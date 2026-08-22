@@ -16,11 +16,33 @@ import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import {
   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
-  CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
+  // AI-REMOVED 2026-08-22:
+  // Reason: 右侧工具列状态按功能请求归一化，不再直接保存按钮 ID。
+  // Trigger: 用户要求呼起方仅声明功能及 button/shortcut/both 展示意图。
+  // Evidence: CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS 是新的有效功能集合。
+  // Replacement: CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
+  CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS,
   CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
   type CanvasFloatingToolbarButtonId,
   type CanvasFloatingToolbarSize,
-  type CanvasRightDockToolbarButtonId,
+  // AI-REMOVED 2026-08-22:
+  // Reason: 呼起接口不再接收按钮 ID 数组。
+  // Trigger: 右侧工具列改为逐项功能展示请求。
+  // Evidence: showCanvasRightDockToolbar 接收 CanvasRightDockToolbarItemRequest。
+  // Replacement: CanvasRightDockToolbarItemRequest。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // type CanvasRightDockToolbarButtonId,
+  type CanvasRightDockToolbarItemRequest,
+  type CanvasRightDockToolbarOperationId,
+  type CanvasRightDockToolbarPresentation,
   type CanvasTopLeftCornerToolbarButtonId,
   type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
@@ -117,9 +139,21 @@ export interface AppInternalAction {
   setCanvasFloatingToolbarSize: (size: CanvasFloatingToolbarSize | null) => void;
   hideCanvasFloatingToolbar: () => void;
   showCanvasRightDockToolbar: (
-    buttonIds: readonly CanvasRightDockToolbarButtonId[],
-    mode?: "icon" | "shortcut",
+    items: readonly CanvasRightDockToolbarItemRequest[],
   ) => void;
+  // AI-REMOVED 2026-08-22:
+  // Reason: 呼起方现在逐项指定 presentation，工具列级 mode 无法表达混排。
+  // Trigger: 用户要求纯快捷键、按钮加快捷键和纯按钮可同时存在。
+  // Evidence: showCanvasRightDockToolbar 的 items 参数携带逐项 presentation。
+  // Replacement: showCanvasRightDockToolbar(items)。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // showCanvasRightDockToolbar: (
+  //   buttonIds: readonly CanvasRightDockToolbarButtonId[],
+  //   mode?: "icon" | "shortcut",
+  // ) => void;
   hideCanvasRightDockToolbar: () => void;
   showCanvasTopLeftCornerToolbar: (
     buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
@@ -691,31 +725,50 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   });
 
   public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = action((
-    buttonIds,
-    mode = "icon",
+    items,
   ) => {
-    const nextButtonIds = normalizeCanvasRightDockToolbarButtonIds(buttonIds);
+    const nextItems = normalizeCanvasRightDockToolbarItems(items);
 
-    if (nextButtonIds.length === 0) {
+    if (nextItems.length === 0) {
       this.hideCanvasRightDockToolbar();
       return;
     }
 
     this.internalState.runtime.canvasRightDockToolbar.visible = true;
-    this.internalState.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
-    this.internalState.runtime.canvasRightDockToolbar.mode = mode;
+    this.internalState.runtime.canvasRightDockToolbar.items = nextItems;
+    // AI-REMOVED 2026-08-22:
+    // Reason: 右侧工具列不再保存按钮数组和全局 mode。
+    // Trigger: 每个功能请求独立声明 button/shortcut/both。
+    // Evidence: nextItems 已包含归一化后的 operationId 与 presentation。
+    // Replacement: canvasRightDockToolbar.items = nextItems。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.internalState.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
+    // this.internalState.runtime.canvasRightDockToolbar.mode = mode;
   });
 
   public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = action(() => {
     if (
       !this.internalState.runtime.canvasRightDockToolbar.visible
-      && this.internalState.runtime.canvasRightDockToolbar.buttonIds.length === 0
+      && this.internalState.runtime.canvasRightDockToolbar.items.length === 0
     ) {
       return;
     }
 
     this.internalState.runtime.canvasRightDockToolbar.visible = false;
-    this.internalState.runtime.canvasRightDockToolbar.buttonIds = [];
+    this.internalState.runtime.canvasRightDockToolbar.items = [];
+    // AI-REMOVED 2026-08-22:
+    // Reason: 隐藏动作清理新的逐项请求状态。
+    // Trigger: canvasRightDockToolbar.buttonIds 已被 items 替代。
+    // Evidence: WorkbenchApp 从 items 渲染右侧工具列。
+    // Replacement: canvasRightDockToolbar.items = []。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.internalState.runtime.canvasRightDockToolbar.buttonIds = [];
   });
 
   public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = action((
@@ -950,22 +1003,64 @@ function normalizeCanvasFloatingToolbarButtonIds(
   return deduped;
 }
 
-function normalizeCanvasRightDockToolbarButtonIds(
-  buttonIds: readonly CanvasRightDockToolbarButtonId[],
-): CanvasRightDockToolbarButtonId[] {
-  const knownButtonIds = new Set<CanvasRightDockToolbarButtonId>(CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
-  const deduped: CanvasRightDockToolbarButtonId[] = [];
+function normalizeCanvasRightDockToolbarItems(
+  items: readonly CanvasRightDockToolbarItemRequest[],
+): CanvasRightDockToolbarItemRequest[] {
+  const knownOperationIds = new Set<CanvasRightDockToolbarOperationId>(
+    CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS,
+  );
+  const knownPresentations = new Set<CanvasRightDockToolbarPresentation>([
+    "button",
+    "shortcut",
+    "both",
+  ]);
+  const seenOperationIds = new Set<CanvasRightDockToolbarOperationId>();
+  const deduped: CanvasRightDockToolbarItemRequest[] = [];
 
-  for (const buttonId of buttonIds) {
-    if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
+  for (const item of items) {
+    if (
+      !knownOperationIds.has(item.operationId)
+      || !knownPresentations.has(item.presentation)
+      || seenOperationIds.has(item.operationId)
+    ) {
       continue;
     }
 
-    deduped.push(buttonId);
+    seenOperationIds.add(item.operationId);
+    deduped.push({
+      operationId: item.operationId,
+      presentation: item.presentation,
+    });
   }
 
   return deduped;
 }
+
+// AI-REMOVED 2026-08-22:
+// Reason: 右侧工具列不再归一化按钮 ID，而是归一化功能展示请求。
+// Trigger: 用户要求呼起方仅指定功能和本次展示形态。
+// Evidence: normalizeCanvasRightDockToolbarItems 同时校验 operationId、presentation 并按功能去重。
+// Replacement: normalizeCanvasRightDockToolbarItems。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function normalizeCanvasRightDockToolbarButtonIds(
+//   buttonIds: readonly CanvasRightDockToolbarButtonId[],
+// ): CanvasRightDockToolbarButtonId[] {
+//   const knownButtonIds = new Set<CanvasRightDockToolbarButtonId>(CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
+//   const deduped: CanvasRightDockToolbarButtonId[] = [];
+//
+//   for (const buttonId of buttonIds) {
+//     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
+//       continue;
+//     }
+//
+//     deduped.push(buttonId);
+//   }
+//
+//   return deduped;
+// }
 
 function normalizeCanvasTopLeftCornerToolbarButtons(
   buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],

@@ -36,9 +36,22 @@ const LOGISTICS_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
-const LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
-  "canvas-right-dock-toolbar-button-exit",
+const LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "exit", presentation: "button" },
 ] as const;
+
+// AI-REMOVED 2026-08-22:
+// Reason: 物流放置手势改为声明功能展示请求，不再直接传递右侧按钮 ID。
+// Trigger: 右侧工具列呼起接口统一为 operationId + presentation。
+// Evidence: LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS 明确请求退出功能的纯按钮形态。
+// Replacement: LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
+//   "canvas-right-dock-toolbar-button-exit",
+// ] as const;
 
 const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
@@ -1289,7 +1302,7 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
     return;
   }
 
-  appHost.internalActions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
+  appHost.internalActions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS);
   if (appHost.internalState.workbench.rightDockOpen) {
     appHost.internalActions.toggleRightDock();
   }

@@ -1115,13 +1115,29 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             buttonIds={canvasFloatingToolbar.buttonIds}
           />
         ) : null}
-        {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
+        {canvasRightDockToolbar.visible && canvasRightDockToolbar.items.length > 0 ? (
           <CanvasRightDockToolbar
             appHost={appHost}
-            buttonIds={canvasRightDockToolbar.buttonIds}
-            mode={canvasRightDockToolbar.mode}
+            items={canvasRightDockToolbar.items}
           />
         ) : null}
+        {/* AI-REMOVED 2026-08-22:
+            Reason: Workbench 改为传递逐项功能展示请求，不再传按钮数组和全局 mode。
+            Trigger: 用户要求右侧工具列按项混排 button、shortcut 与 both。
+            Evidence: CanvasRightDockToolbarProps 只接收 items。
+            Replacement: 上方基于 canvasRightDockToolbar.items 的渲染分支。
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
+              <CanvasRightDockToolbar
+                appHost={appHost}
+                buttonIds={canvasRightDockToolbar.buttonIds}
+                mode={canvasRightDockToolbar.mode}
+              />
+            ) : null}
+        */}
         {showRightDock ? <RightDock appHost={appHost} /> : null}
         {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
         {showTimelineBottomDock ? <TimelineBottomDock appHost={appHost} /> : null}

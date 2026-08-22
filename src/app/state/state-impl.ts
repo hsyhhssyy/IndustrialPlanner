@@ -208,6 +208,24 @@ export const CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
 
 export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS[number];
 
+export const CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS = [
+  "exit",
+  "move",
+  "save-blueprint",
+  "copy",
+  "delete",
+] as const;
+
+export type CanvasRightDockToolbarOperationId =
+  typeof CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS[number];
+
+export type CanvasRightDockToolbarPresentation = "button" | "shortcut" | "both";
+
+export interface CanvasRightDockToolbarItemRequest {
+  readonly operationId: CanvasRightDockToolbarOperationId;
+  readonly presentation: CanvasRightDockToolbarPresentation;
+}
+
 export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
   "canvas-top-left-corner-toolbar-button-toggle-belt",
@@ -422,8 +440,18 @@ export interface CanvasFloatingToolbarStateReadWrite {
 
 export interface CanvasRightDockToolbarStateReadWrite {
   visible: boolean;
-  buttonIds: CanvasRightDockToolbarButtonId[];
-  mode: "icon" | "shortcut";
+  items: CanvasRightDockToolbarItemRequest[];
+  // AI-REMOVED 2026-08-22:
+  // Reason: 右侧工具列不再以全局模式互斥展示按钮或快捷键，改为逐项声明 presentation。
+  // Trigger: 用户要求按钮与快捷键能够混排，并允许同一功能按上下文仅展示其中一种能力。
+  // Evidence: CanvasRightDockToolbarItemRequest 为每个 operationId 保存独立 presentation。
+  // Replacement: items: CanvasRightDockToolbarItemRequest[]。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // buttonIds: CanvasRightDockToolbarButtonId[];
+  // mode: "icon" | "shortcut";
 }
 
 export interface CanvasTopLeftCornerToolbarStateReadWrite {
@@ -602,8 +630,18 @@ class CanvasFloatingToolbarStateReadWriteImpl implements CanvasFloatingToolbarSt
 
 class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbarStateReadWrite {
   visible = false;
-  buttonIds: CanvasRightDockToolbarButtonId[] = [];
-  mode: "icon" | "shortcut" = "icon";
+  items: CanvasRightDockToolbarItemRequest[] = [];
+  // AI-REMOVED 2026-08-22:
+  // Reason: 运行时状态改为保存逐项展示请求，不再保存按钮数组和工具列级展示模式。
+  // Trigger: 用户要求同一工具列同时容纳纯快捷键、按钮加快捷键和纯按钮。
+  // Evidence: items 中每一项独立携带 operationId 与 presentation。
+  // Replacement: items: CanvasRightDockToolbarItemRequest[]。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // buttonIds: CanvasRightDockToolbarButtonId[] = [];
+  // mode: "icon" | "shortcut" = "icon";
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

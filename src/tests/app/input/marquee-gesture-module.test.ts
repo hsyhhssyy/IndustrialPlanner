@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 import {
   createHypergryphMarqueeGestureModule,
@@ -40,15 +41,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-move",
-        "canvas-right-dock-toolbar-button-copy",
-        "canvas-right-dock-toolbar-button-save-blueprint",
-        "canvas-right-dock-toolbar-button-delete",
+        { operationId: "exit", presentation: "shortcut" },
+        { operationId: "move", presentation: "shortcut" },
+        { operationId: "copy", presentation: "shortcut" },
+        { operationId: "save-blueprint", presentation: "shortcut" },
+        { operationId: "delete", presentation: "shortcut" },
       ],
-      "shortcut",
     );
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
@@ -72,13 +72,13 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      "canvas-right-dock-toolbar-button-exit",
-      "canvas-right-dock-toolbar-button-move",
-      "canvas-right-dock-toolbar-button-copy",
-      "canvas-right-dock-toolbar-button-save-blueprint",
-      "canvas-right-dock-toolbar-button-delete",
-    ], "icon");
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("icon");
+      { operationId: "exit", presentation: "button" },
+      { operationId: "move", presentation: "button" },
+      { operationId: "copy", presentation: "button" },
+      { operationId: "save-blueprint", presentation: "button" },
+      { operationId: "delete", presentation: "button" },
+    ]);
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-belt",
@@ -102,15 +102,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-move",
-        "canvas-right-dock-toolbar-button-copy",
-        "canvas-right-dock-toolbar-button-save-blueprint",
-        "canvas-right-dock-toolbar-button-delete",
+        { operationId: "exit", presentation: "shortcut" },
+        { operationId: "move", presentation: "shortcut" },
+        { operationId: "copy", presentation: "shortcut" },
+        { operationId: "save-blueprint", presentation: "shortcut" },
+        { operationId: "delete", presentation: "shortcut" },
       ],
-      "shortcut",
     );
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
   });
 
   it("shows selection action buttons only while the marquee selection is non-empty", () => {
@@ -121,19 +120,34 @@ describe("createHypergryphMarqueeGestureModule", () => {
     const entity = { id: "entity-1" } as WorldEntity;
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
-      "canvas-right-dock-toolbar-button-exit",
-      "canvas-right-dock-toolbar-button-move",
-      "canvas-right-dock-toolbar-button-copy",
-      "canvas-right-dock-toolbar-button-save-blueprint",
-      "canvas-right-dock-toolbar-button-delete",
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+      { operationId: "exit", presentation: "button" },
+      { operationId: "move", presentation: "button" },
+      { operationId: "copy", presentation: "button" },
+      { operationId: "save-blueprint", presentation: "button" },
+      { operationId: "delete", presentation: "button" },
     ]);
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
-      "canvas-right-dock-toolbar-button-exit",
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+      { operationId: "exit", presentation: "button" },
     ]);
   });
+
+  // AI-REMOVED 2026-08-22:
+  // Reason: 框选测试改为验证逐项功能展示请求，不再验证按钮数组和工具列级 mode。
+  // Trigger: showCanvasRightDockToolbar 契约重构为 operationId + presentation。
+  // Evidence: 上述断言覆盖鼠标 shortcut、触控 button 与选区刷新后的 presentation 保持。
+  // Replacement: 上述 items 断言。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
+  // expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("icon");
+  // expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
+  //   "canvas-right-dock-toolbar-button-exit",
+  // ]);
 
   it("toggles the whole strict logistics segment when tapping a belt in marquee mode", () => {
     const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
@@ -297,8 +311,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      "canvas-right-dock-toolbar-button-exit",
-    ], "icon");
+      { operationId: "exit", presentation: "button" },
+    ]);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-belt",
@@ -604,8 +618,7 @@ function createContext(options: {
         marqueeAnchor: options.marqueeAnchor ?? null,
         canvasRightDockToolbar: {
           visible: false,
-          buttonIds: [] as string[],
-          mode: "icon" as "icon" | "shortcut",
+          items: [] as CanvasRightDockToolbarItemRequest[],
         },
         canvasTopLeftCornerToolbar: {
           visible: false,
@@ -627,14 +640,13 @@ function createContext(options: {
         appHost.internalState.workbench.rightDockOpen =
           !appHost.internalState.workbench.rightDockOpen;
       }),
-      showCanvasRightDockToolbar: vi.fn((buttonIds, mode: "icon" | "shortcut" = "icon") => {
+      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
-        appHost.internalState.runtime.canvasRightDockToolbar.buttonIds = [...buttonIds];
-        appHost.internalState.runtime.canvasRightDockToolbar.mode = mode;
+        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
       }),
       hideCanvasRightDockToolbar: vi.fn(() => {
         appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
-        appHost.internalState.runtime.canvasRightDockToolbar.buttonIds = [];
+        appHost.internalState.runtime.canvasRightDockToolbar.items = [];
       }),
       showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;

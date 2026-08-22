@@ -16,17 +16,38 @@ import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
-const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
-  "canvas-right-dock-toolbar-button-exit",
-  "canvas-right-dock-toolbar-button-move",
-  "canvas-right-dock-toolbar-button-copy",
-  "canvas-right-dock-toolbar-button-save-blueprint",
-  "canvas-right-dock-toolbar-button-delete",
+const MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
+  "exit",
+  "move",
+  "copy",
+  "save-blueprint",
+  "delete",
 ] as const;
 
-const EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
-  "canvas-right-dock-toolbar-button-exit",
+const EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
+  "exit",
 ] as const;
+
+// AI-REMOVED 2026-08-22:
+// Reason: 框选手势现在声明功能与本次 presentation，不再直接声明按钮 ID。
+// Trigger: 用户要求呼起方只决定展示按钮、快捷键或两者。
+// Evidence: showMarqueeRightDockToolbar 将 operationIds 映射为逐项请求。
+// Replacement: MARQUEE_RIGHT_DOCK_OPERATION_IDS 与 EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
+//   "canvas-right-dock-toolbar-button-exit",
+//   "canvas-right-dock-toolbar-button-move",
+//   "canvas-right-dock-toolbar-button-copy",
+//   "canvas-right-dock-toolbar-button-save-blueprint",
+//   "canvas-right-dock-toolbar-button-delete",
+// ] as const;
+//
+// const EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
+//   "canvas-right-dock-toolbar-button-exit",
+// ] as const;
 
 const MARQUEE_TOP_LEFT_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
@@ -392,7 +413,7 @@ function enterMarqueeMode(options: {
   }
 
   if (options.source === "touch") {
-    showMarqueeRightDockToolbar(options.appHost, options.editor, "icon");
+    showMarqueeRightDockToolbar(options.appHost, options.editor, "button");
     if (options.appHost.internalState.workbench.rightDockOpen) {
       options.appHost.internalActions.toggleRightDock();
     }
@@ -509,14 +530,39 @@ function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
 export function showMarqueeRightDockToolbar(
   appHost: AppHost,
   editor: EditorContract | null,
-  mode = appHost.internalState.runtime.canvasRightDockToolbar.mode,
+  presentation = appHost.internalState.runtime.canvasRightDockToolbar.items.find(
+    (item) => item.operationId === "exit",
+  )?.presentation ?? "button",
 ): void {
-  const buttonIds = (editor?.state.collections.selection?.length ?? 0) > 0
-    ? MARQUEE_RIGHT_DOCK_BUTTON_IDS
-    : EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS;
+  const operationIds = (editor?.state.collections.selection?.length ?? 0) > 0
+    ? MARQUEE_RIGHT_DOCK_OPERATION_IDS
+    : EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS;
 
-  appHost.internalActions.showCanvasRightDockToolbar(buttonIds, mode);
+  appHost.internalActions.showCanvasRightDockToolbar(
+    operationIds.map((operationId) => ({ operationId, presentation })),
+  );
 }
+
+// AI-REMOVED 2026-08-22:
+// Reason: 框选工具列刷新不再复用工具列级 mode，也不再传递按钮 ID。
+// Trigger: presentation 已成为逐项展示请求。
+// Evidence: 新实现从退出功能请求继承 presentation，并为每个 operationId 构造请求。
+// Replacement: 上方 showMarqueeRightDockToolbar 实现。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export function showMarqueeRightDockToolbar(
+//   appHost: AppHost,
+//   editor: EditorContract | null,
+//   mode = appHost.internalState.runtime.canvasRightDockToolbar.mode,
+// ): void {
+//   const buttonIds = (editor?.state.collections.selection?.length ?? 0) > 0
+//     ? MARQUEE_RIGHT_DOCK_BUTTON_IDS
+//     : EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS;
+//
+//   appHost.internalActions.showCanvasRightDockToolbar(buttonIds, mode);
+// }
 
 function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
   appHost: AppHost;

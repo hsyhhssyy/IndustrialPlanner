@@ -631,6 +631,15 @@
   backdrop-filter: none;
 }
 
+.canvas-right-dock-toolbar-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  color: var(--in-canvas-toolbar-button-text);
+  pointer-events: none;
+}
+
 .canvas-right-dock-toolbar-button:not(:disabled):hover .canvas-right-dock-toolbar-icon {
   border-color: var(--in-canvas-toolbar-button-hover-border);
   background: var(--in-canvas-toolbar-button-hover-bg);
@@ -671,10 +680,18 @@
 
 // ── 快捷键模式 ──
 
-// 快捷键模式下默认穿透点击
-.canvas-right-dock-toolbar--shortcut {
-  pointer-events: none;
-}
+// AI-REMOVED 2026-08-22:
+// Reason: 工具列不再存在全局快捷键模式；只有纯快捷键项穿透点击，按钮加快捷键仍可点击。
+// Trigger: 用户要求同一工具列混排纯快捷键、按钮加快捷键和纯按钮。
+// Evidence: .canvas-right-dock-toolbar-shortcut 仅作用于无按钮的快捷键项。
+// Replacement: .canvas-right-dock-toolbar-shortcut。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// .canvas-right-dock-toolbar--shortcut {
+//   pointer-events: none;
+// }
 
 // 快捷键按键徽章
 .canvas-right-dock-toolbar-shortcut-key {

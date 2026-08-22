@@ -87,8 +87,7 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
     expect(hideCanvasRightDockToolbar).not.toHaveBeenCalled();
     expect(showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      ["canvas-right-dock-toolbar-button-exit"],
-      "icon",
+      [{ operationId: "exit", presentation: "button" }],
     );
   });
 
@@ -219,7 +218,7 @@ function createContext(options: {
           activeTool: options.activeTool ?? "select",
           runtime: {
             canvasRightDockToolbar: {
-              mode: "icon",
+              items: [{ operationId: "exit", presentation: "button" }],
             },
           },
         },
@@ -240,6 +239,23 @@ function createContext(options: {
     isShortcutFor,
   };
 }
+
+// AI-REMOVED 2026-08-22:
+// Reason: 删除选区测试桩改为保存逐项展示请求，不再提供工具列级 icon mode。
+// Trigger: showMarqueeRightDockToolbar 从退出功能请求继承 presentation。
+// Evidence: marquee 删除后仍以 button presentation 呼起退出功能。
+// Replacement: canvasRightDockToolbar.items 与新的调用断言。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// canvasRightDockToolbar: {
+//   mode: "icon",
+// },
+// expect(showCanvasRightDockToolbar).toHaveBeenCalledWith(
+//   ["canvas-right-dock-toolbar-button-exit"],
+//   "icon",
+// );
 
 function createSelectionCollection(entityIds: readonly string[]): EntityCollection {
   const selection = [...entityIds] as string[] & EntityCollection;

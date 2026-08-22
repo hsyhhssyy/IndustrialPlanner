@@ -2419,9 +2419,9 @@ describe("createAppHost", () => {
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     appHost.internalActions.showCanvasRightDockToolbar([
-      "canvas-right-dock-toolbar-button-exit",
-      "canvas-right-dock-toolbar-button-move",
-      "canvas-right-dock-toolbar-button-delete",
+      { operationId: "exit", presentation: "button" },
+      { operationId: "move", presentation: "button" },
+      { operationId: "delete", presentation: "button" },
     ]);
     appHost.internalActions.setActiveTool("marquee");
 
@@ -2435,8 +2435,8 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.selection).toEqual([]);
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalState.runtime.canvasRightDockToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
-      "canvas-right-dock-toolbar-button-exit",
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+      { operationId: "exit", presentation: "button" },
     ]);
   });
 

@@ -1789,8 +1789,8 @@ describe("WorkbenchApp", () => {
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
       appHost.internalActions.showCanvasRightDockToolbar([
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-move",
+        { operationId: "exit", presentation: "button" },
+        { operationId: "move", presentation: "button" },
       ]);
     });
     expect(container.querySelector(".canvas-right-dock-toolbar")).not.toBeNull();
@@ -1837,31 +1837,34 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
   });
 
-  it("renders canvas right dock toolbar in shortcut mode with key badges instead of icons", () => {
+  it("renders shortcut-only right dock items with key badges instead of buttons", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
+      appHost.internalActions.setShortcutFor(SHORTCUT_KEY.DELETE_DEVICE, "");
     });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
       appHost.internalActions.showCanvasRightDockToolbar(
         [
-          "canvas-right-dock-toolbar-button-exit",
-          "canvas-right-dock-toolbar-button-move",
-          "canvas-right-dock-toolbar-button-delete",
+          { operationId: "exit", presentation: "shortcut" },
+          { operationId: "move", presentation: "shortcut" },
+          { operationId: "delete", presentation: "shortcut" },
         ],
-        "shortcut",
       );
     });
 
     const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
     expect(toolbar).not.toBeNull();
-    expect(toolbar?.classList.contains("canvas-right-dock-toolbar--shortcut")).toBe(true);
+    expect(toolbar?.querySelectorAll("[data-ui-button-id]")).toHaveLength(0);
+    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="shortcut"]')).toHaveLength(2);
+    expect(toolbar?.querySelector('[data-toolbar-operation-id="delete"]')).toBeNull();
 
     // AI-CORRECTION 2026-08-03: 快捷键模式渲染 input-prompts 图片，而非文字 kbd 徽章。
+    // AI-CORRECTION 2026-08-22: 全局快捷键模式已取消；本断言现在验证逐项 shortcut presentation。
     const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
     expect(iconElements?.length).toBe(0);
 
@@ -1879,11 +1882,11 @@ describe("WorkbenchApp", () => {
     // expect(keyBadges!.length).toBeGreaterThan(0);
     const shortcutImages = toolbar?.querySelectorAll('img[data-key-token]');
     expect(shortcutImages).not.toBeNull();
-    expect(shortcutImages!.length).toBeGreaterThan(0);
+    expect(shortcutImages?.length).toBe(2);
 
     // 标签应有外发光样式
     const labels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label--glow");
-    expect(labels?.length).toBe(3);
+    expect(labels?.length).toBe(2);
 
     act(() => {
       appHost.internalActions.hideCanvasRightDockToolbar();
@@ -1892,29 +1895,34 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
   });
 
-  it("renders canvas right dock toolbar in icon mode with workbench icons by default", () => {
+  it("keeps buttons when a both request resolves to an empty shortcut", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
+      appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MOVE_SELECTION, "");
     });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
       appHost.internalActions.showCanvasRightDockToolbar([
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-move",
+        { operationId: "exit", presentation: "button" },
+        { operationId: "move", presentation: "both" },
       ]);
     });
 
     const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
     expect(toolbar).not.toBeNull();
-    expect(toolbar?.classList.contains("canvas-right-dock-toolbar--shortcut")).toBe(false);
+    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="button"]')).toHaveLength(1);
+    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="both"]')).toHaveLength(1);
 
     // 图标模式应渲染 WorkbenchIcon SVG，而非 kbd 徽章
+    // AI-CORRECTION 2026-08-22: 全局图标模式已取消；本断言现在验证逐项 button presentation。
+    // AI-CORRECTION 2026-08-22: 同时覆盖 both 请求在快捷键绑定为空时自动退化为按钮。
     const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
     expect(iconElements?.length).toBe(2);
+    expect(toolbar?.querySelectorAll('img[data-key-token]')).toHaveLength(0);
 
     const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
     expect(keyBadges?.length).toBe(0);
@@ -2116,8 +2124,8 @@ describe("WorkbenchApp", () => {
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
       appHost.internalActions.showCanvasRightDockToolbar([
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-move",
+        { operationId: "exit", presentation: "both" },
+        { operationId: "move", presentation: "both" },
       ]);
       appHost.internalActions.toggleRightDock();
     });
@@ -2133,6 +2141,8 @@ describe("WorkbenchApp", () => {
     expect(toolbar).not.toBeNull();
     expect(exitButton).not.toBeNull();
     expect(moveButton).not.toBeNull();
+    expect(toolbar?.querySelectorAll('img[data-key-token]')).toHaveLength(2);
+    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="both"]')).toHaveLength(2);
 
     if (!toolbar || !exitButton || !moveButton) {
       throw new Error("Canvas right dock toolbar did not render expected buttons.");
@@ -2223,8 +2233,8 @@ describe("WorkbenchApp", () => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalState.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-save-blueprint",
+        { operationId: "exit", presentation: "button" },
+        { operationId: "save-blueprint", presentation: "button" },
       ]);
     });
 
@@ -2289,8 +2299,8 @@ describe("WorkbenchApp", () => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalState.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
-        "canvas-right-dock-toolbar-button-exit",
-        "canvas-right-dock-toolbar-button-save-blueprint",
+        { operationId: "exit", presentation: "button" },
+        { operationId: "save-blueprint", presentation: "button" },
       ]);
     });
 

@@ -5,7 +5,11 @@ import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcu
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { KeyboardShortcutPrompt } from "@/app/shell/shared";
-import type { CanvasRightDockToolbarButtonId } from "@/app/state/state-impl";
+import type {
+  CanvasRightDockToolbarButtonId,
+  CanvasRightDockToolbarItemRequest,
+  CanvasRightDockToolbarOperationId,
+} from "@/app/state/state-impl";
 import type { UiKey } from "@/shared/i18n";
 import {
   // AI-REMOVED 2026-08-03:
@@ -28,30 +32,61 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 type CanvasRightDockToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasRightDockToolbarTone = "exit";
-type CanvasRightDockToolbarMode = "icon" | "shortcut";
+
+// AI-REMOVED 2026-08-22:
+// Reason: 工具列不再使用全局模式互斥按钮和快捷键。
+// Trigger: 用户要求每个功能独立选择 button、shortcut 或 both。
+// Evidence: CanvasRightDockToolbarItemRequest.presentation 已下沉到逐项请求。
+// Replacement: CanvasRightDockToolbarItemRequest["presentation"]。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// type CanvasRightDockToolbarMode = "icon" | "shortcut";
+
+interface CanvasRightDockToolbarButtonDefinition {
+  readonly buttonId: CanvasRightDockToolbarButtonId;
+  readonly icon: CanvasRightDockToolbarIconKind;
+  readonly tone?: CanvasRightDockToolbarTone;
+}
+
+type CanvasRightDockToolbarShortcutDefinition =
+  | { readonly value: string }
+  | { readonly shortcutKeyId: ShortcutKeyId };
 
 interface CanvasRightDockToolbarDefinition {
   readonly labelKey: UiKey;
-  icon: CanvasRightDockToolbarIconKind;
-  tone?: CanvasRightDockToolbarTone;
-  shortcut?: string;
-  shortcutKeyId?: ShortcutKeyId;
+  readonly button?: CanvasRightDockToolbarButtonDefinition;
+  readonly shortcut?: CanvasRightDockToolbarShortcutDefinition;
 }
 
 interface CanvasRightDockToolbarProps {
   appHost: AppHost;
-  buttonIds: readonly CanvasRightDockToolbarButtonId[];
-  mode?: CanvasRightDockToolbarMode;
+  items: readonly CanvasRightDockToolbarItemRequest[];
+  // AI-REMOVED 2026-08-22:
+  // Reason: 组件改为接收逐项展示请求，不能继续接收按钮数组和全局 mode。
+  // Trigger: 同一工具列需要混排纯快捷键、按钮加快捷键和纯按钮。
+  // Evidence: items 中每个 operationId 都携带独立 presentation。
+  // Replacement: items: readonly CanvasRightDockToolbarItemRequest[]。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // buttonIds: readonly CanvasRightDockToolbarButtonId[];
+  // mode?: CanvasRightDockToolbarMode;
 }
 
 const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
-  CanvasRightDockToolbarButtonId,
+  CanvasRightDockToolbarOperationId,
   CanvasRightDockToolbarDefinition
 > = {
-  "canvas-right-dock-toolbar-button-exit": {
+  exit: {
     labelKey: "action.exit",
-    icon: "cancel",
-    tone: "exit",
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-exit",
+      icon: "cancel",
+      tone: "exit",
+    },
     // AI-REMOVED 2026-08-03:
     // Reason: Escape 不再属于可配置快捷键，退出按钮提示改用硬编码键名。
     // Trigger: ST2-RQ-002 禁止任何快捷键绑定 Escape。
@@ -62,27 +97,39 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
     //
     // Original code:
     // shortcutKeyId: SHORTCUT_KEY.RETURN_SELECT,
-    shortcut: "Esc",
+    shortcut: { value: "Esc" },
   },
-  "canvas-right-dock-toolbar-button-move": {
+  move: {
     labelKey: "tool.move",
-    icon: "move",
-    shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION,
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-move",
+      icon: "move",
+    },
+    shortcut: { shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION },
   },
-  "canvas-right-dock-toolbar-button-save-blueprint": {
+  "save-blueprint": {
     labelKey: "action.saveBlueprint",
-    icon: "save-blueprint",
-    shortcutKeyId: SHORTCUT_KEY.SAVE_BLUEPRINT,
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-save-blueprint",
+      icon: "save-blueprint",
+    },
+    shortcut: { shortcutKeyId: SHORTCUT_KEY.SAVE_BLUEPRINT },
   },
-  "canvas-right-dock-toolbar-button-copy": {
+  copy: {
     labelKey: "action.copySelection",
-    icon: "copy",
-    shortcutKeyId: SHORTCUT_KEY.COPY_SELECTION,
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-copy",
+      icon: "copy",
+    },
+    shortcut: { shortcutKeyId: SHORTCUT_KEY.COPY_SELECTION },
   },
-  "canvas-right-dock-toolbar-button-delete": {
+  delete: {
     labelKey: "action.deleteSelection",
-    icon: "delete",
-    shortcutKeyId: SHORTCUT_KEY.DELETE_DEVICE,
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-delete",
+      icon: "delete",
+    },
+    shortcut: { shortcutKeyId: SHORTCUT_KEY.DELETE_DEVICE },
   },
 };
 
@@ -92,8 +139,7 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 
 export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   appHost,
-  buttonIds,
-  mode = "icon",
+  items,
 }: CanvasRightDockToolbarProps) {
   const t = appHost.actions.translate;
   // AI-REMOVED 2026-06-19:
@@ -109,9 +155,48 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   // const visibleButtonIds = buttonIds.filter(
   //   (buttonId) => canSaveBlueprint || buttonId !== "canvas-right-dock-toolbar-button-save-blueprint",
   // );
-  const visibleButtonIds = buttonIds;
+  // AI-CORRECTION 2026-08-22: 呼起方现在传入完整 items，业务显示规则仍由手势模组负责。
 
-  const isShortcutMode = mode === "shortcut";
+  const visibleItems = items.flatMap((item) => {
+    const definition = CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS[item.operationId];
+    const wantsButton = item.presentation === "button" || item.presentation === "both";
+    const wantsShortcut = item.presentation === "shortcut" || item.presentation === "both";
+    const button = wantsButton ? definition.button ?? null : null;
+    const shortcutString = wantsShortcut && definition.shortcut
+      ? "value" in definition.shortcut
+        ? definition.shortcut.value
+        : appHost.internalActions.getKeyboardShortcutFor(definition.shortcut.shortcutKeyId)
+      : null;
+    const shortcut = shortcutString === null || shortcutString === "" ? null : shortcutString;
+
+    if (button === null && shortcut === null) {
+      return [];
+    }
+
+    return [{
+      button,
+      definition,
+      operationId: item.operationId,
+      presentation: item.presentation,
+      shortcut,
+    }];
+  });
+
+  if (visibleItems.length === 0) {
+    return null;
+  }
+
+  // AI-REMOVED 2026-08-22:
+  // Reason: 快捷键状态已经下沉到每个 item，不存在工具列级快捷键模式。
+  // Trigger: 按钮和快捷键需要在同一工具列中混排。
+  // Evidence: visibleItems 分别解析 button 与 shortcut 能力。
+  // Replacement: item.presentation 与 visibleItems。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const visibleButtonIds = buttonIds;
+  // const isShortcutMode = mode === "shortcut";
 
   const stopUiPropagation = (
     event:
@@ -140,8 +225,17 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   ) => {
     event.stopPropagation();
 
-    // 快捷键模式下不触发，让事件穿透
-    if (isShortcutMode) return;
+    // AI-REMOVED 2026-08-22:
+    // Reason: 是否可点击现在由当前 item 是否解析出 button 决定，不再由全局快捷键模式拦截。
+    // Trigger: 按钮加快捷键形态必须保持按钮可点击。
+    // Evidence: 只有 button 非空的 item 才会绑定 handleButtonPointerUp。
+    // Replacement: 下方仅在按钮分支绑定的 onPointerUp。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // // 快捷键模式下不触发，让事件穿透
+    // if (isShortcutMode) return;
 
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -184,13 +278,23 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   //     .filter((part) => part !== "");
   // }
 
+  // AI-REMOVED 2026-08-22:
+  // Reason: 工具列级快捷键 class 无法表达逐项混排。
+  // Trigger: presentation 已下沉到每个功能请求。
+  // Evidence: 纯快捷键项使用 canvas-right-dock-toolbar-shortcut，按钮项仍可交互。
+  // Replacement: 固定 canvas-right-dock-toolbar class 与逐项 class。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // className={cm(styles, joinClassNames([
+  //   "canvas-right-dock-toolbar",
+  //   isShortcutMode ? "canvas-right-dock-toolbar--shortcut" : undefined,
+  // ]))}
   return (
     <div
       aria-label={t("toolbar.canvasRightDock")}
-      className={cm(styles, joinClassNames([
-        "canvas-right-dock-toolbar",
-        isShortcutMode ? "canvas-right-dock-toolbar--shortcut" : undefined,
-      ]))}
+      className={cm(styles, "canvas-right-dock-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -200,39 +304,18 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
       onPointerUp={stopUiPropagation}
       onWheel={stopUiPropagationAndDefault}
     >
-      {visibleButtonIds.map((buttonId) => {
-        const definition = CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS[buttonId];
+      {visibleItems.map(({ button, definition, operationId, presentation, shortcut }) => {
         const label = t(definition.labelKey);
 
-        const shortcutString = isShortcutMode
-          ? definition.shortcut
-            ?? (definition.shortcutKeyId
-              ? appHost.internalActions.getKeyboardShortcutFor(definition.shortcutKeyId)
-              : null)
-          : null;
-
-        const showShortcutBadge = isShortcutMode && shortcutString !== null && shortcutString !== "";
-
-        return (
-          <button
-            aria-label={label}
-            className={cm(styles, joinClassNames([
-              "canvas-right-dock-toolbar-button",
-              definition.tone ? `is-${definition.tone}` : undefined,
-            ]))}
-            data-ui-button-id={buttonId}
-            key={buttonId}
-            onClick={stopUiPropagation}
-            onContextMenu={stopUiPropagationAndDefault}
-            onPointerCancel={stopUiPropagation}
-            onPointerDown={stopTouchPointerDownPropagation}
-            onPointerMove={stopUiPropagation}
-            onPointerUp={(event) => {
-              handleButtonPointerUp(event, buttonId);
-            }}
-            type="button"
-          >
-            {showShortcutBadge ? (
+        const contents = (
+          <>
+            {button === null ? null : (
+              <WorkbenchIcon
+                className={cm(styles, "canvas-right-dock-toolbar-icon")}
+                kind={button.icon}
+              />
+            )}
+            {shortcut === null ? null : (
               <>
                 {/* AI-REMOVED 2026-08-03:
                     Reason: 画布工具栏快捷键不再以文字 kbd 与加号拼接。
@@ -247,24 +330,58 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
                       <Fragment key={i}>...</Fragment>
                     ))
                 */}
-                <KeyboardShortcutPrompt shortcut={shortcutString ?? ""} size="small" />
+                <KeyboardShortcutPrompt shortcut={shortcut} size="small" />
               </>
-            ) : (
-              <WorkbenchIcon
-                className={cm(styles, "canvas-right-dock-toolbar-icon")}
-                kind={definition.icon}
-              />
             )}
             <span
               className={cm(
                 styles,
-                isShortcutMode
-                  ? "canvas-right-dock-toolbar-label--glow"
-                  : "canvas-right-dock-toolbar-label",
+                shortcut === null
+                  ? "canvas-right-dock-toolbar-label"
+                  : "canvas-right-dock-toolbar-label--glow",
               )}
             >
               {label}
             </span>
+          </>
+        );
+
+        if (button === null) {
+          return (
+            <div
+              aria-label={label}
+              className={cm(styles, "canvas-right-dock-toolbar-shortcut")}
+              data-toolbar-operation-id={operationId}
+              data-toolbar-presentation={presentation}
+              key={operationId}
+            >
+              {contents}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            aria-label={label}
+            className={cm(styles, joinClassNames([
+              "canvas-right-dock-toolbar-button",
+              button.tone ? `is-${button.tone}` : undefined,
+            ]))}
+            data-toolbar-operation-id={operationId}
+            data-toolbar-presentation={presentation}
+            data-ui-button-id={button.buttonId}
+            key={operationId}
+            onClick={stopUiPropagation}
+            onContextMenu={stopUiPropagationAndDefault}
+            onPointerCancel={stopUiPropagation}
+            onPointerDown={stopTouchPointerDownPropagation}
+            onPointerMove={stopUiPropagation}
+            onPointerUp={(event) => {
+              handleButtonPointerUp(event, button.buttonId);
+            }}
+            type="button"
+          >
+            {contents}
           </button>
         );
       })}
