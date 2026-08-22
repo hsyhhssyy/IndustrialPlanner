@@ -883,6 +883,19 @@ describe("GenericDeviceSprite", () => {
     expect(previewEffectRoot?.children).toHaveLength(4)
     expect(previewMask?.texture).toBe(blueprintMaskTexture)
     expect(scanlineTiling?.mask).toBe(previewMask)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["logistics-preview-device"],
+      activeTool: "move",
+      moveKind: "batch",
+    }))
+
+    const selectionEffectRoot = overlayRoot?.children?.[1] as {
+      visible?: boolean;
+    } | undefined
+    expect(previewEffectRoot?.visible).toBe(false)
+    expect(selectionEffectRoot?.visible).toBe(true)
   })
 
   it.each([
@@ -1936,6 +1949,51 @@ describe("GenericDeviceSprite", () => {
     expect(scanlineTiling?.mask).toBe(previewMask)
   })
 
+  it("uses the selection overlay for a single-device batch move preview", async () => {
+    const resolvedTexture = createLoadedTextureMock("batch-move-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("batch-move-device-mask-texture")
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "batch-move-preview-entity",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["batch-move-preview-entity"],
+      activeTool: "move",
+      moveKind: "batch",
+    })
+
+    sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
+    sprite.syncLayout(createBeltLayout(), context)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: Array<{ visible?: boolean }>;
+    } | undefined
+
+    expect(overlayRoot?.children?.[0]?.visible).toBe(false)
+    expect(overlayRoot?.children?.[1]?.visible).toBe(true)
+  })
+
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture-fallback")
 
@@ -2931,6 +2989,7 @@ function createRenderContextStub(options: {
   }>;
   deviceClass?: "desktop" | "tablet" | "mobile";
   activeTool?: string;
+  moveKind?: "ordinary" | "batch" | null;
   suppressBelts?: boolean;
   suppressPipes?: boolean;
 }) {
@@ -2964,7 +3023,11 @@ function createRenderContextStub(options: {
     },
   }
 
-  if (options.deviceClass !== undefined || options.activeTool !== undefined) {
+  if (
+    options.deviceClass !== undefined
+    || options.activeTool !== undefined
+    || options.moveKind !== undefined
+  ) {
     workspace.app = {
       state: {
         settings: {},
@@ -2972,6 +3035,7 @@ function createRenderContextStub(options: {
           deviceClass: options.deviceClass ?? "desktop",
         },
         activeTool: options.activeTool ?? null,
+        moveKind: options.moveKind ?? null,
       },
     }
   }

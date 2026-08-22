@@ -91,11 +91,34 @@ describe("PreviewRectDecoration", () => {
     expect(graphics?.rectCommands).toEqual([]);
     expect(graphics?.fillCommands).toEqual([]);
   });
+
+  it("draws the bounding background for a single-device batch move", () => {
+    graphicsInstances.length = 0;
+    const decoration = createPreviewRectDecoration();
+
+    decoration.sync(createDecorationContext("move", ["a"], "batch"));
+
+    const graphics = graphicsInstances[0];
+    expect(graphics?.rectCommands).toEqual([
+      { x: 50, y: 50, width: 20, height: 20 },
+    ]);
+  });
+
+  it("does not draw the bounding background for an ordinary move regardless of preview count", () => {
+    graphicsInstances.length = 0;
+    const decoration = createPreviewRectDecoration();
+
+    decoration.sync(createDecorationContext("move", ["a", "b"], "ordinary"));
+
+    const graphics = graphicsInstances[0];
+    expect(graphics?.rectCommands).toEqual([]);
+  });
 });
 
 function createDecorationContext(
   activeTool: string,
   previewEntityIds: readonly string[],
+  moveKind: "ordinary" | "batch" | null = null,
 ): DecorationSyncContext {
   return {
     viewportState: {
@@ -118,6 +141,7 @@ function createDecorationContext(
         app: {
           state: {
             activeTool,
+            moveKind,
           },
         },
         editor: {

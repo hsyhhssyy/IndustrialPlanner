@@ -95,6 +95,31 @@ describe("GasDiffusionRangeDecoration", () => {
     expect(haveSameGasDiffusionRanges(left, [createRange(0, 1)])).toBe(false);
     expect(haveSameGasDiffusionRanges(null, right)).toBe(false);
   });
+
+  it("clears batch-move ranges and redraws them after returning to ordinary movement", () => {
+    let moveKind: "ordinary" | "batch" = "ordinary";
+    const ctx = createContext({
+      itemDefinitions: [],
+      getRanges: () => [createRange(0, 0)],
+      getMoveKind: () => moveKind,
+    });
+    const decoration = createGasDiffusionRangeDecoration();
+    const graphics = graphicsTestState.instances[0]!;
+
+    decoration.sync(ctx);
+    expect(graphics.rect).toHaveBeenCalledTimes(1);
+
+    moveKind = "batch";
+    decoration.sync(ctx);
+    expect(graphics.clear).toHaveBeenCalledTimes(1);
+
+    decoration.sync(ctx);
+    expect(graphics.clear).toHaveBeenCalledTimes(1);
+
+    moveKind = "ordinary";
+    decoration.sync(ctx);
+    expect(graphics.rect).toHaveBeenCalledTimes(2);
+  });
 });
 
 function createRange(x: number, y: number) {
@@ -108,6 +133,7 @@ function createRange(x: number, y: number) {
 function createContext(options: {
   itemDefinitions: readonly unknown[];
   getRanges: () => ReturnType<typeof createRange>[];
+  getMoveKind?: () => "ordinary" | "batch" | null;
 }): DecorationSyncContext {
   return {
     viewportState: {
@@ -127,6 +153,13 @@ function createContext(options: {
     },
     renderHost: {
       workspace: {
+        app: {
+          state: {
+            get moveKind() {
+              return options.getMoveKind?.() ?? null;
+            },
+          },
+        },
         registry: {
           itemDefinitions: options.itemDefinitions,
         },

@@ -165,6 +165,8 @@ class CloudflareV2SyncLocalState implements SyncLocalState {
 class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   private planCache: CfV2LoadPlanResult | null = null;
   private latestCommittedRevision: CfV2Revision | null;
+  /** 仅完整处理过的 collection 才能参与全局 applied revision 推进。 */
+  private readonly appliedCompleteCollectionIds = new Set<string>();
   // AI-REMOVED 2026-08-13:
   // Reason: 同步编排已改为“先下载、后上传、单次 commit”，不再有同会话多批次顺序上传。
   // Trigger: sync-model.md 要求上传基线固定为下载阶段开始前 plan 的最新 revision。
@@ -329,6 +331,11 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public async markApplied(result: RemoteApplyResult): Promise<void> {
+    if (!result.scopeComplete) {
+      return;
+    }
+
+    this.appliedCompleteCollectionIds.add(result.collection.adapterId);
     if (result.collectionRevision !== null) {
       await this.localState.setRemoteRevision(
         result.collection.stateKey,
@@ -350,8 +357,24 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public async complete(): Promise<void> {
-    const targetRevision = this.latestCommittedRevision
-      ?? (this.context.reason === "local-change" ? null : this.planCache?.revision ?? null);
+    const allCollectionsApplied = this.context.collections.every((collection) =>
+      this.appliedCompleteCollectionIds.has(collection.adapterId)
+    );
+    // AI-REMOVED 2026-08-22:
+    // Reason: 仅依据 run reason 或本轮 commit 推进全局 revision，会把未进入局部 scope 的
+    //   其他 collection/资产一并标记为已读取。
+    // Trigger: 非当前基地远端变化在另一个局部上传完成后被小检查永久跳过。
+    // Evidence: markApplied 已提供 scopeComplete，但旧 complete 未验证所有 collection 是否完整处理。
+    // Replacement: 下方仅在 allCollectionsApplied 时选择 targetRevision；上传日志确认继续独立执行。
+    // Risk: Medium；局部上传后会保守地保留旧 applied revision，下一轮小检查将再次拉取确认。
+    // Human Review: Required
+    //
+    // Original code:
+    // const targetRevision = this.latestCommittedRevision
+    //   ?? (this.context.reason === "local-change" ? null : this.planCache?.revision ?? null);
+    const targetRevision = allCollectionsApplied
+      ? this.latestCommittedRevision ?? this.planCache?.revision ?? null
+      : null;
     if (targetRevision !== null) {
       await this.request<void>({
         type: "state-write-applied-revision",

@@ -214,6 +214,11 @@ export const CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS = [
   "save-blueprint",
   "copy",
   "delete",
+  "pan-viewport",
+  "zoom-viewport",
+  "rotate-placement",
+  "confirm-placement",
+  "continuous-placement",
 ] as const;
 
 export type CanvasRightDockToolbarOperationId =
@@ -767,6 +772,14 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
 
   public get theme(): AppTheme {
     return resolveAppTheme(this.settings.themeId);
+  }
+
+  public get moveKind(): UiState["moveKind"] {
+    if (this.activeTool !== "move") {
+      return null;
+    }
+
+    return this.runtime.moveEnterFrom === "marquee" ? "batch" : "ordinary";
   }
 }
 

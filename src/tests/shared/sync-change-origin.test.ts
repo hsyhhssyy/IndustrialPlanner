@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { createWorldDocument } from "@/domain/document/world-document";
 import {
   savePlannerState,
   type PlannerPersistedState,
 } from "@/shared/storage/planner-storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
+import { recordWorldDocumentProjectionChange } from "@/sync/sync-host";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
 
 afterEach(() => {
@@ -66,5 +68,28 @@ describe("sync change origin", () => {
     }
 
     expect(origins).toEqual(["local", "remote-sync"]);
+  });
+
+  it("distinguishes base navigation from document content changes", () => {
+    const hashesByBaseId = new Map<string, string>();
+    const firstBase = createWorldDocument({ baseId: "base-a" });
+    const secondBase = createWorldDocument({ baseId: "base-b" });
+
+    expect(recordWorldDocumentProjectionChange(hashesByBaseId, firstBase)).toBe(true);
+    expect(recordWorldDocumentProjectionChange(hashesByBaseId, secondBase)).toBe(true);
+    expect(recordWorldDocumentProjectionChange(hashesByBaseId, firstBase)).toBe(false);
+    expect(recordWorldDocumentProjectionChange(hashesByBaseId, secondBase)).toBe(false);
+
+    const editedSecondBase = {
+      ...secondBase,
+      meta: {
+        ...secondBase.meta,
+        name: "Edited base",
+      },
+    };
+    expect(recordWorldDocumentProjectionChange(
+      hashesByBaseId,
+      editedSecondBase,
+    )).toBe(true);
   });
 });

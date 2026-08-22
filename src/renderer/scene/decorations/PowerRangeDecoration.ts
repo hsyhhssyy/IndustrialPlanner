@@ -2,6 +2,7 @@ import { Graphics } from "pixi.js";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { isBatchMove } from "@/renderer/move-visual-policy";
 import {
   areGridRectsIntersecting,
   resolvePowerRangeGridRect,
@@ -93,6 +94,10 @@ export function createPowerRangeDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       graphics.clear();
+
+      if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
+        return;
+      }
 
       const editor = ctx.renderHost.workspace.editor;
       if (!editor) {

@@ -110,11 +110,22 @@ async function seedRemoteWorldDocument(
   assetId: string,
   content: string,
 ): Promise<string> {
-  const createResponse = await request.post(
-    `${BACKEND_API_BASE_URL}/v1/sync/spaces`,
-    { data: { spaceId } },
+  // AI-CORRECTION 2026-08-22: 该辅助函数同时承担后续远端版本写入；空间已存在时必须
+  // 使用当前 revision 作为 baseRevision，不能再次创建空间或固定从 revision 0 提交。
+  const planResponse = await request.get(
+    `${BACKEND_API_BASE_URL}/v1/sync/spaces/${encodeURIComponent(spaceId)}/plan`,
   );
-  expect(createResponse.status(), await createResponse.text()).toBe(201);
+  let baseRevision = "0";
+  if (planResponse.status() === 404) {
+    const createResponse = await request.post(
+      `${BACKEND_API_BASE_URL}/v1/sync/spaces`,
+      { data: { spaceId } },
+    );
+    expect(createResponse.status(), await createResponse.text()).toBe(201);
+  } else {
+    expect(planResponse.ok(), await planResponse.text()).toBe(true);
+    baseRevision = (await planResponse.json() as CfV2PlanResponse).revision;
+  }
 
   const contentBytes = Buffer.from(content);
   const prepareResponse = await request.post(
@@ -123,7 +134,7 @@ async function seedRemoteWorldDocument(
       data: {
         protocol: CF_SYNC_V2_PROTOCOL,
         action: "prepare",
-        baseRevision: "0",
+        baseRevision,
         clientBatchId: randomUUID(),
         objects: [{
           clientMutationId: randomUUID(),
@@ -225,6 +236,242 @@ async function clearRemoteTestAssets(
   }
 }
 
+function createWorldDocumentVariant(
+  content: string,
+  name: string,
+): string {
+  const document = JSON.parse(content) as Record<string, unknown>;
+  const meta = document.meta;
+  if (typeof meta !== "object" || meta === null || Array.isArray(meta)) {
+    throw new Error("World document metadata is unavailable.");
+  }
+
+  return JSON.stringify({
+    ...document,
+    meta: {
+      ...meta,
+      name,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+}
+
+async function readCurrentWorldDocumentProjection(page: Page): Promise<{
+  readonly assetId: string;
+  readonly content: string;
+}> {
+  return await page.evaluate(async () => {
+    const host = (window as unknown as BrowserTestWindow).__industrialPlannerAppHost;
+    const documentSnapshot = host?.workspace?.editor?.document?.getSnapshot();
+    if (!documentSnapshot) {
+      throw new Error("Current world document is unavailable.");
+    }
+    const syncHostModuleUrl = "/src/sync/sync-host.ts";
+    const { createWorldDocumentRemoteValue } = await import(
+      /* @vite-ignore */ syncHostModuleUrl
+    );
+    return {
+      assetId: documentSnapshot.baseId as string,
+      content: JSON.stringify(createWorldDocumentRemoteValue(documentSnapshot)),
+    };
+  });
+}
+
+async function mutateStoredWorldDocument(
+  page: Page,
+  baseId: string,
+  name: string,
+): Promise<void> {
+  const mutationResult = await page.evaluate(async ({ targetBaseId, nextName }) => {
+    const storageModuleUrl = "/src/shared/storage/world-document-storage.ts";
+    const storage = await import(/* @vite-ignore */ storageModuleUrl);
+    const documents = await storage.listLatestWorldDocumentsByBase({});
+    const document = documents.get(targetBaseId);
+    if (document === undefined) {
+      throw new Error(`Stored world document is unavailable: ${targetBaseId}`);
+    }
+
+    const nextDocument = {
+      ...document,
+      meta: {
+        ...document.meta,
+        name: nextName,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    // 直接写入持久化层用于构造“非当前基地已在另一标签页发生本地改动”的真实同步输入；
+    // 不调用编辑器 action，避免测试过程切换到目标基地并提前触发同步。
+    await storage.writeWorldDocument(nextDocument);
+    return {
+      baseId: nextDocument.baseId as string,
+      name: nextDocument.meta.name as string,
+    };
+  }, {
+    targetBaseId: baseId,
+    nextName: name,
+  });
+
+  expect(mutationResult).toEqual({ baseId, name });
+}
+
+async function switchBase(
+  page: Page,
+  baseId: string,
+  expectedName: string,
+): Promise<void> {
+  const baseButton = page.locator('[data-ui-button-id="base-current-select"]');
+  if (!(await baseButton.isVisible().catch(() => false))) {
+    await page.getByTitle("基地").click();
+    await expect(baseButton).toBeVisible({ timeout: 10_000 });
+  }
+
+  await baseButton.click();
+  const target = page.locator(`[data-base-id="${baseId}"]`);
+  await expect(target).toBeVisible({ timeout: 10_000 });
+  await target.click();
+  await page.getByRole("button", { name: "确定" }).last().click();
+  await expect(baseButton).toContainText(expectedName);
+  await expect.poll(async () => await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
+  ), {
+    message: `应切换到基地 ${baseId}`,
+    timeout: 15_000,
+  }).toBe(baseId);
+}
+
+async function configureCloudflareTestSpace(
+  page: Page,
+  spaceId: string,
+): Promise<void> {
+  await page.addInitScript(() => {
+    // AI-CORRECTION 2026-08-22: init script 会在 page.reload() 时再次执行；只允许首次导航
+    // 清空 provider，否则 startup 回归阶段会被错误切回 none，根本不会启动同步。
+    const initializedKey = "e2e-cf-inactive-base-provider-initialized";
+    if (sessionStorage.getItem(initializedKey) !== "true") {
+      localStorage.setItem("v3-sync-provider", "none");
+      sessionStorage.setItem(initializedKey, "true");
+    }
+  });
+  await page.goto("/");
+  await page.waitForFunction(() =>
+    Boolean(
+      (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+        ?.workspace?.sync,
+    )
+  );
+
+  const configurationResult = await page.evaluate(async ({ apiBaseUrl, targetSpaceId }) => {
+    const backendAddressModuleUrl = "/src/shared/storage/backend-api-address.ts";
+    const cloudflareSettingsModuleUrl = "/src/shared/storage/cloudflare-sync-settings.ts";
+    const [backendAddress, cloudflareSettings] = await Promise.all([
+      import(/* @vite-ignore */ backendAddressModuleUrl),
+      import(/* @vite-ignore */ cloudflareSettingsModuleUrl),
+    ]);
+    backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
+    const settings = await cloudflareSettings.writeCloudflareSyncSettings({
+      spaceName: targetSpaceId,
+    });
+    return {
+      apiBaseUrl: backendAddress.resolveBackendApiBaseUrl(),
+      spaceId: cloudflareSettings.resolveCloudflareSpaceId(settings),
+    };
+  }, {
+    apiBaseUrl: BACKEND_API_BASE_URL,
+    targetSpaceId: spaceId,
+  });
+
+  expect(configurationResult).toEqual({
+    apiBaseUrl: BACKEND_API_BASE_URL,
+    spaceId,
+  });
+  await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+}
+
+async function waitForStableSync(page: Page): Promise<void> {
+  await expect.poll(async () => await page.evaluate(() => {
+    const sync = (window as unknown as BrowserTestWindow)
+      .__industrialPlannerAppHost?.workspace?.sync;
+    return sync === null || sync === undefined
+      ? null
+      : {
+          phase: sync.state.status.phase,
+          saveState: sync.state.status.saveState,
+          currentRunReason: sync.state.status.currentRunReason,
+          initialSyncStage: sync.state.status.initialSyncStage,
+          pendingConflict: sync.state.pendingConflict,
+          pendingLocalChangeCount: sync.state.status.pendingLocalChangeCount,
+          lastError: sync.state.status.lastError,
+        };
+  }), {
+    message: "同步应完成并回到无冲突、无待上传内容的 idle 状态",
+    timeout: 90_000,
+    intervals: [500],
+  }).toEqual({
+    phase: "idle",
+    saveState: "idle",
+    currentRunReason: null,
+    initialSyncStage: "ready",
+    pendingConflict: null,
+    pendingLocalChangeCount: 0,
+    lastError: null,
+  });
+}
+
+async function enableCloudflareSync(page: Page): Promise<void> {
+  await page.getByTitle("设置").click();
+  await expect(page.getByRole("heading", { name: "设置" }).first())
+    .toBeVisible({ timeout: 10_000 });
+
+  const hasSidebar = await page.getByRole("tree").isVisible().catch(() => false);
+  if (hasSidebar) {
+    await page.getByRole("treeitem", { name: "其他" }).click();
+  }
+
+  const experimentalToggle = page.locator(
+    'input[name="other-experimental-features"]',
+  );
+  await expect(experimentalToggle).toBeVisible({ timeout: 5_000 });
+  if (!(await experimentalToggle.isChecked())) {
+    await page.locator('label[for="setting-other-experimental-features"]').click();
+    await page.getByRole("button", { name: "开启实验性功能" }).click();
+  }
+
+  if (hasSidebar) {
+    await page.getByRole("treeitem", { name: "实验性" }).click();
+  }
+  await page.locator('select[name="sync-provider"]').selectOption("cloudflare");
+  await waitForStableSync(page);
+
+  const settingsCloseButton = page.getByRole("button", {
+    name: "关闭",
+    exact: true,
+  });
+  await expect(settingsCloseButton).toBeVisible();
+  await settingsCloseButton.click();
+}
+
+async function resolveVisibleConflictUsingRemote(page: Page): Promise<void> {
+  const conflictTitle = page.getByRole("heading", { name: "同步冲突" });
+  await expect(conflictTitle).toBeVisible({ timeout: 90_000 });
+
+  const useRemoteButton = page.getByRole("button", { name: "全部使用远端" });
+  if (await useRemoteButton.isVisible().catch(() => false)) {
+    await useRemoteButton.click();
+  } else {
+    const radios = page.locator('input[value="use-remote"]');
+    await Promise.all(
+      Array.from({ length: await radios.count() }, (_, index) =>
+        radios.nth(index).check({ force: true })
+      ),
+    );
+  }
+
+  await page.getByRole("button", { name: "应用" }).click();
+  await expect(conflictTitle).not.toBeVisible({ timeout: 30_000 });
+  await waitForStableSync(page);
+}
+
 test.setTimeout(240_000);
 
 // AI-REMOVED 2026-08-12:
@@ -266,6 +513,178 @@ test("Cloudflare conflict: use local", async ({ page, request }) => {
     await clearRemoteTestAssets(request, spaceId);
   }
 });
+
+test("Cloudflare inactive base conflict: interval and startup", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(360_000);
+  // AI-REMOVED 2026-08-22:
+  // Reason: 前缀与 UUID 拼接后超过 Cloudflare 空间名 64 字符上限，写入时会被合法截断。
+  // Trigger: 新增 E2E 的空间 ID 前置断言首次运行失败。
+  // Evidence: resolveCloudflareSpaceId 返回值缺少 UUID 末尾两字符；设置规范明确限制为 64 字符。
+  // Replacement: 下方更短且仍可识别场景的 e2e-cf-inactive- 前缀。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const spaceId = `e2e-cf-inactive-base-conflict-${randomUUID()}`;
+  const spaceId = `e2e-cf-inactive-${randomUUID()}`;
+  try {
+    await runInactiveBaseConflictScenario({ page, request, spaceId });
+  } finally {
+    await clearRemoteTestAssets(request, spaceId);
+  }
+});
+
+async function runInactiveBaseConflictScenario(options: {
+  readonly page: Page;
+  readonly request: APIRequestContext;
+  readonly spaceId: string;
+}): Promise<void> {
+  const { page, request, spaceId } = options;
+  const currentBaseId = "wuling_protocol_core";
+  const currentBaseName = "协议核心区";
+  const inactiveBaseId = "stm_hongs_3";
+  const inactiveBaseName = "盈天台建设站";
+
+  // ─── Phase 1: 建立两个基地的共同同步基线，并停留在协议核心区 ───
+  await configureCloudflareTestSpace(page, spaceId);
+  await switchBase(page, inactiveBaseId, inactiveBaseName);
+  const inactiveBaseBaseline = await readCurrentWorldDocumentProjection(page);
+  expect(inactiveBaseBaseline.assetId).toBe(inactiveBaseId);
+  await switchBase(page, currentBaseId, currentBaseName);
+  await seedRemoteWorldDocument(
+    request,
+    spaceId,
+    inactiveBaseId,
+    inactiveBaseBaseline.content,
+  );
+  await enableCloudflareSync(page);
+
+  const revisionAfterInitialSync = (await readRemotePlan(request, spaceId)).revision;
+  await expect.poll(async () => await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
+  )).toBe(currentBaseId);
+
+  // ─── Phase 2: 默认小检查必须在未切换基地时发现非当前基地冲突 ───
+  const previousSmallCheckAt = await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+  );
+  await mutateStoredWorldDocument(
+    page,
+    inactiveBaseId,
+    "inactive-local-interval",
+  );
+  const intervalRemoteContent = createWorldDocumentVariant(
+    inactiveBaseBaseline.content,
+    "inactive-remote-interval",
+  );
+  const intervalRemoteRevision = await seedRemoteWorldDocument(
+    request,
+    spaceId,
+    inactiveBaseId,
+    intervalRemoteContent,
+  );
+  expect(intervalRemoteRevision).not.toBe(revisionAfterInitialSync);
+
+  await expect.poll(async () => await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+  ), {
+    message: "默认小检查应发现非当前基地的远端 revision 变化",
+    timeout: 75_000,
+    intervals: [1000],
+  }).not.toBe(previousSmallCheckAt);
+
+  const conflictTitle = page.getByRole("heading", { name: "同步冲突" });
+  await expect(conflictTitle).toBeVisible({ timeout: 60_000 });
+  expect(await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.pendingConflict ?? null
+  )).toMatchObject({
+    phase: "awaiting-resolution",
+    items: [{
+      adapterId: "world-documents",
+      assetId: inactiveBaseId,
+      kind: "conflict",
+    }],
+  });
+  expect(await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
+  )).toBe(currentBaseId);
+  await expect(page.locator('[data-ui-button-id="base-current-select"]'))
+    .toContainText(currentBaseName);
+  await resolveVisibleConflictUsingRemote(page);
+  expect((await readRemotePlan(request, spaceId)).revision)
+    .toBe(intervalRemoteRevision);
+
+  // ─── Phase 3: 刷新后的 startup/background 同步也必须发现同一类冲突 ───
+  await mutateStoredWorldDocument(
+    page,
+    inactiveBaseId,
+    "inactive-local-startup",
+  );
+  const startupRemoteContent = createWorldDocumentVariant(
+    intervalRemoteContent,
+    "inactive-remote-startup",
+  );
+  const startupRemoteRevision = await seedRemoteWorldDocument(
+    request,
+    spaceId,
+    inactiveBaseId,
+    startupRemoteContent,
+  );
+  expect(startupRemoteRevision).not.toBe(intervalRemoteRevision);
+
+  await page.reload();
+  await page.waitForFunction(() =>
+    Boolean(
+      (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+        ?.workspace?.sync,
+    )
+  );
+  await expect.poll(async () => await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
+  ), {
+    message: "刷新后仍应停留在原当前基地",
+    timeout: 30_000,
+  }).toBe(currentBaseId);
+  await expect(conflictTitle).toBeVisible({ timeout: 90_000 });
+  expect(await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.pendingConflict ?? null
+  )).toMatchObject({
+    phase: "awaiting-resolution",
+    items: [{
+      adapterId: "world-documents",
+      assetId: inactiveBaseId,
+      kind: "conflict",
+    }],
+  });
+  expect(await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
+  )).toBe(currentBaseId);
+  await resolveVisibleConflictUsingRemote(page);
+  expect((await readRemotePlan(request, spaceId)).revision)
+    .toBe(startupRemoteRevision);
+
+  // ─── Phase 4: 纯导航到已存在、已同步的基地不得制造上传 ───
+  const revisionBeforeNavigation = (
+    await readRemotePlan(request, spaceId)
+  ).revision;
+  await switchBase(page, inactiveBaseId, inactiveBaseName);
+  // 本地变化的空闲上传去抖为 5 秒；跨过该窗口后 revision 仍不变，才可证明纯导航未入队。
+  await page.waitForTimeout(12_000);
+  await waitForStableSync(page);
+  expect((await readRemotePlan(request, spaceId)).revision)
+    .toBe(revisionBeforeNavigation);
+}
 
 // AI-REMOVED 2026-08-12:
 // Reason: 单一测试只固定选择 use-remote，无法独立验证 use-local。

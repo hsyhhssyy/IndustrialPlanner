@@ -16,6 +16,7 @@ import {
   type LogisticsKind,
 } from "@/domain/shared/logistics"
 import type { RenderHost } from "@/renderer/renderer-host"
+import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
@@ -624,7 +625,11 @@ export function resolveDedicatedLogisticTintColor(options: {
   const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
   const selectionCollection = collections[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entityId) ?? false
-  const isPreviewGroup = isPreview && (previewCollection?.length ?? 0) > 1
+  const moveKind = workspace.app?.state.moveKind ?? null
+  const isPreviewGroup = isPreview && shouldUseGroupedPreviewVisuals(
+    moveKind,
+    previewCollection?.length ?? 0,
+  )
   const isMarquee = marqueeCollection?.contains(entityId) ?? false
   const isReverseMarquee = reverseMarqueeCollection?.contains(entityId) ?? false
   const isPlacementHead = logisticsHeadCollection?.contains(entityId) ?? false

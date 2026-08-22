@@ -408,9 +408,62 @@ describe("cloudflare-sync-remote-v2", () => {
     await session.checkCollections([collection]);
     expect(checkUrl).toContain("knownRevision=0");
 
+    await session.markApplied({
+      collection,
+      assetIds: ["default"],
+      scopeComplete: true,
+      collectionRevision: 1,
+      collectionEtag: "1",
+    });
     await session.complete?.();
     await session.checkCollections([collection]);
     expect(checkUrl).toContain("knownRevision=1");
+
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  it("does not advance the applied revision for an incomplete collection scope", async () => {
+    let checkUrl = "";
+    fetchMock
+      .add("GET:/plan", () => ({
+        json: v2Plan([{
+          assetType: "planner-state",
+          assetId: "default",
+          contentHash: BLOB_HASH,
+        }]),
+      }))
+      .add("GET:/check", (request) => {
+        checkUrl = request.url;
+        return {
+          json: {
+            revision: 1,
+            epoch: 1,
+            changed: true,
+            planRequired: true,
+            serverTime: "",
+          },
+        };
+      });
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "local-change",
+      collections: [collection],
+    });
+    await session.prefetchIndexes([collection]);
+    await session.markApplied({
+      collection,
+      assetIds: ["default"],
+      scopeComplete: false,
+      collectionRevision: 1,
+      collectionEtag: "1",
+    });
+
+    await session.complete?.();
+    await session.checkCollections([collection]);
+    expect(checkUrl).toContain("knownRevision=0");
 
     await session.dispose?.();
     remote.dispose?.();
@@ -446,6 +499,13 @@ describe("cloudflare-sync-remote-v2", () => {
     const index = await session.readIndex(collection);
     expect(index.revision).toBe(1786492800123);
 
+    await session.markApplied({
+      collection,
+      assetIds: ["default"],
+      scopeComplete: true,
+      collectionRevision: index.revision,
+      collectionEtag: String(index.revision),
+    });
     await session.complete?.();
     await session.checkCollections([collection]);
     expect(checkUrl).toContain(`knownRevision=${encodeURIComponent(opaqueRevision)}`);
@@ -577,6 +637,13 @@ describe("cloudflare-sync-remote-v2", () => {
     fetchMock.add("GET:/check", (req) => {
       checkUrl = req.url;
       return { json: {}, status: 204 };
+    });
+    await session.markApplied({
+      collection,
+      assetIds: ["default"],
+      scopeComplete: true,
+      collectionRevision: result.writes[0]?.revision ?? null,
+      collectionEtag: null,
     });
     await session.complete?.();
     await session.checkCollections([collection]);

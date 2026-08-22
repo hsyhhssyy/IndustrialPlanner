@@ -22,6 +22,7 @@ function createTestRemote(options: {
   readonly dispose?: () => void;
   readonly refreshIndexes?: SyncRemoteSession["refreshIndexes"];
   readonly complete?: SyncRemoteSession["complete"];
+  readonly markApplied?: SyncRemoteSession["markApplied"];
 } = {}): SyncRemote {
   const session: SyncRemoteSession = {
     localState: {
@@ -45,7 +46,7 @@ function createTestRemote(options: {
       commit: async () => ({ writes: [] }),
       discard: async () => undefined,
     }),
-    markApplied: async () => undefined,
+    markApplied: options.markApplied ?? (async () => undefined),
     ...(options.refreshIndexes === undefined
       ? {}
       : { refreshIndexes: options.refreshIndexes }),
@@ -202,6 +203,70 @@ describe("sync-service", () => {
       toolbox: "success",
       "background-documents": "success",
     });
+  });
+
+  it("marks complementary current and background scopes as complete collection coverage", async () => {
+    const markApplied = vi.fn<SyncRemoteSession["markApplied"]>(async () => undefined);
+    const adapter = createNamedAdapter("world-documents", []);
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote: () => createTestRemote({ markApplied }),
+      adapters: [adapter],
+      createInitialSyncPlan: () => ({
+        batches: [{
+          stage: "canvas",
+          requests: [{
+            adapterId: "world-documents",
+            scope: { includeAssetIds: ["current"] },
+          }],
+        }],
+        backgroundRequests: [{
+          adapterId: "world-documents",
+          scope: { excludeAssetIds: ["current"] },
+        }],
+      }),
+    });
+
+    await service.syncNow("startup");
+
+    expect(markApplied).toHaveBeenCalledTimes(2);
+    expect(markApplied.mock.calls.map(([result]) => result.scopeComplete)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it("keeps a single-asset local-change scope incomplete", async () => {
+    vi.useFakeTimers();
+    const markApplied = vi.fn<SyncRemoteSession["markApplied"]>(async () => undefined);
+    const adapter = createNamedAdapter("world-documents", []);
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote: () => createTestRemote({ markApplied }),
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    markApplied.mockClear();
+    adapter.sync.mockClear();
+
+    service.notifyLocalChange({
+      adapterId: "world-documents",
+      assetId: "current",
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+
+    expect(markApplied).toHaveBeenCalledWith(expect.objectContaining({
+      scopeComplete: false,
+    }));
+    service.stop();
   });
 
   it("reports maintenance task progress separately from adapter tasks", async () => {

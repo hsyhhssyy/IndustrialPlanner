@@ -1,10 +1,10 @@
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
-import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import { KeyboardShortcutPrompt } from "@/app/shell/shared";
+import { KeyboardShortcutPrompt, MouseShortcutPrompt } from "@/app/shell/shared";
 import type {
   CanvasRightDockToolbarButtonId,
   CanvasRightDockToolbarItemRequest,
@@ -29,6 +29,10 @@ import {
 } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  resolveCanvasRightDockToolbarShortcut,
+  type CanvasRightDockToolbarShortcutDefinition,
+} from "./canvas-right-dock-toolbar-shortcut";
 
 type CanvasRightDockToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasRightDockToolbarTone = "exit";
@@ -50,9 +54,18 @@ interface CanvasRightDockToolbarButtonDefinition {
   readonly tone?: CanvasRightDockToolbarTone;
 }
 
-type CanvasRightDockToolbarShortcutDefinition =
-  | { readonly value: string }
-  | { readonly shortcutKeyId: ShortcutKeyId };
+// AI-REMOVED 2026-08-22:
+// Reason: 单一字符串或 ShortcutKeyId 无法表达“快捷键 + 固定鼠标输入”和方向键组。
+// Trigger: 用户要求连续放置显示为“连续放置快捷键 + 鼠标左键”，且仍由操作定义拥有完整快捷键内容。
+// Evidence: canvas-right-dock-toolbar-shortcut.ts 使用有序 parts 统一表达固定键、可配置键与鼠标输入。
+// Replacement: CanvasRightDockToolbarShortcutDefinition from ./canvas-right-dock-toolbar-shortcut。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// type CanvasRightDockToolbarShortcutDefinition =
+//   | { readonly value: string }
+//   | { readonly shortcutKeyId: ShortcutKeyId };
 
 interface CanvasRightDockToolbarDefinition {
   readonly labelKey: UiKey;
@@ -97,7 +110,9 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
     //
     // Original code:
     // shortcutKeyId: SHORTCUT_KEY.RETURN_SELECT,
-    shortcut: { value: "Esc" },
+    shortcut: {
+      parts: [{ kind: "fixed-key", value: "Esc" }],
+    },
   },
   move: {
     labelKey: "tool.move",
@@ -105,7 +120,9 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
       buttonId: "canvas-right-dock-toolbar-button-move",
       icon: "move",
     },
-    shortcut: { shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION },
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION }],
+    },
   },
   "save-blueprint": {
     labelKey: "action.saveBlueprint",
@@ -113,7 +130,9 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
       buttonId: "canvas-right-dock-toolbar-button-save-blueprint",
       icon: "save-blueprint",
     },
-    shortcut: { shortcutKeyId: SHORTCUT_KEY.SAVE_BLUEPRINT },
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.SAVE_BLUEPRINT }],
+    },
   },
   copy: {
     labelKey: "action.copySelection",
@@ -121,7 +140,9 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
       buttonId: "canvas-right-dock-toolbar-button-copy",
       icon: "copy",
     },
-    shortcut: { shortcutKeyId: SHORTCUT_KEY.COPY_SELECTION },
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.COPY_SELECTION }],
+    },
   },
   delete: {
     labelKey: "action.deleteSelection",
@@ -129,7 +150,65 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
       buttonId: "canvas-right-dock-toolbar-button-delete",
       icon: "delete",
     },
-    shortcut: { shortcutKeyId: SHORTCUT_KEY.DELETE_DEVICE },
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.DELETE_DEVICE }],
+    },
+  },
+  "pan-viewport": {
+    labelKey: "action.panViewport",
+    shortcut: {
+      parts: [
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP,
+          bindingDisplay: "primary",
+        },
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT,
+          bindingDisplay: "primary",
+        },
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN,
+          bindingDisplay: "primary",
+        },
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT,
+          bindingDisplay: "primary",
+        },
+      ],
+      separator: "gap",
+    },
+  },
+  "zoom-viewport": {
+    labelKey: "action.zoomViewport",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "wheel" }],
+    },
+  },
+  "rotate-placement": {
+    labelKey: "action.rotateDevice",
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.ROTATE }],
+    },
+  },
+  "confirm-placement": {
+    labelKey: "action.confirmPlacement",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "left-button" }],
+    },
+  },
+  "continuous-placement": {
+    labelKey: "action.continuousPlacement",
+    shortcut: {
+      parts: [
+        { kind: "fixed-key", value: "Ctrl" },
+        { kind: "mouse", input: "left-button" },
+      ],
+      separator: "plus",
+    },
   },
 };
 
@@ -162,12 +241,28 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     const wantsButton = item.presentation === "button" || item.presentation === "both";
     const wantsShortcut = item.presentation === "shortcut" || item.presentation === "both";
     const button = wantsButton ? definition.button ?? null : null;
-    const shortcutString = wantsShortcut && definition.shortcut
-      ? "value" in definition.shortcut
-        ? definition.shortcut.value
-        : appHost.internalActions.getKeyboardShortcutFor(definition.shortcut.shortcutKeyId)
+    const shortcut = wantsShortcut && definition.shortcut
+      ? resolveCanvasRightDockToolbarShortcut(
+        definition.shortcut,
+        appHost.internalActions.getKeyboardShortcutFor,
+      )
       : null;
-    const shortcut = shortcutString === null || shortcutString === "" ? null : shortcutString;
+
+    // AI-REMOVED 2026-08-22:
+    // Reason: 单字符串解析无法保留键盘部分与固定鼠标部分的有序组合。
+    // Trigger: 右侧工具栏快捷键扩展为结构化 parts。
+    // Evidence: resolveCanvasRightDockToolbarShortcut 解析完整定义，并在任一动态键位为空时整体降级。
+    // Replacement: 上方 resolveCanvasRightDockToolbarShortcut 调用。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const shortcutString = wantsShortcut && definition.shortcut
+    //   ? "value" in definition.shortcut
+    //     ? definition.shortcut.value
+    //     : appHost.internalActions.getKeyboardShortcutFor(definition.shortcut.shortcutKeyId)
+    //   : null;
+    // const shortcut = shortcutString === null || shortcutString === "" ? null : shortcutString;
 
     if (button === null && shortcut === null) {
       return [];
@@ -330,7 +425,39 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
                       <Fragment key={i}>...</Fragment>
                     ))
                 */}
-                <KeyboardShortcutPrompt shortcut={shortcut} size="small" />
+                <span className={cm(styles, "canvas-right-dock-toolbar-shortcut-prompt")}>
+                  {shortcut.parts.map((part, partIndex) => (
+                    <span
+                      className={cm(styles, "canvas-right-dock-toolbar-shortcut-part")}
+                      key={`${operationId}-${part.kind}-${partIndex}`}
+                    >
+                      {partIndex > 0 && shortcut.separator === "plus" ? (
+                        <span
+                          aria-hidden="true"
+                          className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
+                        >
+                          +
+                        </span>
+                      ) : null}
+                      {part.kind === "keyboard" ? (
+                        <KeyboardShortcutPrompt shortcut={part.value} size="small" />
+                      ) : (
+                        <MouseShortcutPrompt input={part.input} size="small" />
+                      )}
+                    </span>
+                  ))}
+                </span>
+                {/* AI-REMOVED 2026-08-22:
+                    Reason: 单个 KeyboardShortcutPrompt 无法渲染固定鼠标输入。
+                    Trigger: 右侧工具栏快捷键改为有序 parts 组合。
+                    Evidence: 上方按 part.kind 组合 KeyboardShortcutPrompt 与 MouseShortcutPrompt。
+                    Replacement: canvas-right-dock-toolbar-shortcut-prompt。
+                    Risk: Low
+                    Human Review: Required
+
+                    Original code:
+                    <KeyboardShortcutPrompt shortcut={shortcut} size="small" />
+                */}
               </>
             )}
             <span

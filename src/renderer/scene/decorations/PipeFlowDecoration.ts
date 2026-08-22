@@ -4,6 +4,7 @@ import type { WorldEntity } from "@/domain/document/world-document"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RegistryQuery } from "@/domain/registry/registry-query"
+import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import type {
   GridEdge,
   GridFloatPoint,
@@ -1068,7 +1069,11 @@ function resolvePipeFlowTintColor(
   const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
   const selectionCollection = collections[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entry.entity.id) ?? false
-  const isPreviewGroup = isPreview && (previewCollection?.length ?? 0) > 1
+  const moveKind = ctx.renderHost.workspace.app?.state.moveKind ?? null
+  const isPreviewGroup = isPreview && shouldUseGroupedPreviewVisuals(
+    moveKind,
+    previewCollection?.length ?? 0,
+  )
   const isMarquee = marqueeCollection?.contains(entry.entity.id) ?? false
   const isReverseMarquee = reverseMarqueeCollection?.contains(entry.entity.id) ?? false
   const isPlacementHead = logisticsHeadCollection?.contains(entry.entity.id) ?? false

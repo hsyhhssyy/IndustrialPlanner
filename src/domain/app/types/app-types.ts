@@ -71,5 +71,6 @@ export interface UiState {
   readonly screenProfile: ScreenProfile;
   readonly theme: AppTheme;
   readonly activeTool: ActiveTool;
+  readonly moveKind: "ordinary" | "batch" | null;
   readonly toolInfo: ToolInfo;
 }

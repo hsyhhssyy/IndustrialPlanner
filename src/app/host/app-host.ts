@@ -88,6 +88,9 @@ export function createAppHost(
     get activeTool() {
       return internalState.activeTool;
     },
+    get moveKind() {
+      return internalState.moveKind;
+    },
     get toolInfo() {
       return internalState.toolInfo;
     },

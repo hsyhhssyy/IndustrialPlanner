@@ -209,7 +209,26 @@ export async function createSyncHost(
   let localNotificationScheduled = false;
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
-  let lastEditorDocumentHash: string | null = null;
+  // AI-REMOVED 2026-08-22:
+  // Reason: 单一 hash 把不同基地之间的正常导航当成同一文档的内容变化。
+  // Trigger: 切换到非当前基地才产生上传意图并暴露此前被漏检的冲突。
+  // Evidence: A/B 的同步投影天然不同，lastEditorDocumentHash 无法表达 hash 所属 baseId。
+  // Replacement: 下方 lastEditorDocumentHashByBaseId 与 recordWorldDocumentProjectionChange。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // let lastEditorDocumentHash: string | null = null;
+  // 按基地记录已观察到的同步投影，避免 A→B 导航的天然 hash 变化被误判为编辑。
+  const lastEditorDocumentHashByBaseId = new Map(
+    Array.from(
+      (await listLatestWorldDocumentsByBase({})).values(),
+      (document) => [
+        document.baseId,
+        createStableJsonHash(createWorldDocumentRemoteValue(document)),
+      ] as const,
+    ),
+  );
   // AI-REMOVED 2026-08-08:
   // Reason: 本地 owner 不能参与共享 Cloudflare spaceId。
   // Trigger: 相同空间名称必须在不同浏览器中解析为同一个远端空间。
@@ -414,6 +433,16 @@ export async function createSyncHost(
     createWorldDocumentAdapter(
       workspace,
       resolveInteractiveConflict,
+      (baseId, document) => {
+        if (document === null) {
+          lastEditorDocumentHashByBaseId.delete(baseId);
+          return;
+        }
+        recordWorldDocumentProjectionChange(
+          lastEditorDocumentHashByBaseId,
+          document,
+        );
+      },
     ),
   ];
 
@@ -743,10 +772,14 @@ export async function createSyncHost(
         const nextEditorDocumentHash = createStableJsonHash(
           createWorldDocumentRemoteValue(currentDocument),
         );
-        if (lastEditorDocumentHash === nextEditorDocumentHash) {
+        // AI-CORRECTION 2026-08-22: 同步投影按 baseId 去重；纯基地导航不产生上传意图。
+        if (!recordWorldDocumentProjectionHashChange(
+          lastEditorDocumentHashByBaseId,
+          currentDocument.baseId,
+          nextEditorDocumentHash,
+        )) {
           return;
         }
-        lastEditorDocumentHash = nextEditorDocumentHash;
         notifyLocalChange({
           adapterId: "world-documents",
           assetId: currentDocument.baseId,
@@ -800,16 +833,25 @@ export async function createSyncHost(
       );
       if (!editorDocumentHydrated) {
         editorDocumentHydrated = true;
-        lastEditorDocumentHash = nextEditorDocumentHash;
+        recordWorldDocumentProjectionHashChange(
+          lastEditorDocumentHashByBaseId,
+          documentSnapshot.baseId,
+          nextEditorDocumentHash,
+        );
         syncStarted = true;
         service.start();
         return;
       }
 
-      if (lastEditorDocumentHash === nextEditorDocumentHash) {
+      // AI-CORRECTION 2026-08-22: 比较目标基地自身的上次投影，而不是与前一个基地比较。
+      // 已存在且内容未变的基地切换只更新当前指针；新基地与真实内容变化仍会入队。
+      if (!recordWorldDocumentProjectionHashChange(
+        lastEditorDocumentHashByBaseId,
+        documentSnapshot.baseId,
+        nextEditorDocumentHash,
+      )) {
         return;
       }
-      lastEditorDocumentHash = nextEditorDocumentHash;
       if (changeContext?.origin === "remote-sync") {
         return;
       }
@@ -1103,6 +1145,10 @@ function createAdapterFromSource(
 function createWorldDocumentAdapter(
   workspace: WorkspaceContract,
   resolveConflict: ResolveInteractiveConflict,
+  onSynchronizedDocumentChange: (
+    baseId: string,
+    document: WorldDocument | null,
+  ) => void,
   // AI-REMOVED 2026-08-12:
   // Reason: editor snapshot 现在直接携带 remote-sync origin。
   // Trigger: 当前画布远端覆盖不应依赖 withRemoteApply 释放时机。
@@ -1205,6 +1251,7 @@ function createWorldDocumentAdapter(
             await deleteWorldDocument(document.documentKey);
           }
         }
+        onSynchronizedDocumentChange(entry.id, null);
         return;
       }
 
@@ -1244,6 +1291,7 @@ function createWorldDocumentAdapter(
         existingDocument,
       );
       await writeWorldDocument(localValue);
+      onSynchronizedDocumentChange(entry.id, localValue);
       if (
         editor !== null
         && currentDocument?.baseId === entry.id
@@ -1290,6 +1338,31 @@ export function createWorldDocumentRemoteValue(
       },
     },
   };
+}
+
+/**
+ * 记录基地文档的同步投影并返回内容是否相对该基地上次记录发生变化。
+ * 不同基地互不比较，因此纯导航不会制造本地上传意图。
+ */
+export function recordWorldDocumentProjectionChange(
+  hashesByBaseId: Map<string, string>,
+  document: WorldDocument,
+): boolean {
+  return recordWorldDocumentProjectionHashChange(
+    hashesByBaseId,
+    document.baseId,
+    createStableJsonHash(createWorldDocumentRemoteValue(document)),
+  );
+}
+
+function recordWorldDocumentProjectionHashChange(
+  hashesByBaseId: Map<string, string>,
+  baseId: string,
+  nextHash: string,
+): boolean {
+  const changed = hashesByBaseId.get(baseId) !== nextHash;
+  hashesByBaseId.set(baseId, nextHash);
+  return changed;
 }
 
 // AI-REMOVED 2026-07-29:

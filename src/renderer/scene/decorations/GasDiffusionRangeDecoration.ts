@@ -5,6 +5,7 @@ import type { GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
+import { isBatchMove } from "@/renderer/move-visual-policy";
 import {
   areGridRectsIntersecting,
   resolveGasDiffusionRangeGridRect,
@@ -221,6 +222,17 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
+        if (graphicsHasContent) {
+          graphics.clear();
+          graphicsHasContent = false;
+        }
+        cachedGasDiffusions = null;
+        cachedViewportLayoutState = null;
+        cachedPreviewStamp = null;
+        return;
+      }
+
       const simulation = ctx.renderHost.workspace.simulation;
       const activeGasDiffusions = simulation?.queries.getActiveGasDiffusionRanges() ?? [];
 

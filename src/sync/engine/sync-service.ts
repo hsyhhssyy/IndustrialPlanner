@@ -276,7 +276,23 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   // 清理时集合相同但版本已推进的 adapter 保留脏标。
   const dirtyVersionsByAdapter = new Map<string, number>();
   let activeFrozenDirty = new Map<string, FrozenDirtyEntry>();
-  let passRequestScopes = new Map<string, SyncAdapterScope | undefined>();
+  // AI-REMOVED 2026-08-22:
+  // Reason: 单值 Map 会被同一 adapter 的后续 scope 覆盖，无法识别 include[current] 与
+  //   exclude[current] 在同一轮初始同步中共同覆盖完整 collection。
+  // Trigger: 非当前基地的远端变化被局部同步错误推进的 collection cursor 吞掉，
+  //   小检查和刷新均误判为远端未变化。
+  // Evidence: runAdapterRequests 原实现每次 passRequestScopes.set(adapter.id, requestScope)，
+  //   resolveRequestScopeComplete 只读取最后一个 scope。
+  // Replacement: 下方按 adapter 累积全部 request scope，并在终局计算联合覆盖。
+  // Risk: Low；仅改变 collection cursor 是否允许推进，不改变资产分类与决议。
+  // Human Review: Required
+  //
+  // Original code:
+  // let passRequestScopes = new Map<string, SyncAdapterScope | undefined>();
+  let passRequestScopes = new Map<
+    string,
+    Array<SyncAdapterScope | undefined>
+  >();
 
   const setStatus = (nextStatus: SyncServiceStatus): SyncServiceStatus => {
     status = nextStatus;
@@ -757,7 +773,19 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
             },
           }
           : request.scope;
-        passRequestScopes.set(adapter.id, requestScope);
+        // AI-REMOVED 2026-08-22:
+        // Reason: 覆盖写入会丢失同一 adapter 在本轮已经完成的其他 scope。
+        // Trigger: 当前基地 include scope 与后台基地 exclude scope 无法合并为完整覆盖。
+        // Evidence: createInitialSyncPlan 对 world-documents 连续提交两个互补 scope。
+        // Replacement: 下方追加到 adapterScopes。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // passRequestScopes.set(adapter.id, requestScope);
+        const adapterScopes = passRequestScopes.get(adapter.id) ?? [];
+        adapterScopes.push(requestScope);
+        passRequestScopes.set(adapter.id, adapterScopes);
         const syncOptions: SyncAdapterSyncOptions = {
           scope: requestScope,
           transaction,
@@ -1212,11 +1240,23 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     }
   };
 
-  const resolveRequestScopeComplete = (adapterId: string): boolean => {
-    const scope = passRequestScopes.get(adapterId);
-    return scope?.includeAssetIds === undefined
-      && scope?.excludeAssetIds === undefined;
-  };
+  // AI-REMOVED 2026-08-22:
+  // Reason: 只检查最后一个 scope，既会漏掉互补 scope，也会把 collection 完整性绑定到执行顺序。
+  // Trigger: 初始同步先 include 当前基地、再 exclude 当前基地，实际完整覆盖却被判定为不完整；
+  //   局部请求的 provider 推进语义因此无法建立可靠依据。
+  // Evidence: passRequestScopes 现已保留本轮同一 adapter 的全部 scope。
+  // Replacement: 下方 resolveRequestScopesComplete 联合覆盖判断。
+  // Risk: Medium；错误返回 true 会重新引入远端变化漏检，因此由回归测试锁定 include/exclude 边界。
+  // Human Review: Required
+  //
+  // Original code:
+  // const resolveRequestScopeComplete = (adapterId: string): boolean => {
+  //   const scope = passRequestScopes.get(adapterId);
+  //   return scope?.includeAssetIds === undefined
+  //     && scope?.excludeAssetIds === undefined;
+  // };
+  const resolveRequestScopeComplete = (adapterId: string): boolean =>
+    resolveRequestScopesComplete(passRequestScopes.get(adapterId) ?? []);
 
   const computeResolvedResults = (
     transaction: EngineTransaction,
@@ -1988,6 +2028,45 @@ function defaultItemChoices(
 
 function createSyncItemKey(adapterId: string, assetId: string): string {
   return `${adapterId}\u0000${assetId}`;
+}
+
+/**
+ * 判断同一 adapter 在单轮 pass 中的请求 scope 是否共同覆盖完整 collection。
+ * 无 scope 直接完整；否则只有存在不带 include 的 exclude scope，且它排除的每个资产
+ * 都被另一 scope 覆盖时才完整。纯 include 永远不能证明覆盖未知的其他资产。
+ */
+function resolveRequestScopesComplete(
+  scopes: readonly (SyncAdapterScope | undefined)[],
+): boolean {
+  if (scopes.some((scope) =>
+    scope?.includeAssetIds === undefined
+    && scope?.excludeAssetIds === undefined
+  )) {
+    return true;
+  }
+
+  return scopes.some((scope) =>
+    scope !== undefined
+    && scope.includeAssetIds === undefined
+    && scope.excludeAssetIds !== undefined
+    && scope.excludeAssetIds.every((assetId) =>
+      scopes.some((candidate) => isAssetIncludedByScope(assetId, candidate))
+    )
+  );
+}
+
+function isAssetIncludedByScope(
+  assetId: string,
+  scope: SyncAdapterScope | undefined,
+): boolean {
+  if (
+    scope?.includeAssetIds !== undefined
+    && !scope.includeAssetIds.includes(assetId)
+  ) {
+    return false;
+  }
+
+  return scope?.excludeAssetIds?.includes(assetId) !== true;
 }
 
 function areDirtySetsEquivalent(

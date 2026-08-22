@@ -27,6 +27,10 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { RenderHost } from "@/renderer/renderer-host"
+import {
+  isBatchMove,
+  shouldUseGroupedPreviewVisuals,
+} from "@/renderer/move-visual-policy";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveLogisticsEquipmentSuppressionKind } from "@/shared/logistics-suppression"
 import {
@@ -553,17 +557,23 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 当 preview 包含多个元素时，使用蓝色 selection 特效
+    // 2026-08-22 订正：move 模式改由显式 moveKind 决定特效；批量移动即使只有一个元素也使用蓝色特效，普通移动不再按数量切换。
     const previewCollection = context.workspace.editor?.state.collections[EntityCollectionType.preview];
+    const moveKind = context.workspace.app?.state.moveKind ?? null;
     if (
       previewCollection
-      && previewCollection.length > 1
-      && !this.shouldForceBlueprintPreviewTexture(context)
+      && shouldUseGroupedPreviewVisuals(moveKind, previewCollection.length)
+      && (
+        moveKind === "batch"
+        || !this.shouldForceBlueprintPreviewTexture(context)
+      )
     ) {
       this.drawSelectionOverlay(layout, context);
       return;
     }
 
     // 单元素 preview：使用白色系动画遮罩
+    // 2026-08-22 订正：该分支现在表示普通移动或非 move 的单元素预览；批量移动的单元素预览由上方蓝色特效分支处理。
     this.drawScanlineOverlay(layout, context);
   }
 
@@ -1716,6 +1726,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   private shouldDrawPortOverlay(context: RenderSpriteSyncContext): boolean {
     if (this.definition.tags.includes("ChevronHidden")) {
+      return false;
+    }
+
+    if (isBatchMove(context.workspace.app?.state.moveKind ?? null)) {
       return false;
     }
 

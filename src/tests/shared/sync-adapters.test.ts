@@ -211,6 +211,33 @@ describe("sync-adapters", () => {
     remote.dispose?.();
   });
 
+  it("does not advance WebDAV collection metadata for an incomplete scope", async () => {
+    const client = new MemoryStorageClient();
+    const adapter = createFullNoRevisionAdapter({
+      id: "planner",
+      remotePath: "assets/planner-state.json",
+      readLocal: async () => null,
+      writeLocal: async () => undefined,
+    });
+    const session = await createSession(client, [adapter]);
+    await session.localState.setRemoteRevision(adapter.collection.stateKey, 3);
+    await session.localState.setRemoteEtag(adapter.collection.stateKey, "etag-3");
+
+    await session.markApplied({
+      collection: adapter.collection,
+      assetIds: ["single"],
+      scopeComplete: false,
+      collectionRevision: 4,
+      collectionEtag: "etag-4",
+    });
+
+    await expect(session.localState.getRemoteRevision(adapter.collection.stateKey))
+      .resolves.toBe(3);
+    await expect(session.localState.getRemoteEtag(adapter.collection.stateKey))
+      .resolves.toBe("etag-3");
+    session.dispose?.();
+  });
+
   it("uploads and downloads a full-no-revision value", async () => {
     const client = new MemoryStorageClient();
     let localValue: { count: number } | null = { count: 1 };

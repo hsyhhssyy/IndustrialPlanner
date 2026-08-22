@@ -114,6 +114,7 @@ describe("createHypergryphMoveGestureModule", () => {
       { x: 4, y: 4 },
     );
     expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
+    expect(appHost.state.moveKind).toBe("ordinary");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
 
     expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
@@ -158,6 +159,7 @@ describe("createHypergryphMoveGestureModule", () => {
       { x: 2, y: 2 },
     );
     expect(handled.appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
+    expect(handled.appHost.state.moveKind).toBe("batch");
   });
 
   it("enters touch move from select by selecting the pointer entity first", () => {
@@ -1115,6 +1117,15 @@ function createContext(options: {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphCopyWhileMoving: options.copyWhileMoving ?? false,
+      },
+      get moveKind(): "ordinary" | "batch" | null {
+        if (appHost.internalState.activeTool !== "move") {
+          return null;
+        }
+
+        return appHost.internalState.runtime.moveEnterFrom === "marquee"
+          ? "batch"
+          : "ordinary";
       },
     },
     internalState: {

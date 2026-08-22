@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { resolveStrongPortOverlayEntityIds as resolveStrongPortOverlayIds } from "@/renderer/move-visual-policy";
 import type { GridEdge, GridFloatPoint } from "@/domain/shared/grid";
 import {
   resolveDisplayRotationRadians,
@@ -211,13 +212,11 @@ function resolveStrongPortOverlayEntityIds(
     return new Set();
   }
 
-  const preview = collections[EntityCollectionType.preview];
-  if (preview.length === 1) {
-    return new Set(preview);
-  }
-
-  const selection = collections[EntityCollectionType.selection];
-  return selection.length === 1 ? new Set(selection) : new Set();
+  return resolveStrongPortOverlayIds(
+    ctx.renderHost.workspace.app?.state.moveKind ?? null,
+    collections[EntityCollectionType.preview],
+    collections[EntityCollectionType.selection],
+  );
 }
 
 function resolvePipePortBoundaryViewportPoint(

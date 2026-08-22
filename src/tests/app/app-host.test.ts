@@ -206,6 +206,29 @@ afterEach(() => {
 });
 
 describe("createAppHost", () => {
+  it("projects the move entry source as a public move kind", () => {
+    const appHost = createAppHost(createWorkspace());
+
+    expect(appHost.state.moveKind).toBeNull();
+
+    runInAction(() => {
+      appHost.internalState.runtime.moveEnterFrom = "select";
+      appHost.internalState.activeTool = "move";
+    });
+    expect(appHost.state.moveKind).toBe("ordinary");
+
+    runInAction(() => {
+      appHost.internalState.runtime.moveEnterFrom = "marquee";
+    });
+    expect(appHost.state.moveKind).toBe("batch");
+
+    runInAction(() => {
+      appHost.internalState.activeTool = "select";
+    });
+    expect(appHost.state.moveKind).toBeNull();
+    appHost.dispose();
+  });
+
   it("hydrates the persisted placement variant selected for each craft group", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,

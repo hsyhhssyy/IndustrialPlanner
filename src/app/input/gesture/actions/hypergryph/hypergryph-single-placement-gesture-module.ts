@@ -15,6 +15,7 @@ import {
 } from "@/app/actions/keyboard-shortcut-manager";
 import type {
   CanvasFloatingToolbarButtonId,
+  CanvasRightDockToolbarItemRequest,
   CanvasTopLeftCornerToolbarShowButtonId,
   PlacementGroup,
 } from "@/app/state/state-impl";
@@ -68,6 +69,14 @@ const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+
+const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "rotate-placement", presentation: "shortcut" },
+  { operationId: "confirm-placement", presentation: "shortcut" },
+  { operationId: "continuous-placement", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>> = {
   beltLogistics: SHORTCUT_KEY.PLACE_CONVEYOR,
@@ -1095,6 +1104,7 @@ function clearPlacementUi(appHost: AppHost): void {
   });
   appHost.internalActions.hideCanvasFloatingToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+  appHost.internalActions.hideCanvasRightDockToolbar();
 }
 
 export function closeCompactLeftDockOnPlacementEnter(appHost: AppHost): void {
@@ -1127,15 +1137,18 @@ export function syncPlacementEntryUi(
   continuous = appHost.internalState.runtime.singlePlacementContinuous,
 ): boolean {
   if (pointerMode === null) {
+    appHost.internalActions.hideCanvasRightDockToolbar();
     return true;
   }
 
   if (pointerMode !== "touch") {
     appHost.internalActions.hideCanvasFloatingToolbar();
     appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+    appHost.internalActions.showCanvasRightDockToolbar(PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS);
     return true;
   }
 
+  appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.showCanvasTopLeftCornerToolbar(
     resolveSinglePlacementTopLeftToolbarButtonIds(appHost, continuous),
   );

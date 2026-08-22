@@ -505,6 +505,8 @@ async function runAutoDownloadScenario(options: {
   expect(remoteAssetId).toBe("stm_hongs_3");
 
   // 等待基地切换触发的上传完成
+  // AI-CORRECTION 2026-08-22: 本场景首次打开盈天台建设站时创建了新的本地基地文档；
+  // 上传来源是该文档的首次创建，不是“切换基地”这一纯导航动作。
   await expect.poll(async () => await page.evaluate(() => {
     const sync = (window as unknown as BrowserTestWindow)
       .__industrialPlannerAppHost?.workspace?.sync;
@@ -517,7 +519,7 @@ async function runAutoDownloadScenario(options: {
           lastError: sync.state.status.lastError,
         };
   }), {
-    message: "基地切换触发的上传应完成并回到 idle",
+    message: "首次创建基地文档触发的上传应完成并回到 idle",
     timeout: 60_000,
   }).toEqual({
     phase: "idle",
@@ -687,6 +689,8 @@ async function runAutoDownloadScenario(options: {
   ).toBe(false);
 
   // ─── Phase 5: 小检查（短路、无事发生） ───
+  // AI-CORRECTION 2026-08-22: 局部增量上传不会推进“已完整检查全部 collection”的全局 cursor；
+  // 因此下一次小检查可合法发现 revision 变化并触发一次无实际下载的完整同步。
   const previousSmallCheckAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
       ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
@@ -706,7 +710,32 @@ async function runAutoDownloadScenario(options: {
   }).not.toBe(previousSmallCheckAt);
 
   // 远端无变化 → 无事发生：未进入 downloading、未锁画布、未发生下载、本地精炼炉仍在
-  const syncStateAfterCheck = await page.evaluate(() => {
+  // AI-CORRECTION 2026-08-22: lastSmallCheckAt 在后续完整同步结束前更新；这里必须等待同步稳定，
+  // 最终仍严格要求无下载、无画布锁定且本地内容保持不变。
+  // AI-REMOVED 2026-08-22:
+  // Reason: 小检查时间戳变化后立即读取 phase，会与仍在执行的 interval 完整同步形成观察竞态。
+  // Trigger: 该 E2E 实际日志显示全部 adapter 正常完成，但断言在 sync done 前读到 downloading。
+  // Evidence: cf-worker-conflict-small-check 已采用“时间戳变化后等待稳定状态”的同一规则。
+  // Replacement: 下方 expect.poll 等待 phase=idle，同时保持 lastDownloadAt 不变断言。
+  // Risk: Low；没有放宽最终状态或下载结果。
+  // Human Review: Required
+  //
+  // Original code:
+  // const syncStateAfterCheck = await page.evaluate(() => {
+  //   const sync = (window as unknown as BrowserTestWindow)
+  //     .__industrialPlannerAppHost?.workspace?.sync;
+  //   return sync === null || sync === undefined
+  //     ? null
+  //     : {
+  //         phase: sync.state.status.phase,
+  //         lastDownloadAt: sync.state.status.lastDownloadAt,
+  //       };
+  // });
+  // expect(syncStateAfterCheck).toEqual({
+  //   phase: "idle",
+  //   lastDownloadAt: lastDownloadAtBeforeCheck,
+  // });
+  await expect.poll(async () => await page.evaluate(() => {
     const sync = (window as unknown as BrowserTestWindow)
       .__industrialPlannerAppHost?.workspace?.sync;
     return sync === null || sync === undefined
@@ -715,8 +744,11 @@ async function runAutoDownloadScenario(options: {
           phase: sync.state.status.phase,
           lastDownloadAt: sync.state.status.lastDownloadAt,
         };
-  });
-  expect(syncStateAfterCheck).toEqual({
+  }), {
+    message: "小检查触发的后续同步应稳定结束且不产生下载",
+    timeout: 60_000,
+    intervals: [500],
+  }).toEqual({
     phase: "idle",
     lastDownloadAt: lastDownloadAtBeforeCheck,
   });

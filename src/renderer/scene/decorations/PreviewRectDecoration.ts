@@ -1,5 +1,6 @@
 import { Graphics } from "pixi.js";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { isBatchMove } from "@/renderer/move-visual-policy";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
@@ -37,7 +38,16 @@ export function createPreviewRectDecoration(): DecorationLayer {
       const previewCollection = editor.state.collections[EntityCollectionType.preview];
 
       // 仅当 preview 中有多个元素时才显示包围盒背景
-      if (!previewCollection || previewCollection.length <= 1) {
+      // 2026-08-22 订正：move 模式改由显式 moveKind 决定；批量移动即使只有一个元素也显示包围框，其他放置模式仍沿用多元素规则。
+      if (
+        !previewCollection
+        || previewCollection.length === 0
+        || (
+          app.state.activeTool === "move"
+            ? !isBatchMove(app.state.moveKind)
+            : previewCollection.length <= 1
+        )
+      ) {
         return;
       }
       ctx.profiler?.count("previewRect.collectionSize", previewCollection.length);

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import {
   createHypergryphSinglePlacementGestureModule,
   type GestureActionContext,
@@ -40,6 +41,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.runtime.placementAnchor).toBeNull();
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+      PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST,
+    );
   });
 
   it("enters from a placement button even when the current tool is not select", () => {
@@ -96,6 +100,8 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
+    expect(appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
   });
 
   it("toggles touch continuous placement from the top-left toolbar", () => {
@@ -644,6 +650,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(apply.appHost.internalState.activeTool).toBe("select");
     expect(apply.appHost.internalState.runtime.placementAnchor).toBeNull();
     expect(apply.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+    expect(apply.appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
@@ -654,6 +661,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(cancel.appHost.internalState.runtime.placementAnchor).toBeNull();
     expect(cancel.appHost.internalState.runtime.singlePlacementContinuous).toBe(false);
     expect(cancel.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+    expect(cancel.appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -885,6 +893,10 @@ function createContext(options: {
           buttonIds: [],
           initialOffButtonIds: [],
         },
+        canvasRightDockToolbar: {
+          visible: false,
+          items: [] as CanvasRightDockToolbarItemRequest[],
+        },
       },
     },
     internalActions: {
@@ -917,6 +929,14 @@ function createContext(options: {
         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
         appHost.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
+      }),
+      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
+        appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
+        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
+      }),
+      hideCanvasRightDockToolbar: vi.fn(() => {
+        appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
+        appHost.internalState.runtime.canvasRightDockToolbar.items = [];
       }),
       alignCanvasFloatingToolbar: vi.fn(() => true),
       getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
@@ -971,6 +991,14 @@ const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
 
 const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST =
   "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
+
+const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "rotate-placement", presentation: "shortcut" },
+  { operationId: "confirm-placement", presentation: "shortcut" },
+  { operationId: "continuous-placement", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 type MockCollection = string[] & {
   contains(entityId: string): boolean;

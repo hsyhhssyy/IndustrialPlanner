@@ -4,6 +4,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
+import { resolveStrongPortOverlayEntityIds } from "@/renderer/move-visual-policy";
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import {
   FluidDomain,
@@ -641,10 +642,11 @@ function isOrdinaryLogisticsDefinition(
 function resolveSingleSelectedOrPreviewEntityIds(ctx: DecorationSyncContext): ReadonlySet<string> {
   const collections = ctx.renderHost.workspace.editor?.state.collections;
   if (collections === undefined) return new Set();
-  const preview = collections[EntityCollectionType.preview];
-  if (preview.length === 1) return new Set(preview);
-  const selection = collections[EntityCollectionType.selection];
-  return selection.length === 1 ? new Set(selection) : new Set();
+  return resolveStrongPortOverlayEntityIds(
+    ctx.renderHost.workspace.app?.state.moveKind ?? null,
+    collections[EntityCollectionType.preview],
+    collections[EntityCollectionType.selection],
+  );
 }
 
 function resolveActiveLogisticsKind(ctx: DecorationSyncContext): LogisticsKind | null {

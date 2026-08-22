@@ -612,7 +612,7 @@
   display: grid;
   gap: 6px;
   transform: translateY(-50%);
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .canvas-right-dock-toolbar-button {
@@ -629,6 +629,7 @@
   box-shadow: none;
   color: var(--in-canvas-toolbar-button-text);
   backdrop-filter: none;
+  pointer-events: auto;
 }
 
 .canvas-right-dock-toolbar-shortcut {
@@ -638,6 +639,26 @@
   gap: 8px;
   color: var(--in-canvas-toolbar-button-text);
   pointer-events: none;
+}
+
+.canvas-right-dock-toolbar-shortcut-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.canvas-right-dock-toolbar-shortcut-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.canvas-right-dock-toolbar-shortcut-separator {
+  color: var(--in-canvas-toolbar-button-text);
+  font-size: 0.65rem;
+  font-weight: 750;
+  line-height: 1;
 }
 
 .canvas-right-dock-toolbar-button:not(:disabled):hover .canvas-right-dock-toolbar-icon {
@@ -692,6 +713,8 @@
 // .canvas-right-dock-toolbar--shortcut {
 //   pointer-events: none;
 // }
+// AI-CORRECTION 2026-08-22: 容器统一穿透输入，只有真实 button 恢复 pointer-events，
+// 从而保证纯快捷键行和混排工具列的非按钮区域不会阻断画布点击与滚轮。
 
 // 快捷键按键徽章
 .canvas-right-dock-toolbar-shortcut-key {
