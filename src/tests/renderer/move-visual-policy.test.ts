@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isBatchMove,
+  resolveBatchMoveHiddenRangeEntityIds,
   resolveStrongPortOverlayEntityIds,
   shouldUseGroupedPreviewVisuals,
 } from "@/renderer/move-visual-policy";
@@ -36,5 +37,26 @@ describe("move visual policy", () => {
       ["preview-device"],
       ["selected-device"],
     )).toEqual(new Set(["preview-device"]));
+  });
+
+  it("hides only original and draft entities that belong to a batch move", () => {
+    expect(resolveBatchMoveHiddenRangeEntityIds(
+      "batch",
+      ["preview-power-pole", "preview-gas-device"],
+      ["power-pole", "gas-device"],
+    )).toEqual(new Set([
+      "power-pole",
+      "gas-device",
+      "preview-power-pole",
+      "preview-gas-device",
+    ]));
+  });
+
+  it("does not hide range entities during an ordinary move", () => {
+    expect(resolveBatchMoveHiddenRangeEntityIds(
+      "ordinary",
+      ["preview-power-pole"],
+      ["power-pole"],
+    )).toEqual(new Set());
   });
 });

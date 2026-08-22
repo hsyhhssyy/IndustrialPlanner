@@ -17,15 +17,21 @@ import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
 const MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
-  "exit",
-  "move",
-  "copy",
   "save-blueprint",
+  "copy",
+  "move",
   "delete",
+  "toggle-marquee-selection",
+  "marquee-select",
+  "marquee-deselect",
+  "exit-marquee",
 ] as const;
 
 const EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
-  "exit",
+  "toggle-marquee-selection",
+  "marquee-select",
+  "marquee-deselect",
+  "exit-marquee",
 ] as const;
 
 // AI-REMOVED 2026-08-22:
@@ -531,7 +537,7 @@ export function showMarqueeRightDockToolbar(
   appHost: AppHost,
   editor: EditorContract | null,
   presentation = appHost.internalState.runtime.canvasRightDockToolbar.items.find(
-    (item) => item.operationId === "exit",
+    (item) => item.operationId === "exit-marquee",
   )?.presentation ?? "button",
 ): void {
   const operationIds = (editor?.state.collections.selection?.length ?? 0) > 0

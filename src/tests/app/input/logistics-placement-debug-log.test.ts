@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SHORTCUT_KEY } from "@/app/actions";
 import type { AppHost } from "@/app/host/app-host";
 import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
+import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import {
   createHypergryphLogisticsPlacementGestureModule,
   type GestureActionContext,
@@ -131,6 +132,40 @@ describe("logistics placement debug logging", () => {
       "t",
     );
   });
+
+  it("shows logistics shortcuts from kind and placement phase", () => {
+    const beltStart = createContext({
+      allowEmptySource: true,
+      kind: LOGISTICS_KIND.belt,
+      draftState: null,
+    });
+    const pipeEnd = createContext({
+      allowEmptySource: true,
+      kind: LOGISTICS_KIND.pipe,
+      draftState: createInvalidDraftState(),
+    });
+    const module = createHypergryphLogisticsPlacementGestureModule();
+
+    expect(module.handle(onEnterActiveToolEvent(), beltStart.context)).toEqual({
+      status: "handled",
+    });
+    expect(beltStart.appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+      { operationId: "pan-viewport", presentation: "shortcut" },
+      { operationId: "zoom-viewport", presentation: "shortcut" },
+      { operationId: "confirm-logistics-start", presentation: "shortcut" },
+      { operationId: "change-belt-route-priority", presentation: "shortcut" },
+    ]);
+
+    expect(module.handle(onEnterActiveToolEvent(), pipeEnd.context)).toEqual({
+      status: "handled",
+    });
+    expect(pipeEnd.appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+      { operationId: "pan-viewport", presentation: "shortcut" },
+      { operationId: "zoom-viewport", presentation: "shortcut" },
+      { operationId: "confirm-logistics-end", presentation: "shortcut" },
+      { operationId: "change-pipe-route-priority", presentation: "shortcut" },
+    ]);
+  });
 });
 
 function createContext(options: {
@@ -169,6 +204,9 @@ function createContext(options: {
   } as unknown as WorkspaceContract;
   const appHost = {
     state: {
+      screenProfile: {
+        deviceClass: "desktop",
+      },
       settings: {
         hypergryphAllowEmptyLogisticsEndpoints: options.allowEmptySource,
         hypergryphAutoCreateSplittersAndConvergers: false,
@@ -177,6 +215,10 @@ function createContext(options: {
     internalState: {
       activeTool: "logistics-placement",
       runtime: {
+        canvasRightDockToolbar: {
+          visible: false,
+          items: [] as CanvasRightDockToolbarItemRequest[],
+        },
         logisticsPlacement: {
           kind: options.kind,
           pointerMode: "mouse",
@@ -193,6 +235,12 @@ function createContext(options: {
       },
     },
     internalActions: {
+      hideCanvasFloatingToolbar: vi.fn(),
+      hideCanvasRightDockToolbar: vi.fn(),
+      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
+        appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
+        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
+      }),
       isShortcutFor: vi.fn((shortcutKey: string, code: string | null) => (
         shortcutKey === SHORTCUT_KEY.ROTATE && code === "KeyT"
       )),
@@ -208,6 +256,25 @@ function createContext(options: {
     },
     appHost,
     editor,
+  };
+}
+
+function onEnterActiveToolEvent(): Extract<
+  GestureEvent,
+  { type: "on-enter-active-tool" }
+> {
+  return {
+    type: "on-enter-active-tool",
+    gestureId: "enter-logistics-placement",
+    from: "select",
+    to: "logistics-placement",
+    modifiers: {
+      alt: false,
+      ctrl: false,
+      meta: false,
+      shift: false,
+    },
+    sourceEvent: null,
   };
 }
 

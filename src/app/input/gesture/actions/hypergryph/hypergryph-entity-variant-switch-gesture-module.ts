@@ -1,3 +1,4 @@
+import { SHORTCUT_KEY } from "@/app/actions";
 import {
   SWITCH_DEVICE_MODE_BUTTON_ID,
   resolveNextSwitchableEntityVariantDefinitionId,
@@ -20,6 +21,22 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
       }
 
       switch (event.type) {
+        case "key down":
+          if (
+            context.appHost.internalState.activeTool !== "select"
+            || !context.appHost.state.settings.gameUseInspectorPanel
+            || !context.appHost.internalActions.isShortcutFor(
+              SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+              event.code,
+              event.key,
+              event.modifiers,
+            )
+          ) {
+            return { status: "ignored" };
+          }
+
+          return switchSelectedEntityVariant(context.appHost, editor);
+
         case "ui-button-touch-tap":
           return event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID
             ? switchSelectedEntityVariant(context.appHost, editor)

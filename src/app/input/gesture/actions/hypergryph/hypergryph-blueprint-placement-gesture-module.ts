@@ -3,6 +3,7 @@ import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
+import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
@@ -18,6 +19,7 @@ import {
   driveMousePlacementPreview,
   drivePlacementPreview,
   primePlacementAnchorFromPreview,
+  PLACEMENT_TOOLBAR_BUTTON_IDS,
   resolveViewportCenterGridPoint,
   rotatePlacementPreview,
   syncPlacementEntryUi,
@@ -32,6 +34,19 @@ const TOGGLE_CONTINUOUS_PLACEMENT_ON =
 const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
   `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-off`;
 const TEMP_BLUEPRINT_NAME = "Temp Blueprint";
+
+const BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "rotate-placement", presentation: "shortcut" },
+  { operationId: "confirm-placement", presentation: "shortcut" },
+  { operationId: "cancel-placement", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
+const BLUEPRINT_PLACEMENT_UI_OPTIONS = {
+  floatingToolbarButtonIds: PLACEMENT_TOOLBAR_BUTTON_IDS,
+  rightDockToolbarItems: BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS,
+} as const;
 
 type TempBlueprintShortcut = "copy" | "paste";
 
@@ -118,6 +133,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           context.appHost,
           context.appHost.internalState.runtime.blueprintPlacementPointerMode,
           context.appHost.internalState.runtime.blueprintPlacementContinuous,
+          BLUEPRINT_PLACEMENT_UI_OPTIONS,
         );
         return { status: "handled" };
       }
@@ -426,7 +442,12 @@ function enterBlueprintPlacement(options: {
     options.appHost.blueprintPreview.close();
 
     if (reenteringBlueprintPlacement) {
-      if (!syncPlacementEntryUi(options.appHost, options.source)) {
+      if (!syncPlacementEntryUi(
+        options.appHost,
+        options.source,
+        options.appHost.internalState.runtime.blueprintPlacementContinuous,
+        BLUEPRINT_PLACEMENT_UI_OPTIONS,
+      )) {
         restoreFailedBlueprintPlacementEnter(options.appHost, options.editor);
         return { status: "ignored" };
       }
@@ -548,6 +569,7 @@ function applyBlueprintPlacement(
           appHost,
           pointerMode,
           appHost.internalState.runtime.blueprintPlacementContinuous,
+          BLUEPRINT_PLACEMENT_UI_OPTIONS,
         )
       ) {
         throw new Error("failed to re-arm blueprint placement preview");
@@ -617,6 +639,7 @@ function clearBlueprintPlacementUi(appHost: AppHost): void {
   appHost.internalState.runtime.blueprintPlacementContinuous = false;
   appHost.internalActions.hideCanvasFloatingToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+  appHost.internalActions.hideCanvasRightDockToolbar();
 }
 
 function restoreFailedBlueprintPlacementEnter(appHost: AppHost, editor: EditorContract): void {

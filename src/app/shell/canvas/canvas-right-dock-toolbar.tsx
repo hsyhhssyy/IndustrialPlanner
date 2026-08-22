@@ -121,7 +121,14 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
       icon: "move",
     },
     shortcut: {
-      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION }],
+      parts: [
+        { kind: "fixed-label", labelKey: "input.mouseLongPress" },
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION,
+        },
+      ],
+      separator: "alternative",
     },
   },
   "save-blueprint": {
@@ -161,22 +168,18 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP,
-          bindingDisplay: "primary",
         },
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT,
-          bindingDisplay: "primary",
         },
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN,
-          bindingDisplay: "primary",
         },
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT,
-          bindingDisplay: "primary",
         },
       ],
       separator: "gap",
@@ -186,6 +189,15 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
     labelKey: "action.zoomViewport",
     shortcut: {
       parts: [{ kind: "mouse", input: "wheel" }],
+    },
+  },
+  "switch-device-variant": {
+    labelKey: "action.switchDeviceVariant",
+    shortcut: {
+      parts: [{
+        kind: "shortcut-key",
+        shortcutKeyId: SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+      }],
     },
   },
   "rotate-placement": {
@@ -208,6 +220,78 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
         { kind: "mouse", input: "left-button" },
       ],
       separator: "plus",
+    },
+  },
+  "delete-device": {
+    labelKey: "action.deleteDevice",
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.DELETE_DEVICE }],
+    },
+  },
+  "cancel-placement": {
+    labelKey: "action.cancelPlacement",
+    shortcut: {
+      parts: [{ kind: "fixed-key", value: "Esc" }],
+    },
+  },
+  "confirm-logistics-start": {
+    labelKey: "action.confirmLogisticsStart",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "left-button" }],
+    },
+  },
+  "confirm-logistics-end": {
+    labelKey: "action.confirmLogisticsEnd",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "left-button" }],
+    },
+  },
+  "change-belt-route-priority": {
+    labelKey: "action.changeBeltRoutePriority",
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.ROTATE }],
+    },
+  },
+  "change-pipe-route-priority": {
+    labelKey: "action.changePipeRoutePriority",
+    shortcut: {
+      parts: [{ kind: "shortcut-key", shortcutKeyId: SHORTCUT_KEY.ROTATE }],
+    },
+  },
+  "toggle-marquee-selection": {
+    labelKey: "action.selectOrDeselect",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "left-button" }],
+    },
+  },
+  "marquee-select": {
+    labelKey: "action.marqueeSelect",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "left-button" }],
+    },
+  },
+  "marquee-deselect": {
+    labelKey: "action.marqueeDeselect",
+    shortcut: {
+      parts: [{ kind: "mouse", input: "right-button" }],
+    },
+  },
+  "exit-marquee": {
+    labelKey: "action.exitMarquee",
+    button: {
+      buttonId: "canvas-right-dock-toolbar-button-exit",
+      icon: "cancel",
+      tone: "exit",
+    },
+    shortcut: {
+      parts: [
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.MARQUEE,
+        },
+        { kind: "fixed-key", value: "Esc" },
+      ],
+      separator: "alternative",
     },
   },
 };
@@ -431,18 +515,24 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
                       className={cm(styles, "canvas-right-dock-toolbar-shortcut-part")}
                       key={`${operationId}-${part.kind}-${partIndex}`}
                     >
-                      {partIndex > 0 && shortcut.separator === "plus" ? (
+                      {partIndex > 0 && shortcut.separator !== "gap" ? (
                         <span
                           aria-hidden="true"
                           className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
                         >
-                          +
+                          {shortcut.separator === "plus" ? "+" : "/"}
                         </span>
                       ) : null}
                       {part.kind === "keyboard" ? (
                         <KeyboardShortcutPrompt shortcut={part.value} size="small" />
-                      ) : (
+                      ) : part.kind === "mouse" ? (
                         <MouseShortcutPrompt input={part.input} size="small" />
+                      ) : (
+                        <span
+                          className={cm(styles, "canvas-right-dock-toolbar-shortcut-label")}
+                        >
+                          {t(part.labelKey)}
+                        </span>
                       )}
                     </span>
                   ))}

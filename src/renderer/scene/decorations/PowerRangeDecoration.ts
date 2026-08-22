@@ -1,8 +1,9 @@
 import { Graphics } from "pixi.js";
 import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import { isBatchMove } from "@/renderer/move-visual-policy";
+import { resolveBatchMoveHiddenRangeEntityIds } from "@/renderer/move-visual-policy";
 import {
   areGridRectsIntersecting,
   resolvePowerRangeGridRect,
@@ -39,6 +40,7 @@ export function resolvePowerRangeStrokeWidth(
 
 export function resolvePowerRangeOutlineLayouts(options: {
   entities: readonly WorldEntity[];
+  hiddenEntityIds?: ReadonlySet<string>;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   visibleWorldRect: VisibleWorldRect;
   viewportBounds: DecorationSyncContext["viewportBounds"];
@@ -53,6 +55,10 @@ export function resolvePowerRangeOutlineLayouts(options: {
   const layouts: PowerRangeOutlineLayout[] = [];
 
   for (const entity of options.entities) {
+    if (options.hiddenEntityIds?.has(entity.id) === true) {
+      continue;
+    }
+
     const definition = options.entityDefinitionMap.get(entity.definitionId);
     if (definition === undefined) {
       continue;
@@ -95,14 +101,30 @@ export function createPowerRangeDecoration(): DecorationLayer {
     sync(ctx: DecorationSyncContext): void {
       graphics.clear();
 
-      if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
-        return;
-      }
+      // AI-REMOVED 2026-08-22:
+      // Reason: 批量移动不应关闭整个供电范围图层，只应隐藏被移动设备自身的范围。
+      // Trigger: 未被多选选中的供电桩范围也被一并清除。
+      // Evidence: move draft 已通过 ghost 与 preview collection 精确记录原实体和移动草稿 ID。
+      // Replacement: 当前 sync 中使用 resolveBatchMoveHiddenRangeEntityIds 过滤实体。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
+      //   return;
+      // }
 
       const editor = ctx.renderHost.workspace.editor;
       if (!editor) {
         return;
       }
+
+      const collections = editor.state.collections;
+      const hiddenEntityIds = resolveBatchMoveHiddenRangeEntityIds(
+        ctx.renderHost.workspace.app?.state.moveKind ?? null,
+        collections[EntityCollectionType.preview],
+        collections[EntityCollectionType.ghost],
+      );
 
       const entityDefinitionMap = new Map(
         ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
@@ -112,6 +134,7 @@ export function createPowerRangeDecoration(): DecorationLayer {
       );
       const layouts = resolvePowerRangeOutlineLayouts({
         entities: editor.queries.listEntities(),
+        hiddenEntityIds,
         entityDefinitionMap,
         visibleWorldRect: resolveVisibleWorldRect(
           ctx.viewportState,

@@ -4,6 +4,18 @@ export function isBatchMove(moveKind: UiState["moveKind"]): boolean {
   return moveKind === "batch";
 }
 
+export function resolveBatchMoveHiddenRangeEntityIds(
+  moveKind: UiState["moveKind"],
+  previewEntityIds: readonly string[],
+  ghostEntityIds: readonly string[],
+): ReadonlySet<string> {
+  if (!isBatchMove(moveKind)) {
+    return new Set();
+  }
+
+  return new Set([...ghostEntityIds, ...previewEntityIds]);
+}
+
 export function shouldUseGroupedPreviewVisuals(
   moveKind: UiState["moveKind"],
   previewCount: number,

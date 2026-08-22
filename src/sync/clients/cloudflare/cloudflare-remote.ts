@@ -534,7 +534,20 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     const plan = this.planCache;
     if (plan === null) return { revision: 0, entries: {}, committedAt: null };
 
-    const assets = plan.assets.filter((a) => a.assetType === collection.assetType);
+    // AI-REMOVED 2026-08-22:
+    // Reason: legacy Cloudflare session 同样只按 assetType 枚举，会跨 adapter 暴露共享 planner-state 资源。
+    // Trigger: regional-settings 与 production-planning 的远端键碰撞审计。
+    // Evidence: SyncRemoteAssetIdCodec 现已声明 acceptsRemoteAssetId 作为 collection 归属边界。
+    // Replacement: 下方同时按 assetType 与 codec 归属过滤。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // const assets = plan.assets.filter((a) => a.assetType === collection.assetType);
+    const assets = plan.assets.filter((asset) =>
+      asset.assetType === collection.assetType
+      && (collection.assetIdCodec.acceptsRemoteAssetId?.(asset.assetId) ?? true)
+    );
     if (assets.length === 0) {
       return { revision: toLegacyNumericRevision(plan.revision), entries: {}, committedAt: null };
     }

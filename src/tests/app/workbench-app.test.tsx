@@ -1844,6 +1844,7 @@ describe("WorkbenchApp", () => {
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalActions.setShortcutFor(SHORTCUT_KEY.DELETE_DEVICE, "");
+      appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MOVE_SELECTION, "M;N");
     });
 
     act(() => {
@@ -1852,6 +1853,7 @@ describe("WorkbenchApp", () => {
         [
           { operationId: "exit", presentation: "shortcut" },
           { operationId: "move", presentation: "shortcut" },
+          { operationId: "marquee-deselect", presentation: "shortcut" },
           { operationId: "delete", presentation: "shortcut" },
         ],
       );
@@ -1860,7 +1862,7 @@ describe("WorkbenchApp", () => {
     const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
     expect(toolbar).not.toBeNull();
     expect(toolbar?.querySelectorAll("[data-ui-button-id]")).toHaveLength(0);
-    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="shortcut"]')).toHaveLength(2);
+    expect(toolbar?.querySelectorAll('[data-toolbar-presentation="shortcut"]')).toHaveLength(3);
     expect(toolbar?.querySelector('[data-toolbar-operation-id="delete"]')).toBeNull();
 
     // AI-CORRECTION 2026-08-03: 快捷键模式渲染 input-prompts 图片，而非文字 kbd 徽章。
@@ -1882,17 +1884,88 @@ describe("WorkbenchApp", () => {
     // expect(keyBadges!.length).toBeGreaterThan(0);
     const shortcutImages = toolbar?.querySelectorAll('img[data-key-token]');
     expect(shortcutImages).not.toBeNull();
-    expect(shortcutImages?.length).toBe(2);
+    expect(shortcutImages?.length).toBe(3);
+    expect(toolbar?.querySelector('[data-mouse-input="right-button"]')).not.toBeNull();
+    expect(toolbar?.querySelector(".canvas-right-dock-toolbar-shortcut-label")?.textContent).toBe(
+      "长按鼠标",
+    );
+    expect(
+      Array.from(toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-separator") ?? [])
+        .map((separator) => separator.textContent),
+    ).toContain("/");
+    // AI-REMOVED 2026-08-22:
+    // Reason: KeyboardShortcutPrompt 使用 CSS Modules，测试不能依赖未经映射的内部类名。
+    // Trigger: 新增的第二快捷键斜杠断言没有命中实际 DOM 类名。
+    // Evidence: data-key-token 已确认 M、N 均渲染，但旧选择器返回空数组。
+    // Replacement: 下方通过公开 aria-label 定位快捷键提示，并验证实际斜杠文本。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(
+    //   Array.from(toolbar?.querySelectorAll(".keyboard-shortcut-prompt-alternative-separator") ?? [])
+    //     .map((separator) => separator.textContent),
+    // ).toContain("/");
+    const moveKeyboardPrompt = toolbar?.querySelector('[aria-label="M;N"]');
+    expect(moveKeyboardPrompt).not.toBeNull();
+    expect(
+      Array.from(moveKeyboardPrompt?.querySelectorAll('span[aria-hidden="true"]') ?? [])
+        .map((separator) => separator.textContent)
+        .filter((text) => text === "/"),
+    ).toEqual(["/"]);
 
     // 标签应有外发光样式
     const labels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label--glow");
-    expect(labels?.length).toBe(2);
+    expect(labels?.length).toBe(3);
 
     act(() => {
       appHost.internalActions.hideCanvasRightDockToolbar();
     });
 
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+  });
+
+  it("renders both configured marquee bindings before the fixed escape binding", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+      appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MARQUEE, "X;Q");
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar([
+        { operationId: "exit-marquee", presentation: "shortcut" },
+      ]);
+    });
+
+    const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
+    expect(toolbar).not.toBeNull();
+    expect(
+      Array.from(toolbar?.querySelectorAll("img[data-key-token]") ?? [])
+        .map((image) => image.getAttribute("data-key-token")),
+    ).toEqual(["X", "Q", "Esc"]);
+    // AI-REMOVED 2026-08-22:
+    // Reason: 组合选择器中的 KeyboardShortcutPrompt 类名受 CSS Modules 映射，无法稳定命中。
+    // Trigger: 三键退出测试只命中工具栏外层斜杠，漏掉 X 与 Q 之间已渲染的内层斜杠。
+    // Evidence: data-key-token 顺序已确认是 X、Q、Esc。
+    // Replacement: 下方按 aria-hidden 与实际文本统计本功能内的两个斜杠。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(
+    //   Array.from(toolbar?.querySelectorAll(
+    //     ".keyboard-shortcut-prompt-alternative-separator, .canvas-right-dock-toolbar-shortcut-separator",
+    //   ) ?? []).map((separator) => separator.textContent),
+    // ).toEqual(["/", "/"]);
+    expect(
+      Array.from(toolbar?.querySelectorAll('span[aria-hidden="true"]') ?? [])
+        .map((separator) => separator.textContent)
+        .filter((text) => text === "/"),
+    ).toEqual(["/", "/"]);
   });
 
   it("keeps buttons when a both request resolves to an empty shortcut", () => {

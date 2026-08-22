@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { DecorationSyncContext } from "@/renderer/scene/decorations/DecorationSyncContext";
 
 const graphicsTestState = vi.hoisted(() => ({
@@ -96,35 +97,60 @@ describe("GasDiffusionRangeDecoration", () => {
     expect(haveSameGasDiffusionRanges(null, right)).toBe(false);
   });
 
-  it("clears batch-move ranges and redraws them after returning to ordinary movement", () => {
+  it("keeps unselected active gas ranges visible during a batch move", () => {
     let moveKind: "ordinary" | "batch" = "ordinary";
     const ctx = createContext({
       itemDefinitions: [],
-      getRanges: () => [createRange(0, 0)],
+      getRanges: () => [
+        createRange(0, 0, "selected-device"),
+        createRange(10, 0, "unselected-device"),
+      ],
       getMoveKind: () => moveKind,
+      getGhostIds: () => ["selected-device"],
+      getPreviewIds: () => ["selected-device:draft"],
     });
     const decoration = createGasDiffusionRangeDecoration();
     const graphics = graphicsTestState.instances[0]!;
 
     decoration.sync(ctx);
-    expect(graphics.rect).toHaveBeenCalledTimes(1);
+    expect(graphics.rect).toHaveBeenCalledTimes(2);
 
     moveKind = "batch";
     decoration.sync(ctx);
     expect(graphics.clear).toHaveBeenCalledTimes(1);
+    expect(graphics.rect).toHaveBeenCalledTimes(3);
 
     decoration.sync(ctx);
     expect(graphics.clear).toHaveBeenCalledTimes(1);
+    expect(graphics.rect).toHaveBeenCalledTimes(3);
 
     moveKind = "ordinary";
     decoration.sync(ctx);
-    expect(graphics.rect).toHaveBeenCalledTimes(2);
+    expect(graphics.clear).toHaveBeenCalledTimes(2);
+    expect(graphics.rect).toHaveBeenCalledTimes(5);
+  });
+
+  it("does not enter editor preview mode when every active range is moved", () => {
+    const ctx = createContext({
+      itemDefinitions: [],
+      getRanges: () => [createRange(0, 0, "selected-device")],
+      getMoveKind: () => "batch",
+      getGhostIds: () => ["selected-device"],
+      getPreviewIds: () => ["selected-device:draft"],
+    });
+    const decoration = createGasDiffusionRangeDecoration();
+    const graphics = graphicsTestState.instances[0]!;
+
+    decoration.sync(ctx);
+
+    expect(graphics.rect).not.toHaveBeenCalled();
+    expect(graphics.clear).not.toHaveBeenCalled();
   });
 });
 
-function createRange(x: number, y: number) {
+function createRange(x: number, y: number, sourceDeviceId = "device:vaporizer") {
   return {
-    sourceDeviceId: "device:vaporizer",
+    sourceDeviceId,
     gasItemId: "item_gas_inert",
     gridRect: { x, y, width: 13, height: 13 },
   };
@@ -134,6 +160,8 @@ function createContext(options: {
   itemDefinitions: readonly unknown[];
   getRanges: () => ReturnType<typeof createRange>[];
   getMoveKind?: () => "ordinary" | "batch" | null;
+  getGhostIds?: () => readonly string[];
+  getPreviewIds?: () => readonly string[];
 }): DecorationSyncContext {
   return {
     viewportState: {
@@ -168,6 +196,21 @@ function createContext(options: {
             getActiveGasDiffusionRanges: options.getRanges,
           },
         },
+        editor: options.getGhostIds === undefined
+          && options.getPreviewIds === undefined
+          ? undefined
+          : {
+              state: {
+                collections: {
+                  get [EntityCollectionType.ghost]() {
+                    return options.getGhostIds?.() ?? [];
+                  },
+                  get [EntityCollectionType.preview]() {
+                    return options.getPreviewIds?.() ?? [];
+                  },
+                },
+              },
+            },
       },
     },
     theme: "light",

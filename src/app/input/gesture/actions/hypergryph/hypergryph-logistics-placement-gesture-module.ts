@@ -5,6 +5,7 @@ import {
   canCurrentBaseAcceptWulingOnlyEntities,
   canPlaceEntityDefinitionInCurrentBase,
 } from "@/app/placement-zone-availability";
+import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
@@ -39,6 +40,34 @@ const LOGISTICS_TOOLBAR_BUTTON_IDS = [
 const LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS = [
   { operationId: "exit", presentation: "button" },
 ] as const;
+
+const BELT_START_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "confirm-logistics-start", presentation: "shortcut" },
+  { operationId: "change-belt-route-priority", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
+const BELT_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "confirm-logistics-end", presentation: "shortcut" },
+  { operationId: "change-belt-route-priority", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
+const PIPE_START_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "confirm-logistics-start", presentation: "shortcut" },
+  { operationId: "change-pipe-route-priority", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
+const PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "confirm-logistics-end", presentation: "shortcut" },
+  { operationId: "change-pipe-route-priority", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 // AI-REMOVED 2026-08-22:
 // Reason: 物流放置手势改为声明功能展示请求，不再直接传递右侧按钮 ID。
@@ -751,6 +780,7 @@ function driveMouseLogisticsStartPreview(options: {
   runtime.phase = "idle";
   runtime.isHoverPreview = true;
   runtime.lastPreviewGridPoint = options.gridPoint;
+  showMouseLogisticsPlacementShortcuts(options.appHost);
   return { status: "handled" };
 }
 
@@ -800,6 +830,7 @@ function handleMouseLeftTap(options: {
     runtime.phase = "drawing";
     runtime.pointerMode = "mouse";
     runtime.lastPreviewGridPoint = gridPoint;
+    showMouseLogisticsPlacementShortcuts(options.appHost);
     return { status: "handled" };
   }
 
@@ -1233,6 +1264,9 @@ function updateRuntimeFromResult(options: {
   result: LogisticsDraftActionResult;
 }): void {
   const runtime = options.appHost.internalState.runtime.logisticsPlacement;
+  const previousConfirmationOperationId = resolveLogisticsConfirmationOperationId(
+    runtime.phase,
+  );
   runtime.pointerMode = options.pointerMode;
   runtime.phase = options.phase;
   runtime.sourceEntityId = options.result.sourceEntityId;
@@ -1244,6 +1278,13 @@ function updateRuntimeFromResult(options: {
     runtime.anchorGridPoint = options.result.headGridPoint;
   } else if (runtime.anchorGridPoint === null && options.result.headGridPoint !== null) {
     runtime.anchorGridPoint = options.result.headGridPoint;
+  }
+
+  if (
+    options.pointerMode === "mouse"
+    && previousConfirmationOperationId !== resolveLogisticsConfirmationOperationId(runtime.phase)
+  ) {
+    showMouseLogisticsPlacementShortcuts(options.appHost);
   }
 }
 
@@ -1298,7 +1339,13 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
   appHost.internalActions.hideCanvasFloatingToolbar();
   appHost.internalActions.hideCanvasRightDockToolbar();
 
-  if (appHost.internalState.runtime.logisticsPlacement.pointerMode !== "touch") {
+  const pointerMode = appHost.internalState.runtime.logisticsPlacement.pointerMode;
+  if (pointerMode === "mouse") {
+    showMouseLogisticsPlacementShortcuts(appHost);
+    return;
+  }
+
+  if (pointerMode !== "touch") {
     return;
   }
 
@@ -1306,6 +1353,46 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
   if (appHost.internalState.workbench.rightDockOpen) {
     appHost.internalActions.toggleRightDock();
   }
+}
+
+function showMouseLogisticsPlacementShortcuts(appHost: AppHost): void {
+  const items = resolveLogisticsRightDockToolbarItems(appHost);
+  if (items.length === 0) {
+    appHost.internalActions.hideCanvasRightDockToolbar();
+    return;
+  }
+
+  appHost.internalActions.showCanvasRightDockToolbar(items);
+}
+
+function resolveLogisticsRightDockToolbarItems(
+  appHost: AppHost,
+): readonly CanvasRightDockToolbarItemRequest[] {
+  const runtime = appHost.internalState.runtime.logisticsPlacement;
+  const confirmsStart = resolveLogisticsConfirmationOperationId(runtime.phase)
+    === "confirm-logistics-start";
+
+  if (runtime.kind === LOGISTICS_KIND.belt) {
+    return confirmsStart
+      ? BELT_START_RIGHT_DOCK_TOOLBAR_ITEMS
+      : BELT_END_RIGHT_DOCK_TOOLBAR_ITEMS;
+  }
+
+  if (runtime.kind === LOGISTICS_KIND.pipe) {
+    return confirmsStart
+      ? PIPE_START_RIGHT_DOCK_TOOLBAR_ITEMS
+      : PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS;
+  }
+
+  return [];
+}
+
+function resolveLogisticsConfirmationOperationId(
+  phase: AppHost["internalState"]["runtime"]["logisticsPlacement"]["phase"],
+): "confirm-logistics-end" | "confirm-logistics-start" {
+  return phase === "idle"
+    ? "confirm-logistics-start"
+    : "confirm-logistics-end";
 }
 
 function resetLogisticsRuntime(appHost: AppHost): void {
@@ -1336,6 +1423,9 @@ function softResetLogisticsRuntime(appHost: AppHost): void {
   runtime.headGridPoint = null;
   runtime.lastPreviewGridPoint = null;
   runtime.statusMessageKey = null;
+  if (runtime.pointerMode === "mouse") {
+    showMouseLogisticsPlacementShortcuts(appHost);
+  }
 }
 
 function resolveKindFromOperationButton(uiButtonId: string): LogisticsKind | null {

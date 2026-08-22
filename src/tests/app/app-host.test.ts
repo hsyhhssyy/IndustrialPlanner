@@ -2459,7 +2459,10 @@ describe("createAppHost", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalState.runtime.canvasRightDockToolbar.visible).toBe(true);
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "exit", presentation: "button" },
+      { operationId: "toggle-marquee-selection", presentation: "button" },
+      { operationId: "marquee-select", presentation: "button" },
+      { operationId: "marquee-deselect", presentation: "button" },
+      { operationId: "exit-marquee", presentation: "button" },
     ]);
   });
 

@@ -16,6 +16,7 @@ import {
   CloudflareV2WorkerClient,
   createCloudflareSyncRemote,
 } from "@/sync/clients/cloudflare";
+import { createSyncRemoteCollection } from "@/sync";
 import { CloudflareV2WorkerRuntime } from "@/sync/clients/cloudflare/cloudflare-v2-worker-runtime";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
 import type {
@@ -278,6 +279,47 @@ describe("cloudflare-sync-remote-v2", () => {
       deletedAt: null,
     });
     expect(index.entries["extra"]).toBeDefined();
+
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  it("isolates production planning and regional settings in the shared planner-state namespace", async () => {
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("GET:/plan", () => ({
+        json: v2Plan([
+          { assetType: "planner-state", assetId: "default", contentHash: "abc" },
+          { assetType: "planner-state", assetId: "regional-settings", contentHash: "def" },
+        ]),
+      }));
+
+    const productionPlanning = createSyncRemoteCollection({
+      adapterId: "production-planning",
+      mode: "full-no-revision",
+      stateKey: "production-planning",
+    });
+    const regionalSettings = createSyncRemoteCollection({
+      adapterId: "regional-settings",
+      mode: "full-with-revision",
+      stateKey: "regional-settings",
+    });
+    expect(productionPlanning.assetIdCodec.toRemoteAssetId("single"))
+      .toBe("default");
+    expect(regionalSettings.assetIdCodec.toRemoteAssetId("default"))
+      .toBe("regional-settings");
+
+    const remote = createTestRemote();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [productionPlanning, regionalSettings],
+    });
+    await session.prefetchIndexes([productionPlanning, regionalSettings]);
+
+    const productionPlanningIndex = await session.readIndex(productionPlanning);
+    const regionalSettingsIndex = await session.readIndex(regionalSettings);
+    expect(Object.keys(productionPlanningIndex.entries)).toEqual(["single"]);
+    expect(Object.keys(regionalSettingsIndex.entries)).toEqual(["default"]);
 
     await session.dispose?.();
     remote.dispose?.();

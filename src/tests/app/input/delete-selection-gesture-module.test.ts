@@ -87,7 +87,12 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
     expect(hideCanvasRightDockToolbar).not.toHaveBeenCalled();
     expect(showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      [{ operationId: "exit", presentation: "button" }],
+      [
+        { operationId: "toggle-marquee-selection", presentation: "button" },
+        { operationId: "marquee-select", presentation: "button" },
+        { operationId: "marquee-deselect", presentation: "button" },
+        { operationId: "exit-marquee", presentation: "button" },
+      ],
     );
   });
 
@@ -218,7 +223,7 @@ function createContext(options: {
           activeTool: options.activeTool ?? "select",
           runtime: {
             canvasRightDockToolbar: {
-              items: [{ operationId: "exit", presentation: "button" }],
+              items: [{ operationId: "exit-marquee", presentation: "button" }],
             },
           },
         },

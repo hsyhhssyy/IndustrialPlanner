@@ -661,6 +661,14 @@
   line-height: 1;
 }
 
+.canvas-right-dock-toolbar-shortcut-label {
+  color: var(--in-canvas-toolbar-button-text);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .canvas-right-dock-toolbar-button:not(:disabled):hover .canvas-right-dock-toolbar-icon {
   border-color: var(--in-canvas-toolbar-button-hover-border);
   background: var(--in-canvas-toolbar-button-hover-bg);

@@ -6,7 +6,7 @@ import styles from "./mouse-shortcut-prompt.module.scss";
 
 type MouseShortcutPromptSize = "small" | "regular" | "large";
 
-export type MouseShortcutInput = "left-button" | "wheel";
+export type MouseShortcutInput = "left-button" | "right-button" | "wheel";
 
 interface MouseShortcutPromptProps {
   readonly className?: string;
@@ -22,6 +22,7 @@ const MOUSE_PROMPT_ASSET_NAMES: Readonly<
   Record<MouseShortcutInput, string>
 > = {
   "left-button": "mouse_left_outline.svg",
+  "right-button": "mouse_right_outline.svg",
   wheel: "mouse_scroll_vertical_outline.svg",
 };
 

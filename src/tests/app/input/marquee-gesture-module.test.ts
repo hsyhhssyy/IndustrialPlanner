@@ -41,11 +41,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
-        { operationId: "exit", presentation: "shortcut" },
-        { operationId: "move", presentation: "shortcut" },
-        { operationId: "copy", presentation: "shortcut" },
         { operationId: "save-blueprint", presentation: "shortcut" },
+        { operationId: "copy", presentation: "shortcut" },
+        { operationId: "move", presentation: "shortcut" },
         { operationId: "delete", presentation: "shortcut" },
+        { operationId: "toggle-marquee-selection", presentation: "shortcut" },
+        { operationId: "marquee-select", presentation: "shortcut" },
+        { operationId: "marquee-deselect", presentation: "shortcut" },
+        { operationId: "exit-marquee", presentation: "shortcut" },
       ],
     );
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
@@ -72,11 +75,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "exit", presentation: "button" },
-      { operationId: "move", presentation: "button" },
-      { operationId: "copy", presentation: "button" },
       { operationId: "save-blueprint", presentation: "button" },
+      { operationId: "copy", presentation: "button" },
+      { operationId: "move", presentation: "button" },
       { operationId: "delete", presentation: "button" },
+      { operationId: "toggle-marquee-selection", presentation: "button" },
+      { operationId: "marquee-select", presentation: "button" },
+      { operationId: "marquee-deselect", presentation: "button" },
+      { operationId: "exit-marquee", presentation: "button" },
     ]);
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
@@ -102,11 +108,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
-        { operationId: "exit", presentation: "shortcut" },
-        { operationId: "move", presentation: "shortcut" },
-        { operationId: "copy", presentation: "shortcut" },
         { operationId: "save-blueprint", presentation: "shortcut" },
+        { operationId: "copy", presentation: "shortcut" },
+        { operationId: "move", presentation: "shortcut" },
         { operationId: "delete", presentation: "shortcut" },
+        { operationId: "toggle-marquee-selection", presentation: "shortcut" },
+        { operationId: "marquee-select", presentation: "shortcut" },
+        { operationId: "marquee-deselect", presentation: "shortcut" },
+        { operationId: "exit-marquee", presentation: "shortcut" },
       ],
     );
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
@@ -121,16 +130,22 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "exit", presentation: "button" },
-      { operationId: "move", presentation: "button" },
-      { operationId: "copy", presentation: "button" },
       { operationId: "save-blueprint", presentation: "button" },
+      { operationId: "copy", presentation: "button" },
+      { operationId: "move", presentation: "button" },
       { operationId: "delete", presentation: "button" },
+      { operationId: "toggle-marquee-selection", presentation: "button" },
+      { operationId: "marquee-select", presentation: "button" },
+      { operationId: "marquee-deselect", presentation: "button" },
+      { operationId: "exit-marquee", presentation: "button" },
     ]);
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "exit", presentation: "button" },
+      { operationId: "toggle-marquee-selection", presentation: "button" },
+      { operationId: "marquee-select", presentation: "button" },
+      { operationId: "marquee-deselect", presentation: "button" },
+      { operationId: "exit-marquee", presentation: "button" },
     ]);
   });
 
@@ -311,7 +326,10 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "exit", presentation: "button" },
+      { operationId: "toggle-marquee-selection", presentation: "button" },
+      { operationId: "marquee-select", presentation: "button" },
+      { operationId: "marquee-deselect", presentation: "button" },
+      { operationId: "exit-marquee", presentation: "button" },
     ]);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",

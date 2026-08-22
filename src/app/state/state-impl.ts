@@ -216,9 +216,20 @@ export const CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS = [
   "delete",
   "pan-viewport",
   "zoom-viewport",
+  "switch-device-variant",
   "rotate-placement",
   "confirm-placement",
   "continuous-placement",
+  "delete-device",
+  "cancel-placement",
+  "confirm-logistics-start",
+  "confirm-logistics-end",
+  "change-belt-route-priority",
+  "change-pipe-route-priority",
+  "toggle-marquee-selection",
+  "marquee-select",
+  "marquee-deselect",
+  "exit-marquee",
 ] as const;
 
 export type CanvasRightDockToolbarOperationId =

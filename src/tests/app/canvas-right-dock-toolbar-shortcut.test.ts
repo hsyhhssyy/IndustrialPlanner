@@ -34,18 +34,16 @@ describe("canvas right dock toolbar shortcut", () => {
     });
   });
 
-  it("resolves the primary binding for a grouped directional prompt", () => {
+  it("preserves every configured binding for grouped directional prompts", () => {
     const definition: CanvasRightDockToolbarShortcutDefinition = {
       parts: [
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP,
-          bindingDisplay: "primary",
         },
         {
           kind: "shortcut-key",
           shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT,
-          bindingDisplay: "primary",
         },
       ],
       separator: "gap",
@@ -58,10 +56,47 @@ describe("canvas right dock toolbar shortcut", () => {
         : "A;ArrowLeft",
     )).toEqual({
       parts: [
-        { kind: "keyboard", value: "W" },
-        { kind: "keyboard", value: "A" },
+        { kind: "keyboard", value: "W;ArrowUp" },
+        { kind: "keyboard", value: "A;ArrowLeft" },
       ],
       separator: "gap",
+    });
+  });
+
+  it("preserves secondary bindings when composing different input alternatives", () => {
+    const definition: CanvasRightDockToolbarShortcutDefinition = {
+      parts: [
+        { kind: "fixed-label", labelKey: "input.mouseLongPress" },
+        {
+          kind: "shortcut-key",
+          shortcutKeyId: SHORTCUT_KEY.MOVE_SELECTION,
+        },
+      ],
+      separator: "alternative",
+    };
+
+    expect(resolveCanvasRightDockToolbarShortcut(
+      definition,
+      (shortcutKeyId) => shortcutKeyId === SHORTCUT_KEY.MOVE_SELECTION
+        ? "M;N"
+        : "",
+    )).toEqual({
+      parts: [
+        { kind: "label", labelKey: "input.mouseLongPress" },
+        { kind: "keyboard", value: "M;N" },
+      ],
+      separator: "alternative",
+    });
+  });
+
+  it("preserves right mouse input prompts", () => {
+    const definition: CanvasRightDockToolbarShortcutDefinition = {
+      parts: [{ kind: "mouse", input: "right-button" }],
+    };
+
+    expect(resolveCanvasRightDockToolbarShortcut(definition, () => "")).toEqual({
+      parts: [{ kind: "mouse", input: "right-button" }],
+      separator: "plus",
     });
   });
 

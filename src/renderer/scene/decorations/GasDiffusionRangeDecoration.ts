@@ -1,11 +1,12 @@
 import { Graphics } from "pixi.js";
 
 import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
-import { isBatchMove } from "@/renderer/move-visual-policy";
+import { resolveBatchMoveHiddenRangeEntityIds } from "@/renderer/move-visual-policy";
 import {
   areGridRectsIntersecting,
   resolveGasDiffusionRangeGridRect,
@@ -125,7 +126,10 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
 
   // ---- 预览气体范围渲染（半透明，无仿真/无活跃气体时） ----
 
-  function syncPreviewGasRanges(ctx: DecorationSyncContext): void {
+  function syncPreviewGasRanges(
+    ctx: DecorationSyncContext,
+    hiddenEntityIds: ReadonlySet<string>,
+  ): void {
     const editor = ctx.renderHost.workspace.editor;
     if (!editor) {
       if (graphicsHasContent) {
@@ -145,7 +149,9 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
       ctx.renderHost.workspace.registry.recipeDefinitions,
     );
 
-    const entities = editor.queries.listEntities();
+    const entities = editor.queries.listEntities().filter(
+      (entity) => !hiddenEntityIds.has(entity.id),
+    );
     const previewRanges = resolveEditorGasPreviewRanges(
       entities,
       entityDefinitionMap,
@@ -222,26 +228,48 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
-        if (graphicsHasContent) {
-          graphics.clear();
-          graphicsHasContent = false;
-        }
-        cachedGasDiffusions = null;
-        cachedViewportLayoutState = null;
-        cachedPreviewStamp = null;
-        return;
-      }
+      // AI-REMOVED 2026-08-22:
+      // Reason: 批量移动不应关闭整个气体范围图层，只应隐藏被移动设备自身的范围。
+      // Trigger: 未被多选选中的气体设备范围也被一并清除。
+      // Evidence: move draft 已通过 ghost 与 preview collection 精确记录原实体和移动草稿 ID。
+      // Replacement: 当前 sync 中按 hiddenEntityIds 过滤活跃范围与编辑器预览实体。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
+      //   if (graphicsHasContent) {
+      //     graphics.clear();
+      //     graphicsHasContent = false;
+      //   }
+      //   cachedGasDiffusions = null;
+      //   cachedViewportLayoutState = null;
+      //   cachedPreviewStamp = null;
+      //   return;
+      // }
 
-      const simulation = ctx.renderHost.workspace.simulation;
+      const workspace = ctx.renderHost.workspace;
+      const collections = workspace.editor?.state.collections;
+      const hiddenEntityIds = resolveBatchMoveHiddenRangeEntityIds(
+        workspace.app?.state.moveKind ?? null,
+        collections?.[EntityCollectionType.preview] ?? [],
+        collections?.[EntityCollectionType.ghost] ?? [],
+      );
+
+      const simulation = workspace.simulation;
       const activeGasDiffusions = simulation?.queries.getActiveGasDiffusionRanges() ?? [];
 
       if (activeGasDiffusions.length > 0) {
-        syncActiveGasRanges(ctx, activeGasDiffusions);
+        syncActiveGasRanges(
+          ctx,
+          activeGasDiffusions.filter(
+            (range) => !hiddenEntityIds.has(range.sourceDeviceId),
+          ),
+        );
         return;
       }
 
-      syncPreviewGasRanges(ctx);
+      syncPreviewGasRanges(ctx, hiddenEntityIds);
     },
 
     destroy(): void {

@@ -1,5 +1,6 @@
 import type { ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { MouseShortcutInput } from "@/app/shell/shared";
+import type { UiKey } from "@/shared/i18n";
 
 // AI-REMOVED 2026-08-22:
 // Reason: 鼠标提示原子不应反向依赖右侧工具栏的私有类型。
@@ -16,11 +17,24 @@ export type CanvasRightDockToolbarShortcutPartDefinition =
   | {
     readonly kind: "shortcut-key";
     readonly shortcutKeyId: ShortcutKeyId;
-    readonly bindingDisplay?: "all" | "primary";
+    // AI-REMOVED 2026-08-22:
+    // Reason: 右侧工具栏必须展示快捷键配置中的全部绑定，调用方不得只截取主绑定。
+    // Trigger: 用户明确要求任何快捷键配置了第二快捷键时，都显示“主快捷键 / 第二快捷键”。
+    // Evidence: KeyboardShortcutPrompt 已原生将分号分隔的绑定渲染为斜杠分隔的候选快捷键。
+    // Replacement: resolveCanvasRightDockToolbarShortcut 完整保留 getKeyboardShortcutFor 的返回值。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // readonly bindingDisplay?: "all" | "primary";
   }
   | {
     readonly kind: "fixed-key";
     readonly value: string;
+  }
+  | {
+    readonly kind: "fixed-label";
+    readonly labelKey: UiKey;
   }
   | {
     readonly kind: "mouse";
@@ -29,7 +43,7 @@ export type CanvasRightDockToolbarShortcutPartDefinition =
 
 export interface CanvasRightDockToolbarShortcutDefinition {
   readonly parts: readonly CanvasRightDockToolbarShortcutPartDefinition[];
-  readonly separator?: "gap" | "plus";
+  readonly separator?: "alternative" | "gap" | "plus";
 }
 
 export type ResolvedCanvasRightDockToolbarShortcutPart =
@@ -38,13 +52,17 @@ export type ResolvedCanvasRightDockToolbarShortcutPart =
     readonly value: string;
   }
   | {
+    readonly kind: "label";
+    readonly labelKey: UiKey;
+  }
+  | {
     readonly kind: "mouse";
     readonly input: MouseShortcutInput;
   };
 
 export interface ResolvedCanvasRightDockToolbarShortcut {
   readonly parts: readonly ResolvedCanvasRightDockToolbarShortcutPart[];
-  readonly separator: "gap" | "plus";
+  readonly separator: "alternative" | "gap" | "plus";
 }
 
 export function resolveCanvasRightDockToolbarShortcut(
@@ -58,17 +76,29 @@ export function resolveCanvasRightDockToolbarShortcut(
   const parts: ResolvedCanvasRightDockToolbarShortcutPart[] = [];
 
   for (const part of definition.parts) {
-    if (part.kind === "mouse") {
-      parts.push(part);
+    if (part.kind === "mouse" || part.kind === "fixed-label") {
+      parts.push(part.kind === "mouse"
+        ? part
+        : { kind: "label", labelKey: part.labelKey });
       continue;
     }
 
     const unresolvedValue = part.kind === "fixed-key"
       ? part.value
       : getKeyboardShortcutFor(part.shortcutKeyId);
-    const value = part.kind === "shortcut-key" && part.bindingDisplay === "primary"
-      ? unresolvedValue.split(";", 1)[0]?.trim() ?? ""
-      : unresolvedValue.trim();
+    // AI-REMOVED 2026-08-22:
+    // Reason: 截断到主绑定会使右侧工具栏漏掉用户配置的第二快捷键。
+    // Trigger: 用户明确要求所有第二快捷键都以“/”展示。
+    // Evidence: KeyboardShortcutPrompt 接收完整的分号分隔字符串后会自动渲染候选分隔符。
+    // Replacement: 下方直接 trim 完整绑定字符串。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const value = part.kind === "shortcut-key" && part.bindingDisplay === "primary"
+    //   ? unresolvedValue.split(";", 1)[0]?.trim() ?? ""
+    //   : unresolvedValue.trim();
+    const value = unresolvedValue.trim();
 
     if (value === "") {
       return null;

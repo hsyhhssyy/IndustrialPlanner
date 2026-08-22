@@ -78,6 +78,15 @@ const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS = [
   { operationId: "continuous-placement", presentation: "shortcut" },
 ] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
+const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "switch-device-variant", presentation: "shortcut" },
+  { operationId: "rotate-placement", presentation: "shortcut" },
+  { operationId: "confirm-placement", presentation: "shortcut" },
+  { operationId: "continuous-placement", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
 const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>> = {
   beltLogistics: SHORTCUT_KEY.PLACE_CONVEYOR,
   pipeLogistics: SHORTCUT_KEY.PLACE_PIPE,
@@ -1135,6 +1144,10 @@ export function syncPlacementEntryUi(
   appHost: AppHost,
   pointerMode = appHost.internalState.runtime.singlePlacementPointerMode,
   continuous = appHost.internalState.runtime.singlePlacementContinuous,
+  options: {
+    readonly floatingToolbarButtonIds?: readonly CanvasFloatingToolbarButtonId[];
+    readonly rightDockToolbarItems?: readonly CanvasRightDockToolbarItemRequest[];
+  } = {},
 ): boolean {
   if (pointerMode === null) {
     appHost.internalActions.hideCanvasRightDockToolbar();
@@ -1144,7 +1157,9 @@ export function syncPlacementEntryUi(
   if (pointerMode !== "touch") {
     appHost.internalActions.hideCanvasFloatingToolbar();
     appHost.internalActions.hideCanvasTopLeftCornerToolbar();
-    appHost.internalActions.showCanvasRightDockToolbar(PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS);
+    appHost.internalActions.showCanvasRightDockToolbar(
+      options.rightDockToolbarItems ?? resolvePlacementRightDockToolbarItems(appHost),
+    );
     return true;
   }
 
@@ -1154,9 +1169,23 @@ export function syncPlacementEntryUi(
   );
 
   return appHost.internalActions.showCanvasFloatingToolbarForCollection(
-    resolvePlacementToolbarButtonIds(appHost),
+    options.floatingToolbarButtonIds ?? resolvePlacementToolbarButtonIds(appHost),
     EntityCollectionType.preview,
   );
+}
+
+function resolvePlacementRightDockToolbarItems(
+  appHost: AppHost,
+): readonly CanvasRightDockToolbarItemRequest[] {
+  const deviceId = appHost.internalState.runtime.singlePlacementDeviceId;
+  if (
+    deviceId === null
+    || !canSwitchEntityVariantDefinition({ appHost, definitionId: deviceId })
+  ) {
+    return PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS;
+  }
+
+  return PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT;
 }
 
 function handleContinuousPlacementToggleTap(

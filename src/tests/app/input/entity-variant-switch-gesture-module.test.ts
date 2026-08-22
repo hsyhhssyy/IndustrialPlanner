@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { SHORTCUT_KEY } from "@/app/actions";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
@@ -29,11 +30,37 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     );
   });
 
+  it("switches from Tab only in select mode with the right Inspector panel", () => {
+    const panel = createContext({ useInspectorPanel: true });
+    const dialog = createContext({ useInspectorPanel: false });
+    const marquee = createContext({ activeTool: "marquee", useInspectorPanel: true });
+    const module = createHypergryphEntityVariantSwitchGestureModule();
+
+    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), panel.context)).toEqual({
+      status: "handled",
+    });
+    expect(panel.editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
+      "selected-entity",
+      "liquid_filling_pd_mc_1",
+    );
+
+    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), dialog.context)).toEqual({
+      status: "ignored",
+    });
+    expect(dialog.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
+
+    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), marquee.context)).toEqual({
+      status: "ignored",
+    });
+    expect(marquee.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
+  });
+
   it("ignores non-switchable or multi-selected devices", () => {
     const nonSwitchable = createContext({
       selectedDefinitionId: "belt_straight_1x1",
     });
     const multi = createContext({
+      activeTool: "marquee",
       selectionIds: ["selected-entity", "other-entity"],
     });
     const module = createHypergryphEntityVariantSwitchGestureModule();
@@ -60,6 +87,7 @@ function createContext(options: {
   activeTool?: "select" | "marquee" | "move";
   selectedDefinitionId?: string;
   selectionIds?: readonly string[];
+  useInspectorPanel?: boolean;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -108,10 +136,22 @@ function createContext(options: {
     state: {
       settings: {
         hypergryphOperationMode: true,
+        gameUseInspectorPanel: options.useInspectorPanel ?? false,
       },
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
+    },
+    internalActions: {
+      isShortcutFor: vi.fn((
+        shortcutKey: string,
+        code: string | null,
+        eventKey: string | null,
+      ) => (
+        shortcutKey === SHORTCUT_KEY.SWITCH_DEVICE_MODE
+        && code === "Tab"
+        && eventKey === "Tab"
+      )),
     },
     workspace: {
       editor,
@@ -168,6 +208,18 @@ function uiButtonMouseTapEvent(uiButtonId: string) {
     gestureId: "ui-mouse-tap-1",
     uiButtonId,
     button: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function keyDownEvent(options: { code: string | null; key: string | null }) {
+  return {
+    type: "key down" as const,
+    gestureId: "key-down-1",
+    code: options.code,
+    key: options.key,
+    keyCode: options.key === null ? null : options.key.toUpperCase().charCodeAt(0),
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

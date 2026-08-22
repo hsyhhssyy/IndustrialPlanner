@@ -683,6 +683,58 @@ describe("resolveMarqueeGridRectStrokeStyle", () => {
 })
 
 describe("resolvePowerRangeOutlineLayouts", () => {
+  it("keeps unselected power ranges while omitting batch-move entities", () => {
+    const registry = createRegistryContract()
+    const entityDefinitionMap = new Map(
+      registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    )
+    const entities = [
+      {
+        id: "selected-pole",
+        definitionId: "power_diffuser_1",
+        position: { x: 0, y: 0 },
+        rotation: 0 as const,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "unselected-pole",
+        definitionId: "power_diffuser_1",
+        position: { x: 20, y: 0 },
+        rotation: 0 as const,
+        config: {},
+        tags: [],
+      },
+    ]
+    const layoutOptions = {
+      entities,
+      entityDefinitionMap,
+      visibleWorldRect: {
+        left: -20,
+        top: -20,
+        right: 40,
+        bottom: 20,
+      },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 600,
+        height: 400,
+      },
+      viewportCenter: {
+        x: 10,
+        y: 0,
+      },
+      gridCellPixelSize: 10,
+    }
+
+    expect(resolvePowerRangeOutlineLayouts(layoutOptions)).toHaveLength(2)
+    expect(resolvePowerRangeOutlineLayouts({
+      ...layoutOptions,
+      hiddenEntityIds: new Set(["selected-pole", "selected-pole:draft"]),
+    })).toHaveLength(1)
+  })
+
   it("keeps rendering a power range when the power pole body is outside the viewport", () => {
     const registry = createRegistryContract()
     const entityDefinitionMap = new Map(

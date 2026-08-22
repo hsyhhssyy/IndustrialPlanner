@@ -20,6 +20,8 @@ export type SyncAssetType =
 export interface SyncRemoteAssetIdCodec {
   toRemoteAssetId(adapterAssetId: string): string;
   toAdapterAssetId(remoteAssetId: string): string;
+  /** 同一 assetType 被多个 adapter 共享时，只枚举属于当前 adapter 的远端 ID。 */
+  acceptsRemoteAssetId?(remoteAssetId: string): boolean;
 }
 
 export type SyncRemoteWebDavBinding =

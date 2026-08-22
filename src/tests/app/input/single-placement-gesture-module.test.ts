@@ -514,6 +514,22 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     );
   });
 
+  it("shows the Tab shortcut for a switchable device in mouse placement", () => {
+    const { context, appHost } = createContext({
+      activeTool: "single-placement",
+      singlePlacementDeviceId: "filling_pd_mc_1",
+      singlePlacementPointerMode: "mouse",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(module.handle(onEnterActiveToolEvent("select", "single-placement"), context)).toEqual({
+      status: "handled",
+    });
+    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+      PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST,
+    );
+  });
+
   it("keeps mouse placement active when apply uses ctrl", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "single-placement",
@@ -995,6 +1011,15 @@ const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST =
 const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST = [
   { operationId: "pan-viewport", presentation: "shortcut" },
   { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "rotate-placement", presentation: "shortcut" },
+  { operationId: "confirm-placement", presentation: "shortcut" },
+  { operationId: "continuous-placement", presentation: "shortcut" },
+] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
+
+const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST = [
+  { operationId: "pan-viewport", presentation: "shortcut" },
+  { operationId: "zoom-viewport", presentation: "shortcut" },
+  { operationId: "switch-device-variant", presentation: "shortcut" },
   { operationId: "rotate-placement", presentation: "shortcut" },
   { operationId: "confirm-placement", presentation: "shortcut" },
   { operationId: "continuous-placement", presentation: "shortcut" },
