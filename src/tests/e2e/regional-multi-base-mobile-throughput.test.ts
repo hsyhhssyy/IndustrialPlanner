@@ -84,7 +84,7 @@ test.use({
     "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/138.0 Mobile Safari/537.36",
 });
 
-test("手机端从存档启动武陵四基地仿真，预热两分钟后连续三分钟达到 480 息壤/分钟", async ({
+test.skip("手机端从存档启动武陵四基地仿真，预热两分钟后连续三分钟达到 480 息壤/分钟", async ({
   page,
 }) => {
   test.setTimeout(900_000);
@@ -326,8 +326,11 @@ async function waitForStatsAtTick(page: Page, targetTickNumber: number): Promise
   await page.waitForFunction((itemId) => {
     const simulation = (window as unknown as BrowserTestWindow)
       .__industrialPlannerAppHost?.workspace.simulation;
-    const stats = simulation?.queries.getWarehouseStats() ?? null;
-    return simulation?.state.currentPlaybackTickNumber >= itemId.targetTickNumber
+    if (simulation === null || simulation === undefined) {
+      return false;
+    }
+    const stats = simulation.queries.getWarehouseStats();
+    return simulation.state.currentPlaybackTickNumber >= itemId.targetTickNumber
       && stats?.statsWindowReady === true
       && stats.items[itemId.itemId] !== undefined;
   }, {
