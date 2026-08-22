@@ -46,6 +46,56 @@ describe("区域仓库出口表与仲裁器", () => {
     expect(outlet.ignoreStock).toBe(false);
   });
 
+  it.each([
+    ["传送带分流器", "unloader_1", "log_splitter", 52, 35, 270, "item_copper_ore"],
+    ["传送带汇流器", "unloader_1", "log_converger", 52, 35, 0, "item_copper_ore"],
+    ["传送带桥接器", "unloader_1", "log_connector", 52, 35, 0, "item_copper_ore"],
+    ["物品准入口", "unloader_1", "log_admission", 52, 35, 0, "item_copper_ore"],
+    ["管道分流器", "udpipe_unloader_1", "pipe_splitter", 3, 1, 270, "item_liquid_water"],
+    ["管道汇流器", "udpipe_unloader_1", "pipe_converger", 3, 1, 0, "item_liquid_water"],
+    ["管道桥接器", "udpipe_unloader_1", "pipe_connector", 3, 1, 0, "item_liquid_water"],
+    ["管道准入口", "udpipe_unloader_1", "pipe_admission", 3, 1, 0, "item_liquid_water"],
+  ] as const)("允许仓库直接输出到%s", (
+    _label,
+    sourceDefinitionId,
+    targetDefinitionId,
+    targetX,
+    targetY,
+    targetRotation,
+    itemId,
+  ) => {
+    const registry = createRegistryContract();
+    const isPipe = sourceDefinitionId === "udpipe_unloader_1";
+    const document = createWorldDocumentFromBlueprint(createBlueprint(
+      `regional-outlet-${targetDefinitionId}`,
+      [
+        createEntity("unloader", sourceDefinitionId, isPipe ? 0 : 51, isPipe ? 0 : 34, isPipe ? 180 : 270),
+        createEntity("target", targetDefinitionId, targetX, targetY, targetRotation),
+      ],
+      [createWarehouseSlotLink("unloader", itemId)],
+    ));
+    const topology = compileSimulationTopology({
+      document,
+      registry,
+      simulationMode: "regional-multi-base",
+      poweredEntityIds: new Set(),
+      activeActivityIds: [],
+    });
+
+    const result = buildRegionalWarehouseOutletTable({
+      registry,
+      topologies: [{ baseId: document.baseId, regionBaseOrderIndex: 0, topology }],
+    });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ok).toBe(true);
+    expect(result.table?.orderedOutletIds).toHaveLength(1);
+    expect(Object.values(result.table!.outletById)[0]).toMatchObject({
+      itemId,
+      targetCompiledNodeId: expect.stringContaining("device:target"),
+    });
+  });
+
   it("按每物品区域游标公平轮询，库存充足时全批通过", () => {
     const table = createFakeOutletTable([
       createFakeOutlet("a", "item_iron", 0),

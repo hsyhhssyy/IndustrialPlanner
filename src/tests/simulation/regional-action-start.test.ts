@@ -49,7 +49,7 @@ describe("区域多基地 SimulationAction 启动", () => {
     }
   });
 
-  it("开启基地面板开关后按区域启动并预填已提交播放缓冲", async () => {
+  it("区域 x2 启动只等待首个 Epoch，再异步补充 20 Tick 播放缓冲", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const otherBaseIds = registry.baseDefinitions
@@ -79,14 +79,21 @@ describe("区域多基地 SimulationAction 启动", () => {
 
     const host = createSimulationHost(workspace, { workerMode: "runtime" });
     try {
+      host.actions.setSimulationSpeed(2);
       host.actions.setRegionalMultiBaseEnabled(true);
       await host.actions.start();
       expect(host.state.runningState).toBe("start");
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      expect(host.state.simulationSpeed).toBe(2);
+      expect(host.internalState.runtimeStatus.dynamicTickRate).toBe(10);
+      expect(host.internalState.runtimeStatus.maxBufferSize).toBe(20);
+      host.actions.pause();
       host.actions.setRegionalMultiBaseEnabled(false);
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
       expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(0);
-      expect(host.internalState.runtimeStatus.latestTickNumber).toBeGreaterThanOrEqual(10);
+      expect(host.internalState.runtimeStatus.latestTickNumber).toBeGreaterThanOrEqual(1);
+      expect(host.internalState.runtimeStatus.latestTickNumber).toBeLessThanOrEqual(11);
+      expect(host.internalState.runtimeStatus.bufferSize).toBeLessThanOrEqual(20);
       expect(host.queries.getWarehouseStats()).not.toBeNull();
     } finally {
       host.dispose();

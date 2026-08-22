@@ -2598,7 +2598,8 @@ implements SimulationAction, SimulationInternalAction {
       this.playbackTargetTickNumber = 0;
 
       // 预填约 18 个稳态 Epoch，让 UI 只消费已经完成区域提交的结果。
-      for (let epoch = 0; epoch < 18 && !this.regionalSessionStopped; epoch += 1) {
+      // AI-CORRECTION 2026-08-21: 启动只等待首个已提交 Epoch；后续快照由区域会话异步补充到播放低水位。
+      for (let epoch = 0; epoch < 1 && !this.regionalSessionStopped; epoch += 1) {
         const committed = await this.regionalSession.runEpoch(epoch);
         this.enqueueRegionalCommittedEpoch(committed);
       }
@@ -2618,7 +2619,7 @@ implements SimulationAction, SimulationInternalAction {
           retainedFromTick: this.stateReadWrite.currentSnapshot?.tickNumber ?? 0,
           latestTickNumber: this.latestRegionalPlaybackTickNumber(),
           bufferSize: this.playbackHotQueue.size + (this.stateReadWrite.currentSnapshot === null ? 0 : 1),
-          maxBufferSize: 180,
+          maxBufferSize: PLAYBACK_HOT_QUEUE_CAPACITY,
           dynamicTickRate: currentBaseDynamicTickRate,
           error: null,
         };
@@ -2729,7 +2730,8 @@ implements SimulationAction, SimulationInternalAction {
       if (session === null) {
         return;
       }
-      if (this.playbackHotQueue.size >= 180) {
+      // AI-CORRECTION 2026-08-21: 区域播放复用单基地低水位；每个 Epoch 补入 10 Tick，队列稳定在 10~19。
+      if (this.playbackHotQueue.size >= PLAYBACK_HOT_QUEUE_LOW_WATER) {
         await new Promise((resolve) => setTimeout(resolve, 50));
         continue;
       }

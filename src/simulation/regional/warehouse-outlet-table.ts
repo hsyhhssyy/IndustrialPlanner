@@ -369,37 +369,59 @@ function validateFirstSegment(options: {
   readonly collect: CollectBaseOutletsOptions;
 }): string | null {
   const { registry, input, targetNode, targetDevice, edge, collect } = options;
-  if (!registry.queries.isBelt(targetDevice.definitionId) && !registry.queries.isPipe(targetDevice.definitionId)) {
+  if (
+    !registry.queries.isBeltFamily(targetDevice.definitionId)
+    && !registry.queries.isPipeFamily(targetDevice.definitionId)
+  ) {
     pushError(
       collect,
-      "regional-warehouse-target-not-strict-logistics",
-      `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.definitionId} 不是严格传送带节或管道节。`,
+      "regional-warehouse-target-not-phase-gated-logistics",
+      `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.definitionId} 不属于受相位门禁控制的传送带族或管道族。`,
     );
     return "rejected";
   }
 
-  if (targetNode.inputPortIds.length !== 1) {
-    pushError(
-      collect,
-      "regional-warehouse-target-input-count",
-      `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.id} 相关输入端口数不为 1。`,
-    );
-    return "rejected";
-  }
+  // AI-REMOVED 2026-08-22:
+  // Reason: 输入端口数量不决定区域 Epoch 正确性；汇流器和桥接器虽有多个输入端口，仍受统一物流相位门禁控制。
+  // Trigger: 用户要求所有受门禁控制的物流设备均可直接接入区域仓库。
+  // Evidence: Stage 3A 在 Demand 前完成本地求解，Stage 3B 注入后不重跑；同一共享目标的多区域出口仍由 seenTargetNodeIds 拒绝。
+  // Replacement: 上方 BeltFamily/PipeFamily 门禁准入 + collectBaseOutlets 中 shared-regional-warehouse-first-segment 校验。
+  // Risk: Low - 本地输入在 Demand 前已冻结，授权物品只能等下一合法物流相位继续移动。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (targetNode.inputPortIds.length !== 1) {
+  //   pushError(
+  //     collect,
+  //     "regional-warehouse-target-input-count",
+  //     `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.id} 相关输入端口数不为 1。`,
+  //   );
+  //   return "rejected";
+  // }
 
-  for (const slotId of targetNode.slotIds) {
-    const slot = options.input.topology.slots[slotId];
-    if (slot !== undefined && slot.capacity > 1) {
-      pushError(
-        collect,
-        "regional-warehouse-target-capacity",
-        `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.id} 槽 ${slot.sourceSlotId ?? slot.id} 容量为 ${slot.capacity}，第一版要求共享容量为 1。`,
-      );
-      return "rejected";
-    }
-  }
+  // AI-REMOVED 2026-08-22:
+  // Reason: 目标容量大于 1 不破坏 0/1 Demand；每个区域出口每 Epoch 仍只申请一件，实际剩余容量由 findInputSlotForItem 判断。
+  // Trigger: 用户要求区域仓库首段类别准入只取决于设备是否受物流相位门禁控制。
+  // Evidence: 同一目标节点只允许一个区域出口，Stage 3A 后状态冻结，Stage 3B 每个获批出口只注入一件。
+  // Replacement: RegionWarehouseGate.canOutletAcceptAtGate/applyGrantedOutlet 的 findInputSlotForItem 容量检查。
+  // Risk: Low - 目标容量改变可连续接货的 Epoch 数量，不改变单次授权的原子性。
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const slotId of targetNode.slotIds) {
+  //   const slot = options.input.topology.slots[slotId];
+  //   if (slot !== undefined && slot.capacity > 1) {
+  //     pushError(
+  //       collect,
+  //       "regional-warehouse-target-capacity",
+  //       `基地 ${input.baseId} 仓库出口 ${edge.id} 的首段 ${targetDevice.id} 槽 ${slot.sourceSlotId ?? slot.id} 容量为 ${slot.capacity}，第一版要求共享容量为 1。`,
+  //     );
+  //     return "rejected";
+  //   }
+  // }
 
   // 严格物流首段只有单向输入视图；后续 Stage 3B 注入后不重跑目标 output 求解。
+  // AI-CORRECTION 2026-08-22: 首段现允许全部受相位门禁控制的物流设备；仍要求目标节点为 input-view，Stage 3B 注入后不重跑 output 求解。
   if (targetNode.viewRole !== "input-view") {
     pushError(
       collect,
