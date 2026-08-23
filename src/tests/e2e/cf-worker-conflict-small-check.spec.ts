@@ -395,10 +395,13 @@ async function waitForStableSync(page: Page): Promise<void> {
     return sync === null || sync === undefined
       ? null
       : {
+          settingsEnabled: sync.state.settings.enabled,
           phase: sync.state.status.phase,
           saveState: sync.state.status.saveState,
           currentRunReason: sync.state.status.currentRunReason,
           initialSyncStage: sync.state.status.initialSyncStage,
+          hasCompletedInitialFeatureSync:
+            sync.state.status.hasCompletedInitialFeatureSync,
           pendingConflict: sync.state.pendingConflict,
           pendingLocalChangeCount: sync.state.status.pendingLocalChangeCount,
           lastError: sync.state.status.lastError,
@@ -408,10 +411,12 @@ async function waitForStableSync(page: Page): Promise<void> {
     timeout: 90_000,
     intervals: [500],
   }).toEqual({
+    settingsEnabled: true,
     phase: "idle",
     saveState: "idle",
     currentRunReason: null,
     initialSyncStage: "ready",
+    hasCompletedInitialFeatureSync: true,
     pendingConflict: null,
     pendingLocalChangeCount: 0,
     lastError: null,
