@@ -54,6 +54,7 @@ interface BrowserSyncState {
     readonly saveState: string;
     readonly currentRunReason: string | null;
     readonly initialSyncStage: string;
+    readonly hasCompletedInitialFeatureSync: boolean;
     readonly pendingLocalChangeCount: number;
     readonly lastError: string | null;
     readonly lastSmallCheckAt: string | null;
