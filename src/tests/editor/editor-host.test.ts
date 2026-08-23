@@ -63,6 +63,33 @@ function createTestEntity(
   };
 }
 
+function createOuterRingPumpBlueprint() {
+  return createBlueprintDocument({
+    name: "抽水泵边缘蓝图",
+    baseId: DEFAULT_WORLD_BASE_ID,
+    initialGridPoint: { x: 0, y: 20 },
+    entities: {
+      pump: createTestEntity("pump", "water_pump_1", -10, 20, 180),
+      storage: createTestEntity("storage", "storager_1", 0, 20),
+    },
+    entityOrder: ["pump", "storage"],
+    slotLinks: [{
+      id: "pump-storage-link",
+      linkType: "share-all",
+      source: {
+        entityId: "pump",
+        storageSlotGroupId: "fluid_output_buffer",
+        slotId: "output_fluid_slot_1",
+      },
+      target: {
+        entityId: "storage",
+        storageSlotGroupId: "storage",
+        slotId: "storage_slot_1",
+      },
+    }],
+  });
+}
+
 function createDocumentWithTestEntities(
   entities: readonly WorldDocument["entities"][string][],
 ): WorldDocument {
@@ -1621,6 +1648,75 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toBeNull();
   });
 
+  it("moves an outer-ring constrained blueprint as one rigid collection", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createBlueprintPlacementDraft?.(
+      createOuterRingPumpBlueprint(),
+      { x: 0, y: 20 },
+    );
+    const [pumpDraftId, storageDraftId] = editorHost.state.collections.preview;
+
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: 2, y: 0 },
+    });
+
+    expect(editorHost.queries.getEntityById(pumpDraftId ?? "")).toMatchObject({
+      position: { x: -10, y: 20 },
+      rotation: 180,
+    });
+    expect(editorHost.queries.getEntityById(storageDraftId ?? "")).toMatchObject({
+      position: { x: 0, y: 20 },
+      rotation: 0,
+    });
+  });
+
+  it("places only the legal blueprint subset in free placement state", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createBlueprintPlacementDraft?.(
+      createOuterRingPumpBlueprint(),
+      { x: 0, y: 20 },
+    );
+    const [pumpDraftId, storageDraftId] = editorHost.state.collections.preview;
+
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: 20, y: 0 },
+    });
+
+    expect(editorHost.queries.getEntityById(pumpDraftId ?? "")?.position).toEqual({
+      x: 10,
+      y: 20,
+    });
+    expect(editorHost.queries.getEntityById(storageDraftId ?? "")?.position).toEqual({
+      x: 20,
+      y: 20,
+    });
+    expect(
+      editorHost.queries.getEntityPlacementValidation(pumpDraftId ?? "").reasons.some(
+        (reason) => reason.code === "outside-base",
+      ),
+    ).toBe(true);
+    expect(editorHost.queries.getEntityPlacementValidation(storageDraftId ?? "").canPlace).toBe(true);
+
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+    const placedDocument = editorHost.document.getSnapshot();
+    expect(placedDocument.entityOrder).toHaveLength(1);
+    expect(Object.values(placedDocument.entities)).toEqual([
+      expect.objectContaining({
+        definitionId: "storager_1",
+        position: { x: 20, y: 20 },
+      }),
+    ]);
+    expect(placedDocument.slotLinks).toEqual([]);
+  });
+
   it("creates move operation ghost entities and preview drafts from the current selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1727,6 +1823,46 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.internalState.drafts).toHaveLength(1);
     expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
+  });
+
+  it("moves only the legal subset when a constrained multi-selection enters free state", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("pump", "water_pump_1", -10, 20, 180),
+      createTestEntity("storage", "storager_1", 0, 20),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["pump", "storage"]);
+    editorHost.actions.createMoveOperationDraft();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: 20, y: 0 },
+    });
+
+    const [pumpDraftId, storageDraftId] = editorHost.state.collections.preview;
+    expect(editorHost.queries.getEntityById(pumpDraftId ?? "")?.position).toEqual({
+      x: 10,
+      y: 20,
+    });
+    expect(editorHost.queries.getEntityById(storageDraftId ?? "")?.position).toEqual({
+      x: 20,
+      y: 20,
+    });
+
+    expect(editorHost.actions.applyMoveOerationDraft()).toBe(true);
+    expect(editorHost.document.getSnapshot().entities.pump?.position).toEqual({
+      x: -10,
+      y: 20,
+    });
+    expect(editorHost.document.getSnapshot().entities.storage?.position).toEqual({
+      x: 20,
+      y: 20,
+    });
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual([]);
   });
 
   it("switches a document entity definition, clears config, and removes stale slot links", () => {

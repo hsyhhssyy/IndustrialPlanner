@@ -10,7 +10,7 @@ import {
 import { cloneEntityConfig } from "../entity-config-clone";
 import { resolveEntityById } from "../entity-resolvers";
 import {
-  hasOutsideBasePlacementReason,
+  resolveOutsideBasePlacementEntityIds,
   syncPlacementValidationState,
 } from "../placement-validation";
 import type { EditorActionsContext } from "./types";
@@ -93,20 +93,44 @@ export function createEditorMoveActions({
         drafts: state.drafts,
       });
 
-      if (hasOutsideBasePlacementReason({
+      const outsideBaseDraftIds = resolveOutsideBasePlacementEntityIds({
         document: currentDocument,
         entityIds: previewDrafts.map((draft) => draft.id),
         state,
         workspace,
-      })) {
+      });
+      const movablePreviewDrafts = previewDrafts.filter(
+        (draft) => !outsideBaseDraftIds.has(draft.id),
+      );
+      if (movablePreviewDrafts.length === 0) {
         return false;
       }
+
+      /*
+        AI-REMOVED 2026-08-23:
+        Reason: 原逻辑让任一受限设备阻断整个框选移动，无法在规则冲突时保留非法设备原位并移动合法设备。
+        Trigger: 用户要求框选移动与蓝图放置采用一致的合法子集提交语义。
+        Evidence: move preview 已逐实体校验，ghost 原实体会在未提交时自然保留原位。
+        Replacement: 上方 outsideBaseDraftIds + movablePreviewDrafts。
+        Risk: Medium；多选移动可能只移动部分设备，历史记录必须只包含实际移动成员。
+        Human Review: Required
+
+        Original code:
+        if (hasOutsideBasePlacementReason({
+          document: currentDocument,
+          entityIds: previewDrafts.map((draft) => draft.id),
+          state,
+          workspace,
+        })) {
+          return false;
+        }
+      */
 
       const nextEntities = { ...currentDocument.entities };
       const definitionChangedEntityIds = new Set<string>();
       let didUpdateDocument = false;
 
-      for (const draft of previewDrafts) {
+      for (const draft of movablePreviewDrafts) {
         if (!ghostEntityIds.has(draft.originalEntityId)) {
           continue;
         }
@@ -137,11 +161,11 @@ export function createEditorMoveActions({
           action: {
             type: "entity.move",
             label: "移动设备",
-            entityIds: previewDrafts.map((draft) => draft.originalEntityId),
+            entityIds: movablePreviewDrafts.map((draft) => draft.originalEntityId),
             definitionIds: resolveUniqueStrings(
-              previewDrafts.map((draft) => draft.definitionId),
+              movablePreviewDrafts.map((draft) => draft.definitionId),
             ),
-            count: previewDrafts.length,
+            count: movablePreviewDrafts.length,
           },
           update: (documentSnapshot) => ({
             ...documentSnapshot,

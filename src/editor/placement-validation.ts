@@ -83,15 +83,26 @@ export function hasOutsideBasePlacementReason(options: {
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
 }): boolean {
+  return resolveOutsideBasePlacementEntityIds(options).size > 0;
+}
+
+export function resolveOutsideBasePlacementEntityIds(options: {
+  document: WorldDocument;
+  entityIds: readonly string[];
+  state: EditorStateReadWrite;
+  workspace: WorkspaceContract;
+}): ReadonlySet<string> {
   const validationByEntityId = resolvePlacementValidations({
     document: options.document,
     state: options.state,
     workspace: options.workspace,
   });
 
-  return options.entityIds.some((entityId) =>
-    validationByEntityId[entityId]?.reasons.some((reason) => reason.code === "outside-base")
-    ?? false,
+  return new Set(
+    options.entityIds.filter((entityId) =>
+      validationByEntityId[entityId]?.reasons.some((reason) => reason.code === "outside-base")
+      ?? false,
+    ),
   );
 }
 

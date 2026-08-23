@@ -12,7 +12,10 @@ import {
   type LogisticsKind,
 } from "@/domain/shared/logistics";
 
-import { syncPlacementValidationState } from "../placement-validation";
+import {
+  resolveOutsideBasePlacementEntityIds,
+  syncPlacementValidationState,
+} from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import { snapPlacementToOuterRingEdge } from "../placement-snapping";
@@ -215,14 +218,42 @@ export function createEditorPlacementActions({
       });
 
       // 2026-05-24: 禁止确认放置 outside-base 的设备。
-      const validationByEntityId = state.internalTransientState.placementValidationByEntityId;
-      if (previewDrafts.some((draft) => {
-        const validation = validationByEntityId[draft.id];
-
-        return validation?.reasons.some((reason) => reason.code === "outside-base") ?? false;
-      })) {
+      // AI-CORRECTION 2026-08-23: 多设备蓝图改为提交合法子集；单设备仍保持原有整次拒绝语义。
+      const outsideBaseDraftIds = resolveOutsideBasePlacementEntityIds({
+        document: currentDocument,
+        entityIds: previewDrafts.map((draft) => draft.id),
+        state,
+        workspace,
+      });
+      const committedPreviewDrafts = previewDrafts.filter(
+        (draft) => !outsideBaseDraftIds.has(draft.id),
+      );
+      if (
+        committedPreviewDrafts.length === 0
+        || (previewDrafts.length === 1 && committedPreviewDrafts.length !== 1)
+      ) {
         return false;
       }
+
+      /*
+        AI-REMOVED 2026-08-23:
+        Reason: 原逻辑只要蓝图中任一设备存在 outside-base 就拒绝整张蓝图，无法兼容设备放置规则演进后的旧蓝图。
+        Trigger: 用户要求约束无共同解时允许自由选择位置，并只放下该位置可放置的设备。
+        Evidence: placement validation 已逐实体给出 outside-base；提交层可以安全筛选合法子集。
+        Replacement: 上方 outsideBaseDraftIds + committedPreviewDrafts。
+        Risk: Medium；蓝图可能部分落地，因此历史记录和 slotLinks 必须同步收敛到实际提交子集。
+        Human Review: Required
+
+        Original code:
+        const validationByEntityId = state.internalTransientState.placementValidationByEntityId;
+        if (previewDrafts.some((draft) => {
+          const validation = validationByEntityId[draft.id];
+
+          return validation?.reasons.some((reason) => reason.code === "outside-base") ?? false;
+        })) {
+          return false;
+        }
+      */
 
       // 构建 definition 查找表，用于物流族判定。
       const definitionMap = new Map(
@@ -240,10 +271,25 @@ export function createEditorPlacementActions({
 
       // 蓝图包含协议核心时，标记当前文档中的协议核心为被替换实体，
       // 使其在同一 commit 内被移除，避免出现两个协议核心。
-      const previewHasProtocolCore = previewDrafts.some(
+      // AI-CORRECTION 2026-08-23: 仅实际提交的合法子集可以触发现有协议核心替换。
+      const committedPreviewHasProtocolCore = committedPreviewDrafts.some(
         (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
       );
-      if (previewHasProtocolCore) {
+      /*
+        AI-REMOVED 2026-08-23:
+        Reason: 部分蓝图提交时，已跳过的协议核心不得删除文档中现有协议核心。
+        Trigger: 蓝图提交改为只提交不含 outside-base 的合法子集。
+        Evidence: previewDrafts 包含被跳过成员，committedPreviewDrafts 才是实际写入集合。
+        Replacement: committedPreviewHasProtocolCore
+        Risk: Low
+        Human Review: Required
+
+        Original code:
+        const previewHasProtocolCore = previewDrafts.some(
+          (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
+        );
+      */
+      if (committedPreviewHasProtocolCore) {
         for (const [entityId, entity] of Object.entries(currentDocument.entities)) {
           if (workspace.registry.queries.isProtocolCore(entity.definitionId)) {
             replacedEntityIds.add(entityId);
@@ -274,7 +320,7 @@ export function createEditorPlacementActions({
       const newlyAllocatedIds = new Set<string>();
       const existingDocumentIds = new Set(Object.keys(currentDocument.entities));
 
-      for (const draft of previewDrafts) {
+      for (const draft of committedPreviewDrafts) {
         const newId = generateFinalEntityId(
           draft.definitionId,
           existingDocumentIds,
@@ -283,7 +329,7 @@ export function createEditorPlacementActions({
         oldIdToNewId.set(draft.id, newId);
       }
 
-      for (const draft of previewDrafts) {
+      for (const draft of committedPreviewDrafts) {
         const newId = oldIdToNewId.get(draft.id) ?? draft.id;
 
         // AI-CORRECTION 2026-06-09: config 中不再存储 entity ID 引用（links 已迁移至 document.slotLinks），
@@ -305,10 +351,25 @@ export function createEditorPlacementActions({
       }
 
       if (state.internalTransientState.placementDraftSlotLinks !== null) {
+        const previewDraftIds = new Set(previewDrafts.map((draft) => draft.id));
+        const committedPreviewDraftIds = new Set(
+          committedPreviewDrafts.map((draft) => draft.id),
+        );
         nextSlotLinks.push(
-          ...state.internalTransientState.placementDraftSlotLinks.map((link) =>
-            rewriteSlotLinkEntityIds(link, oldIdToNewId),
-          ),
+          ...state.internalTransientState.placementDraftSlotLinks
+            .filter((link) =>
+              isPlacementSlotLinkEndpointAvailable({
+                entityId: link.source.entityId,
+                previewDraftIds,
+                committedPreviewDraftIds,
+              })
+              && isPlacementSlotLinkEndpointAvailable({
+                entityId: link.target.entityId,
+                previewDraftIds,
+                committedPreviewDraftIds,
+              }),
+            )
+            .map((link) => rewriteSlotLinkEntityIds(link, oldIdToNewId)),
         );
       }
 
@@ -318,8 +379,15 @@ export function createEditorPlacementActions({
       // 如果 drafts 未清除，预览 draft 会与刚放置的正式实体位置重叠，导致两者都被打入
       // invalidPlacement collection，进而被 resolveSimulationCompileDocument 过滤掉，
       // 最终导致仿真拓扑缺失该实体（如供电桩），触发 "运行中放置供电桩不生效" 的 bug。
-      const historyAction = state.internalTransientState.placementHistoryAction
-        ?? createPlacementHistoryAction(previewDrafts);
+      const historyAction = {
+        ...(state.internalTransientState.placementHistoryAction
+          ?? createPlacementHistoryAction(committedPreviewDrafts)),
+        entityIds: committedPreviewDrafts.map((draft) => draft.id),
+        definitionIds: resolveUniqueStrings(
+          committedPreviewDrafts.map((draft) => draft.definitionId),
+        ),
+        count: committedPreviewDrafts.length,
+      };
       clearPlacementState(state);
 
       const committedDocument = documentWriter.commit({
@@ -520,6 +588,15 @@ function rewriteSlotLinkEntityIds(
     source: { ...link.source, entityId: newSourceId },
     target: { ...link.target, entityId: newTargetId },
   };
+}
+
+function isPlacementSlotLinkEndpointAvailable(options: {
+  entityId: string;
+  previewDraftIds: ReadonlySet<string>;
+  committedPreviewDraftIds: ReadonlySet<string>;
+}): boolean {
+  return !options.previewDraftIds.has(options.entityId)
+    || options.committedPreviewDraftIds.has(options.entityId);
 }
 
 function cloneWorldEntity(entity: WorldEntity): WorldEntity {

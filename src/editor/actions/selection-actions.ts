@@ -25,6 +25,7 @@ import {
 } from "../placement-validation";
 import {
   hasOuterRingEdgeSnapBehavior,
+  resolveOuterRingEdgeSnap,
   rotateOuterRingEdgeSnappedPlacement,
   snapPlacementToOuterRingEdge,
 } from "../placement-snapping";
@@ -187,32 +188,63 @@ export function createEditorSelectionActions({
 
     }
 
-    let didUpdateDrafts = false;
-    const nextDrafts = state.drafts.map((entity) => {
-      if (!targetEntityIds.has(entity.id) || currentDocument.entities[entity.id] !== undefined) {
-        return entity;
+    const movedDraftMap = new Map<string, DraftEntity>();
+    for (const draft of state.drafts) {
+      if (!targetEntityIds.has(draft.id) || currentDocument.entities[draft.id] !== undefined) {
+        continue;
       }
 
-      didUpdateDrafts = true;
-      const movedEntity = moveEntityByGridVector(entity, gridVector);
-      const definition = entityDefinitionMap.get(movedEntity.definitionId);
-      if (collectionType !== EntityCollectionType.preview || definition === undefined) {
-        return movedEntity;
-      }
+      movedDraftMap.set(draft.id, moveEntityByGridVector(draft, gridVector));
+    }
 
-      const snappedPlacement = snapPlacementToOuterRingEdge({
-        definition,
+    const resolvedDraftMap = collectionType === EntityCollectionType.preview
+      ? resolveRigidOuterRingMoveDraftMap({
+        collection,
+        currentDocument,
         baseDefinition,
-        position: movedEntity.position,
-        rotation: movedEntity.rotation,
-      });
+        movedDraftMap,
+      })
+      : movedDraftMap;
+    const nextDrafts = state.drafts.map((draft) => resolvedDraftMap.get(draft.id) ?? draft);
+    const didUpdateDrafts = movedDraftMap.size > 0;
 
-      return {
-        ...movedEntity,
-        position: snappedPlacement.position,
-        rotation: snappedPlacement.rotation,
-      };
-    });
+    /*
+      AI-REMOVED 2026-08-23:
+      Reason: 对 preview 中每个设备分别吸附会破坏蓝图和框选移动集合的相对位置。
+      Trigger: 含抽水泵等受限设备的蓝图移动时，抽水泵卡在边缘而其他设备继续移动。
+      Evidence: 原循环逐 draft 调用 snapPlacementToOuterRingEdge，吸附修正没有传播到集合其他成员。
+      Replacement: movedDraftMap + resolveRigidOuterRingMoveDraftMap；共同约束无解时保留统一原始位移进入自由态。
+      Risk: Medium；共同约束求解可能整体旋转 preview，但只使用现有四向旋转和放置校验语义。
+      Human Review: Required
+
+      Original code:
+      let didUpdateDrafts = false;
+      const nextDrafts = state.drafts.map((entity) => {
+        if (!targetEntityIds.has(entity.id) || currentDocument.entities[entity.id] !== undefined) {
+          return entity;
+        }
+
+        didUpdateDrafts = true;
+        const movedEntity = moveEntityByGridVector(entity, gridVector);
+        const definition = entityDefinitionMap.get(movedEntity.definitionId);
+        if (collectionType !== EntityCollectionType.preview || definition === undefined) {
+          return movedEntity;
+        }
+
+        const snappedPlacement = snapPlacementToOuterRingEdge({
+          definition,
+          baseDefinition,
+          position: movedEntity.position,
+          rotation: movedEntity.rotation,
+        });
+
+        return {
+          ...movedEntity,
+          position: snappedPlacement.position,
+          rotation: snappedPlacement.rotation,
+        };
+      });
+    */
 
     if (didUpdateDrafts) {
       state.drafts = nextDrafts;
@@ -582,6 +614,161 @@ export function createEditorSelectionActions({
         }),
       ]),
     );
+  };
+
+  const resolveRigidOuterRingMoveDraftMap = (options: {
+    readonly collection: readonly string[];
+    readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
+    readonly baseDefinition:
+      EditorActionsContext["workspace"]["registry"]["baseDefinitions"][number] | null;
+    readonly movedDraftMap: ReadonlyMap<string, DraftEntity>;
+  }): ReadonlyMap<string, DraftEntity> => {
+    if (options.baseDefinition === null || options.movedDraftMap.size === 0) {
+      return options.movedDraftMap;
+    }
+
+    const snappedDraftIds = Array.from(options.movedDraftMap.values())
+      .filter((draft) => {
+        const definition = entityDefinitionMap.get(draft.definitionId);
+        return definition !== undefined && hasOuterRingEdgeSnapBehavior(definition);
+      })
+      .map((draft) => draft.id);
+    if (snappedDraftIds.length === 0) {
+      return options.movedDraftMap;
+    }
+
+    const movedDrafts = state.drafts.map(
+      (draft) => options.movedDraftMap.get(draft.id) ?? draft,
+    );
+    const geometry = resolveEntityCollectionGeometry({
+      collection: options.collection,
+      document: options.currentDocument,
+      drafts: movedDrafts,
+      entityDefinitionMap,
+    });
+    if (geometry === null) {
+      return options.movedDraftMap;
+    }
+
+    let bestCandidate: {
+      readonly draftMap: ReadonlyMap<string, DraftEntity>;
+      readonly score: number;
+    } | null = null;
+    const rotationAngles: readonly GridRotation[] = [0, 90, 180, 270];
+
+    for (const angle of rotationAngles) {
+      const rotatedEntityMap = angle === 0
+        ? new Map<string, WorldEntity>(options.movedDraftMap)
+        : resolveRotatedEntityMap({
+          geometry,
+          angle,
+          pivotMode: "pivot-cell",
+        });
+
+      for (const anchorDraftId of snappedDraftIds) {
+        const anchorEntity = rotatedEntityMap.get(anchorDraftId);
+        if (anchorEntity === undefined) {
+          continue;
+        }
+
+        const anchorDefinition = entityDefinitionMap.get(anchorEntity.definitionId);
+        if (anchorDefinition === undefined) {
+          continue;
+        }
+
+        const anchorSnap = resolveOuterRingEdgeSnap({
+          definition: anchorDefinition,
+          baseDefinition: options.baseDefinition,
+          position: anchorEntity.position,
+          rotation: anchorEntity.rotation,
+        });
+        if (anchorSnap === null || anchorSnap.rotation !== anchorEntity.rotation) {
+          continue;
+        }
+
+        const correction = {
+          x: anchorSnap.position.x - anchorEntity.position.x,
+          y: anchorSnap.position.y - anchorEntity.position.y,
+        };
+        const candidateDraftMap = new Map<string, DraftEntity>();
+        for (const [entityId, sourceDraft] of options.movedDraftMap) {
+          const rotatedEntity = rotatedEntityMap.get(entityId);
+          if (rotatedEntity === undefined) {
+            continue;
+          }
+
+          candidateDraftMap.set(entityId, {
+            ...sourceDraft,
+            ...rotatedEntity,
+            originalEntityId: sourceDraft.originalEntityId,
+            position: {
+              x: rotatedEntity.position.x + correction.x,
+              y: rotatedEntity.position.y + correction.y,
+            },
+          });
+        }
+
+        if (
+          candidateDraftMap.size !== options.movedDraftMap.size
+          || !snappedDraftIds.every((entityId) => {
+            const entity = candidateDraftMap.get(entityId);
+            if (entity === undefined) {
+              return false;
+            }
+
+            const definition = entityDefinitionMap.get(entity.definitionId);
+            if (definition === undefined) {
+              return false;
+            }
+
+            const snap = resolveOuterRingEdgeSnap({
+              definition,
+              baseDefinition: options.baseDefinition,
+              position: entity.position,
+              rotation: entity.rotation,
+            });
+
+            return snap !== null
+              && snap.position.x === entity.position.x
+              && snap.position.y === entity.position.y
+              && snap.rotation === entity.rotation;
+          })
+        ) {
+          continue;
+        }
+
+        const candidateDrafts = state.drafts.map(
+          (draft) => candidateDraftMap.get(draft.id) ?? draft,
+        );
+        const validationByEntityId = resolvePlacementValidations({
+          document: options.currentDocument,
+          state,
+          workspace,
+          drafts: candidateDrafts,
+        });
+        if (Array.from(candidateDraftMap.keys()).some((entityId) =>
+          validationByEntityId[entityId]?.reasons.some(
+            (reason) => reason.code === "outside-base",
+          ) ?? false,
+        )) {
+          continue;
+        }
+
+        const score = resolveRigidMoveCandidateScore({
+          movedDraftMap: options.movedDraftMap,
+          candidateDraftMap,
+          angle,
+        });
+        if (bestCandidate === null || score < bestCandidate.score) {
+          bestCandidate = {
+            draftMap: candidateDraftMap,
+            score,
+          };
+        }
+      }
+    }
+
+    return bestCandidate?.draftMap ?? options.movedDraftMap;
   };
 
   const rotateCollectionByAngle = (
@@ -1637,6 +1824,28 @@ function normalizeZero(value: number): number {
 //     y: Math.round(centerCells.y - footprint.height / 2),
 //   };
 // }
+
+function resolveRigidMoveCandidateScore(options: {
+  movedDraftMap: ReadonlyMap<string, DraftEntity>;
+  candidateDraftMap: ReadonlyMap<string, DraftEntity>;
+  angle: GridRotation;
+}): number {
+  let squaredPositionDistance = 0;
+
+  for (const [entityId, movedDraft] of options.movedDraftMap) {
+    const candidateDraft = options.candidateDraftMap.get(entityId);
+    if (candidateDraft === undefined) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const deltaX = candidateDraft.position.x - movedDraft.position.x;
+    const deltaY = candidateDraft.position.y - movedDraft.position.y;
+    squaredPositionDistance += deltaX * deltaX + deltaY * deltaY;
+  }
+
+  const rotationStepCount = options.angle === 270 ? 1 : options.angle / 90;
+  return squaredPositionDistance + rotationStepCount * 0.001;
+}
 
 function resolveUniqueStrings(values: readonly string[]): string[] {
   return Array.from(new Set(values));
