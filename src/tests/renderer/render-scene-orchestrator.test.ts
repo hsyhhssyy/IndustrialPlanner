@@ -733,6 +733,10 @@ describe("resolvePowerRangeOutlineLayouts", () => {
       ...layoutOptions,
       hiddenEntityIds: new Set(["selected-pole", "selected-pole:draft"]),
     })).toHaveLength(1)
+    expect(resolvePowerRangeOutlineLayouts({
+      ...layoutOptions,
+      visibleEntityIds: new Set(["selected-pole"]),
+    })).toHaveLength(1)
   })
 
   it("keeps rendering a power range when the power pole body is outside the viewport", () => {

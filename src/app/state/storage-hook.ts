@@ -208,6 +208,10 @@ function normalizePersistedAppSettings(
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
         ? persistedAppSettings.gameAlwaysShowGridLines
         : fallback.gameAlwaysShowGridLines,
+    gameAlwaysShowPowerRange:
+      typeof persistedAppSettings.gameAlwaysShowPowerRange === "boolean"
+        ? persistedAppSettings.gameAlwaysShowPowerRange
+        : fallback.gameAlwaysShowPowerRange,
     selectedActivityIds: normalizeSelectedActivityIds(persistedAppSettings.selectedActivityIds),
     toolboxShowAllActivityContent:
       typeof persistedAppSettings.toolboxShowAllActivityContent === "boolean"

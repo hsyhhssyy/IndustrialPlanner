@@ -115,6 +115,16 @@ export abstract class BaseRenderSprite implements RenderSprite {
     ) {
       this.drawSelectionOverlay(layout, context);
     }
+
+    const selectionOverlayAlreadyVisible = activeCollectionTypeSet.has(EntityCollectionType.marquee)
+      || (
+        activeCollectionTypeSet.has(EntityCollectionType.selection)
+        && !activeCollectionTypeSet.has(EntityCollectionType.reverseMarquee)
+      );
+    if (!selectionOverlayAlreadyVisible
+      && context.powerInteractionVisualState?.highlightedEntityIds.has(this.entityId) === true) {
+      this.drawSelectionOverlay(layout, context);
+    }
   }
 
   protected afterSyncLayout(
@@ -210,4 +220,3 @@ export abstract class BaseRenderSprite implements RenderSprite {
     }
   }
 }
-

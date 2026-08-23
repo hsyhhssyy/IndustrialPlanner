@@ -1,5 +1,6 @@
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/domain/shared/grid";
+import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
 import type { RenderHost } from "@/renderer/renderer-host";
 
 export interface RenderViewportState {
@@ -30,6 +31,7 @@ export interface DecorationSyncContext {
   renderHost: RenderHost;
   theme: AppTheme;
   nowMs: number;
+  powerInteractionVisualState?: PowerInteractionVisualState;
   profiler?: DecorationProfiler;
   /** renderer 内部维护的分层失效版本。 */
   versions?: {

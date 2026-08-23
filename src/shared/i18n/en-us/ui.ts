@@ -310,6 +310,8 @@ const UI: Record<string, string> = {
     "settingsField.debug-simulation-worker-detailed-reportDescription": "Report detailed simulation diagnostics in the logs. This severely degrades performance and is intended only for diagnosing simulation errors whose cause cannot otherwise be identified.",
     "settingsField.game-always-show-grid-lines": "Always Show Grid Lines",
     "settingsField.game-always-show-grid-linesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
+    "settingsField.game-always-show-power-range": "Always Show Power Ranges",
+    "settingsField.game-always-show-power-rangeDescription": "When enabled, every power pole range is always visible. When disabled, related ranges and device highlights appear only while placing or moving a single relevant device.",
     "settingsField.game-collapse-device-modes": "Collapse Device Modes",
     "settingsField.game-collapse-device-modesDescription": "Collapse variants of the same device into one button and select modes from its right cap.",
     "settingsField.game-show-pipe-exact-fluid-position": "Show Exact Pipe Fluid Position",

@@ -41,6 +41,7 @@ export function resolvePowerRangeStrokeWidth(
 export function resolvePowerRangeOutlineLayouts(options: {
   entities: readonly WorldEntity[];
   hiddenEntityIds?: ReadonlySet<string>;
+  visibleEntityIds?: ReadonlySet<string> | null;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   visibleWorldRect: VisibleWorldRect;
   viewportBounds: DecorationSyncContext["viewportBounds"];
@@ -55,6 +56,12 @@ export function resolvePowerRangeOutlineLayouts(options: {
   const layouts: PowerRangeOutlineLayout[] = [];
 
   for (const entity of options.entities) {
+    if (options.visibleEntityIds !== undefined
+      && options.visibleEntityIds !== null
+      && !options.visibleEntityIds.has(entity.id)) {
+      continue;
+    }
+
     if (options.hiddenEntityIds?.has(entity.id) === true) {
       continue;
     }
@@ -135,6 +142,8 @@ export function createPowerRangeDecoration(): DecorationLayer {
       const layouts = resolvePowerRangeOutlineLayouts({
         entities: editor.queries.listEntities(),
         hiddenEntityIds,
+        visibleEntityIds:
+          ctx.powerInteractionVisualState?.visiblePowerRangeEntityIds ?? null,
         entityDefinitionMap,
         visibleWorldRect: resolveVisibleWorldRect(
           ctx.viewportState,

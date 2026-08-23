@@ -11,6 +11,10 @@ import {
   getRotatedGridFootprint,
   type GridArea,
 } from "@/shared/geometry/grid";
+import {
+  areGridRectsIntersecting,
+  resolvePowerRangeGridRect,
+} from "@/shared/geometry/power-range";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
 import {
@@ -30,6 +34,7 @@ type EditorEntityQueries = Pick<
   | "getEntityById"
   | "getEntityPlacementValidation"
   | "listEntities"
+  | "listPowerRangeProvidersCoveringGridRect"
 >;
 
 export function createEditorEntityQueries({
@@ -56,6 +61,28 @@ export function createEditorEntityQueries({
       drafts: state.drafts,
       baseDefinitions: workspace.registry.baseDefinitions,
     }),
+    listPowerRangeProvidersCoveringGridRect: (gridRect) => {
+      const entities = resolveListedEntities({
+        document: document.getSnapshot(),
+        drafts: state.drafts,
+        baseDefinitions: workspace.registry.baseDefinitions,
+      });
+
+      return entities.filter((entity) => {
+        const definition = entityDefinitionMap.get(entity.definitionId);
+        if (definition === undefined) {
+          return false;
+        }
+
+        const powerRangeGridRect = resolvePowerRangeGridRect({
+          entity,
+          definition,
+        });
+
+        return powerRangeGridRect !== null
+          && areGridRectsIntersecting(powerRangeGridRect, gridRect);
+      });
+    },
     findEntityCollectionGridRect: (collectionType) => {
       const currentDocument = document.getSnapshot();
 

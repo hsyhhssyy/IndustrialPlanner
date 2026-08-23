@@ -610,6 +610,7 @@
   right: calc(var(--right-dock-width, 0px) + 12px);
   z-index: 4;
   display: grid;
+  justify-items: end;
   gap: 6px;
   transform: translateY(-50%);
   pointer-events: none;

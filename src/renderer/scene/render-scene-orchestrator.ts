@@ -33,6 +33,10 @@ import {
   type PixiRenderDiagnosticsSnapshot,
 } from "../pixi-render-diagnostics"
 import type { RenderHost } from "../renderer-host"
+import {
+  resolvePowerInteractionVisualState,
+  type PowerInteractionVisualState,
+} from "../power-interaction-visual-state"
 
 import { BeltSprite } from "../sprites/belt-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -460,6 +464,28 @@ export function createRenderSceneOrchestrator(
       simulation: simulationVersion,
     }
 
+    let listedEntitiesForFrame: readonly WorldEntity[] | null = null
+    const listEntitiesForFrame = (): readonly WorldEntity[] => {
+      listedEntitiesForFrame ??= renderHost.workspace.editor!.queries.listEntities()
+      return listedEntitiesForFrame
+    }
+    const editorCollections = renderHost.workspace.editor!.state.collections
+    const powerInteractionVisualState = measureRenderStage(
+      frameProfiler,
+      "powerInteraction.resolve",
+      () => resolvePowerInteractionVisualState({
+        alwaysShowPowerRange: workspaceApp.state.settings.gameAlwaysShowPowerRange,
+        activeTool: workspaceApp.state.activeTool,
+        moveKind: workspaceApp.state.moveKind,
+        entities: listEntitiesForFrame(),
+        previewEntityIds: editorCollections[EntityCollectionType.preview],
+        ghostEntityIds: editorCollections[EntityCollectionType.ghost],
+        entityDefinitionMap,
+        listPowerRangeProvidersCoveringGridRect: (gridRect) =>
+          renderHost.workspace.editor!.queries.listPowerRangeProvidersCoveringGridRect(gridRect),
+      }),
+    )
+
     const ctx: DecorationSyncContext = {
       viewportState,
       viewportBounds: {
@@ -471,6 +497,7 @@ export function createRenderSceneOrchestrator(
       renderHost,
       theme: effectiveCanvasTheme,
       nowMs: frameTime.nowMs,
+      powerInteractionVisualState,
       profiler: frameProfiler ?? undefined,
       versions: frameVersions,
     }
@@ -498,7 +525,7 @@ export function createRenderSceneOrchestrator(
     const entities = measureRenderStage(
       frameProfiler,
       "editor.listEntities",
-      () => renderHost.workspace.editor!.queries.listEntities(),
+      () => listEntitiesForFrame(),
     )
     if (refreshEntityGeometryStamps(
       entities,
@@ -532,6 +559,7 @@ export function createRenderSceneOrchestrator(
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
         logisticsPortOccupancy: null,
+        powerInteractionVisualState,
         versions: frameVersions,
         cache: entitySpriteSyncCache,
       }),
@@ -955,8 +983,10 @@ function createRenderPresentationSignature(renderHost: RenderHost): string {
     settings?.gameShowDeviceNames,
     settings?.gameShowDeviceIcons,
     settings?.gameAlwaysShowGridLines,
+    settings?.gameAlwaysShowPowerRange,
     settings?.showGrassBackground,
     appState?.activeTool,
+    appState?.moveKind,
     appState?.toolInfo?.marqueeType,
     appState?.screenProfile?.deviceClass,
     editor?.state.suppressBelts,
@@ -1175,6 +1205,7 @@ function syncWorldEntitySprites(options: {
   };
   theme: AppTheme;
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
+  powerInteractionVisualState: PowerInteractionVisualState;
   profiler: DecorationProfiler | null;
   versions: RenderSpriteSyncVersions;
   cache: EntitySpriteSyncCache;
@@ -1198,6 +1229,7 @@ function syncWorldEntitySprites(options: {
     time: options.frameTime,
     suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
     suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
+    powerInteractionVisualState: options.powerInteractionVisualState,
     logisticsPortOccupancy: options.logisticsPortOccupancy,
     portOverlayManagedGlobally: true,
     versions: options.versions,

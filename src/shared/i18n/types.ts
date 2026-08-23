@@ -464,6 +464,8 @@ export type UiKey =
   | "settingsField.debug-simulation-worker-detailed-reportDescription"
   | "settingsField.game-always-show-grid-lines"
   | "settingsField.game-always-show-grid-linesDescription"
+  | "settingsField.game-always-show-power-range"
+  | "settingsField.game-always-show-power-rangeDescription"
   | "settingsField.game-collapse-device-modes"
   | "settingsField.game-collapse-device-modesDescription"
   | "settingsField.game-show-pipe-exact-fluid-position"

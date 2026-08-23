@@ -280,6 +280,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         },
       },
       {
+        id: "game-always-show-power-range",
+        kind: "switch",
+        labelKey: "settingsField.game-always-show-power-range",
+        descriptionKey: "settingsField.game-always-show-power-rangeDescription",
+        defaultValue: false,
+      },
+      {
         id: "game-show-grass-background",
         kind: "switch",
         labelKey: "settingsField.game-show-grass-background",

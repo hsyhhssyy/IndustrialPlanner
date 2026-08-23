@@ -484,6 +484,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameAlwaysShowGridLines = value;
         }),
       },
+      "game-always-show-power-range": {
+        readValue: () => appHost.state.settings.gameAlwaysShowPowerRange,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameAlwaysShowPowerRange === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameAlwaysShowPowerRange = value;
+        }),
+      },
       "game-show-grass-background": {
         readValue: () => appHost.state.settings.showGrassBackground,
         writeValue: action((value) => {

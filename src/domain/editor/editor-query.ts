@@ -22,6 +22,7 @@ import type { EditorBaseDocumentSummary } from "./editor-document";
 export interface EditorQuery {
 	getEntityById(entityId: string): WorldEntity | null;
 	listEntities(): readonly WorldEntity[];
+	listPowerRangeProvidersCoveringGridRect(gridRect: GridRect): readonly WorldEntity[];
 	findEntityAtClientPixelPoint(
 		clientPixelPoint: ClientPixelPoint,
 	): WorldEntity | null;

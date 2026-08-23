@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
+
+function createEmptyEditorCollections(): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.values(EntityCollectionType).map((collectionType) => [collectionType, []]),
+  )
+}
+
 const orchestratorTestState = vi.hoisted(() => {
   let tickHandler: (() => void) | null = null
   const createdSprites: Array<{ kind: string; entityId: string; definitionId: string }> = []
@@ -352,6 +360,7 @@ describe("createRenderSceneOrchestrator", () => {
         },
         editor: {
           state: {
+            collections: createEmptyEditorCollections(),
             viewport: {
               clientRect: {
                 width: 640,
@@ -492,6 +501,7 @@ describe("createRenderSceneOrchestrator", () => {
         },
         editor: {
           state: {
+            collections: createEmptyEditorCollections(),
             viewport: {
               clientRect: { width: 640, height: 480 },
               center: { x: 0, y: 0 },
@@ -637,6 +647,7 @@ describe("createRenderSceneOrchestrator", () => {
         },
         editor: {
           state: {
+            collections: createEmptyEditorCollections(),
             viewport: {
               clientRect: {
                 width: 640,
@@ -773,6 +784,7 @@ describe("createRenderSceneOrchestrator", () => {
         },
         editor: {
           state: {
+            collections: createEmptyEditorCollections(),
             viewport: {
               clientRect: {
                 width: 640,

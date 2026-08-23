@@ -89,6 +89,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   collapseDeviceModes: boolean;
   gameShowPipeExactFluidPosition: boolean;
   gameAlwaysShowGridLines: boolean;
+  gameAlwaysShowPowerRange: boolean;
   selectedActivityIds: string[];
   toolboxShowAllActivityContent: boolean;
   showGrassBackground: boolean;
@@ -761,6 +762,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     collapseDeviceModes: true,
     gameShowPipeExactFluidPosition: false,
     gameAlwaysShowGridLines: true,
+    gameAlwaysShowPowerRange: false,
     selectedActivityIds: [],
     toolboxShowAllActivityContent: true,
     showGrassBackground: false,

@@ -76,6 +76,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   collapseDeviceModes: true,
   gameShowPipeExactFluidPosition: false,
   gameAlwaysShowGridLines: true,
+  gameAlwaysShowPowerRange: false,
   selectedActivityIds: [],
   toolboxShowAllActivityContent: true,
   showGrassBackground: false,
@@ -2709,6 +2710,9 @@ describe("WorkbenchApp", () => {
     const alwaysShowGridLinesToggle = container.querySelector(
       'input[name="game-always-show-grid-lines"]',
     ) as HTMLInputElement | null;
+    const alwaysShowPowerRangeToggle = container.querySelector(
+      'input[name="game-always-show-power-range"]',
+    ) as HTMLInputElement | null;
     const showFpsToggle = container.querySelector(
       'input[name="debug-show-fps"]',
     ) as HTMLInputElement | null;
@@ -2784,6 +2788,8 @@ describe("WorkbenchApp", () => {
     expect(autoCreateSplittersAndConvergersToggle?.disabled).toBe(false);
     expect(debugToggle?.checked).toBe(true);
     expect(alwaysShowGridLinesToggle?.checked).toBe(true);
+    expect(alwaysShowPowerRangeToggle?.checked).toBe(false);
+    expect(appHost.state.settings.gameAlwaysShowPowerRange).toBe(false);
     expect(showFpsToggle?.checked).toBe(true);
     expect(showGestureTestWindowToggle?.checked).toBe(true);
     expect(simulationWorkerDetailedReportToggle?.checked).toBe(true);
@@ -4325,6 +4331,43 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         gameAlwaysShowGridLines: false,
+      }),
+    );
+  });
+
+  it("writes always-show-power-range into AppSettings storage", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const alwaysShowPowerRangeToggle = container.querySelector(
+      'input[name="game-always-show-power-range"]',
+    ) as HTMLInputElement | null;
+
+    expect(alwaysShowPowerRangeToggle).not.toBeNull();
+    expect(alwaysShowPowerRangeToggle?.checked).toBe(false);
+
+    act(() => {
+      alwaysShowPowerRangeToggle?.click();
+    });
+
+    expect(appHost.state.settings.gameAlwaysShowPowerRange).toBe(true);
+    expect(alwaysShowPowerRangeToggle?.checked).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        gameAlwaysShowPowerRange: true,
       }),
     );
   });

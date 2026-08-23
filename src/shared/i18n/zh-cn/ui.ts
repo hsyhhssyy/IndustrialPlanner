@@ -303,6 +303,8 @@ const UI: Record<string, string> = {
     "settingsField.debug-simulation-worker-detailed-reportDescription": "该选项将会详细在日志汇报仿真情况，将会严重拖慢性能，仅用于无法确认的仿真出错诊断。",
     "settingsField.game-always-show-grid-lines": "总是显示网格线",
     "settingsField.game-always-show-grid-linesDescription": "开启后总是显示网格线；关闭后仅在特定模式显示附近的网格线。",
+    "settingsField.game-always-show-power-range": "总是显示供电范围",
+    "settingsField.game-always-show-power-rangeDescription": "开启后总是显示所有供电桩的供电范围；关闭后仅在放置或单独移动相关设备时显示关联范围并高亮设备。",
     "settingsField.game-collapse-device-modes": "折叠设备模式",
     "settingsField.game-collapse-device-modesDescription": "将同一设备的多个变体折叠为一个按钮，并通过右侧端帽选择模式。",
     "settingsField.game-show-pipe-exact-fluid-position": "显示管道具体物流情况",

@@ -89,6 +89,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
+        "game-always-show-power-range": false,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": true,
@@ -147,6 +148,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-collapse-device-modes"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
+    expect(hydratedController.values["game-always-show-power-range"]).toBe(false);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
     expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
     expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
@@ -364,6 +366,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
+        "game-always-show-power-range": false,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": false,

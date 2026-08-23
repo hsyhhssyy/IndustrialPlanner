@@ -1,6 +1,7 @@
 import { Container } from "pixi.js";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { AppTheme } from "@/domain/app/types/theme";
+import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
 import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entityLow" | "entity" | "entityHigh" | "logisticsBelt" | "logisticsPipe" | "draft" | "overlay";
@@ -51,6 +52,7 @@ export interface RenderSpriteSyncContext {
   time: RenderSpriteTimeContext;
   suppressBelts: boolean;
   suppressPipes: boolean;
+  powerInteractionVisualState?: PowerInteractionVisualState;
   /**
    * entityId → 该设备已连接的端口键集合("portGroupId:portId")。
    * 仅物流布设模式(activeTool="logistics-placement")下由 orchestrator 构建，其余模式为 null。
