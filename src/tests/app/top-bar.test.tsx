@@ -211,6 +211,10 @@ describe("TopBar", () => {
         return Promise.resolve();
       }),
     });
+    Object.defineProperty(document.documentElement, "webkitRequestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
   });
 
   afterEach(() => {
@@ -286,6 +290,123 @@ describe("TopBar", () => {
     expect(
       fullscreenButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
     ).toBe("expand");
+  });
+
+  it("reports unsupported fullscreen when the browser exposes neither state nor request APIs", async () => {
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    const onFullscreenActionFailure = vi.fn();
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(
+        <TopBar
+          appHost={appHost}
+          onFullscreenActionFailure={onFullscreenActionFailure}
+        />,
+      );
+    });
+
+    const fullscreenButton = container.querySelector(
+      ".top-bar-fullscreen-button",
+    ) as HTMLButtonElement | null;
+
+    expect(fullscreenButton).not.toBeNull();
+
+    await act(async () => {
+      fullscreenButton?.click();
+    });
+
+    expect(document.exitFullscreen).not.toHaveBeenCalled();
+    expect(onFullscreenActionFailure).toHaveBeenCalledWith("unsupported");
+  });
+
+  it("uses the prefixed WebKit fullscreen API when the standard request API is absent", async () => {
+    const webkitRequestFullscreen = vi.fn();
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(document.documentElement, "webkitRequestFullscreen", {
+      configurable: true,
+      value: webkitRequestFullscreen,
+    });
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    await act(async () => {
+      const fullscreenButton = container.querySelector(
+        ".top-bar-fullscreen-button",
+      ) as HTMLButtonElement | null;
+      fullscreenButton?.click();
+    });
+
+    expect(webkitRequestFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides an unsupported fullscreen button in standalone mode", () => {
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} isStandalone />);
+    });
+
+    expect(container.querySelector(".top-bar-fullscreen-button")).toBeNull();
+  });
+
+  it("keeps a supported fullscreen button in standalone mode", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} isStandalone />);
+    });
+
+    expect(container.querySelector(".top-bar-fullscreen-button")).not.toBeNull();
+  });
+
+  it("reports a rejected fullscreen request", async () => {
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: vi.fn(() => Promise.reject(new Error("Fullscreen denied"))),
+    });
+    const onFullscreenActionFailure = vi.fn();
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(
+        <TopBar
+          appHost={appHost}
+          onFullscreenActionFailure={onFullscreenActionFailure}
+        />,
+      );
+    });
+
+    await act(async () => {
+      const fullscreenButton = container.querySelector(
+        ".top-bar-fullscreen-button",
+      ) as HTMLButtonElement | null;
+      fullscreenButton?.click();
+    });
+
+    expect(onFullscreenActionFailure).toHaveBeenCalledWith("rejected");
   });
 
   it("starts the simulation through the simulation contract when the control button is idle", async () => {

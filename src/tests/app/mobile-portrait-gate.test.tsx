@@ -28,6 +28,7 @@ describe("Mobile portrait gate", () => {
   let fullscreenElement: Element | null;
   let coarsePointer: boolean;
   let hoverNone: boolean;
+  let standalone: boolean;
 
   const setViewport = (options: {
     width: number;
@@ -77,6 +78,7 @@ describe("Mobile portrait gate", () => {
     fullscreenElement = null;
     coarsePointer = false;
     hoverNone = false;
+    standalone = false;
 
     Object.defineProperty(window, "devicePixelRatio", {
       configurable: true,
@@ -102,7 +104,8 @@ describe("Mobile portrait gate", () => {
       value: vi.fn((query: string) => ({
         matches:
           (query === "(pointer: coarse)" && coarsePointer) ||
-          (query === "(hover: none)" && hoverNone),
+          (query === "(hover: none)" && hoverNone) ||
+          (query === "(display-mode: standalone)" && standalone),
         media: query,
         onchange: null,
         addEventListener: vi.fn(),
@@ -140,7 +143,7 @@ describe("Mobile portrait gate", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows a rotate and fullscreen gate only in phone portrait", () => {
+  it("shows the Apple PWA guide after an iPhone user clicks unsupported fullscreen", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -149,6 +152,10 @@ describe("Mobile portrait gate", () => {
       userAgent:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
       maxTouchPoints: 5,
+    });
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
     });
 
     const appHost = renderWorkbench();
@@ -163,14 +170,29 @@ describe("Mobile portrait gate", () => {
     expect(gate?.textContent).toContain("请旋转手机横屏使用");
     expect(fullscreenButton?.textContent).toContain("进入全屏");
 
-    act(() => {
+    await act(async () => {
       fullscreenButton?.click();
     });
 
-    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("无法直接进入全屏");
+    expect(container.textContent).toContain("添加到主屏幕");
+    expect(container.textContent).toContain("作为 Web App 打开");
+
+    const closeButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "我知道了",
+    );
+
+    expect(document.activeElement).toBe(closeButton);
+
+    await act(async () => {
+      closeButton?.click();
+    });
+
+    expect(container.textContent).not.toContain("无法直接进入全屏");
+    expect(document.activeElement).toBe(fullscreenButton);
   });
 
-  it("hides the gate when a phone rotates to landscape and then attempts fullscreen", () => {
+  it("hides the gate after rotation without automatically requesting fullscreen", () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -201,7 +223,48 @@ describe("Mobile portrait gate", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
     expect(container.querySelector(".mobile-portrait-gate")).toBeNull();
-    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(0);
+  });
+
+  it("hides unsupported fullscreen controls in iPhone standalone mode", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    standalone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+
+    renderWorkbench();
+
+    expect(container.querySelector(".mobile-portrait-gate")).not.toBeNull();
+    expect(container.querySelector(".mobile-portrait-gate-fullscreen")).toBeNull();
+    expect(container.textContent).toContain("当前已在独立应用模式中");
+  });
+
+  it("keeps supported fullscreen controls in Android standalone mode", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    standalone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 9 Pro) AppleWebKit/537.36 Chrome/136.0.0.0 Mobile Safari/537.36",
+      maxTouchPoints: 5,
+    });
+
+    renderWorkbench();
+
+    expect(container.querySelector(".mobile-portrait-gate-fullscreen")).not.toBeNull();
+    expect(container.textContent).toContain("建议进入全屏");
   });
 
   it("keeps tablet portrait usable without the phone gate", () => {

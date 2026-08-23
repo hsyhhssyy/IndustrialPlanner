@@ -571,7 +571,7 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
   });
 
-  it("requests fullscreen after a phone rotates from portrait to landscape", () => {
+  it("does not request fullscreen automatically after a phone rotates to landscape", () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -607,13 +607,13 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
-    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(0);
 
     act(() => {
       window.dispatchEvent(new Event("resize"));
     });
 
-    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(0);
   });
 
   it("opens the version help dialog on phone portrait without storing portrait viewport dimensions", async () => {

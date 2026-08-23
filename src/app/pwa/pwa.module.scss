@@ -34,6 +34,20 @@
   border-radius: 8px;
 }
 
+.pwa-fullscreen-notice-card {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.pwa-fullscreen-notice-steps {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 22px;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+
 .pwa-install-card {
   position: fixed;
   right: 20px;

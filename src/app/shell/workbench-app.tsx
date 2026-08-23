@@ -10,11 +10,21 @@ import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-c
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
-import {
-  FullscreenToggleButton,
-  requestDocumentFullscreen,
-  resolveFullscreenState,
-} from "@/app/shell/layout/fullscreen-toggle-button";
+import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
+// AI-REMOVED 2026-08-23:
+// Reason: 手机旋转不再自动请求全屏，Workbench 只负责把用户点击失败转交给 PWA 引导。
+// Trigger: 用户确认全屏/PWA 提示只能由全屏按钮点击触发，不能主动打扰。
+// Evidence: Fullscreen API 要求瞬时用户激活；orientationchange 后的 effect 不具备该条件。
+// Replacement: FullscreenToggleButton.onFullscreenActionFailure。
+// Risk: Low；用户仍可从顶栏、悬浮入口或竖屏 Gate 主动请求全屏。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   FullscreenToggleButton,
+//   requestDocumentFullscreen,
+//   resolveFullscreenState,
+// } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import { FeedbackDialog } from "@/app/shell/dialogs/feedback-dialog";
 import { BaseSelectDialog } from "@/app/shell/dialogs/base-select-dialog";
@@ -98,12 +108,21 @@ import {
 //   writeWebDavSyncUrl, writeWebDavSyncUsername } from "@/shared/storage/webdav-sync-settings";
 import {
   isMobileOrTabletScreenProfile,
-  isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
   isTouchLandscapeScreenProfile,
   resetScreenProfileConsoleDiagnosticsForTest,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
+// AI-REMOVED 2026-08-23:
+// Reason: Workbench 不再识别“竖屏转横屏”以自动请求全屏。
+// Trigger: 用户要求只在点击全屏按钮时执行全屏或展示引导。
+// Evidence: screenProfile 仍用于布局；isMobileLandscapeScreenProfile 仅服务于已移除的自动全屏 effect。
+// Replacement: None。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { isMobileLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import {
   resolveEffectiveCanvasTheme,
   resolveInCanvasThemeCssVariables,
@@ -719,7 +738,16 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     && appHost.state.toolInfo.darkPipeLink === null;
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
-  const previousScreenProfileRef = useRef(screenProfile);
+  // AI-REMOVED 2026-08-23:
+  // Reason: 不再比较前后屏幕方向以自动进入全屏。
+  // Trigger: 用户要求全屏动作和 PWA 引导都只由全屏按钮点击触发。
+  // Evidence: previousScreenProfileRef 仅被自动全屏 effect 使用。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
   const hasVisibleDialogShell =
     isAnyDialogShellVisible(appHost, { showTimelineBottomDock, showToolboxBottomDock })
@@ -867,24 +895,33 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     resolveScreenProfileFromWindow();
   }, [appHost, appHost.state.settings.debugMode]);
 
-  useEffect(() => {
-    const previousScreenProfile = previousScreenProfileRef.current;
-    previousScreenProfileRef.current = screenProfile;
-
-    if (!isMobilePortraitScreenProfile(previousScreenProfile)) {
-      return;
-    }
-
-    if (!isMobileLandscapeScreenProfile(screenProfile)) {
-      return;
-    }
-
-    if (resolveFullscreenState()) {
-      return;
-    }
-
-    requestDocumentFullscreen();
-  }, [screenProfile]);
+  // AI-REMOVED 2026-08-23:
+  // Reason: 旋转手机后的 effect 没有瞬时用户激活，自动请求全屏会被浏览器拒绝且违背按需提示原则。
+  // Trigger: 用户要求仅在点击全屏按钮时提示，不主动打扰用户。
+  // Evidence: Fullscreen API 要求请求由用户交互直接触发；现有 orientationchange 链路由 screenProfile effect 间接调用。
+  // Replacement: 顶栏、悬浮入口和 MobilePortraitGate 中的 FullscreenToggleButton。
+  // Risk: Low；手机转横屏后需要用户主动点击一次全屏按钮。
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   const previousScreenProfile = previousScreenProfileRef.current;
+  //   previousScreenProfileRef.current = screenProfile;
+  //
+  //   if (!isMobilePortraitScreenProfile(previousScreenProfile)) {
+  //     return;
+  //   }
+  //
+  //   if (!isMobileLandscapeScreenProfile(screenProfile)) {
+  //     return;
+  //   }
+  //
+  //   if (resolveFullscreenState()) {
+  //     return;
+  //   }
+  //
+  //   requestDocumentFullscreen();
+  // }, [screenProfile]);
 
   useEffect(() => {
     if (!hasVisibleDialogShell) {
@@ -1022,7 +1059,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       style={workbenchStyle}
     >
       <OverlayStackProvider>
-        <TopBar appHost={appHost} />
+        <TopBar
+          appHost={appHost}
+          isStandalone={pwaController.standalone}
+          onFullscreenActionFailure={pwaController.openFullscreenNotice}
+        />
         <LeftToolbar appHost={appHost} />
         <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
         {effectiveLeftDockOpen
@@ -1053,6 +1094,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
                 styles,
                 "workbench-floating-top-bar-button workbench-floating-fullscreen-button",
               )}
+              isStandalone={pwaController.standalone}
+              onFullscreenActionFailure={pwaController.openFullscreenNotice}
             />
             {useInspectorPanel && !rightDockOpen ? (
               <button
@@ -1195,7 +1238,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             t={appHost.actions.translate}
           />
         )}
-        {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
+        {showMobilePortraitGate ? (
+          <MobilePortraitGate
+            appHost={appHost}
+            isStandalone={pwaController.standalone}
+            onFullscreenActionFailure={pwaController.openFullscreenNotice}
+          />
+        ) : null}
       </OverlayStackProvider>
     </div>
   );

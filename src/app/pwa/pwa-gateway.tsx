@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -6,7 +6,12 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import styles from "@/app/shell/app-shell.module.scss";
 
-import { formatPwaBytes, type PwaController, type PwaProgress } from "./pwa-controller";
+import {
+  formatPwaBytes,
+  type PwaController,
+  type PwaFullscreenNotice,
+  type PwaProgress,
+} from "./pwa-controller";
 
 const PRECACHE_CACHE_NAME_PREFIX = "industrial-planner-precache-";
 
@@ -20,6 +25,9 @@ export const PwaGateway = observer(function PwaGateway({
   pwaController,
 }: PwaGatewayProps) {
   const copy = PWA_GATEWAY_COPY[appHost.state.settings.locale];
+  const fullscreenNoticeCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const fullscreenNoticeTriggerRef = useRef<HTMLElement | null>(null);
+  const previousFullscreenNoticeRef = useRef<PwaFullscreenNotice | null>(null);
 
   useEffect(() => {
     pwaController.initialize();
@@ -29,9 +37,37 @@ export const PwaGateway = observer(function PwaGateway({
     };
   }, [pwaController]);
 
-  if (pwaController.offlineStatus === "unsupported") {
-    return null;
-  }
+  useEffect(() => {
+    const previousNotice = previousFullscreenNoticeRef.current;
+    const currentNotice = pwaController.fullscreenNotice;
+
+    if (previousNotice === null && currentNotice !== null) {
+      fullscreenNoticeTriggerRef.current = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      fullscreenNoticeCloseButtonRef.current?.focus();
+    }
+
+    if (previousNotice !== null && currentNotice === null) {
+      fullscreenNoticeTriggerRef.current?.focus();
+      fullscreenNoticeTriggerRef.current = null;
+    }
+
+    previousFullscreenNoticeRef.current = currentNotice;
+  }, [pwaController.fullscreenNotice]);
+
+  // AI-REMOVED 2026-08-23:
+  // Reason: 离线能力不受支持时仍需承载由用户点击触发的全屏失败/PWA 引导。
+  // Trigger: iPhone Safari 不提供页面 Fullscreen API，开发环境也会把 offlineStatus 标记为 unsupported。
+  // Evidence: 原提前返回会让 fullscreenNotice 已更新但没有任何 UI 渲染。
+  // Replacement: 下方各离线 UI 继续按自身状态条件渲染，fullscreenNotice 独立渲染。
+  // Risk: Low；unsupported 状态下原有离线提示条件均为 false。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (pwaController.offlineStatus === "unsupported") {
+  //   return null;
+  // }
 
   const pwaProgress = pwaController.progress;
   const pwaStatus = pwaController.offlineStatus;
@@ -162,9 +198,95 @@ export const PwaGateway = observer(function PwaGateway({
           )}
         </OverlayStackLayer>
       ) : null}
+      {pwaController.fullscreenNotice !== null ? (
+        <FullscreenNotice
+          closeButtonRef={fullscreenNoticeCloseButtonRef}
+          copy={copy}
+          notice={pwaController.fullscreenNotice}
+          onClose={pwaController.closeFullscreenNotice}
+        />
+      ) : null}
     </>
   );
 });
+
+function FullscreenNotice({
+  closeButtonRef,
+  copy,
+  notice,
+  onClose,
+}: {
+  readonly closeButtonRef: RefObject<HTMLButtonElement | null>;
+  readonly copy: PwaGatewayCopy;
+  readonly notice: PwaFullscreenNotice;
+  readonly onClose: () => void;
+}) {
+  const content = resolveFullscreenNoticeContent(copy, notice);
+
+  return (
+    <OverlayStackLayer kind="system" layerId="pwa:fullscreen-notice" visible>
+      {({ zIndex }) => (
+        <div className={cm(styles, "pwa-gateway-backdrop")} role="presentation" style={{ zIndex }}>
+          <section
+            aria-labelledby="pwa-fullscreen-notice-title"
+            aria-modal="true"
+            className={cm(styles, "pwa-gateway-card pwa-fullscreen-notice-card")}
+            role="dialog"
+          >
+            <h2 id="pwa-fullscreen-notice-title">{content.title}</h2>
+            <p>{content.body}</p>
+            {content.steps === null ? null : (
+              <ol className={cm(styles, "pwa-fullscreen-notice-steps")}>
+                {content.steps.map((step) => <li key={step}>{step}</li>)}
+              </ol>
+            )}
+            <div className={cm(styles, "pwa-gateway-actions")}>
+              <button
+                className={cm(styles, "pwa-gateway-primary-button")}
+                onClick={onClose}
+                ref={closeButtonRef}
+                type="button"
+              >
+                {copy.fullscreenNoticeAcknowledge}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </OverlayStackLayer>
+  );
+}
+
+function resolveFullscreenNoticeContent(
+  copy: PwaGatewayCopy,
+  notice: PwaFullscreenNotice,
+): {
+  readonly body: string;
+  readonly steps: readonly string[] | null;
+  readonly title: string;
+} {
+  if (notice === "apple-mobile-install") {
+    return {
+      body: copy.fullscreenAppleInstallBody,
+      steps: copy.fullscreenAppleInstallSteps,
+      title: copy.fullscreenAppleInstallTitle,
+    };
+  }
+
+  if (notice === "request-rejected") {
+    return {
+      body: copy.fullscreenRejectedBody,
+      steps: null,
+      title: copy.fullscreenRejectedTitle,
+    };
+  }
+
+  return {
+    body: copy.fullscreenUnsupportedBody,
+    steps: null,
+    title: copy.fullscreenUnsupportedTitle,
+  };
+}
 
 function ProgressToast({
   copy,
@@ -236,6 +358,14 @@ interface PwaGatewayCopy {
   readonly desktopInstallTitle: string;
   readonly enableOffline: string;
   readonly errorTitle: string;
+  readonly fullscreenAppleInstallBody: string;
+  readonly fullscreenAppleInstallSteps: readonly string[];
+  readonly fullscreenAppleInstallTitle: string;
+  readonly fullscreenNoticeAcknowledge: string;
+  readonly fullscreenRejectedBody: string;
+  readonly fullscreenRejectedTitle: string;
+  readonly fullscreenUnsupportedBody: string;
+  readonly fullscreenUnsupportedTitle: string;
   readonly installDesktop: string;
   readonly installProgress: string;
   readonly later: string;
@@ -263,6 +393,18 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
     desktopInstallTitle: "安装到桌面",
     enableOffline: "启用离线模式",
     errorTitle: "离线模式处理失败",
+    fullscreenAppleInstallBody: "iPhone 浏览器不支持网页直接全屏。本站支持 Web App 模式，可隐藏浏览器地址栏。如果已经添加到主屏幕，请从主屏幕图标打开；如果尚未添加，请按以下步骤操作。",
+    fullscreenAppleInstallSteps: [
+      "打开浏览器的分享菜单。",
+      "选择“添加到主屏幕”。",
+      "开启“作为 Web App 打开”，然后点击“添加”。",
+    ],
+    fullscreenAppleInstallTitle: "无法直接进入全屏",
+    fullscreenNoticeAcknowledge: "我知道了",
+    fullscreenRejectedBody: "浏览器未完成全屏操作。请尝试在系统浏览器中直接打开本站后重试。",
+    fullscreenRejectedTitle: "未能切换全屏",
+    fullscreenUnsupportedBody: "当前浏览器不支持网页全屏。请尝试使用支持全屏的浏览器。",
+    fullscreenUnsupportedTitle: "无法进入全屏",
     installDesktop: "安装",
     installProgress: "正在下载离线资源",
     later: "以后再说",
@@ -289,6 +431,18 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
     desktopInstallTitle: "Install App",
     enableOffline: "Enable Offline Mode",
     errorTitle: "Offline setup failed",
+    fullscreenAppleInstallBody: "iPhone browsers cannot make a web page fullscreen directly. This site supports Web App mode, which removes the browser address bar. If it is already on your Home Screen, open it from that icon. Otherwise, follow these steps.",
+    fullscreenAppleInstallSteps: [
+      "Open the browser Share menu.",
+      "Choose Add to Home Screen.",
+      "Enable Open as Web App, then tap Add.",
+    ],
+    fullscreenAppleInstallTitle: "Fullscreen is unavailable",
+    fullscreenNoticeAcknowledge: "Got it",
+    fullscreenRejectedBody: "The browser did not complete the fullscreen action. Open this site directly in the system browser and try again.",
+    fullscreenRejectedTitle: "Could not switch fullscreen",
+    fullscreenUnsupportedBody: "This browser does not support web page fullscreen. Try a browser that supports fullscreen.",
+    fullscreenUnsupportedTitle: "Fullscreen is unavailable",
     installDesktop: "Install",
     installProgress: "Downloading offline resources",
     later: "Later",

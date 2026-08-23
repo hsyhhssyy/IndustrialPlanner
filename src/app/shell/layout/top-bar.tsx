@@ -252,7 +252,15 @@ export const TimelineButton = observer(function TimelineButton({
   );
 });
 
-export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
+export const TopBar = observer(function TopBar({
+  appHost,
+  isStandalone = false,
+  onFullscreenActionFailure,
+}: {
+  appHost: AppHost;
+  isStandalone?: boolean;
+  onFullscreenActionFailure?: (reason: "rejected" | "unsupported") => void;
+}) {
   const t = appHost.actions.translate;
   const {
     screenProfile,
@@ -333,6 +341,8 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
         <FullscreenToggleButton
           appHost={appHost}
           className={cm(styles, "top-bar-icon-button top-bar-fullscreen-button")}
+          isStandalone={isStandalone}
+          onFullscreenActionFailure={onFullscreenActionFailure}
         />
         {isTouchLandscape ? (
           <button

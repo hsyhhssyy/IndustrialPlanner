@@ -8,6 +8,11 @@ const UPDATE_POLL_INTERVAL_MS = 15 * 60 * 1000;
 
 export type PwaOfflinePreference = "unknown" | "accepted" | "declined";
 
+export type PwaFullscreenNotice =
+  | "apple-mobile-install"
+  | "request-rejected"
+  | "unsupported";
+
 export type PwaOfflineStatus =
   | "unsupported"
   | "ready-to-enable"
@@ -75,6 +80,7 @@ type PwaServiceWorkerMessage =
 export class PwaController {
   public desktopInstallPromptDismissed = false;
   public errorMessage: string | null = null;
+  public fullscreenNotice: PwaFullscreenNotice | null = null;
   public installPromptAvailable = false;
   public offlinePreference: PwaOfflinePreference = "unknown";
   public offlineStatus: PwaOfflineStatus = "ready-to-enable";
@@ -96,6 +102,7 @@ export class PwaController {
     this.desktopInstallPromptDismissed = persistedPreference.desktopInstallPromptDismissed;
     this.offlinePreference = persistedPreference.offlineMode;
     this.offlineStatus = this.offlinePreference === "declined" ? "not-enabled" : "ready-to-enable";
+    this.standalone = resolveStandaloneMode();
 
     makeAutoObservable<
       PwaController,
@@ -304,6 +311,21 @@ export class PwaController {
   public dismissDesktopInstallPrompt(): void {
     this.desktopInstallPromptDismissed = true;
     this.persistPreference();
+  }
+
+  public openFullscreenNotice(reason: "rejected" | "unsupported"): void {
+    if (reason === "rejected") {
+      this.fullscreenNotice = "request-rejected";
+      return;
+    }
+
+    this.fullscreenNotice = isAppleMobileBrowser()
+      ? "apple-mobile-install"
+      : "unsupported";
+  }
+
+  public closeFullscreenNotice(): void {
+    this.fullscreenNotice = null;
   }
 
   public resetDesktopInstallPromptDismissal(): void {
@@ -609,6 +631,14 @@ function resolveStandaloneMode(): boolean {
       typeof window.matchMedia === "function"
       && window.matchMedia("(display-mode: standalone)").matches
     );
+}
+
+function isAppleMobileBrowser(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return /iPhone|iPod/i.test(navigator.userAgent);
 }
 
 function normalizePersistedPwaPreference(value: unknown): Required<PersistedPwaPreference> {

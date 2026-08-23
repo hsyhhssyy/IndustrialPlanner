@@ -135,6 +135,12 @@
   fill: currentColor;
 }
 
+.mobile-portrait-gate-fullscreen .top-bar-toggle-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+
 @keyframes mobile-portrait-gate-phone-rotate {
   0%,
   18% {
