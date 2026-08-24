@@ -57,6 +57,24 @@ class FakeWorker {
     }
   }
 
+  public fail(requestId: number, status: number): void {
+    const event = {
+      data: {
+        requestId,
+        ok: false,
+        error: {
+          name: "CfV2HttpError",
+          message: `HTTP ${status}`,
+          status,
+          code: "unauthorized",
+        },
+      },
+    } as MessageEvent<CfV2WorkerResponse>;
+    for (const listener of this.messageListeners) {
+      listener(event);
+    }
+  }
+
   public crash(message = "worker crashed"): void {
     const event = { message } as ErrorEvent;
     for (const listener of this.errorListeners) {
@@ -204,6 +222,31 @@ describe("cloudflare-v2-worker-client", () => {
     workers[1]!.respond(request!.requestId, { recovered: true, commit: null });
     await expect(recovered).resolves.toEqual({ recovered: true, commit: null });
 
+    client.dispose();
+  });
+
+  it("reports a 401 response so the main thread can clear an expired account session", async () => {
+    const worker = new FakeWorker();
+    const onAuthenticationFailure = vi.fn();
+    const client = new CloudflareV2WorkerClient({
+      workerFactory: () => worker as unknown as Worker,
+      onAuthenticationFailure,
+    });
+    const requestPromise = client.request({
+      apiBase: "https://sync.example.test",
+      spaceId: "account-space",
+      accessToken: "expired-token",
+      maxConcurrentRequests: 1,
+      requestTimeoutMs: 30_000,
+    }, { type: "load-plan" });
+    const request = worker.posted.find((value): value is CfV2WorkerRequest =>
+      typeof value === "object" && value !== null && "requestId" in value
+    );
+
+    worker.fail(request!.requestId, 401);
+
+    expect(onAuthenticationFailure).toHaveBeenCalledTimes(1);
+    await expect(requestPromise).rejects.toMatchObject({ status: 401 });
     client.dispose();
   });
 });

@@ -13,6 +13,7 @@ import type { CfV2WorkerConfig } from "@/sync/clients/cloudflare/cloudflare-v2-w
 const config: CfV2WorkerConfig = {
   apiBase: "https://sync.example.test",
   spaceId: "retry-423",
+  accessToken: "account-token",
   maxConcurrentRequests: 4,
   requestTimeoutMs: 30_000,
 };
@@ -77,6 +78,10 @@ describe("CloudflareV2WorkerRuntime read-asset 423 重试", () => {
     ) as { revision: number; value: unknown };
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const call of fetchMock.mock.calls) {
+      expect(new Headers(call[1]?.headers).get("authorization"))
+        .toBe("Bearer account-token");
+    }
     expect(result.revision).toBe(42);
     expect(result.value).toEqual({ entities: {} });
   });

@@ -24,6 +24,7 @@ export interface CloudflareV2WorkerActivity {
 export interface CloudflareV2WorkerClientOptions {
   readonly workerFactory?: () => Worker;
   readonly runtimeFactory?: () => CloudflareV2WorkerRuntime;
+  readonly onAuthenticationFailure?: () => void;
 }
 
 interface QueuedRequest {
@@ -210,6 +211,9 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
     if (error === null) {
       queued.resolve(result);
     } else {
+      if (error instanceof CfV2HttpError && error.status === 401) {
+        this.options.onAuthenticationFailure?.();
+      }
       queued.reject(error);
     }
     this.flush();

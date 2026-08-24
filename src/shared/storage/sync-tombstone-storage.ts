@@ -6,6 +6,7 @@ import {
   type IndexedDbStoreLocation,
 } from "./browser-storage";
 import { readCloudflareSyncSettings } from "./cloudflare-sync-settings";
+import { readCloudflareOAuthSession } from "./cloudflare-oauth-session";
 // AI-REMOVED 2026-08-08:
 // Reason: Cloudflare 墓碑作用域必须跟随可共享的真实远端目标，不能绑定本地 owner。
 // Trigger: 用户明确要求不同浏览器使用相同空间名称共享。
@@ -13,6 +14,8 @@ import { readCloudflareSyncSettings } from "./cloudflare-sync-settings";
 // Replacement: apiBase + spaceName。
 // Risk: Low。
 // Human Review: Required
+// AI-CORRECTION 2026-08-23: 账户模式使用 OAuth session 中的账户 spaceId；
+// 未登录的账户模式不生成匿名墓碑，避免退出或会话失效后静默污染匿名空间。
 //
 // Original code:
 // import {
@@ -189,11 +192,17 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
 
   if (provider === "cloudflare") {
     const settings = await readCloudflareSyncSettings();
+    const session = settings.remoteMode === "account"
+      ? readCloudflareOAuthSession()
+      : null;
+    if (settings.remoteMode === "account" && session === null) {
+      return null;
+    }
     return {
       provider,
       scopeKey: [
         resolveBackendApiBaseUrl().replace(/\/$/, ""),
-        settings.spaceName,
+        session?.spaceId ?? settings.spaceName,
       ].join("\u0000"),
       storeLocation: {
         databaseName: SYNC_DATABASE_NAME,

@@ -40,6 +40,7 @@ jobs:
     outputs:
       tag: ${{ steps.classify.outputs.tag }}
       channel: ${{ steps.classify.outputs.channel }}
+      backend_api_base_url: ${{ steps.classify.outputs.backend_api_base_url }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@v4
@@ -70,8 +71,15 @@ jobs:
             exit 1
           fi
 
+          if [ "$channel" = 'stable' ]; then
+            backend_api_base_url='https://endfield-api.amiyabot.com'
+          else
+            backend_api_base_url='https://endfield-api.richetriotour.net'
+          fi
+
           echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "backend_api_base_url=$backend_api_base_url" >> "$GITHUB_OUTPUT"
           echo "Release channel: $channel"
 
       - name: Generate changelog
@@ -142,6 +150,7 @@ jobs:
       - name: Build application
         env:
           VITE_APP_VERSION: ${{ env.RELEASE_TAG }}
+          VITE_BACKEND_API_BASE_URL: ${{ needs.prepare.outputs.backend_api_base_url }}
         run: npm run build
 
       # AI-REMOVED 2026-08-19:

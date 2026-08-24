@@ -337,10 +337,10 @@ export class CloudflareV2WorkerRuntime {
         }
         const response = await fetchWithTimeout(instruction.url, {
           method: "PUT",
-          headers: {
+          headers: createRequestHeaders(config, {
             "content-type": "application/octet-stream",
             ...instruction.headers,
-          },
+          }),
           body: bytes,
         }, config.requestTimeoutMs);
         if (!response.ok) {
@@ -534,7 +534,7 @@ async function readAsset(
   const retryDelayMs = 200;
   let response = await fetchWithTimeout(
     operation.asset.downloadUrl,
-    undefined,
+    { headers: createRequestHeaders(config) },
     config.requestTimeoutMs,
   );
   for (
@@ -545,7 +545,7 @@ async function readAsset(
     await wait(retryDelayMs);
     response = await fetchWithTimeout(
       operation.asset.downloadUrl,
-      undefined,
+      { headers: createRequestHeaders(config) },
       config.requestTimeoutMs,
     );
   }
@@ -690,7 +690,10 @@ async function request(
 ): Promise<Response> {
   const response = await fetchWithTimeout(
     `${config.apiBase}${path}`,
-    init,
+    {
+      ...init,
+      headers: createRequestHeaders(config, init?.headers),
+    },
     config.requestTimeoutMs,
   );
   if (!response.ok && response.status !== 204) {
@@ -782,6 +785,9 @@ function normalizeConfig(config: CfV2WorkerConfig): CfV2WorkerConfig {
   return {
     apiBase: config.apiBase.replace(/\/$/, ""),
     spaceId,
+    ...(typeof config.accessToken === "string" && config.accessToken.trim() !== ""
+      ? { accessToken: config.accessToken.trim() }
+      : {}),
     maxConcurrentRequests: Number.isFinite(config.maxConcurrentRequests)
       ? Math.max(1, Math.min(16, Math.round(config.maxConcurrentRequests)))
       : 4,
@@ -789,6 +795,17 @@ function normalizeConfig(config: CfV2WorkerConfig): CfV2WorkerConfig {
       ? Math.max(1_000, Math.round(config.requestTimeoutMs))
       : 30_000,
   };
+}
+
+function createRequestHeaders(
+  config: CfV2WorkerConfig,
+  initialHeaders?: HeadersInit,
+): Headers {
+  const headers = new Headers(initialHeaders);
+  if (config.accessToken !== undefined) {
+    headers.set("authorization", `Bearer ${config.accessToken}`);
+  }
+  return headers;
 }
 
 function createScopeKey(config: CfV2WorkerConfig): string {

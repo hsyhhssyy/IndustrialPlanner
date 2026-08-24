@@ -51,6 +51,13 @@ function resolvePrecacheFilePath(entryUrl: string): string {
   return filePath;
 }
 
+function rewriteOAuthCallbackPath(requestUrl: string | undefined): string | undefined {
+  return requestUrl?.replace(
+    /^\/auth\/callback(?=\?|$)/u,
+    "/auth/callback/",
+  );
+}
+
 export default defineConfig({
   base: "./",
   define: {
@@ -58,8 +65,31 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 4096,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        oauthCallback: fileURLToPath(
+          new URL("./auth/callback/index.html", import.meta.url),
+        ),
+      },
+    },
   },
   plugins: [
+    {
+      name: "oauth-callback-path-rewrite",
+      configureServer(server) {
+        server.middlewares.use((request, _response, next) => {
+          request.url = rewriteOAuthCallbackPath(request.url);
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((request, _response, next) => {
+          request.url = rewriteOAuthCallbackPath(request.url);
+          next();
+        });
+      },
+    },
     react(),
     Icons({
       compiler: "jsx",
@@ -130,6 +160,22 @@ export default defineConfig({
         ],
       },
     }),
+    {
+      name: "oauth-callback-manifest-path",
+      enforce: "post",
+      transformIndexHtml: {
+        order: "post",
+        handler(html) {
+          if (!html.includes('id="oauth-callback-root"')) {
+            return html;
+          }
+          return html.replace(
+            'href="./manifest.webmanifest"',
+            'href="../../manifest.webmanifest"',
+          );
+        },
+      },
+    },
   ],
   server: {
     allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],

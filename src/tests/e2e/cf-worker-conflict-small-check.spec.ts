@@ -372,6 +372,7 @@ async function configureCloudflareTestSpace(
     backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
     const settings = await cloudflareSettings.writeCloudflareSyncSettings({
       spaceName: targetSpaceId,
+      remoteMode: "anonymous",
     });
     return {
       apiBaseUrl: backendAddress.resolveBackendApiBaseUrl(),
@@ -782,6 +783,7 @@ async function runConflictScenario(options: {
       backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
       const settings = await cloudflareSettings.writeCloudflareSyncSettings({
         spaceName: spaceId,
+        remoteMode: "anonymous",
       });
       return {
         ok: true,

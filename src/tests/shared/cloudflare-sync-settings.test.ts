@@ -28,14 +28,20 @@ describe("cloudflare-sync-settings", () => {
 
     await expect(readCloudflareSyncSettings()).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
     await expect(writeCloudflareSyncSettings({
       spaceName: "  production  ",
-    })).resolves.toEqual({ spaceName: "production" });
+      remoteMode: "anonymous",
+    })).resolves.toEqual({ spaceName: "production", remoteMode: "anonymous" });
     await expect(readCloudflareSyncSettings()).resolves.toEqual({
       spaceName: "production",
+      remoteMode: "anonymous",
     });
-    expect(resolveCloudflareSpaceId({ spaceName: " shared-space " }))
+    expect(resolveCloudflareSpaceId({
+      spaceName: " shared-space ",
+      remoteMode: "anonymous",
+    }))
       .toBe("shared-space");
   });
 
@@ -62,25 +68,34 @@ describe("cloudflare-sync-settings", () => {
       preserveImplicitDefault: true,
     })).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
 
     await clearCloudflareSyncSettings();
     await writeCloudflareSyncSettings({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
     await expect(initializeCloudflareSyncSettings({
       preserveImplicitDefault: false,
     })).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
   });
 
   it("rejects an empty space instead of resolving it to default", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
-    await expect(writeCloudflareSyncSettings({ spaceName: "   " }))
+    await expect(writeCloudflareSyncSettings({
+      spaceName: "   ",
+      remoteMode: "anonymous",
+    }))
       .rejects.toThrow("Cloudflare space name must not be empty.");
-    expect(() => resolveCloudflareSpaceId({ spaceName: "   " }))
+    expect(() => resolveCloudflareSpaceId({
+      spaceName: "   ",
+      remoteMode: "anonymous",
+    }))
       .toThrow("Cloudflare space name must not be empty.");
   });
 
@@ -89,14 +104,19 @@ describe("cloudflare-sync-settings", () => {
     const listener = vi.fn();
     const unsubscribe = subscribeToCloudflareSyncSettingsChanges(listener);
 
-    await writeCloudflareSyncSettings({ spaceName: "temporary" });
+    await writeCloudflareSyncSettings({
+      spaceName: "temporary",
+      remoteMode: "anonymous",
+    });
     await clearCloudflareSyncSettings();
 
     expect(listener).toHaveBeenLastCalledWith({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
     await expect(readCloudflareSyncSettings()).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
     unsubscribe();
   });
@@ -113,10 +133,16 @@ describe("cloudflare-sync-settings", () => {
     });
     await expect(listActiveSyncTombstones("blueprints")).resolves.toHaveLength(1);
 
-    await writeCloudflareSyncSettings({ spaceName: "another-space" });
+    await writeCloudflareSyncSettings({
+      spaceName: "another-space",
+      remoteMode: "anonymous",
+    });
     await expect(listActiveSyncTombstones("blueprints")).resolves.toEqual([]);
 
-    await writeCloudflareSyncSettings({ spaceName: "default" });
+    await writeCloudflareSyncSettings({
+      spaceName: "default",
+      remoteMode: "anonymous",
+    });
     await expect(listActiveSyncTombstones("blueprints")).resolves.toHaveLength(1);
   });
 });

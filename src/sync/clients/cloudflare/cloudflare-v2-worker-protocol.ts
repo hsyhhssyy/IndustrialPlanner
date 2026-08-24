@@ -13,6 +13,7 @@ import type {
 export interface CfV2WorkerConfig {
   readonly apiBase: string;
   readonly spaceId: string;
+  readonly accessToken?: string;
   readonly maxConcurrentRequests: number;
   readonly requestTimeoutMs: number;
 }

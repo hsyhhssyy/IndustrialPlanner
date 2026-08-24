@@ -373,6 +373,7 @@ async function runAutoDownloadScenario(options: {
       backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
       const settings = await cloudflareSettings.writeCloudflareSyncSettings({
         spaceName: spaceId,
+        remoteMode: "anonymous",
       });
       return {
         ok: true,

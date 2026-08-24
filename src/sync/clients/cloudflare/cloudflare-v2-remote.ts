@@ -46,6 +46,7 @@ import { CfV2HttpError } from "./cloudflare-v2-types";
 export interface CloudflareSyncRemoteOptions {
   readonly apiBase?: string;
   readonly spaceId: string;
+  readonly accessToken?: string;
   readonly maxConcurrentRequests?: number;
   readonly requestTimeoutMs?: number;
   readonly onRequestActivityChange?: (activity: CloudflareV2WorkerActivity) => void;
@@ -68,6 +69,9 @@ export class CloudflareSyncRemote implements SyncRemote {
     this.config = {
       apiBase: (options.apiBase ?? resolveBackendApiBaseUrl()).replace(/\/$/, ""),
       spaceId,
+      ...(options.accessToken === undefined
+        ? {}
+        : { accessToken: options.accessToken }),
       maxConcurrentRequests: normalizeConcurrency(options.maxConcurrentRequests),
       requestTimeoutMs: normalizeTimeout(options.requestTimeoutMs),
     };

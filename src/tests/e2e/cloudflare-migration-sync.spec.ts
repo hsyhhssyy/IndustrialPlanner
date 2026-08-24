@@ -270,7 +270,10 @@ async function prepareWorldDocumentMigrationFixture(
       },
     }));
     backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
-    await cloudflareSettings.writeCloudflareSyncSettings({ spaceName: spaceId });
+    await cloudflareSettings.writeCloudflareSyncSettings({
+      spaceName: spaceId,
+      remoteMode: "anonymous",
+    });
     localStorage.setItem("v3-sync-provider", "cloudflare");
 
     return {
@@ -359,7 +362,10 @@ async function prepareBlueprintMigrationFixture(
       key: `blueprint:${blueprintId}`,
     }, legacyBlueprint);
     backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
-    await cloudflareSettings.writeCloudflareSyncSettings({ spaceName: spaceId });
+    await cloudflareSettings.writeCloudflareSyncSettings({
+      spaceName: spaceId,
+      remoteMode: "anonymous",
+    });
     localStorage.setItem("v3-sync-provider", "cloudflare");
 
     return {

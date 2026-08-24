@@ -37,6 +37,7 @@ describe("Cloudflare 首次空间初始化", () => {
       cloudflareProviderSelected: true,
     })).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
   });
 
@@ -61,6 +62,7 @@ describe("Cloudflare 首次空间初始化", () => {
       cloudflareProviderSelected: false,
     })).resolves.toEqual({
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+      remoteMode: "anonymous",
     });
   });
 });

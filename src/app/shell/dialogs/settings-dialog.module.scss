@@ -472,6 +472,66 @@
   gap: 14px;
 }
 
+.cloudflare-account-card {
+  display: grid;
+  gap: 10px;
+
+  > p {
+    margin: 0;
+    color: var(--text-1);
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+}
+
+.cloudflare-account-identity {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--surface-3);
+
+  > span {
+    color: var(--text-1);
+    font-size: 0.8rem;
+  }
+
+  > strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-0);
+    font-size: 0.9rem;
+  }
+}
+
+.cloudflare-account-primary-btn,
+.cloudflare-account-secondary-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cloudflare-account-primary-btn {
+  border: 1px solid var(--accent-strong);
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.cloudflare-account-secondary-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.cloudflare-account-primary-btn:hover,
+.cloudflare-account-secondary-btn:hover {
+  opacity: 0.86;
+}
+
 .sync-config-switch {
   display: flex;
   align-items: center;

@@ -19,7 +19,10 @@ const RANDOM_CLOUDFLARE_SPACE_NAME_PREFIX = "space-";
 
 export interface CloudflareSyncSettings {
   readonly spaceName: string;
+  readonly remoteMode: CloudflareRemoteMode;
 }
+
+export type CloudflareRemoteMode = "anonymous" | "account";
 
 export interface InitializeCloudflareSyncSettingsOptions {
   readonly preserveImplicitDefault: boolean;
@@ -31,6 +34,7 @@ export type CloudflareSyncSettingsChangeListener = (
 
 const DEFAULT_CLOUDFLARE_SYNC_SETTINGS: CloudflareSyncSettings = {
   spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+  remoteMode: "anonymous",
 };
 
 const settingsChangeListeners = new Set<CloudflareSyncSettingsChangeListener>();
@@ -70,6 +74,7 @@ export async function initializeCloudflareSyncSettings(
     spaceName: options.preserveImplicitDefault
       ? DEFAULT_CLOUDFLARE_SPACE_NAME
       : createRandomCloudflareSpaceName(),
+    remoteMode: "anonymous",
   });
 }
 
@@ -131,7 +136,11 @@ function normalizeCloudflareSyncSettings(value: unknown): CloudflareSyncSettings
     ? value.spaceName.trim().slice(0, MAX_CLOUDFLARE_SPACE_NAME_LENGTH)
     : "";
 
-  return spaceName === "" ? null : { spaceName };
+  const remoteMode: CloudflareRemoteMode = value.remoteMode === "account"
+    ? "account"
+    : "anonymous";
+
+  return spaceName === "" ? null : { spaceName, remoteMode };
 }
 
 function emitCloudflareSyncSettingsChange(settings: CloudflareSyncSettings): void {

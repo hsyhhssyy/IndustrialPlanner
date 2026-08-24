@@ -1,10 +1,12 @@
 export {
   applyIndexedDbTransactionMutations,
+  deleteFromLocalStorage,
   listFromIndexedDb,
   readFromIndexedDb,
   readFromLocalStorage,
   saveToIndexedDb,
   saveToLocalStorage,
+  trySaveToLocalStorage,
 } from "@/shared/storage/browser-storage";
 
 export {

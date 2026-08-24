@@ -1,6 +1,16 @@
 /// <reference types="vite/client" />
 /// <reference types="unplugin-icons/types/react" />
 
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_BACKEND_API_BASE_URL?: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
 // AI-GENERATED 2026-05-20: CI build 时将 tag 写入 public/version.js，暴露为全局变量。
 declare global {
   interface Window {

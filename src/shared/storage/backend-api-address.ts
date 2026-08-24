@@ -6,6 +6,8 @@ import {
 export const BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY = "v3-backend-api-address-override";
 export const DEFAULT_BACKEND_API_HOST = "endfield-api.amiyabot.com";
 export const DEFAULT_BACKEND_API_BASE_URL = `https://${DEFAULT_BACKEND_API_HOST}`;
+export const BUILD_BACKEND_API_BASE_URL =
+  import.meta.env.VITE_BACKEND_API_BASE_URL?.trim() || DEFAULT_BACKEND_API_BASE_URL;
 
 export function readBackendApiAddressOverride(): string {
   const value = readFromLocalStorage<string>(BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY);
@@ -18,7 +20,10 @@ export function writeBackendApiAddressOverride(value: string): string {
 }
 
 export function resolveBackendApiBaseUrl(): string {
-  return normalizeBackendApiBaseUrl(readBackendApiAddressOverride());
+  const override = readBackendApiAddressOverride().trim();
+  return normalizeBackendApiBaseUrl(
+    override === "" ? BUILD_BACKEND_API_BASE_URL : override,
+  );
 }
 
 export function normalizeBackendApiBaseUrl(value: string): string {

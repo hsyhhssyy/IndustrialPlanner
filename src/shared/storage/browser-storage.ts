@@ -138,19 +138,44 @@ export function saveToLocalStorage<TValue>(
   value: TValue,
   codec: JsonStorageCodec<TValue> = {},
 ): TValue {
+  trySaveToLocalStorage(key, value, codec);
+
+  return value;
+}
+
+export function trySaveToLocalStorage<TValue>(
+  key: string,
+  value: TValue,
+  codec: JsonStorageCodec<TValue> = {},
+): boolean {
   const storage = getLocalStorage();
 
   if (storage === null) {
-    return value;
+    return false;
   }
 
   try {
     storage.setItem(key, getCodec(codec).serialize(value));
   } catch {
-    return value;
+    return false;
   }
 
-  return value;
+  return true;
+}
+
+export function deleteFromLocalStorage(key: string): boolean {
+  const storage = getLocalStorage();
+
+  if (storage === null) {
+    return false;
+  }
+
+  try {
+    storage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function readFromIndexedDb<TValue>(

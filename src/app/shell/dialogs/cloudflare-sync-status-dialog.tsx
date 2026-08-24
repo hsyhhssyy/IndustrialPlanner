@@ -17,7 +17,29 @@ import {
   MAX_CLOUDFLARE_SPACE_NAME_LENGTH,
   readCloudflareSyncSettings,
   writeCloudflareSyncSettings,
+  type CloudflareRemoteMode,
 } from "@/shared/storage/cloudflare-sync-settings";
+import {
+  clearCloudflareOAuthSession,
+  readCloudflareOAuthSession,
+  subscribeToCloudflareOAuthSessionChanges,
+  type CloudflareOAuthSession,
+} from "@/shared/storage/cloudflare-oauth-session";
+import {
+  CloudflareOAuthLoginError,
+  startCloudflareOAuthLogin,
+} from "@/shared/storage/cloudflare-oauth-browser-flow";
+
+// AI-REMOVED 2026-08-24:
+// Reason: 授权 URL 现在必须与原标签页预创建的随机频道一起生成，不能由 UI 直接拼接旧入口。
+// Trigger: 后端 /authorize 新增 frontend_redirect_uri 与 oauth_channel 必填参数。
+// Evidence: cloudflare-oauth-browser-flow 在打开 popup 前同步创建频道并监听。
+// Replacement: startCloudflareOAuthLogin。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { createCloudflareOAuthAuthorizeUrl } from "@/shared/storage/cloudflare-oauth-session";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { cm } from "@/app/shell/shared/css-module-class";
 import styles from "./settings-dialog.module.scss";
@@ -84,24 +106,61 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
 }) {
   const status = state.status;
   const [savedSpaceName, setSavedSpaceName] = useState("");
+  const [savedRemoteMode, setSavedRemoteMode] = useState<CloudflareRemoteMode>(
+    "anonymous",
+  );
   const [draftSpaceName, setDraftSpaceName] = useState("");
   const [loadingSpaceName, setLoadingSpaceName] = useState(true);
   const [savingSpaceName, setSavingSpaceName] = useState(false);
   const [spaceNameSaveFailed, setSpaceNameSaveFailed] = useState(false);
+  const [oauthSession, setOAuthSession] = useState<CloudflareOAuthSession | null>(
+    () => readCloudflareOAuthSession(),
+  );
+  const [oauthPopupBlocked, setOAuthPopupBlocked] = useState(false);
+  const [oauthLoginInProgress, setOAuthLoginInProgress] = useState(false);
+  const [oauthLoginFailed, setOAuthLoginFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
+    const applySession = (session: CloudflareOAuthSession | null) => {
+      if (!active) {
+        return;
+      }
+      setOAuthSession(session);
+      if (session !== null) {
+        void (async () => {
+          try {
+            const settings = await readCloudflareSyncSettings();
+            if (settings.remoteMode === "account") {
+              if (active) setSavedRemoteMode("account");
+              return;
+            }
+            const accountSettings = await writeCloudflareSyncSettings({
+              ...settings,
+              remoteMode: "account",
+            });
+            if (active) setSavedRemoteMode(accountSettings.remoteMode);
+          } catch {
+            // 同步宿主也会在读取到有效 session 时重试写入账户模式。
+          }
+        })();
+      }
+    };
     void readCloudflareSyncSettings().then((settings) => {
       if (!active) {
         return;
       }
       setSavedSpaceName(settings.spaceName);
+      setSavedRemoteMode(settings.remoteMode);
       setDraftSpaceName(settings.spaceName);
       setLoadingSpaceName(false);
+      applySession(readCloudflareOAuthSession());
     });
+    const unsubscribe = subscribeToCloudflareOAuthSessionChanges(applySession);
 
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -121,14 +180,36 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
     try {
       const settings = await writeCloudflareSyncSettings({
         spaceName: normalizedDraftSpaceName,
+        remoteMode: savedRemoteMode,
       });
       setSavedSpaceName(settings.spaceName);
+      setSavedRemoteMode(settings.remoteMode);
       setDraftSpaceName(settings.spaceName);
     } catch {
       setSpaceNameSaveFailed(true);
     } finally {
       setSavingSpaceName(false);
     }
+  };
+  const handleOpenOAuth = () => {
+    if (oauthLoginInProgress) {
+      return;
+    }
+    setOAuthPopupBlocked(false);
+    setOAuthLoginFailed(false);
+    setOAuthLoginInProgress(true);
+    void startCloudflareOAuthLogin()
+      .catch((error: unknown) => {
+        if (
+          error instanceof CloudflareOAuthLoginError
+          && error.code === "popup_blocked"
+        ) {
+          setOAuthPopupBlocked(true);
+          return;
+        }
+        setOAuthLoginFailed(true);
+      })
+      .finally(() => setOAuthLoginInProgress(false));
   };
 
   const filteredTasks = useMemo(
@@ -174,6 +255,70 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         className={cm(styles, "sync-status-content")}
         data-cloudflare-sync-status-dialog
       >
+        <section
+          className={cm(styles, "sync-status-section", "sync-config-section")}
+        >
+          <h3>{t("cloudflareStatus.accountSettings")}</h3>
+          <div className={cm(styles, "cloudflare-account-card")}>
+            {oauthSession === null ? (
+              <>
+                <p data-cloudflare-oauth-description>
+                  {t(savedRemoteMode === "account"
+                    ? "cloudflareStatus.loginRequiredDescription"
+                    : "cloudflareStatus.loginDescription")}
+                </p>
+                <button
+                  className={cm(styles, "cloudflare-account-primary-btn")}
+                  data-cloudflare-oauth-login
+                  disabled={oauthLoginInProgress}
+                  onClick={handleOpenOAuth}
+                  type="button"
+                >
+                  {t(oauthLoginInProgress
+                    ? "cloudflareStatus.loginInProgress"
+                    : savedRemoteMode === "account"
+                      ? "cloudflareStatus.relogin"
+                      : "cloudflareStatus.login")}
+                </button>
+                {oauthPopupBlocked ? (
+                  <span
+                    className={cm(styles, "sync-config-test-result", "is-failed")}
+                    role="alert"
+                  >
+                    {t("cloudflareStatus.popupBlocked")}
+                  </span>
+                ) : null}
+                {oauthLoginFailed ? (
+                  <span
+                    className={cm(styles, "sync-config-test-result", "is-failed")}
+                    role="alert"
+                  >
+                    {t("cloudflareStatus.loginFailed")}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <div className={cm(styles, "cloudflare-account-identity")}>
+                  <span>{t("cloudflareStatus.loggedInAs")}</span>
+                  <strong data-cloudflare-oauth-username>
+                    {oauthSession.account.username}
+                  </strong>
+                </div>
+                <button
+                  className={cm(styles, "cloudflare-account-secondary-btn")}
+                  data-cloudflare-oauth-logout
+                  onClick={clearCloudflareOAuthSession}
+                  type="button"
+                >
+                  {t("cloudflareStatus.logout")}
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+
+        {oauthSession !== null || savedRemoteMode === "account" ? null : (
         <section
           className={cm(styles, "sync-status-section", "sync-config-section")}
         >
@@ -223,6 +368,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
             </div>
           </div>
         </section>
+        )}
 
         {/* 服务器端错误 — 置顶醒目展示 */}
         {status.lastError === null ? null : (

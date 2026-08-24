@@ -121,6 +121,12 @@ import {
   initializeCloudflareSpaceSettings,
 } from "./clients/cloudflare";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
+import {
+  clearCloudflareOAuthSession,
+  readCloudflareOAuthSession,
+  subscribeToCloudflareOAuthSessionChanges,
+  type CloudflareOAuthSession,
+} from "@/shared/storage/cloudflare-oauth-session";
 // AI-REMOVED 2026-08-19:
 // Reason: 同步主机启动时必须完成随机空间初始化；删除远端数据后直接写入新的随机空间，不再留下未初始化状态。
 // Trigger: 新用户不能继续隐式进入共享 default 空间，同时已有 default 用户必须保持不动。
@@ -189,12 +195,23 @@ export async function createSyncHost(
 ): Promise<SyncHost> {
   const state = new SyncStateImpl();
   const disposers: Array<() => void> = [];
+  let currentCloudflareSession = readCloudflareOAuthSession();
   // Cloudflare transport 归 SyncHost 所有；单轮 SyncRemote dispose 不终止正在后台执行的上传。
   // 延迟创建避免未选择 Cloudflare 时加载或初始化对应 Worker。
   let cloudflareWorkerClient: CloudflareV2WorkerClient | null = null;
   const getCloudflareWorkerClient = (): CloudflareV2WorkerClient => {
-    cloudflareWorkerClient ??= new CloudflareV2WorkerClient();
+    cloudflareWorkerClient ??= new CloudflareV2WorkerClient({
+      onAuthenticationFailure: () => {
+        if (currentCloudflareSession !== null) {
+          clearCloudflareOAuthSession();
+        }
+      },
+    });
     return cloudflareWorkerClient;
+  };
+  const disposeCloudflareWorkerClient = (): void => {
+    cloudflareWorkerClient?.dispose();
+    cloudflareWorkerClient = null;
   };
   // AI-REMOVED 2026-08-12:
   // Reason: 远端落地已由 storage/snapshot change origin 显式标记，不再需要动态作用域猜测变更来源。
@@ -244,10 +261,37 @@ export async function createSyncHost(
     apiBase: resolveBackendApiBaseUrl(),
     cloudflareProviderSelected: readSyncProvider() === "cloudflare",
   });
+  if (
+    currentCloudflareSession !== null
+    && currentCloudflareSettings.remoteMode === "anonymous"
+  ) {
+    currentCloudflareSettings = await writeCloudflareSyncSettings({
+      ...currentCloudflareSettings,
+      remoteMode: "account",
+    });
+  }
   let suppressCloudflareSettingsSync = false;
-  const getCloudflareSpaceId = (
+  const getCloudflareTarget = (
     settings: CloudflareSyncSettings = currentCloudflareSettings,
-  ) => resolveCloudflareSpaceId(settings);
+    session: CloudflareOAuthSession | null = currentCloudflareSession,
+  ) => {
+    if (settings.remoteMode === "account") {
+      if (
+        session === null
+        || session.apiBaseUrl !== resolveBackendApiBaseUrl()
+      ) {
+        throw new Error("Cloudflare account login is required.");
+      }
+      return {
+        spaceId: session.spaceId,
+        accessToken: session.accessToken,
+      };
+    }
+    return {
+      spaceId: resolveCloudflareSpaceId(settings),
+      accessToken: null,
+    };
+  };
   let currentSettings = await readSyncConnectionSettings();
   // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
   // deriveEnabled 内部会在旧用户首次访问时将 provider 写为 "webdav"
@@ -468,8 +512,15 @@ export async function createSyncHost(
     validateSettings: (settings) => {
       const provider = readSyncProvider();
       if (provider === "cloudflare") {
-        return resolveBackendApiBaseUrl().trim() === ""
-          ? "Cloudflare backend URL is empty"
+        if (resolveBackendApiBaseUrl().trim() === "") {
+          return "Cloudflare backend URL is empty";
+        }
+        return currentCloudflareSettings.remoteMode === "account"
+          && (
+            currentCloudflareSession === null
+            || currentCloudflareSession.apiBaseUrl !== resolveBackendApiBaseUrl()
+          )
+          ? "Cloudflare account login is required"
           : null;
       }
       return settings.url.trim() === "" ? "Sync URL is empty" : null;
@@ -481,9 +532,13 @@ export async function createSyncHost(
     ) => {
       const provider = readSyncProvider();
       if (provider === "cloudflare") {
+        const target = getCloudflareTarget();
         return createCloudflareSyncRemote({
           apiBase: resolveBackendApiBaseUrl(),
-          spaceId: getCloudflareSpaceId(),
+          spaceId: target.spaceId,
+          ...(target.accessToken === null
+            ? {}
+            : { accessToken: target.accessToken }),
           workerClient: getCloudflareWorkerClient(),
           maxConcurrentRequests: settings.maxConcurrentRequests,
           onRequestActivityChange,
@@ -642,10 +697,16 @@ export async function createSyncHost(
       }
       service.stop();
       try {
-        const remote = provider === "cloudflare"
+        const cloudflareTarget = provider === "cloudflare"
+          ? getCloudflareTarget(cloudflareSettings)
+          : null;
+        const remote = cloudflareTarget !== null
           ? createCloudflareSyncRemote({
               apiBase: resolveBackendApiBaseUrl(),
-              spaceId: getCloudflareSpaceId(cloudflareSettings),
+              spaceId: cloudflareTarget.spaceId,
+              ...(cloudflareTarget.accessToken === null
+                ? {}
+                : { accessToken: cloudflareTarget.accessToken }),
               workerClient: getCloudflareWorkerClient(),
               maxConcurrentRequests: settings.maxConcurrentRequests,
             })
@@ -678,6 +739,7 @@ export async function createSyncHost(
             // await clearCloudflareSyncSettings();
             currentCloudflareSettings = await writeCloudflareSyncSettings({
               spaceName: createRandomCloudflareSpaceName(),
+              remoteMode: cloudflareSettings.remoteMode,
             });
           } finally {
             suppressCloudflareSettingsSync = false;
@@ -706,9 +768,13 @@ export async function createSyncHost(
       const cloudflareSettings = currentCloudflareSettings;
       service.stop();
       try {
+        const cloudflareTarget = getCloudflareTarget(cloudflareSettings);
         const remote = createCloudflareSyncRemote({
           apiBase: resolveBackendApiBaseUrl(),
-          spaceId: getCloudflareSpaceId(cloudflareSettings),
+          spaceId: cloudflareTarget.spaceId,
+          ...(cloudflareTarget.accessToken === null
+            ? {}
+            : { accessToken: cloudflareTarget.accessToken }),
           workerClient: getCloudflareWorkerClient(),
           maxConcurrentRequests: settings.maxConcurrentRequests,
         });
@@ -752,8 +818,7 @@ export async function createSyncHost(
       }
       state.cancelConflictWorkflow();
       service.stop();
-      cloudflareWorkerClient?.dispose();
-      cloudflareWorkerClient = null;
+      disposeCloudflareWorkerClient();
       if (workspace.sync === host) {
         workspace.sync = null;
       }
@@ -916,7 +981,8 @@ export async function createSyncHost(
     }
   }));
   disposers.push(subscribeToCloudflareSyncSettingsChanges((settings) => {
-    const changed = settings.spaceName !== currentCloudflareSettings.spaceName;
+    const changed = settings.spaceName !== currentCloudflareSettings.spaceName
+      || settings.remoteMode !== currentCloudflareSettings.remoteMode;
     currentCloudflareSettings = settings;
     if (
       changed
@@ -926,6 +992,39 @@ export async function createSyncHost(
     ) {
       void service.syncNow("settings-change");
     }
+  }));
+  disposers.push(subscribeToCloudflareOAuthSessionChanges((session) => {
+    const unchanged = session?.accessToken === currentCloudflareSession?.accessToken
+      && session?.spaceId === currentCloudflareSession?.spaceId;
+    if (unchanged) {
+      return;
+    }
+    currentCloudflareSession = session;
+    service.stop();
+    disposeCloudflareWorkerClient();
+    void (async () => {
+      try {
+        if (session !== null && currentCloudflareSettings.remoteMode === "anonymous") {
+          suppressCloudflareSettingsSync = true;
+          try {
+            const accountSettings: CloudflareSyncSettings = {
+              ...currentCloudflareSettings,
+              remoteMode: "account",
+            };
+            currentCloudflareSettings = accountSettings;
+            await writeCloudflareSyncSettings(accountSettings);
+          } finally {
+            suppressCloudflareSettingsSync = false;
+          }
+        }
+      } catch {
+        // 内存态仍保持 account，禁止持久化失败时回退到匿名空间。
+      } finally {
+        if (syncStarted) {
+          service.start();
+        }
+      }
+    })();
   }));
   if (typeof document !== "undefined") {
     const handleVisibilityChange = () => {
