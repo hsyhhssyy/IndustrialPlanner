@@ -269,6 +269,7 @@ class WebDavSyncRemoteSession implements SyncRemoteSession {
   public async markApplied(result: RemoteApplyResult): Promise<void> {
     // AI-CORRECTION 2026-08-22: 局部 scope 只推进资产级 touch，不得把整个 collection
     // 的 revision/ETag 标记为已处理，否则其他基地的远端变化会被小检查短路吞掉。
+    // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
     if (!result.scopeComplete) {
       return;
     }

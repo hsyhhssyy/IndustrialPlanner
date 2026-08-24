@@ -102,6 +102,17 @@ import {
   readSyncProvider,
   writeSyncProvider,
 } from "./sync-providers";
+import {
+  activateSyncProvider,
+  createCloudflareAccountSyncTargetKey,
+  createCloudflareAnonymousSyncTargetKey,
+  createWebDavSyncTargetKey,
+  hasPersistedSyncProviderActivation,
+  isSyncProviderTargetActive,
+  readActiveSyncProvider,
+  readSyncProviderActivation,
+  subscribeToSyncProviderActivationChanges,
+} from "@/shared/storage/sync-provider-activation";
 import { SyncStateImpl } from "./sync-state-impl";
 import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
 import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
@@ -134,12 +145,13 @@ import {
 // Replacement: initializeCloudflareSpaceSettings、createRandomCloudflareSpaceName 与 writeCloudflareSyncSettings。
 // Risk: Low。
 // Human Review: Required
+// AI-CORRECTION 2026-08-24: 上述随机空间替代方案已失效；未确认用户保持空目标，删除后也回到待配置态。
 //
 // Original code:
 //   clearCloudflareSyncSettings,
 //   readCloudflareSyncSettings,
 import {
-  createRandomCloudflareSpaceName,
+  clearCloudflareSyncSettings,
   resolveCloudflareSpaceId,
   subscribeToCloudflareSyncSettingsChanges,
   writeCloudflareSyncSettings,
@@ -173,18 +185,55 @@ type ResolveInteractiveConflict = <TValue>(
  * 兼容旧用户：若 provider 未设置但旧 enabled=true 且 URL 非空，
  * 自动迁移 provider→"webdav"。
  */
-function deriveEnabled(settings: { url: string }, oldEnabled?: boolean): boolean {
-  const provider = readSyncProvider();
-  if (provider === "webdav") {
-    return settings.url.trim() !== "";
-  }
-  if (provider === "cloudflare") {
-    return resolveBackendApiBaseUrl().trim() !== "";
-  }
-  // 迁移路径：旧用户 enabled=true 且 URL 非空，自动注册为 webdav
-  if (oldEnabled === true && settings.url.trim() !== "") {
-    writeSyncProvider("webdav");
+// AI-CORRECTION 2026-08-24: enabled 现在由已确认 activation 与当前目标共同派生；pending provider 永远返回 false。
+function deriveEnabled(
+  settings: { readonly url: string; readonly username: string },
+  cloudflareTargetKey: string | null,
+  oldEnabled?: boolean,
+): boolean {
+  // AI-REMOVED 2026-08-24:
+  // Reason: provider 选择不再等同于同步激活，单看 provider/URL 会在配置确认前启动网络同步。
+  // Trigger: 用户要求切换同步方式后必须进入设置明确确认目标。
+  // Evidence: sync-provider-activation 区分 pending 与 active，并保存已确认目标 key。
+  // Replacement: 下方 isSyncProviderTargetActive 门控。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const provider = readSyncProvider();
+  // if (provider === "webdav") {
+  //   return settings.url.trim() !== "";
+  // }
+  // if (provider === "cloudflare") {
+  //   return resolveBackendApiBaseUrl().trim() !== "";
+  // }
+  // // 迁移路径：旧用户 enabled=true 且 URL 非空，自动注册为 webdav
+  // if (oldEnabled === true && settings.url.trim() !== "") {
+  //   writeSyncProvider("webdav");
+  //   return true;
+  // }
+  // return false;
+  const webDavTargetKey = createWebDavSyncTargetKey(settings);
+  if (
+    settings.url.trim() !== ""
+    && isSyncProviderTargetActive("webdav", webDavTargetKey)
+  ) {
     return true;
+  }
+  if (
+    cloudflareTargetKey !== null
+    && resolveBackendApiBaseUrl().trim() !== ""
+    && isSyncProviderTargetActive("cloudflare", cloudflareTargetKey)
+  ) {
+    return true;
+  }
+  if (
+    !hasPersistedSyncProviderActivation()
+    && readSyncProvider() === "none"
+    && oldEnabled === true
+    && settings.url.trim() !== ""
+  ) {
+    return activateSyncProvider("webdav", webDavTargetKey);
   }
   return false;
 }
@@ -257,12 +306,17 @@ export async function createSyncHost(
   // Original code:
   // const syncOwnerState = await ensureLocalSyncOwnerState();
   // const cloudflareOwnerScope = createLocalSyncOwnerScopeKey(syncOwnerState.activeOwner);
+  const activationAtStartup = readSyncProviderActivation();
   let currentCloudflareSettings = await initializeCloudflareSpaceSettings({
     apiBase: resolveBackendApiBaseUrl(),
-    cloudflareProviderSelected: readSyncProvider() === "cloudflare",
+    cloudflareProviderSelected: activationAtStartup.state === "active"
+      && activationAtStartup.provider === "cloudflare"
+      && activationAtStartup.confirmedTargetKey === null,
   });
   if (
-    currentCloudflareSession !== null
+    !hasPersistedSyncProviderActivation()
+    && readActiveSyncProvider() === "cloudflare"
+    && currentCloudflareSession !== null
     && currentCloudflareSettings.remoteMode === "anonymous"
   ) {
     currentCloudflareSettings = await writeCloudflareSyncSettings({
@@ -271,6 +325,27 @@ export async function createSyncHost(
     });
   }
   let suppressCloudflareSettingsSync = false;
+  const resolveCloudflareTargetKey = (
+    settings: CloudflareSyncSettings = currentCloudflareSettings,
+    session: CloudflareOAuthSession | null = currentCloudflareSession,
+  ): string | null => {
+    if (settings.remoteMode === "account") {
+      return session === null
+        || session.apiBaseUrl !== resolveBackendApiBaseUrl()
+        ? null
+        : createCloudflareAccountSyncTargetKey({
+            apiBaseUrl: session.apiBaseUrl,
+            accountId: session.account.accountId,
+            spaceId: session.spaceId,
+          });
+    }
+    return settings.spaceName.trim() === ""
+      ? null
+      : createCloudflareAnonymousSyncTargetKey({
+          apiBaseUrl: resolveBackendApiBaseUrl(),
+          spaceId: settings.spaceName,
+        });
+  };
   const getCloudflareTarget = (
     settings: CloudflareSyncSettings = currentCloudflareSettings,
     session: CloudflareOAuthSession | null = currentCloudflareSession,
@@ -285,20 +360,48 @@ export async function createSyncHost(
       return {
         spaceId: session.spaceId,
         accessToken: session.accessToken,
+        targetKey: createCloudflareAccountSyncTargetKey({
+          apiBaseUrl: session.apiBaseUrl,
+          accountId: session.account.accountId,
+          spaceId: session.spaceId,
+        }),
       };
     }
     return {
       spaceId: resolveCloudflareSpaceId(settings),
       accessToken: null,
+      targetKey: createCloudflareAnonymousSyncTargetKey({
+        apiBaseUrl: resolveBackendApiBaseUrl(),
+        spaceId: resolveCloudflareSpaceId(settings),
+      }),
     };
   };
   let currentSettings = await readSyncConnectionSettings();
   // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
   // deriveEnabled 内部会在旧用户首次访问时将 provider 写为 "webdav"
+  // AI-CORRECTION 2026-08-24: 迁移现在写入带目标确认 key 的 active activation，不再只写 provider。
   currentSettings = {
     ...currentSettings,
-    enabled: deriveEnabled(currentSettings, currentSettings.enabled),
+    enabled: deriveEnabled(
+      currentSettings,
+      resolveCloudflareTargetKey(),
+      currentSettings.enabled,
+    ),
   };
+  const initialActivation = readSyncProviderActivation();
+  if (
+    initialActivation.state === "active"
+    && initialActivation.confirmedTargetKey === null
+  ) {
+    const legacyTargetKey = initialActivation.provider === "webdav"
+      ? currentSettings.url.trim() === ""
+        ? null
+        : createWebDavSyncTargetKey(currentSettings)
+      : resolveCloudflareTargetKey();
+    if (legacyTargetKey !== null) {
+      activateSyncProvider(initialActivation.provider, legacyTargetKey);
+    }
+  }
   // AI-REMOVED 2026-08-08:
   // Reason: Cloudflare 不使用 WebDAV URL；伪造 URL 会污染持久设置且切换 provider 后留下错误目标。
   // Trigger: sync-service 现在支持 provider-aware validateSettings。
@@ -510,7 +613,7 @@ export async function createSyncHost(
   const service:  SyncService = createSyncService({
     readSettings: () => currentSettings,
     validateSettings: (settings) => {
-      const provider = readSyncProvider();
+      const provider = readActiveSyncProvider();
       if (provider === "cloudflare") {
         if (resolveBackendApiBaseUrl().trim() === "") {
           return "Cloudflare backend URL is empty";
@@ -530,7 +633,7 @@ export async function createSyncHost(
       onRequestActivityChange,
       requestOptions,
     ) => {
-      const provider = readSyncProvider();
+      const provider = readActiveSyncProvider();
       if (provider === "cloudflare") {
         const target = getCloudflareTarget();
         return createCloudflareSyncRemote({
@@ -626,7 +729,11 @@ export async function createSyncHost(
       const wasEnabled = currentSettings.enabled;
       const merged = { ...currentSettings, ...patch };
       // enabled 由 provider + URL 派生，忽略 patch 中的 enabled
-      merged.enabled = deriveEnabled(merged, wasEnabled ? undefined : currentSettings.enabled);
+      merged.enabled = deriveEnabled(
+        merged,
+        resolveCloudflareTargetKey(),
+        wasEnabled ? undefined : currentSettings.enabled,
+      );
       currentSettings = await writeSyncConnectionSettings(merged);
       state.setSettings(currentSettings);
       // AI-REMOVED 2026-08-08:
@@ -686,8 +793,8 @@ export async function createSyncHost(
     //   }
     // },
     deleteRemoteData: async () => {
-      const provider = readSyncProvider();
-      if (provider === "none") {
+      const provider = readActiveSyncProvider();
+      if (provider === null) {
         return;
       }
       const settings = currentSettings;
@@ -734,13 +841,28 @@ export async function createSyncHost(
             // Replacement: 下方 writeCloudflareSyncSettings 写入新随机空间。
             // Risk: Low；写入失败时仍保留原空间设置，且删除 action 会失败并保持 provider 供用户重试。
             // Human Review: Required
+            // AI-CORRECTION 2026-08-24: 上述随机空间替代方案已失效；删除成功后清空目标并关闭 provider。
             //
             // Original code:
             // await clearCloudflareSyncSettings();
-            currentCloudflareSettings = await writeCloudflareSyncSettings({
-              spaceName: createRandomCloudflareSpaceName(),
-              remoteMode: cloudflareSettings.remoteMode,
-            });
+            // AI-REMOVED 2026-08-24:
+            // Reason: 删除远端数据后不能再次预生成随机目标；下次选择 Cloudflare 必须回到待配置。
+            // Trigger: 用户要求匿名 Space ID 只有在明确确认后才生效，避免浪费远端空间。
+            // Evidence: clearCloudflareSyncSettings 现在返回未配置空目标，provider 随后关闭。
+            // Replacement: 下方 clearCloudflareSyncSettings 与内存未配置状态。
+            // Risk: 用户下次启用时必须重新填写或选择账户。
+            // Human Review: Required
+            //
+            // Original code:
+            // currentCloudflareSettings = await writeCloudflareSyncSettings({
+            //   spaceName: createRandomCloudflareSpaceName(),
+            //   remoteMode: cloudflareSettings.remoteMode,
+            // });
+            await clearCloudflareSyncSettings();
+            currentCloudflareSettings = {
+              spaceName: "",
+              remoteMode: "anonymous",
+            };
           } finally {
             suppressCloudflareSettingsSync = false;
           }
@@ -754,13 +876,13 @@ export async function createSyncHost(
         });
         state.setSettings(currentSettings);
       } finally {
-        if (syncStarted) {
+        if (syncStarted && currentSettings.enabled) {
           service.start();
         }
       }
     },
     abortCurrentTransaction: async () => {
-      const provider = readSyncProvider();
+      const provider = readActiveSyncProvider();
       if (provider !== "cloudflare") {
         return;
       }
@@ -784,7 +906,7 @@ export async function createSyncHost(
           remote.dispose?.();
         }
       } finally {
-        if (syncStarted) {
+        if (syncStarted && currentSettings.enabled) {
           service.start();
         }
       }
@@ -904,7 +1026,10 @@ export async function createSyncHost(
           nextEditorDocumentHash,
         );
         syncStarted = true;
-        service.start();
+        // AI-CORRECTION 2026-08-24: pending/disabled 状态不启动定时器或 startup sync；激活后由设置订阅启动。
+        if (currentSettings.enabled) {
+          service.start();
+        }
         return;
       }
 
@@ -942,7 +1067,10 @@ export async function createSyncHost(
     }));
   } else {
     syncStarted = true;
-    service.start();
+    // AI-CORRECTION 2026-08-24: 没有编辑器时也只启动已确认的同步目标。
+    if (currentSettings.enabled) {
+      service.start();
+    }
   }
   disposers.push(subscribeToSyncConnectionSettingsChanges((settings) => {
     currentSettings = settings;
@@ -950,6 +1078,10 @@ export async function createSyncHost(
     state.setSettings(settings);
     if (!settings.enabled && state.pendingConflict !== null) {
       state.cancelConflictWorkflow();
+    }
+    if (!settings.enabled) {
+      service.stop();
+      disposeCloudflareWorkerClient();
     }
     if (!settings.enabled && !syncStarted) {
       state.setStatus({
@@ -974,23 +1106,55 @@ export async function createSyncHost(
     //     initialSyncStage: "canvas",
     //   });
     // }
+    if (!settings.enabled) {
+      void service.syncNow("settings-change");
+      return;
+    }
     if (syncStarted) {
-      void service.syncNow(
-        settings.enabled && !wasEnabled ? "foreground" : "settings-change",
-      );
+      if (!wasEnabled) {
+        service.start();
+      } else {
+        void service.syncNow("settings-change");
+      }
     }
   }));
+  let derivedSettingsRefresh = Promise.resolve();
+  const refreshDerivedEnabled = (): Promise<void> => {
+    const refresh = async (): Promise<void> => {
+      const enabled = deriveEnabled(
+        currentSettings,
+        resolveCloudflareTargetKey(),
+      );
+      if (enabled === currentSettings.enabled) {
+        return;
+      }
+      currentSettings = await writeSyncConnectionSettings({
+        ...currentSettings,
+        enabled,
+      });
+    };
+    derivedSettingsRefresh = derivedSettingsRefresh.then(refresh, refresh);
+    return derivedSettingsRefresh;
+  };
+  disposers.push(subscribeToSyncProviderActivationChanges(() => {
+    service.stop();
+    disposeCloudflareWorkerClient();
+    void refreshDerivedEnabled()
+      .then(() => {
+        if (syncStarted && currentSettings.enabled) {
+          service.start();
+        }
+      })
+      .catch(() => {
+        // 激活状态已安全落盘；enabled 持久化失败时保持当前运行态停止，等待下次设置刷新。
+      });
+  }));
   disposers.push(subscribeToCloudflareSyncSettingsChanges((settings) => {
-    const changed = settings.spaceName !== currentCloudflareSettings.spaceName
-      || settings.remoteMode !== currentCloudflareSettings.remoteMode;
     currentCloudflareSettings = settings;
-    if (
-      changed
-      && !suppressCloudflareSettingsSync
-      && syncStarted
-      && readSyncProvider() === "cloudflare"
-    ) {
-      void service.syncNow("settings-change");
+    if (!suppressCloudflareSettingsSync) {
+      void refreshDerivedEnabled().catch(() => {
+        // 配置写入成功但 enabled 刷新失败时不主动启动同步。
+      });
     }
   }));
   disposers.push(subscribeToCloudflareOAuthSessionChanges((session) => {
@@ -1002,29 +1166,47 @@ export async function createSyncHost(
     currentCloudflareSession = session;
     service.stop();
     disposeCloudflareWorkerClient();
-    void (async () => {
-      try {
-        if (session !== null && currentCloudflareSettings.remoteMode === "anonymous") {
-          suppressCloudflareSettingsSync = true;
-          try {
-            const accountSettings: CloudflareSyncSettings = {
-              ...currentCloudflareSettings,
-              remoteMode: "account",
-            };
-            currentCloudflareSettings = accountSettings;
-            await writeCloudflareSyncSettings(accountSettings);
-          } finally {
-            suppressCloudflareSettingsSync = false;
-          }
-        }
-      } catch {
-        // 内存态仍保持 account，禁止持久化失败时回退到匿名空间。
-      } finally {
-        if (syncStarted) {
+    // AI-REMOVED 2026-08-24:
+    // Reason: OAuth session 的存在只表示已登录，不能替用户选择账户同步并自动重启服务。
+    // Trigger: 用户要求 Cloudflare 必须明确选择账户或匿名 Space ID 后才生效。
+    // Evidence: Cloudflare 对话框的“使用账号并启用”现在负责写 account 配置与 active activation。
+    // Replacement: refreshDerivedEnabled；只有既有 active account 目标与新 session 匹配时恢复同步。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // void (async () => {
+    //   try {
+    //     if (session !== null && currentCloudflareSettings.remoteMode === "anonymous") {
+    //       suppressCloudflareSettingsSync = true;
+    //       try {
+    //         const accountSettings: CloudflareSyncSettings = {
+    //           ...currentCloudflareSettings,
+    //           remoteMode: "account",
+    //         };
+    //         currentCloudflareSettings = accountSettings;
+    //         await writeCloudflareSyncSettings(accountSettings);
+    //       } finally {
+    //         suppressCloudflareSettingsSync = false;
+    //       }
+    //     }
+    //   } catch {
+    //     // 内存态仍保持 account，禁止持久化失败时回退到匿名空间。
+    //   } finally {
+    //     if (syncStarted) {
+    //       service.start();
+    //     }
+    //   }
+    // })();
+    void refreshDerivedEnabled()
+      .then(() => {
+        if (syncStarted && currentSettings.enabled) {
           service.start();
         }
-      }
-    })();
+      })
+      .catch(() => {
+        // session 变化后默认保持停止；后续显式配置或 focus 会再次刷新。
+      });
   }));
   if (typeof document !== "undefined") {
     const handleVisibilityChange = () => {

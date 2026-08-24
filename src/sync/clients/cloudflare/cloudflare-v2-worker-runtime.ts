@@ -530,6 +530,7 @@ async function readAsset(
   // 423（空间锁）是后端上一轮 commit 后的瞬时状态，锁释放窗口很短。
   // 固定 200ms 间隔重试，含首次共 10 次尝试（总窗口约 2s）；仍 423 则原样抛错，
   // 由引擎放弃本轮同步，等待下一轮小检查或下一次编辑提供新的同步机会。
+  // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
   const maxAttempts = 10;
   const retryDelayMs = 200;
   let response = await fetchWithTimeout(

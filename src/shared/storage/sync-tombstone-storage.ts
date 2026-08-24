@@ -7,6 +7,13 @@ import {
 } from "./browser-storage";
 import { readCloudflareSyncSettings } from "./cloudflare-sync-settings";
 import { readCloudflareOAuthSession } from "./cloudflare-oauth-session";
+import {
+  createCloudflareAccountSyncTargetKey,
+  createCloudflareAnonymousSyncTargetKey,
+  createWebDavSyncTargetKey,
+  isSyncProviderTargetActive,
+  readActiveSyncProvider,
+} from "./sync-provider-activation";
 // AI-REMOVED 2026-08-08:
 // Reason: Cloudflare 墓碑作用域必须跟随可共享的真实远端目标，不能绑定本地 owner。
 // Trigger: 用户明确要求不同浏览器使用相同空间名称共享。
@@ -23,7 +30,16 @@ import { readCloudflareOAuthSession } from "./cloudflare-oauth-session";
 //   ensureLocalSyncOwnerState,
 // } from "./sync-owner-storage";
 
-const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
+// AI-REMOVED 2026-08-24:
+// Reason: provider 选择不再等于同步激活，墓碑只能绑定已确认的活动 provider。
+// Trigger: 用户要求切换同步方式后在完成配置前不得生效。
+// Evidence: shared sync-provider-activation 已提供 readActiveSyncProvider。
+// Replacement: readActiveSyncProvider import。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
 const SYNC_DATABASE_NAME = "v3-industrial-planner";
 // 同步连接设置 store：与 src/sync/storage/sync-connection-settings.ts 保持一致。
 const SYNC_CONNECTION_SETTINGS_LOCATION = {
@@ -198,6 +214,19 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
     if (settings.remoteMode === "account" && session === null) {
       return null;
     }
+    const targetKey = session === null
+      ? createCloudflareAnonymousSyncTargetKey({
+          apiBaseUrl: resolveBackendApiBaseUrl(),
+          spaceId: settings.spaceName,
+        })
+      : createCloudflareAccountSyncTargetKey({
+          apiBaseUrl: session.apiBaseUrl,
+          accountId: session.account.accountId,
+          spaceId: session.spaceId,
+        });
+    if (!isSyncProviderTargetActive("cloudflare", targetKey)) {
+      return null;
+    }
     return {
       provider,
       scopeKey: [
@@ -219,6 +248,12 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
   const username = typeof settings.username === "string"
     ? settings.username.trim()
     : "";
+  if (!isSyncProviderTargetActive(
+    "webdav",
+    createWebDavSyncTargetKey({ url, username }),
+  )) {
+    return null;
+  }
 
   return {
     provider,
@@ -230,14 +265,23 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
   };
 }
 
-function readActiveSyncProvider(): ActiveSyncProvider | null {
-  try {
-    const provider = globalThis.localStorage?.getItem(SYNC_PROVIDER_STORAGE_KEY);
-    return provider === "cloudflare" || provider === "webdav" ? provider : null;
-  } catch {
-    return null;
-  }
-}
+// AI-REMOVED 2026-08-24:
+// Reason: 直接读取旧 provider key 会把 pending 选择误当成活动同步目标。
+// Trigger: 用户要求 provider 切换进入待配置态，确认前不得生成同步墓碑。
+// Evidence: readActiveSyncProvider 只在 activation.state=active 时返回 provider。
+// Replacement: src/shared/storage/sync-provider-activation.ts readActiveSyncProvider。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function readActiveSyncProvider(): ActiveSyncProvider | null {
+//   try {
+//     const provider = globalThis.localStorage?.getItem(SYNC_PROVIDER_STORAGE_KEY);
+//     return provider === "cloudflare" || provider === "webdav" ? provider : null;
+//   } catch {
+//     return null;
+//   }
+// }
 
 function createTombstoneStorageKey(options: {
   readonly scopeKey: string;

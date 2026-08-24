@@ -61,7 +61,20 @@ import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-st
 import { writeRegionalMultiBaseExperimentalEnabled } from "@/shared/storage/regional-simulation-settings";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
-import { readSyncProvider, writeSyncProvider } from "@/sync/sync-providers";
+import {
+  readSelectedSyncProvider,
+  requestSyncProvider,
+} from "@/shared/storage/sync-provider-activation";
+// AI-REMOVED 2026-08-24:
+// Reason: app 模块不应跨模块调用 sync 内部 provider 存储入口。
+// Trigger: provider 选择现由 shared 两阶段激活状态统一持久化。
+// Evidence: 项目模块隔离规范只允许 app 引用 shared 与 domain。
+// Replacement: readSelectedSyncProvider / requestSyncProvider。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { readSyncProvider, writeSyncProvider } from "@/sync/sync-providers";
 import {
   SyncInitialSyncFeatureGate,
   SyncInitialSyncGate,
@@ -658,10 +671,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         }),
       },
       "sync-provider": {
-        readValue: () => readSyncProvider(),
+        readValue: () => readSelectedSyncProvider(),
         writeValue: action((value) => {
-          writeSyncProvider(typeof value === "string" ? value : "none");
-          // 通知 sync-host 重新派生 enabled
+          requestSyncProvider(
+            value === "webdav" || value === "cloudflare" ? value : "none",
+          );
+          // AI-CORRECTION 2026-08-24: provider 订阅会主动更新宿主；此调用仅兼容初始化期间尚未注册订阅的场景。
           appHost.workspace.sync?.actions.updateSettings({});
         }),
       },
@@ -1231,7 +1246,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost={appHost}
             compactMobileLayout={appHost.state.screenProfile.deviceClass !== "desktop"}
             onStopSync={() => {
-              writeSyncProvider("none");
+              requestSyncProvider("none");
               appHost.workspace.sync?.actions.updateSettings({});
             }}
             sync={appHost.workspace.sync}

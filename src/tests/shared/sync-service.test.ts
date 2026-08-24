@@ -980,7 +980,7 @@ describe("sync-service", () => {
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
     expect(service.getStatus().tasks.find(
-      (task) => task.kind === "interval-check",
+      (task) => task.kind === "update-check",
     )).toMatchObject({
       phase: "success",
       completedUnitCount: 1,

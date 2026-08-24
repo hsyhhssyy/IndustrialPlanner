@@ -2,7 +2,27 @@ import { makeAutoObservable } from "mobx";
 
 import type { UiKey } from "@/shared/i18n";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
-import { SYNC_PROVIDER_CONFIGS, type SyncProviderId } from "@/sync/sync-providers";
+import type { SyncProviderId } from "@/shared/storage/sync-provider-activation";
+
+// AI-REMOVED 2026-08-24:
+// Reason: app 模块不能跨模块读取 src/sync 的 UI 配置；provider 类型已下沉 shared。
+// Trigger: 同步 provider 两阶段激活改造需要修正既有跨模块引用。
+// Evidence: 项目模块隔离规范只允许 app 引用 shared 与 domain。
+// Replacement: 下方 SYNC_PROVIDER_OPTIONS 与 shared SyncProviderId。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { SYNC_PROVIDER_CONFIGS, type SyncProviderId } from "@/sync/sync-providers";
+
+const SYNC_PROVIDER_OPTIONS: readonly {
+  readonly value: SyncProviderId;
+  readonly labelKey: UiKey;
+}[] = [
+  { value: "none", labelKey: "settingsOption.syncProvider.none" },
+  { value: "webdav", labelKey: "settingsOption.syncProvider.webdav" },
+  { value: "cloudflare", labelKey: "settingsOption.syncProvider.cloudflare" },
+];
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
@@ -587,10 +607,20 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.sync-provider" as UiKey,
         descriptionKey: "settingsField.sync-providerDescription" as UiKey,
         defaultValue: "none" satisfies SyncProviderId,
-        options: SYNC_PROVIDER_CONFIGS.map((c) => ({
-          value: c.id,
-          labelKey: c.labelKey,
-        })),
+        // AI-REMOVED 2026-08-24:
+        // Reason: app 设置定义不能再从 sync 模块映射 provider UI 配置。
+        // Trigger: provider 标识及选择状态已下沉 shared，修复 app → sync 跨模块引用。
+        // Evidence: 上方 SYNC_PROVIDER_OPTIONS 在 app owner 内定义展示顺序与文案 key。
+        // Replacement: SYNC_PROVIDER_OPTIONS。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // options: SYNC_PROVIDER_CONFIGS.map((c) => ({
+        //   value: c.id,
+        //   labelKey: c.labelKey,
+        // })),
+        options: SYNC_PROVIDER_OPTIONS,
       },
       {
         id: "experimental-regional-multi-base",

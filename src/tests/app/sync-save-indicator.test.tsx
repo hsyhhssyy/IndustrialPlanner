@@ -141,7 +141,7 @@ function createStatus(
     canvasLocked: false,
     lastDownloadAt: null,
     lastError: null,
-    lastSmallCheckAt: null,
+    lastUpdateCheckAt: null,
     lastResults: [],
     ...overrides,
   };

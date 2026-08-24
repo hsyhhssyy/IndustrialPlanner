@@ -92,7 +92,7 @@ export interface SyncServiceStatus {
   readonly lastUploadAt: string | null;
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
-  readonly lastSmallCheckAt: string | null;
+  readonly lastUpdateCheckAt: string | null;
   /** 下载不容忍中止后锁定画布，阻断继续编辑直到本轮同步结束。 */
   readonly canvasLocked: boolean;
   // AI-REMOVED 2026-08-10:
@@ -220,7 +220,7 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "toolbox",
   "background-documents",
   "directory-maintenance",
-  "interval-check",
+  "update-check",
 ];
 // AI-REMOVED 2026-08-10:
 // Reason: 大检查任务类型已删除。
@@ -231,6 +231,7 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
 //
 // Original code:
 //   "big-check",
+// AI-CORRECTION 2026-08-24: 现行任务类型已由 `interval-check` 统一更名为 `update-check`。
 // AI-REMOVED 2026-07-29:
 // Reason: 设备心跳和设备列表已退出同步任务。
 // Trigger: 用户确认设备列表没有意义，仅展示 revision 的远端上传时间。
@@ -257,7 +258,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   //
   // Original code:
   // let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
-  let smallCheckRunning = false;
+  let updateCheckRunning = false;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let activeRemote: SyncRemote | null = null;
@@ -286,6 +287,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   // Replacement: 下方按 adapter 累积全部 request scope，并在终局计算联合覆盖。
   // Risk: Low；仅改变 collection cursor 是否允许推进，不改变资产分类与决议。
   // Human Review: Required
+  // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
   //
   // Original code:
   // let passRequestScopes = new Map<string, SyncAdapterScope | undefined>();
@@ -316,7 +318,8 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   const resetTasks = (): readonly SyncTaskStatus[] =>
     SYNC_TASK_KINDS.map((kind) => {
       // AI-CORRECTION 2026-08-10: big-check 已删除，仅保留 interval-check 的跳过逻辑。
-      if (kind === "interval-check") {
+      // AI-CORRECTION 2026-08-24: 现行任务类型已由 `interval-check` 更名为 `update-check`。
+      if (kind === "update-check") {
         const existing = status.tasks.find((t) => t.kind === kind);
         if (existing !== undefined && existing.lastStartedAt !== null) {
           return existing;
@@ -557,7 +560,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           lastUploadAt: status.lastUploadAt,
           lastDownloadAt: status.lastDownloadAt,
           lastError: "Sync conflict",
-          lastSmallCheckAt: status.lastSmallCheckAt,
+          lastUpdateCheckAt: status.lastUpdateCheckAt,
           canvasLocked: false,
           lastResults: results,
         });
@@ -607,7 +610,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         lastUploadAt: didUpload || hasPendingLocalChanges ? timestamp : status.lastUploadAt,
         lastDownloadAt: didDownload ? timestamp : status.lastDownloadAt,
         lastError: null,
-        lastSmallCheckAt: status.lastSmallCheckAt,
+        lastUpdateCheckAt: status.lastUpdateCheckAt,
         canvasLocked: false,
         lastResults: results,
       });
@@ -1604,7 +1607,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     }
   };
 
-  const runSmallCheck = async (): Promise<boolean> => {
+  const isRemoteUnchanged = async (): Promise<boolean> => {
     const settings = options.readSettings();
     const remote = options.createRemote(settings, () => {}, {});
     const session = await remote.beginSession({
@@ -1624,39 +1627,39 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     }
   };
 
-  const runIntervalCheck = async (): Promise<void> => {
-    if (smallCheckRunning) return;
-    smallCheckRunning = true;
+  const runUpdateCheck = async (): Promise<void> => {
+    if (updateCheckRunning) return;
+    updateCheckRunning = true;
     const now = new Date().toISOString();
 
     // 任务初始化为 running 态
-    beginTask("interval-check", 1);
+    beginTask("update-check", 1);
     try {
       const settings = options.readSettings();
       if (!settings.enabled || getSettingsError(settings) !== null) {
-        finishTask("interval-check", 1);
+        finishTask("update-check", 1);
         setStatus({
           ...status,
-          lastSmallCheckAt: now,
+          lastUpdateCheckAt: now,
         });
         return;
       }
 
       // 有脏数据等上传 → 走完整同步
       if (localChangeVersion > acknowledgedLocalChangeVersion) {
-        finishTask("interval-check", 1);
+        finishTask("update-check", 1);
         setStatus({
           ...status,
-          lastSmallCheckAt: now,
+          lastUpdateCheckAt: now,
         });
         await syncNow("interval");
         return;
       }
 
-      const unchanged = await runSmallCheck();
+      const unchanged = await isRemoteUnchanged();
       if (unchanged) {
-        logger.debug("small check: remote unchanged → idle");
-        finishTask("interval-check", 1);
+        logger.debug("update check: remote unchanged → idle");
+        finishTask("update-check", 1);
         setStatus({
           ...status,
           phase: "idle",
@@ -1665,27 +1668,27 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           pendingLocalChangeCount: 0,
           saveError: null,
           lastError: null,
-          lastSmallCheckAt: now,
+          lastUpdateCheckAt: now,
         });
         return;
       }
 
-      logger.info("small check: remote changed → triggering full sync");
-      finishTask("interval-check", 1);
+      logger.info("update check: remote changed → triggering full sync");
+      finishTask("update-check", 1);
       setStatus({
         ...status,
-        lastSmallCheckAt: now,
+        lastUpdateCheckAt: now,
       });
       await syncNow("interval");
     } catch (error) {
-      finishTask("interval-check", 1, error);
+      finishTask("update-check", 1, error);
       setStatus({
         ...status,
-        lastSmallCheckAt: now,
+        lastUpdateCheckAt: now,
         lastError: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      smallCheckRunning = false;
+      updateCheckRunning = false;
     }
   };
 
@@ -1701,7 +1704,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       void syncNow("startup");
       intervalId = globalThis.setInterval(() => {
         if (options.canRunInterval?.() !== false && !syncing) {
-          void runIntervalCheck();
+          void runUpdateCheck();
         }
       }, options.intervalMs ?? DEFAULT_INTERVAL_MS);
       unrefTimer(intervalId);
@@ -1864,7 +1867,7 @@ function createIdleStatus(lastResults: readonly SyncAdapterResult[]): SyncServic
     lastUploadAt: null,
     lastDownloadAt: null,
     lastError: null,
-    lastSmallCheckAt: null,
+    lastUpdateCheckAt: null,
     canvasLocked: false,
     lastResults,
   };

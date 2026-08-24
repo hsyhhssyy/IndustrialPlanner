@@ -14,6 +14,9 @@ import {
   writeCloudflareOAuthSession,
 } from "@/shared/storage/cloudflare-oauth-session";
 import { writeBackendApiAddressOverride } from "@/shared/storage/backend-api-address";
+import {
+  readSyncProviderActivation,
+} from "@/shared/storage/sync-provider-activation";
 import { SyncStateImpl } from "@/sync/sync-state-impl";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -38,7 +41,7 @@ describe("CloudflareSyncStatusDialog", () => {
     vi.unstubAllGlobals();
   });
 
-  it("keeps the space name as a draft until Save is pressed", async () => {
+  it("keeps the Space ID as a draft until explicit enable is pressed", async () => {
     class ClosedBroadcastChannel {
       public addEventListener(): void {}
       public close(): void {}
@@ -100,7 +103,7 @@ describe("CloudflareSyncStatusDialog", () => {
     const saveButton = document.querySelector<HTMLButtonElement>(
       "[data-cloudflare-space-name-save]",
     );
-    expect(input?.value).toBe("default");
+    expect(input?.value).toBe("");
     expect(saveButton?.disabled).toBe(true);
 
     await act(async () => {
@@ -134,7 +137,7 @@ describe("CloudflareSyncStatusDialog", () => {
     });
 
     await expect(readCloudflareSyncSettings()).resolves.toEqual({
-      spaceName: "default",
+      spaceName: "",
       remoteMode: "anonymous",
     });
     expect(saveButton?.disabled).toBe(false);
@@ -147,10 +150,14 @@ describe("CloudflareSyncStatusDialog", () => {
       spaceName: "factory-a",
       remoteMode: "anonymous",
     });
+    expect(readSyncProviderActivation()).toMatchObject({
+      state: "active",
+      provider: "cloudflare",
+    });
     expect(saveButton?.disabled).toBe(true);
   });
 
-  it("shows the shared username and keeps account mode after logout", async () => {
+  it("requires explicit account activation and keeps account mode after logout", async () => {
     writeBackendApiAddressOverride("https://backend.test");
     writeCloudflareOAuthSession({
       schemaVersion: 1,
@@ -206,9 +213,22 @@ describe("CloudflareSyncStatusDialog", () => {
 
     expect(document.querySelector("[data-cloudflare-oauth-username]")?.textContent)
       .toBe("planner-user");
-    expect(document.querySelector("[data-cloudflare-space-name-input]")).toBeNull();
+    expect(document.querySelector("[data-cloudflare-space-name-input]")).not.toBeNull();
+    await expect(readCloudflareSyncSettings()).resolves.toEqual({
+      spaceName: "",
+      remoteMode: "anonymous",
+    });
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>("[data-cloudflare-account-activate]")?.click();
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 0));
+    });
     await expect(readCloudflareSyncSettings()).resolves.toMatchObject({
       remoteMode: "account",
+    });
+    expect(readSyncProviderActivation()).toMatchObject({
+      state: "active",
+      provider: "cloudflare",
     });
 
     act(() => {
@@ -219,7 +239,7 @@ describe("CloudflareSyncStatusDialog", () => {
     expect(document.querySelector("[data-cloudflare-oauth-login]")).not.toBeNull();
     expect(document.querySelector("[data-cloudflare-oauth-description]")?.textContent)
       .toBe("cloudflareStatus.loginRequiredDescription");
-    expect(document.querySelector("[data-cloudflare-space-name-input]")).toBeNull();
+    expect(document.querySelector("[data-cloudflare-space-name-input]")).not.toBeNull();
     await expect(readCloudflareSyncSettings()).resolves.toMatchObject({
       remoteMode: "account",
     });

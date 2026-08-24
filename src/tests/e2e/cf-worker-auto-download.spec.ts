@@ -14,6 +14,7 @@
  * 不触发冲突对话框。
  * AI-CORRECTION 2026-08-13: 小检查发现远端变化触发的下载期间应锁定画布
  * （断言 data-sync-initial-sync-stage="canvas" 遮罩可见）。
+ * AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
  */
 import { createHash, randomUUID } from "node:crypto";
 
@@ -52,7 +53,7 @@ interface BrowserSyncState {
     readonly pendingLocalChangeCount: number;
     readonly lastError: string | null;
     readonly lastDownloadAt: string | null;
-    readonly lastSmallCheckAt: string | null;
+    readonly lastUpdateCheckAt: string | null;
   };
   readonly pendingConflict: unknown;
 }
@@ -437,9 +438,25 @@ async function runAutoDownloadScenario(options: {
   await page.locator('select[name="sync-provider"]').selectOption("cloudflare");
   await page.waitForTimeout(1000);
 
-  const settingsCloseButton = page.getByRole("button", { name: "关闭", exact: true });
+  // AI-CORRECTION 2026-08-24: provider 选择现在只进入待配置态，必须在 Cloudflare 状态窗口
+  // 明确确认匿名 Space ID 后才会激活同步。
+  const cloudflareDialog = page.getByRole("dialog", { name: "Cloudflare 同步状态" });
+  await expect(cloudflareDialog).toBeVisible();
+  const activateCloudflareButton = cloudflareDialog.getByRole("button", {
+    name: "使用此 Space ID 并启用",
+  });
+  await expect(activateCloudflareButton).toBeEnabled();
+  await activateCloudflareButton.click();
+
+  const settingsDialog = page.getByRole("dialog", { name: "设置" });
+  const settingsCloseButton = settingsDialog.getByRole("button", {
+    name: "关闭",
+    exact: true,
+  });
   await expect(settingsCloseButton).toBeVisible();
-  await settingsCloseButton.click();
+  const closeSettingsDialog = async (): Promise<void> => {
+    await settingsCloseButton.click();
+  };
 
   // 查看同步状态
   const syncStateAfterEnable = await page.evaluate(() => {
@@ -474,6 +491,11 @@ async function runAutoDownloadScenario(options: {
     pendingLocalChangeCount: 0,
     lastError: null,
   });
+
+  await cloudflareDialog.getByRole("button", { name: "关闭", exact: true }).click();
+  await expect(cloudflareDialog).not.toBeVisible();
+  await closeSettingsDialog();
+  await expect(settingsDialog).not.toBeVisible();
 
   // 初始同步完成后，画布锁定遮罩应消失
   expect(
@@ -692,27 +714,29 @@ async function runAutoDownloadScenario(options: {
   // ─── Phase 5: 小检查（短路、无事发生） ───
   // AI-CORRECTION 2026-08-22: 局部增量上传不会推进“已完整检查全部 collection”的全局 cursor；
   // 因此下一次小检查可合法发现 revision 变化并触发一次无实际下载的完整同步。
-  const previousSmallCheckAt = await page.evaluate(() =>
+  // AI-CORRECTION 2026-08-24: 本阶段现统一称为“更新检查”。
+  const previousUpdateCheckAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   );
   const lastDownloadAtBeforeCheck = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
       ?.workspace?.sync?.state.status.lastDownloadAt ?? null
   );
-  console.log("[TEST] Waiting for the next small check...");
+  console.log("[TEST] Waiting for the next update check...");
   await expect.poll(async () => await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   ), {
-    message: "应在一个默认检查周期内完成小检查",
+    message: "应在一个默认检查周期内完成更新检查",
     timeout: 70_000,
     intervals: [1000],
-  }).not.toBe(previousSmallCheckAt);
+  }).not.toBe(previousUpdateCheckAt);
 
   // 远端无变化 → 无事发生：未进入 downloading、未锁画布、未发生下载、本地精炼炉仍在
   // AI-CORRECTION 2026-08-22: lastSmallCheckAt 在后续完整同步结束前更新；这里必须等待同步稳定，
   // 最终仍严格要求无下载、无画布锁定且本地内容保持不变。
+  // AI-CORRECTION 2026-08-24: 上述字段现已更名为 lastUpdateCheckAt。
   // AI-REMOVED 2026-08-22:
   // Reason: 小检查时间戳变化后立即读取 phase，会与仍在执行的 interval 完整同步形成观察竞态。
   // Trigger: 该 E2E 实际日志显示全部 adapter 正常完成，但断言在 sync done 前读到 downloading。
@@ -720,6 +744,8 @@ async function runAutoDownloadScenario(options: {
   // Replacement: 下方 expect.poll 等待 phase=idle，同时保持 lastDownloadAt 不变断言。
   // Risk: Low；没有放宽最终状态或下载结果。
   // Human Review: Required
+  // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”，引用的 E2E 文件现为
+  // cf-worker-conflict-update-check.spec.ts。
   //
   // Original code:
   // const syncStateAfterCheck = await page.evaluate(() => {
@@ -746,7 +772,7 @@ async function runAutoDownloadScenario(options: {
           lastDownloadAt: sync.state.status.lastDownloadAt,
         };
   }), {
-    message: "小检查触发的后续同步应稳定结束且不产生下载",
+    message: "更新检查触发的后续同步应稳定结束且不产生下载",
     timeout: 60_000,
     intervals: [500],
   }).toEqual({

@@ -58,6 +58,12 @@ import {
   estimateTotalStorageBytes,
   formatStorageBytesToMB,
 } from "@/shared/storage";
+import {
+  activateSyncProvider,
+  createWebDavSyncTargetKey,
+  readSyncProviderActivation,
+  requestSyncProvider,
+} from "@/shared/storage/sync-provider-activation";
 // AI-REMOVED 2026-08-08:
 // Reason: 删除目标 provider 必须由 sync-host 在 reset 成功后原子关闭，UI 不能提前切成 none。
 // Trigger: UI 先切 provider 会让 deleteRemoteData 看见 none，从而完全不删除远端。
@@ -113,6 +119,7 @@ export const SettingsDialog = observer(function SettingsDialog({
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
   const sync = appHost.workspace.sync;
+  const syncActivation = readSyncProviderActivation();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   // AI-REMOVED 2026-08-03:
@@ -612,6 +619,17 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [webDavStatusDialogState]);
 
+  const handleSelectSettingValue = useCallback((settingId: string, value: string) => {
+    controller.updateSelectValue(settingId, value);
+    if (settingId !== "sync-provider") {
+      return;
+    }
+    runInAction(() => {
+      webDavStatusDialogState.visible = value === "webdav";
+      cloudflareStatusDialogState.visible = value === "cloudflare";
+    });
+  }, [cloudflareStatusDialogState, controller, webDavStatusDialogState]);
+
   // AI-CORRECTION 2026-08-01: 测试 WebDAV 连接。
   // 通过 fetch 发送 PROPFIND 请求验证 URL/用户名/密码是否可达。
   const handleWebDavTestConnection = useCallback(
@@ -1098,6 +1116,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                             setting,
                             t,
                             isEditable,
+                            onSelectValue: handleSelectSettingValue,
                             onRequestToggleExperimentalFeatures: handleRequestToggleExperimentalFeatures,
                           })}
                         </div>
@@ -1180,12 +1199,18 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <>
                     {controller.getValue("sync-provider") === "webdav" ? (
                       <WebDavSyncStatusCard
+                        enabled={sync?.state.settings.enabled === true
+                          && syncActivation.state === "active"
+                          && syncActivation.provider === "webdav"}
                         onOpen={handleOpenWebDavStatus}
                         t={t}
                       />
                     ) : null}
                     {controller.getValue("sync-provider") === "cloudflare" ? (
                       <CloudflareSyncStatusCard
+                        enabled={sync?.state.settings.enabled === true
+                          && syncActivation.state === "active"
+                          && syncActivation.provider === "cloudflare"}
                         onOpen={handleOpenCloudflareStatus}
                         t={t}
                       />
@@ -1330,8 +1355,20 @@ export const SettingsDialog = observer(function SettingsDialog({
         />
       ) : null}
     */}
-    {webDavStatusDialogState.visible && sync !== null ? (
-      <WebDavSyncStatusDialog
+      {webDavStatusDialogState.visible && sync !== null ? (
+        /*
+          AI-REMOVED 2026-08-24:
+          Reason: WebDAV 设置应用必须在连接参数持久化后显式激活目标，不能只写参数。
+          Trigger: 用户要求切换同步方式后完成设置确认才生效。
+          Evidence: 新 handler 串行执行 pending、updateSettings 与 activateSyncProvider。
+          Replacement: 下方异步 onUpdateSettings。
+          Risk: Low。
+          Human Review: Required
+
+          Original code:
+          onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
+        */
+        <WebDavSyncStatusDialog
         compactMobileLayout={isNonDesktop}
         deleting={webDavDeleting}
         dialogState={webDavStatusDialogState}
@@ -1341,7 +1378,22 @@ export const SettingsDialog = observer(function SettingsDialog({
         onResize={handleWebDavStatusResize}
         onTestConnection={handleWebDavTestConnection}
         onToggleMaximized={handleToggleWebDavStatusMaximized}
-        onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
+        onUpdateSettings={async (patch) => {
+          if (!requestSyncProvider("webdav")) {
+            throw new Error("Failed to enter WebDAV setup mode.");
+          }
+          await sync.actions.updateSettings(patch);
+          const nextSettings = {
+            ...sync.state.settings,
+            ...patch,
+          };
+          if (!activateSyncProvider(
+            "webdav",
+            createWebDavSyncTargetKey(nextSettings),
+          )) {
+            throw new Error("Failed to activate WebDAV sync.");
+          }
+        }}
         state={sync.state}
         t={t}
       />
@@ -1527,16 +1579,20 @@ function StorageUsageCard({
 }
 
 const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
+  enabled,
   onOpen,
   t,
 }: {
+  enabled: boolean;
   onOpen: () => void;
   t: AppHost["actions"]["translate"];
 }) {
   return (
     <SettingsActionCard
       buttonLabel={t("webDavStatus.open")}
-      description={t("settingsField.experimental-webdav-statusDescription")}
+      description={t(enabled
+        ? "settingsField.experimental-webdav-statusDescription"
+        : "syncActivation.setupRequiredDescription")}
       onClick={onOpen}
       title={t("webDavConfig.title")}
     />
@@ -1544,16 +1600,20 @@ const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
 });
 
 const CloudflareSyncStatusCard = observer(function CloudflareSyncStatusCard({
+  enabled,
   onOpen,
   t,
 }: {
+  enabled: boolean;
   onOpen: () => void;
   t: AppHost["actions"]["translate"];
 }) {
   return (
     <SettingsActionCard
       buttonLabel={t("cloudflareStatus.open")}
-      description={t("settingsField.experimental-webdav-statusDescription")}
+      description={t(enabled
+        ? "settingsField.experimental-webdav-statusDescription"
+        : "syncActivation.setupRequiredDescription")}
       onClick={onOpen}
       title={t("cloudflareStatus.title")}
     />
@@ -1766,6 +1826,7 @@ function renderSettingControl(options: {
   setting: WorkbenchSettingDefinition;
   t: AppHost["actions"]["translate"];
   isEditable: boolean;
+  onSelectValue?: (settingId: string, value: string) => void;
   onRequestToggleExperimentalFeatures?: () => void;
 }) {
   const {
@@ -1773,6 +1834,7 @@ function renderSettingControl(options: {
     setting,
     t,
     isEditable,
+    onSelectValue,
     onRequestToggleExperimentalFeatures,
   } = options;
   const value = controller.getValue(setting.id);
@@ -1804,7 +1866,21 @@ function renderSettingControl(options: {
           id={`setting-${setting.id}`}
           name={setting.id}
           onChange={(event) => {
-            controller.updateSelectValue(setting.id, event.target.value);
+            // AI-REMOVED 2026-08-24:
+            // Reason: provider 下拉框还必须打开对应配置对话框，不能只更新选中值。
+            // Trigger: 用户要求切换同步方式后必须进入设置完成确认。
+            // Evidence: handleSelectSettingValue 在保持通用 select 行为的同时处理同步配置入口。
+            // Replacement: 下方 onSelectValue 分支。
+            // Risk: Low。
+            // Human Review: Required
+            //
+            // Original code:
+            // controller.updateSelectValue(setting.id, event.target.value);
+            if (onSelectValue === undefined) {
+              controller.updateSelectValue(setting.id, event.target.value);
+              return;
+            }
+            onSelectValue(setting.id, event.target.value);
           }}
           value={typeof value === "string" ? value : setting.defaultValue}
         >

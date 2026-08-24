@@ -27,6 +27,7 @@ export type SyncConflictPhase =
 // Original code:
 //   | "big-check"
 //
+// AI-CORRECTION 2026-08-24: 唯一保留的同步检查现统一称为“更新检查”，`interval` 仅表示定时触发原因。
 export type SyncRunReason =
   | "startup"
   | "foreground"
@@ -42,7 +43,7 @@ export type SyncTaskKind =
   | "toolbox"
   | "background-documents"
   | "directory-maintenance"
-  | "interval-check";
+  | "update-check";
 // AI-REMOVED 2026-08-10:
 // Reason: 大检查任务类型已删除，与小检查功能重叠。
 // Trigger: 用户确认大检查无额外价值。
@@ -53,6 +54,7 @@ export type SyncTaskKind =
 //
 // Original code:
 //   | "big-check";
+// AI-CORRECTION 2026-08-24: 现行任务类型已由 `interval-check` 统一更名为 `update-check`。
 // AI-REMOVED 2026-07-29:
 // Reason: 设备枚举与设备心跳不再参与 WebDAV 同步协议。
 // Trigger: 用户确认不需要列出设备，冲突只展示远端上传时间。
@@ -107,7 +109,7 @@ export interface SyncStatus {
   readonly lastUploadAt: string | null;
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
-  readonly lastSmallCheckAt: string | null;
+  readonly lastUpdateCheckAt: string | null;
   /** 下载不容忍中止后锁定画布，阻断继续编辑直到本轮同步结束。 */
   readonly canvasLocked: boolean;
   // AI-REMOVED 2026-08-10:

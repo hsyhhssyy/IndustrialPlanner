@@ -4,6 +4,7 @@
  * 本测试名称保留历史称呼，但场景验证的是当前 HTTP 同步实现。
  * AI-CORRECTION 2026-08-12: 上述主线程实现已被 Dedicated Worker v2 链路取代；
  * 本场景继续验证相同后端协议下的冲突、小检查与增量同步。
+ * AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
  *
  * 全部使用文本/role/data 选择器（CSS Module 在 dev 模式被哈希）。
  */
@@ -57,7 +58,7 @@ interface BrowserSyncState {
     readonly hasCompletedInitialFeatureSync: boolean;
     readonly pendingLocalChangeCount: number;
     readonly lastError: string | null;
-    readonly lastSmallCheckAt: string | null;
+    readonly lastUpdateCheckAt: string | null;
   };
   readonly pendingConflict: unknown;
 }
@@ -448,14 +449,26 @@ async function enableCloudflareSync(page: Page): Promise<void> {
     await page.getByRole("treeitem", { name: "实验性" }).click();
   }
   await page.locator('select[name="sync-provider"]').selectOption("cloudflare");
+  // AI-CORRECTION 2026-08-24: provider 选择现在只进入待配置态，必须明确确认匿名 Space ID。
+  const cloudflareDialog = page.getByRole("dialog", { name: "Cloudflare 同步状态" });
+  await expect(cloudflareDialog).toBeVisible();
+  const activateCloudflareButton = cloudflareDialog.getByRole("button", {
+    name: "使用此 Space ID 并启用",
+  });
+  await expect(activateCloudflareButton).toBeEnabled();
+  await activateCloudflareButton.click();
   await waitForStableSync(page);
 
-  const settingsCloseButton = page.getByRole("button", {
+  await cloudflareDialog.getByRole("button", { name: "关闭", exact: true }).click();
+  await expect(cloudflareDialog).not.toBeVisible();
+  const settingsDialog = page.getByRole("dialog", { name: "设置" });
+  const settingsCloseButton = settingsDialog.getByRole("button", {
     name: "关闭",
     exact: true,
   });
   await expect(settingsCloseButton).toBeVisible();
   await settingsCloseButton.click();
+  await expect(settingsDialog).not.toBeVisible();
 }
 
 async function resolveVisibleConflictUsingRemote(page: Page): Promise<void> {
@@ -576,9 +589,10 @@ async function runInactiveBaseConflictScenario(options: {
   )).toBe(currentBaseId);
 
   // ─── Phase 2: 默认小检查必须在未切换基地时发现非当前基地冲突 ───
-  const previousSmallCheckAt = await page.evaluate(() =>
+  // AI-CORRECTION 2026-08-24: 本阶段现统一称为“默认更新检查”。
+  const previousUpdateCheckAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   );
   await mutateStoredWorldDocument(
     page,
@@ -599,12 +613,12 @@ async function runInactiveBaseConflictScenario(options: {
 
   await expect.poll(async () => await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   ), {
-    message: "默认小检查应发现非当前基地的远端 revision 变化",
+    message: "默认更新检查应发现非当前基地的远端 revision 变化",
     timeout: 75_000,
     intervals: [1000],
-  }).not.toBe(previousSmallCheckAt);
+  }).not.toBe(previousUpdateCheckAt);
 
   const conflictTitle = page.getByRole("heading", { name: "同步冲突" });
   await expect(conflictTitle).toBeVisible({ timeout: 60_000 });
@@ -913,7 +927,20 @@ async function runConflictScenario(options: {
   await page.waitForTimeout(1000);
   // AI-CORRECTION 2026-08-12: 开启同步后初始同步门禁/冲突弹窗会覆盖设置窗口；
   // 必须先解决冲突并等待同步结束，再点击设置关闭按钮。
-  const settingsCloseButton = page.getByRole("button", { name: "关闭", exact: true });
+  // AI-CORRECTION 2026-08-24: provider 选择只进入待配置态；确认匿名 Space ID 后才真正启动同步，
+  // 冲突解决后还需要先关闭 Cloudflare 状态窗口，再关闭设置窗口。
+  const cloudflareDialog = page.getByRole("dialog", { name: "Cloudflare 同步状态" });
+  await expect(cloudflareDialog).toBeVisible();
+  const activateCloudflareButton = cloudflareDialog.getByRole("button", {
+    name: "使用此 Space ID 并启用",
+  });
+  await expect(activateCloudflareButton).toBeEnabled();
+  await activateCloudflareButton.click();
+  const settingsDialog = page.getByRole("dialog", { name: "设置" });
+  const settingsCloseButton = settingsDialog.getByRole("button", {
+    name: "关闭",
+    exact: true,
+  });
   await expect(settingsCloseButton).toBeVisible();
   await page.waitForTimeout(5000);
 
@@ -1048,26 +1075,30 @@ async function runConflictScenario(options: {
   const revisionAfterConflictResolution = (
     await readRemotePlan(request, spaceId)
   ).revision;
+  await cloudflareDialog.getByRole("button", { name: "关闭", exact: true }).click();
+  await expect(cloudflareDialog).not.toBeVisible();
   await settingsCloseButton.click();
+  await expect(settingsDialog).not.toBeVisible();
 
   // ─── Phase 6: 小检查 (~35s) ───
   // AI-CORRECTION 2026-08-12: 当前默认检查周期为 60 秒；等待状态时间戳变化，避免依赖固定 sleep。
   // AI-CORRECTION 2026-08-20: 时间戳只代表小检查完成，若检查触发完整同步，还必须等待同步状态回到稳定。
+  // AI-CORRECTION 2026-08-24: 本阶段及上述“小检查”现统一称为“更新检查”。
   const preCheck = syncLogs.length;
   const preCheckResponseCount = backendCheckResponses.length;
-  const previousSmallCheckAt = await page.evaluate(() =>
+  const previousUpdateCheckAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   );
-  console.log("[TEST] Waiting for the next small check...");
+  console.log("[TEST] Waiting for the next update check...");
   await expect.poll(async () => await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastSmallCheckAt ?? null
+      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
   ), {
-    message: "应在一个默认检查周期内完成小检查",
+    message: "应在一个默认检查周期内完成更新检查",
     timeout: 70_000,
     intervals: [1000],
-  }).not.toBe(previousSmallCheckAt);
+  }).not.toBe(previousUpdateCheckAt);
 
   await expect.poll(async () => await page.evaluate(() => {
     const sync = (window as unknown as BrowserTestWindow)
@@ -1083,7 +1114,7 @@ async function runConflictScenario(options: {
           lastError: sync.state.status.lastError,
         };
   }), {
-    message: "小检查触发的后续同步应完成并回到稳定状态",
+    message: "更新检查触发的后续同步应完成并回到稳定状态",
     timeout: 60_000,
   }).toEqual({
     phase: "idle",
@@ -1095,20 +1126,21 @@ async function runConflictScenario(options: {
   });
 
   const checkLogs = syncLogs.slice(preCheck);
-  const smallCheckResponses = backendCheckResponses.slice(preCheckResponseCount);
+  const updateCheckResponses = backendCheckResponses.slice(preCheckResponseCount);
   expect((await readRemotePlan(request, spaceId)).revision)
     .toBe(revisionAfterConflictResolution);
   // AI-CORRECTION 2026-08-12: page response 事件与 lastSmallCheckAt 状态通知存在观测竞态；
   // 独立向当前 test 的空间发送同一 knownRevision 检查，以 HTTP 结果作为权威断言。
+  // AI-CORRECTION 2026-08-24: 上述字段现已更名为 lastUpdateCheckAt。
   const verificationCheck = await request.get(
     `${BACKEND_API_BASE_URL}/v1/sync/spaces/${encodeURIComponent(spaceId)}`
       + `/check?knownRevision=${revisionAfterConflictResolution}`,
   );
   const shortCircuited = verificationCheck.status() === 204;
   const remoteChanged = verificationCheck.status() === 200;
-  console.log(`[TEST] Small check: short-circuited=${shortCircuited}, changed=${remoteChanged}`);
+  console.log(`[TEST] Update check: short-circuited=${shortCircuited}, changed=${remoteChanged}`);
   console.log(
-    `[TEST] Page check HTTP statuses: ${smallCheckResponses.join(", ")}; `
+    `[TEST] Page check HTTP statuses: ${updateCheckResponses.join(", ")}; `
       + `verification=${verificationCheck.status()}`,
   );
   checkLogs.forEach((l) => console.log(`  [CHECK] ${l}`));

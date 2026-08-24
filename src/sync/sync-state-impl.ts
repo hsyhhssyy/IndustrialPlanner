@@ -35,7 +35,7 @@ export class SyncStateImpl implements SyncState {
     lastUploadAt: null,
     lastDownloadAt: null,
     lastError: null,
-    lastSmallCheckAt: null,
+    lastUpdateCheckAt: null,
     canvasLocked: false,
     lastResults: [],
   };

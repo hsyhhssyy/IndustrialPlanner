@@ -14,6 +14,10 @@ import {
   SYNC_PROVIDER_STORAGE_KEY,
   writeSyncProvider,
 } from "@/sync/sync-providers";
+import {
+  readActiveSyncProvider,
+  SYNC_PROVIDER_ACTIVATION_STORAGE_KEY,
+} from "@/shared/storage/sync-provider-activation";
 
 describe("sync-provider persistence", () => {
   const originalGetItem = localStorage.getItem;
@@ -21,6 +25,7 @@ describe("sync-provider persistence", () => {
 
   beforeEach(() => {
     localStorage.removeItem(SYNC_PROVIDER_STORAGE_KEY);
+    localStorage.removeItem(SYNC_PROVIDER_ACTIVATION_STORAGE_KEY);
   });
 
   afterEach(() => {
@@ -32,6 +37,7 @@ describe("sync-provider persistence", () => {
   it("writeSyncProvider → readSyncProvider round-trip", () => {
     writeSyncProvider("webdav");
     expect(readSyncProvider()).toBe("webdav");
+    expect(readActiveSyncProvider()).toBeNull();
     expect(localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY)).toBe("webdav");
 
     writeSyncProvider("none");

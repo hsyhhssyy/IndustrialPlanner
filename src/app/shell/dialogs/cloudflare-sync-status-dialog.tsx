@@ -29,6 +29,13 @@ import {
   CloudflareOAuthLoginError,
   startCloudflareOAuthLogin,
 } from "@/shared/storage/cloudflare-oauth-browser-flow";
+import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
+import {
+  activateSyncProvider,
+  createCloudflareAccountSyncTargetKey,
+  createCloudflareAnonymousSyncTargetKey,
+  requestSyncProvider,
+} from "@/shared/storage/sync-provider-activation";
 
 // AI-REMOVED 2026-08-24:
 // Reason: 授权 URL 现在必须与原标签页预创建的随机频道一起生成，不能由 UI 直接拼接旧入口。
@@ -55,16 +62,19 @@ import styles from "./settings-dialog.module.scss";
 // - 显示 interval-check 任务卡片
 // AI-CORRECTION 2026-08-08: Cloudflare 弹窗现包含独立的空间名称配置表单；
 // 输入先保留为本地草稿，只有按下保存按钮后才写入设置并切换同步空间。
+// AI-CORRECTION 2026-08-24: 保存动作现为明确的“使用此 Space ID 并启用”；登录 session 本身不再切换同步模式。
+// AI-CORRECTION 2026-08-24: 唯一保留的同步检查现统一称为“更新检查”，任务类型为 update-check。
 
-const DEFAULT_SMALL_CHECK_INTERVAL_MS = 60_000;
+const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 
 const CLOUDFLARE_EXCLUDED_TASK_KINDS: ReadonlySet<SyncTaskKind> = new Set([
   "directory-maintenance",
 ]);
 
 // 小检查任务放在任务列表的最前面
+// AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
 const TASK_ORDER: Record<SyncTaskKind, number> = {
-  "interval-check": 0,
+  "update-check": 0,
   "canvas": 1,
   "blueprints": 2,
   "modules": 3,
@@ -127,24 +137,33 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         return;
       }
       setOAuthSession(session);
-      if (session !== null) {
-        void (async () => {
-          try {
-            const settings = await readCloudflareSyncSettings();
-            if (settings.remoteMode === "account") {
-              if (active) setSavedRemoteMode("account");
-              return;
-            }
-            const accountSettings = await writeCloudflareSyncSettings({
-              ...settings,
-              remoteMode: "account",
-            });
-            if (active) setSavedRemoteMode(accountSettings.remoteMode);
-          } catch {
-            // 同步宿主也会在读取到有效 session 时重试写入账户模式。
-          }
-        })();
-      }
+      // AI-REMOVED 2026-08-24:
+      // Reason: 登录状态变化不能自动选择账户同步目标。
+      // Trigger: 用户要求明确确认使用登录账户或匿名 Space ID。
+      // Evidence: 下方 handleActivateAccountSession 是唯一账户激活入口。
+      // Replacement: handleActivateAccountSession。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // if (session !== null) {
+      //   void (async () => {
+      //     try {
+      //       const settings = await readCloudflareSyncSettings();
+      //       if (settings.remoteMode === "account") {
+      //         if (active) setSavedRemoteMode("account");
+      //         return;
+      //       }
+      //       const accountSettings = await writeCloudflareSyncSettings({
+      //         ...settings,
+      //         remoteMode: "account",
+      //       });
+      //       if (active) setSavedRemoteMode(accountSettings.remoteMode);
+      //     } catch {
+      //       // 同步宿主也会在读取到有效 session 时重试写入账户模式。
+      //     }
+      //   })();
+      // }
     };
     void readCloudflareSyncSettings().then((settings) => {
       if (!active) {
@@ -166,10 +185,14 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
 
   const normalizedDraftSpaceName = draftSpaceName.trim();
   const spaceNameIsDirty = normalizedDraftSpaceName !== savedSpaceName;
+  const anonymousTargetIsActive = state.settings.enabled
+    && savedRemoteMode === "anonymous"
+    && !spaceNameIsDirty;
   const canSaveSpaceName = !loadingSpaceName
     && !savingSpaceName
+    && !oauthLoginInProgress
     && normalizedDraftSpaceName !== ""
-    && spaceNameIsDirty;
+    && !anonymousTargetIsActive;
   const handleSaveSpaceName = async () => {
     if (!canSaveSpaceName) {
       return;
@@ -178,10 +201,22 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
     setSavingSpaceName(true);
     setSpaceNameSaveFailed(false);
     try {
+      if (!requestSyncProvider("cloudflare")) {
+        throw new Error("Failed to enter Cloudflare setup mode.");
+      }
       const settings = await writeCloudflareSyncSettings({
         spaceName: normalizedDraftSpaceName,
-        remoteMode: savedRemoteMode,
+        remoteMode: "anonymous",
       });
+      if (!activateSyncProvider(
+        "cloudflare",
+        createCloudflareAnonymousSyncTargetKey({
+          apiBaseUrl: resolveBackendApiBaseUrl(),
+          spaceId: settings.spaceName,
+        }),
+      )) {
+        throw new Error("Failed to activate Cloudflare anonymous sync.");
+      }
       setSavedSpaceName(settings.spaceName);
       setSavedRemoteMode(settings.remoteMode);
       setDraftSpaceName(settings.spaceName);
@@ -191,6 +226,29 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
       setSavingSpaceName(false);
     }
   };
+  const handleActivateAccountSession = async (
+    session: CloudflareOAuthSession,
+  ): Promise<void> => {
+    if (!requestSyncProvider("cloudflare")) {
+      throw new Error("Failed to enter Cloudflare setup mode.");
+    }
+    const settings = await readCloudflareSyncSettings();
+    const accountSettings = await writeCloudflareSyncSettings({
+      ...settings,
+      remoteMode: "account",
+    });
+    if (!activateSyncProvider(
+      "cloudflare",
+      createCloudflareAccountSyncTargetKey({
+        apiBaseUrl: session.apiBaseUrl,
+        accountId: session.account.accountId,
+        spaceId: session.spaceId,
+      }),
+    )) {
+      throw new Error("Failed to activate Cloudflare account sync.");
+    }
+    setSavedRemoteMode(accountSettings.remoteMode);
+  };
   const handleOpenOAuth = () => {
     if (oauthLoginInProgress) {
       return;
@@ -198,7 +256,13 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
     setOAuthPopupBlocked(false);
     setOAuthLoginFailed(false);
     setOAuthLoginInProgress(true);
+    if (!requestSyncProvider("cloudflare")) {
+      setOAuthLoginFailed(true);
+      setOAuthLoginInProgress(false);
+      return;
+    }
     void startCloudflareOAuthLogin()
+      .then(handleActivateAccountSession)
       .catch((error: unknown) => {
         if (
           error instanceof CloudflareOAuthLoginError
@@ -224,14 +288,14 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
     return () => globalThis.clearInterval(timer);
   }, []);
 
-  const smallCountdown = useMemo(() => {
-    if (status.lastSmallCheckAt === null) return null;
-    const last = new Date(status.lastSmallCheckAt).getTime();
-    const next = last + DEFAULT_SMALL_CHECK_INTERVAL_MS;
+  const updateCheckCountdown = useMemo(() => {
+    if (status.lastUpdateCheckAt === null) return null;
+    const last = new Date(status.lastUpdateCheckAt).getTime();
+    const next = last + DEFAULT_UPDATE_CHECK_INTERVAL_MS;
     const remaining = Math.max(0, next - now);
     if (remaining <= 0) return "...";
     return formatDuration(remaining);
-  }, [status.lastSmallCheckAt, now]);
+  }, [status.lastUpdateCheckAt, now]);
 
   return (
     <DialogShell
@@ -255,6 +319,16 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         className={cm(styles, "sync-status-content")}
         data-cloudflare-sync-status-dialog
       >
+        {state.settings.enabled ? null : (
+          <section
+            className={cm(styles, "sync-status-section", "cloudflare-server-error")}
+            data-sync-setup-required
+            role="status"
+          >
+            <strong>{t("syncActivation.setupRequired")}</strong>
+            <span>{t("syncActivation.cloudflareSetupRequiredDescription")}</span>
+          </section>
+        )}
         <section
           className={cm(styles, "sync-status-section", "sync-config-section")}
         >
@@ -270,7 +344,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                 <button
                   className={cm(styles, "cloudflare-account-primary-btn")}
                   data-cloudflare-oauth-login
-                  disabled={oauthLoginInProgress}
+                  disabled={savingSpaceName || oauthLoginInProgress}
                   onClick={handleOpenOAuth}
                   type="button"
                 >
@@ -313,12 +387,52 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                 >
                   {t("cloudflareStatus.logout")}
                 </button>
+                <button
+                  className={cm(styles, "cloudflare-account-primary-btn")}
+                  data-cloudflare-account-activate
+                  disabled={savingSpaceName || oauthLoginInProgress || (state.settings.enabled && savedRemoteMode === "account")}
+                  onClick={() => {
+                    setOAuthLoginFailed(false);
+                    setOAuthLoginInProgress(true);
+                    void handleActivateAccountSession(oauthSession)
+                      .catch(() => {
+                        setOAuthLoginFailed(true);
+                      })
+                      .finally(() => setOAuthLoginInProgress(false));
+                  }}
+                  type="button"
+                >
+                  {t(oauthLoginInProgress
+                    ? "syncActivation.activating"
+                    : state.settings.enabled && savedRemoteMode === "account"
+                      ? "syncActivation.enabled"
+                      : "cloudflareStatus.useAccountAndEnable")}
+                </button>
+                {oauthLoginFailed ? (
+                  <span
+                    className={cm(styles, "sync-config-test-result", "is-failed")}
+                    role="alert"
+                  >
+                    {t("syncActivation.activateFailed")}
+                  </span>
+                ) : null}
               </>
             )}
           </div>
         </section>
 
-        {oauthSession !== null || savedRemoteMode === "account" ? null : (
+        {/*
+          AI-REMOVED 2026-08-24:
+          Reason: 已登录或曾使用账户模式时仍必须允许用户主动选择匿名 Space ID。
+          Trigger: 用户要求 Cloudflare 配置明确二选一，而不是由 session 隐式决定。
+          Evidence: 账户激活与匿名激活现为两个独立按钮。
+          Replacement: 下方始终显示的匿名 Space ID 配置 section。
+          Risk: Low。
+          Human Review: Required
+
+          Original code:
+          {oauthSession !== null || savedRemoteMode === "account" ? null : (
+        */}
         <section
           className={cm(styles, "sync-status-section", "sync-config-section")}
         >
@@ -328,7 +442,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
               <span>{t("cloudflareStatus.spaceName")}</span>
               <input
                 data-cloudflare-space-name-input
-                disabled={loadingSpaceName || savingSpaceName}
+                disabled={loadingSpaceName || savingSpaceName || oauthLoginInProgress}
                 maxLength={MAX_CLOUDFLARE_SPACE_NAME_LENGTH}
                 onChange={(event) => {
                   setDraftSpaceName(event.target.value);
@@ -363,12 +477,18 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
               >
                 {t(savingSpaceName
                   ? "cloudflareStatus.savingSpaceName"
-                  : "cloudflareStatus.saveSpaceName")}
+                  : anonymousTargetIsActive
+                    ? "syncActivation.enabled"
+                    : "cloudflareStatus.useSpaceAndEnable")}
               </button>
             </div>
           </div>
         </section>
-        )}
+        {/*
+          AI-REMOVED 2026-08-24:
+          Original code:
+          )}
+        */}
 
         {/* 服务器端错误 — 置顶醒目展示 */}
         {status.lastError === null ? null : (
@@ -426,10 +546,11 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
               )}
             />
             {/* 小检查倒计时 */}
-            {smallCountdown === null ? null : (
+            {/* AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。 */}
+            {updateCheckCountdown === null ? null : (
               <StatusValue
-                label={t("cloudflareStatus.smallCountdown")}
-                value={smallCountdown}
+                label={t("cloudflareStatus.updateCheckCountdown")}
+                value={updateCheckCountdown}
               />
             )}
           </dl>
@@ -451,6 +572,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 任务 — 含 interval-check，按顺序排列 */}
+        {/* AI-CORRECTION 2026-08-24: 现行任务类型已由 interval-check 更名为 update-check。 */}
         <section className={cm(styles, "sync-status-section")}>
           <h3>{t("syncStatus.tasks")}</h3>
           <div className={cm(styles, "sync-task-list")}>
@@ -509,7 +631,10 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 删除远端数据 */}
-        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
+        <section
+          className={cm(styles, "sync-status-section", "sync-delete-section")}
+          hidden={!state.settings.enabled}
+        >
           {deleting ? (
             <div className={cm(styles, "sync-delete-progress")}>
               {t("syncConfig.deleteAllDataDeleting")}
@@ -526,7 +651,10 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 立即结束当前事务 */}
-        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
+        <section
+          className={cm(styles, "sync-status-section", "sync-delete-section")}
+          hidden={!state.settings.enabled}
+        >
           {aborting ? (
             <div className={cm(styles, "sync-delete-progress")}>
               {t("cloudflareStatus.abortingTransaction")}

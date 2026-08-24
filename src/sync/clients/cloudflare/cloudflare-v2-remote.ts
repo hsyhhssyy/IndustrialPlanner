@@ -385,6 +385,7 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     // Replacement: 下方仅在 allCollectionsApplied 时选择 targetRevision；上传日志确认继续独立执行。
     // Risk: Medium；局部上传后会保守地保留旧 applied revision，下一轮小检查将再次拉取确认。
     // Human Review: Required
+    // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
     //
     // Original code:
     // const targetRevision = this.latestCommittedRevision

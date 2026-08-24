@@ -55,7 +55,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   onResize: (width: number, height: number) => void;
   onTestConnection: (draft: Pick<SyncConnectionSettings, "url" | "username" | "password">) => Promise<boolean>;
   onToggleMaximized: () => void;
-  onUpdateSettings: (patch: Partial<SyncConnectionSettings>) => void;
+  onUpdateSettings: (patch: Partial<SyncConnectionSettings>) => void | Promise<void>;
   state: SyncState;
   t: AppHost["actions"]["translate"];
 }) {
@@ -70,6 +70,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "failed" | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applyFailed, setApplyFailed] = useState(false);
 
   // 对话框打开时重置草稿为当前设置
   useEffect(() => {
@@ -80,6 +82,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
       setDraftConcurrent(settings.maxConcurrentRequests);
       setTesting(false);
       setTestResult(null);
+      setApplying(false);
+      setApplyFailed(false);
     }
   }, [dialogState.visible, settings.url, settings.username, settings.password, settings.maxConcurrentRequests]);
 
@@ -97,6 +101,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setDraftUrl(e.target.value);
       setTestResult(null);
+      setApplyFailed(false);
     },
     [],
   );
@@ -105,6 +110,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setDraftUsername(e.target.value);
       setTestResult(null);
+      setApplyFailed(false);
     },
     [],
   );
@@ -113,6 +119,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setDraftPassword(e.target.value);
       setTestResult(null);
+      setApplyFailed(false);
     },
     [],
   );
@@ -124,15 +131,51 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
     [],
   );
 
-  const handleApplySettings = useCallback(() => {
-    onUpdateSettings({
-      url: draftUrl,
-      username: draftUsername,
-      password: draftPassword,
-      maxConcurrentRequests: draftConcurrent,
-    });
-    setTestResult(null);
-  }, [onUpdateSettings, draftUrl, draftUsername, draftPassword, draftConcurrent]);
+  // AI-REMOVED 2026-08-24:
+  // Reason: 原应用动作只写连接参数，无法表达用户确认启用，也无法处理持久化失败。
+  // Trigger: 用户要求切换 WebDAV 后必须进入配置并明确确认才生效。
+  // Evidence: onUpdateSettings 现在由父级串行执行 pending、配置写入与 active activation。
+  // Replacement: 下方异步 handleApplySettings。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const handleApplySettings = useCallback(() => {
+  //   onUpdateSettings({
+  //     url: draftUrl,
+  //     username: draftUsername,
+  //     password: draftPassword,
+  //     maxConcurrentRequests: draftConcurrent,
+  //   });
+  //   setTestResult(null);
+  // }, [onUpdateSettings, draftUrl, draftUsername, draftPassword, draftConcurrent]);
+  const handleApplySettings = useCallback(async () => {
+    if (draftUrl.trim() === "" || applying) {
+      return;
+    }
+    setApplying(true);
+    setApplyFailed(false);
+    try {
+      await onUpdateSettings({
+        url: draftUrl,
+        username: draftUsername,
+        password: draftPassword,
+        maxConcurrentRequests: draftConcurrent,
+      });
+      setTestResult(null);
+    } catch {
+      setApplyFailed(true);
+    } finally {
+      setApplying(false);
+    }
+  }, [
+    applying,
+    onUpdateSettings,
+    draftUrl,
+    draftUsername,
+    draftPassword,
+    draftConcurrent,
+  ]);
 
   const handleTestConnection = useCallback(async () => {
     setTesting(true);
@@ -173,6 +216,16 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
         className={cm(styles, "sync-status-content")}
         data-webdav-sync-status-dialog
       >
+        {state.settings.enabled ? null : (
+          <section
+            className={cm(styles, "sync-status-section", "cloudflare-server-error")}
+            data-sync-setup-required
+            role="status"
+          >
+            <strong>{t("syncActivation.setupRequired")}</strong>
+            <span>{t("syncActivation.webDavSetupRequiredDescription")}</span>
+          </section>
+        )}
         <section
           className={cm(styles, "sync-status-section", "sync-config-section")}
         >
@@ -229,6 +282,14 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
             测试连接始终可点，应用设置在草稿无改动时灰色禁用。
           */}
           <div className={cm(styles, "sync-config-actions")}>
+            {applyFailed ? (
+              <span
+                className={cm(styles, "sync-config-test-result", "is-failed")}
+                role="alert"
+              >
+                {t("syncActivation.activateFailed")}
+              </span>
+            ) : null}
             {testResult !== null && (
               <span
                 className={cm(
@@ -251,11 +312,15 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               </button>
               <button
                 className={cm(styles, "sync-apply-settings-btn", isDirty ? "is-dirty" : "is-clean")}
-                disabled={!isDirty}
-                onClick={handleApplySettings}
+                disabled={applying || draftUrl.trim() === "" || (!isDirty && state.settings.enabled)}
+                onClick={() => void handleApplySettings()}
                 type="button"
               >
-                {t("webDavConfig.applySettings")}
+                {t(applying
+                  ? "syncActivation.activating"
+                  : state.settings.enabled && !isDirty
+                    ? "syncActivation.enabled"
+                    : "webDavConfig.applyAndEnable")}
               </button>
             </div>
           </div>
@@ -389,7 +454,10 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
           </div>
         </section>
 
-        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
+        <section
+          className={cm(styles, "sync-status-section", "sync-delete-section")}
+          hidden={!state.settings.enabled}
+        >
           {deleting ? (
             <div className={cm(styles, "sync-delete-progress")}>
               {t("syncConfig.deleteAllDataDeleting")}

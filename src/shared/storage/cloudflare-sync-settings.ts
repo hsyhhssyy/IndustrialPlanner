@@ -33,7 +33,8 @@ export type CloudflareSyncSettingsChangeListener = (
 ) => void;
 
 const DEFAULT_CLOUDFLARE_SYNC_SETTINGS: CloudflareSyncSettings = {
-  spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+  // AI-CORRECTION 2026-08-24: 未配置状态必须保持空目标；default 只用于迁移已使用旧空间。
+  spaceName: "",
   remoteMode: "anonymous",
 };
 
@@ -70,10 +71,27 @@ export async function initializeCloudflareSyncSettings(
     return existingSettings;
   }
 
+  // AI-REMOVED 2026-08-24:
+  // Reason: 同步宿主初始化不得替尚未确认同步方式的用户生成并持久化随机 Space ID。
+  // Trigger: 用户要求切换 Cloudflare 后必须明确选择账户或匿名 Space ID 才能生效。
+  // Evidence: provider 选择现进入 pending；随机目标只应由显式配置动作产生。
+  // Replacement: 下方未配置返回空目标；旧 active default 用户仍走 preserveImplicitDefault 分支。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // return await writeCloudflareSyncSettings({
+  //   spaceName: options.preserveImplicitDefault
+  //     ? DEFAULT_CLOUDFLARE_SPACE_NAME
+  //     : createRandomCloudflareSpaceName(),
+  //   remoteMode: "anonymous",
+  // });
+  if (!options.preserveImplicitDefault) {
+    return DEFAULT_CLOUDFLARE_SYNC_SETTINGS;
+  }
+
   return await writeCloudflareSyncSettings({
-    spaceName: options.preserveImplicitDefault
-      ? DEFAULT_CLOUDFLARE_SPACE_NAME
-      : createRandomCloudflareSpaceName(),
+    spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
     remoteMode: "anonymous",
   });
 }
@@ -117,6 +135,11 @@ export function createRandomCloudflareSpaceName(): string {
   return `${RANDOM_CLOUDFLARE_SPACE_NAME_PREFIX}${createUuid()}`;
 }
 
+export function isRandomCloudflareSpaceName(value: string): boolean {
+  return /^space-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+    .test(value.trim());
+}
+
 export async function clearCloudflareSyncSettings(): Promise<void> {
   const cleared = await deleteFromIndexedDb(CLOUDFLARE_SYNC_SETTINGS_LOCATION);
 
@@ -140,7 +163,9 @@ function normalizeCloudflareSyncSettings(value: unknown): CloudflareSyncSettings
     ? "account"
     : "anonymous";
 
-  return spaceName === "" ? null : { spaceName, remoteMode };
+  return spaceName === "" && remoteMode === "anonymous"
+    ? null
+    : { spaceName, remoteMode };
 }
 
 function emitCloudflareSyncSettingsChange(settings: CloudflareSyncSettings): void {
