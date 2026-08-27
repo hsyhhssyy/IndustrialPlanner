@@ -70,6 +70,8 @@ export interface RenderSpriteSyncContext {
 export interface RenderSprite {
   attach(layers: RenderLayerMap): void;
   syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
+  /** 异步视觉资源变化后，是否需要由 renderer 使用最新 context 重放完整布局同步。 */
+  isVisualSyncInvalidated(): boolean;
   /** 仿真展示快照变化时同步运行时视觉，不重新计算静态布局。 */
   syncRuntime?(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
   /** 每个渲染帧只推进已有动画对象的相位。 */

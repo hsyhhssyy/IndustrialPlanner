@@ -1283,7 +1283,12 @@ function syncWorldEntitySprites(options: {
       if (layout === undefined) {
         continue
       }
-      if (simulationInvalidated && sprite.syncRuntime !== undefined) {
+      if (sprite.isVisualSyncInvalidated()) {
+        sprite.syncLayout(layout, spriteContext)
+        if (stats !== null) {
+          stats.syncLayoutCalls += 1
+        }
+      } else if (simulationInvalidated && sprite.syncRuntime !== undefined) {
         sprite.syncRuntime(layout, spriteContext)
         if (stats !== null) {
           stats.syncRuntimeCalls += 1

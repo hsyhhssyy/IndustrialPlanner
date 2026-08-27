@@ -8,8 +8,10 @@ import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
  * 键盘视口平移速度：每秒 10 格。
  * 斜向移动时每个轴各自保持 10 格/秒（不做向量归一化）。
  * 订正（2026-08-25）：改为每个轴固定 1280 客户区像素/秒，不再随缩放级别改变屏幕速度。
+ * 订正（2026-08-27）：按住 Shift 时每个轴提升为 2 倍速度，WASD 与方向键行为一致。
  */
 const PAN_SPEED_PIXELS_PER_SECOND = 1280;
+const PAN_ACCELERATION_MULTIPLIER = 2;
 
 type PanDirection = "up" | "down" | "left" | "right";
 
@@ -26,6 +28,7 @@ const PAN_DIRECTION_SHORTCUTS: ReadonlyArray<readonly [string, PanDirection]> = 
  * 实现方式：key down 时记录按下的方向并启动自管理 RAF 循环，
  * 每帧按真实时间差累加位移，调用 moveViewportByClientPixelVector 平移。
  * key up 全部松开后停止循环；窗口失焦（key up 丢失）时由 RAF 兜底停止。
+ * Shift 可在移动前或移动中按下，松开后立即恢复基础速度。
  *
  * 方向语义（与鼠标拖拽一致，内容跟随移动）：
  * - 上（W）：内容向屏幕下方移动，像素向量 dy 为正
@@ -39,6 +42,7 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
   const pressedDirections = new Set<PanDirection>();
   let rafId: number | null = null;
   let lastTickMs: number | null = null;
+  let isAccelerated = false;
   // 缓存会话级 workspace，每帧读取当前 editor，避免文档切换后引用失效
   let panWorkspace: WorkspaceContract | null = null;
 
@@ -48,6 +52,7 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
       rafId = null;
     }
     lastTickMs = null;
+    isAccelerated = false;
     panWorkspace = null;
   };
 
@@ -69,7 +74,8 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
 
     if (lastTickMs !== null) {
       const deltaSeconds = (nowMs - lastTickMs) / 1000;
-      const pixelsPerSecond = PAN_SPEED_PIXELS_PER_SECOND;
+      const pixelsPerSecond = PAN_SPEED_PIXELS_PER_SECOND
+        * (isAccelerated ? PAN_ACCELERATION_MULTIPLIER : 1);
 
       let dx = 0;
       let dy = 0;
@@ -105,6 +111,18 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
       )) {
         return direction;
       }
+
+      if (
+        event.modifiers.shift
+        && context.appHost.internalActions.isShortcutFor(
+          shortcutKey,
+          event.code,
+          event.key,
+          { ...event.modifiers, shift: false },
+        )
+      ) {
+        return direction;
+      }
     }
 
     return null;
@@ -114,6 +132,12 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
     id: "hypergryph-keyboard-viewport-pan",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "key down" || event.type === "key up") {
+        isAccelerated = context.keyboard.modifiers.shift
+          || context.keyboard.pressedKeys.has("ShiftLeft")
+          || context.keyboard.pressedKeys.has("ShiftRight");
+      }
+
       switch (event.type) {
         case "key down": {
           const direction = resolvePressedDirection(context, event);

@@ -435,6 +435,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
           this.selectionGlow.texture = bodyTexture
         }
         this.isTextureReady = true
+        this.invalidateVisualSync()
 
         if (this.currentLayout !== null && this.currentSyncContext !== null) {
           if (this.isLogisticsSuppressed(this.currentSyncContext)) {

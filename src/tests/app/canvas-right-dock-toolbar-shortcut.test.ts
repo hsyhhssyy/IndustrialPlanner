@@ -63,6 +63,111 @@ describe("canvas right dock toolbar shortcut", () => {
     });
   });
 
+  it("groups viewport pan bindings by slot and adds a Shift acceleration row", () => {
+    const directionShortcutIds = [
+      SHORTCUT_KEY.PAN_VIEWPORT_UP,
+      SHORTCUT_KEY.PAN_VIEWPORT_LEFT,
+      SHORTCUT_KEY.PAN_VIEWPORT_DOWN,
+      SHORTCUT_KEY.PAN_VIEWPORT_RIGHT,
+    ] as const;
+    const definition: CanvasRightDockToolbarShortcutDefinition = {
+      rows: [
+        {
+          groups: [
+            {
+              parts: directionShortcutIds.map((shortcutKeyId) => ({
+                kind: "shortcut-key-slot" as const,
+                shortcutKeyId,
+                slotIndex: 0 as const,
+              })),
+              separator: "gap",
+            },
+            {
+              parts: directionShortcutIds.map((shortcutKeyId) => ({
+                kind: "shortcut-key-slot" as const,
+                shortcutKeyId,
+                slotIndex: 1 as const,
+              })),
+              separator: "gap",
+            },
+          ],
+          separator: "alternative",
+        },
+        {
+          groups: [
+            { parts: [{ kind: "fixed-key", value: "Shift" }] },
+            {
+              parts: directionShortcutIds.map((shortcutKeyId) => ({
+                kind: "shortcut-key-slot" as const,
+                shortcutKeyId,
+                slotIndex: 0 as const,
+              })),
+              separator: "gap",
+            },
+          ],
+          separator: "plus",
+        },
+      ],
+    };
+    const bindings: Record<(typeof directionShortcutIds)[number], string> = {
+      [SHORTCUT_KEY.PAN_VIEWPORT_UP]: "W;ArrowUp",
+      [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]: "A;ArrowLeft",
+      [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]: "S;ArrowDown",
+      [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]: "D;ArrowRight",
+    };
+
+    expect(resolveCanvasRightDockToolbarShortcut(
+      definition,
+      (shortcutKeyId) => bindings[shortcutKeyId as keyof typeof bindings],
+    )).toEqual({
+      parts: [],
+      separator: "gap",
+      rows: [
+        {
+          groups: [
+            {
+              parts: [
+                { kind: "keyboard", value: "W" },
+                { kind: "keyboard", value: "A" },
+                { kind: "keyboard", value: "S" },
+                { kind: "keyboard", value: "D" },
+              ],
+              separator: "gap",
+            },
+            {
+              parts: [
+                { kind: "keyboard", value: "ArrowUp" },
+                { kind: "keyboard", value: "ArrowLeft" },
+                { kind: "keyboard", value: "ArrowDown" },
+                { kind: "keyboard", value: "ArrowRight" },
+              ],
+              separator: "gap",
+            },
+          ],
+          separator: "alternative",
+        },
+        {
+          groups: [
+            {
+              parts: [{ kind: "keyboard", value: "Shift" }],
+              separator: "plus",
+            },
+            {
+              parts: [
+                { kind: "keyboard", value: "W" },
+                { kind: "keyboard", value: "A" },
+                { kind: "keyboard", value: "S" },
+                { kind: "keyboard", value: "D" },
+              ],
+              separator: "gap",
+            },
+          ],
+          separator: "plus",
+        },
+      ],
+    });
+  });
+
   it("preserves secondary bindings when composing different input alternatives", () => {
     const definition: CanvasRightDockToolbarShortcutDefinition = {
       parts: [

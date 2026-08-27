@@ -34,7 +34,11 @@ function advanceRafFrame(nowMs: number): void {
 }
 
 // ─── 事件与上下文辅助 ───
-function keyEvent(code: string, key: string): {
+function keyEvent(
+  code: string,
+  key: string,
+  modifiers: Partial<{ alt: boolean; ctrl: boolean; meta: boolean; shift: boolean }> = {},
+): {
   type: "key down" | "key up";
   gestureId: string;
   code: string;
@@ -49,17 +53,25 @@ function keyEvent(code: string, key: string): {
     code,
     key,
     keyCode: key.toUpperCase().charCodeAt(0),
-    modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+    modifiers: { alt: false, ctrl: false, meta: false, shift: false, ...modifiers },
     sourceEvent: null,
   };
 }
 
-function keyDownEvent(code: string, key: string) {
-  return { ...keyEvent(code, key), type: "key down" as const };
+function keyDownEvent(
+  code: string,
+  key: string,
+  modifiers: Partial<{ alt: boolean; ctrl: boolean; meta: boolean; shift: boolean }> = {},
+) {
+  return { ...keyEvent(code, key, modifiers), type: "key down" as const };
 }
 
-function keyUpEvent(code: string, key: string) {
-  return { ...keyEvent(code, key), type: "key up" as const };
+function keyUpEvent(
+  code: string,
+  key: string,
+  modifiers: Partial<{ alt: boolean; ctrl: boolean; meta: boolean; shift: boolean }> = {},
+) {
+  return { ...keyEvent(code, key, modifiers), type: "key up" as const };
 }
 
 const PAN_SHORTCUT_CODE: Record<string, string> = {
@@ -102,8 +114,17 @@ function createContext(options: {
   //   (key: string, code: string | null) => PAN_SHORTCUT_CODE[key] === code,
   // );
   const isShortcutFor = vi.fn(
-    (key: string, code: string | null) => (
-      PAN_SHORTCUT_CODE[key] === code || PAN_SECONDARY_SHORTCUT_CODE[key] === code
+    (
+      key: string,
+      code: string | null,
+      _eventKey?: string | null,
+      modifiers: { alt?: boolean; ctrl?: boolean; meta?: boolean; shift?: boolean } = {},
+    ) => (
+      !modifiers.alt
+      && !modifiers.ctrl
+      && !modifiers.meta
+      && !modifiers.shift
+      && (PAN_SHORTCUT_CODE[key] === code || PAN_SECONDARY_SHORTCUT_CODE[key] === code)
     ),
   );
 
@@ -147,6 +168,27 @@ function emptyKeyboardSnapshot(): KeyboardSnapshot {
     lastKey: null,
     lastKeyCode: null,
     modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+  };
+}
+
+function withKeyboardSnapshot(
+  context: GestureActionContext<AppHost>,
+  pressedKeys: readonly string[],
+  modifiers: Partial<KeyboardSnapshot["modifiers"]> = {},
+): GestureActionContext<AppHost> {
+  return {
+    ...context,
+    keyboard: {
+      ...emptyKeyboardSnapshot(),
+      pressedKeys: new Set(pressedKeys),
+      modifiers: {
+        alt: false,
+        ctrl: false,
+        meta: false,
+        shift: false,
+        ...modifiers,
+      },
+    },
   };
 }
 
@@ -227,6 +269,60 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     }
   });
 
+  it("doubles WASD pan speed while Shift is already held", () => {
+    const { context, moveViewportByClientPixelVector } = createContext();
+    const module = createHypergryphKeyboardViewportPanModule();
+    const acceleratedContext = withKeyboardSnapshot(
+      context,
+      ["ShiftLeft", "KeyW"],
+      { shift: true },
+    );
+
+    expect(module.handle(
+      keyDownEvent("KeyW", "w", { shift: true }),
+      acceleratedContext,
+    )).toEqual({ status: "handled" });
+    advanceRafFrame(0);
+    advanceRafFrame(1000);
+
+    expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+      startClientPixel: { x: 0, y: 0 },
+      endClientPixel: { x: 0, y: 2560 },
+    });
+  });
+
+  it("switches between normal and accelerated speed without restarting WASD pan", () => {
+    const { context, moveViewportByClientPixelVector } = createContext();
+    const module = createHypergryphKeyboardViewportPanModule();
+
+    module.handle(
+      keyDownEvent("KeyW", "w"),
+      withKeyboardSnapshot(context, ["KeyW"]),
+    );
+    advanceRafFrame(0);
+    advanceRafFrame(500);
+
+    expect(module.handle(
+      keyDownEvent("ShiftLeft", "Shift", { shift: true }),
+      withKeyboardSnapshot(context, ["KeyW", "ShiftLeft"], { shift: true }),
+    )).toEqual({ status: "ignored" });
+    advanceRafFrame(1000);
+
+    expect(module.handle(
+      keyUpEvent("ShiftLeft", "Shift"),
+      withKeyboardSnapshot(context, ["KeyW"]),
+    )).toEqual({ status: "ignored" });
+    advanceRafFrame(1500);
+
+    expect(moveViewportByClientPixelVector.mock.calls.map(([options]) => (
+      options.endClientPixel
+    ))).toEqual([
+      { x: 0, y: 640 },
+      { x: 0, y: 1280 },
+      { x: 0, y: 640 },
+    ]);
+  });
+
   it("treats all four arrow keys as equivalent viewport pan bindings", () => {
     const expectations: Array<[string, { x: number; y: number }]> = [
       ["ArrowUp", { x: 0, y: 1280 }],
@@ -248,6 +344,23 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
         endClientPixel: expectedDelta,
       });
     }
+  });
+
+  it("doubles arrow-key pan speed while Shift is held", () => {
+    const { context, moveViewportByClientPixelVector } = createContext();
+    const module = createHypergryphKeyboardViewportPanModule();
+
+    module.handle(
+      keyDownEvent("ArrowRight", "ArrowRight", { shift: true }),
+      withKeyboardSnapshot(context, ["ShiftRight", "ArrowRight"], { shift: true }),
+    );
+    advanceRafFrame(0);
+    advanceRafFrame(1000);
+
+    expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+      startClientPixel: { x: 0, y: 0 },
+      endClientPixel: { x: -2560, y: 0 },
+    });
   });
 
   it("pans diagonally with each axis at 1280 pixels per second", () => {
@@ -290,6 +403,25 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     expect(rafCallbacks.size).toBe(0);
     advanceRafFrame(2000);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops accelerated panning when the direction key is released before Shift", () => {
+    const { context, moveViewportByClientPixelVector } = createContext();
+    const module = createHypergryphKeyboardViewportPanModule();
+
+    module.handle(
+      keyDownEvent("KeyW", "w", { shift: true }),
+      withKeyboardSnapshot(context, ["ShiftLeft", "KeyW"], { shift: true }),
+    );
+    advanceRafFrame(0);
+    advanceRafFrame(1000);
+    expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
+
+    expect(module.handle(
+      keyUpEvent("KeyW", "w", { shift: true }),
+      withKeyboardSnapshot(context, ["ShiftLeft"], { shift: true }),
+    )).toEqual({ status: "handled" });
+    expect(rafCallbacks.size).toBe(0);
   });
 
   it("stops panning when the window loses focus", () => {

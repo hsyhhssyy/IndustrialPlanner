@@ -21,6 +21,7 @@ const orchestratorTestState = vi.hoisted(() => {
   const layoutSyncs: string[] = []
   const runtimeSyncs: string[] = []
   const animationSyncs: string[] = []
+  const visualSyncInvalidatedEntityIds = new Set<string>()
 
   return {
     reset() {
@@ -31,6 +32,7 @@ const orchestratorTestState = vi.hoisted(() => {
       layoutSyncs.length = 0
       runtimeSyncs.length = 0
       animationSyncs.length = 0
+      visualSyncInvalidatedEntityIds.clear()
     },
     setTickHandler(handler: () => void) {
       tickHandler = handler
@@ -71,7 +73,14 @@ const orchestratorTestState = vi.hoisted(() => {
       return [...attachedSprites]
     },
     recordLayoutSync(entityId: string) {
+      visualSyncInvalidatedEntityIds.delete(entityId)
       layoutSyncs.push(entityId)
+    },
+    invalidateVisualSync(entityId: string) {
+      visualSyncInvalidatedEntityIds.add(entityId)
+    },
+    isVisualSyncInvalidated(entityId: string) {
+      return visualSyncInvalidatedEntityIds.has(entityId)
     },
     recordRuntimeSync(entityId: string) {
       runtimeSyncs.push(entityId)
@@ -133,6 +142,8 @@ vi.mock("@/renderer/sprites/belt-sprite", () => ({
     public readonly syncLayout = vi.fn(() => {
       orchestratorTestState.recordLayoutSync(this.entityId)
     })
+    public readonly isVisualSyncInvalidated = vi.fn(() =>
+      orchestratorTestState.isVisualSyncInvalidated(this.entityId))
     public readonly syncAnimation = vi.fn(() => {
       orchestratorTestState.recordAnimationSync(this.entityId)
     })
@@ -165,6 +176,8 @@ vi.mock("@/renderer/sprites/generic-device-sprite", () => ({
     public readonly syncLayout = vi.fn(() => {
       orchestratorTestState.recordLayoutSync(this.entityId)
     })
+    public readonly isVisualSyncInvalidated = vi.fn(() =>
+      orchestratorTestState.isVisualSyncInvalidated(this.entityId))
     public readonly syncRuntime = vi.fn(() => {
       orchestratorTestState.recordRuntimeSync(this.entityId)
     })
@@ -200,6 +213,8 @@ vi.mock("@/renderer/sprites/pipe-sprite", () => ({
     public readonly syncLayout = vi.fn(() => {
       orchestratorTestState.recordLayoutSync(this.entityId)
     })
+    public readonly isVisualSyncInvalidated = vi.fn(() =>
+      orchestratorTestState.isVisualSyncInvalidated(this.entityId))
     public readonly syncRuntime = vi.fn(() => {
       orchestratorTestState.recordRuntimeSync(this.entityId)
     })
@@ -433,7 +448,7 @@ describe("createRenderSceneOrchestrator", () => {
     expect(ticker.remove).toHaveBeenCalledTimes(3)
   })
 
-  it("reuses entity layout while runtime and animation keep their own invalidation paths", () => {
+  it("reuses entity layout while runtime, animation, and sprite visuals keep separate invalidation paths", () => {
     let runtimeTick = 10
     const ticker = {
       lastTime: 1200,
@@ -554,10 +569,13 @@ describe("createRenderSceneOrchestrator", () => {
     tickHandler?.()
     runtimeTick = 11
     tickHandler?.()
+    orchestratorTestState.invalidateVisualSync("entity-a")
+    tickHandler?.()
 
-    expect(orchestratorTestState.getLayoutSyncs()).toEqual(["entity-a"])
+    expect(orchestratorTestState.getLayoutSyncs()).toEqual(["entity-a", "entity-a"])
     expect(orchestratorTestState.getRuntimeSyncs()).toEqual(["entity-a"])
     expect(orchestratorTestState.getAnimationSyncs()).toEqual([
+      "entity-a",
       "entity-a",
       "entity-a",
       "entity-a",

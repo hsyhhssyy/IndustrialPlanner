@@ -164,25 +164,48 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
   "pan-viewport": {
     labelKey: "action.panViewport",
     shortcut: {
-      parts: [
+      rows: [
         {
-          kind: "shortcut-key",
-          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP,
+          groups: [
+            {
+              parts: [
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT, slotIndex: 0 },
+              ],
+              separator: "gap",
+            },
+            {
+              parts: [
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP, slotIndex: 1 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT, slotIndex: 1 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN, slotIndex: 1 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT, slotIndex: 1 },
+              ],
+              separator: "gap",
+            },
+          ],
+          separator: "alternative",
         },
         {
-          kind: "shortcut-key",
-          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT,
-        },
-        {
-          kind: "shortcut-key",
-          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN,
-        },
-        {
-          kind: "shortcut-key",
-          shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT,
+          groups: [
+            {
+              parts: [{ kind: "fixed-key", value: "Shift" }],
+            },
+            {
+              parts: [
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_UP, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_LEFT, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_DOWN, slotIndex: 0 },
+                { kind: "shortcut-key-slot", shortcutKeyId: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT, slotIndex: 0 },
+              ],
+              separator: "gap",
+            },
+          ],
+          separator: "plus",
         },
       ],
-      separator: "gap",
     },
   },
   "zoom-viewport": {
@@ -510,32 +533,86 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
                     ))
                 */}
                 <span className={cm(styles, "canvas-right-dock-toolbar-shortcut-prompt")}>
-                  {shortcut.parts.map((part, partIndex) => (
-                    <span
-                      className={cm(styles, "canvas-right-dock-toolbar-shortcut-part")}
-                      key={`${operationId}-${part.kind}-${partIndex}`}
-                    >
-                      {partIndex > 0 && shortcut.separator !== "gap" ? (
+                  {shortcut.rows === undefined ? (
+                    shortcut.parts.map((part, partIndex) => (
+                      <span
+                        className={cm(styles, "canvas-right-dock-toolbar-shortcut-part")}
+                        key={`${operationId}-${part.kind}-${partIndex}`}
+                      >
+                        {partIndex > 0 && shortcut.separator !== "gap" ? (
+                          <span
+                            aria-hidden="true"
+                            className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
+                          >
+                            {shortcut.separator === "plus" ? "+" : "/"}
+                          </span>
+                        ) : null}
+                        {part.kind === "keyboard" ? (
+                          <KeyboardShortcutPrompt shortcut={part.value} size="small" />
+                        ) : part.kind === "mouse" ? (
+                          <MouseShortcutPrompt input={part.input} size="small" />
+                        ) : (
+                          <span
+                            className={cm(styles, "canvas-right-dock-toolbar-shortcut-label")}
+                          >
+                            {t(part.labelKey)}
+                          </span>
+                        )}
+                      </span>
+                    ))
+                  ) : (
+                    <span className={cm(styles, "canvas-right-dock-toolbar-shortcut-rows")}>
+                      {shortcut.rows.map((row, rowIndex) => (
                         <span
-                          aria-hidden="true"
-                          className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
+                          className={cm(styles, "canvas-right-dock-toolbar-shortcut-row")}
+                          data-shortcut-row-index={rowIndex}
+                          key={`${operationId}-row-${rowIndex}`}
                         >
-                          {shortcut.separator === "plus" ? "+" : "/"}
+                          {row.groups.map((group, groupIndex) => (
+                            <span
+                              className={cm(styles, "canvas-right-dock-toolbar-shortcut-group")}
+                              key={`${operationId}-row-${rowIndex}-group-${groupIndex}`}
+                            >
+                              {groupIndex > 0 && row.separator !== "gap" ? (
+                                <span
+                                  aria-hidden="true"
+                                  className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
+                                >
+                                  {row.separator === "plus" ? "+" : "/"}
+                                </span>
+                              ) : null}
+                              {group.parts.map((part, partIndex) => (
+                                <span
+                                  className={cm(styles, "canvas-right-dock-toolbar-shortcut-part")}
+                                  key={`${operationId}-row-${rowIndex}-group-${groupIndex}-${part.kind}-${partIndex}`}
+                                >
+                                  {partIndex > 0 && group.separator !== "gap" ? (
+                                    <span
+                                      aria-hidden="true"
+                                      className={cm(styles, "canvas-right-dock-toolbar-shortcut-separator")}
+                                    >
+                                      {group.separator === "plus" ? "+" : "/"}
+                                    </span>
+                                  ) : null}
+                                  {part.kind === "keyboard" ? (
+                                    <KeyboardShortcutPrompt shortcut={part.value} size="small" />
+                                  ) : part.kind === "mouse" ? (
+                                    <MouseShortcutPrompt input={part.input} size="small" />
+                                  ) : (
+                                    <span
+                                      className={cm(styles, "canvas-right-dock-toolbar-shortcut-label")}
+                                    >
+                                      {t(part.labelKey)}
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </span>
+                          ))}
                         </span>
-                      ) : null}
-                      {part.kind === "keyboard" ? (
-                        <KeyboardShortcutPrompt shortcut={part.value} size="small" />
-                      ) : part.kind === "mouse" ? (
-                        <MouseShortcutPrompt input={part.input} size="small" />
-                      ) : (
-                        <span
-                          className={cm(styles, "canvas-right-dock-toolbar-shortcut-label")}
-                        >
-                          {t(part.labelKey)}
-                        </span>
-                      )}
+                      ))}
                     </span>
-                  ))}
+                  )}
                 </span>
                 {/* AI-REMOVED 2026-08-22:
                     Reason: 单个 KeyboardShortcutPrompt 无法渲染固定鼠标输入。

@@ -648,6 +648,20 @@
   gap: 4px;
 }
 
+.canvas-right-dock-toolbar-shortcut-rows {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.canvas-right-dock-toolbar-shortcut-row,
+.canvas-right-dock-toolbar-shortcut-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .canvas-right-dock-toolbar-shortcut-part {
   display: inline-flex;
   align-items: center;

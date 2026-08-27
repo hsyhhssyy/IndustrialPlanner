@@ -1,18 +1,28 @@
-import type {
-  CompiledSimulationPort,
-  CompiledSimulationTopology,
-} from "../types";
+import type { CompiledSimulationTopology } from "../types";
+import {
+  collectTopologyRoutingCursorGroups,
+  type RoutingCursorGroup,
+} from "./routing-cursor-groups";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 
 interface RoutingTopologyCache {
   readonly connectedPortIds: ReadonlySet<string>;
-  readonly portGroups: readonly RoutingPortGroup[];
+  readonly portGroups: readonly RoutingCursorGroup[];
 }
 
-interface RoutingPortGroup {
-  readonly key: string;
-  readonly ports: readonly CompiledSimulationPort[];
-}
+// AI-REMOVED 2026-08-27:
+// Reason: 路由组定义已集中到 Stage 3、Stage 4、runtime-state 共用的模块，避免三处再次漂移。
+// Trigger: 反应池双液体出口暴露 Stage 3 与 Stage 4 对轮询组边界理解不一致。
+// Evidence: routing-cursor-groups.ts 现统一生成 key、排序及候选端口集合。
+// Replacement: routing-cursor-groups.ts 的 RoutingCursorGroup。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// interface RoutingPortGroup {
+//   readonly key: string;
+//   readonly ports: readonly CompiledSimulationPort[];
+// }
 
 const routingTopologyCache = new WeakMap<CompiledSimulationTopology, RoutingTopologyCache>();
 
@@ -28,6 +38,7 @@ const routingTopologyCache = new WeakMap<CompiledSimulationTopology, RoutingTopo
  *   ① 未连接端口阻塞游标 → 跳过未连接端口（永久死端口不应参与轮转）；
  *   ② 无传输的空 tick 中游标震荡导致与输出节奏同步锁死 → 仅当端口组内至少有一个端口发生了
  *      moved 传输时才执行旋转；空 tick 时保留游标位置不变。
+ * AI-CORRECTION 2026-08-27: 此处轮询组按 Node、方向、物流类型和优先级划分；PortGroup 仅负责配置与绑定。
  */
 export function rotateRoutingCursors(
   topology: CompiledSimulationTopology,
@@ -147,33 +158,26 @@ function buildMovedEdgeByPort(
   return moved;
 }
 
-function collectRoutingPortGroups(topology: CompiledSimulationTopology): readonly RoutingPortGroup[] {
-  const portsByKey = new Map<string, CompiledSimulationPort[]>();
-  for (const portId of topology.ordering.portOrder) {
-    const port = topology.ports[portId];
-    if (port === undefined) {
-      continue;
-    }
-
-    const key = getRoutingCursorGroupKey(port);
-    const ports = portsByKey.get(key) ?? [];
-    ports.push(port);
-    portsByKey.set(key, ports);
-  }
-
-  return [...portsByKey.entries()].map(([key, ports]) => ({
-    key,
-    ports: ports.sort(comparePortsForRouting),
-  }));
+function collectRoutingPortGroups(topology: CompiledSimulationTopology): readonly RoutingCursorGroup[] {
+  return collectTopologyRoutingCursorGroups(topology);
 }
 
-function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
-  return left.priorityGroup - right.priorityGroup
-    || left.roundRobinSeed - right.roundRobinSeed
-    || left.order - right.order
-    || left.id.localeCompare(right.id);
-}
-
-function getRoutingCursorGroupKey(port: CompiledSimulationPort): string {
-  return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
-}
+// AI-REMOVED 2026-08-27:
+// Reason: Stage 4 不能按定义层 PortGroup 独立推进游标，必须与 Stage 3 使用相同的 Node 级候选集合。
+// Trigger: 两个独立单端口液体输出组绑定同一反应池库存 Node 时，两个长度为 1 的游标都无法推进。
+// Evidence: reactor-dual-fluid-output-routing.test.ts 修复前六次产出均从 out_w_1 输出。
+// Replacement: routing-cursor-groups.ts 的 collectTopologyRoutingCursorGroups。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
+//   return left.priorityGroup - right.priorityGroup
+//     || left.roundRobinSeed - right.roundRobinSeed
+//     || left.order - right.order
+//     || left.id.localeCompare(right.id);
+// }
+//
+// function getRoutingCursorGroupKey(port: CompiledSimulationPort): string {
+//   return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
+// }

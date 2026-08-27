@@ -21,6 +21,8 @@ export abstract class BaseRenderSprite implements RenderSprite {
   private currentLayerMap: RenderLayerMap | null = null;
   private readonly layerRoots = new Map<RenderLayerId, Container>();
   private destroyed = false;
+  private visualStateVersion = 0;
+  private syncedVisualStateVersion = 0;
 
   protected constructor(
     protected readonly entityId: string,
@@ -43,6 +45,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   public syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     this.ensureNotDestroyed();
+    const syncingVisualStateVersion = this.visualStateVersion;
 
     this.syncSpriteLayout(layout, context);
     this.resetCollectionOverlay(layout, context);
@@ -54,6 +57,11 @@ export abstract class BaseRenderSprite implements RenderSprite {
     );
 
     this.afterSyncLayout(layout, context);
+    this.syncedVisualStateVersion = syncingVisualStateVersion;
+  }
+
+  public isVisualSyncInvalidated(): boolean {
+    return this.visualStateVersion !== this.syncedVisualStateVersion;
   }
 
   public destroy(): void {
@@ -139,6 +147,15 @@ export abstract class BaseRenderSprite implements RenderSprite {
   }
 
   protected onDestroy(): void {}
+
+  /** 异步资源改变可绘制状态时，请求 renderer 在下一帧执行完整 syncLayout。 */
+  protected invalidateVisualSync(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.visualStateVersion += 1;
+  }
 
   /** ghost 特效绘制，由子类实现 */
   protected abstract drawGhostOverlay(

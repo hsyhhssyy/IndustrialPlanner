@@ -21,6 +21,6 @@ jobs:
         with:
           agent: copilot
           api-key: ${{ secrets.API_KEY }}
-          model: gpt-5.4
+          model: gpt-5.6 Luna
           github-token: ${{ secrets.GITHUB_TOKEN }}
           bot-name: "@github-actions"

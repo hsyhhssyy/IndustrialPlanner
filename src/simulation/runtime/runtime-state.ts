@@ -9,6 +9,7 @@ import type {
   CompiledSimulationTopology,
   SimulationRecipeType,
 } from "../types";
+import { collectTopologyRoutingCursorGroups } from "./routing-cursor-groups";
 
 /** 基地电池满容量（焦耳）= 100MJ。940kW 负载约 106 秒耗尽。 */
 export const BASE_BATTERY_CAPACITY_J = 100_000_000;
@@ -265,13 +266,26 @@ export function createSimulationMutableRuntimeState(
     for (const [portRef, entry] of Object.entries(device.routing)) {
       routingCursors[`${deviceId}:${portRef}`] = entry.roundRobinSeed;
     }
-    for (const portId of device.portIds) {
-      const port = topology.ports[portId];
-      if (port !== undefined) {
-        routingCursors[`${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`] ??= 0;
-      }
-    }
   }
+  for (const routingGroup of collectTopologyRoutingCursorGroups(topology)) {
+    routingCursors[routingGroup.key] = 0;
+  }
+
+  // AI-REMOVED 2026-08-27:
+  // Reason: 运行时游标改由 Node 级候选集合初始化，PortGroup 级 key 与 Stage 3 的实际排序集合不一致。
+  // Trigger: 反应池两个单端口液体输出组共享库存 Node 时，PortGroup 级游标长度恒为 1。
+  // Evidence: reactor-dual-fluid-output-routing.test.ts 修复前六次产出均从 out_w_1 输出。
+  // Replacement: 上方 collectTopologyRoutingCursorGroups(topology) 初始化循环。
+  // Risk: Low - 热迁移首次采用新 key 时从 0 开始，后续同拓扑迁移会保留新游标。
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const portId of device.portIds) {
+  //   const port = topology.ports[portId];
+  //   if (port !== undefined) {
+  //     routingCursors[`${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`] ??= 0;
+  //   }
+  // }
 
   return {
     tickNumber: 0,

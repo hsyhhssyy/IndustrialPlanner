@@ -1325,6 +1325,8 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(8)
 
+    expect(sprite.isVisualSyncInvalidated()).toBe(true)
+
     sprite.syncLayout({
       x: 16,
       y: 24,
@@ -1332,6 +1334,8 @@ describe("GenericDeviceSprite", () => {
       height: 32,
       rotation: 0,
     }, context)
+
+    expect(sprite.isVisualSyncInvalidated()).toBe(false)
 
     await flushMicrotasks(8)
 

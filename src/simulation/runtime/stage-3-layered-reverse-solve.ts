@@ -20,6 +20,7 @@ import {
   resolveStorageSlotId,
 } from "./runtime-slot-access";
 import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
+import { collectNodeRoutingCursorGroups } from "./routing-cursor-groups";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 // AI-REMOVED 2026-05-17:
@@ -1054,6 +1055,8 @@ function getOrderedInputEdgeIds(
   return getOrderedEdgeIdsForPorts({
     topology,
     state,
+    node,
+    direction: "input",
     portIds: node.inputPortIds,
     edgeSelector: getPortInputEdgeIds,
   }).filter((edgeId) => topology.transferEdges[edgeId]?.targetNodeId === node.id);
@@ -1067,6 +1070,8 @@ function getOrderedOutputEdgeIds(
   return getOrderedEdgeIdsForPorts({
     topology,
     state,
+    node,
+    direction: "output",
     portIds: node.outputPortIds,
     edgeSelector: getPortOutputEdgeIds,
   }).filter((edgeId) => topology.transferEdges[edgeId]?.sourceNodeId === node.id);
@@ -1075,6 +1080,8 @@ function getOrderedOutputEdgeIds(
 function getOrderedEdgeIdsForPorts(options: {
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
+  readonly node: CompiledSimulationNode;
+  readonly direction: "input" | "output";
   readonly portIds: readonly string[];
   readonly edgeSelector: (
     topology: CompiledSimulationTopology,
@@ -1082,43 +1089,62 @@ function getOrderedEdgeIdsForPorts(options: {
     portId: string,
   ) => readonly string[];
 }): readonly string[] {
-  return getOrderedPorts(options.topology, options.state, options.portIds)
+  return getOrderedPorts(
+    options.topology,
+    options.state,
+    options.node,
+    options.direction,
+    options.portIds,
+  )
     .flatMap((port) => options.edgeSelector(options.topology, options.state, port.id));
 }
 
 function getOrderedPorts(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+  direction: "input" | "output",
   portIds: readonly string[],
 ): readonly CompiledSimulationPort[] {
   const ports = portIds
     .map((portId) => topology.ports[portId])
-    .filter((port): port is CompiledSimulationPort => port !== undefined)
-    .sort(comparePortsForRouting);
-  const priorityGroups = [...new Set(ports.map((port) => port.priorityGroup))].sort((left, right) => left - right);
+    .filter((port): port is CompiledSimulationPort => port !== undefined);
   const ordered: CompiledSimulationPort[] = [];
-  for (const priorityGroup of priorityGroups) {
-    const groupPorts = ports.filter((port) => port.priorityGroup === priorityGroup);
-    const cursor = state.persistent.routingCursors[getRoutingCursorGroupKey(groupPorts[0])] ?? 0;
-    const normalizedCursor = groupPorts.length === 0 ? 0 : ((cursor % groupPorts.length) + groupPorts.length) % groupPorts.length;
-    ordered.push(...groupPorts.slice(normalizedCursor), ...groupPorts.slice(0, normalizedCursor));
+  for (const group of collectNodeRoutingCursorGroups({ node, direction, ports })) {
+    const cursor = state.persistent.routingCursors[group.key] ?? 0;
+    const normalizedCursor = group.ports.length === 0
+      ? 0
+      : ((cursor % group.ports.length) + group.ports.length) % group.ports.length;
+    ordered.push(
+      ...group.ports.slice(normalizedCursor),
+      ...group.ports.slice(0, normalizedCursor),
+    );
   }
   return ordered;
 }
 
-function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
-  return left.priorityGroup - right.priorityGroup
-    || left.roundRobinSeed - right.roundRobinSeed
-    || left.order - right.order
-    || left.id.localeCompare(right.id);
-}
-
-function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): string {
-  if (port === undefined) {
-    return "unknown";
-  }
-  return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
-}
+// AI-REMOVED 2026-08-27:
+// Reason: Stage 3 的游标分组必须与 Stage 4 共用 Node 级定义，不能继续按首个 PortGroup 生成 key。
+// Trigger: 反应池两个独立液体输出组绑定同一库存 Node 时，Stage 3 按双端口排序但 Stage 4 各自按单端口推进。
+// Evidence: reactor-dual-fluid-output-routing.test.ts 修复前六次产出均从 out_w_1 输出。
+// Replacement: routing-cursor-groups.ts 的 collectNodeRoutingCursorGroups。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
+//   return left.priorityGroup - right.priorityGroup
+//     || left.roundRobinSeed - right.roundRobinSeed
+//     || left.order - right.order
+//     || left.id.localeCompare(right.id);
+// }
+//
+// function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): string {
+//   if (port === undefined) {
+//     return "unknown";
+//   }
+//   return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
+// }
 
 function getRawOutputEdgeIds(
   topology: CompiledSimulationTopology,

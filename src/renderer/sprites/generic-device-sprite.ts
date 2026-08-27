@@ -954,6 +954,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.previewMask.texture = previewMaskTexture
       this.selectionMask.texture = previewMaskTexture
       this.isTextureReady = true
+      this.invalidateVisualSync()
       this.body.visible = this.currentSuppressedAccessoryFamily === null
 
       if (this.currentLayout !== null) {
@@ -1035,6 +1036,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.previewMask.texture = maskTexture
       this.selectionMask.texture = maskTexture
       this.isTextureReady = true
+      this.invalidateVisualSync()
       this.body.visible = this.currentSuppressedAccessoryFamily === null
 
       if (this.currentLayout !== null) {

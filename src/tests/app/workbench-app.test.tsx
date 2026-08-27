@@ -1926,6 +1926,46 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
   });
 
+  it("renders viewport pan bindings as grouped rows with a Shift acceleration hint", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar([
+        { operationId: "pan-viewport", presentation: "shortcut" },
+      ]);
+    });
+
+    const panShortcut = container.querySelector(
+      '[data-toolbar-operation-id="pan-viewport"]',
+    );
+    const normalRow = panShortcut?.querySelector('[data-shortcut-row-index="0"]');
+    const acceleratedRow = panShortcut?.querySelector('[data-shortcut-row-index="1"]');
+
+    expect(Array.from(normalRow?.querySelectorAll("img[data-key-token]") ?? []).map(
+      (image) => image.getAttribute("data-key-token"),
+    )).toEqual([
+      "W",
+      "A",
+      "S",
+      "D",
+      "ArrowUp",
+      "ArrowLeft",
+      "ArrowDown",
+      "ArrowRight",
+    ]);
+    expect(Array.from(normalRow?.querySelectorAll('span[aria-hidden="true"]') ?? []).map(
+      (separator) => separator.textContent,
+    ).filter((text) => text === "/")).toEqual(["/"]);
+    expect(Array.from(acceleratedRow?.querySelectorAll("img[data-key-token]") ?? []).map(
+      (image) => image.getAttribute("data-key-token"),
+    )).toEqual(["Shift", "W", "A", "S", "D"]);
+    expect(Array.from(acceleratedRow?.querySelectorAll('span[aria-hidden="true"]') ?? []).map(
+      (separator) => separator.textContent,
+    ).filter((text) => text === "+")).toEqual(["+"]);
+  });
+
   it("renders both configured marquee bindings before the fixed escape binding", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
