@@ -527,6 +527,7 @@ export type UiKey =
   | "cloudflareStatus.title"
   | "cloudflareStatus.open"
   | "cloudflareStatus.syncEnabled"
+  | "cloudflareStatus.currentVersion"
   | "cloudflareStatus.phase"
   | "cloudflareStatus.updateCheckCountdown"
   | "cloudflareStatus.countdownNext"

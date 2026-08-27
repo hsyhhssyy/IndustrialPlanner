@@ -41,6 +41,47 @@ describe("CloudflareSyncStatusDialog", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows the current local revision as 当前版本", async () => {
+    const state = new SyncStateImpl();
+    state.setCurrentLocalRevision("revision-42");
+    const dialogState = makeAutoObservable<DialogStateReadWrite>({
+      visible: true,
+      maximized: false,
+      offsetX: 0,
+      offsetY: 0,
+      width: 760,
+      height: 620,
+      activeTab: null,
+    });
+
+    await act(async () => {
+      root.render(
+        <OverlayStackProvider>
+          <CloudflareSyncStatusDialog
+            aborting={false}
+            compactMobileLayout={false}
+            deleting={false}
+            dialogState={dialogState}
+            onAbortCurrentTransaction={vi.fn()}
+            onClose={vi.fn()}
+            onDeleteAllData={vi.fn()}
+            onOffsetChange={vi.fn()}
+            onResize={vi.fn()}
+            onToggleMaximized={vi.fn()}
+            state={state}
+            t={(key) => key === "cloudflareStatus.currentVersion" ? "当前版本" : key}
+          />
+        </OverlayStackProvider>,
+      );
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+
+    const currentVersionLabel = Array.from(document.querySelectorAll("dt"))
+      .find((element) => element.textContent === "当前版本");
+    expect(currentVersionLabel).not.toBeUndefined();
+    expect(currentVersionLabel?.nextElementSibling?.textContent).toBe("revision-42");
+  });
+
   it("keeps the Space ID as a draft until explicit enable is pressed", async () => {
     class ClosedBroadcastChannel {
       public addEventListener(): void {}
@@ -112,7 +153,7 @@ describe("CloudflareSyncStatusDialog", () => {
     });
     const authorizeUrl = new URL(String(openPopup.mock.calls[0]?.[0]));
     expect(`${authorizeUrl.origin}${authorizeUrl.pathname}`).toBe(
-      "https://endfield-api.amiyabot.com/v1/oauth/authorize",
+      "https://endfield-api.anonymous-test.top/v1/oauth/authorize",
     );
     expect(authorizeUrl.searchParams.get("frontend_redirect_uri")).toBe(
       "http://localhost:3000/auth/callback",

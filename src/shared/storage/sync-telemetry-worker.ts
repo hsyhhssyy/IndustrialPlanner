@@ -1,6 +1,11 @@
 /// <reference lib="webworker" />
 
 import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
+import {
+  CLIENT_TELEMETRY_INTERVAL_MS,
+  isClientTelemetryWorkerRequest,
+  type ClientTelemetryUploadPayload,
+} from "./client-telemetry-protocol";
 
 // 独立遥测上报 Worker。
 //
@@ -10,22 +15,25 @@ import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
 // 自带 15 分钟节流，重复调用直接跳过。
 
 const TELEMETRY_TIMEOUT_MS = 3000;
-const TELEMETRY_MIN_INTERVAL_MS = 15 * 60 * 1000;
+const TELEMETRY_MIN_INTERVAL_MS = CLIENT_TELEMETRY_INTERVAL_MS;
 
 let lastUploadAttemptAt = 0;
 
 export interface SyncTelemetryWorkerRequest {
   readonly type: "upload-telemetry";
   readonly apiBaseUrl: string;
-  readonly payload: object;
+  readonly payload: ClientTelemetryUploadPayload;
 }
 
 installWorkerEndpoint({
   workerKind: "sync-telemetry",
   handleMessage: async (event) => {
-    const request = event.data as SyncTelemetryWorkerRequest;
+    const request = event.data as Partial<SyncTelemetryWorkerRequest> | null;
 
-    if (request.type !== "upload-telemetry") {
+    if (
+      request?.type !== "upload-telemetry"
+      || !isClientTelemetryWorkerRequest(request)
+    ) {
       return;
     }
 
@@ -35,7 +43,7 @@ installWorkerEndpoint({
 
 async function handleUploadTelemetry(
   apiBaseUrl: string,
-  payload: object,
+  payload: ClientTelemetryUploadPayload,
 ): Promise<void> {
   const nowMs = Date.now();
 

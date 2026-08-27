@@ -4,7 +4,7 @@ import {
 } from "./browser-storage";
 
 export const BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY = "v3-backend-api-address-override";
-export const DEFAULT_BACKEND_API_HOST = "endfield-api.amiyabot.com";
+export const DEFAULT_BACKEND_API_HOST = "endfield-api.anonymous-test.top";
 export const DEFAULT_BACKEND_API_BASE_URL = `https://${DEFAULT_BACKEND_API_HOST}`;
 export const BUILD_BACKEND_API_BASE_URL =
   import.meta.env.VITE_BACKEND_API_BASE_URL?.trim() || DEFAULT_BACKEND_API_BASE_URL;

@@ -366,6 +366,7 @@ const UI: Record<string, string> = {
     "cloudflareStatus.title": "Cloudflare 同步状态",
     "cloudflareStatus.open": "修改Cloudflare设置",
     "cloudflareStatus.syncEnabled": "Cloudflare 同步开关",
+    "cloudflareStatus.currentVersion": "当前版本",
     "cloudflareStatus.phase": "Cloudflare 同步状态",
     "cloudflareStatus.updateCheckCountdown": "下次更新检查",
     "cloudflareStatus.countdownNext": "{time}后",

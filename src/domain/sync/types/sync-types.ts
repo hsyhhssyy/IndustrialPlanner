@@ -98,6 +98,7 @@ export interface SyncSettings {
 export interface SyncStatus {
   readonly phase: SyncPhase;
   readonly saveState: SyncSaveState;
+  readonly currentLocalRevision: string | null;
   readonly initialSyncStage: SyncInitialSyncStage;
   readonly hasCompletedInitialFeatureSync: boolean;
   readonly currentRunReason: SyncRunReason | null;

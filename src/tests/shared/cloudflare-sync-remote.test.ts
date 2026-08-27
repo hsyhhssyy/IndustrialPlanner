@@ -465,7 +465,7 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
-  it("does not advance the applied revision for an incomplete collection scope", async () => {
+  it("advances the plan revision when the full session completes", async () => {
     let checkUrl = "";
     fetchMock
       .add("GET:/plan", () => ({
@@ -505,7 +505,7 @@ describe("cloudflare-sync-remote-v2", () => {
 
     await session.complete?.();
     await session.checkCollections([collection]);
-    expect(checkUrl).toContain("knownRevision=0");
+    expect(checkUrl).toContain("knownRevision=1");
 
     await session.dispose?.();
     remote.dispose?.();

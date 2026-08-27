@@ -1,6 +1,7 @@
 import { Container } from "pixi.js";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { AppTheme } from "@/domain/app/types/theme";
+import type { GasInteractionVisualState } from "@/renderer/gas-interaction-visual-state";
 import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
 import type { GridRotation } from "@/shared/geometry/grid"
 
@@ -52,6 +53,7 @@ export interface RenderSpriteSyncContext {
   time: RenderSpriteTimeContext;
   suppressBelts: boolean;
   suppressPipes: boolean;
+  gasInteractionVisualState?: GasInteractionVisualState;
   powerInteractionVisualState?: PowerInteractionVisualState;
   /**
    * entityId → 该设备已连接的端口键集合("portGroupId:portId")。

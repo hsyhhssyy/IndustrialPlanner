@@ -15,6 +15,10 @@
  * AI-CORRECTION 2026-08-13: 小检查发现远端变化触发的下载期间应锁定画布
  * （断言 data-sync-initial-sync-stage="canvas" 遮罩可见）。
  * AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
+ * AI-CORRECTION 2026-08-25: 按用户本轮诊断要求，所有 E2E 暂时统一断言全程不得锁定画布；
+ * 真实远端下载阶段也先按不锁定处理，执行结果由用户决定后续语义。
+ * AI-CORRECTION 2026-08-25: 用户已收敛最终语义：实际下载或冲突处理允许锁定，
+ * 仅无冲突且无下载结果的 interval 空跑不得锁定；回到 idle 后必须解锁。
  */
 import { createHash, randomUUID } from "node:crypto";
 
@@ -23,7 +27,7 @@ import {
   test,
   type APIRequestContext,
   type Page,
-} from "playwright/test";
+} from "./canvas-lock-audit";
 
 import {
   CF_SYNC_V2_PROTOCOL,
@@ -49,11 +53,16 @@ interface BrowserSyncState {
   readonly status: {
     readonly phase: string;
     readonly saveState: string;
+    readonly currentRunReason: string | null;
     readonly initialSyncStage: string;
     readonly pendingLocalChangeCount: number;
     readonly lastError: string | null;
     readonly lastDownloadAt: string | null;
     readonly lastUpdateCheckAt: string | null;
+    readonly tasks: readonly {
+      readonly kind: string;
+      readonly phase: string;
+    }[];
   };
   readonly pendingConflict: unknown;
 }
@@ -307,9 +316,14 @@ async function runAutoDownloadScenario(options: {
   const backendRequestFailures: string[] = [];
   const backendHttpErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.text().includes("sync-service")) {
-      syncLogs.push(`[${msg.type()}] ${msg.text()}`);
-      console.log(`[SYNC] ${msg.text()}`);
+    const message = msg.text();
+    if (message.includes("sync-service")) {
+      syncLogs.push(`[${msg.type()}] ${message}`);
+      console.log(`[SYNC] ${message}`);
+      return;
+    }
+    if (message.startsWith("[SYNC-TIMER-DIAGNOSTIC]")) {
+      console.log(`[BROWSER] ${message}`);
     }
   });
   page.on("requestfailed", (failedRequest) => {
@@ -820,13 +834,35 @@ async function runAutoDownloadScenario(options: {
   console.log(`[TEST] Remote pushed: new revision=${pushedRevision} (removed furnace)`);
 
   // ─── Phase 7: 等待下一次检查 → 下载期间锁定画布 → 完成后解锁 ───
+  // AI-CORRECTION 2026-08-25: 本轮诊断将预期改为下载期间也不得锁定画布。
   // 确认没有冲突弹窗（本地无未提交改动，直接下载）
   expect(
     await page.getByRole("heading", { name: "同步冲突" }).isVisible().catch(() => false)
   ).toBe(false);
   console.log("[TEST] Waiting for auto-download...");
 
+  const timingBaseline = await page.evaluate(() => {
+    const sync = (window as unknown as BrowserTestWindow)
+      .__industrialPlannerAppHost?.workspace?.sync;
+    const updateCheckTask = sync?.state.status.tasks.find(
+      (task) => task.kind === "update-check",
+    );
+    return {
+      observedAt: new Date().toISOString(),
+      performanceNow: performance.now(),
+      visibilityState: document.visibilityState,
+      phase: sync?.state.status.phase ?? null,
+      currentRunReason: sync?.state.status.currentRunReason ?? null,
+      updateCheckTaskPhase: updateCheckTask?.phase ?? null,
+      lastUpdateCheckAt: sync?.state.status.lastUpdateCheckAt ?? null,
+    };
+  });
+  console.log(
+    `[TEST] Auto-download timing baseline: ${JSON.stringify(timingBaseline)}`,
+  );
+
   // 浏览器内高频观察：phase 一旦进入 downloading，立即检查画布锁定遮罩是否可见
+  // AI-CORRECTION 2026-08-25: 保留高频观察机制，但期望值改为 unlocked。
   const lockObservation = await page.evaluate(() =>
     new Promise<"locked" | "unlocked" | "no-downloading-observed">((resolve) => {
       const sync = (window as unknown as BrowserTestWindow)
@@ -836,24 +872,55 @@ async function runAutoDownloadScenario(options: {
         return;
       }
       const startedAt = Date.now();
+      let previousTimerAt = startedAt;
+      let maxTimerGapMs = 0;
+      let hasReportedTimerGap = false;
+      console.info(
+        `[SYNC-TIMER-DIAGNOSTIC] observer-start ` +
+        `at=${new Date(startedAt).toISOString()} ` +
+        `visibility=${document.visibilityState} phase=${sync.state.status.phase}`,
+      );
+      const finishObservation = (
+        result: "locked" | "unlocked" | "no-downloading-observed",
+      ): void => {
+        clearInterval(timer);
+        console.info(
+          `[SYNC-TIMER-DIAGNOSTIC] observer-finish result=${result} ` +
+          `elapsedMs=${Date.now() - startedAt} maxTimerGapMs=${maxTimerGapMs} ` +
+          `visibility=${document.visibilityState} phase=${sync.state.status.phase} ` +
+          `currentRunReason=${sync.state.status.currentRunReason ?? "none"}`,
+        );
+        resolve(result);
+      };
       const timer = setInterval(() => {
+        const timerAt = Date.now();
+        const timerGapMs = timerAt - previousTimerAt;
+        previousTimerAt = timerAt;
+        maxTimerGapMs = Math.max(maxTimerGapMs, timerGapMs);
+        if (timerGapMs >= 1_000 && !hasReportedTimerGap) {
+          hasReportedTimerGap = true;
+          console.warn(
+            `[SYNC-TIMER-DIAGNOSTIC] timer-gap gapMs=${timerGapMs} ` +
+            `elapsedMs=${timerAt - startedAt} visibility=${document.visibilityState} ` +
+            `phase=${sync.state.status.phase} ` +
+            `currentRunReason=${sync.state.status.currentRunReason ?? "none"}`,
+          );
+        }
         if (sync.state.status.phase === "downloading") {
-          clearInterval(timer);
           const gate = document.querySelector(
             '[data-sync-initial-sync-stage="canvas"]'
           );
-          resolve(gate !== null ? "locked" : "unlocked");
+          finishObservation(gate !== null ? "locked" : "unlocked");
           return;
         }
-        if (Date.now() - startedAt > 80_000) {
-          clearInterval(timer);
-          resolve("no-downloading-observed");
+        if (timerAt - startedAt > 80_000) {
+          finishObservation("no-downloading-observed");
         }
       }, 10);
     })
   );
   console.log(`[TEST] Lock observation during downloading: ${lockObservation}`);
-  expect(lockObservation).toBe("locked");
+  expect(["locked", "unlocked"]).toContain(lockObservation);
 
   // 等待下载完成回到 idle
   await expect.poll(async () => await page.evaluate(() => {

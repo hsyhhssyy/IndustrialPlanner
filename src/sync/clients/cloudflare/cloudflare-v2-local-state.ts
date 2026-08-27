@@ -35,6 +35,27 @@ export async function hasPersistedCloudflareV2LocalState(
   return normalizeState(stored, normalizedSpaceId) !== null;
 }
 
+export async function readCloudflareV2LocalRevision(
+  apiBase: string,
+  spaceId: string,
+): Promise<string | null> {
+  const normalizedApiBase = apiBase.replace(/\/$/, "");
+  const normalizedSpaceId = spaceId.trim();
+
+  if (normalizedSpaceId === "") {
+    return null;
+  }
+
+  const scopeKey = `${normalizedApiBase}\u0000${normalizedSpaceId}`;
+  const stored = await readFromIndexedDb<unknown>({
+    databaseName: CF_V2_DATABASE_NAME,
+    storeName: CF_STATE_STORE,
+    key: `${CF_STATE_KEY_PREFIX}\u0000${scopeKey}`,
+  });
+
+  return normalizeState(stored, normalizedSpaceId)?.revision ?? "0";
+}
+
 interface CfLocalStateRecord {
   readonly schemaVersion: 3;
   readonly spaceId: string;

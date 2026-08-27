@@ -169,8 +169,18 @@ class CloudflareV2SyncLocalState implements SyncLocalState {
 class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   private planCache: CfV2LoadPlanResult | null = null;
   private latestCommittedRevision: CfV2Revision | null;
-  /** 仅完整处理过的 collection 才能参与全局 applied revision 推进。 */
-  private readonly appliedCompleteCollectionIds = new Set<string>();
+  // AI-REMOVED 2026-08-25:
+  // Reason: 引擎常规同步已恢复为全部 adapter 的完整 plan 分类，不再存在用 collection 集合
+  //   补救局部 scope 的合法路径；继续保留该门禁会使成功 commit 无法推进全局 revision。
+  // Trigger: 本地 A 上传、远端 B 变化并存时，上传成功后更新检查仍重复命中旧 revision。
+  // Evidence: sync-service.resolveRegularSyncRequests 现始终发出无 scope 的全部 adapter 请求。
+  // Replacement: complete() 在完整同步事务成功后直接推进 plan/commit revision。
+  // Risk: Low；CloudflareV2SyncRemoteSession 仅由执行完整分类的同步引擎创建。
+  // Human Review: Required
+  //
+  // Original code:
+  // /** 仅完整处理过的 collection 才能参与全局 applied revision 推进。 */
+  // private readonly appliedCompleteCollectionIds = new Set<string>();
   // AI-REMOVED 2026-08-13:
   // Reason: 同步编排已改为“先下载、后上传、单次 commit”，不再有同会话多批次顺序上传。
   // Trigger: sync-model.md 要求上传基线固定为下载阶段开始前 plan 的最新 revision。
@@ -187,7 +197,17 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     private readonly workerClient: CloudflareV2WorkerBridge,
     private readonly config: CfV2WorkerConfig,
     public readonly localState: SyncLocalState,
-    private readonly context: SyncRemoteSessionContext,
+    // AI-REMOVED 2026-08-25:
+    // Reason: session 不再用 run reason/collection 到齐状态决定全局 revision。
+    // Trigger: CF 同步恢复完整 plan 分类，complete() 成为唯一推进边界。
+    // Evidence: context 的唯一活动读取来自已移除的 allCollectionsApplied 与 local-change 特判。
+    // Replacement: 保留普通参数 `_context` 以维持构造签名，provider 不再持久持有它。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // private readonly context: SyncRemoteSessionContext,
+    _context: SyncRemoteSessionContext,
     private readonly onActivity: ((activity: CloudflareV2WorkerActivity) => void) | undefined,
     recovery: CfV2TransactionRecoveryResult,
   ) {
@@ -352,7 +372,16 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
       return;
     }
 
-    this.appliedCompleteCollectionIds.add(result.collection.adapterId);
+    // AI-REMOVED 2026-08-25:
+    // Reason: complete() 不再按 collection 到齐情况决定全局 revision，集合登记失去语义。
+    // Trigger: 常规同步恢复完整 plan 分类，局部 scope 不再是 CF 成功事务的合法形态。
+    // Evidence: sync-service.resolveRegularSyncRequests 对所有 adapter 使用无 scope 请求。
+    // Replacement: complete() 的事务成功边界。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.appliedCompleteCollectionIds.add(result.collection.adapterId);
     if (result.collectionRevision !== null) {
       await this.localState.setRemoteRevision(
         result.collection.stateKey,
@@ -374,9 +403,20 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public async complete(): Promise<void> {
-    const allCollectionsApplied = this.context.collections.every((collection) =>
-      this.appliedCompleteCollectionIds.has(collection.adapterId)
-    );
+    // AI-REMOVED 2026-08-25:
+    // Reason: collection 到齐门禁是对局部 local-change scope 的补救；它只能阻止漏变更，
+    //   却同时造成成功 commit 后全局 revision 不前推、下一轮重复 plan 和伪下载阶段。
+    // Trigger: 同步引擎已恢复“每轮完整 plan、全部资源分类”的原设计不变量。
+    // Evidence: sync-service.resolveRegularSyncRequests 始终覆盖全部 adapter，初始同步 scope
+    //   也由互补请求覆盖完整 collection；只有完整事务成功后才调用 complete()。
+    // Replacement: 下方直接选择 latestCommittedRevision 或本轮 plan revision。
+    // Risk: Low；若未来重新引入局部 CF 同步，必须在引擎层建立独立游标，不能复用全局 revision。
+    // Human Review: Required
+    //
+    // Original code:
+    // const allCollectionsApplied = this.context.collections.every((collection) =>
+    //   this.appliedCompleteCollectionIds.has(collection.adapterId)
+    // );
     // AI-REMOVED 2026-08-22:
     // Reason: 仅依据 run reason 或本轮 commit 推进全局 revision，会把未进入局部 scope 的
     //   其他 collection/资产一并标记为已读取。
@@ -390,9 +430,23 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     // Original code:
     // const targetRevision = this.latestCommittedRevision
     //   ?? (this.context.reason === "local-change" ? null : this.planCache?.revision ?? null);
-    const targetRevision = allCollectionsApplied
-      ? this.latestCommittedRevision ?? this.planCache?.revision ?? null
-      : null;
+    // AI-CORRECTION 2026-08-25: 上述 2026-08-22 的局部 scope 门禁已由完整 plan 不变量取代；
+    // 成功 commit 必须推进到 commit revision，无上传的完整分类推进到 plan revision。
+    // AI-REMOVED 2026-08-25:
+    // Reason: allCollectionsApplied 门禁已删除，条件表达式不再成立。
+    // Trigger: 常规同步不再允许局部 CF scope。
+    // Evidence: sync-service.resolveRegularSyncRequests 的无 scope 全 adapter 请求。
+    // Replacement: 下方 targetRevision。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // const targetRevision = allCollectionsApplied
+    //   ? this.latestCommittedRevision ?? this.planCache?.revision ?? null
+    //   : null;
+    const targetRevision = this.latestCommittedRevision
+      ?? this.planCache?.revision
+      ?? null;
     if (targetRevision !== null) {
       await this.request<void>({
         type: "state-write-applied-revision",

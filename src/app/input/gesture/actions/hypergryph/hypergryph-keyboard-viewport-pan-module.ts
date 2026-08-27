@@ -7,8 +7,9 @@ import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 /**
  * 键盘视口平移速度：每秒 10 格。
  * 斜向移动时每个轴各自保持 10 格/秒（不做向量归一化）。
+ * 订正（2026-08-25）：改为每个轴固定 1280 客户区像素/秒，不再随缩放级别改变屏幕速度。
  */
-const PAN_SPEED_CELLS_PER_SECOND = 10;
+const PAN_SPEED_PIXELS_PER_SECOND = 1280;
 
 type PanDirection = "up" | "down" | "left" | "right";
 
@@ -68,7 +69,7 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
 
     if (lastTickMs !== null) {
       const deltaSeconds = (nowMs - lastTickMs) / 1000;
-      const pixelsPerSecond = PAN_SPEED_CELLS_PER_SECOND * editor.state.viewport.gridCellPixelSize;
+      const pixelsPerSecond = PAN_SPEED_PIXELS_PER_SECOND;
 
       let dx = 0;
       let dy = 0;

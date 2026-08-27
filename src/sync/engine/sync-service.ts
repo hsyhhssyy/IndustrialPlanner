@@ -130,6 +130,21 @@ interface EngineTransaction extends SyncEngineTransaction {
   }>;
 }
 
+interface UpdateCheckTimerTrace {
+  readonly schedulerGeneration: number;
+  readonly tickSequence: number;
+  readonly scheduledAtMs: number;
+  readonly firedAtMs: number;
+  readonly driftMs: number;
+}
+
+type UpdateCheckTraceOutcome =
+  | "disabled-or-invalid"
+  | "local-changes"
+  | "remote-unchanged"
+  | "remote-changed"
+  | "failed";
+
 export interface SyncServiceOptions {
   readonly readSettings: () => SyncConnectionSettings;
   readonly validateSettings?: (settings: SyncConnectionSettings) => string | null;
@@ -259,12 +274,17 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   // Original code:
   // let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
   let updateCheckRunning = false;
+  let schedulerGeneration = 0;
+  let intervalTickSequence = 0;
+  let nextIntervalScheduledAtMs: number | null = null;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let activeRemote: SyncRemote | null = null;
   let pendingTrigger: SyncRunReason | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
+  /** 最近一次完整分类后，本服务实例是否持续接收了全部本地变更通知。 */
+  let localChangeTrackingComplete = false;
   const getSettingsError = (settings: SyncConnectionSettings): string | null =>
     options.validateSettings === undefined
       ? settings.url.trim() === "" ? "Sync URL is empty" : null
@@ -369,9 +389,14 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     error: unknown = null,
     direction?: SyncTaskDirection,
   ): void => {
+    // AI-CORRECTION 2026-08-25: 普通同步的方向在实际下载/commit 时才确定；
+    // finish 不得用调用入口捕获的 undefined 覆盖运行中已经更新的真实方向。
+    const effectiveDirection = direction
+      ?? status.tasks.find((task) => task.kind === kind)?.direction
+      ?? null;
     updateTask(kind, {
       phase: error === null ? "success" : "error",
-      direction: direction ?? null,
+      direction: effectiveDirection,
       completedUnitCount: error === null ? totalUnitCount : getTaskCompletedUnitCount(kind),
       totalUnitCount,
       lastFinishedAt: new Date().toISOString(),
@@ -429,6 +454,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     const settings = options.readSettings();
     if (!settings.enabled) {
       logger.info("sync skipped — disabled");
+      localChangeTrackingComplete = false;
       acknowledgedLocalChangeVersion = localChangeVersion;
       dirtyAssetIdsByAdapter.clear();
       dirtyVersionsByAdapter.clear();
@@ -462,9 +488,22 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     clearLocalChangeTimers();
     const syncLocalChangeVersion = localChangeVersion;
     const hasPendingLocalChanges = syncLocalChangeVersion > acknowledgedLocalChangeVersion;
-    const activePhase: SyncServicePhase = hasPendingLocalChanges || trigger === "local-change"
-      ? "uploading"
-      : "downloading";
+    // AI-CORRECTION 2026-08-25: 普通同步开始只代表正在读取 plan/分类，不能据此宣称正在下载；
+    // 只有初始同步需要预先锁定画布，普通同步由实际下载落地或上传 commit 再切换 phase。
+    // AI-REMOVED 2026-08-25:
+    // Reason: local-change/待保存只说明需要分类，不证明最终存在 upload mutation；净变化归零时
+    //   提前进入 uploading 同样会让状态描述与实际 I/O 不一致。
+    // Trigger: phase 必须表达有效数据应用，而不是同步触发来源。
+    // Evidence: commitTransactionUploads 已在 uploads 非空时切换 uploading。
+    // Replacement: 下方普通同步 idle、初始同步 downloading 的状态选择。
+    // Risk: Low；保存按钮仍由 saveState=saving 表达待提交状态。
+    // Human Review: Required
+    //
+    // Original code:
+    // const activePhase: SyncServicePhase = hasPendingLocalChanges || trigger === "local-change"
+    //   ? "uploading"
+    //   : isInitialSync ? "downloading" : "idle";
+    const activePhase: SyncServicePhase = isInitialSync ? "downloading" : "idle";
     setStatus({
       ...status,
       phase: activePhase,
@@ -823,10 +862,14 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         );
         adapterResults.push(result);
         if (taskKind !== undefined) {
+          const resultDirection: SyncTaskDirection | null = result.status === "uploaded"
+            ? "upload"
+            : result.status === "downloaded" ? "download" : null;
           updateTask(taskKind, {
             completedUnitCount: tracksProtocolProgress
               ? totalUnitCount
               : getTaskCompletedUnitCount(taskKind) + 1,
+            ...(resultDirection === null ? {} : { direction: resultDirection }),
           });
         }
         // AI-CORRECTION 2026-08-13: 冲突不再中断批次，继续完成全部下载后再统一弹框。
@@ -845,18 +888,29 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const resolveRegularSyncRequests = (
-    trigger: SyncRunReason,
+    _trigger: SyncRunReason,
   ): readonly SyncAdapterRequest[] => {
-    if (trigger !== "local-change") {
-      return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
-    }
-
-    return Array.from(dirtyAssetIdsByAdapter, ([adapterId, assetIds]) => ({
-      adapterId,
-      scope: assetIds === null
-        ? undefined
-        : { includeAssetIds: Array.from(assetIds) },
-    }));
+    // AI-REMOVED 2026-08-25:
+    // Reason: local-change 只执行脏资产 scope，会跳过同一份 CF plan 中其他远端已变化资产；
+    //   随后的 commit 若推进全局 revision 就会永久漏下载，若不推进则更新检查反复命中同一 revision。
+    // Trigger: 本地 A 上传与远端 B 变化并存时，commit 成功后同步无法完成前推。
+    // Evidence: CF /plan 返回全空间资产 hash；sync-model.md 要求每次操作对全部资源分类。
+    // Replacement: 下方所有 adapter 的无 scope 请求；脏标仅用于免算 clean 资产本地 hash。
+    // Risk: Medium；WebDAV 会失去局部 scope 优化，用户已明确本轮不要求兼容 WebDAV。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (trigger !== "local-change") {
+    //   return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
+    // }
+    //
+    // return Array.from(dirtyAssetIdsByAdapter, ([adapterId, assetIds]) => ({
+    //   adapterId,
+    //   scope: assetIds === null
+    //     ? undefined
+    //     : { includeAssetIds: Array.from(assetIds) },
+    // }));
+    return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
   };
 
   const runRegularSyncRequests = async (
@@ -927,7 +981,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     // 重跑时第二代脏标被升格为新一代快照的一部分。
     activeFrozenDirty = freezeDirtySnapshot();
     passRequestScopes = new Map();
-    const transaction = createEngineTransaction(session, activeFrozenDirty);
+    const transaction = createEngineTransaction(
+      session,
+      activeFrozenDirty,
+      localChangeTrackingComplete,
+    );
     try {
       return await withSyncLock(async () => {
         await options.beforeSync?.(session, passSettings);
@@ -973,6 +1031,13 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
         await options.afterSync?.(session, passSettings, resolution.results);
         await session.complete?.();
+        // 只有全部 adapter 的 scope 都完整覆盖后，才能用脏标证明未命中的资产为 clean；
+        // clean 资产随后可直接复用持久化 touch hash，无需重算正文 hash。
+        if (options.adapters.every((adapter) =>
+          resolveRequestScopeComplete(adapter.id)
+        )) {
+          localChangeTrackingComplete = true;
+        }
 
         return resolution.results;
       });
@@ -1013,6 +1078,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   const createEngineTransaction = (
     session: SyncRemoteSession,
     frozenDirty: Map<string, FrozenDirtyEntry>,
+    changeTrackingComplete: boolean,
   ): EngineTransaction => {
     const items: SyncPlanItem[] = [];
     const uploads: SyncPlanUpload[] = [];
@@ -1045,6 +1111,31 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       },
       recordUpload: (upload) => {
         uploads.push(upload);
+      },
+      getLocalChangeState: (adapterId, assetId) => {
+        if (!changeTrackingComplete) {
+          return "unknown";
+        }
+        const frozen = frozenDirty.get(adapterId)?.assetIds;
+        if (frozen === null || frozen?.has(assetId) === true) {
+          return "dirty";
+        }
+        return "clean";
+      },
+      beginDownload: () => {
+        if (status.phase === "downloading") {
+          return;
+        }
+        setStatus({
+          ...status,
+          phase: "downloading",
+          tasks: status.tasks.map((task) =>
+            task.phase === "running"
+              ? { ...task, direction: "download" }
+              : task
+          ),
+        });
+        logger.info("sync phase: downloading");
       },
       assertDownloadAllowed: async (adapterId, assetId) => {
         // 下载不容忍：下载资产在分类时必然不在第一代脏标中；
@@ -1185,6 +1276,18 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     if (transaction.uploads.length === 0) {
       await transaction.writeBatch.discard();
       return null;
+    }
+    if (status.phase !== "uploading") {
+      setStatus({
+        ...status,
+        phase: "uploading",
+        tasks: status.tasks.map((task) =>
+          task.phase === "running"
+            ? { ...task, direction: "upload" }
+            : task
+        ),
+      });
+      logger.info("sync phase: uploading");
     }
     for (const upload of transaction.uploads) {
       if ("deletedAt" in upload.params) {
@@ -1619,7 +1722,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         options.adapters.map((adapter) => adapter.collection),
       );
       return result.changedCollections.length === 0;
-    } catch {
+    } catch (error) {
+      logger.debug(
+        `update check probe failed — falling back to full sync: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+      );
       return false;
     } finally {
       session.dispose?.();
@@ -1627,16 +1734,32 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     }
   };
 
-  const runUpdateCheck = async (): Promise<void> => {
-    if (updateCheckRunning) return;
+  const runUpdateCheck = async (
+    trace: UpdateCheckTimerTrace,
+  ): Promise<void> => {
+    if (updateCheckRunning) {
+      logger.debug(
+        `update check coalesced — generation=${trace.schedulerGeneration} ` +
+        `tick=${trace.tickSequence} reason=already-running`,
+      );
+      return;
+    }
     updateCheckRunning = true;
+    const startedAtMs = Date.now();
     const now = new Date().toISOString();
+    let outcome: UpdateCheckTraceOutcome = "failed";
+
+    logger.debug(
+      `update check started — generation=${trace.schedulerGeneration} ` +
+      `tick=${trace.tickSequence} startDelayMs=${startedAtMs - trace.firedAtMs}`,
+    );
 
     // 任务初始化为 running 态
     beginTask("update-check", 1);
     try {
       const settings = options.readSettings();
       if (!settings.enabled || getSettingsError(settings) !== null) {
+        outcome = "disabled-or-invalid";
         finishTask("update-check", 1);
         setStatus({
           ...status,
@@ -1647,6 +1770,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
 
       // 有脏数据等上传 → 走完整同步
       if (localChangeVersion > acknowledgedLocalChangeVersion) {
+        outcome = "local-changes";
         finishTask("update-check", 1);
         setStatus({
           ...status,
@@ -1656,8 +1780,15 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         return;
       }
 
+      const probeStartedAtMs = Date.now();
       const unchanged = await isRemoteUnchanged();
+      logger.debug(
+        `update check probe completed — generation=${trace.schedulerGeneration} ` +
+        `tick=${trace.tickSequence} unchanged=${unchanged} ` +
+        `durationMs=${Date.now() - probeStartedAtMs}`,
+      );
       if (unchanged) {
+        outcome = "remote-unchanged";
         logger.debug("update check: remote unchanged → idle");
         finishTask("update-check", 1);
         setStatus({
@@ -1673,6 +1804,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         return;
       }
 
+      outcome = "remote-changed";
       logger.info("update check: remote changed → triggering full sync");
       finishTask("update-check", 1);
       setStatus({
@@ -1681,6 +1813,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       });
       await syncNow("interval");
     } catch (error) {
+      outcome = "failed";
       finishTask("update-check", 1, error);
       setStatus({
         ...status,
@@ -1689,6 +1822,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       });
     } finally {
       updateCheckRunning = false;
+      logger.debug(
+        `update check finished — generation=${trace.schedulerGeneration} ` +
+        `tick=${trace.tickSequence} outcome=${outcome} ` +
+        `durationMs=${Date.now() - startedAtMs}`,
+      );
     }
   };
 
@@ -1702,15 +1840,55 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       syncSuppressImmediate = false;
       logger.info("sync service started");
       void syncNow("startup");
+      const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+      schedulerGeneration += 1;
+      intervalTickSequence = 0;
+      const schedulerStartedAtMs = Date.now();
+      nextIntervalScheduledAtMs = schedulerStartedAtMs + intervalMs;
+      logger.debug(
+        `update check scheduler started — generation=${schedulerGeneration} ` +
+        `intervalMs=${intervalMs} startedAt=${new Date(schedulerStartedAtMs).toISOString()} ` +
+        `nextScheduledAt=${new Date(nextIntervalScheduledAtMs).toISOString()}`,
+      );
       intervalId = globalThis.setInterval(() => {
-        if (options.canRunInterval?.() !== false && !syncing) {
-          void runUpdateCheck();
+        const firedAtMs = Date.now();
+        const scheduledAtMs = nextIntervalScheduledAtMs ?? firedAtMs;
+        intervalTickSequence += 1;
+        nextIntervalScheduledAtMs = scheduledAtMs + intervalMs;
+        const canRunInterval = options.canRunInterval?.() !== false;
+        const decision = !canRunInterval
+          ? "discard-not-runnable"
+          : syncing
+            ? "discard-syncing"
+            : updateCheckRunning
+              ? "discard-update-check-running"
+              : "run";
+        const trace: UpdateCheckTimerTrace = {
+          schedulerGeneration,
+          tickSequence: intervalTickSequence,
+          scheduledAtMs,
+          firedAtMs,
+          driftMs: firedAtMs - scheduledAtMs,
+        };
+        logger.debug(
+          `update check timer fired — generation=${trace.schedulerGeneration} ` +
+          `tick=${trace.tickSequence} ` +
+          `scheduledAt=${new Date(trace.scheduledAtMs).toISOString()} ` +
+          `firedAt=${new Date(trace.firedAtMs).toISOString()} ` +
+          `driftMs=${trace.driftMs} runnable=${canRunInterval} ` +
+          `syncing=${syncing} updateCheckRunning=${updateCheckRunning} ` +
+          `phase=${status.phase} currentRunReason=${status.currentRunReason ?? "none"} ` +
+          `decision=${decision}`,
+        );
+        if (decision === "run") {
+          void runUpdateCheck(trace);
         }
-      }, options.intervalMs ?? DEFAULT_INTERVAL_MS);
+      }, intervalMs);
       unrefTimer(intervalId);
     },
     stop: () => {
       started = false;
+      localChangeTrackingComplete = false;
       logger.info("sync service stopped");
       pendingTrigger = null;
       clearLocalChangeTimers();
@@ -1720,6 +1898,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         globalThis.clearInterval(intervalId);
         intervalId = null;
       }
+      logger.debug(
+        `update check scheduler stopped — generation=${schedulerGeneration} ` +
+        `ticks=${intervalTickSequence}`,
+      );
+      nextIntervalScheduledAtMs = null;
     },
     syncNow,
     flushPendingChanges: () => {

@@ -6,7 +6,10 @@ import {
   DEFAULT_CLOUDFLARE_SPACE_NAME,
   writeCloudflareSyncSettings,
 } from "@/shared/storage/cloudflare-sync-settings";
-import { initializeCloudflareSpaceSettings } from "@/sync/clients/cloudflare";
+import {
+  initializeCloudflareSpaceSettings,
+  readCloudflareV2LocalRevision,
+} from "@/sync/clients/cloudflare";
 import {
   CloudflareV2LocalStateStore,
   hasPersistedCloudflareV2LocalState,
@@ -95,5 +98,22 @@ describe("Cloudflare 首次空间初始化", () => {
       spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
       remoteMode: "anonymous",
     });
+  });
+
+  it("reads the persisted local revision for the selected Cloudflare space", async () => {
+    const localState = new CloudflareV2LocalStateStore(
+      API_BASE,
+      "factory-a",
+    );
+    await localState.writeAppliedRevision("revision-42");
+
+    await expect(readCloudflareV2LocalRevision(
+      `${API_BASE}/`,
+      "factory-a",
+    )).resolves.toBe("revision-42");
+    await expect(readCloudflareV2LocalRevision(
+      API_BASE,
+      "factory-b",
+    )).resolves.toBe("0");
   });
 });

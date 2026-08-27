@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./canvas-lock-audit";
 
 const TOOLTIP_TEXT = "自然资源现在由基地面板的地区资源卡片控制";
 const APP_URL = "http://127.0.0.1:4174/";

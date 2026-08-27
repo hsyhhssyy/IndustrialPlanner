@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { getLogLevel, setLogLevel } from "@/shared/logging/logger";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 
 import {
@@ -93,6 +94,60 @@ describe("sync-service", () => {
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
     expect(status.lastUploadAt).not.toBeNull();
+  });
+
+  it("does not enter downloading while an interval pass only classifies an unchanged plan", async () => {
+    const observedPhases: string[] = [];
+    const adapter = createAdapter();
+    adapter.sync.mockResolvedValue({
+      adapterId: "adapter",
+      mode: "full-no-revision",
+      status: "idle",
+      changedAssetIds: [],
+    });
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      onStatusChange: (status) => {
+        if (status.currentRunReason === "interval") {
+          observedPhases.push(status.phase);
+        }
+      },
+    });
+
+    await service.syncNow("interval");
+
+    expect(observedPhases).toContain("idle");
+    expect(observedPhases).not.toContain("downloading");
+  });
+
+  it("enters downloading only when an adapter begins applying remote content", async () => {
+    const observedPhases: string[] = [];
+    const adapter = createNamedAdapter("adapter", []);
+    adapter.sync.mockImplementation(async (_session, syncOptions) => {
+      syncOptions.transaction.beginDownload?.();
+      return {
+        adapterId: "adapter",
+        mode: "full-no-revision",
+        status: "downloaded",
+        changedAssetIds: ["single"],
+      };
+    });
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      onStatusChange: (status) => {
+        if (status.currentRunReason === "interval") {
+          observedPhases.push(status.phase);
+        }
+      },
+    });
+
+    await service.syncNow("interval");
+
+    expect(observedPhases).toContain("downloading");
   });
 
   it("fails fast and unlocks the canvas when initial network sync fails", async () => {
@@ -236,23 +291,28 @@ describe("sync-service", () => {
     ]);
   });
 
-  it("keeps a single-asset local-change scope incomplete", async () => {
+  it("classifies every adapter on local change and marks the pass complete", async () => {
     vi.useFakeTimers();
     const markApplied = vi.fn<SyncRemoteSession["markApplied"]>(async () => undefined);
-    const adapter = createNamedAdapter("world-documents", []);
+    const calls: string[] = [];
+    const worldDocuments = createNamedAdapter("world-documents", calls);
+    const blueprints = createNamedAdapter("blueprints", calls);
     const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote({ markApplied }),
-      adapters: [adapter],
+      adapters: [worldDocuments, blueprints],
       intervalMs: 60_000,
     });
 
     service.start();
     await vi.waitFor(() => {
-      expect(adapter.sync).toHaveBeenCalledTimes(1);
+      expect(worldDocuments.sync).toHaveBeenCalledTimes(1);
+      expect(blueprints.sync).toHaveBeenCalledTimes(1);
     });
     markApplied.mockClear();
-    adapter.sync.mockClear();
+    worldDocuments.sync.mockClear();
+    blueprints.sync.mockClear();
+    calls.length = 0;
 
     service.notifyLocalChange({
       adapterId: "world-documents",
@@ -260,12 +320,17 @@ describe("sync-service", () => {
     });
     await vi.advanceTimersByTimeAsync(5_000);
     await vi.waitFor(() => {
-      expect(adapter.sync).toHaveBeenCalledTimes(1);
+      expect(worldDocuments.sync).toHaveBeenCalledTimes(1);
+      expect(blueprints.sync).toHaveBeenCalledTimes(1);
     });
 
-    expect(markApplied).toHaveBeenCalledWith(expect.objectContaining({
-      scopeComplete: false,
-    }));
+    expect(calls).toEqual([
+      "world-documents:all",
+      "blueprints:all",
+    ]);
+    expect(markApplied).toHaveBeenCalledTimes(2);
+    expect(markApplied.mock.calls.map(([result]) => result.scopeComplete))
+      .toEqual([true, true]);
     service.stop();
   });
 
@@ -375,7 +440,7 @@ describe("sync-service", () => {
     });
   });
 
-  it("uploads only the dirty adapter and asset after the debounce window", async () => {
+  it("uses dirty notifications without limiting local-change plan coverage", async () => {
     vi.useFakeTimers();
     const calls: string[] = [];
     const firstAdapter = createNamedAdapter("first", calls);
@@ -410,8 +475,8 @@ describe("sync-service", () => {
       expect(service.getStatus().saveState).toBe("idle");
     });
 
-    expect(calls).toEqual(["second:include=asset-b"]);
-    expect(firstAdapter.sync).not.toHaveBeenCalled();
+    expect(calls).toEqual(["first:all", "second:all"]);
+    expect(firstAdapter.sync).toHaveBeenCalledTimes(1);
     expect(secondAdapter.sync).toHaveBeenCalledTimes(1);
     service.stop();
   });
@@ -932,13 +997,15 @@ describe("sync-service", () => {
     // 后续在同步进行中连续调用 notifyLocalChange 才会走 5s / 30s 防抖。
     service.notifyLocalChange({ adapterId: "adapter" });
     await vi.waitFor(() => {
-      expect(service.getStatus().phase).toBe("idle");
+      expect(adapter.sync).toHaveBeenCalledTimes(2);
+      expect(service.getStatus().saveState).toBe("idle");
     });
     adapter.sync.mockClear();
 
     service.notifyLocalChange({ adapterId: "adapter" });
     await vi.waitFor(() => {
-      expect(service.getStatus().phase).toBe("idle");
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+      expect(service.getStatus().saveState).toBe("idle");
     });
     // idle 状态下每次 notifyLocalChange 立即同步，验证确实调用了 adapter
     expect(adapter.sync).toHaveBeenCalledTimes(1);
@@ -988,6 +1055,127 @@ describe("sync-service", () => {
       lastError: null,
     });
     service.stop();
+  });
+
+  it("emits scheduler diagnostics only while debug logging is enabled", async () => {
+    vi.useFakeTimers();
+    const previousLogLevel = getLogLevel();
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const adapter = createAdapter();
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    try {
+      setLogLevel("debug");
+      service.start();
+      await vi.waitFor(() => {
+        expect(service.getStatus().phase).toBe("idle");
+      });
+      debugSpy.mockClear();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.waitFor(() => {
+        expect(service.getStatus().lastUpdateCheckAt).not.toBeNull();
+      });
+
+      const messages = debugSpy.mock.calls
+        .map(([message]) => String(message))
+        .join("\n");
+      expect(messages).toContain(
+        "update check timer fired — generation=1 tick=1",
+      );
+      expect(messages).toContain(
+        "driftMs=0 runnable=true syncing=false updateCheckRunning=false " +
+        "phase=idle currentRunReason=none decision=run",
+      );
+      expect(messages).toContain(
+        "update check started — generation=1 tick=1",
+      );
+      expect(messages).toContain(
+        "update check probe completed — generation=1 tick=1 unchanged=true",
+      );
+      expect(messages).toContain(
+        "update check finished — generation=1 tick=1 outcome=remote-unchanged",
+      );
+
+      const previousUpdateCheckAt = service.getStatus().lastUpdateCheckAt;
+      debugSpy.mockClear();
+      setLogLevel("warn");
+      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.waitFor(() => {
+        expect(service.getStatus().lastUpdateCheckAt).not.toBe(previousUpdateCheckAt);
+      });
+      expect(debugSpy).not.toHaveBeenCalled();
+    } finally {
+      service.stop();
+      setLogLevel(previousLogLevel);
+      debugSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("records an interval tick as discarded while a sync is running", async () => {
+    vi.useFakeTimers();
+    const previousLogLevel = getLogLevel();
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    let releaseStartupSync!: () => void;
+    const startupSyncGate = new Promise<void>((resolve) => {
+      releaseStartupSync = resolve;
+    });
+    const adapter = createAdapter();
+    adapter.sync.mockImplementation(async (): Promise<SyncAdapterResult> => {
+      await startupSyncGate;
+      return {
+        adapterId: "adapter",
+        mode: "full-no-revision",
+        status: "idle",
+        changedAssetIds: [],
+      };
+    });
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    try {
+      setLogLevel("debug");
+      service.start();
+      await vi.waitFor(() => {
+        expect(service.getStatus()).toMatchObject({
+          phase: "downloading",
+          currentRunReason: "startup",
+        });
+      });
+      debugSpy.mockClear();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      const messages = debugSpy.mock.calls
+        .map(([message]) => String(message))
+        .join("\n");
+      expect(messages).toContain(
+        "syncing=true updateCheckRunning=false phase=downloading " +
+        "currentRunReason=startup decision=discard-syncing",
+      );
+      expect(messages).not.toContain("update check started");
+    } finally {
+      releaseStartupSync();
+      await vi.waitFor(() => {
+        expect(service.getStatus().phase).toBe("idle");
+      });
+      service.stop();
+      setLogLevel(previousLogLevel);
+      debugSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
   });
 
   it("keeps a failed save visible until a later sync succeeds", async () => {
@@ -1194,7 +1382,8 @@ describe("sync-service", () => {
     // 先触发一次上传并等待完成，确认正常路径 saveState 回到 idle。
     service.notifyLocalChange({ adapterId: "adapter" });
     await vi.waitFor(() => {
-      expect(service.getStatus().phase).toBe("idle");
+      expect(adapter.sync).toHaveBeenCalledTimes(2);
+      expect(service.getStatus().saveState).toBe("idle");
     });
     expect(service.getStatus().saveState).toBe("idle");
 

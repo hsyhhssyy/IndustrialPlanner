@@ -342,6 +342,7 @@ describe("createRenderSceneOrchestrator", () => {
         registry: {
           entityDefinitions: [],
           baseDefinitions: [],
+          recipeDefinitions: [],
         },
         app: {
           state: {
@@ -623,6 +624,7 @@ describe("createRenderSceneOrchestrator", () => {
             },
           ],
           baseDefinitions: [],
+          recipeDefinitions: [],
           queries: {
             isDedicatedLogisticsDevice: vi.fn(() => false),
             resolveDedicatedLogisticsKind: vi.fn(() => null),
@@ -756,6 +758,7 @@ describe("createRenderSceneOrchestrator", () => {
             },
           ],
           baseDefinitions: [],
+          recipeDefinitions: [],
           queries: {
             isDedicatedLogisticsDevice: vi.fn((definitionId: string) =>
               definitionId === "belt_straight_1x1",

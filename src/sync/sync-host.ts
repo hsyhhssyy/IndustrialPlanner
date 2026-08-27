@@ -130,6 +130,7 @@ import {
   CloudflareV2WorkerClient,
   createCloudflareSyncRemote,
   initializeCloudflareSpaceSettings,
+  readCloudflareV2LocalRevision,
 } from "./clients/cloudflare";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import {
@@ -375,6 +376,46 @@ export async function createSyncHost(
         spaceId: resolveCloudflareSpaceId(settings),
       }),
     };
+  };
+  let localRevisionTargetKey: string | null = null;
+  let localRevisionRefreshGeneration = 0;
+  const refreshCurrentLocalRevision = async (): Promise<void> => {
+    const generation = ++localRevisionRefreshGeneration;
+    if (readActiveSyncProvider() !== "cloudflare") {
+      localRevisionTargetKey = null;
+      state.setCurrentLocalRevision(null);
+      return;
+    }
+
+    let target: ReturnType<typeof getCloudflareTarget>;
+    try {
+      target = getCloudflareTarget();
+    } catch {
+      localRevisionTargetKey = null;
+      state.setCurrentLocalRevision(null);
+      return;
+    }
+
+    if (localRevisionTargetKey !== target.targetKey) {
+      localRevisionTargetKey = target.targetKey;
+      state.setCurrentLocalRevision(null);
+    }
+
+    try {
+      const revision = await readCloudflareV2LocalRevision(
+        resolveBackendApiBaseUrl(),
+        target.spaceId,
+      );
+      if (
+        generation === localRevisionRefreshGeneration
+        && readActiveSyncProvider() === "cloudflare"
+        && resolveCloudflareTargetKey() === target.targetKey
+      ) {
+        state.setCurrentLocalRevision(revision);
+      }
+    } catch {
+      // 本地 revision 读取失败不影响同步；目标切换时已清空旧目标的展示值。
+    }
   };
   let currentSettings = await readSyncConnectionSettings();
   // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
@@ -717,11 +758,20 @@ export async function createSyncHost(
       // Original code:
       // state.setRemoteDevices(await listRemoteDevices(client));
     },
-    onStatusChange: state.setStatus,
+    onStatusChange: (nextStatus) => {
+      state.setStatus(nextStatus);
+      if (
+        nextStatus.currentRunReason === null
+        && (nextStatus.phase === "idle" || nextStatus.phase === "error")
+      ) {
+        void refreshCurrentLocalRevision();
+      }
+    },
     onConflictDiscoveryStart: state.beginConflictDiscovery,
     resolveConflicts: state.requestConflictResolutions,
     onConflictWorkflowFinished: state.finishConflictWorkflow,
   });
+  await refreshCurrentLocalRevision();
   notifyConflictDetected = service.notifyConflictDetected;
 
   const actions: SyncContract["actions"] = {

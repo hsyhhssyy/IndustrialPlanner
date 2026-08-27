@@ -1278,7 +1278,7 @@ describe("GenericDeviceSprite", () => {
     expect(previewMask?.texture).toBe(resolvedMaskTexture)
   })
 
-  it("uses the blueprint footprint rectangle itself for simplified preview scanlines", async () => {
+  it("keeps simplified scanlines while distinguishing preview focus from related devices", async () => {
     const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("blueprint-device-mask-texture")
 
@@ -1337,6 +1337,9 @@ describe("GenericDeviceSprite", () => {
 
     const previewEffectRoot = resolvePreviewEffectRoot(overlayLayer)
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const previewBorderGraphics = previewEffectRoot?.children?.[3] as {
+      strokeCalls?: unknown[];
+    } | undefined
 
     expect(previewEffectRoot?.visible).toBe(true)
     expect(scanlineTiling).toMatchObject({
@@ -1345,11 +1348,53 @@ describe("GenericDeviceSprite", () => {
       y: 40,
       width: 48,
       height: 32,
+      tint: 0x666666,
       mask: null,
       texture: {
         id: "/textures/scanline-45deg-50opacity.png",
       },
     })
+    expect(previewBorderGraphics?.strokeCalls).toContainEqual({
+      width: 2,
+      color: 0xffa500,
+    })
+
+    const relatedContext = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    })
+    Object.assign(relatedContext.workspace, {
+      app: createRenderContextAppStub(renderHost),
+    })
+    Object.assign(relatedContext, {
+      powerInteractionVisualState: {
+        visiblePowerRangeEntityIds: new Set<string>(),
+        highlightedEntityIds: new Set(["dummy-blueprint-preview"]),
+      },
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, relatedContext)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: Array<{ visible?: boolean; children?: RenderedSpriteSnapshot[] }>;
+    } | undefined
+    const selectionEffectRoot = resolveSelectionEffectRoot(overlayLayer)
+    const relatedScanlineTiling = selectionEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(previewEffectRoot?.visible).toBe(false)
+    expect(selectionEffectRoot?.visible).toBe(true)
+    expect(relatedScanlineTiling).toMatchObject({
+      visible: true,
+      tint: 0x666666,
+      mask: null,
+    })
+    expect(overlayRoot?.children).toHaveLength(3)
   })
 
   it("uses the blueprint footprint rectangle itself for simplified marquee selection", async () => {
@@ -1420,6 +1465,7 @@ describe("GenericDeviceSprite", () => {
       y: 40,
       width: 48,
       height: 32,
+      tint: 0x666666,
       mask: null,
       texture: {
         id: "/textures/scanline-45deg-50opacity.png",
@@ -1946,6 +1992,7 @@ describe("GenericDeviceSprite", () => {
         id: "device-mask-texture",
       },
     })
+    expect(scanlineTiling?.tint).toBe(0xffffff)
     expect(scanlineTiling?.mask).toBe(previewMask)
   })
 
@@ -1992,6 +2039,11 @@ describe("GenericDeviceSprite", () => {
 
     expect(overlayRoot?.children?.[0]?.visible).toBe(false)
     expect(overlayRoot?.children?.[1]?.visible).toBe(true)
+
+    const selectionEffectRoot = overlayRoot?.children?.[1] as {
+      children?: RenderedSpriteSnapshot[];
+    } | undefined
+    expect(selectionEffectRoot?.children?.[0]?.tint).toBe(0xffffff)
   })
 
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {

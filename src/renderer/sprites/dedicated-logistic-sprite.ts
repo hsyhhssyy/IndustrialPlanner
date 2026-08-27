@@ -221,6 +221,13 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.drawPipeSelectionGlow(layout, context)
   }
 
+  protected drawRelatedOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    this.drawScanlineOverlay(layout, context, false)
+  }
+
   protected onDestroy(): void {
     this.disposed = true
   }
@@ -247,6 +254,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   private drawScanlineOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
+    drawBorder = true,
   ): void {
     this.loadScanlineTexture()
 
@@ -269,14 +277,16 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.scanlineRectMask.clear()
     this.scanlineTiling.mask = null
 
-    this.previewBorderGraphics.visible = true
-    this.previewBorderGraphics
-      .rect(layout.x, layout.y, layout.width, layout.height)
-      .stroke({
-        width: PREVIEW_BORDER_WIDTH,
-        color: borderColor,
-        alpha: PREVIEW_BORDER_ALPHA,
-      })
+    if (drawBorder) {
+      this.previewBorderGraphics.visible = true
+      this.previewBorderGraphics
+        .rect(layout.x, layout.y, layout.width, layout.height)
+        .stroke({
+          width: PREVIEW_BORDER_WIDTH,
+          color: borderColor,
+          alpha: PREVIEW_BORDER_ALPHA,
+        })
+    }
 
     this.previewEffectRoot.visible = true
   }

@@ -9,7 +9,7 @@ import {
   test,
   type APIRequestContext,
   type Page,
-} from "playwright/test";
+} from "./canvas-lock-audit";
 
 import { BLUEPRINT_SCHEMA_VERSION } from "../../domain/document/blueprint-document";
 import { WORLD_DOCUMENT_SCHEMA_VERSION } from "../../domain/document/world-document";

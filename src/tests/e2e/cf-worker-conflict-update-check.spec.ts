@@ -15,7 +15,7 @@ import {
   test,
   type APIRequestContext,
   type Page,
-} from "playwright/test";
+} from "./canvas-lock-audit";
 
 import {
   CF_SYNC_V2_PROTOCOL,
@@ -283,8 +283,15 @@ async function mutateStoredWorldDocument(
   page: Page,
   baseId: string,
   name: string,
+  options: {
+    readonly notifyDirty?: boolean;
+  } = {},
 ): Promise<void> {
-  const mutationResult = await page.evaluate(async ({ targetBaseId, nextName }) => {
+  const mutationResult = await page.evaluate(async ({
+    targetBaseId,
+    nextName,
+    notifyDirty,
+  }) => {
     const storageModuleUrl = "/src/shared/storage/world-document-storage.ts";
     const storage = await import(/* @vite-ignore */ storageModuleUrl);
     const documents = await storage.listLatestWorldDocumentsByBase({});
@@ -303,7 +310,21 @@ async function mutateStoredWorldDocument(
     };
     // 直接写入持久化层用于构造“非当前基地已在另一标签页发生本地改动”的真实同步输入；
     // 不调用编辑器 action，避免测试过程切换到目标基地并提前触发同步。
+    // AI-CORRECTION 2026-08-25: 常规同步依赖脏标免除重复 hash；非刷新场景必须显式发出
+    // storage change，使测试输入与正式本地写入链路一致。startup 场景重建服务并执行未知状态 hash。
     await storage.writeWorldDocument(nextDocument);
+    if (notifyDirty) {
+      const storageChangeModuleUrl = "/src/shared/storage/storage-change-event.ts";
+      const { emitStorageChange } = await import(
+        /* @vite-ignore */ storageChangeModuleUrl
+      );
+      emitStorageChange({
+        assetType: "world-document",
+        assetId: nextDocument.documentKey,
+        origin: "local",
+        timestamp: Date.now(),
+      });
+    }
     return {
       baseId: nextDocument.baseId as string,
       name: nextDocument.meta.name as string,
@@ -311,6 +332,7 @@ async function mutateStoredWorldDocument(
   }, {
     targetBaseId: baseId,
     nextName: name,
+    notifyDirty: options.notifyDirty ?? false,
   });
 
   expect(mutationResult).toEqual({ baseId, name });
@@ -534,7 +556,7 @@ test("Cloudflare conflict: use local", async ({ page, request }) => {
   }
 });
 
-test("Cloudflare inactive base conflict: interval and startup", async ({
+test("Cloudflare inactive base conflict: dirty local change and startup", async ({
   page,
   request,
 }) => {
@@ -590,15 +612,21 @@ async function runInactiveBaseConflictScenario(options: {
 
   // ─── Phase 2: 默认小检查必须在未切换基地时发现非当前基地冲突 ───
   // AI-CORRECTION 2026-08-24: 本阶段现统一称为“默认更新检查”。
-  const previousUpdateCheckAt = await page.evaluate(() =>
-    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
-  );
-  await mutateStoredWorldDocument(
-    page,
-    inactiveBaseId,
-    "inactive-local-interval",
-  );
+  // AI-CORRECTION 2026-08-25: 常规同步现在以本地脏标证明资产可复用 touch hash；本阶段改为
+  // 验证正式脏标通知触发的全量 plan 分类仍能发现非当前基地冲突。
+  // AI-REMOVED 2026-08-25:
+  // Reason: 本地修改发出正式脏标后会立即触发常规同步，不再等待默认更新检查。
+  // Trigger: 用户确认同步以脏标避免每轮重新 hash，测试必须模拟同一输入 contract。
+  // Evidence: SyncService.notifyLocalChange 在 idle 首次变更时立即调用 syncNow("local-change")。
+  // Replacement: 下方先写远端、再写本地并发出 storage change 的顺序。
+  // Risk: Low；默认更新检查的远端探测与短路由同文件其他场景覆盖。
+  // Human Review: Required
+  //
+  // Original code:
+  // const previousUpdateCheckAt = await page.evaluate(() =>
+  //   (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+  //     ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
+  // );
   const intervalRemoteContent = createWorldDocumentVariant(
     inactiveBaseBaseline.content,
     "inactive-remote-interval",
@@ -610,15 +638,30 @@ async function runInactiveBaseConflictScenario(options: {
     intervalRemoteContent,
   );
   expect(intervalRemoteRevision).not.toBe(revisionAfterInitialSync);
+  await mutateStoredWorldDocument(
+    page,
+    inactiveBaseId,
+    "inactive-local-interval",
+    { notifyDirty: true },
+  );
 
-  await expect.poll(async () => await page.evaluate(() =>
-    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
-  ), {
-    message: "默认更新检查应发现非当前基地的远端 revision 变化",
-    timeout: 75_000,
-    intervals: [1000],
-  }).not.toBe(previousUpdateCheckAt);
+  // AI-REMOVED 2026-08-25:
+  // Reason: 脏标通知会立即触发常规同步；等待周期时间戳既延长测试，也不再证明冲突来源。
+  // Trigger: 用户要求测试在本地持久化修改后插入脏标。
+  // Evidence: 本阶段冲突应由 local-change pass 产生，后续 pendingConflict 断言直接验证结果。
+  // Replacement: 下方 conflictTitle 可见性与 pendingConflict 内容断言。
+  // Risk: Low；更新检查计时仍由独立 E2E 与单元测试覆盖。
+  // Human Review: Required
+  //
+  // Original code:
+  // await expect.poll(async () => await page.evaluate(() =>
+  //   (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+  //     ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
+  // ), {
+  //   message: "默认更新检查应发现非当前基地的远端 revision 变化",
+  //   timeout: 75_000,
+  //   intervals: [1000],
+  // }).not.toBe(previousUpdateCheckAt);
 
   const conflictTitle = page.getByRole("heading", { name: "同步冲突" });
   await expect(conflictTitle).toBeVisible({ timeout: 60_000 });
@@ -1089,6 +1132,21 @@ async function runConflictScenario(options: {
   const previousUpdateCheckAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
       ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
+  );
+  const checkTimingBaseline = await page.evaluate(() => {
+    const sync = (window as unknown as BrowserTestWindow)
+      .__industrialPlannerAppHost?.workspace?.sync;
+    return {
+      observedAt: new Date().toISOString(),
+      performanceNow: performance.now(),
+      visibilityState: document.visibilityState,
+      phase: sync?.state.status.phase ?? null,
+      currentRunReason: sync?.state.status.currentRunReason ?? null,
+      lastUpdateCheckAt: sync?.state.status.lastUpdateCheckAt ?? null,
+    };
+  });
+  console.log(
+    `[TEST] Update-check timing baseline: ${JSON.stringify(checkTimingBaseline)}`,
   );
   console.log("[TEST] Waiting for the next update check...");
   await expect.poll(async () => await page.evaluate(() =>

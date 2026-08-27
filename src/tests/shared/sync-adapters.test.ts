@@ -370,6 +370,87 @@ describe("sync-adapters", () => {
     expect(entries.find((entry) => entry.id === "blueprint-b")?.value).toEqual({ name: "B" });
   });
 
+  it("reuses persisted touch hashes for clean collection assets", async () => {
+    const cleanValue = { name: "clean" };
+    const dirtyValue = { name: "dirty" };
+    const cleanHash = createStableJsonHash(cleanValue);
+    const dirtyHash = createStableJsonHash(dirtyValue);
+    const adapter = createFullWithRevisionAdapter({
+      id: "dirty-hash-scan",
+      indexPath: "assets/dirty-hash-scan/index.json",
+      entryPath: (id) => `assets/dirty-hash-scan/${id}.json`,
+      listLocal: async () => [
+        { id: "clean", value: cleanValue, deletedAt: null },
+        { id: "dirty", value: dirtyValue, deletedAt: null },
+      ],
+      writeLocal: async () => undefined,
+    });
+    const computeContentHashes = vi.fn<SyncRemoteSession["computeContentHashes"]>(
+      async (requests) => requests.map((request) => createStableJsonHash(request.value)),
+    );
+    const readAsset = vi.fn<SyncRemoteSession["readAsset"]>(async () => null);
+    const session: SyncRemoteSession = {
+      localState: {
+        getLastSyncedHash: async (assetKey) =>
+          assetKey.endsWith(":clean") ? cleanHash : dirtyHash,
+        setLastSyncedHash: async () => undefined,
+        getRemoteRevision: async () => null,
+        setRemoteRevision: async () => undefined,
+        getRemoteEtag: async () => null,
+        setRemoteEtag: async () => undefined,
+      },
+      computeContentHashes,
+      prefetchIndexes: async () => undefined,
+      readIndex: async () => ({
+        revision: 1,
+        entries: {
+          clean: {
+            revision: 1,
+            contentHash: cleanHash,
+            deletedAt: null,
+            committedAt: null,
+          },
+          dirty: {
+            revision: 1,
+            contentHash: dirtyHash,
+            deletedAt: null,
+            committedAt: null,
+          },
+        },
+        committedAt: null,
+      }),
+      readAsset,
+      checkCollections: async () => ({ changedCollections: [] }),
+      beginWriteBatch: () => ({
+        putAsset: () => undefined,
+        putTombstone: () => undefined,
+        commit: async () => ({ writes: [] }),
+        discard: async () => undefined,
+      }),
+      markApplied: async () => undefined,
+    };
+    const transaction: SyncEngineTransaction = {
+      writeBatch: session.beginWriteBatch(),
+      stageTouch: () => undefined,
+      stageDeletion: () => undefined,
+      recordItem: () => undefined,
+      recordUpload: () => undefined,
+      assertDownloadAllowed: async () => undefined,
+      getLocalChangeState: (_adapterId, assetId) =>
+        assetId === "dirty" ? "dirty" : "clean",
+    };
+
+    await expect(adapter.sync(session, { transaction }))
+      .resolves.toMatchObject({ status: "idle" });
+
+    expect(computeContentHashes).toHaveBeenCalledTimes(1);
+    expect(computeContentHashes).toHaveBeenCalledWith([{
+      algorithm: adapter.collection.hashAlgorithm,
+      value: dirtyValue,
+    }]);
+    expect(readAsset).not.toHaveBeenCalled();
+  });
+
   it("does not advance lastSyncedHash when a collection batch fails", async () => {
     const setLastSyncedHash = vi.fn(async () => undefined);
     const collection = createFullWithRevisionAdapter({
@@ -729,7 +810,7 @@ describe("sync-adapters", () => {
     expect(clearedTouch).toBe(true);
   });
 
-  it("uses a stable canonical ETag to skip rebuilding an unchanged patch collection", async () => {
+  it("does not read unchanged patch asset bodies during full plan classification", async () => {
     const client = new MemoryStorageClient();
     const originalReadTextFile = client.readTextFile.bind(client);
     client.readTextFile = vi.fn(async (relativePath: string) => {
@@ -781,8 +862,31 @@ describe("sync-adapters", () => {
       status: "idle",
     });
 
-    expect(client.stat).toHaveBeenCalledWith("documents/index.json");
-    expect(client.readPaths).toHaveLength(readCountAfterCacheWarmup);
+    // AI-REMOVED 2026-08-25:
+    // Reason: adapter 级 WebDAV ETag 短路已被完整 plan 分类取代，是否 stat canonical index
+    //   不再是公共同步引擎的行为契约。
+    // Trigger: CF 每轮必须消费同一份完整 plan，WebDAV 本轮不作为兼容约束。
+    // Evidence: 回归目标改为不读取未变化资产正文，避免把 provider 探测细节固化进 adapter 测试。
+    // Replacement: 下方 readPaths 数量断言。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(client.stat).toHaveBeenCalledWith("documents/index.json");
+    // AI-CORRECTION 2026-08-25: 完整 plan 分类需要读取一次 canonical index；
+    // 回归约束是只读 index、不读取任何未变化资产正文。
+    // AI-REMOVED 2026-08-25:
+    // Reason: 完整分类会新增一次 index 读取，readPaths 总数不变不再成立。
+    // Trigger: adapter 级 ETag 短路移除。
+    // Evidence: 实际新增读取仅为 documents/index.json，没有 canvas 正文路径。
+    // Replacement: 下方 newReadPaths 精确断言。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(client.readPaths).toHaveLength(readCountAfterCacheWarmup);
+    const newReadPaths = client.readPaths.slice(readCountAfterCacheWarmup);
+    expect(newReadPaths).toEqual(["documents/index.json"]);
   });
 
   it("repairs a legacy patch index after normalizing device-local fields", async () => {

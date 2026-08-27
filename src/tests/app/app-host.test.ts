@@ -1451,6 +1451,98 @@ describe("createAppHost", () => {
     });
   });
 
+  it("keeps an attached canvas floating toolbar aligned with the projected collection across viewport rotations", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities["dummy-entity-1"]!.position = { x: -2, y: -1 };
+    document.entities["dummy-entity-7"]!.position = { x: 1, y: 0 };
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.preview.replace([
+      "dummy-entity-1",
+      "dummy-entity-7",
+    ]);
+    appHost.internalActions.setCanvasFloatingToolbarSize({
+      width: 44,
+      height: 16,
+    });
+
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection(
+      ["canvas-floating-toolbar-button-ok"],
+      EntityCollectionType.preview,
+    )).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+      x: 320,
+      y: 250,
+    });
+
+    const expectedRotations = [
+      { displayRotation: 90, anchor: { x: 320, y: 234 } },
+      { displayRotation: 180, anchor: { x: 320, y: 250 } },
+      { displayRotation: 270, anchor: { x: 320, y: 234 } },
+      { displayRotation: 0, anchor: { x: 320, y: 250 } },
+    ] as const;
+
+    for (const expected of expectedRotations) {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        button: 0,
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+      });
+
+      expect(editorHost.state.viewport.displayRotation).toBe(expected.displayRotation);
+      expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual(
+        expected.anchor,
+      );
+    }
+  });
+
+  it("uses the projected collection bottom edge when rotated toolbar placement falls back below", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities["dummy-entity-1"]!.position = { x: -11, y: -1 };
+    document.entities["dummy-entity-7"]!.position = { x: -8, y: 0 };
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    editorHost.actions.setViewportDisplayRotation(90);
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.preview.replace([
+      "dummy-entity-1",
+      "dummy-entity-7",
+    ]);
+    appHost.internalActions.setCanvasFloatingToolbarSize({
+      width: 44,
+      height: 16,
+    });
+
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection(
+      ["canvas-floating-toolbar-button-ok"],
+      EntityCollectionType.preview,
+    )).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+      x: 320,
+      y: 182,
+    });
+  });
+
   it("moves the preview draft and applies or cancels the move gesture", () => {
     vi.useFakeTimers();
 

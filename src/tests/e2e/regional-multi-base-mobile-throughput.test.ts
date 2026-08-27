@@ -5,7 +5,7 @@ import {
   expect,
   test,
   type Page,
-} from "playwright/test";
+} from "./canvas-lock-audit";
 
 import type { BlueprintDocument } from "../../domain/document/blueprint-document";
 import {

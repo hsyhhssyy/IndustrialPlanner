@@ -5,6 +5,7 @@ import type {
   SyncPendingConflict,
   SyncSettings,
   SyncState,
+  SyncStatus,
 } from "@/domain/sync";
 import type {
   SyncAdapterConflict,
@@ -21,9 +22,10 @@ const EMPTY_SETTINGS: SyncSettings = {
 
 export class SyncStateImpl implements SyncState {
   public settings: SyncSettings = EMPTY_SETTINGS;
-  public status: SyncServiceStatus = {
+  public status: SyncServiceStatus & Pick<SyncStatus, "currentLocalRevision"> = {
     phase: "idle",
     saveState: "idle",
+    currentLocalRevision: null,
     initialSyncStage: "ready",
     hasCompletedInitialFeatureSync: false,
     currentRunReason: null,
@@ -53,7 +55,17 @@ export class SyncStateImpl implements SyncState {
   }
 
   public setStatus(status: SyncServiceStatus): void {
-    this.status = status;
+    this.status = {
+      ...status,
+      currentLocalRevision: this.status.currentLocalRevision,
+    };
+  }
+
+  public setCurrentLocalRevision(revision: string | null): void {
+    this.status = {
+      ...this.status,
+      currentLocalRevision: revision,
+    };
   }
 
   public setSettings(settings: SyncSettings): void {

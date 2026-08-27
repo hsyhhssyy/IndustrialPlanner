@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./canvas-lock-audit";
 
 test("recipe item tooltip escapes inspector clipping without changing layout", async ({
   page,

@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./canvas-lock-audit";
 
 test("collects main and Dedicated Worker logs and keeps them across refresh", async ({
   page,

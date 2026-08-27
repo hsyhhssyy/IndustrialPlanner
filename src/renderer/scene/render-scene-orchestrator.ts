@@ -37,6 +37,11 @@ import {
   resolvePowerInteractionVisualState,
   type PowerInteractionVisualState,
 } from "../power-interaction-visual-state"
+import {
+  createGasInteractionDefinitionIndex,
+  resolveGasInteractionVisualState,
+  type GasInteractionVisualState,
+} from "../gas-interaction-visual-state"
 
 import { BeltSprite } from "../sprites/belt-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -257,6 +262,9 @@ export function createRenderSceneOrchestrator(
   const invalidPlacementOverlayLayer = new Container()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
+  const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
+    renderHost.workspace.registry.recipeDefinitions,
+  )
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
   const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
@@ -485,6 +493,19 @@ export function createRenderSceneOrchestrator(
           renderHost.workspace.editor!.queries.listPowerRangeProvidersCoveringGridRect(gridRect),
       }),
     )
+    const gasInteractionVisualState = measureRenderStage(
+      frameProfiler,
+      "gasInteraction.resolve",
+      () => resolveGasInteractionVisualState({
+        activeTool: workspaceApp.state.activeTool,
+        moveKind: workspaceApp.state.moveKind,
+        entities: listEntitiesForFrame(),
+        previewEntityIds: editorCollections[EntityCollectionType.preview],
+        ghostEntityIds: editorCollections[EntityCollectionType.ghost],
+        entityDefinitionMap,
+        definitionIndex: gasInteractionDefinitionIndex,
+      }),
+    )
 
     const ctx: DecorationSyncContext = {
       viewportState,
@@ -559,6 +580,7 @@ export function createRenderSceneOrchestrator(
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
         logisticsPortOccupancy: null,
+        gasInteractionVisualState,
         powerInteractionVisualState,
         versions: frameVersions,
         cache: entitySpriteSyncCache,
@@ -1205,6 +1227,7 @@ function syncWorldEntitySprites(options: {
   };
   theme: AppTheme;
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
+  gasInteractionVisualState: GasInteractionVisualState;
   powerInteractionVisualState: PowerInteractionVisualState;
   profiler: DecorationProfiler | null;
   versions: RenderSpriteSyncVersions;
@@ -1229,6 +1252,7 @@ function syncWorldEntitySprites(options: {
     time: options.frameTime,
     suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
     suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
+    gasInteractionVisualState: options.gasInteractionVisualState,
     powerInteractionVisualState: options.powerInteractionVisualState,
     logisticsPortOccupancy: options.logisticsPortOccupancy,
     portOverlayManagedGlobally: true,

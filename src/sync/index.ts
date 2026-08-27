@@ -31,6 +31,7 @@ export type {
   SyncAdapterStatus,
   SyncAdapterSyncOptions,
   SyncEngineTransaction,
+  SyncLocalChangeState,
   SyncPlanItem,
   SyncPlanItemKind,
   SyncPlanUpload,

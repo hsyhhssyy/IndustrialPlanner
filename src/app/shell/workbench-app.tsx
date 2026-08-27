@@ -53,6 +53,7 @@ import {
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaGateway } from "@/app/pwa/pwa-gateway";
+import { createAppTelemetryController } from "@/app/telemetry";
 import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
@@ -775,6 +776,16 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   useEffect(() => {
     migrationController.initialize();
   }, [migrationController]);
+
+  useEffect(() => {
+    const telemetryController = createAppTelemetryController({
+      readScreenProfile: () => appHost.state.screenProfile,
+    });
+
+    return () => {
+      telemetryController.dispose();
+    };
+  }, [appHost]);
 
   // 版本检测：新版本自动弹出帮助对话框并切换到"版本更新"tab
   // AI-CORRECTION 2026-07-06: 现在必须同时满足版本变更与当前版本存在新的 changelog 条目，才自动弹出。

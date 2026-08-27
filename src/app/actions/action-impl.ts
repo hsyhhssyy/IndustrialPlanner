@@ -11,6 +11,7 @@ import type {
 } from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/domain/app";
 import { lookupText } from "@/shared/i18n";
+import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
@@ -609,27 +610,57 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return false;
     }
 
-    const topLeftCellRect = editor.queries.findClientRectForGridCell({
-      x: collectionRect.x,
-      y: collectionRect.y,
+    // AI-REMOVED 2026-08-25:
+    // Reason: 单独投影世界左上单元格无法代表旋转视角下的集合屏幕包围盒。
+    // Trigger: 基地视角旋转后，悬浮工具条锚点沿错误的屏幕方向计算。
+    // Evidence: 90°/180°/270° 下世界左上单元格不再是屏幕左上角，且世界 width 不再恒定映射到屏幕 X 轴。
+    // Replacement: 下方 collectionClientRect 使用完整 collectionRect 的四角投影结果。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const topLeftCellRect = editor.queries.findClientRectForGridCell({
+    //   x: collectionRect.x,
+    //   y: collectionRect.y,
+    // });
+    // if (topLeftCellRect === null) {
+    //   return false;
+    // }
+    const viewportState = editor.state.viewport;
+    const collectionClientRect = resolveViewportRectFromWorldGridRect({
+      gridRect: collectionRect,
+      viewportBounds: viewportState.clientRect,
+      viewportCenter: viewportState.center,
+      gridCellPixelSize: viewportState.gridCellPixelSize,
+      displayRotation: viewportState.displayRotation,
     });
-    if (topLeftCellRect === null) {
+    if (collectionClientRect === null) {
       return false;
     }
 
     const toolbarHeight = toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT;
     const toolbarWidth = toolbar.measuredSize?.width ?? 0;
-    const viewport = editor.state.viewport.clientRect;
-    const cellWidth = topLeftCellRect.width;
+    const viewport = viewportState.clientRect;
+
+    // AI-REMOVED 2026-08-25:
+    // Reason: 完整集合屏幕包围盒已经包含旋转后的实际宽度，不应再用单格宽度乘世界 width 重建。
+    // Trigger: 90°/270° 视角下集合的屏幕宽度对应世界 height。
+    // Evidence: resolveViewportRectFromWorldGridRect 会基于四角投影计算旋转后的 width。
+    // Replacement: aboveAnchor 直接使用 collectionClientRect.width。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const cellWidth = topLeftCellRect.width;
 
     const halfToolbarHeight = toolbarHeight / 2;
 
     const aboveAnchor: ClientPixelPoint = {
       x:
-        topLeftCellRect.left
-        + cellWidth * collectionRect.width / 2,
+        collectionClientRect.left
+        + collectionClientRect.width / 2,
       y:
-        topLeftCellRect.top
+        collectionClientRect.top
         - halfToolbarHeight
         - FLOATING_TOOLBAR_DEVICE_GAP_PX,
     };
@@ -638,31 +669,57 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     const viewportTopSixth = viewport.top + viewport.height / 6;
     if (aboveAnchor.y < viewportTopSixth) {
-      const bottomCellY = collectionRect.y + collectionRect.height - 1;
-      const bottomCellRect = editor.queries.findClientRectForGridCell({
-        x: collectionRect.x,
-        y: bottomCellY,
-      });
       const viewportBottomFiveSixths = viewport.top + (viewport.height * 5) / 6;
+      const belowY =
+        collectionClientRect.top
+        + collectionClientRect.height
+        + halfToolbarHeight
+        + FLOATING_TOOLBAR_DEVICE_GAP_PX;
 
-      if (bottomCellRect !== null) {
-        const belowY =
-          bottomCellRect.top
-          + bottomCellRect.height
-          + halfToolbarHeight
-          + FLOATING_TOOLBAR_DEVICE_GAP_PX;
-
-        if (belowY <= viewportBottomFiveSixths) {
-          anchor = {
-            x: aboveAnchor.x,
-            y: belowY,
-          };
-        } else {
-          anchor = {
-            x: aboveAnchor.x,
-            y: viewport.top + toolbarHeight * 1.5,
-          };
-        }
+      // AI-REMOVED 2026-08-25:
+      // Reason: 世界底边单元格在旋转视角下不一定处于屏幕底边，不能用于计算工具条下方锚点。
+      // Trigger: 集合靠近屏幕顶部时，90°/180°/270° 视角的下方回退位置仍会错乱。
+      // Evidence: 完整集合投影的 bottom 恒为 collectionClientRect.top + collectionClientRect.height。
+      // Replacement: 上方 belowY 基于 collectionClientRect 的屏幕底边计算。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const bottomCellY = collectionRect.y + collectionRect.height - 1;
+      // const bottomCellRect = editor.queries.findClientRectForGridCell({
+      //   x: collectionRect.x,
+      //   y: bottomCellY,
+      // });
+      //
+      // if (bottomCellRect !== null) {
+      //   const belowY =
+      //     bottomCellRect.top
+      //     + bottomCellRect.height
+      //     + halfToolbarHeight
+      //     + FLOATING_TOOLBAR_DEVICE_GAP_PX;
+      //
+      //   if (belowY <= viewportBottomFiveSixths) {
+      //     anchor = {
+      //       x: aboveAnchor.x,
+      //       y: belowY,
+      //     };
+      //   } else {
+      //     anchor = {
+      //       x: aboveAnchor.x,
+      //       y: viewport.top + toolbarHeight * 1.5,
+      //     };
+      //   }
+      // } else {
+      //   anchor = {
+      //     x: aboveAnchor.x,
+      //     y: viewport.top + toolbarHeight * 1.5,
+      //   };
+      // }
+      if (belowY <= viewportBottomFiveSixths) {
+        anchor = {
+          x: aboveAnchor.x,
+          y: belowY,
+        };
       } else {
         anchor = {
           x: aboveAnchor.x,

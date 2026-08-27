@@ -373,6 +373,7 @@ const UI: Record<string, string> = {
     "cloudflareStatus.title": "Cloudflare Sync Status",
     "cloudflareStatus.open": "Edit Cloudflare Settings",
     "cloudflareStatus.syncEnabled": "Cloudflare Sync",
+    "cloudflareStatus.currentVersion": "Current Version",
     "cloudflareStatus.phase": "Cloudflare Sync Status",
     "cloudflareStatus.updateCheckCountdown": "Next Update Check",
     "cloudflareStatus.countdownNext": "in {time}",

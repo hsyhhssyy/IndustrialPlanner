@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./canvas-lock-audit";
 
 test("regional multi-base mode resolves conflicting speed and timeline UI", async ({
   page,

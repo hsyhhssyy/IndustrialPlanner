@@ -73,6 +73,8 @@ const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50op
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
+const DEFAULT_SCANLINE_TINT = 0xffffff;
+const BLUEPRINT_SCANLINE_TINT = 0x666666;
 const SUPPRESSED_BELT_COLOR = 0xFFD54A;
 const SUPPRESSED_PIPE_COLOR = 0x448AFF;
 
@@ -85,8 +87,17 @@ const SUPPRESSED_PIPE_COLOR = 0x448AFF;
 //
 // Original code:
 // const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
-const PREVIEW_BORDER_WIDTH = 1;
-const PREVIEW_BORDER_ALPHA = 0.5;
+// AI-REMOVED 2026-08-26:
+// Reason: 单设备 preview 改为复用 selection 的响应式橙色焦点描边，不再使用固定 1px 半透明白框。
+// Trigger: 用户反馈蓝图样式下关联设备的橙框压过当前操作虚影，无法辨认操作焦点。
+// Evidence: preview 与 selection 在交互上互斥；关联设备仍保留原扫描线，只移除焦点描边。
+// Replacement: drawScanlineOverlay 中的 resolveSelectionCollectionOverlayColor / resolveSelectionCollectionOverlayStrokeWidth。
+// Risk: Low；preview 描边会随缩放在 1px 到 4px 之间变化，并与 selection 保持一致。
+// Human Review: Required
+//
+// Original code:
+// const PREVIEW_BORDER_WIDTH = 1;
+// const PREVIEW_BORDER_ALPHA = 0.5;
 
 // ---- Fallback 精灵纹理 ----
 const FALLBACK_SPRITE_TEXTURE_PATH = createPublicAssetUrl("textures/missing-sprite-texture.png");
@@ -264,6 +275,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly scanlineRectMask: Graphics;
 
   /** preview 白色固定宽度边框线 */
+  /** AI-CORRECTION 2026-08-26: preview 边框现为与 selection 一致的响应式橙色焦点描边。 */
   private readonly previewBorderGraphics: Graphics;
 
   /** selection 特效：blueprint mask 平铺 + device mask 裁剪 */
@@ -387,6 +399,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineRectMask.renderable = false;
 
     // preview 白色固定边框线，位于扫描线之上
+    // AI-CORRECTION 2026-08-26: 边框现改为 selection 橙色焦点描边；扫描线保持原样。
     this.previewBorderGraphics = new Graphics({ roundPixels: true });
     this.previewBorderGraphics.visible = false;
 
@@ -573,6 +586,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 单元素 preview：使用白色系动画遮罩
+    // AI-CORRECTION 2026-08-26: 扫描线继续沿用原色，边框改为 selection 橙色以标记唯一操作焦点。
     // 2026-08-22 订正：该分支现在表示普通移动或非 move 的单元素预览；批量移动的单元素预览由上方蓝色特效分支处理。
     this.drawScanlineOverlay(layout, context);
   }
@@ -590,9 +604,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // AI-CORRECTION 2026-06-09:
     // Reason: invalid 红色边框已统一迁移至 InvalidPlacementDecoration（基于 footprint 布局），
     // 精灵层 scanline overlay 不再根据 invalidPlacement 切换颜色，始终为白色预览特效。
+    // AI-CORRECTION 2026-08-25: 蓝图样式改用中性灰扫描线以增强浅色画布对比；普通精灵仍保持白色。
+    // AI-CORRECTION 2026-08-26: 上述“白色预览特效”仅指扫描线；preview 边框现使用 selection 橙色。
     // 原始逻辑（2026-05-24 版）根据 invalidPlacement 切换白/红色，已被当前装饰层替代。
-    const borderColor = 0xffffff;
-    const scanlineTint = 0xffffff;
+    const borderColor = this.resolveSelectionCollectionOverlayColor(context);
+    const useBlueprintStyle = readSimplifiedDeviceIconPreference(context.workspace.app);
+    const scanlineTint = useBlueprintStyle
+      ? BLUEPRINT_SCANLINE_TINT
+      : DEFAULT_SCANLINE_TINT;
 
     // 以纹理原始像素尺寸平铺，不做 zoom 缩放
     const tilePixelSize = this.scanlineTexture?.width ?? 64;
@@ -612,7 +631,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪扫描线
     // AI-CORRECTION 2026-05-25: Pixi v8 WebGL 下 Graphics 矩形 mask 会把蓝图样式的 TilingSprite 裁成不可见；现在直接用 TilingSprite 自身尺寸作为 footprint 矩形裁剪。
-    if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
+    if (useBlueprintStyle) {
       this.scanlineTiling.width = layout.width;
       this.scanlineTiling.height = layout.height;
       this.scanlineRectMask.clear();
@@ -635,15 +654,15 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 固定宽度边框线，50% 不透明度。始终为白色预览边框，红色 invalid 边框由 InvalidPlacementDecoration 统一绘制。
+    // AI-CORRECTION 2026-08-26: preview 现使用 selection 的橙色与响应式线宽；invalid 红框仍由 InvalidPlacementDecoration 覆盖。
     // 2026-06-14: 边框改用足迹布局（不含 spriteOffset），避免仓库等大偏移设备边框超出 footprint。
     this.previewBorderGraphics.visible = true;
     const borderLayout = this.currentFootprintLayout ?? layout;
     this.previewBorderGraphics
       .rect(borderLayout.x, borderLayout.y, borderLayout.width, borderLayout.height)
       .stroke({
-        width: PREVIEW_BORDER_WIDTH,
+        width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
         color: borderColor,
-        alpha: PREVIEW_BORDER_ALPHA,
       });
 
     this.previewEffectRoot.visible = true;
@@ -652,6 +671,21 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected drawSelectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
+  ): void {
+    this.drawSelectionScanlineOverlay(layout, context, true);
+  }
+
+  protected drawRelatedOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    this.drawSelectionScanlineOverlay(layout, context, false);
+  }
+
+  private drawSelectionScanlineOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+    drawFocusBorder: boolean,
   ): void {
     if (!this.isTextureReady) {
       return;
@@ -674,6 +708,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 加载扫描线纹理（与 preview 共用同一纹理）
     this.loadScanlineTexture();
 
+    const useBlueprintStyle = readSimplifiedDeviceIconPreference(context.workspace.app);
     const tilePixelSize = this.scanlineTexture?.width ?? 64;
 
     this.selectionTiling.visible = true;
@@ -682,14 +717,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.rotation = 0;
     this.selectionTiling.width = layout.width;
     this.selectionTiling.height = layout.height;
-    this.selectionTiling.tint = 0xffffff;
+    // AI-CORRECTION 2026-08-25: 蓝图样式的选中扫描线与预览扫描线统一使用中性灰；普通精灵继续使用白色。
+    this.selectionTiling.tint = useBlueprintStyle
+      ? BLUEPRINT_SCANLINE_TINT
+      : DEFAULT_SCANLINE_TINT;
 
     // 扫描线水平滚动（复用 SCANLINE_SCROLL_INTERVAL_MS 周期）
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
     this.selectionTiling.tilePosition.x = phase * tilePixelSize;
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
-    if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
+    if (useBlueprintStyle) {
       this.selectionRectMask.clear();
       // AI-REMOVED 2026-05-25: 已由更早提交处理
       this.selectionTiling.mask = null;
@@ -698,12 +736,15 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 线框（足迹布局，不含 spriteOffset）
-    const strokeLayout = this.currentFootprintLayout ?? layout;
-    this.drawCollectionOverlayStroke({
-      layout: { x: strokeLayout.x, y: strokeLayout.y, width: strokeLayout.width, height: strokeLayout.height, rotation: layout.rotation },
-      color: this.resolveSelectionCollectionOverlayColor(context),
-      width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
-    });
+    // AI-CORRECTION 2026-08-26: selection/marquee 保留线框；供电、气体关联目标仅保留同强度扫描线。
+    if (drawFocusBorder) {
+      const strokeLayout = this.currentFootprintLayout ?? layout;
+      this.drawCollectionOverlayStroke({
+        layout: { x: strokeLayout.x, y: strokeLayout.y, width: strokeLayout.width, height: strokeLayout.height, rotation: layout.rotation },
+        color: this.resolveSelectionCollectionOverlayColor(context),
+        width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
+      });
+    }
 
     this.selectionEffectRoot.visible = true;
   }

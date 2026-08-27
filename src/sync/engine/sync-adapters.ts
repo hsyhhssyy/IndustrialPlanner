@@ -71,6 +71,7 @@ export interface SyncAdapterConflictDecision {
 // ============================================================================
 
 export type SyncPlanItemKind = "upload" | "download" | "conflict";
+export type SyncLocalChangeState = "dirty" | "clean" | "unknown";
 
 /**
  * 引擎级计划条目：一个资产的分类结果与决议执行句柄。
@@ -124,6 +125,10 @@ export interface SyncEngineTransaction {
   recordUpload(upload: SyncPlanUpload): void;
   /** 下载落地前检查二代脏标；置位则抛 SyncDownloadDirtyAbortError 终止本轮。 */
   assertDownloadAllowed(adapterId: string, assetId: string): Promise<void>;
+  /** 本轮开始时的本地变更状态；clean 可直接复用持久化 touch hash。 */
+  getLocalChangeState?(adapterId: string, assetId: string): SyncLocalChangeState;
+  /** 真正开始应用远端内容时通知引擎切换下载阶段。 */
+  beginDownload?(): void;
 }
 
 /** 下载不容忍：落地前发现第二代脏标。引擎捕获后锁定画布并从头重跑。 */
@@ -594,6 +599,7 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
 
   const applyDownload = async (): Promise<void> => {
     await transaction.assertDownloadAllowed(adapterId, assetId);
+    transaction.beginDownload?.();
     if (remoteDeletedAt !== null) {
       if (options.applyRemoteTombstone === null) {
         logger.warn(`${adapterId}/${assetId}: remote tombstone not supported → skipping`);
@@ -655,6 +661,7 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
   // 空间 revision 为等待信号的调用方。
   const applyDiscardLocal = async (): Promise<void> => {
     await transaction.assertDownloadAllowed(adapterId, assetId);
+    transaction.beginDownload?.();
     if (options.applyRemoteTombstone === null) {
       logger.warn(
         `${adapterId}/${assetId}: local discard not supported → skipping`,
@@ -1582,25 +1589,42 @@ async function syncFullWithRevision<TValue>(
     isAssetIncludedInScope(entry.id, scope),
   );
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
-  if (await isRemoteIndexUnchangedForCleanLocalEntries({
-    session,
-    collection,
-    localEntries,
-  })) {
-    return {
-      adapterId: options.id,
-      mode: "full-with-revision",
-      status: "idle",
-      changedAssetIds: [],
-    };
-  }
+  // AI-REMOVED 2026-08-25:
+  // Reason: adapter 在已拉取全量 plan 后再次用 collection check 提前返回，会绕开 plan 的全资产分类，
+  //   且每个 adapter 重复请求相同的全局 CF revision。
+  // Trigger: 本地 A 上传与远端 B 变化并存时，原设计要求当前 plan 内完成全部资源三值判断。
+  // Evidence: session.prefetchIndexes 已在 adapter 执行前完成；CF readIndex 直接消费该 plan。
+  // Replacement: 下方读取 plan index 并分类；clean 本地资产通过 persisted touch hash 免重算。
+  // Risk: Medium；WebDAV 不再享受 collection ETag 的 adapter 内短路，本轮明确不要求兼容。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (await isRemoteIndexUnchangedForCleanLocalEntries({
+  //   session,
+  //   collection,
+  //   localEntries,
+  // })) {
+  //   return {
+  //     adapterId: options.id,
+  //     mode: "full-with-revision",
+  //     status: "idle",
+  //     changedAssetIds: [],
+  //   };
+  // }
   const remoteIndexState = await session.readIndex(collection);
   const changedAssetIds: string[] = [];
   let status: SyncAdapterStatus = "idle";
-  const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
-    entry.id,
-    await createSyncContentHash(session, collection, entry.value),
-  ] as const)));
+  const localHashStatesById = await resolveLocalHashStates({
+    session,
+    collection,
+    transaction,
+    adapterId: options.id,
+    localEntries,
+  });
+  const localContentHashesById = new Map(Array.from(
+    localHashStatesById,
+    ([assetId, state]) => [assetId, state.contentHash] as const,
+  ));
   const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndexState.entries[entry.id];
     if (
@@ -1686,7 +1710,10 @@ async function syncFullWithRevision<TValue>(
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
       ?? await createSyncContentHash(session, collection, localEntry.value);
-    const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
+    const localHashState = localHashStatesById.get(localEntry.id);
+    const lastSyncedHash = localHashState === undefined
+      ? await session.localState.getLastSyncedHash(assetKey)
+      : localHashState.lastSyncedHash;
     const remoteValue = remoteValuesByLocalId.get(localEntry.id) ?? null;
 
     // 远端墓碑（WebDAV 索引携带 deletedAt）。
@@ -2116,27 +2143,44 @@ async function syncPatchCollectionWithRevision<TValue>(
   );
   reportSyncProgress(scope, 10);
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
-  if (await isRemoteIndexUnchangedForCleanLocalEntries({
-    session,
-    collection,
-    localEntries,
-  })) {
-    reportSyncProgress(scope, 100);
-    return {
-      adapterId: options.id,
-      mode: "patch-with-revision",
-      status: "idle",
-      changedAssetIds: [],
-    };
-  }
+  // AI-REMOVED 2026-08-25:
+  // Reason: adapter 在已拉取全量 plan 后再次做 collection check 并提前返回，会跳过 plan 分类，
+  //   也会让 CF 为每个 adapter 重复检查同一个全局 revision。
+  // Trigger: 本地上传与其他资产远端变化并存时，必须在同一 plan 内完成全部资源判断。
+  // Evidence: runAdapterRequests 已统一 prefetchIndexes；CF readIndex 不产生额外 plan 请求。
+  // Replacement: 下方完整 index 分类；clean 资产复用 touch hash，只有 dirty/unknown 重算。
+  // Risk: Medium；WebDAV 的 adapter 内 ETag 短路不再保留，本轮明确不要求兼容。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (await isRemoteIndexUnchangedForCleanLocalEntries({
+  //   session,
+  //   collection,
+  //   localEntries,
+  // })) {
+  //   reportSyncProgress(scope, 100);
+  //   return {
+  //     adapterId: options.id,
+  //     mode: "patch-with-revision",
+  //     status: "idle",
+  //     changedAssetIds: [],
+  //   };
+  // }
   const remoteIndexState = await session.readIndex(collection);
   reportSyncProgress(scope, 35);
   const changedAssetIds: string[] = [];
   let status: SyncAdapterStatus = "idle";
-  const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
-    entry.id,
-    await createSyncContentHash(session, collection, entry.value),
-  ] as const)));
+  const localHashStatesById = await resolveLocalHashStates({
+    session,
+    collection,
+    transaction,
+    adapterId: options.id,
+    localEntries,
+  });
+  const localContentHashesById = new Map(Array.from(
+    localHashStatesById,
+    ([assetId, state]) => [assetId, state.contentHash] as const,
+  ));
   const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndexState.entries[entry.id];
     if (
@@ -2227,7 +2271,10 @@ async function syncPatchCollectionWithRevision<TValue>(
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
       ?? await createSyncContentHash(session, collection, localEntry.value);
-    const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
+    const localHashState = localHashStatesById.get(localEntry.id);
+    const lastSyncedHash = localHashState === undefined
+      ? await session.localState.getLastSyncedHash(assetKey)
+      : localHashState.lastSyncedHash;
     const remoteState = remoteStatesByLocalId.get(localEntry.id) ?? null;
 
     // 远端墓碑（WebDAV 索引携带 deletedAt）。
@@ -2668,46 +2715,97 @@ function reportSyncProgress(
 //   return scope?.includeAssetIds === undefined && scope?.excludeAssetIds === undefined;
 // }
 
-async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
+// AI-REMOVED 2026-08-25:
+// Reason: adapter 级 ETag 短路与“已取得 plan 后对全部资源分类”的流程冲突，并为 CF 制造
+//   每个 adapter 一次的重复全局 check；它还必须先重算全部本地 hash 才能判断 clean。
+// Trigger: 本地 A 上传、远端 B 变化并存时需要一次 plan 内闭合下载、上传与 revision 前推。
+// Evidence: 两个 collection adapter 入口均已改为直接消费 prefetched plan index。
+// Replacement: resolveLocalHashStates；远端是否有变化由 plan index 直接参与三值分类。
+// Risk: Medium；WebDAV ETag 快路径移除，用户已明确可不兼容 WebDAV。
+// Human Review: Required
+//
+// Original code:
+// async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
+//   readonly session: SyncRemoteSession;
+//   readonly collection: SyncRemoteCollection;
+//   readonly localEntries: readonly {
+//     readonly id: string;
+//     readonly value: TValue;
+//     readonly deletedAt: string | null;
+//   }[];
+// }): Promise<boolean> {
+//   const lastSeenEtag = await options.session.localState.getRemoteEtag(
+//     options.collection.stateKey,
+//   );
+//   if (
+//     lastSeenEtag === null
+//     || options.localEntries.length === 0
+//     || options.localEntries.some((entry) =>
+//       entry.deletedAt !== null
+//     )
+//   ) {
+//     return false;
+//   }
+//
+//   for (const entry of options.localEntries) {
+//     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
+//       createSyncAssetKey(options.collection, entry.id),
+//     );
+//     if (lastSyncedHash !== await createSyncContentHash(options.session, options.collection, entry.value)) {
+//       return false;
+//     }
+//   }
+//
+//   const result = await options.session.checkCollections([options.collection]);
+//   const unchanged = !result.changedCollections.includes(options.collection.adapterId);
+//   if (unchanged) {
+//     logger.debug(
+//       `${options.collection.adapterId}: canonical index ETag unchanged and local hashes clean → idle`,
+//     );
+//   }
+//
+//   return unchanged;
+// }
+
+interface LocalHashState {
+  readonly contentHash: string;
+  readonly lastSyncedHash: string | null;
+}
+
+async function resolveLocalHashStates<TValue>(options: {
   readonly session: SyncRemoteSession;
   readonly collection: SyncRemoteCollection;
+  readonly transaction: SyncEngineTransaction;
+  readonly adapterId: string;
   readonly localEntries: readonly {
     readonly id: string;
     readonly value: TValue;
     readonly deletedAt: string | null;
   }[];
-}): Promise<boolean> {
-  const lastSeenEtag = await options.session.localState.getRemoteEtag(
-    options.collection.stateKey,
-  );
-  if (
-    lastSeenEtag === null
-    || options.localEntries.length === 0
-    || options.localEntries.some((entry) =>
-      entry.deletedAt !== null
-    )
-  ) {
-    return false;
-  }
-
-  for (const entry of options.localEntries) {
+}): Promise<ReadonlyMap<string, LocalHashState>> {
+  const states = await Promise.all(options.localEntries.map(async (entry) => {
     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
       createSyncAssetKey(options.collection, entry.id),
     );
-    if (lastSyncedHash !== await createSyncContentHash(options.session, options.collection, entry.value)) {
-      return false;
-    }
-  }
+    const localChangeState = options.transaction.getLocalChangeState?.(
+      options.adapterId,
+      entry.id,
+    ) ?? "unknown";
+    const canReuseTouchHash = localChangeState === "clean"
+      && entry.deletedAt === null
+      && lastSyncedHash !== null;
+    const contentHash = canReuseTouchHash
+      ? lastSyncedHash
+      : await createSyncContentHash(
+        options.session,
+        options.collection,
+        entry.value,
+      );
 
-  const result = await options.session.checkCollections([options.collection]);
-  const unchanged = !result.changedCollections.includes(options.collection.adapterId);
-  if (unchanged) {
-    logger.debug(
-      `${options.collection.adapterId}: canonical index ETag unchanged and local hashes clean → idle`,
-    );
-  }
+    return [entry.id, { contentHash, lastSyncedHash }] as const;
+  }));
 
-  return unchanged;
+  return new Map(states);
 }
 
 function interpolateProgress(

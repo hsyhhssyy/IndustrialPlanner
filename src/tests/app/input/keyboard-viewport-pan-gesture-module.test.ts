@@ -76,12 +76,18 @@ const PAN_SECONDARY_SHORTCUT_CODE: Record<string, string> = {
   [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]: "ArrowRight",
 };
 
-function createContext(options: { hypergryphOperationMode?: boolean } = {}): {
+function createContext(options: {
+  hypergryphOperationMode?: boolean;
+  gridCellPixelSize?: number;
+} = {}): {
   context: GestureActionContext<AppHost>;
   moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
   isShortcutFor: ReturnType<typeof vi.fn>;
 } {
-  const { hypergryphOperationMode = true } = options;
+  const {
+    hypergryphOperationMode = true,
+    gridCellPixelSize = 32,
+  } = options;
   const moveViewportByClientPixelVector = vi.fn();
   // AI-REMOVED 2026-08-03:
   // Reason: mock 不能再只识别 WASD 主槽位，否则无法验证方向键等效绑定。
@@ -105,7 +111,7 @@ function createContext(options: { hypergryphOperationMode?: boolean } = {}): {
     editor: {
       state: {
         viewport: {
-          gridCellPixelSize: 32,
+          gridCellPixelSize,
         },
       },
       actions: {
@@ -158,7 +164,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     vi.restoreAllMocks();
   });
 
-  it("pans the viewport upward at 10 cells per second while W is held", () => {
+  it("pans the viewport upward at 1280 pixels per second while W is held", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
@@ -170,20 +176,39 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
 
     // 1 秒后：向上平移 10 格（每格 32px → 320px，内容向屏幕下方移动 dy 为正）
+    // 订正（2026-08-25）：屏幕速度固定为 1280px/s，不再按网格像素尺寸换算。
     advanceRafFrame(1000);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
       startClientPixel: { x: 0, y: 0 },
-      endClientPixel: { x: 0, y: 320 },
+      endClientPixel: { x: 0, y: 1280 },
     });
+  });
+
+  it("keeps the client pixel speed unchanged across zoom levels", () => {
+    for (const gridCellPixelSize of [16, 64, 128]) {
+      const { context, moveViewportByClientPixelVector } = createContext({ gridCellPixelSize });
+      const module = createHypergryphKeyboardViewportPanModule();
+
+      module.handle(keyDownEvent("KeyW", "w"), context);
+      advanceRafFrame(0);
+      advanceRafFrame(1000);
+
+      expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+        startClientPixel: { x: 0, y: 0 },
+        endClientPixel: { x: 0, y: 1280 },
+      });
+
+      module.handle(keyUpEvent("KeyW", "w"), context);
+    }
   });
 
   it("pans in the correct direction for each WASD key", () => {
     const expectations: Array<[string, string, { x: number; y: number }]> = [
-      ["KeyW", "w", { x: 0, y: 320 }],
-      ["KeyS", "s", { x: 0, y: -320 }],
-      ["KeyA", "a", { x: 320, y: 0 }],
-      ["KeyD", "d", { x: -320, y: 0 }],
+      ["KeyW", "w", { x: 0, y: 1280 }],
+      ["KeyS", "s", { x: 0, y: -1280 }],
+      ["KeyA", "a", { x: 1280, y: 0 }],
+      ["KeyD", "d", { x: -1280, y: 0 }],
     ];
 
     for (const [code, key, expectedDelta] of expectations) {
@@ -204,10 +229,10 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
 
   it("treats all four arrow keys as equivalent viewport pan bindings", () => {
     const expectations: Array<[string, { x: number; y: number }]> = [
-      ["ArrowUp", { x: 0, y: 320 }],
-      ["ArrowDown", { x: 0, y: -320 }],
-      ["ArrowLeft", { x: 320, y: 0 }],
-      ["ArrowRight", { x: -320, y: 0 }],
+      ["ArrowUp", { x: 0, y: 1280 }],
+      ["ArrowDown", { x: 0, y: -1280 }],
+      ["ArrowLeft", { x: 1280, y: 0 }],
+      ["ArrowRight", { x: -1280, y: 0 }],
     ];
 
     for (const [code, expectedDelta] of expectations) {
@@ -225,7 +250,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     }
   });
 
-  it("pans diagonally with each axis at 10 cells per second", () => {
+  it("pans diagonally with each axis at 1280 pixels per second", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
@@ -237,7 +262,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
       startClientPixel: { x: 0, y: 0 },
-      endClientPixel: { x: -320, y: 320 },
+      endClientPixel: { x: -1280, y: 1280 },
     });
   });
 
@@ -257,7 +282,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
       startClientPixel: { x: 0, y: 0 },
-      endClientPixel: { x: 0, y: 320 },
+      endClientPixel: { x: 0, y: 1280 },
     });
 
     module.handle(keyUpEvent("KeyW", "w"), context);

@@ -69,6 +69,8 @@ class OverlayRecordingSprite extends BaseRenderSprite {
 
   protected drawSelectionOverlay(): void {}
 
+  protected drawRelatedOverlay(): void {}
+
   protected syncCollectionOverlay(collectionTypes: readonly string[]): void {
     this.overlayCalls.push([...collectionTypes])
   }

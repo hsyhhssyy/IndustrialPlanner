@@ -21,3 +21,4 @@ export {
   initializeCloudflareSpaceSettings,
   type InitializeCloudflareSpaceSettingsOptions,
 } from "./cloudflare-space-settings";
+export { readCloudflareV2LocalRevision } from "./cloudflare-v2-local-state";

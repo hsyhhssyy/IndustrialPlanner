@@ -514,6 +514,11 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                 : "syncStatus.disabled")}
             />
             <StatusValue
+              label={t("cloudflareStatus.currentVersion")}
+              value={state.status.currentLocalRevision
+                ?? t("settingsOption.none")}
+            />
+            <StatusValue
               label={t("cloudflareStatus.phase")}
               value={t(resolvePhaseKey(status.phase))}
             />

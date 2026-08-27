@@ -122,8 +122,11 @@ export abstract class BaseRenderSprite implements RenderSprite {
         && !activeCollectionTypeSet.has(EntityCollectionType.reverseMarquee)
       );
     if (!selectionOverlayAlreadyVisible
-      && context.powerInteractionVisualState?.highlightedEntityIds.has(this.entityId) === true) {
-      this.drawSelectionOverlay(layout, context);
+      && (
+        context.gasInteractionVisualState?.highlightedEntityIds.has(this.entityId) === true
+        || context.powerInteractionVisualState?.highlightedEntityIds.has(this.entityId) === true
+      )) {
+      this.drawRelatedOverlay(layout, context);
     }
   }
 
@@ -151,6 +154,12 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   /** selection/marquee 特效绘制，由子类实现 */
   protected abstract drawSelectionOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void;
+
+  /** 供电、气体等交互关系特效；与 selection 分离，避免关联目标获得焦点边框。 */
+  protected abstract drawRelatedOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void;
