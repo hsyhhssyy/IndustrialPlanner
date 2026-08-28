@@ -72,7 +72,7 @@ jobs:
           fi
 
           if [ "$channel" = 'stable' ]; then
-            backend_api_base_url='https://endfield-api.amiyabot.com'
+            backend_api_base_url='https://endfield-api.anonymous-test.top'
           else
             backend_api_base_url='https://endfield-api.richetriotour.net'
           fi

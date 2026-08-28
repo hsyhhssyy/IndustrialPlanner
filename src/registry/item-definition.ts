@@ -279,7 +279,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_copper_enr2_cmpt",
     nameKey: "registry.item.item_copper_enr2_cmpt.name",
     iconId: "item_copper_enr2_cmpt",
-    tags: [],
+    tags: ["调度券地区:武陵", "调度券价值:70"],
     displayOrder: 10000,
   },
   {
@@ -559,14 +559,14 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_activity_xiranite_hulu",
     nameKey: "registry.item.item_activity_xiranite_hulu.name",
     iconId: "item_activity_xiranite_hulu",
-    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG, "调度券地区:武陵", "调度券价值:40"],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_enr_hulu",
     nameKey: "registry.item.item_activity_xiranite_enr_hulu.name",
     iconId: "item_activity_xiranite_enr_hulu",
-    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG, "调度券地区:武陵", "调度券价值:120"],
     displayOrder: 10000,
   },
   {
@@ -636,7 +636,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_filter_core",
     nameKey: "registry.item.item_filter_core.name",
     iconId: "item_filter_core",
-    tags: [],
+    tags: ["调度券地区:武陵", "调度券价值:1"],
     displayOrder: 10000,
   },
   {

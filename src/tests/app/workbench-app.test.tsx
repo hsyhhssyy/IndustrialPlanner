@@ -1886,7 +1886,13 @@ describe("WorkbenchApp", () => {
     const shortcutImages = toolbar?.querySelectorAll('img[data-key-token]');
     expect(shortcutImages).not.toBeNull();
     expect(shortcutImages?.length).toBe(3);
-    expect(toolbar?.querySelector('[data-mouse-input="right-button"]')).not.toBeNull();
+    const mousePromptImage = toolbar?.querySelector<HTMLImageElement>(
+      '[data-mouse-input="right-button"]',
+    );
+    expect(mousePromptImage).not.toBeNull();
+    expect(mousePromptImage?.parentElement?.style.getPropertyValue(
+      "--mouse-shortcut-prompt-mask",
+    )).toBe(`url("${window.location.origin}/input-prompts/mouse_right_outline.svg")`);
     expect(toolbar?.querySelector(".canvas-right-dock-toolbar-shortcut-label")?.textContent).toBe(
       "长按鼠标",
     );

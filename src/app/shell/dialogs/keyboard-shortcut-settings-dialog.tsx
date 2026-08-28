@@ -364,6 +364,7 @@ function KeyboardShortcutConflictDialog({
       onClose={onCancel}
       onToggleMaximized={() => {}}
       restoreTitle=""
+      shellStyle={{ height: "auto", minHeight: 0 }}
       showMaximizeButton={false}
       title={t("settingsKeybinding.conflictTitle")}
       titleId="keyboard-shortcut-conflict-dialog-title"
@@ -410,6 +411,7 @@ function KeyboardShortcutResetDialog({
       onClose={onCancel}
       onToggleMaximized={() => {}}
       restoreTitle=""
+      shellStyle={{ height: "auto", minHeight: 0 }}
       showMaximizeButton={false}
       title={t("keyboardShortcutDialog.resetAll")}
       titleId="keyboard-shortcut-reset-dialog-title"

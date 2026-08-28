@@ -19,6 +19,10 @@ export function createPublicAssetUrl(path: string): string {
   return `${normalizedBaseUrl}${normalizedPath}`;
 }
 
+export function createAbsolutePublicAssetUrl(path: string): string {
+  return new URL(createPublicAssetUrl(path), document.baseURI).href;
+}
+
 export function createDeviceIconAssetUrl(iconId: string): string {
   return createPublicAssetUrl(`device-icons/${iconId}.webp`);
 }

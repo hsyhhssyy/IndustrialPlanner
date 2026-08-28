@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import {
+  createAbsolutePublicAssetUrl,
+  createPublicAssetUrl,
+} from "@/shared/browser/public-asset-url";
 
 import styles from "./keyboard-shortcut-prompt.module.scss";
 
@@ -125,7 +128,9 @@ export function KeyboardShortcutPrompt({
           <span className={styles["keyboard-shortcut-prompt-binding"]}>
             {tokenizeShortcutBinding(binding).map((token, tokenIndex) => {
               const assetName = resolveKeyboardPromptAssetName(token);
-              const assetUrl = createPublicAssetUrl(`input-prompts/keyboard_${assetName}_outline.svg`);
+              const assetPath = `input-prompts/keyboard_${assetName}_outline.svg`;
+              const assetUrl = createPublicAssetUrl(assetPath);
+              const maskAssetUrl = createAbsolutePublicAssetUrl(assetPath);
 
               return (
                 <span
@@ -144,7 +149,7 @@ export function KeyboardShortcutPrompt({
                     aria-hidden="true"
                     className={styles["keyboard-shortcut-prompt-key-visual"]}
                     style={{
-                      "--keyboard-shortcut-prompt-mask": `url("${assetUrl}")`,
+                      "--keyboard-shortcut-prompt-mask": `url("${maskAssetUrl}")`,
                       "--keyboard-shortcut-prompt-scale": KEYBOARD_PROMPT_ASSET_SCALES[assetName] ?? 1,
                     } as KeyboardShortcutPromptStyle}
                   >

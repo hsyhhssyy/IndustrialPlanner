@@ -242,6 +242,9 @@ describe("SettingsDialog", () => {
       "/input-prompts/keyboard_w_outline.svg",
       "/input-prompts/keyboard_arrow_up_outline.svg",
     ]);
+    expect(panUpImages?.item(0).parentElement?.style.getPropertyValue(
+      "--keyboard-shortcut-prompt-mask",
+    )).toBe(`url("${window.location.origin}/input-prompts/keyboard_w_outline.svg")`);
 
     const saveBlueprintSlot = shortcutDialog?.querySelector<HTMLButtonElement>(
       '[data-shortcut-id="shortcut-save-blueprint"][data-slot-index="0"]',
@@ -292,8 +295,12 @@ describe("SettingsDialog", () => {
       }));
     });
 
-    const conflictDialog = document.querySelector('[data-dialog-key="keyboard-shortcut-conflict"]');
+    const conflictDialog = document.querySelector<HTMLElement>(
+      '[data-dialog-key="keyboard-shortcut-conflict"]',
+    );
     expect(conflictDialog).not.toBeNull();
+    expect(conflictDialog?.style.height).toBe("auto");
+    expect(parseFloat(conflictDialog?.style.minHeight ?? "")).toBe(0);
     expect(conflictDialog?.querySelector('img[data-key-token="E"]')).not.toBeNull();
     const replaceButton = [...conflictDialog?.querySelectorAll("button") ?? []].find((button) => (
       button.textContent === "更换"
@@ -304,5 +311,19 @@ describe("SettingsDialog", () => {
 
     expect(appHost.internalActions.getKeyboardShortcutFor("shortcut-place-conveyor")).toBe("");
     expect(appHost.internalActions.getKeyboardShortcutFor("shortcut-rotate")).toBe("R;E");
+
+    const resetAllButton = [...shortcutDialog?.querySelectorAll("button") ?? []].find((button) => (
+      button.textContent === "重置全部快捷键"
+    ));
+    act(() => {
+      resetAllButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const resetDialog = document.querySelector<HTMLElement>(
+      '[data-dialog-key="keyboard-shortcut-reset"]',
+    );
+    expect(resetDialog).not.toBeNull();
+    expect(resetDialog?.style.height).toBe("auto");
+    expect(parseFloat(resetDialog?.style.minHeight ?? "")).toBe(0);
   });
 });

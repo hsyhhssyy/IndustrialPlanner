@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import {
+  createAbsolutePublicAssetUrl,
+  createPublicAssetUrl,
+} from "@/shared/browser/public-asset-url";
 
 import styles from "./mouse-shortcut-prompt.module.scss";
 
@@ -31,9 +34,9 @@ export function MouseShortcutPrompt({
   input,
   size = "regular",
 }: MouseShortcutPromptProps) {
-  const assetUrl = createPublicAssetUrl(
-    `input-prompts/${MOUSE_PROMPT_ASSET_NAMES[input]}`,
-  );
+  const assetPath = `input-prompts/${MOUSE_PROMPT_ASSET_NAMES[input]}`;
+  const assetUrl = createPublicAssetUrl(assetPath);
+  const maskAssetUrl = createAbsolutePublicAssetUrl(assetPath);
 
   return (
     <span
@@ -45,7 +48,7 @@ export function MouseShortcutPrompt({
       ])}
       role="img"
       style={{
-        "--mouse-shortcut-prompt-mask": `url("${assetUrl}")`,
+        "--mouse-shortcut-prompt-mask": `url("${maskAssetUrl}")`,
       } as MouseShortcutPromptStyle}
     >
       <img

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createAbsolutePublicAssetUrl,
   createDeviceIconAssetUrl,
   createEntityIconAssetUrl,
   createItemIconAssetUrl,
@@ -25,6 +26,12 @@ describe("public asset url", () => {
     expect(createEntityIconAssetUrl(undefined)).toBe("./textures/missing-sprite-texture.png");
     expect(createItemIconAssetUrl("item_iron_ore")).toBe("./item-icons/item_iron_ore.webp");
     expect(createPublicAssetUrl("https://example.com/static.png")).toBe("https://example.com/static.png");
+    expect(createAbsolutePublicAssetUrl("input-prompts/keyboard_w_outline.svg")).toBe(
+      `${window.location.origin}/nested/prefix/v3/input-prompts/keyboard_w_outline.svg`,
+    );
+    expect(createAbsolutePublicAssetUrl("https://example.com/static.png")).toBe(
+      "https://example.com/static.png",
+    );
     expect(isRootPublicAssetBaseUrl()).toBe(false);
   });
 
@@ -44,6 +51,9 @@ describe("public asset url", () => {
   it("normalizes public assets for root and nested absolute bases", () => {
     vi.stubEnv("BASE_URL", "/");
     expect(createPublicAssetUrl("help/getting-started.md")).toBe("/help/getting-started.md");
+    expect(createAbsolutePublicAssetUrl("input-prompts/keyboard_w_outline.svg")).toBe(
+      `${window.location.origin}/input-prompts/keyboard_w_outline.svg`,
+    );
     // AI-REMOVED 2026-08-19:
     // Reason: ../v2/ 跨目录解析仅服务于已退出的顶栏旧版链接。
     // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
@@ -58,6 +68,9 @@ describe("public asset url", () => {
 
     vi.stubEnv("BASE_URL", "/nested/prefix/v3/");
     expect(createPublicAssetUrl("help/getting-started.md")).toBe("/nested/prefix/v3/help/getting-started.md");
+    expect(createAbsolutePublicAssetUrl("input-prompts/keyboard_w_outline.svg")).toBe(
+      `${window.location.origin}/nested/prefix/v3/input-prompts/keyboard_w_outline.svg`,
+    );
     // AI-REMOVED 2026-08-19:
     // Reason: ../v2/ 跨目录解析仅服务于已退出的顶栏旧版链接。
     // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
