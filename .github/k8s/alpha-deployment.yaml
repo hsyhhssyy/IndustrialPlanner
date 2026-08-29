@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: industrial-planner-alpha
+  labels:
+    app: industrial-planner-alpha
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: industrial-planner-alpha
+  template:
+    metadata:
+      labels:
+        app: industrial-planner-alpha
+    spec:
+      imagePullSecrets:
+        - name: ${IMAGE_PULL_SECRET}
+      containers:
+        - name: industrial-planner-alpha
+          image: ${IMAGE}
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: industrial-planner-alpha
+spec:
+  selector:
+    app: industrial-planner-alpha
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: industrial-planner-alpha
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ${ALPHA_DOMAIN}
+      secretName: industrial-planner-alpha-tls
+  rules:
+    - host: ${ALPHA_DOMAIN}
+      http:
+        paths:
+          - path: /${SOURCE_SHA}/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: industrial-planner-alpha
+                port:
+                  number: 80

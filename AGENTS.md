@@ -273,6 +273,19 @@ AI 在分析代码时必须区分：
 - 用户明确要求 `full-check` 或完整代码质量检查时，仍按 `full-check` skill 执行全部检查，包括 E2E 和 Blueprint。用户明确点名 E2E 或 Blueprint 时，也允许执行对应测试；开发后的自动验证不构成这两项测试的授权。
 - 单项测试的运行方式（vitest project 划分、蓝图测试概念）见 `test-writing` skill。
 
+## Alpha 保密发布环境
+
+本项目的 `origin` 是保密内容开发仓库，`upstream` 是公开正式仓库。Alpha 用于部署尚未解密、仅供内部开发者访问的构建。
+
+1. Alpha tag 只允许 `vX.Y.Z-alphaN` 或 `vX.Y.Z.N-alphaN`，并且只能推送到私有 `origin`；不得推送到公开 `upstream`。
+2. Alpha 入口固定为 `https://endfield-alpha.hsyhhssyy.net/<完整 commit SHA>/`。完整 SHA 是访问能力凭据，不得缩短、改用 tag 名、增加 `latest`、根路径入口或目录索引。
+3. Alpha 是单实例环境。新 Alpha 发布切换到新 SHA 路径，旧 SHA 路径立即失效；允许发布切换期间暂时不可用。
+4. Alpha 构建复用 Beta 后端与前端逻辑，保留 Analytics，不增加 Alpha 专用的 PWA 开关。PWA 在 SHA 子路径不可用是已接受行为。
+5. Alpha 只发布到私有 Docker 镜像仓库与 K8s，不部署 EdgeOne、GitHub Pages，也不创建 GitHub Release。`DEPLOY_CONFIG.alpha_image_name` 必须指向私有镜像仓库。
+6. 固定域名、tag 规则和部署逻辑可以进入仓库；当前私有 commit SHA、镜像、构建产物和 Action 日志不得提前公开。用户约定对应 SHA 进入公开仓库时该版本已解密。
+7. 该 URL 方案是用户明确接受的 capability URL 风险模型，不等同于身份认证或加密。除非用户改变要求，不得擅自增加登录、Basic Auth、IP allowlist、禁用 Analytics 等访问策略。
+8. 创建或推送 Alpha tag 必须获得用户明确授权，并使用 `release-versioning` skill；修改工作流不构成打 tag 或发布授权。
+
 ## 提交方式
 
 提交代码必须使用 `project-commit` skill，禁止直接执行 commit。

@@ -1,6 +1,6 @@
 ---
 name: release-versioning
-description: 仅当用户明确要求发布 release、创建或推送正式版、pre、beta 版本标签时使用；仅讨论版本号、查看历史标签或执行普通提交时不得使用。
+description: 仅当用户明确要求发布 release、创建或推送正式版、alpha、pre、beta 版本标签时使用；仅讨论版本号、查看历史标签或执行普通提交时不得使用。
 ---
 
 # 版本发布

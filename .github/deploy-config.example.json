@@ -3,7 +3,9 @@
   "username": "your-username",
   "password": "your-password",
   "image_name": "industrial-planner-v3",
+  "alpha_image_name": "industrial-planner-alpha-private",
   "domain": "***",
+  "alpha_domain": "endfield-alpha.hsyhhssyy.net",
   "namespace": "amiyabot",
   "image_pull_secret": ""
 }

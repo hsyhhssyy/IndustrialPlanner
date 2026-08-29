@@ -4,12 +4,15 @@ run-name: Release ${{ inputs.tag_name || github.ref_name }}
 # beta: Docker + K8s；pre: GitHub prerelease + dist zip；stable/Patch: 全量发布。
 # AI-CORRECTION 2026-08-15: 发布阶梯现为 pre: Docker + K8s；beta: Docker + K8s → EdgeOne；stable/Patch: Docker + K8s → EdgeOne → GitHub Pages。GitHub Release 和 dist zip 仅由 stable/Patch 创建。
 # AI-CORRECTION 2026-08-15: 上述箭头仅表示发布等级覆盖范围；同一 tag 面向所有允许环境的部署在 dist 构建完成后并行执行。
+# AI-CORRECTION 2026-08-29: alpha: 私有 Docker 镜像 + 单实例 K8s Alpha；pre/beta/stable 规则保持不变。Alpha 只在完整 commit SHA 路径暴露当前构建。
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-alpha[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+-alpha[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-beta[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+-beta[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-pre[0-9]+'
@@ -18,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: '要重新发布的 tag，例如 v1.4.0.2、v1.4.0.3-beta1 或 v1.4.0.3-pre1'
+        description: '要重新发布的 tag，例如 v1.4.0.3-alpha1、v1.4.0.3-beta1、v1.4.0.3-pre1 或 v1.4.0.2'
         required: true
         type: string
 
@@ -54,12 +57,15 @@ jobs:
         run: |
           set -euo pipefail
 
+          alpha_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-alpha[0-9]+$'
           beta_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-beta[0-9]+$'
           pre_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-pre[0-9]+$'
           stable_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$'
           patch_pattern='^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-Patch[0-9]+$'
 
-          if [[ "$RELEASE_TAG" =~ $beta_pattern ]]; then
+          if [[ "$RELEASE_TAG" =~ $alpha_pattern ]]; then
+            channel='alpha'
+          elif [[ "$RELEASE_TAG" =~ $beta_pattern ]]; then
             channel='beta'
           elif [[ "$RELEASE_TAG" =~ $pre_pattern ]]; then
             channel='pre'
@@ -67,7 +73,7 @@ jobs:
             channel='stable'
           else
             echo "Unsupported release tag: $RELEASE_TAG" >&2
-            echo 'Expected vX.Y.Z[.N], vX.Y.Z[.N]-betaN, vX.Y.Z[.N]-preN, or vX.Y.Z.N-PatchN.' >&2
+            echo 'Expected vX.Y.Z[.N], vX.Y.Z[.N]-alphaN, vX.Y.Z[.N]-betaN, vX.Y.Z[.N]-preN, or vX.Y.Z.N-PatchN.' >&2
             exit 1
           fi
 
@@ -279,7 +285,7 @@ jobs:
 
   build-docker:
     name: Docker ${{ needs.prepare.outputs.tag }}
-    if: needs.prepare.outputs.channel == 'pre' || needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
+    if: needs.prepare.outputs.channel == 'alpha' || needs.prepare.outputs.channel == 'pre' || needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
     needs:
       - prepare
       - build-dist
@@ -311,15 +317,20 @@ jobs:
 
           config_file="$RUNNER_TEMP/deploy-config.json"
           printf '%s' "$DEPLOY_CONFIG" > "$config_file"
-          jq -e '
-            [.registry, .username, .password, .image_name]
+          image_name_key='image_name'
+          if [ "$RELEASE_CHANNEL" = 'alpha' ]; then
+            image_name_key='alpha_image_name'
+          fi
+
+          jq -e --arg image_name_key "$image_name_key" '
+            [.registry, .username, .password, .[$image_name_key]]
             | all(type == "string" and length > 0)
           ' "$config_file" > /dev/null
 
           registry="$(jq -r '.registry' "$config_file")"
           username="$(jq -r '.username' "$config_file")"
           password="$(jq -r '.password' "$config_file")"
-          image_name="$(jq -r '.image_name' "$config_file")"
+          image_name="$(jq -r --arg image_name_key "$image_name_key" '.[$image_name_key]' "$config_file")"
           image="${registry}/${image_name}:${RELEASE_TAG}"
 
           echo "::add-mask::$password"
@@ -410,6 +421,85 @@ jobs:
 
           envsubst < .github/k8s/deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
           kubectl rollout status deployment/industrial-planner -n "$NAMESPACE" --timeout=120s
+
+  deploy-alpha-container:
+    name: Deploy Alpha container
+    if: needs.prepare.outputs.channel == 'alpha'
+    needs:
+      - prepare
+      - build-dist
+      - build-docker
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ needs.build-docker.outputs.image }}
+      SOURCE_SHA: ${{ needs.build-dist.outputs.source_sha }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Load Alpha K8s deploy config
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          config_file="$RUNNER_TEMP/deploy-config.json"
+          printf '%s' "$DEPLOY_CONFIG" > "$config_file"
+          jq -e '
+            [.alpha_domain, .namespace]
+            | all(type == "string" and length > 0)
+          ' "$config_file" > /dev/null
+
+          alpha_domain="$(jq -r '.alpha_domain' "$config_file")"
+          if [[ ! "$alpha_domain" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]; then
+            echo 'DEPLOY_CONFIG.alpha_domain must be a lowercase DNS hostname without scheme or path.' >&2
+            exit 1
+          fi
+
+          echo "alpha_domain=$alpha_domain" >> "$GITHUB_ENV"
+          echo "namespace=$(jq -r '.namespace' "$config_file")" >> "$GITHUB_ENV"
+
+          # image_pull_secret: 未配置时回退到 registry 名
+          image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
+          if [ -z "$image_pull_secret" ]; then
+            image_pull_secret="$(jq -r '.registry' "$config_file")"
+          fi
+          echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
+
+      - name: Validate Alpha source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid full commit SHA: $SOURCE_SHA" >&2
+            exit 1
+          fi
+
+      - name: Render and apply Alpha K8s manifests
+        env:
+          ALPHA_DOMAIN: ${{ env.alpha_domain }}
+          NAMESPACE: ${{ env.namespace }}
+          IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubeconfig_file="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBECONFIG_DATA" > "$kubeconfig_file"
+          chmod 600 "$kubeconfig_file"
+          export KUBECONFIG="$kubeconfig_file"
+
+          envsubst < .github/k8s/alpha-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+          kubectl rollout status deployment/industrial-planner-alpha -n "$NAMESPACE" --timeout=120s
+
+          alpha_url="https://${ALPHA_DOMAIN}/${SOURCE_SHA}/"
+          echo "Alpha URL: $alpha_url"
+          echo "Alpha URL: $alpha_url" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-pages:
     name: Deploy GitHub Pages
