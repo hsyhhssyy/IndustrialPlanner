@@ -17,7 +17,7 @@
 1. Alpha tag 格式只能是 `vX.Y.Z-alphaN` 或 `vX.Y.Z.N-alphaN`。
 2. Alpha 的版本主体选择遵循下方 Pre / Beta 规则；`alphaN` 序号只在相同版本主体的 Alpha tag 内递增。
 3. Alpha 包含尚未公开的保密内容，只能推送到当前项目的私有 `origin`；不得把 Alpha tag 或对应提交推送到公开 `upstream`。
-4. Alpha 使用 Beta 后端，但只发布私有 Docker 镜像和 K8s Alpha 环境，不创建 GitHub Release，不部署 EdgeOne 或 GitHub Pages。
+4. Alpha 使用 `DEPLOY_CONFIG.backend_api_base_urls.beta` 后端默认 URL，但只发布私有 Docker 镜像和 K8s Alpha 环境，不创建 GitHub Release，不部署 EdgeOne 或 GitHub Pages。
 5. 发布成功后的入口是 `https://endfield-alpha.hsyhhssyy.net/<完整 commit SHA>/`；完整 SHA 必须取 tag 实际指向的 commit，不得截短、改用 tag 名或增加 latest 别名。
 6. Alpha 是单实例环境：新 Alpha 发布会切换唯一有效 SHA 路径，旧 SHA 路径随即失效。
 7. Alpha 镜像必须写入 `DEPLOY_CONFIG.alpha_image_name` 指向的私有镜像仓库；无法确认镜像仓库为私有时停止发布并要求用户确认。

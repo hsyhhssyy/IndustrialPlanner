@@ -2,7 +2,7 @@ import { makeAutoObservable } from "mobx";
 
 import type { UiKey } from "@/shared/i18n";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
-import { DEFAULT_BACKEND_API_HOST } from "@/shared/storage/backend-api-address";
+import { BUILD_BACKEND_API_BASE_URL } from "@/shared/storage/backend-api-address";
 import type { SyncProviderId } from "@/shared/storage/sync-provider-activation";
 
 // AI-REMOVED 2026-08-24:
@@ -664,7 +664,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.debug-backend-api-address-override",
         descriptionKey: "settingsField.debug-backend-api-address-overrideDescription",
         defaultValue: "",
-        placeholderText: DEFAULT_BACKEND_API_HOST,
+        placeholderText: BUILD_BACKEND_API_BASE_URL,
       },
       {
         id: "debug-show-fps",

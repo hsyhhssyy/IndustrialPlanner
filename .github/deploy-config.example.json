@@ -6,6 +6,10 @@
   "alpha_image_name": "industrial-planner-alpha-private",
   "domain": "***",
   "alpha_domain": "endfield-alpha.hsyhhssyy.net",
+  "backend_api_base_urls": {
+    "beta": "https://endfield-api.richetriotour.net",
+    "live": "https://endfield-api.anonymous-test.top"
+  },
   "namespace": "amiyabot",
   "image_pull_secret": ""
 }

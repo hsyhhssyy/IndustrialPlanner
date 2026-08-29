@@ -53,6 +53,8 @@ jobs:
 
       - name: Classify and validate tag
         id: classify
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
         shell: bash
         run: |
           set -euo pipefail
@@ -77,16 +79,51 @@ jobs:
             exit 1
           fi
 
+          # AI-REMOVED 2026-08-29:
+          # Reason: 发布渠道对应的后端默认 URL 已收敛到 DEPLOY_CONFIG，workflow 不再持有环境地址真相。
+          # Trigger: 用户要求每个后端环境可配置默认 URL，stable/patch 选 live，其他发布渠道选 beta。
+          # Evidence: VITE_BACKEND_API_BASE_URL 已由 prepare job 统一输出，现有硬编码只需替换其值来源。
+          # Replacement: 下方 backend_api_base_urls.beta/live 解析与渠道选择。
+          # Risk: DEPLOY_CONFIG 缺少任一默认 URL 时所有发布渠道都会 fail-fast。
+          # Human Review: Required
+          #
+          # Original code:
+          # if [ "$channel" = 'stable' ]; then
+          #   backend_api_base_url='https://endfield-api.anonymous-test.top'
+          # else
+          #   backend_api_base_url='https://endfield-api.richetriotour.net'
+          # fi
+
+          config_file="$RUNNER_TEMP/deploy-config.json"
+          printf '%s' "$DEPLOY_CONFIG" > "$config_file"
+          jq -e '
+            .backend_api_base_urls as $urls
+            | [$urls.beta, $urls.live]
+            | all(type == "string" and length > 0)
+          ' "$config_file" > /dev/null
+
+          backend_environment='beta'
           if [ "$channel" = 'stable' ]; then
-            backend_api_base_url='https://endfield-api.anonymous-test.top'
-          else
-            backend_api_base_url='https://endfield-api.richetriotour.net'
+            backend_environment='live'
           fi
+
+          backend_api_base_url="$(
+            jq -r --arg environment "$backend_environment" \
+              '.backend_api_base_urls[$environment]' "$config_file"
+          )"
+          if [[ ! "$backend_api_base_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "DEPLOY_CONFIG.backend_api_base_urls.$backend_environment must be a valid HTTPS URL." >&2
+            exit 1
+          fi
+          while [[ "$backend_api_base_url" == */ ]]; do
+            backend_api_base_url="${backend_api_base_url%/}"
+          done
 
           echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
           echo "backend_api_base_url=$backend_api_base_url" >> "$GITHUB_OUTPUT"
           echo "Release channel: $channel"
+          echo "Backend environment: $backend_environment"
 
       - name: Generate changelog
         if: steps.classify.outputs.channel == 'stable'

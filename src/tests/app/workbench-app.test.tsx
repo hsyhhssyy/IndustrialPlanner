@@ -4385,7 +4385,9 @@ describe("WorkbenchApp", () => {
     expect(showFpsToggle?.checked).toBe(false);
     expect(showGestureTestWindowToggle?.checked).toBe(false);
     expect(simulationWorkerDetailedReportToggle?.checked).toBe(false);
-    expect(backendApiAddressInput?.placeholder).toBe("endfield-api.anonymous-test.top");
+    expect(backendApiAddressInput?.placeholder).toBe(
+      "https://endfield-api.anonymous-test.top",
+    );
 
     act(() => {
       if (backendApiAddressInput) {

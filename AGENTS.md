@@ -280,7 +280,7 @@ AI 在分析代码时必须区分：
 1. Alpha tag 只允许 `vX.Y.Z-alphaN` 或 `vX.Y.Z.N-alphaN`，并且只能推送到私有 `origin`；不得推送到公开 `upstream`。
 2. Alpha 入口固定为 `https://endfield-alpha.hsyhhssyy.net/<完整 commit SHA>/`。完整 SHA 是访问能力凭据，不得缩短、改用 tag 名、增加 `latest`、根路径入口或目录索引。
 3. Alpha 是单实例环境。新 Alpha 发布切换到新 SHA 路径，旧 SHA 路径立即失效；允许发布切换期间暂时不可用。
-4. Alpha 构建复用 Beta 后端与前端逻辑，保留 Analytics，不增加 Alpha 专用的 PWA 开关。PWA 在 SHA 子路径不可用是已接受行为。
+4. 发布构建从 `DEPLOY_CONFIG.backend_api_base_urls` 选择后端默认 URL：stable / Patch 使用 `live`，Alpha / Pre / Beta 使用 `beta`。Alpha 保留 Analytics，不增加 Alpha 专用的 PWA 开关；PWA 在 SHA 子路径不可用是已接受行为。
 5. Alpha 只发布到私有 Docker 镜像仓库与 K8s，不部署 EdgeOne、GitHub Pages，也不创建 GitHub Release。`DEPLOY_CONFIG.alpha_image_name` 必须指向私有镜像仓库。
 6. 固定域名、tag 规则和部署逻辑可以进入仓库；当前私有 commit SHA、镜像、构建产物和 Action 日志不得提前公开。用户约定对应 SHA 进入公开仓库时该版本已解密。
 7. 该 URL 方案是用户明确接受的 capability URL 风险模型，不等同于身份认证或加密。除非用户改变要求，不得擅自增加登录、Basic Auth、IP allowlist、禁用 Analytics 等访问策略。
