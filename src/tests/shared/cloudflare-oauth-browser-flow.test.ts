@@ -74,7 +74,7 @@ describe("cloudflare-oauth-browser-flow", () => {
     expect(createCloudflareOAuthFrontendRedirectUri(
       `https://endfield-alpha.hsyhhssyy.net/${ALPHA_SOURCE_SHA}/?debug=1#section`,
     )).toBe(
-      `https://endfield-alpha.hsyhhssyy.net/${ALPHA_SOURCE_SHA}/auth/callback/`,
+      `https://endfield-alpha.hsyhhssyy.net/${ALPHA_SOURCE_SHA}/auth/callback`,
     );
     expect(parseCloudflareOAuthCallbackFragment(
       `#code=callback-code&oauth_channel=${CHANNEL_A}`,

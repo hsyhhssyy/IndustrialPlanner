@@ -85,7 +85,7 @@ export function createCloudflareOAuthFrontendRedirectUri(
   const callbackUrl = new URL(
     alphaSourceSha === undefined
       ? "/auth/callback"
-      : `/${alphaSourceSha}/auth/callback/`,
+      : `/${alphaSourceSha}/auth/callback`,
     browserLocation,
   );
   callbackUrl.search = "";

@@ -176,7 +176,14 @@ jobs:
       - name: Record source SHA
         id: source
         shell: bash
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          public_base_path='./'
+          if [ "$RELEASE_CHANNEL" = 'alpha' ]; then
+            public_base_path="/${source_sha}/"
+          fi
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "public_base_path=$public_base_path" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -194,6 +201,7 @@ jobs:
         env:
           VITE_APP_VERSION: ${{ env.RELEASE_TAG }}
           VITE_BACKEND_API_BASE_URL: ${{ needs.prepare.outputs.backend_api_base_url }}
+          VITE_PUBLIC_BASE_PATH: ${{ steps.source.outputs.public_base_path }}
         run: npm run build
 
       # AI-REMOVED 2026-08-19:

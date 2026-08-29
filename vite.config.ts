@@ -10,6 +10,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
 const PWA_DIST_DIRECTORY = fileURLToPath(new URL("./dist/", import.meta.url));
 const APP_VERSION_CACHE_KEY = encodeURIComponent(process.env.VITE_APP_VERSION?.trim() || "dev");
+const PUBLIC_BASE_PATH = process.env.VITE_PUBLIC_BASE_PATH?.trim() || "./";
 
 interface WorkboxManifestEntryWithSize {
   readonly integrity?: string;
@@ -59,7 +60,7 @@ function rewriteOAuthCallbackPath(requestUrl: string | undefined): string | unde
 }
 
 export default defineConfig({
-  base: "./",
+  base: PUBLIC_BASE_PATH,
   define: {
     "import.meta.env.VITE_APP_VERSION_CACHE_KEY": JSON.stringify(APP_VERSION_CACHE_KEY),
   },

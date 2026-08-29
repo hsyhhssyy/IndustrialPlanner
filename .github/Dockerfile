@@ -17,6 +17,7 @@ RUN echo 'server { \
     index index.html; \
     location = /sw.js { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; } \
     location = /manifest.webmanifest { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; } \
+    location = /auth/callback { try_files /auth/callback/index.html =404; } \
     location = /v2 { return 410; } \
     location ^~ /v2/ { return 410; } \
     location / { try_files $uri $uri/ /index.html; } \
