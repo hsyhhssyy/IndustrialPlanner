@@ -178,10 +178,10 @@ export default defineConfig({
     },
   ],
   server: {
-    allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],
+    allowedHosts: [".hsyhhssyy.net"],
   },
   preview: {
-    allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],
+    allowedHosts: [".hsyhhssyy.net"],
   },
   resolve: {
     alias: {

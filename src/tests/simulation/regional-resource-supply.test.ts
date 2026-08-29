@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { aggregateRegionalWarehouseStats } from "@/simulation/regional";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
   LocalRegionalBasePort,
@@ -8,7 +9,10 @@ import {
   type RegionalBaseTopologyInput,
 } from "@/simulation/regional/session";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import type { RegionalResourceSupplySetting } from "@/simulation/types";
+import type {
+  RegionalResourceSupplySetting,
+  RuntimeTickSnapshot,
+} from "@/simulation/types";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
@@ -139,6 +143,19 @@ describe("地区资源供给", () => {
       }
       expect(committed.gateTickNumber).toBe(1201);
       expect(committed.warehouseCounts["item_originium_ore"]).toBe(10);
+      const baseSnapshots = Object.values(committed.snapshotsByBaseId)
+        .filter((snapshot): snapshot is RuntimeTickSnapshot => snapshot !== null);
+      const warehouseStats = aggregateRegionalWarehouseStats({
+        baseSnapshots,
+        authorityCounts: committed.warehouseCounts,
+        supply: topologies[0]!.topology.regionalResourceSupply,
+      });
+      expect(warehouseStats.items["item_originium_ore"]).toMatchObject({
+        producedPerMinute: 10,
+        warehouseCount: 10,
+        infinite: false,
+      });
+      expect(warehouseStats.items["item_liquid_water"]?.infinite).toBe(true);
     } finally {
       session.dispose();
     }

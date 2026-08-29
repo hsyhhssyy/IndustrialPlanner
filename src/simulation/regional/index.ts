@@ -11,6 +11,7 @@ export {
   LocalRegionalBasePort,
   RegionalSimulationSession,
 } from "./session";
+export { aggregateRegionalWarehouseStats } from "./warehouse-stats";
 export type {
   LocalRegionalBasePortOptions,
   RegionalAuthorityPort,

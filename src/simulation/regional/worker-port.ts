@@ -101,6 +101,16 @@ export class RegionalWorkerBridge {
     }, "regional-topology-loaded");
   }
 
+  public setRegionalAdvanceMode(
+    advanceMode: "per-tick" | "coarse",
+  ): Promise<Extract<SimulationWorkerResponse, { readonly type: "regional-advance-mode-set" }>> {
+    return this.request({
+      type: "set-regional-advance-mode",
+      requestId: this.createRequestId(),
+      advanceMode,
+    }, "regional-advance-mode-set");
+  }
+
   public prepareRegionalEpoch(epochNumber: number): Promise<Extract<SimulationWorkerResponse, { readonly type: "regional-epoch-prepared" }>> {
     return this.request({
       type: "prepare-regional-epoch",
@@ -326,6 +336,11 @@ export class BrowserRegionalBasePort implements RegionalBasePort {
     const response = await this.options.bridge.takeRegionalSnapshots();
     rejectRegionalWorkerError(response.status);
     return response.snapshots;
+  }
+
+  public async setAdvanceMode(advanceMode: "per-tick" | "coarse"): Promise<void> {
+    const response = await this.options.bridge.setRegionalAdvanceMode(advanceMode);
+    rejectRegionalWorkerError(response.status);
   }
 
   public dispose(): void {

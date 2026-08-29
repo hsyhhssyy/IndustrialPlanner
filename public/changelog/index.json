@@ -1,32 +1,188 @@
 [
-  "浏览器里运行集成工业-v0.0.9.md",
-  "浏览器里运行集成工业-v1.0.5.md",
-  "来自未来的超时空配方更新-v1.1.0-beta.md",
-  "新潮起，故渊离-正式更新-v1.1.1.md",
-  "春晓时-正式更新-v1.2.0.md",
-  "全新版本&移动端支持 寻遗散记-1.3.0.md",
-  "incremental/1.3.0/增量更新-v1.3.0.1.md",
-  "向渊行-正式更新-v1.4.0.md",
-  "incremental/1.4.0/增量更新-v1.4.0.1.md",
-  "incremental/1.4.0/增量更新-v1.4.0.2.md",
-  "incremental/1.4.0/增量更新-v1.4.0.3.md",
-  "incremental/1.4.0/增量更新-v1.4.0.4.md",
-  "向渊行-功能更新1-v1.4.1.md",
-  "incremental/1.4.1/增量更新-v1.4.1.1.md",
-  "incremental/1.4.1/增量更新-v1.4.1.2.md",
-  "incremental/1.4.1/增量更新-v1.4.1.3.md",
-  "incremental/1.4.1/增量更新-v1.4.1.4.md",
-  "incremental/1.4.1/增量更新-v1.4.1.5.md",
-  "incremental/1.4.1/增量更新-v1.4.1.6.md",
-  "incremental/1.4.1/增量更新-v1.4.1.7.md",
-  "incremental/1.4.1/增量更新-v1.4.1.8.md",
-  "incremental/1.4.1/增量更新-v1.4.1.9.md",
-  "incremental/1.4.1/增量更新-v1.4.1.10.md",
-  "incremental/1.4.1/增量更新-v1.4.1.11.md",
-  "incremental/1.4.1/增量更新-v1.4.1.12.md",
-  "incremental/1.4.1/增量更新-v1.4.1.13.md",
-  "incremental/1.4.1/增量更新-v1.4.1.14.md",
-  "incremental/1.4.1/增量更新-v1.4.1.15.md",
-  "向渊行-功能更新2-v1.4.2.md",
-  "incremental/1.4.2/增量更新-v1.4.2.1.md"
+  {
+    "file": "0.0.9.md",
+    "title": "浏览器里运行集成工业-v0.0.9",
+    "version": "0.0.9",
+    "kind": "main"
+  },
+  {
+    "file": "1.0.5.md",
+    "title": "浏览器里运行集成工业-v1.0.5",
+    "version": "1.0.5",
+    "kind": "main"
+  },
+  {
+    "file": "1.1.0.md",
+    "title": "来自未来的超时空配方更新-v1.1.0",
+    "version": "1.1.0",
+    "kind": "main"
+  },
+  {
+    "file": "1.1.1.md",
+    "title": "新潮起，故渊离-正式更新-v1.1.1",
+    "version": "1.1.1",
+    "kind": "main"
+  },
+  {
+    "file": "1.2.0.md",
+    "title": "春晓时-正式更新-v1.2.0",
+    "version": "1.2.0",
+    "kind": "main"
+  },
+  {
+    "file": "1.3.0.md",
+    "title": "全新版本&移动端支持 寻遗散记-1.3.0",
+    "version": "1.3.0",
+    "kind": "main"
+  },
+  {
+    "file": "incremental/1.3.0/1.3.0.1.md",
+    "title": "增量更新-v1.3.0.1",
+    "version": "1.3.0.1",
+    "kind": "incremental"
+  },
+  {
+    "file": "1.4.0.md",
+    "title": "向渊行-正式更新-v1.4.0",
+    "version": "1.4.0",
+    "kind": "main"
+  },
+  {
+    "file": "incremental/1.4.0/1.4.0.1.md",
+    "title": "增量更新-v1.4.0.1",
+    "version": "1.4.0.1",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.0/1.4.0.2.md",
+    "title": "增量更新-v1.4.0.2",
+    "version": "1.4.0.2",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.0/1.4.0.3.md",
+    "title": "增量更新-v1.4.0.3",
+    "version": "1.4.0.3",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.0/1.4.0.4.md",
+    "title": "增量更新-v1.4.0.4",
+    "version": "1.4.0.4",
+    "kind": "incremental"
+  },
+  {
+    "file": "1.4.1.md",
+    "title": "向渊行-功能更新1-v1.4.1",
+    "version": "1.4.1",
+    "kind": "main"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.1.md",
+    "title": "增量更新-v1.4.1.1",
+    "version": "1.4.1.1",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.2.md",
+    "title": "增量更新-v1.4.1.2",
+    "version": "1.4.1.2",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.3.md",
+    "title": "增量更新-v1.4.1.3",
+    "version": "1.4.1.3",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.4.md",
+    "title": "增量更新-v1.4.1.4",
+    "version": "1.4.1.4",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.5.md",
+    "title": "增量更新-v1.4.1.5",
+    "version": "1.4.1.5",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.6.md",
+    "title": "增量更新-v1.4.1.6",
+    "version": "1.4.1.6",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.7.md",
+    "title": "增量更新-v1.4.1.7",
+    "version": "1.4.1.7",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.8.md",
+    "title": "增量更新-v1.4.1.8",
+    "version": "1.4.1.8",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.9.md",
+    "title": "增量更新-v1.4.1.9",
+    "version": "1.4.1.9",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.10.md",
+    "title": "增量更新-v1.4.1.10",
+    "version": "1.4.1.10",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.11.md",
+    "title": "增量更新-v1.4.1.11",
+    "version": "1.4.1.11",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.12.md",
+    "title": "增量更新-v1.4.1.12",
+    "version": "1.4.1.12",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.13.md",
+    "title": "增量更新-v1.4.1.13",
+    "version": "1.4.1.13",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.14.md",
+    "title": "增量更新-v1.4.1.14",
+    "version": "1.4.1.14",
+    "kind": "incremental"
+  },
+  {
+    "file": "incremental/1.4.1/1.4.1.15.md",
+    "title": "增量更新-v1.4.1.15",
+    "version": "1.4.1.15",
+    "kind": "incremental"
+  },
+  {
+    "file": "1.4.2.md",
+    "title": "向渊行-功能更新2-v1.4.2",
+    "version": "1.4.2",
+    "kind": "main"
+  },
+  {
+    "file": "incremental/1.4.2/1.4.2.1.md",
+    "title": "增量更新-v1.4.2.1",
+    "version": "1.4.2.1",
+    "kind": "incremental"
+  },
+  {
+    "file": "1.5.0.md",
+    "title": "雪凇幽梦-正式更新-v1.5.0",
+    "version": "1.5.0",
+    "kind": "main"
+  }
 ]

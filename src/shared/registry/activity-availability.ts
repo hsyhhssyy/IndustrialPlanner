@@ -12,6 +12,8 @@ export interface ActivityDefinition {
 export const ACTIVITY_TAG_PREFIX = "activity:";
 export const ACTIVITY_LIMITED_FORMULA_1_ID = "activity-limited-formula-1";
 export const ACTIVITY_LIMITED_FORMULA_1_TAG = `${ACTIVITY_TAG_PREFIX}${ACTIVITY_LIMITED_FORMULA_1_ID}`;
+export const ACTIVITY_LIMITED_FORMULA_2_ID = "activity-limited-formula-2";
+export const ACTIVITY_LIMITED_FORMULA_2_TAG = `${ACTIVITY_TAG_PREFIX}${ACTIVITY_LIMITED_FORMULA_2_ID}`;
 
 export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
   {
@@ -20,6 +22,13 @@ export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
     icon: "/item-icons/item_activity_xiranite_enr_hulu.webp",
     startTime: Date.parse("2026-04-28T00:00:00+08:00"),
     endTime: Date.parse("2026-05-19T00:00:00+08:00"),
+  },
+  {
+    id: ACTIVITY_LIMITED_FORMULA_2_ID,
+    name: "集成援助·泡泡出击",
+    icon: "/item-icons/missing-item-icon.webp",
+    startTime: Date.parse("2026-09-16T12:00:00+08:00"),
+    endTime: Date.parse("2026-09-30T16:00:00+08:00"),
   },
 ];
 

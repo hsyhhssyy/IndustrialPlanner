@@ -322,8 +322,26 @@ export function moduleContainsInactiveActivityContent(
   index: ModuleBalancingIndex,
   activeActivityIds: readonly string[],
 ): boolean {
-  const activeActivityIdSet = new Set(activeActivityIds);
-  return resolveModuleActivityIds(module, index).some((activityId) => !activeActivityIdSet.has(activityId));
+  if (module.sourceType !== "system-recipe") {
+    return [...module.inputs, ...module.outputs].some((port) => {
+      const item = index.itemById.get(port.itemId);
+      return item !== undefined && !isItemAvailableByActivity(item, activeActivityIds);
+    });
+  }
+
+  const recipe = index.allRecipeById.get(module.recipeId) ?? index.recipeById.get(module.recipeId);
+  if (recipe === undefined) {
+    return false;
+  }
+
+  if (!isRecipeAvailableByActivity(recipe, activeActivityIds)) {
+    return true;
+  }
+
+  return [...recipe.inputs, ...recipe.outputs].some((slot) => {
+    const item = index.itemById.get(slot.itemId);
+    return item !== undefined && !isItemAvailableByActivity(item, activeActivityIds);
+  });
 }
 
 export function resolveCanvasActivityIds(
@@ -351,8 +369,19 @@ export function canvasContainsInactiveActivityContent(
   index: ModuleBalancingIndex,
   activeActivityIds: readonly string[],
 ): boolean {
-  const activeActivityIdSet = new Set(activeActivityIds);
-  return resolveCanvasActivityIds(canvas, index).some((activityId) => !activeActivityIdSet.has(activityId));
+  const hasInactiveGlobalInput = canvas.globalInputs.some((port) => {
+    const item = index.itemById.get(port.itemId);
+    return item !== undefined && !isItemAvailableByActivity(item, activeActivityIds);
+  });
+  if (hasInactiveGlobalInput) {
+    return true;
+  }
+
+  return canvas.stages.some((stage) => stage.entries.some((entry) => {
+    const module = resolveModuleForActivityLookup(entry.moduleId, index);
+    return module !== null
+      && moduleContainsInactiveActivityContent(module, index, activeActivityIds);
+  }));
 }
 
 export function resolveModuleInputs(

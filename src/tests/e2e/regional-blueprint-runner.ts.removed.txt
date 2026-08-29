@@ -1,0 +1,484 @@
+// AI-REMOVED 2026-08-28:
+// Reason: 区域蓝图负荷 Runner 已改为直接驱动真实仿真内核的 Blueprint Runner，不再依赖浏览器与 Playwright。
+// Trigger: 用户明确要求当前及未来所有使用区域蓝图 Runner 创建的用例归入 Blueprint 测试组。
+// Evidence: 新 Runner 位于 src/tests/simulation，首个用例已由 Vitest blueprint project 运行通过。
+// Replacement: src/tests/simulation/regional-blueprint-runner.ts
+// Risk: Low；浏览器装载与触摸交互不再由此 Runner 覆盖，产率仿真由替代实现覆盖。
+// Human Review: Required
+//
+// Original code:
+// import type { Page } from "playwright/test";
+//
+// import type { BlueprintDocument } from "../../domain/document/blueprint-document";
+// import {
+//   createWorldDocument,
+//   type SlotLinkDefinition,
+//   type WorldDocument,
+//   type WorldEntity,
+// } from "../../domain/document/world-document";
+// import { createWorkspaceState } from "../../domain/document/workspace-state";
+// import type { WorkspaceContract } from "../../domain/document/workspace-contract";
+// import type { GridPoint } from "../../domain/shared/grid";
+// import { ensureProtocolCoreEntity } from "../../editor/ensure-protocol-core";
+// import { resolvePlacementValidations } from "../../editor/placement-validation";
+// import { createEditorStateReadWrite } from "../../editor/state-impl";
+// import { createRegistryContract } from "../../registry";
+// import type { RegionalSimulationTickSyncResult } from "../../simulation/action-impl";
+//
+// export interface RegionalBlueprintPlacement {
+//   readonly blueprint: BlueprintDocument;
+//   /** 目标锚点；省略时保持蓝图原始坐标。 */
+//   readonly anchor?: GridPoint;
+// }
+//
+// export interface RegionalBlueprintScenario {
+//   readonly name: string;
+//   readonly regionTag: string;
+//   readonly currentBaseId: string;
+//   /** 未声明或空数组的同区域基地会以空基地参与仿真。 */
+//   readonly placementsByBaseId?: Readonly<Record<string, readonly RegionalBlueprintPlacement[]>>;
+//   readonly untilTick: number;
+//   readonly timeoutMs: number;
+//   /** 只保留明确要求的采样点；最终 untilTick 会自动加入。 */
+//   readonly captureTicks?: readonly number[];
+// }
+//
+// export interface RegionalBlueprintDocumentSummary {
+//   readonly baseId: string;
+//   readonly documentKey: string;
+//   readonly entityCount: number;
+//   readonly protocolCoreCount: number;
+// }
+//
+// export interface RegionalBlueprintScenarioReport {
+//   readonly currentBaseId: string;
+//   readonly documents: readonly WorldDocument[];
+//   readonly documentSummaries: readonly RegionalBlueprintDocumentSummary[];
+//   readonly captures: readonly RegionalSimulationTickSyncResult[];
+// }
+//
+// interface BrowserRunnerWindow {
+//   readonly __industrialPlannerAppHost?: {
+//     readonly workspace: {
+//       readonly render: {
+//         destroy(): void;
+//       } | null;
+//       readonly editor: {
+//         readonly document: {
+//           getSnapshot(): WorldDocument;
+//         };
+//       } | null;
+//       readonly simulation: {
+//         readonly state: {
+//           readonly runningState: string;
+//           readonly simulationMode: string;
+//           readonly runtimeStatus: {
+//             readonly error: string | null;
+//           };
+//         };
+//         readonly internalActions: {
+//           syncRegionalToTick(
+//             tickNumber: number,
+//             timeoutMs: number,
+//           ): Promise<RegionalSimulationTickSyncResult>;
+//         };
+//       } | null;
+//     };
+//   };
+//   __regionalBlueprintRunnerRendererDisposed?: boolean;
+// }
+//
+// const registry = createRegistryContract();
+//
+// export async function runRegionalBlueprintScenario(
+//   page: Page,
+//   scenario: RegionalBlueprintScenario,
+// ): Promise<RegionalBlueprintScenarioReport> {
+//   const documents = createRegionalBlueprintDocuments(scenario);
+//   const captureTicks = normalizeCaptureTicks(scenario);
+//
+//   await page.addInitScript(() => {
+//     localStorage.setItem("v3-experimental-regional-multi-base", "true");
+//     localStorage.setItem("v3-sync-provider", "none");
+//   });
+//   await page.goto("/");
+//   await page.waitForFunction(() => Boolean(
+//     (window as unknown as BrowserRunnerWindow).__industrialPlannerAppHost
+//       ?.workspace.editor?.document,
+//   ));
+//
+//   await injectRegionalBlueprintDocuments(page, documents, scenario.currentBaseId);
+//   await page.reload();
+//   await page.getByRole("button", { name: "开始仿真" }).waitFor({
+//     state: "visible",
+//     timeout: 30_000,
+//   });
+//   await page.waitForFunction(() => (
+//     (window as unknown as BrowserRunnerWindow).__industrialPlannerAppHost
+//       ?.workspace.simulation?.state.simulationMode === "regional-multi-base"
+//   ));
+//
+//   const restored = await readRegionalBlueprintDocumentSummaries(page);
+//   if (restored.currentBaseId !== scenario.currentBaseId) {
+//     throw new Error(
+//       `Regional runner restored current base ${restored.currentBaseId}; expected ${scenario.currentBaseId}.`,
+//     );
+//   }
+//
+//   const simulationButton = page.locator(
+//     '[data-ui-button-id="top-bar-simulation-control"]',
+//   );
+//   await simulationButton.tap();
+//   await page.waitForFunction(() => {
+//     const simulation = (window as unknown as BrowserRunnerWindow)
+//       .__industrialPlannerAppHost?.workspace.simulation;
+//     return simulation?.state.runningState === "start"
+//       && simulation.state.runtimeStatus.error === null;
+//   }, undefined, { timeout: 60_000 });
+//   await prepareRegionalSimulationForHeadlessAdvance(page);
+//
+//   const captures: RegionalSimulationTickSyncResult[] = [];
+//   for (const targetTick of captureTicks) {
+//     const capture = await syncRegionalSimulationToTick(
+//       page,
+//       targetTick,
+//       scenario.timeoutMs,
+//     );
+//     captures.push(capture);
+//   }
+//
+//   return {
+//     currentBaseId: restored.currentBaseId,
+//     documents,
+//     documentSummaries: restored.summaries,
+//     captures,
+//   };
+// }
+//
+// export async function prepareRegionalSimulationForHeadlessAdvance(
+//   page: Page,
+// ): Promise<void> {
+//   await page.evaluate(() => {
+//     const runnerWindow = window as unknown as BrowserRunnerWindow;
+//     if (runnerWindow.__regionalBlueprintRunnerRendererDisposed === true) {
+//       return;
+//     }
+//     const render = runnerWindow.__industrialPlannerAppHost?.workspace.render;
+//     if (render === null || render === undefined) {
+//       throw new Error("Regional runner cannot disable the renderer before headless advance.");
+//     }
+//     render.destroy();
+//     runnerWindow.__regionalBlueprintRunnerRendererDisposed = true;
+//   });
+// }
+//
+// export async function syncRegionalSimulationToTick(
+//   page: Page,
+//   targetTick: number,
+//   timeoutMs: number,
+// ): Promise<RegionalSimulationTickSyncResult> {
+//   return await page.evaluate(async ({ target, timeout }) => {
+//     const simulation = (window as unknown as BrowserRunnerWindow)
+//       .__industrialPlannerAppHost?.workspace.simulation;
+//     if (simulation === null || simulation === undefined) {
+//       throw new Error("Regional simulation host is unavailable.");
+//     }
+//     return await simulation.internalActions.syncRegionalToTick(target, timeout);
+//   }, {
+//     target: targetTick,
+//     timeout: timeoutMs,
+//   });
+// }
+//
+// export function createRegionalBlueprintDocuments(
+//   scenario: RegionalBlueprintScenario,
+// ): WorldDocument[] {
+//   validateScenario(scenario);
+//   const regionDefinitions = registry.baseDefinitions.filter(
+//     (definition) => definition.tag === scenario.regionTag,
+//   );
+//
+//   return regionDefinitions.map((definition) => composeBaseDocument({
+//     scenarioName: scenario.name,
+//     baseId: definition.id,
+//     placements: scenario.placementsByBaseId?.[definition.id] ?? [],
+//   }));
+// }
+//
+// async function injectRegionalBlueprintDocuments(
+//   page: Page,
+//   documents: readonly WorldDocument[],
+//   currentBaseId: string,
+// ): Promise<void> {
+//   await page.evaluate(async ({ activeBaseId, injectedDocuments }) => {
+//     const activeDocument = injectedDocuments.find(
+//       (document) => document.baseId === activeBaseId,
+//     );
+//     if (activeDocument === undefined) {
+//       throw new Error(`Regional runner has no document for current base ${activeBaseId}.`);
+//     }
+//
+//     const editorPersistModuleUrl = "/src/shared/storage/editor-persist-state-storage.ts";
+//     const regionalSettingsModuleUrl = "/src/app/regional-settings/storage.ts";
+//     const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
+//     const [editorPersist, regionalSettings, worldStorage] = await Promise.all([
+//       import(/* @vite-ignore */ editorPersistModuleUrl),
+//       import(/* @vite-ignore */ regionalSettingsModuleUrl),
+//       import(/* @vite-ignore */ worldStorageModuleUrl),
+//     ]);
+//
+//     const replaced = await worldStorage.replaceWorldDocuments(injectedDocuments);
+//     if (!replaced) {
+//       throw new Error("Regional runner failed to replace world documents.");
+//     }
+//     editorPersist.writeEditorPersistState({
+//       lastDocumentId: activeDocument.documentKey,
+//       latestDocumentIdByBaseId: Object.fromEntries(
+//         injectedDocuments.map((document) => [document.baseId, document.documentKey]),
+//       ),
+//     });
+//     await regionalSettings.saveRegionalSettingsAsset({
+//       schemaVersion: 1,
+//       multiBaseEnabled: true,
+//       regions: {},
+//     });
+//   }, {
+//     activeBaseId: currentBaseId,
+//     injectedDocuments: documents,
+//   });
+// }
+//
+// async function readRegionalBlueprintDocumentSummaries(page: Page): Promise<{
+//   readonly currentBaseId: string;
+//   readonly summaries: readonly RegionalBlueprintDocumentSummary[];
+// }> {
+//   return await page.evaluate(async () => {
+//     const host = (window as unknown as BrowserRunnerWindow).__industrialPlannerAppHost;
+//     const editor = host?.workspace.editor;
+//     if (editor === null || editor === undefined) {
+//       throw new Error("Regional runner cannot read the restored editor document.");
+//     }
+//
+//     const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
+//     const worldStorage = await import(/* @vite-ignore */ worldStorageModuleUrl);
+//     const documents = await worldStorage.listWorldDocuments() as WorldDocument[];
+//     return {
+//       currentBaseId: editor.document.getSnapshot().baseId,
+//       summaries: documents.map((document) => ({
+//         baseId: document.baseId,
+//         documentKey: document.documentKey,
+//         entityCount: document.entityOrder.length,
+//         protocolCoreCount: document.entityOrder.filter((entityId) =>
+//           document.entities[entityId]?.definitionId === "sp_hub_1"
+//         ).length,
+//       })),
+//     };
+//   });
+// }
+//
+// function composeBaseDocument(options: {
+//   readonly scenarioName: string;
+//   readonly baseId: string;
+//   readonly placements: readonly RegionalBlueprintPlacement[];
+// }): WorldDocument {
+//   const initialDocument = createWorldDocument({ baseId: options.baseId });
+//   let document: WorldDocument = {
+//     ...initialDocument,
+//     documentKey: `e2e-regional-runner-${sanitizeKey(options.scenarioName)}-${options.baseId}`,
+//     meta: {
+//       ...initialDocument.meta,
+//       id: `world-e2e-regional-runner-${sanitizeKey(options.scenarioName)}-${options.baseId}`,
+//       name: `${options.scenarioName}-${options.baseId}`,
+//     },
+//   };
+//   const state = createEditorStateReadWrite();
+//   const workspace: WorkspaceContract = {
+//     state: createWorkspaceState(),
+//     registry,
+//     app: null,
+//     editor: null,
+//     render: null,
+//     simulation: null,
+//     sync: null,
+//   };
+//
+//   for (const [placementIndex, placement] of options.placements.entries()) {
+//     const blueprint = placement.blueprint;
+//     const anchor = placement.anchor ?? blueprint.initialGridPoint;
+//     const offset = {
+//       x: anchor.x - blueprint.initialGridPoint.x,
+//       y: anchor.y - blueprint.initialGridPoint.y,
+//     };
+//     const idMap = new Map<string, string>();
+//     const placedEntities: WorldEntity[] = [];
+//
+//     for (const entityId of blueprint.entityOrder) {
+//       const source = blueprint.entities[entityId];
+//       if (source === undefined) {
+//         throw new Error(`Blueprint ${blueprint.name} is missing ordered entity ${entityId}.`);
+//       }
+//       if (!registry.entityDefinitions.some((definition) => definition.id === source.definitionId)) {
+//         throw new Error(
+//           `Blueprint ${blueprint.name} uses unknown entity definition ${source.definitionId}.`,
+//         );
+//       }
+//
+//       const placedId = `runner:${placementIndex}:${source.id}`;
+//       idMap.set(source.id, placedId);
+//       placedEntities.push({
+//         ...structuredClone(source),
+//         id: placedId,
+//         position: {
+//           x: source.position.x + offset.x,
+//           y: source.position.y + offset.y,
+//         },
+//       });
+//     }
+//
+//     if (placedEntities.some((entity) => registry.queries.isProtocolCore(entity.definitionId))) {
+//       document = removeProtocolCore(document);
+//     }
+//
+//     const validations = resolvePlacementValidations({
+//       document,
+//       state,
+//       workspace,
+//       drafts: placedEntities,
+//     });
+//     const invalid = placedEntities.flatMap((entity) => {
+//       const validation = validations[entity.id];
+//       return validation?.canPlace === false
+//         ? [{ entityId: entity.id, reasons: validation.reasons }]
+//         : [];
+//     });
+//     if (invalid.length > 0) {
+//       throw new Error(
+//         `Blueprint ${blueprint.name} cannot be placed on ${options.baseId}: ${JSON.stringify(invalid)}`,
+//       );
+//     }
+//
+//     const placedLinks = blueprint.slotLinks.flatMap((link, linkIndex) => {
+//       const sourceEntityId = resolvePlacementEndpoint(link.source.entityId, idMap);
+//       const targetEntityId = resolvePlacementEndpoint(link.target.entityId, idMap);
+//       if (sourceEntityId === null || targetEntityId === null) {
+//         return [];
+//       }
+//       return [{
+//         ...structuredClone(link),
+//         id: `runner:${placementIndex}:${linkIndex}:${link.id}`,
+//         source: { ...link.source, entityId: sourceEntityId },
+//         target: { ...link.target, entityId: targetEntityId },
+//       } satisfies SlotLinkDefinition];
+//     });
+//     document = {
+//       ...document,
+//       entities: {
+//         ...document.entities,
+//         ...Object.fromEntries(placedEntities.map((entity) => [entity.id, entity])),
+//       },
+//       entityOrder: [
+//         ...document.entityOrder,
+//         ...placedEntities.map((entity) => entity.id),
+//       ],
+//       slotLinks: [...document.slotLinks, ...placedLinks],
+//       documentSettings: {
+//         ...document.documentSettings,
+//         viewport: {
+//           ...document.documentSettings.viewport,
+//           center: { ...anchor },
+//         },
+//       },
+//     };
+//   }
+//
+//   return ensureProtocolCoreEntity({
+//     document,
+//     queries: registry.queries,
+//   });
+// }
+//
+// function removeProtocolCore(document: WorldDocument): WorldDocument {
+//   const removedIds = new Set(
+//     document.entityOrder.filter((entityId) => {
+//       const entity = document.entities[entityId];
+//       return entity !== undefined && registry.queries.isProtocolCore(entity.definitionId);
+//     }),
+//   );
+//   if (removedIds.size === 0) {
+//     return document;
+//   }
+//
+//   return {
+//     ...document,
+//     entities: Object.fromEntries(
+//       Object.entries(document.entities).filter(([entityId]) => !removedIds.has(entityId)),
+//     ),
+//     entityOrder: document.entityOrder.filter((entityId) => !removedIds.has(entityId)),
+//     slotLinks: document.slotLinks.filter((link) =>
+//       !removedIds.has(link.source.entityId) && !removedIds.has(link.target.entityId)
+//     ),
+//   };
+// }
+//
+// function resolvePlacementEndpoint(
+//   entityId: string,
+//   idMap: ReadonlyMap<string, string>,
+// ): string | null {
+//   const mapped = idMap.get(entityId);
+//   if (mapped !== undefined) {
+//     return mapped;
+//   }
+//   return entityId === "warehouse"
+//     || entityId.startsWith("warehouse:")
+//     || entityId.startsWith("base-builtin:")
+//     ? entityId
+//     : null;
+// }
+//
+// function normalizeCaptureTicks(scenario: RegionalBlueprintScenario): number[] {
+//   const requested = [...(scenario.captureTicks ?? []), scenario.untilTick];
+//   for (const tickNumber of requested) {
+//     if (!Number.isSafeInteger(tickNumber) || tickNumber < 0) {
+//       throw new Error(`Regional capture tick must be a non-negative safe integer; received ${tickNumber}.`);
+//     }
+//     if (tickNumber > scenario.untilTick) {
+//       throw new Error(
+//         `Regional capture tick ${tickNumber} exceeds untilTick ${scenario.untilTick}.`,
+//       );
+//     }
+//   }
+//   return [...new Set(requested)].sort((left, right) => left - right);
+// }
+//
+// function validateScenario(scenario: RegionalBlueprintScenario): void {
+//   if (scenario.name.trim() === "") {
+//     throw new Error("Regional blueprint scenario requires a name.");
+//   }
+//   if (!Number.isFinite(scenario.timeoutMs) || scenario.timeoutMs <= 0) {
+//     throw new Error(`Regional scenario timeout must be positive; received ${scenario.timeoutMs}.`);
+//   }
+//   normalizeCaptureTicks(scenario);
+//
+//   const regionDefinitions = registry.baseDefinitions.filter(
+//     (definition) => definition.tag === scenario.regionTag,
+//   );
+//   if (regionDefinitions.length < 2) {
+//     throw new Error(`Region ${scenario.regionTag} must contain at least two registered bases.`);
+//   }
+//   if (!regionDefinitions.some((definition) => definition.id === scenario.currentBaseId)) {
+//     throw new Error(
+//       `Current base ${scenario.currentBaseId} does not belong to region ${scenario.regionTag}.`,
+//     );
+//   }
+//
+//   const regionBaseIds = new Set(regionDefinitions.map((definition) => definition.id));
+//   for (const baseId of Object.keys(scenario.placementsByBaseId ?? {})) {
+//     if (!regionBaseIds.has(baseId)) {
+//       throw new Error(`Scenario placement base ${baseId} does not belong to region ${scenario.regionTag}.`);
+//     }
+//   }
+// }
+//
+// function sanitizeKey(value: string): string {
+//   return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+// }

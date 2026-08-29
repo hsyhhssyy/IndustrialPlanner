@@ -12,7 +12,10 @@ import {
   // FLUID_DOMAIN_RECIPE_ITEM_ID,
   RecipeItemDomainId,
 } from "@/domain/shared/item-domain-flags";
-import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
+import {
+  ACTIVITY_LIMITED_FORMULA_1_TAG,
+  ACTIVITY_LIMITED_FORMULA_2_TAG,
+} from "@/shared/registry/activity-availability";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 import {
@@ -458,6 +461,26 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [],
   },
   {
+    id: "r_furnace_activity_limited_formula_2_1",
+    nameKey: "registry.recipe.r_furnace_activity_limited_formula_2_1.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_1", amount: 1 }],
+    machineId: "furnance_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_furnace_activity_limited_formula_2_5",
+    nameKey: "registry.recipe.r_furnace_activity_limited_formula_2_5.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_5", amount: 1 }],
+    machineId: "furnance_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
     id: "r_furnace_quartz_glass_from_quartz_sand_basic",
     nameKey: "registry.recipe.r_furnace_quartz_glass_from_quartz_sand_basic.name",
     durationSeconds: 2,
@@ -728,6 +751,36 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
+    id: "r_component_activity_limited_formula_2_2",
+    nameKey: "registry.recipe.r_component_activity_limited_formula_2_2.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_activity_limited_formula_2_1", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_2", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_component_activity_limited_formula_2_6",
+    nameKey: "registry.recipe.r_component_activity_limited_formula_2_6.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_activity_limited_formula_2_5", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_6", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_component_activity_limited_formula_2_9",
+    nameKey: "registry.recipe.r_component_activity_limited_formula_2_9.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_activity_limited_formula_2_8", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_9", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
     id: "r_component_glass_cmpt_from_quartz_glass_basic",
     nameKey: "registry.recipe.r_component_glass_cmpt_from_quartz_glass_basic.name",
     durationSeconds: 2,
@@ -967,6 +1020,58 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "tools_asm_mc_1",
     recipeType: "immediate-consume",
     tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
+  },
+  {
+    id: "r_packaging_activity_limited_formula_2_3",
+    nameKey: "registry.recipe.r_packaging_activity_limited_formula_2_3.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_xiranite_powder", amount: 1 },
+      { itemId: "item_copper_cmpt", amount: 4 },
+    ],
+    outputs: [{ itemId: "item_activity_limited_formula_2_3", amount: 1 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_packaging_activity_limited_formula_2_4",
+    nameKey: "registry.recipe.r_packaging_activity_limited_formula_2_4.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_activity_limited_formula_2_3", amount: 5 },
+      { itemId: "item_activity_limited_formula_2_2", amount: 5 },
+    ],
+    outputs: [{ itemId: "item_activity_limited_formula_2_4", amount: 1 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_packaging_activity_limited_formula_2_10",
+    nameKey: "registry.recipe.r_packaging_activity_limited_formula_2_10.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_activity_limited_formula_2_9", amount: 5 },
+      { itemId: "item_activity_limited_formula_2_5", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_activity_limited_formula_2_10", amount: 1 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+  },
+  {
+    id: "r_packaging_activity_limited_formula_2_11",
+    nameKey: "registry.recipe.r_packaging_activity_limited_formula_2_11.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_activity_limited_formula_2_10", amount: 1 },
+      { itemId: "item_activity_limited_formula_2_6", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_activity_limited_formula_2_11", amount: 1 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
   },
   {
     id: "r_winder_equip_script_1_from_crystal_shell_and_quartz_glass_basic",
@@ -3767,6 +3872,20 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     requiredGasDiffusion: "item_gas_acid",
   },
   {
+    id: "r_gas_reactor_activity_limited_formula_2_7",
+    nameKey: "registry.recipe.r_gas_reactor_activity_limited_formula_2_7.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_gas_copper", amount: 2 },
+      { itemId: "item_gas_xiranite", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_activity_limited_formula_2_7", amount: 1 }],
+    machineId: "gas_reactor_1",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    requiredGasDiffusion: "item_gas_inert",
+  },
+  {
     id: "liquid_purifier_gas_copper_enr_1",
     nameKey: "registry.recipe.liquid_purifier_gas_copper_enr_1.name",
     durationSeconds: 2,
@@ -4047,6 +4166,16 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "transmuter_2_solidtrans",
     recipeType: "immediate-consume",
     tags: ["introduced:1.4"],
+  },
+  {
+    id: "r_transmuter_2_solid_activity_limited_formula_2_8",
+    nameKey: "registry.recipe.r_transmuter_2_solid_activity_limited_formula_2_8.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_activity_limited_formula_2_7", amount: 1 }],
+    outputs: [{ itemId: "item_activity_limited_formula_2_8", amount: 1 }],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "immediate-consume",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
   },
   {
     id: "liquid_transmuter_2_solid_copper_enr_1",

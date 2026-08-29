@@ -44,6 +44,7 @@ export interface RegionalBasePort {
   }>;
   /** 当前基地自上次取走后新生成的逐 tick 展示快照；后台基地返回空数组。 */
   takePreparedSnapshots(): Promise<readonly RuntimeTickSnapshot[]>;
+  setAdvanceMode(advanceMode: "per-tick" | "coarse"): Promise<void>;
   dispose(): void;
 }
 
@@ -139,6 +140,12 @@ export class RegionalSimulationSession {
       throw new Error("Regional session has no current base port.");
     }
     return port;
+  }
+
+  public async setCurrentBaseAdvanceMode(
+    advanceMode: "per-tick" | "coarse",
+  ): Promise<void> {
+    await this.currentBasePort.setAdvanceMode(advanceMode);
   }
 
   public async runEpoch(epochNumber: number): Promise<RegionalCommittedEpoch> {
@@ -375,6 +382,10 @@ export class LocalRegionalBasePort implements RegionalBasePort {
       return [];
     }
     return this.runtime.takeRegionalSnapshots();
+  }
+
+  public async setAdvanceMode(advanceMode: "per-tick" | "coarse"): Promise<void> {
+    this.runtime.setRegionalAdvanceMode(advanceMode);
   }
 
   public dispose(): void {

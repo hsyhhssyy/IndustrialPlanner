@@ -621,6 +621,7 @@ const UI: Record<string, string> = {
     "moduleBalancing.deleteFolder": "Delete Folder",
     "moduleBalancing.deleteFromStage": "Remove from Stage",
     "moduleBalancing.deleteModule": "Delete Module",
+    "moduleBalancing.deleteStage": "Delete Stage",
     "moduleBalancing.disableInfiniteInput": "Disable Infinite Supply",
     "moduleBalancing.dispatchTicketTitle": "Dispatch Ticket Demand",
     "moduleBalancing.dispatchTicketTotal": "Total",

@@ -292,6 +292,7 @@ export type UiKey =
   | "moduleBalancing.deleteFolder"
   | "moduleBalancing.deleteFromStage"
   | "moduleBalancing.deleteModule"
+  | "moduleBalancing.deleteStage"
   | "moduleBalancing.disableInfiniteInput"
   | "moduleBalancing.dispatchTicketTitle"
   | "moduleBalancing.dispatchTicketTotal"

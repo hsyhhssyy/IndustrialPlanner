@@ -117,6 +117,11 @@ export type SimulationWorkerRequest =
       readonly advanceMode: "per-tick" | "coarse";
     }
   | {
+      readonly type: "set-regional-advance-mode";
+      readonly requestId: number;
+      readonly advanceMode: "per-tick" | "coarse";
+    }
+  | {
       readonly type: "prepare-regional-epoch";
       readonly requestId: number;
       readonly epochNumber: number;
@@ -241,6 +246,11 @@ export type SimulationWorkerResponse =
       readonly type: "regional-topology-loaded";
       readonly requestId: number;
       readonly result: SimulationStartResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-advance-mode-set";
+      readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }
   | {

@@ -422,6 +422,13 @@ export class SimulationWorkerRuntime {
             }),
             status: this.getStatus(),
           };
+        case "set-regional-advance-mode":
+          this.setRegionalAdvanceMode(request.advanceMode);
+          return {
+            type: "regional-advance-mode-set",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
         case "prepare-regional-epoch":
           return {
             type: "regional-epoch-prepared",
@@ -598,6 +605,12 @@ export class SimulationWorkerRuntime {
             type: "regional-topology-loaded",
             requestId: request.requestId,
             result: { status: "failed", topologyId: null, diagnostics: [] },
+            status,
+          };
+        case "set-regional-advance-mode":
+          return {
+            type: "regional-advance-mode-set",
+            requestId: request.requestId,
             status,
           };
         case "prepare-regional-epoch":
@@ -1586,6 +1599,16 @@ export class SimulationWorkerRuntime {
       this.regionalGate.setWarehouseProjection(this.runtimeState, options.initialWarehouseCounts);
     }
     return result;
+  }
+
+  public setRegionalAdvanceMode(advanceMode: "per-tick" | "coarse"): void {
+    if (!this.regionalRuntimeMode || this.regionalGate === null) {
+      throw new Error("Regional runtime is not initialized.");
+    }
+    if (this.regionalGatePausedTick !== null) {
+      throw new Error("Regional advance mode can only change between committed epochs.");
+    }
+    this.regionalAdvancePerTick = advanceMode === "per-tick";
   }
 
   /**

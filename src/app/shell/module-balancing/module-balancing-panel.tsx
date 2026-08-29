@@ -343,6 +343,40 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     setActivePage({ kind: "stage", stageId });
   };
 
+  const deleteStage = (stageId: string) => {
+    if (activeCanvas === null) {
+      return;
+    }
+
+    const nextStageId = runInAction((): string | null | undefined => {
+      const stageIndex = activeCanvas.stages.findIndex((stage) => stage.id === stageId);
+      const stage = activeCanvas.stages[stageIndex];
+      if (stage === undefined || stage.entries.length > 0) {
+        return undefined;
+      }
+
+      activeCanvas.stages.splice(stageIndex, 1);
+      return activeCanvas.stages[Math.max(0, stageIndex - 1)]?.id ?? null;
+    });
+    if (nextStageId === undefined) {
+      return;
+    }
+
+    setExpandedBalanceIds((current) => {
+      if (!current.has(stageId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.delete(stageId);
+      return next;
+    });
+    setQuantityDraft((current) => current?.stageId === stageId ? null : current);
+    setSelectedStageId(nextStageId);
+    setActivePage(nextStageId === null
+      ? { kind: "canvas" }
+      : { kind: "stage", stageId: nextStageId });
+  };
+
   const openNewCustomModuleForm = () => {
     setCustomModuleForm({
       id: null,
@@ -944,6 +978,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             }}
             onAddStage={addStage}
             onClearStage={(stage) => runInAction(() => { stage.entries = []; })}
+            onDeleteStage={(stage) => deleteStage(stage.id)}
             onEditEntry={openEditEntryDraft}
             onOpenStageAsModule={openStageAsCustomModuleForm}
             onRenameStage={(stage, name) => runInAction(() => { stage.name = name; })}
@@ -2514,6 +2549,7 @@ const StageDetailPanel = observer(function StageDetailPanel({
   onAddModule,
   onAddStage,
   onClearStage,
+  onDeleteStage,
   onEditEntry,
   onOpenStageAsModule,
   onRenameStage,
@@ -2529,6 +2565,7 @@ const StageDetailPanel = observer(function StageDetailPanel({
   onAddModule: () => void;
   onAddStage: () => void;
   onClearStage: (stage: ModuleBalancingStageReadWrite) => void;
+  onDeleteStage: (stage: ModuleBalancingStageReadWrite) => void;
   onEditEntry: (stageId: string, moduleId: string, entryIndex: number, quantity: number) => void;
   onOpenStageAsModule: (stage: ModuleBalancingStageReadWrite) => void;
   onRenameStage: (stage: ModuleBalancingStageReadWrite, name: string) => void;
@@ -2554,6 +2591,7 @@ const StageDetailPanel = observer(function StageDetailPanel({
     <section className={cm(styles, "module-balancing-stage-detail")}>
       <StageHeader
         onClear={() => onClearStage(selectedStage)}
+        onDelete={() => onDeleteStage(selectedStage)}
         onSaveAsModule={() => onOpenStageAsModule(selectedStage)}
         onUpdateName={(name) => onRenameStage(selectedStage, name)}
         stage={selectedStage}
@@ -2583,12 +2621,14 @@ const StageDetailPanel = observer(function StageDetailPanel({
 
 const StageHeader = observer(function StageHeader({
   onClear,
+  onDelete,
   onSaveAsModule,
   onUpdateName,
   stage,
   t,
 }: {
   onClear: () => void;
+  onDelete: () => void;
   onSaveAsModule: () => void;
   onUpdateName: (name: string) => void;
   stage: ModuleBalancingStageReadWrite;
@@ -2601,10 +2641,17 @@ const StageHeader = observer(function StageHeader({
         <input value={stage.name} onChange={(event) => onUpdateName(event.currentTarget.value)} />
       </label>
       <div className={cm(styles, "module-balancing-stage-actions")}>
-        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onClear}>
-          <LucideX aria-hidden="true" />
-          <span>{t("moduleBalancing.clearStage")}</span>
-        </button>
+        {stage.entries.length > 0 ? (
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onClear}>
+            <LucideX aria-hidden="true" />
+            <span>{t("moduleBalancing.clearStage")}</span>
+          </button>
+        ) : (
+          <button className={cm(styles, "module-balancing-danger-button")} type="button" onClick={onDelete}>
+            <LucideTrash2 aria-hidden="true" />
+            <span>{t("moduleBalancing.deleteStage")}</span>
+          </button>
+        )}
         <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onSaveAsModule}>
           <LucideSave aria-hidden="true" />
           <span>{t("moduleBalancing.saveAsModule")}</span>

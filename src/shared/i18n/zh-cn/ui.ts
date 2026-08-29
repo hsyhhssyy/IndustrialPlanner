@@ -614,6 +614,7 @@ const UI: Record<string, string> = {
     "moduleBalancing.deleteFolder": "删除文件夹",
     "moduleBalancing.deleteFromStage": "从阶段移除",
     "moduleBalancing.deleteModule": "删除模块",
+    "moduleBalancing.deleteStage": "删除阶段",
     "moduleBalancing.disableInfiniteInput": "取消无限供给",
     "moduleBalancing.dispatchTicketTitle": "调度券需求",
     "moduleBalancing.dispatchTicketTotal": "合计",

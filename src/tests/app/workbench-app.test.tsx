@@ -359,7 +359,14 @@ async function flushMicrotasks(iterations = 8): Promise<void> {
   }
 }
 
-function stubChangelogFetch(entries: Record<string, string>): void {
+interface StubChangelogEntry {
+  title: string;
+  version: string;
+  kind: "main" | "incremental";
+  markdown: string;
+}
+
+function stubChangelogFetch(entries: Record<string, StubChangelogEntry>): void {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = typeof input === "string"
       ? input
@@ -368,7 +375,14 @@ function stubChangelogFetch(entries: Record<string, string>): void {
         : input.url;
 
     if (url === "/changelog/index.json") {
-      return new Response(JSON.stringify(Object.keys(entries)), {
+      const indexEntries = Object.entries(entries).map(([file, entry]) => ({
+        file,
+        title: entry.title,
+        version: entry.version,
+        kind: entry.kind,
+      }));
+
+      return new Response(JSON.stringify(indexEntries), {
         headers: { "Content-Type": "application/json" },
         status: 200,
       });
@@ -378,7 +392,7 @@ function stubChangelogFetch(entries: Record<string, string>): void {
 
     if (url.startsWith(changelogPrefix)) {
       const file = decodeURIComponent(url.slice(changelogPrefix.length));
-      const markdown = entries[file];
+      const markdown = entries[file]?.markdown;
 
       if (markdown !== undefined) {
         return new Response(markdown, { status: 200 });
@@ -632,7 +646,12 @@ describe("WorkbenchApp", () => {
       value: "9.9.9-test",
     });
     stubChangelogFetch({
-      "patch-v9.9.9.md": "# Patch",
+      "9.9.9-test.md": {
+        title: "测试版本-v9.9.9-test",
+        version: "9.9.9-test",
+        kind: "main",
+        markdown: "# Patch",
+      },
     });
 
     const workspace = createWorkspace();
@@ -687,7 +706,7 @@ describe("WorkbenchApp", () => {
       CHANGELOG_READ_STATE_KEY,
       JSON.stringify({
         version: "1.3.0",
-        changelogKey: "1.3.0:全新版本-v1.3.0.md",
+        changelogKey: "1.3.0:1.3.0.md",
       }),
     );
     Object.defineProperty(window, "__APP_VERSION__", {
@@ -696,8 +715,18 @@ describe("WorkbenchApp", () => {
       value: "v1.3.0.1",
     });
     stubChangelogFetch({
-      "全新版本-v1.3.0.md": "# Main",
-      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
+      "1.3.0.md": {
+        title: "全新版本-v1.3.0",
+        version: "1.3.0",
+        kind: "main",
+        markdown: "# Main",
+      },
+      "incremental/1.3.0/1.3.0.1.md": {
+        title: "增量更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Patch",
+      },
     });
 
     const workspace = createWorkspace();
@@ -717,7 +746,7 @@ describe("WorkbenchApp", () => {
     expect(helpState.activeTab).toBe("version");
     expect(JSON.parse(localStorage.getItem(CHANGELOG_READ_STATE_KEY) ?? "null")).toEqual({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/1.3.0.1.md",
     });
     expect(localStorage.getItem(LEGACY_LAST_READ_VERSION_KEY)).toBe("1.3.0.1");
   });
@@ -725,7 +754,7 @@ describe("WorkbenchApp", () => {
   it("does not open the version help dialog when the app version changed without a matching changelog entry", async () => {
     const previousReadState = JSON.stringify({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/1.3.0.1.md",
     });
     localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
     Object.defineProperty(window, "__APP_VERSION__", {
@@ -734,8 +763,18 @@ describe("WorkbenchApp", () => {
       value: "v1.3.0.2",
     });
     stubChangelogFetch({
-      "全新版本-v1.3.0.md": "# Main",
-      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
+      "1.3.0.md": {
+        title: "全新版本-v1.3.0",
+        version: "1.3.0",
+        kind: "main",
+        markdown: "# Main",
+      },
+      "incremental/1.3.0/1.3.0.1.md": {
+        title: "增量更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Patch",
+      },
     });
 
     const workspace = createWorkspace();
@@ -756,7 +795,7 @@ describe("WorkbenchApp", () => {
   it("does not open the version help dialog when the changelog entry changed without an app version change", async () => {
     const previousReadState = JSON.stringify({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/1.3.0.1.md",
     });
     localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
     Object.defineProperty(window, "__APP_VERSION__", {
@@ -765,9 +804,24 @@ describe("WorkbenchApp", () => {
       value: "v1.3.0.1",
     });
     stubChangelogFetch({
-      "全新版本-v1.3.0.md": "# Main",
-      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
-      "incremental/1.3.0/热修更新-v1.3.0.1.md": "# Hotfix",
+      "1.3.0.md": {
+        title: "全新版本-v1.3.0",
+        version: "1.3.0",
+        kind: "main",
+        markdown: "# Main",
+      },
+      "incremental/1.3.0/1.3.0.1.md": {
+        title: "增量更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Patch",
+      },
+      "supplemental/1.3.0/1.3.0.1.md": {
+        title: "热修更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Hotfix",
+      },
     });
 
     const workspace = createWorkspace();
@@ -3123,9 +3177,24 @@ describe("WorkbenchApp", () => {
 
   it("opens the help dialog through app internal actions", async () => {
     stubChangelogFetch({
-      "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
-      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.png)",
-      "incremental/1.3.0/补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.png)",
+      "1.2.0.md": {
+        title: "正式更新-v1.2.0",
+        version: "1.2.0",
+        kind: "main",
+        markdown: "# Previous Main\n\n旧主版本内容",
+      },
+      "1.3.0.md": {
+        title: "全新版本-v1.3.0",
+        version: "1.3.0",
+        kind: "main",
+        markdown: "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.png)",
+      },
+      "incremental/1.3.0/1.3.0.1.md": {
+        title: "补丁更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.png)",
+      },
     });
 
     const workspace = createWorkspace();
@@ -3157,6 +3226,7 @@ describe("WorkbenchApp", () => {
     const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));
     const headers = Array.from(container.querySelectorAll(".changelog-accordion-header")) as HTMLButtonElement[];
 
+    expect(headers[1]?.textContent).toContain("全新版本-v1.3.0");
     expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
       "true",
       "true",
@@ -3199,9 +3269,24 @@ describe("WorkbenchApp", () => {
       value: "v1.3.0.0",
     });
     stubChangelogFetch({
-      "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
-      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容",
-      "incremental/1.3.0/补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
+      "1.2.0.md": {
+        title: "正式更新-v1.2.0",
+        version: "1.2.0",
+        kind: "main",
+        markdown: "# Previous Main\n\n旧主版本内容",
+      },
+      "1.3.0.md": {
+        title: "全新版本-v1.3.0",
+        version: "1.3.0",
+        kind: "main",
+        markdown: "# Current Main\n\n当前主版本内容",
+      },
+      "incremental/1.3.0/1.3.0.1.md": {
+        title: "补丁更新-v1.3.0.1",
+        version: "1.3.0.1",
+        kind: "incremental",
+        markdown: "# Current Patch\n\n当前子版本内容",
+      },
     });
 
     const workspace = createWorkspace();

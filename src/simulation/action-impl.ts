@@ -52,6 +52,7 @@ import type {
   TimelineWorkerStatus,
 } from "./timeline-worker-protocol";
 import {
+  aggregateRegionalWarehouseStats as aggregateRegionalWarehouseStatsCore,
   buildRegionalWarehouseOutletTable,
   createBrowserRegionalSessionPorts,
   LocalRegionalBasePort,
@@ -213,6 +214,19 @@ export interface TimelineWorkerBridge {
 export interface SimulationInternalAction {
   refreshFromCurrentDocument(): Promise<SimulationStartResult>;
   syncToTick(tickNumber: number, playbackTickNumberOnReady?: number): Promise<SimulationTickPullStatus>;
+  // AI-REMOVED 2026-08-28:
+  // Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
+  // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+  // Evidence: SimulationInternalAction 中该方法已无 Active Code 调用。
+  // Replacement: src/tests/simulation/regional-blueprint-runner.ts#runRegionalBlueprintSimulation
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // syncRegionalToTick(
+  //   tickNumber: number,
+  //   timeoutMs: number,
+  // ): Promise<RegionalSimulationTickSyncResult>;
   /** 同步轻量 Worker 性能统计；不会开启完整 debugData。 */
   setDebugEnabled(value: boolean): void;
   /** 单独控制完整 debugData 的构造与传输。 */
@@ -221,6 +235,31 @@ export interface SimulationInternalAction {
   reset(): void;
 }
 
+// AI-REMOVED 2026-08-28:
+// Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
+// Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+// Evidence: 两种报告类型仅被已归档浏览器 Runner 使用。
+// Replacement: src/tests/simulation/regional-blueprint-runner.ts 中的 RegionalBlueprintSimulationCapture
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export interface RegionalSimulationBaseTickSummary {
+//   readonly tickNumber: number;
+//   readonly totalPowerDemand: number;
+//   readonly warehouseStats: RuntimeTickSnapshot["warehouseStats"];
+// }
+//
+// export interface RegionalSimulationTickSyncResult {
+//   readonly requestedTickNumber: number;
+//   readonly committedTickNumber: number;
+//   readonly committedEpochNumber: number;
+//   readonly warehouseVersion: number;
+//   readonly warehouseCounts: Readonly<Record<string, number>>;
+//   readonly warehouseStats: RuntimeTickSnapshot["warehouseStats"];
+//   readonly baseSummaries: Readonly<Record<string, RegionalSimulationBaseTickSummary>>;
+// }
+//
 interface SimulationActionImplOptions {
   workspace: WorkspaceContract;
   state: SimulationStateReadWrite;
@@ -382,6 +421,17 @@ implements SimulationAction, SimulationInternalAction {
   private regionalSessionStopped = false;
   private regionalPreviousWarehouseCounts: Readonly<Record<string, number>> = {};
   private regionalPreviousBaseSnapshots: readonly RuntimeTickSnapshot[] = [];
+  // AI-REMOVED 2026-08-28:
+  // Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
+  // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+  // Evidence: 两个字段仅被已归档同步动作读取。
+  // Replacement: None；现有 regionalPreviousBaseSnapshots 足以服务应用运行路径。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private regionalPreviousSnapshotsByBaseId: Readonly<Record<string, RuntimeTickSnapshot | null>> = {};
+  // private regionalTickSyncInFlight: Promise<RegionalSimulationTickSyncResult> | null = null;
   private compiledDocument: WorldDocument | null = null;
   private compiledActivitySignature: string | null = null;
   private compiledRegionalResourceSignature: string | null = null;
@@ -1646,6 +1696,33 @@ implements SimulationAction, SimulationInternalAction {
     return response.result.status;
   };
 
+  // AI-REMOVED 2026-08-28:
+  // Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
+  // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+  // Evidence: 该公开动作仅被已归档浏览器 Runner 调用。
+  // Replacement: src/tests/simulation/regional-blueprint-runner.ts#runRegionalBlueprintSimulation
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // public readonly syncRegionalToTick: SimulationInternalAction["syncRegionalToTick"] = (
+  //   tickNumber,
+  //   timeoutMs,
+  // ) => {
+  //   if (this.regionalTickSyncInFlight !== null) {
+  //     throw new Error("Regional tick synchronization is already running.");
+  //   }
+  //
+  //   const sync = this.syncRegionalToTickNow(tickNumber, timeoutMs);
+  //   const tracked = sync.finally(() => {
+  //     if (this.regionalTickSyncInFlight === tracked) {
+  //       this.regionalTickSyncInFlight = null;
+  //     }
+  //   });
+  //   this.regionalTickSyncInFlight = tracked;
+  //   return tracked;
+  // };
+  //
   public readonly setDebugEnabled: SimulationInternalAction["setDebugEnabled"] = (debugEnabled) => {
     if (this.lastWorkerDebugEnabled === debugEnabled) {
       return;
@@ -2631,6 +2708,186 @@ implements SimulationAction, SimulationInternalAction {
     }
   }
 
+  // AI-REMOVED 2026-08-28:
+  // Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
+  // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+  // Evidence: 该实现包含暂停 UI session、关闭逐 tick 推进和生成测试报告的测试专用流程。
+  // Replacement: src/tests/simulation/regional-blueprint-runner.ts#runRegionalBlueprintSimulation
+  // Risk: Low；应用原有区域仿真循环未依赖此方法。
+  // Human Review: Required
+  //
+  // Original code:
+  // private async syncRegionalToTickNow(
+  //   tickNumber: number,
+  //   timeoutMs: number,
+  // ): Promise<RegionalSimulationTickSyncResult> {
+  //   if (!Number.isSafeInteger(tickNumber) || tickNumber < 0) {
+  //     throw new Error(`Regional target tick must be a non-negative safe integer; received ${tickNumber}.`);
+  //   }
+  //   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+  //     throw new Error(`Regional synchronization timeout must be positive; received ${timeoutMs}.`);
+  //   }
+  //   if (this.stateReadWrite.simulationMode !== SIMULATION_MODE.regionalMultiBase) {
+  //     throw new Error("Regional tick synchronization requires regional-multi-base mode.");
+  //   }
+  //
+  //   const session = this.regionalSession;
+  //   if (session === null || this.regionalSessionStopped) {
+  //     throw new Error("Regional tick synchronization requires a running regional session.");
+  //   }
+  //   const previousRunningState = this.stateReadWrite.runningState;
+  //   if (previousRunningState !== "start" && previousRunningState !== "pause") {
+  //     throw new Error(`Regional session is not ready for synchronization: ${previousRunningState}.`);
+  //   }
+  //
+  //   const deadline = Date.now() + timeoutMs;
+  //   let switchedCurrentBaseToCoarse = false;
+  //   this.regionalSessionPaused = true;
+  //   runInAction(() => {
+  //     this.stateReadWrite.runningState = "pause";
+  //   });
+  //
+  //   try {
+  //     const activeLoop = this.regionalSessionLoop;
+  //     if (activeLoop !== null) {
+  //       await waitForRegionalDeadline(
+  //         activeLoop,
+  //         deadline,
+  //         `Timed out while pausing the regional session before tick ${tickNumber}.`,
+  //       );
+  //     }
+  //     if (this.regionalSession !== session || this.regionalSessionStopped) {
+  //       throw new Error("Regional session stopped before tick synchronization began.");
+  //     }
+  //
+  //     await waitForRegionalDeadline(
+  //       session.setCurrentBaseAdvanceMode("coarse"),
+  //       deadline,
+  //       `Timed out while enabling coarse regional advance before tick ${tickNumber}.`,
+  //     );
+  //     switchedCurrentBaseToCoarse = true;
+  //
+  //     this.resetPlaybackHotQueue();
+  //     let committedTickNumber = resolveRegionalCommittedTickNumber(session.nextEpochNumber);
+  //     while (committedTickNumber < tickNumber) {
+  //       const committed = await waitForRegionalDeadline(
+  //         session.runEpoch(session.nextEpochNumber),
+  //         deadline,
+  //         `Regional session did not reach tick ${tickNumber} within ${timeoutMs}ms.`,
+  //       );
+  //       if (this.regionalSession !== session || this.regionalSessionStopped) {
+  //         throw new Error("Regional session stopped during tick synchronization.");
+  //       }
+  //
+  //       this.regionalPreviousWarehouseCounts = committed.warehouseCounts;
+  //       this.regionalPreviousSnapshotsByBaseId = committed.snapshotsByBaseId;
+  //       this.regionalPreviousBaseSnapshots = Object.values(committed.snapshotsByBaseId)
+  //         .filter((snapshot): snapshot is RuntimeTickSnapshot => snapshot !== null);
+  //       committedTickNumber = committed.gateTickNumber;
+  //     }
+  //
+  //     const currentBaseId = session.currentBasePort.baseId;
+  //     const currentBaseSnapshot = this.regionalPreviousSnapshotsByBaseId[currentBaseId];
+  //     if (currentBaseSnapshot === null || currentBaseSnapshot === undefined) {
+  //       throw new Error(`Regional session has no committed snapshot for current base ${currentBaseId}.`);
+  //     }
+  //
+  //     const aggregateWarehouseStats = aggregateRegionalWarehouseStats(
+  //       this.regionalPreviousBaseSnapshots,
+  //       this.regionalPreviousWarehouseCounts,
+  //       this.topology.getSnapshot()?.regionalResourceSupply,
+  //     );
+  //     const publishedSnapshot: RuntimeTickSnapshot = {
+  //       ...currentBaseSnapshot,
+  //       warehouseStats: aggregateWarehouseStats,
+  //     };
+  //     const totalPowerDemand = this.regionalPreviousBaseSnapshots.reduce(
+  //       (sum, snapshot) => sum + snapshot.totalPowerDemand,
+  //       0,
+  //     );
+  //
+  //     runInAction(() => {
+  //       this.stateReadWrite.currentSnapshot = publishedSnapshot;
+  //       this.stateReadWrite.currentPlaybackTickNumber = committedTickNumber;
+  //       this.playbackTargetTickNumber = committedTickNumber;
+  //       this.stateReadWrite.regionalTotalPowerDemand = totalPowerDemand;
+  //       this.stateReadWrite.statistics = {
+  //         ...this.stateReadWrite.statistics,
+  //         baseBatteryJoules: publishedSnapshot.baseBatteryJoules,
+  //         baseBatteryCapacity: publishedSnapshot.baseBatteryCapacity,
+  //       };
+  //       this.stateReadWrite.runtimeStatus = {
+  //         ...this.stateReadWrite.runtimeStatus,
+  //         mode: "running",
+  //         retainedFromTick: committedTickNumber,
+  //         latestTickNumber: committedTickNumber,
+  //         bufferSize: 1,
+  //         error: null,
+  //       };
+  //     });
+  //
+  //     return {
+  //       requestedTickNumber: tickNumber,
+  //       committedTickNumber,
+  //       committedEpochNumber: session.nextEpochNumber - 1,
+  //       warehouseVersion: session.authorityHead.warehouseVersion,
+  //       warehouseCounts: session.authorityHead.warehouseCounts,
+  //       warehouseStats: aggregateWarehouseStats,
+  //       baseSummaries: Object.fromEntries(
+  //         Object.entries(this.regionalPreviousSnapshotsByBaseId).flatMap(([baseId, snapshot]) =>
+  //           snapshot === null
+  //             ? []
+  //             : [[baseId, {
+  //                 tickNumber: snapshot.tickNumber,
+  //                 totalPowerDemand: snapshot.totalPowerDemand,
+  //                 warehouseStats: snapshot.warehouseStats,
+  //               } satisfies RegionalSimulationBaseTickSummary]],
+  //         ),
+  //       ),
+  //     };
+  //   } catch (error) {
+  //     if (this.regionalSession === session) {
+  //       this.disposeRegionalSession();
+  //       this.resetPlaybackHotQueue();
+  //       runInAction(() => {
+  //         this.stateReadWrite.runningState = "pause";
+  //         this.stateReadWrite.runtimeStatus = {
+  //           ...this.stateReadWrite.runtimeStatus,
+  //           mode: "error",
+  //           error: error instanceof Error ? error.message : String(error),
+  //         };
+  //       });
+  //     }
+  //     throw error;
+  //   } finally {
+  //     if (this.regionalSession === session && !this.regionalSessionStopped) {
+  //       if (switchedCurrentBaseToCoarse) {
+  //         await session.setCurrentBaseAdvanceMode("per-tick").catch((error: unknown) => {
+  //           this.disposeRegionalSession();
+  //           this.resetPlaybackHotQueue();
+  //           runInAction(() => {
+  //             this.stateReadWrite.runningState = "pause";
+  //             this.stateReadWrite.runtimeStatus = {
+  //               ...this.stateReadWrite.runtimeStatus,
+  //               mode: "error",
+  //               error: error instanceof Error ? error.message : String(error),
+  //             };
+  //           });
+  //           return Promise.reject(error);
+  //         });
+  //       }
+  //       const shouldResume = previousRunningState === "start";
+  //       this.regionalSessionPaused = !shouldResume;
+  //       runInAction(() => {
+  //         this.stateReadWrite.runningState = shouldResume ? "start" : "pause";
+  //       });
+  //       if (shouldResume) {
+  //         this.ensureRegionalSessionLoop();
+  //       }
+  //     }
+  //   }
+  // }
+  //
   private latestRegionalPlaybackTickNumber(): number {
     let latest = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
     for (const snapshot of this.playbackHotQueue.values()) {
@@ -2675,6 +2932,16 @@ implements SimulationAction, SimulationInternalAction {
       }
       this.regionalPreviousWarehouseCounts = committed.warehouseCounts;
       this.regionalPreviousBaseSnapshots = baseSnapshots;
+      // AI-REMOVED 2026-08-28:
+      // Reason: 该赋值仅维护已归档浏览器 Runner 所需的按基地快照索引。
+      // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+      // Evidence: Active Code 只使用 regionalPreviousBaseSnapshots。
+      // Replacement: None；应用区域仿真继续维护 regionalPreviousBaseSnapshots。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // this.regionalPreviousSnapshotsByBaseId = committed.snapshotsByBaseId;
       this.stateReadWrite.regionalTotalPowerDemand = baseSnapshots.reduce(
         (sum, snapshot) => sum + snapshot.totalPowerDemand,
         0,
@@ -2758,6 +3025,16 @@ implements SimulationAction, SimulationInternalAction {
     this.regionalSessionBridges = [];
     this.regionalPreviousWarehouseCounts = {};
     this.regionalPreviousBaseSnapshots = [];
+    // AI-REMOVED 2026-08-28:
+    // Reason: 对应的浏览器 Runner 测试专用字段已归档。
+    // Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+    // Evidence: disposeRegionalSession 的 Active Code 不再持有该字段。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.regionalPreviousSnapshotsByBaseId = {};
   }
 
   /**
@@ -2931,69 +3208,50 @@ function aggregateRegionalWarehouseStats(
   authorityCounts: Readonly<Record<string, number>>,
   supply: CompiledRegionalResourceSupply | undefined,
 ): NonNullable<RuntimeTickSnapshot["warehouseStats"]> {
-  const items: Record<string, {
-    producedPerMinute: number;
-    consumedPerMinute: number;
-    warehouseCount: number;
-    infinite: boolean;
-    lastChangedTick: number;
-  }> = {};
-
-  for (const snapshot of baseSnapshots) {
-    if (snapshot.warehouseStats === null) continue;
-    for (const [itemType, stats] of Object.entries(snapshot.warehouseStats.items)) {
-      const target = items[itemType] ??= {
-        producedPerMinute: 0,
-        consumedPerMinute: 0,
-        warehouseCount: 0,
-        infinite: false,
-        lastChangedTick: 0,
-      };
-      target.producedPerMinute += stats.producedPerMinute;
-      target.consumedPerMinute += stats.consumedPerMinute;
-      target.infinite ||= stats.infinite;
-      target.lastChangedTick = Math.max(target.lastChangedTick, stats.lastChangedTick);
-    }
-  }
-  for (const [itemType, count] of Object.entries(authorityCounts)) {
-    if (count <= 0) continue;
-    const target = items[itemType] ??= {
-      producedPerMinute: 0,
-      consumedPerMinute: 0,
-      warehouseCount: 0,
-      infinite: false,
-      lastChangedTick: 0,
-    };
-    target.warehouseCount = count;
-  }
-  for (const itemType of supply?.infiniteItemIds ?? []) {
-    const target = items[itemType] ??= {
-      producedPerMinute: 0,
-      consumedPerMinute: 0,
-      warehouseCount: 0,
-      infinite: false,
-      lastChangedTick: 0,
-    };
-    target.infinite = true;
-  }
-  for (const [itemType, perMinute] of Object.entries(
-    supply?.finitePerMinuteByItemId ?? {},
-  )) {
-    const target = items[itemType] ??= {
-      producedPerMinute: 0,
-      consumedPerMinute: 0,
-      warehouseCount: 0,
-      infinite: false,
-      lastChangedTick: 0,
-    };
-    target.producedPerMinute += perMinute;
-  }
-  return {
-    items,
-    statsWindowReady: baseSnapshots.every((snapshot) => snapshot.warehouseStats?.statsWindowReady === true)
-      && baseSnapshots.length > 0,
-  };
+  return aggregateRegionalWarehouseStatsCore({
+    baseSnapshots,
+    authorityCounts,
+    supply,
+  });
 }
+
+// AI-REMOVED 2026-08-28:
+// Reason: 两个 helper 只服务已归档的应用层区域 tick 同步动作。
+// Trigger: 用户明确要求当前及未来此类用例归入 Blueprint 测试组。
+// Evidence: Active Code 中已不存在 resolveRegionalCommittedTickNumber 或 waitForRegionalDeadline 调用。
+// Replacement: src/tests/simulation/regional-blueprint-runner.ts 内部推进与超时控制。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function resolveRegionalCommittedTickNumber(nextEpochNumber: number): number {
+//   return nextEpochNumber <= 0 ? 0 : 1 + (nextEpochNumber - 1) * 10;
+// }
+//
+// async function waitForRegionalDeadline<T>(
+//   promise: Promise<T>,
+//   deadline: number,
+//   timeoutMessage: string,
+// ): Promise<T> {
+//   const remainingMs = deadline - Date.now();
+//   if (remainingMs <= 0) {
+//     throw new Error(timeoutMessage);
+//   }
+//
+//   let timerId: ReturnType<typeof setTimeout> | null = null;
+//   try {
+//     return await Promise.race([
+//       promise,
+//       new Promise<never>((_resolve, reject) => {
+//         timerId = setTimeout(() => reject(new Error(timeoutMessage)), remainingMs);
+//       }),
+//     ]);
+//   } finally {
+//     if (timerId !== null) {
+//       clearTimeout(timerId);
+//     }
+//   }
+// }
 
 function cloneWorldDocument(document: WorldDocument): WorldDocument {
   return JSON.parse(JSON.stringify(document)) as WorldDocument;

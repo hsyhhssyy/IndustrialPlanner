@@ -6,6 +6,7 @@ import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import {
+  type ChangelogKind,
   type ChangelogIndexEntry,
   type ChangelogVersion,
   loadChangelogIndexEntries,
@@ -108,7 +109,8 @@ interface DisplayEntry {
   loaded: boolean;
   html: string | null;
   error: string | null;
-  version: ChangelogVersion | null;
+  version: ChangelogVersion;
+  kind: ChangelogKind;
 }
 
 function getBaseVersion(version: string): string {
@@ -130,7 +132,7 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
   while (i < entries.length) {
     const entry = entries[i]!;
 
-    if (entry.version === null || entry.version.isMain) {
+    if (entry.kind === "main") {
       result.push({
         key: entry.file,
         label: entry.title,
@@ -138,6 +140,7 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
         html: entry.html,
         error: entry.error,
         version: entry.version,
+        kind: entry.kind,
       });
       i += 1;
       continue;
@@ -149,7 +152,7 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
 
     while (i < entries.length) {
       const e = entries[i]!;
-      if (e.version !== null && !e.version.isMain && getBaseVersion(e.version.canonical) === baseVersion) {
+      if (e.kind === "incremental" && getBaseVersion(e.version.canonical) === baseVersion) {
         group.push(e);
         i += 1;
       } else {
@@ -182,6 +185,7 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
       html: mergedHtml,
       error: groupErrors.length > 0 ? groupErrors.join("; ") : null,
       version: { canonical: baseVersion, isMain: false },
+      kind: "incremental",
     });
   }
 
@@ -199,7 +203,7 @@ function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersion
     // 精确匹配：主版本优先匹配独立条目，避免与同 canonical 的增量组混淆
     if (currentVersion.isMain) {
       const mainIndex = displayEntries.findIndex(
-        (de) => de.version?.canonical === currentVersion.canonical && de.version?.isMain === true,
+        (de) => de.version.canonical === currentVersion.canonical && de.kind === "main",
       );
 
       if (mainIndex >= 0) {
@@ -207,7 +211,7 @@ function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersion
       }
     } else {
       const exactIndex = displayEntries.findIndex(
-        (de) => de.version?.canonical === currentVersion.canonical,
+        (de) => de.version.canonical === currentVersion.canonical && de.kind === "incremental",
       );
 
       if (exactIndex >= 0) {
@@ -218,8 +222,7 @@ function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersion
       const baseVersion = getBaseVersion(currentVersion.canonical);
       const groupIndex = displayEntries.findIndex(
         (de) =>
-          de.version !== null
-          && !de.version.isMain
+          de.kind === "incremental"
           && getBaseVersion(de.version.canonical) === baseVersion,
       );
 
@@ -229,8 +232,18 @@ function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersion
     }
   }
 
-  const latestVersionedIndex = displayEntries.findIndex((de) => de.version !== null);
-  return latestVersionedIndex >= 0 ? latestVersionedIndex : 0;
+  // AI-REMOVED 2026-08-28:
+  // Reason: 结构化索引强制每个条目提供合法版本，不再存在无版本条目。
+  // Trigger: changelog index 从 string[] 迁移为包含 version 与 kind 的对象数组。
+  // Evidence: loadChangelogIndexEntries 会拒绝无法解析版本的索引项。
+  // Replacement: 直接回退到最新条目索引 0
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const latestVersionedIndex = displayEntries.findIndex((de) => de.version !== null);
+  // return latestVersionedIndex >= 0 ? latestVersionedIndex : 0;
+  return 0;
 }
 
 function createDefaultExpandedSet(displayEntries: DisplayEntry[]): Set<number> {
@@ -245,7 +258,7 @@ function createDefaultExpandedSet(displayEntries: DisplayEntry[]): Set<number> {
   expanded.add(currentIndex);
 
   // 当前条目为增量组或增量条目时，同时展开下一条（通常是其父主版本）
-  if (currentEntry?.version !== null && !currentEntry.version.isMain) {
+  if (currentEntry.kind === "incremental") {
     if (currentIndex + 1 < displayEntries.length) {
       expanded.add(currentIndex + 1);
     }

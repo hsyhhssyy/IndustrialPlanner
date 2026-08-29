@@ -1,5 +1,8 @@
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
-import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
+import {
+  ACTIVITY_LIMITED_FORMULA_1_TAG,
+  ACTIVITY_LIMITED_FORMULA_2_TAG,
+} from "@/shared/registry/activity-availability";
 
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {
@@ -371,6 +374,83 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_activity_xiranite_enr_bottle.name",
     iconId: "item_activity_xiranite_enr_bottle",
     tags: [ACTIVITY_LIMITED_FORMULA_1_TAG, "瓶子"],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_1",
+    nameKey: "registry.item.item_activity_limited_formula_2_1.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_2",
+    nameKey: "registry.item.item_activity_limited_formula_2_2.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_3",
+    nameKey: "registry.item.item_activity_limited_formula_2_3.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_4",
+    nameKey: "registry.item.item_activity_limited_formula_2_4.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_5",
+    nameKey: "registry.item.item_activity_limited_formula_2_5.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_6",
+    nameKey: "registry.item.item_activity_limited_formula_2_6.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_7",
+    nameKey: "registry.item.item_activity_limited_formula_2_7.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "gas"],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_8",
+    nameKey: "registry.item.item_activity_limited_formula_2_8.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_9",
+    nameKey: "registry.item.item_activity_limited_formula_2_9.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_10",
+    nameKey: "registry.item.item_activity_limited_formula_2_10.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_activity_limited_formula_2_11",
+    nameKey: "registry.item.item_activity_limited_formula_2_11.name",
+    iconId: "missing-item-icon",
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
     displayOrder: 10000,
   },
   {

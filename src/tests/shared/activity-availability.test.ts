@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ACTIVITY_DEFINITIONS,
   ACTIVITY_LIMITED_FORMULA_1_ID,
   ACTIVITY_LIMITED_FORMULA_1_TAG,
+  ACTIVITY_LIMITED_FORMULA_2_ID,
   areActivityTagsEffective,
   isActivityOngoing,
   resolveActivityIdsFromTags,
@@ -18,6 +20,18 @@ const LIMITED_ACTIVITY = {
 };
 
 describe("activity availability", () => {
+  it("defines the bubble strike activity with the exact Beijing time range", () => {
+    expect(ACTIVITY_DEFINITIONS.find(
+      (activity) => activity.id === ACTIVITY_LIMITED_FORMULA_2_ID,
+    )).toEqual({
+      id: ACTIVITY_LIMITED_FORMULA_2_ID,
+      name: "集成援助·泡泡出击",
+      icon: "/item-icons/missing-item-icon.webp",
+      startTime: Date.parse("2026-09-16T12:00:00+08:00"),
+      endTime: Date.parse("2026-09-30T16:00:00+08:00"),
+    });
+  });
+
   it("uses inclusive start time and exclusive end time", () => {
     expect(isActivityOngoing(
       LIMITED_ACTIVITY,
