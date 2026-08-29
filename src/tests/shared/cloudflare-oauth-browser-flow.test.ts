@@ -14,6 +14,7 @@ import { readCloudflareOAuthSession } from "@/shared/storage/cloudflare-oauth-se
 
 const API_BASE = "https://backend.test";
 const FRONTEND_CALLBACK = "https://frontend.test/auth/callback";
+const ALPHA_SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
 const CHANNEL_A = "01234567-89ab-4cde-8fab-0123456789ab";
 const CHANNEL_B = "fedcba98-7654-4abc-8def-fedcba987654";
 
@@ -70,6 +71,11 @@ describe("cloudflare-oauth-browser-flow", () => {
     expect(createCloudflareOAuthFrontendRedirectUri(
       "https://frontend.test/planner?debug=1#section",
     )).toBe(FRONTEND_CALLBACK);
+    expect(createCloudflareOAuthFrontendRedirectUri(
+      `https://endfield-alpha.hsyhhssyy.net/${ALPHA_SOURCE_SHA}/?debug=1#section`,
+    )).toBe(
+      `https://endfield-alpha.hsyhhssyy.net/${ALPHA_SOURCE_SHA}/auth/callback/`,
+    );
     expect(parseCloudflareOAuthCallbackFragment(
       `#code=callback-code&oauth_channel=${CHANNEL_A}`,
     )).toEqual({

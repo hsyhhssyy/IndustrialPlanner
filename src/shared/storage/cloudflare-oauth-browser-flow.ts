@@ -13,6 +13,7 @@ export const CLOUDFLARE_OAUTH_CALLBACK_ACK_TIMEOUT_MS = 30 * 1000;
 export const CLOUDFLARE_OAUTH_CALLBACK_RETRY_INTERVAL_MS = 500;
 
 const CLOUDFLARE_OAUTH_MESSAGE_VERSION = 1;
+const ALPHA_DEPLOYMENT_PATH_PATTERN = /^\/([0-9a-f]{40})(?:\/|$)/u;
 const OAUTH_CHANNEL_PATTERN = /^[A-Za-z0-9_-]{22,128}$/u;
 const MAX_CALLBACK_VALUE_LENGTH = 2_048;
 
@@ -78,7 +79,15 @@ export function createCloudflareOAuthBroadcastChannelName(
 export function createCloudflareOAuthFrontendRedirectUri(
   browserUrl = globalThis.location.href,
 ): string {
-  const callbackUrl = new URL("/auth/callback", browserUrl);
+  const browserLocation = new URL(browserUrl);
+  const alphaSourceSha = ALPHA_DEPLOYMENT_PATH_PATTERN
+    .exec(browserLocation.pathname)?.[1];
+  const callbackUrl = new URL(
+    alphaSourceSha === undefined
+      ? "/auth/callback"
+      : `/${alphaSourceSha}/auth/callback/`,
+    browserLocation,
+  );
   callbackUrl.search = "";
   callbackUrl.hash = "";
   return callbackUrl.href;
