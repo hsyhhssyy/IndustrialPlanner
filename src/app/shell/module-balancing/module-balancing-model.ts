@@ -16,6 +16,10 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import {
+  buildDeviceRunningConsumptionRecipesByMachine,
+  resolveCompanionDeviceRunningConsumptionRecipe,
+} from "@/shared/device-running-consumption";
 import { lookupText } from "@/shared/i18n";
 import {
   isItemAvailableByActivity,
@@ -46,16 +50,34 @@ export interface ModuleBalancingWarehouseForecast {
 export interface ModuleBalancingDispatchTicketSummary {
   itemId: string;
   value: number;
-  region: string | null;
+  region: ModuleBalancingDispatchTicketRegion;
   netDelta: number;
   dispatchPerMin: number;
+}
+
+export type ModuleBalancingDispatchTicketRegion = "武陵" | "四号谷地";
+
+export interface ModuleBalancingDispatchTicketGroup {
+  region: ModuleBalancingDispatchTicketRegion;
+  items: ModuleBalancingDispatchTicketSummary[];
+  totalDispatchPerMin: number;
 }
 
 export interface ModuleBalancingComputation {
   stageBalances: ModuleBalancingStageBalance[];
   summaryBalances: ModuleBalancingItemBalance[];
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
-  dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
+  // AI-REMOVED 2026-08-29:
+  // Reason: 调度券结果必须按地区持有明细与合计，平铺列表无法阻止跨地区聚合。
+  // Trigger: ST2-RQ-018 要求武陵与四号谷地独立分组、独立合计。
+  // Evidence: 旧 UI 对 dispatchTicketSummaries 直接 reduce，补录四号谷地后会合并两种调度券。
+  // Replacement: dispatchTicketGroups
+  // Risk: Low - 该结果是运行时派生值，不涉及持久化迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
+  dispatchTicketGroups: ModuleBalancingDispatchTicketGroup[];
 }
 
 export interface ModuleBalancingIndex {
@@ -63,6 +85,7 @@ export interface ModuleBalancingIndex {
   entityById: Map<string, EntityDefinition>;
   recipeById: Map<string, RecipeDefinition>;
   allRecipeById: Map<string, RecipeDefinition>;
+  consumptionRecipesByMachine: Map<string, RecipeDefinition[]>;
   customModuleById: Map<string, ModuleBalancingCustomModule>;
   recommendedModuleById: Map<string, ModuleBalancingRecommendedModule>;
   systemModules: ModuleBalancingSystemRecipeModule[];
@@ -103,6 +126,9 @@ export function buildModuleBalancingIndex(
   );
   const allRecipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   const recipeById = new Map(availableRecipes.map((recipe) => [recipe.id, recipe]));
+  const consumptionRecipesByMachine = buildDeviceRunningConsumptionRecipesByMachine(
+    registry.recipeDefinitions,
+  );
   const customModuleById = new Map(state.customModules.map((module) => [module.id, module]));
   const recommendedModuleById = new Map(
     (options.recommendedModules ?? [])
@@ -120,6 +146,7 @@ export function buildModuleBalancingIndex(
     entityById,
     recipeById,
     allRecipeById,
+    consumptionRecipesByMachine,
     customModuleById,
     recommendedModuleById,
     systemModules,
@@ -162,7 +189,17 @@ export function computeModuleBalancing(
     stageBalances,
     summaryBalances: finalizedSummary,
     warehouseForecasts: computeWarehouseForecasts(finalizedSummary, canvas.warehouseCapacity),
-    dispatchTicketSummaries: computeDispatchTicketSummaries(finalizedSummary, index),
+    // AI-REMOVED 2026-08-29:
+    // Reason: 计算入口改为直接生成地区分组，避免 UI 再次推导地区与合计。
+    // Trigger: ST2-RQ-018 要求地区计算只有一个模型层真相。
+    // Evidence: computeDispatchTicketGroups 同时完成正净产出过滤、地区隔离与地区合计。
+    // Replacement: 下方 dispatchTicketGroups
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // dispatchTicketSummaries: computeDispatchTicketSummaries(finalizedSummary, index),
+    dispatchTicketGroups: computeDispatchTicketGroups(finalizedSummary, index),
   };
 }
 
@@ -269,11 +306,23 @@ export function resolveModulePorts(
   }
 
   const multiplier = 60 / recipe.durationSeconds;
+  const recipeInputs = recipe.inputs.map((input) => ({
+    itemId: input.itemId,
+    perMinute: roundFlow(input.amount * multiplier),
+  }));
+  const consumptionRecipe = resolveCompanionDeviceRunningConsumptionRecipe(
+    recipe,
+    index.consumptionRecipesByMachine,
+  );
+  const deviceRunningConsumptionInputs = consumptionRecipe === undefined
+    || consumptionRecipe.durationSeconds <= 0
+    ? []
+    : consumptionRecipe.inputs.map((input) => ({
+        itemId: input.itemId,
+        perMinute: roundFlow(input.amount * 60 / consumptionRecipe.durationSeconds),
+      }));
   return {
-    inputs: recipe.inputs.map((input) => ({
-      itemId: input.itemId,
-      perMinute: roundFlow(input.amount * multiplier),
-    })),
+    inputs: mergeModulePorts(recipeInputs, deviceRunningConsumptionInputs),
     outputs: recipe.outputs.map((output) => ({
       itemId: output.itemId,
       perMinute: roundFlow(output.amount * multiplier),
@@ -747,55 +796,125 @@ function clonePort(port: ModuleBalancingIOPort): ModuleBalancingIOPort {
   };
 }
 
+function mergeModulePorts(
+  ...portGroups: readonly (readonly ModuleBalancingIOPort[])[]
+): ModuleBalancingIOPort[] {
+  const perMinuteByItemId = new Map<string, number>();
+  for (const ports of portGroups) {
+    for (const port of ports) {
+      perMinuteByItemId.set(
+        port.itemId,
+        roundFlow((perMinuteByItemId.get(port.itemId) ?? 0) + port.perMinute),
+      );
+    }
+  }
+
+  return Array.from(perMinuteByItemId, ([itemId, perMinute]) => ({ itemId, perMinute }));
+}
+
 function roundFlow(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
 const DISPATCH_TICKET_VALUE_TAG_PREFIX = "调度券价值:";
 const DISPATCH_TICKET_REGION_TAG_PREFIX = "调度券地区:";
+const DISPATCH_TICKET_REGIONS = ["武陵", "四号谷地"] as const satisfies readonly ModuleBalancingDispatchTicketRegion[];
 
 export function resolveDispatchTicketValue(tags: readonly string[]): number {
-  for (const tag of tags) {
-    if (tag.startsWith(DISPATCH_TICKET_VALUE_TAG_PREFIX)) {
-      const parsed = parseFloat(tag.slice(DISPATCH_TICKET_VALUE_TAG_PREFIX.length));
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
+  const valueTags = tags.filter((tag) => tag.startsWith(DISPATCH_TICKET_VALUE_TAG_PREFIX));
+  if (valueTags.length !== 1) {
+    return 0;
   }
-  return 0;
+
+  const parsed = Number(valueTags[0]?.slice(DISPATCH_TICKET_VALUE_TAG_PREFIX.length));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-export function resolveDispatchTicketRegion(tags: readonly string[]): string | null {
-  for (const tag of tags) {
-    if (tag.startsWith(DISPATCH_TICKET_REGION_TAG_PREFIX)) {
-      return tag.slice(DISPATCH_TICKET_REGION_TAG_PREFIX.length);
-    }
+export function resolveDispatchTicketRegion(
+  tags: readonly string[],
+): ModuleBalancingDispatchTicketRegion | null {
+  const regionTags = tags.filter((tag) => tag.startsWith(DISPATCH_TICKET_REGION_TAG_PREFIX));
+  if (regionTags.length !== 1) {
+    return null;
   }
-  return null;
+
+  const region = regionTags[0]?.slice(DISPATCH_TICKET_REGION_TAG_PREFIX.length);
+  return DISPATCH_TICKET_REGIONS.find((candidate) => candidate === region) ?? null;
 }
 
-export function computeDispatchTicketSummaries(
+// AI-REMOVED 2026-08-29:
+// Reason: 平铺结果既保留零值/负值，又允许调用方跨地区求和，不符合地区独立的正净产出语义。
+// Trigger: ST2-RQ-018 要求只展示正净产出，并按武陵、四号谷地分别生成明细与合计。
+// Evidence: 旧函数对所有有价值 Tag 的 balance 直接 push，且返回值没有地区分组边界。
+// Replacement: computeDispatchTicketGroups
+// Risk: Low - 调度券结果只在模块配平最终汇总消费。
+// Human Review: Required
+//
+// Original code:
+// export function computeDispatchTicketSummaries(
+//   balances: readonly ModuleBalancingItemBalance[],
+//   index: ModuleBalancingIndex,
+// ): ModuleBalancingDispatchTicketSummary[] {
+//   const summaries: ModuleBalancingDispatchTicketSummary[] = [];
+//
+//   for (const balance of balances) {
+//     const item = index.itemById.get(balance.itemId);
+//     if (item === undefined) continue;
+//
+//     const value = resolveDispatchTicketValue(item.tags);
+//     if (value <= 0) continue;
+//
+//     summaries.push({
+//       itemId: balance.itemId,
+//       value,
+//       region: resolveDispatchTicketRegion(item.tags),
+//       netDelta: balance.netDelta,
+//       dispatchPerMin: roundFlow(balance.netDelta * value),
+//     });
+//   }
+//
+//   return summaries;
+// }
+export function computeDispatchTicketGroups(
   balances: readonly ModuleBalancingItemBalance[],
   index: ModuleBalancingIndex,
-): ModuleBalancingDispatchTicketSummary[] {
-  const summaries: ModuleBalancingDispatchTicketSummary[] = [];
+): ModuleBalancingDispatchTicketGroup[] {
+  const groupByRegion = new Map<ModuleBalancingDispatchTicketRegion, ModuleBalancingDispatchTicketGroup>(
+    DISPATCH_TICKET_REGIONS.map((region) => [region, {
+      region,
+      items: [],
+      totalDispatchPerMin: 0,
+    }]),
+  );
 
   for (const balance of balances) {
+    if (balance.netDelta <= 0) continue;
+
     const item = index.itemById.get(balance.itemId);
     if (item === undefined) continue;
 
     const value = resolveDispatchTicketValue(item.tags);
-    if (value <= 0) continue;
+    const region = resolveDispatchTicketRegion(item.tags);
+    if (value <= 0 || region === null) continue;
 
-    summaries.push({
+    const dispatchPerMin = roundFlow(balance.netDelta * value);
+    if (dispatchPerMin <= 0) continue;
+
+    const group = groupByRegion.get(region);
+    if (group === undefined) continue;
+
+    group.items.push({
       itemId: balance.itemId,
       value,
-      region: resolveDispatchTicketRegion(item.tags),
+      region,
       netDelta: balance.netDelta,
-      dispatchPerMin: roundFlow(balance.netDelta * value),
+      dispatchPerMin,
     });
+    group.totalDispatchPerMin = roundFlow(group.totalDispatchPerMin + dispatchPerMin);
   }
 
-  return summaries;
+  return DISPATCH_TICKET_REGIONS.flatMap((region) => {
+    const group = groupByRegion.get(region);
+    return group !== undefined && group.items.length > 0 ? [group] : [];
+  });
 }

@@ -503,6 +503,7 @@ export interface QuickPlaceRuntimeStateReadWrite {
   visible: boolean;
   anchor: ClientPixelPoint | null;
   searchQuery: string;
+  openSource: "keyboard-shortcut" | "pointer" | null;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -679,6 +680,7 @@ class QuickPlaceRuntimeStateReadWriteImpl implements QuickPlaceRuntimeStateReadW
   visible = false;
   anchor: ClientPixelPoint | null = null;
   searchQuery = "";
+  openSource: "keyboard-shortcut" | "pointer" | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

@@ -616,7 +616,7 @@ const UI: Record<string, string> = {
     "moduleBalancing.deleteModule": "删除模块",
     "moduleBalancing.deleteStage": "删除阶段",
     "moduleBalancing.disableInfiniteInput": "取消无限供给",
-    "moduleBalancing.dispatchTicketTitle": "调度券需求",
+    "moduleBalancing.dispatchTicketTitle": "{region}调度券产出",
     "moduleBalancing.dispatchTicketTotal": "合计",
     "moduleBalancing.dispatchTicketUnit": "调度券",
     "moduleBalancing.editModule": "编辑模块",

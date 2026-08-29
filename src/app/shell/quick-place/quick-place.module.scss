@@ -172,7 +172,8 @@
 }
 
 .quick-place-device-button:hover,
-.quick-place-device-button:focus-visible {
+.quick-place-device-button:focus-visible,
+.quick-place-device-button.is-active {
   border-color: var(--accent-strong);
   background: var(--surface-1);
   outline: none;

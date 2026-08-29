@@ -8,7 +8,20 @@ import {
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
-import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
+import {
+  buildDeviceRunningConsumptionRecipesByMachine,
+  resolveCompanionDeviceRunningConsumptionRecipe,
+} from "@/shared/device-running-consumption";
+// AI-REMOVED 2026-08-29:
+// Reason: 设备运行消耗的索引与匹配规则已提升到 shared，生产规划不应继续维护私有规则。
+// Trigger: 模块配平需要复用相同语义并避免固气转化机专用逻辑。
+// Evidence: production-planning-model 与 module-balancing-model 都需要按 ConsumptionChannelRecipe tag 解析同设备消耗。
+// Replacement: @/shared/device-running-consumption
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
   WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
@@ -175,18 +188,30 @@ export function buildProductionPlanningIndex(
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
     );
   const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
-  const consumptionRecipesByMachine = new Map<string, RecipeDefinition[]>();
-  for (const recipe of registry.recipeDefinitions) {
-    if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
-      continue;
-    }
-    const recipes = consumptionRecipesByMachine.get(recipe.machineId);
-    if (recipes === undefined) {
-      consumptionRecipesByMachine.set(recipe.machineId, [recipe]);
-    } else {
-      recipes.push(recipe);
-    }
-  }
+  // AI-REMOVED 2026-08-29:
+  // Reason: 私有索引逻辑已由 shared 统一实现，继续保留 active code 会造成规则漂移。
+  // Trigger: 模块配平同样需要索引隐藏的设备运行消耗配方。
+  // Evidence: buildDeviceRunningConsumptionRecipesByMachine 覆盖原有按 tag 与 machineId 分组行为。
+  // Replacement: 下方 buildDeviceRunningConsumptionRecipesByMachine(registry.recipeDefinitions)
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const consumptionRecipesByMachine = new Map<string, RecipeDefinition[]>();
+  // for (const recipe of registry.recipeDefinitions) {
+  //   if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+  //     continue;
+  //   }
+  //   const recipes = consumptionRecipesByMachine.get(recipe.machineId);
+  //   if (recipes === undefined) {
+  //     consumptionRecipesByMachine.set(recipe.machineId, [recipe]);
+  //   } else {
+  //     recipes.push(recipe);
+  //   }
+  // }
+  const consumptionRecipesByMachine = buildDeviceRunningConsumptionRecipesByMachine(
+    registry.recipeDefinitions,
+  );
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
   for (const recipe of visibleRecipes) {
@@ -693,16 +718,29 @@ function resolveDeviceMinimumConsumptionAmountsPerCycle(
     return new Map();
   }
 
-  const consumptionRecipes = context.index.consumptionRecipesByMachine.get(recipe.machineId) ?? [];
-  if (consumptionRecipes.length === 0) {
-    return new Map();
-  }
-
-  const consumptionRecipe = consumptionRecipes.find((candidate) =>
-    candidate.inputs.some((consumptionInput) =>
-      recipe.inputs.some((input) => input.itemId === consumptionInput.itemId),
-    ),
-  ) ?? consumptionRecipes[0];
+  // AI-REMOVED 2026-08-29:
+  // Reason: 同设备消耗配方的匹配规则已由 shared 统一实现。
+  // Trigger: 模块配平必须与生产规划选择同一个伴随运行消耗配方。
+  // Evidence: resolveCompanionDeviceRunningConsumptionRecipe 保留输入物品优先匹配与首项回退，并排除消耗配方自匹配。
+  // Replacement: 下方 resolveCompanionDeviceRunningConsumptionRecipe 调用。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const consumptionRecipes = context.index.consumptionRecipesByMachine.get(recipe.machineId) ?? [];
+  // if (consumptionRecipes.length === 0) {
+  //   return new Map();
+  // }
+  //
+  // const consumptionRecipe = consumptionRecipes.find((candidate) =>
+  //   candidate.inputs.some((consumptionInput) =>
+  //     recipe.inputs.some((input) => input.itemId === consumptionInput.itemId),
+  //   ),
+  // ) ?? consumptionRecipes[0];
+  const consumptionRecipe = resolveCompanionDeviceRunningConsumptionRecipe(
+    recipe,
+    context.index.consumptionRecipesByMachine,
+  );
   const consumptionInput = consumptionRecipe?.inputs[0];
   if (
     consumptionRecipe === undefined

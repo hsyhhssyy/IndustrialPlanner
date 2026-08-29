@@ -2,15 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { ModuleBalancingCanvas, ModuleBalancingState } from "@/app/toolbox-types";
+import { createRegistryContract } from "@/registry";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 import {
   buildModuleBalancingIndex,
+  computeDispatchTicketGroups,
   computeModuleBalancing,
   computeStageModuleTotals,
   matchesModuleSearchQuery,
   resolveInfiniteSystemInputItemIds,
   resolveModuleDisplayTitle,
   resolveModuleIconSrc,
+  resolveModuleInputs,
+  resolveDispatchTicketRegion,
+  resolveDispatchTicketValue,
 } from "@/app/shell/module-balancing/module-balancing-model";
 
 const TEST_REGISTRY: RegistryContract = {
@@ -77,6 +82,8 @@ const TEST_REGISTRY: RegistryContract = {
     { id: "ore", nameKey: "item.ore", iconId: "ore", displayOrder: 10000, tags: [] },
     { id: "plate", nameKey: "item.plate", iconId: "plate", displayOrder: 10000, tags: [] },
     { id: "gear", nameKey: "item.gear", iconId: "gear", displayOrder: 10000, tags: ["调度券地区:武陵", "调度券价值:22"] },
+    { id: "valley_part", nameKey: "item.valleyPart", iconId: "valley_part", displayOrder: 10000, tags: ["调度券地区:四号谷地", "调度券价值:10"] },
+    { id: "valley_part_2", nameKey: "item.valleyPart2", iconId: "valley_part_2", displayOrder: 10000, tags: ["调度券地区:四号谷地", "调度券价值:3"] },
   ],
   recipeDefinitions: [
     {
@@ -152,6 +159,62 @@ describe("module-balancing-model", () => {
     expect(index.recipeById.has("hidden_void_plate")).toBe(false);
     expect(index.systemModules.map((module) => module.recipeId)).not.toContain("hidden_void_plate");
     expect(index.allEntities.map((entity) => entity.id)).not.toContain("cheat_machine");
+  });
+
+  it("merges hidden device running consumption into solid-gas transmuter recipes", () => {
+    const index = buildModuleBalancingIndex(createRegistryContract(), createState());
+    const gasRecipe = index.systemModules.find((module) => (
+      module.recipeId === "liquid_transmuter_2_gas_gas_xiranite_1"
+    ));
+    const solidRecipe = index.systemModules.find((module) => (
+      module.recipeId === "liquid_transmuter_2_solid_xiranite_powder_1"
+    ));
+
+    expect(gasRecipe).toBeDefined();
+    expect(solidRecipe).toBeDefined();
+    expect(resolveModuleInputs(gasRecipe!, index)).toEqual([
+      { itemId: "item_xiranite_powder", perMinute: 30 },
+      { itemId: "item_gas_xiranite", perMinute: 6 },
+    ]);
+    expect(resolveModuleInputs(solidRecipe!, index)).toEqual([
+      { itemId: "item_gas_xiranite", perMinute: 36 },
+    ]);
+    expect(computeStageModuleTotals({
+      id: "stage",
+      name: "Solid-Gas",
+      entries: [{ moduleId: gasRecipe!.id, quantity: 2 }],
+    }, index)).toContainEqual({
+      itemId: "item_gas_xiranite",
+      totalInput: 12,
+      totalOutput: 60,
+      netDelta: 48,
+    });
+    expect(index.systemModules.some((module) => (
+      module.recipeId === "r_transmuter_2_gastrans_xiranite_consumption_internal"
+    ))).toBe(false);
+  });
+
+  it("keeps gas dispersing recipes visible and counts their own consumption only once", () => {
+    const index = buildModuleBalancingIndex(createRegistryContract(), createState());
+    const recipeId = "r_gas_diffuser_xiranite_gas_environment_basic";
+    const module = index.systemModules.find((candidate) => candidate.recipeId === recipeId);
+
+    expect(module).toBeDefined();
+    expect(resolveModuleInputs(module!, index)).toEqual([
+      { itemId: "item_gas_xiranite", perMinute: 6 },
+    ]);
+    expect(computeStageModuleTotals({
+      id: "stage",
+      name: "Gas Dispersing",
+      entries: [{ moduleId: recipeId, quantity: 1 }],
+    }, index)).toEqual([
+      {
+        itemId: "item_gas_xiranite",
+        totalInput: 6,
+        totalOutput: 0,
+        netDelta: -6,
+      },
+    ]);
   });
 
   it("uses the device icon and output/device title for system recipes", () => {
@@ -308,13 +371,17 @@ describe("module-balancing-model", () => {
     ]));
   });
 
-  it("computes dispatch ticket summaries from summary balances", () => {
+  it("groups positive dispatch ticket output by region", () => {
     const state = createState();
     const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
     const canvas: ModuleBalancingCanvas = {
       id: "canvas",
       name: "Main",
-      globalInputs: [{ itemId: "ore", perMinute: 30 }],
+      globalInputs: [
+        { itemId: "ore", perMinute: 30 },
+        { itemId: "valley_part", perMinute: 3 },
+        { itemId: "valley_part_2", perMinute: 2 },
+      ],
       stages: [
         {
           id: "stage-1",
@@ -333,13 +400,55 @@ describe("module-balancing-model", () => {
     const result = computeModuleBalancing(canvas, index);
 
     // gear has netDelta 7.5, dispatch ticket value 22 → dispatchPerMin = 7.5 * 22 = 165
-    expect(result.dispatchTicketSummaries).toEqual([
+    // Valley 4 parts produce 3 * 10 + 2 * 3 = 36 dispatch tickets per minute.
+    expect(result.dispatchTicketGroups).toEqual([
       {
-        itemId: "gear",
-        value: 22,
         region: "武陵",
-        netDelta: 7.5,
-        dispatchPerMin: 165,
+        items: [{
+          itemId: "gear",
+          value: 22,
+          region: "武陵",
+          netDelta: 7.5,
+          dispatchPerMin: 165,
+        }],
+        totalDispatchPerMin: 165,
+      },
+      {
+        region: "四号谷地",
+        items: [
+          {
+            itemId: "valley_part",
+            value: 10,
+            region: "四号谷地",
+            netDelta: 3,
+            dispatchPerMin: 30,
+          },
+          {
+            itemId: "valley_part_2",
+            value: 3,
+            region: "四号谷地",
+            netDelta: 2,
+            dispatchPerMin: 6,
+          },
+        ],
+        totalDispatchPerMin: 36,
       },
     ]);
-  });});
+  });
+
+  it("omits dispatch ticket regions with no positive net output", () => {
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, createState());
+
+    expect(computeDispatchTicketGroups([
+      { itemId: "gear", totalInput: 2, totalOutput: 1, netDelta: -1 },
+      { itemId: "valley_part", totalInput: 2, totalOutput: 2, netDelta: 0 },
+    ], index)).toEqual([]);
+  });
+
+  it("rejects ambiguous or unknown dispatch ticket metadata", () => {
+    expect(resolveDispatchTicketValue(["调度券价值:22", "调度券价值:23"])).toBe(0);
+    expect(resolveDispatchTicketValue(["调度券价值:22invalid"])).toBe(0);
+    expect(resolveDispatchTicketRegion(["调度券地区:谷地"])).toBeNull();
+    expect(resolveDispatchTicketRegion(["调度券地区:武陵", "调度券地区:四号谷地"])).toBeNull();
+  });
+});

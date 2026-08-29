@@ -623,7 +623,7 @@ const UI: Record<string, string> = {
     "moduleBalancing.deleteModule": "Delete Module",
     "moduleBalancing.deleteStage": "Delete Stage",
     "moduleBalancing.disableInfiniteInput": "Disable Infinite Supply",
-    "moduleBalancing.dispatchTicketTitle": "Dispatch Ticket Demand",
+    "moduleBalancing.dispatchTicketTitle": "{region} Dispatch Ticket Output",
     "moduleBalancing.dispatchTicketTotal": "Total",
     "moduleBalancing.dispatchTicketUnit": "dispatch tickets",
     "moduleBalancing.editModule": "Edit Module",

@@ -70,7 +70,7 @@ import {
   resolveModuleInputs,
   resolveModuleOutputs,
   resolveInfiniteSystemInputItemIds,
-  type ModuleBalancingDispatchTicketSummary,
+  type ModuleBalancingDispatchTicketGroup,
   type ModuleBalancingIndex,
   type ModuleBalancingItemBalance,
   type ModuleBalancingWarehouseForecast,
@@ -993,7 +993,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <SummaryPanel
             balances={computation.summaryBalances}
             canvas={activeCanvas}
-            dispatchTicketSummaries={computation.dispatchTicketSummaries}
+            dispatchTicketGroups={computation.dispatchTicketGroups}
             index={index}
             t={t}
             warehouseForecasts={computation.warehouseForecasts}
@@ -2799,21 +2799,30 @@ function BalanceStrip({
 function SummaryPanel({
   balances,
   canvas,
-  dispatchTicketSummaries,
+  dispatchTicketGroups,
   index,
   t,
   warehouseForecasts,
 }: {
   balances: ModuleBalancingItemBalance[];
   canvas?: ModuleBalancingCanvasReadWrite;
-  dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
+  dispatchTicketGroups: ModuleBalancingDispatchTicketGroup[];
   index: ModuleBalancingIndex;
   t: (key: string) => string;
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
 }) {
   const meaningfulForecasts = warehouseForecasts.filter((forecast) => Math.abs(forecast.netDeltaPerMin) >= 0.005);
-  const dispatchTotal = dispatchTicketSummaries.reduce((sum, item) => sum + item.dispatchPerMin, 0);
-  const hasSideLists = dispatchTicketSummaries.length > 0 || warehouseForecasts.length > 0;
+  // AI-REMOVED 2026-08-29:
+  // Reason: 武陵与四号谷地调度券不可跨地区合计。
+  // Trigger: ST2-RQ-018 要求每个地区独立合计且页面不提供两地总计。
+  // Evidence: ModuleBalancingDispatchTicketGroup 已在模型层持有地区合计。
+  // Replacement: group.totalDispatchPerMin
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const dispatchTotal = dispatchTicketSummaries.reduce((sum, item) => sum + item.dispatchPerMin, 0);
+  const hasSideLists = dispatchTicketGroups.length > 0 || warehouseForecasts.length > 0;
 
   return (
     <section className={cm(styles, "module-balancing-summary", !hasSideLists && "is-summary-full-width")}>
@@ -2839,22 +2848,29 @@ function SummaryPanel({
           </div>
         ))}
       </div>
-      {dispatchTicketSummaries.length > 0 ? (
-        <div className={cm(styles, "module-balancing-dispatch-list")}>
-          <h4>{t("moduleBalancing.dispatchTicketTitle")}</h4>
-          {dispatchTicketSummaries.map((summary) => (
-            <div className={cm(styles, "module-balancing-warehouse-row")} key={summary.itemId}>
-              <img alt="" src={resolveItemIconSrc(summary.itemId, index)} />
-              <span>{resolveItemName(summary.itemId, index, t)}</span>
-              <strong>{formatFlow(summary.dispatchPerMin)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
+      {dispatchTicketGroups.map((group) => {
+        const regionNameKey = group.region === "武陵"
+          ? "workbench.base.wuling"
+          : "workbench.base.valley4";
+        const title = t("moduleBalancing.dispatchTicketTitle")
+          .replace("{region}", t(regionNameKey));
+        return (
+          <div className={cm(styles, "module-balancing-dispatch-list")} key={group.region}>
+            <h4>{title}</h4>
+            {group.items.map((summary) => (
+              <div className={cm(styles, "module-balancing-warehouse-row")} key={summary.itemId}>
+                <img alt="" src={resolveItemIconSrc(summary.itemId, index)} />
+                <span>{resolveItemName(summary.itemId, index, t)}</span>
+                <strong>{formatFlow(summary.dispatchPerMin)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
+              </div>
+            ))}
+            <div className={cm(styles, "module-balancing-dispatch-total")}>
+              <strong>{t("moduleBalancing.dispatchTicketTotal")}</strong>
+              <strong>{formatFlow(group.totalDispatchPerMin)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
             </div>
-          ))}
-          <div className={cm(styles, "module-balancing-dispatch-total")}>
-            <strong>{t("moduleBalancing.dispatchTicketTotal")}</strong>
-            <strong>{formatFlow(dispatchTotal)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
           </div>
-        </div>
-      ) : null}
+        );
+      })}
       {warehouseForecasts.length > 0 ? (
         <div className={cm(styles, "module-balancing-warehouse-list")}>
           <h4>{t("moduleBalancing.warehouseAnalysis")}</h4>

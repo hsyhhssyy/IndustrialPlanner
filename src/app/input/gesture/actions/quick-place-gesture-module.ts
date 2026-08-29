@@ -34,7 +34,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
           return { status: "ignored" };
         }
 
-        if (tryOpenQuickPlaceAt(context, event.position)) {
+        if (tryOpenQuickPlaceAt(context, event.position, "pointer")) {
           return { status: "handled", consume: true };
         }
 
@@ -60,7 +60,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
         return { status: "ignored" };
       }
 
-      if (!tryOpenQuickPlaceAt(context, lastMousePosition)) {
+      if (!tryOpenQuickPlaceAt(context, lastMousePosition, "keyboard-shortcut")) {
         return { status: "ignored" };
       }
 
@@ -102,6 +102,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
 function tryOpenQuickPlaceAt(
   context: GestureActionContext<AppHost>,
   position: GesturePosition | null,
+  openSource: "keyboard-shortcut" | "pointer",
 ): boolean {
   if (
     context.appHost.internalState.activeTool !== "select"
@@ -123,6 +124,7 @@ function tryOpenQuickPlaceAt(
     context.appHost.internalState.runtime.quickPlace.visible = true;
     context.appHost.internalState.runtime.quickPlace.anchor = position;
     context.appHost.internalState.runtime.quickPlace.searchQuery = "";
+    context.appHost.internalState.runtime.quickPlace.openSource = openSource;
   });
 
   return true;
@@ -133,6 +135,7 @@ function closeQuickPlace(appHost: AppHost): void {
     appHost.internalState.runtime.quickPlace.visible = false;
     appHost.internalState.runtime.quickPlace.anchor = null;
     appHost.internalState.runtime.quickPlace.searchQuery = "";
+    appHost.internalState.runtime.quickPlace.openSource = null;
   });
 }
 

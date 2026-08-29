@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -51,12 +52,15 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const favoritesRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const deviceButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const activeDragPayloadRef = useRef<QuickPlaceDragPayload | null>(null);
   const favoriteDropHandledRef = useRef(false);
   const dropTargetIndexRef = useRef<number | null>(null);
   const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [activeResultId, setActiveResultId] = useState<string | null>(null);
+  const deviceListId = useId();
   const t = appHost.actions.translate;
   const runtime = appHost.internalState.runtime.quickPlace;
   const anchor = runtime.anchor;
@@ -115,6 +119,27 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   //   searchInputRef.current?.focus({ preventScroll: true });
   // }, [visible]);
 
+  // AI-CORRECTION 2026-08-29: 上述取消统一自动聚焦的规则仍适用于指针入口；
+  // 快速放置键盘快捷键现在显式请求搜索焦点，以支持连续键盘搜索与选择。
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    setActiveResultId(null);
+    if (runtime.openSource === "keyboard-shortcut") {
+      searchInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [runtime.openSource, visible]);
+
+  useEffect(() => {
+    if (activeResultId === null) {
+      return;
+    }
+
+    deviceButtonRefs.current.get(activeResultId)?.scrollIntoView?.({ block: "nearest" });
+  }, [activeResultId]);
+
   useEffect(() => {
     if (!visible) {
       return;
@@ -168,18 +193,53 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
         shift: event.shiftKey,
       },
     });
-    if (slotIndex === null) {
+    if (slotIndex !== null) {
+      const deviceId = favorites[slotIndex];
+      if (deviceId !== null && deviceId !== undefined) {
+        event.preventDefault();
+        event.stopPropagation();
+        selectDevice(deviceId, {
+          source: "mouse",
+          button: 0,
+          altKey: event.altKey,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          sourceEvent: event.nativeEvent,
+        });
+        return;
+      }
+    }
+
+    if (event.target !== searchInputRef.current || event.nativeEvent.isComposing) {
       return;
     }
 
-    const deviceId = favorites[slotIndex];
-    if (deviceId === null || deviceId === undefined) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (filteredEntries.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      moveActiveResult(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (event.key !== "Enter") {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
-    selectDevice(deviceId, {
+    const activeEntry = activeResultId === null
+      ? filteredEntries[0]
+      : filteredEntries.find((entry) => entry.id === activeResultId) ?? filteredEntries[0];
+    if (activeEntry === undefined) {
+      return;
+    }
+
+    selectDevice(activeEntry.id, {
       source: "mouse",
       button: 0,
       altKey: event.altKey,
@@ -187,6 +247,26 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
       sourceEvent: event.nativeEvent,
+    });
+  }
+
+  function moveActiveResult(delta: -1 | 1): void {
+    setActiveResultId((currentId) => {
+      if (filteredEntries.length === 0) {
+        return null;
+      }
+
+      const currentIndex = currentId === null
+        ? -1
+        : filteredEntries.findIndex((entry) => entry.id === currentId);
+      if (currentIndex < 0) {
+        return delta > 0
+          ? filteredEntries[0]?.id ?? null
+          : filteredEntries.at(-1)?.id ?? null;
+      }
+
+      const nextIndex = clamp(currentIndex + delta, 0, filteredEntries.length - 1);
+      return filteredEntries[nextIndex]?.id ?? null;
     });
   }
 
@@ -426,34 +506,54 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
         <header className={cm(styles, "quick-place-menu-header")}>
           <h2>{t("workbench.quickPlace.title")}</h2>
           <input
+            aria-activedescendant={activeResultId === null ? undefined : `${deviceListId}-${activeResultId}`}
+            aria-autocomplete="list"
+            aria-controls={deviceListId}
+            aria-expanded="true"
             aria-label={t("workbench.quickPlace.searchPlaceholder")}
             className={cm(styles, "quick-place-search-input")}
             onChange={(event) => {
               const nextSearchQuery = event.currentTarget.value;
+              setActiveResultId(null);
               runInAction(() => {
                 runtime.searchQuery = nextSearchQuery;
               });
             }}
             placeholder={t("workbench.quickPlace.searchPlaceholder")}
             ref={searchInputRef}
+            role="combobox"
             type="search"
             value={runtime.searchQuery}
           />
         </header>
-        <div className={cm(styles, "quick-place-device-list")}>
+        <div className={cm(styles, "quick-place-device-list")} id={deviceListId} role="listbox">
           {filteredEntries.length === 0 ? (
             <div className={cm(styles, "quick-place-empty-results")}>
               {t("workbench.quickPlace.emptyResults")}
             </div>
           ) : filteredEntries.map((entry) => (
             <button
-              className={cm(styles, "quick-place-device-button")}
+              aria-selected={activeResultId === entry.id}
+              className={cm(
+                styles,
+                "quick-place-device-button",
+                activeResultId === entry.id && "is-active",
+              )}
               draggable
+              id={`${deviceListId}-${entry.id}`}
               key={entry.id}
               onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
               onDragEnd={handleMenuDragEnd}
               onPointerDown={handleSelectablePointerDown}
               onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
+              ref={(element) => {
+                if (element === null) {
+                  deviceButtonRefs.current.delete(entry.id);
+                } else {
+                  deviceButtonRefs.current.set(entry.id, element);
+                }
+              }}
+              role="option"
               onDragStart={(event) => {
                 favoriteDropHandledRef.current = false;
                 setDraggingFavoriteIndex(null);
@@ -485,6 +585,7 @@ function closeQuickPlace(appHost: AppHost): void {
     appHost.internalState.runtime.quickPlace.visible = false;
     appHost.internalState.runtime.quickPlace.anchor = null;
     appHost.internalState.runtime.quickPlace.searchQuery = "";
+    appHost.internalState.runtime.quickPlace.openSource = null;
   });
 }
 

@@ -286,6 +286,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost.internalState.runtime.quickPlace.visible = false;
             appHost.internalState.runtime.quickPlace.anchor = null;
             appHost.internalState.runtime.quickPlace.searchQuery = "";
+            appHost.internalState.runtime.quickPlace.openSource = null;
           }
         }),
       },

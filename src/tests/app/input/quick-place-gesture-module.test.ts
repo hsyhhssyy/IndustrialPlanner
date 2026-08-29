@@ -24,6 +24,7 @@ describe("createQuickPlaceGestureModule", () => {
       visible: true,
       anchor: { x: 320, y: 180 },
       searchQuery: "",
+      openSource: "keyboard-shortcut",
     });
   });
 
@@ -41,6 +42,7 @@ describe("createQuickPlaceGestureModule", () => {
       visible: true,
       anchor: { x: 111, y: 222 },
       searchQuery: "",
+      openSource: "pointer",
     });
 
     expect(touchModule.handle(touchDoubleTapEvent(333, 444), touchContext.context)).toEqual({
@@ -51,6 +53,7 @@ describe("createQuickPlaceGestureModule", () => {
       visible: true,
       anchor: { x: 333, y: 444 },
       searchQuery: "",
+      openSource: "pointer",
     });
   });
 
@@ -109,6 +112,7 @@ describe("createQuickPlaceGestureModule", () => {
         visible: true,
         anchor: { x: 40, y: 60 },
         searchQuery: "abc",
+        openSource: "keyboard-shortcut",
       },
     });
     const module = createQuickPlaceGestureModule();
@@ -121,12 +125,14 @@ describe("createQuickPlaceGestureModule", () => {
       visible: false,
       anchor: null,
       searchQuery: "",
+      openSource: null,
     });
 
     context.appHost.internalState.runtime.quickPlace = {
       visible: true,
       anchor: { x: 80, y: 90 },
       searchQuery: "belt",
+      openSource: "pointer",
     };
 
     expect(module.handle(exitActiveToolEvent(), context)).toEqual({ status: "handled" });
@@ -134,6 +140,7 @@ describe("createQuickPlaceGestureModule", () => {
       visible: false,
       anchor: null,
       searchQuery: "",
+      openSource: null,
     });
   });
 });
@@ -146,6 +153,7 @@ function createContext(options: {
     visible: boolean;
     anchor: { x: number; y: number } | null;
     searchQuery: string;
+    openSource: "keyboard-shortcut" | "pointer" | null;
   };
 } = {}): { context: GestureActionContext<AppHost> } {
   const editor = {
@@ -168,6 +176,7 @@ function createContext(options: {
           visible: false,
           anchor: null,
           searchQuery: "",
+          openSource: null,
         },
       },
     },
