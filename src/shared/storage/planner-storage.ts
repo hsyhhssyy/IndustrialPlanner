@@ -30,6 +30,8 @@ export interface PlannerPersistedState {
   supplies: Array<{ id: string; itemId: string; perMinute: number; isInfinite?: boolean }>;
   displayMode: "item" | "device";
   viewMode: "tree" | "flow" | "process";
+  useModules: boolean;
+  /** 2026-08-29：历史键名保留为存储协议字段，值已升级为生产候选 ID。 */
   recipeChoices: Record<string, string>;
   recipeChoicesDemandSignature: string | null;
   sourceConfig: {
@@ -117,6 +119,7 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
     supplies: normalizePorts(value.supplies),
     displayMode: value.displayMode === "device" ? "device" : "item",
     viewMode: normalizePersistedViewMode(value.viewMode),
+    useModules: value.useModules === true,
     recipeChoices: normalizeRecipeChoices(value.recipeChoices),
     recipeChoicesDemandSignature: typeof value.recipeChoicesDemandSignature === "string"
       ? value.recipeChoicesDemandSignature
@@ -157,7 +160,7 @@ const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
   key: "v3",
 };
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 const MIGRATIONS: StorageMigration<PlannerPersistedState>[] = [
   {
     version: 2,
@@ -165,6 +168,10 @@ const MIGRATIONS: StorageMigration<PlannerPersistedState>[] = [
   },
   {
     version: 3,
+    migrate: (raw) => normalizePlannerPersistedState(raw),
+  },
+  {
+    version: 4,
     migrate: (raw) => normalizePlannerPersistedState(raw),
   },
 ];
@@ -230,7 +237,19 @@ function normalizeRecipeChoices(value: unknown): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [itemId, recipeId] of Object.entries(value)) {
     if (typeof recipeId === "string") {
-      result[itemId] = recipeId;
+      result[itemId] = recipeId.startsWith("recipe:") || recipeId.startsWith("module:")
+        ? recipeId
+        : `recipe:${recipeId}`;
+      // AI-REMOVED 2026-08-29:
+      // Reason: 旧值是无命名空间配方 ID，无法与模块候选 ID 共享同一持久化字段。
+      // Trigger: ST2-RQ-019 候选 ID 必须带来源命名空间。
+      // Evidence: 新求解索引使用 recipe:<id> 与 module:<source>:<id>。
+      // Replacement: 上方候选 ID 规范化赋值。
+      // Risk: Low；读取旧存储时仅补 recipe: 前缀。
+      // Human Review: Required
+      //
+      // Original code:
+      // result[itemId] = recipeId;
     }
   }
 

@@ -37,10 +37,23 @@ const SCREEN_PROFILES = [
   },
 ] as const;
 
-test("stage action clears content before exposing the red delete action", async ({ browser }) => {
-  test.setTimeout(90_000);
+// AI-REMOVED 2026-08-30:
+// Reason: 单个 Playwright 用例串行执行三种 Screen Profile，共享 90 秒总超时，导致前两种配置完成后第三种配置被提前终止。
+// Trigger: full-check 中该用例以 Test timeout of 90000ms exceeded 失败，日志仅生成 mobile-landscape 与 tablet-square 的完成快照。
+// Evidence: .temp/full-check/runs/20260829-150117-854748/e2e.log；三种配置之间没有共享状态依赖。
+// Replacement: 下方按 SCREEN_PROFILES 注册三个独立 Playwright 用例，每个用例单独设置 90 秒超时。
+// Risk: Low；测试总执行时长仍包含三种配置，但单个慢配置不再消耗其他配置的超时预算。
+// Human Review: Required
+//
+// Original code:
+// test("stage action clears content before exposing the red delete action", async ({ browser }) => {
+//   test.setTimeout(90_000);
+//
+//   for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES) {
+  test(`stage action clears content before exposing the red delete action [${profile.name}]`, async ({ browser }) => {
+    test.setTimeout(90_000);
 
-  for (const profile of SCREEN_PROFILES) {
     const context = await browser.newContext({
       deviceScaleFactor: profile.deviceScaleFactor,
       hasTouch: profile.coarsePointer,
@@ -255,8 +268,19 @@ test("stage action clears content before exposing the red delete action", async 
     } finally {
       await context.close();
     }
-  }
-});
+    // AI-REMOVED 2026-08-30:
+    // Reason: 原结束符关闭单个测试内的 profile 循环与外层测试；拆分后结束符改为关闭当前 profile 测试与注册循环。
+    // Trigger: 三种 Screen Profile 必须拥有独立 Playwright 超时预算。
+    // Evidence: .temp/full-check/runs/20260829-150117-854748/e2e.log 显示原测试在 90 秒总超时后终止。
+    // Replacement: 紧随其后的 `});` 与 `}`。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    //   }
+    // });
+  });
+}
 
 async function press(button: Locator, coarsePointer: boolean): Promise<void> {
   if (coarsePointer) {

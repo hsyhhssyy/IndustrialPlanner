@@ -12,6 +12,7 @@ import {
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionFlowGraph, createSankeyLayout } from "@/app/shell/production-planning/flow";
 import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
+import { createProductionPlanningRecipeCandidateId } from "@/app/shell/production-planning/production-planning-candidate";
 import { createRegistryContract } from "@/registry";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
@@ -35,6 +36,9 @@ function recipeNode(
   return {
     id,
     kind: "recipe",
+    candidateId: createProductionPlanningRecipeCandidateId(recipeId),
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId,
     targetItemId,
     durationSeconds: 60,
@@ -82,6 +86,8 @@ function emptyPlanningIndex(): ProductionPlanningIndex {
     itemById: new Map(),
     entityById: new Map(),
     recipeById: new Map(),
+    candidateById: new Map(),
+    candidatesByOutputItem: new Map(),
     consumptionRecipesByMachine: new Map(),
     recipesByOutputItem: new Map(),
     allItems: [],

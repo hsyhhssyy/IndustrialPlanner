@@ -29,6 +29,16 @@ import {
   WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE,
   WATER_PURIFIER_OUTPUT_ITEM_ID,
 } from "@/shared/water-purifier-node";
+import {
+  createProductionPlanningModuleCandidateId,
+  createProductionPlanningModuleSnapshot,
+  createProductionPlanningRecipeCandidateId,
+  normalizeProductionPlanningCandidateChoiceId,
+  type ProductionPlanningCandidate,
+  type ProductionPlanningCandidateSourceType,
+  type ProductionPlanningModuleDefinition,
+  type ProductionPlanningModuleSnapshot,
+} from "./production-planning-candidate";
 
 // AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
 // panel no longer uses it. New logic uses ProductionPlanningSourceConfig.
@@ -73,13 +83,16 @@ export interface ProductionPlanningIndex {
   recipeById: Map<string, RecipeDefinition>;
   consumptionRecipesByMachine: Map<string, RecipeDefinition[]>;
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
+  candidateById: Map<string, ProductionPlanningCandidate>;
+  candidatesByOutputItem: Map<string, ProductionPlanningCandidate[]>;
   allItems: ItemDefinition[];
   naturalResourceItemIds: Set<string>;
 }
 
-interface ProductionPlanningIndexOptions {
+export interface ProductionPlanningIndexOptions {
   includeInactiveActivityContent?: boolean;
   activeActivityIds?: readonly string[];
+  modules?: readonly ProductionPlanningModuleDefinition[];
 }
 
 export interface ProductionPlanningSupplyBreakdown {
@@ -107,7 +120,10 @@ export interface ProductionPlanningItemNode {
 export interface ProductionPlanningRecipeNode {
   id: string;
   kind: "recipe";
-  recipeId: string;
+  candidateId: string;
+  candidateSourceType: ProductionPlanningCandidateSourceType;
+  module: ProductionPlanningModuleSnapshot | null;
+  recipeId: string | null;
   targetItemId: string;
   durationSeconds: number;
   cyclesPerMinute: number;
@@ -129,7 +145,10 @@ export interface ProductionPlanningItemTotal {
 }
 
 export interface ProductionPlanningRecipeTotal {
-  recipeId: string;
+  candidateId: string;
+  candidateSourceType: ProductionPlanningCandidateSourceType;
+  module: ProductionPlanningModuleSnapshot | null;
+  recipeId: string | null;
   durationSeconds: number;
   cyclesPerMinute: number;
   deviceCount: number;
@@ -147,12 +166,13 @@ export interface ProductionPlanningResult {
   byproductItemIds: ReadonlySet<string>;
 }
 
-interface ProductionPlanningRequest {
+export interface ProductionPlanningRequest {
   targets: readonly ProductionPlanningPort[];
   supplies: readonly ProductionPlanningPort[];
   infiniteItemIds: ReadonlySet<string>;
   recipeChoices: ReadonlyMap<string, string>;
   sourceConfig: ProductionPlanningSourceConfig;
+  useModules?: boolean;
 }
 
 interface SolverContext {
@@ -162,6 +182,8 @@ interface SolverContext {
   infiniteItemIds: ReadonlySet<string>;
   recipeChoices: ReadonlyMap<string, string>;
   sourceConfig: ProductionPlanningSourceConfig;
+  useModules: boolean;
+  globalDemandRemaining: Map<string, number>;
   dumperAmounts: Map<string, number>;
   wasteTreatmentAmounts: Map<string, number>;
   nextNodeIndex: number;
@@ -232,6 +254,25 @@ export function buildProductionPlanningIndex(
     }
   }
 
+  const visibleModules = includeInactiveActivityContent
+    ? options.modules ?? []
+    : (options.modules ?? []).filter((module) => (
+      [...module.inputs, ...module.outputs].every((port) => itemById.has(port.itemId))
+    ));
+  const candidates = buildProductionPlanningCandidates(visibleRecipes, visibleModules);
+  const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const candidatesByOutputItem = new Map<string, ProductionPlanningCandidate[]>();
+  for (const candidate of candidates) {
+    for (const output of candidate.outputs) {
+      const outputCandidates = candidatesByOutputItem.get(output.itemId);
+      if (outputCandidates === undefined) {
+        candidatesByOutputItem.set(output.itemId, [candidate]);
+      } else {
+        outputCandidates.push(candidate);
+      }
+    }
+  }
+
   return {
     registryQueries: registry.queries,
     itemById,
@@ -239,9 +280,61 @@ export function buildProductionPlanningIndex(
     recipeById,
     consumptionRecipesByMachine,
     recipesByOutputItem,
+    candidateById,
+    candidatesByOutputItem,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     naturalResourceItemIds,
   };
+}
+
+function buildProductionPlanningCandidates(
+  recipes: readonly RecipeDefinition[],
+  modules: readonly ProductionPlanningModuleDefinition[],
+): ProductionPlanningCandidate[] {
+  const candidates: ProductionPlanningCandidate[] = [];
+
+  for (const [order, recipe] of recipes.entries()) {
+    if (recipe.durationSeconds <= EPSILON) {
+      continue;
+    }
+    const multiplier = 60 / recipe.durationSeconds;
+    candidates.push({
+      id: createProductionPlanningRecipeCandidateId(recipe.id),
+      sourceType: "system-recipe",
+      inputs: recipe.inputs.map((input) => ({
+        itemId: input.itemId,
+        perMinute: roundFlow(input.amount * multiplier),
+      })),
+      outputs: recipe.outputs.map((output) => ({
+        itemId: output.itemId,
+        perMinute: roundFlow(output.amount * multiplier),
+      })),
+      order,
+      recipeId: recipe.id,
+      module: null,
+    });
+  }
+
+  const seenModuleIds = new Set<string>();
+  for (const module of modules) {
+    const candidateId = createProductionPlanningModuleCandidateId(module.sourceType, module.id);
+    if (seenModuleIds.has(candidateId)) {
+      continue;
+    }
+    seenModuleIds.add(candidateId);
+    const snapshot = createProductionPlanningModuleSnapshot(module);
+    candidates.push({
+      id: candidateId,
+      sourceType: snapshot.sourceType,
+      inputs: snapshot.inputs,
+      outputs: snapshot.outputs,
+      order: recipes.length + candidates.length,
+      recipeId: null,
+      module: snapshot,
+    });
+  }
+
+  return candidates;
 }
 
 export function computeProductionPlan(
@@ -296,7 +389,12 @@ function computeProductionPlanPass(
   request: ProductionPlanningRequest,
   index: ProductionPlanningIndex,
   waterPurifierOutputPerMinute: number,
+  buildModuleDemandForecast = true,
 ): ProductionPlanningResult {
+  const useModules = request.useModules === true;
+  const globalDemandRemaining = useModules && buildModuleDemandForecast
+    ? buildProductionPlanningModuleDemandForecast(request, index, waterPurifierOutputPerMinute)
+    : buildDemandMap(request.targets);
   const context: SolverContext = {
     index,
     manualSupplyRemaining: buildSupplyMap(request.supplies),
@@ -306,13 +404,14 @@ function computeProductionPlanPass(
     infiniteItemIds: buildInfiniteItemIds(request.infiniteItemIds, request.supplies, index),
     recipeChoices: request.recipeChoices,
     sourceConfig: request.sourceConfig,
+    useModules,
+    globalDemandRemaining,
     dumperAmounts: new Map(),
     wasteTreatmentAmounts: new Map(),
     nextNodeIndex: 0,
   };
 
-  const roots = request.targets
-    .filter((target) => target.itemId.length > 0 && target.perMinute > EPSILON)
+  const roots = sortProductionPlanningTargetsForSharedCandidates(request.targets, context)
     .map((target) => resolveDemand(target.itemId, target.perMinute, context, []));
   const recipeNodes = flattenProductionPlanningRecipeNodes(roots);
 
@@ -373,6 +472,26 @@ function computeProductionPlanPass(
   };
 }
 
+function buildProductionPlanningModuleDemandForecast(
+  request: ProductionPlanningRequest,
+  index: ProductionPlanningIndex,
+  waterPurifierOutputPerMinute: number,
+): Map<string, number> {
+  const baseline = computeProductionPlanPass(
+    { ...request, useModules: false },
+    index,
+    waterPurifierOutputPerMinute,
+    false,
+  );
+  const forecast = new Map<string, number>();
+  for (const item of baseline.itemTotals) {
+    if (item.demandPerMinute > EPSILON) {
+      forecast.set(item.itemId, item.demandPerMinute);
+    }
+  }
+  return forecast;
+}
+
 export function flattenProductionPlanningItemNodes(
   nodes: readonly ProductionPlanningItemNode[],
 ): ProductionPlanningItemNode[] {
@@ -425,6 +544,25 @@ export function resolveProductionPlanningRecipeName(
   const machine = index.entityById.get(recipe.machineId);
   const machineName = machine === undefined ? recipe.machineId : translate(machine.nameKey);
   return outputNames.length === 0 ? machineName : `${machineName} · ${outputNames.join(" + ")}`;
+}
+
+export function resolveProductionPlanningCandidateName(
+  candidate: ProductionPlanningCandidate,
+  index: ProductionPlanningIndex,
+  translate: (key: string) => string,
+): string {
+  if (candidate.module !== null) {
+    const sourceName = translate(
+      candidate.module.sourceType === "custom-module"
+        ? "moduleBalancing.customModules"
+        : "moduleBalancing.recommendedModules",
+    );
+    return `${candidate.module.name} · ${sourceName}`;
+  }
+  const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
+  return recipe === undefined
+    ? candidate.id
+    : resolveProductionPlanningRecipeName(recipe, index, translate);
 }
 
 export function resolveProductionPlanningItemIconSrc(itemId: string, index: ProductionPlanningIndex): string {
@@ -601,10 +739,13 @@ function resolveDemand(
     }, context);
   }
 
-  const recipe = resolveRecipeForItem(itemId, context);
-  const output = recipe?.outputs.find((candidate) => candidate.itemId === itemId);
+  const candidate = resolveCandidateForItem(itemId, remaining, context, stack);
+  const candidateOutput = candidate?.outputs.find((output) => output.itemId === itemId);
+  const recipe = candidate?.recipeId === null || candidate === undefined
+    ? undefined
+    : context.index.recipeById.get(candidate.recipeId);
 
-  if (recipe === undefined || output === undefined || output.amount <= EPSILON || recipe.durationSeconds <= 0) {
+  if (candidate === undefined || candidateOutput === undefined || candidateOutput.perMinute <= EPSILON) {
     return createItemNode({
       itemId,
       demandPerMinute: demand,
@@ -619,11 +760,16 @@ function resolveDemand(
     }, context);
   }
 
-  const deviceConsumptionAmounts = resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
-  const targetDeviceConsumptionAmount = deviceConsumptionAmounts.get(itemId) ?? 0;
-  const netOutputAmount = roundFlow(output.amount - targetDeviceConsumptionAmount);
+  const deviceConsumptionAmounts = recipe === undefined
+    ? new Map<string, number>()
+    : resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
+  const recipeOutput = recipe?.outputs.find((output) => output.itemId === itemId);
+  const targetDeviceConsumptionAmountPerCycle = deviceConsumptionAmounts.get(itemId) ?? 0;
+  const netOutputPerUnit = recipe === undefined
+    ? candidateOutput.perMinute
+    : roundFlow((recipeOutput?.amount ?? 0) - targetDeviceConsumptionAmountPerCycle);
 
-  if (netOutputAmount <= EPSILON) {
+  if (netOutputPerUnit <= EPSILON) {
     return createItemNode({
       itemId,
       demandPerMinute: demand,
@@ -638,30 +784,76 @@ function resolveDemand(
     }, context);
   }
 
-  const cyclesPerMinute = roundFlow(remaining / netOutputAmount);
-  const deviceCount = roundFlow(cyclesPerMinute / (60 / recipe.durationSeconds));
-  const recipeInputPorts = recipe.inputs.map((input) => ({
-    id: `${recipe.id}-in-${input.itemId}`,
-    itemId: input.itemId,
-    perMinute: roundFlow(input.amount * cyclesPerMinute),
-  }));
+  const cyclesPerMinute = roundFlow(remaining / netOutputPerUnit);
+  const deviceCount = recipe === undefined
+    ? cyclesPerMinute
+    : roundFlow(cyclesPerMinute / (60 / recipe.durationSeconds));
+  const candidateInputPorts = recipe === undefined
+    ? candidate.inputs.map((input) => ({
+      id: `${candidate.id}-in-${input.itemId}`,
+      itemId: input.itemId,
+      perMinute: roundFlow(input.perMinute * deviceCount),
+    }))
+    : recipe.inputs.map((input) => ({
+      id: `${candidate.id}-in-${input.itemId}`,
+      itemId: input.itemId,
+      perMinute: roundFlow(input.amount * cyclesPerMinute),
+    }));
   const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
-    id: `${recipe.id}-device-consumption-${consumedItemId}`,
+    id: `${candidate.id}-device-consumption-${consumedItemId}`,
     itemId: consumedItemId,
     perMinute: resolveDeviceMinimumConsumptionPerMinute(
       amount,
       cyclesPerMinute,
-      recipe.durationSeconds,
+      recipe?.durationSeconds ?? 60,
       deviceCount,
       context.sourceConfig.includeDeviceMinimumConsumption,
     ),
   }));
-  const inputPorts = mergePorts(recipeInputPorts, deviceConsumptionPorts);
-  const outputPorts = recipe.outputs.map((recipeOutput) => ({
-    id: `${recipe.id}-out-${recipeOutput.itemId}`,
-    itemId: recipeOutput.itemId,
-    perMinute: roundFlow(recipeOutput.amount * cyclesPerMinute),
-  }));
+  const inputPorts = mergePorts(candidateInputPorts, deviceConsumptionPorts);
+  const outputPorts = recipe === undefined
+    ? candidate.outputs.map((output) => ({
+      id: `${candidate.id}-out-${output.itemId}`,
+      itemId: output.itemId,
+      perMinute: roundFlow(output.perMinute * deviceCount),
+    }))
+    : recipe.outputs.map((output) => ({
+      id: `${candidate.id}-out-${output.itemId}`,
+      itemId: output.itemId,
+      perMinute: roundFlow(output.amount * cyclesPerMinute),
+    }));
+
+  // AI-REMOVED 2026-08-29:
+  // Reason: 将系统配方先换算为每设备每分钟流量后再次缩放，改变了既有四位舍入顺序并造成水处理数量漂移。
+  // Trigger: 既有水处理回归测试出现 8→7.998、600→601.2 等精度与自消耗偏差。
+  // Evidence: 原求解按“每周期净产出→周期数→设备数”计算，模块才以每分钟端口和模块数计算。
+  // Replacement: 上方按 candidate.source 选择等价单位，但仍共用同一候选选择与端口结果模型。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const targetDeviceConsumptionAmount = recipe === undefined
+  //   ? 0
+  //   : roundFlow((deviceConsumptionAmounts.get(itemId) ?? 0) * 60 / recipe.durationSeconds);
+  // const netOutputPerCandidate = roundFlow(candidateOutput.perMinute - targetDeviceConsumptionAmount);
+  // const deviceCount = roundFlow(remaining / netOutputPerCandidate);
+  // const cyclesPerMinute = recipe === undefined
+  //   ? deviceCount
+  //   : roundFlow(deviceCount * (60 / recipe.durationSeconds));
+
+  if (candidate.module !== null) {
+    const replacedSystemDemand = collectSystemRecipeDemandFootprint(
+      itemId,
+      remaining,
+      context,
+      stack,
+    );
+    for (const [replacedItemId, replacedPerMinute] of replacedSystemDemand) {
+      if (replacedItemId !== itemId) {
+        consumeSupply(context.globalDemandRemaining, replacedItemId, replacedPerMinute);
+      }
+    }
+  }
 
   for (const outputPort of outputPorts) {
     if (outputPort.itemId !== itemId && outputPort.perMinute > EPSILON) {
@@ -673,7 +865,13 @@ function resolveDemand(
     }
   }
 
-  const inputItems = recipeInputPorts.map((input) => (
+  for (const input of candidateInputPorts) {
+    addSupply(context.globalDemandRemaining, input.itemId, input.perMinute);
+  }
+  for (const input of deviceConsumptionPorts) {
+    addSupply(context.globalDemandRemaining, input.itemId, input.perMinute);
+  }
+  const inputItems = candidateInputPorts.map((input) => (
     resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
   ));
   const deviceMinimumConsumptionItems = deviceConsumptionPorts.map((input) => (
@@ -682,11 +880,14 @@ function resolveDemand(
       : resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
   ));
   const recipeNode: ProductionPlanningRecipeNode = {
-    id: createNodeId("recipe", context),
+    id: createNodeId(candidate.sourceType === "system-recipe" ? "recipe" : "module", context),
     kind: "recipe",
-    recipeId: recipe.id,
+    candidateId: candidate.id,
+    candidateSourceType: candidate.sourceType,
+    module: candidate.module,
+    recipeId: candidate.recipeId,
     targetItemId: itemId,
-    durationSeconds: recipe.durationSeconds,
+    durationSeconds: recipe?.durationSeconds ?? 60,
     cyclesPerMinute,
     deviceCount,
     inputs: inputPorts,
@@ -806,6 +1007,7 @@ function createItemNode(
   node: Omit<ProductionPlanningItemNode, "id" | "kind">,
   context: SolverContext,
 ): ProductionPlanningItemNode {
+  consumeSupply(context.globalDemandRemaining, node.itemId, node.demandPerMinute);
   return {
     id: createNodeId("item", context),
     kind: "item",
@@ -816,28 +1018,678 @@ function createItemNode(
   };
 }
 
-function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDefinition | undefined {
-  const selectedRecipeId = context.recipeChoices.get(itemId);
-  const recipes = context.index.recipesByOutputItem.get(itemId) ?? [];
+function buildDemandMap(ports: readonly ProductionPlanningPort[]): Map<string, number> {
+  const result = new Map<string, number>();
+  for (const port of ports) {
+    if (port.itemId.length > 0 && port.perMinute > EPSILON) {
+      addSupply(result, port.itemId, port.perMinute);
+    }
+  }
+  return result;
+}
 
-  if (selectedRecipeId !== undefined) {
-    const selected = context.index.recipeById.get(selectedRecipeId);
+function sortProductionPlanningTargetsForSharedCandidates(
+  targets: readonly ProductionPlanningPort[],
+  context: SolverContext,
+): ProductionPlanningPort[] {
+  const validTargets = targets.filter(
+    (target) => target.itemId.length > 0 && target.perMinute > EPSILON,
+  );
+  const priorityByItemId = new Map<string, number>();
+
+  for (const candidate of context.index.candidateById.values()) {
+    if (!isCandidateAvailableInContext(candidate, context) || candidate.outputs.length < 2) {
+      continue;
+    }
+    const ratios = candidate.outputs.map((output) => {
+      const demand = context.globalDemandRemaining.get(output.itemId) ?? 0;
+      return {
+        itemId: output.itemId,
+        ratio: output.perMinute > EPSILON ? demand / output.perMinute : 0,
+      };
+    });
+    if (ratios.some((entry) => entry.ratio <= EPSILON)) {
+      continue;
+    }
+    ratios.sort((left, right) => left.ratio - right.ratio || left.itemId.localeCompare(right.itemId));
+    const limitingItemId = ratios[0]!.itemId;
+    priorityByItemId.set(limitingItemId, (priorityByItemId.get(limitingItemId) ?? 0) - 1);
+  }
+
+  return [...validTargets].sort((left, right) => (
+    (priorityByItemId.get(left.itemId) ?? 0) - (priorityByItemId.get(right.itemId) ?? 0)
+    || left.itemId.localeCompare(right.itemId)
+    || left.id.localeCompare(right.id)
+  ));
+}
+
+// AI-REMOVED 2026-08-29:
+// Reason: 逐物品返回首条系统配方无法比较递归资源，也无法让模块与系统配方共享选择规则。
+// Trigger: ST2-RQ-019 要求资源优先、模块/配方统一候选和多输出全局复用。
+// Evidence: 息壤两条配方在忽略气体时存在严格资源支配，但旧函数始终回退到 candidates[0]。
+// Replacement: resolveCandidateForItem
+// Risk: Medium；自动选择由注册顺序升级为确定性的资源/层次比较。
+// Human Review: Required
+//
+// Original code:
+// function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDefinition | undefined {
+//   const selectedRecipeId = context.recipeChoices.get(itemId);
+//   const recipes = context.index.recipesByOutputItem.get(itemId) ?? [];
+//
+//   if (selectedRecipeId !== undefined) {
+//     const selected = context.index.recipeById.get(selectedRecipeId);
+//     if (
+//       selected !== undefined
+//       && !isWaterPurifierNodeRecipe(selected)
+//       && selected.outputs.some((output) => output.itemId === itemId)
+//     ) {
+//       return selected;
+//     }
+//   }
+//
+//   // AI-CORRECTION 2026-05-22:
+//   // 自然资源（矿石、清水、沉积酸）在 auto 模式下优先选择 null 配方（inputs 为空），
+//   // 避免命中净化器等其他生产同一物品的非 null 配方。
+//   return resolveProductionPlanningAutoRecipe(
+//     recipes,
+//     context.index.naturalResourceItemIds.has(itemId),
+//   );
+// }
+
+interface ProductionPlanningPlanEstimate {
+  readonly externalResources: Map<string, number>;
+  readonly unusedOutputs: Map<string, number>;
+  readonly unresolvedResources: Map<string, number>;
+  readonly depth: number;
+  readonly nodeCount: number;
+}
+
+function resolveCandidateForItem(
+  itemId: string,
+  demandPerMinute: number,
+  context: SolverContext,
+  stack: readonly string[],
+): ProductionPlanningCandidate | undefined {
+  const candidates = resolveAvailableCandidatesForItem(itemId, context);
+  const selectedChoice = context.recipeChoices.get(itemId);
+  if (selectedChoice !== undefined) {
+    const selected = context.index.candidateById.get(
+      normalizeProductionPlanningCandidateChoiceId(selectedChoice),
+    );
     if (
       selected !== undefined
-      && !isWaterPurifierNodeRecipe(selected)
+      && isCandidateAvailableInContext(selected, context)
+      && isCandidateAllowedForManualSelection(selected, context.index)
       && selected.outputs.some((output) => output.itemId === itemId)
     ) {
       return selected;
     }
   }
 
-  // AI-CORRECTION 2026-05-22:
-  // 自然资源（矿石、清水、沉积酸）在 auto 模式下优先选择 null 配方（inputs 为空），
-  // 避免命中净化器等其他生产同一物品的非 null 配方。
-  return resolveProductionPlanningAutoRecipe(
-    recipes,
-    context.index.naturalResourceItemIds.has(itemId),
+  if (context.index.naturalResourceItemIds.has(itemId)) {
+    const inputless = candidates.find((candidate) => candidate.inputs.length === 0);
+    if (inputless !== undefined) {
+      return inputless;
+    }
+  }
+
+  let best: ProductionPlanningCandidate | undefined;
+  let bestEstimate: ProductionPlanningPlanEstimate | undefined;
+  for (const candidate of candidates) {
+    const estimate = estimateProductionPlanningCandidate(
+      candidate,
+      itemId,
+      demandPerMinute,
+      context,
+      stack,
+    );
+    if (
+      best === undefined
+      || bestEstimate === undefined
+      || compareProductionPlanningEstimates(estimate, bestEstimate, candidate, best) < 0
+    ) {
+      best = candidate;
+      bestEstimate = estimate;
+    }
+  }
+
+  return best;
+}
+
+function isCandidateAllowedForManualSelection(
+  candidate: ProductionPlanningCandidate,
+  index: ProductionPlanningIndex,
+): boolean {
+  if (candidate.recipeId === null) {
+    return true;
+  }
+  const recipe = index.recipeById.get(candidate.recipeId);
+  return recipe !== undefined && !isWaterPurifierNodeRecipe(recipe);
+}
+
+function resolveAvailableCandidatesForItem(
+  itemId: string,
+  context: SolverContext,
+): ProductionPlanningCandidate[] {
+  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => isCandidateAvailableInContext(candidate, context));
+  const preferred = candidates.filter((candidate) => {
+    if (candidate.recipeId === null) {
+      return true;
+    }
+    const recipe = context.index.recipeById.get(candidate.recipeId);
+    return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+  });
+  if (preferred.length > 0) {
+    if (context.index.naturalResourceItemIds.has(itemId)) {
+      return preferred;
+    }
+    const primarySystemCandidate = preferred.find((candidate) => candidate.recipeId !== null);
+    const primarySystemRecipe = primarySystemCandidate?.recipeId === null
+      || primarySystemCandidate?.recipeId === undefined
+      ? undefined
+      : context.index.recipeById.get(primarySystemCandidate.recipeId);
+    if (primarySystemRecipe === undefined) {
+      return preferred;
+    }
+
+    return preferred.filter((candidate) => {
+      if (candidate.recipeId === null) {
+        return true;
+      }
+      return context.index.recipeById.get(candidate.recipeId)?.machineId === primarySystemRecipe.machineId;
+    });
+  }
+
+  return candidates.filter((candidate) => {
+    if (candidate.recipeId === null) {
+      return true;
+    }
+    const recipe = context.index.recipeById.get(candidate.recipeId);
+    return recipe !== undefined && isIronPowderToNuggetRecipe(recipe);
+  });
+}
+
+function isCandidateAvailableInContext(
+  candidate: ProductionPlanningCandidate,
+  context: SolverContext,
+): boolean {
+  return candidate.sourceType === "system-recipe" || context.useModules;
+}
+
+function estimateProductionPlanningCandidate(
+  candidate: ProductionPlanningCandidate,
+  targetItemId: string,
+  demandPerMinute: number,
+  context: SolverContext,
+  stack: readonly string[],
+): ProductionPlanningPlanEstimate {
+  const output = candidate.outputs.find((port) => port.itemId === targetItemId);
+  if (output === undefined || output.perMinute <= EPSILON) {
+    return createUnresolvedEstimate(targetItemId, demandPerMinute);
+  }
+
+  const quantity = demandPerMinute / output.perMinute;
+  const inputEstimate = estimateCandidateInputs(candidate, quantity, context, [...stack, targetItemId]);
+  const externalResources = new Map(inputEstimate.externalResources);
+  const unusedOutputs = new Map(inputEstimate.unusedOutputs);
+  const replacedSystemDemand = collectSystemRecipeDemandFootprint(
+    targetItemId,
+    demandPerMinute,
+    context,
+    stack,
   );
+  let avoidedNodeCount = 0;
+
+  for (const candidateOutput of candidate.outputs) {
+    if (candidateOutput.itemId === targetItemId) {
+      continue;
+    }
+    const produced = roundFlow(candidateOutput.perMinute * quantity);
+    const useful = Math.min(
+      produced,
+      Math.max(
+        0,
+        (context.globalDemandRemaining.get(candidateOutput.itemId) ?? 0)
+          - (replacedSystemDemand.get(candidateOutput.itemId) ?? 0),
+      ),
+    );
+    const unused = roundFlow(produced - useful);
+    if (unused > EPSILON) {
+      addSupply(unusedOutputs, candidateOutput.itemId, unused);
+    }
+    if (useful <= EPSILON) {
+      continue;
+    }
+
+    const avoided = estimateSystemRecipeItem(
+      candidateOutput.itemId,
+      useful,
+      context,
+      [...stack, targetItemId],
+      new Set([candidate.id]),
+    );
+    subtractEstimateResources(externalResources, avoided.externalResources);
+    avoidedNodeCount += avoided.nodeCount;
+  }
+
+  return {
+    externalResources,
+    unusedOutputs,
+    unresolvedResources: inputEstimate.unresolvedResources,
+    depth: inputEstimate.depth + 1,
+    nodeCount: Math.max(0, inputEstimate.nodeCount + 1 - avoidedNodeCount),
+  };
+}
+
+function estimateCandidateInputs(
+  candidate: ProductionPlanningCandidate,
+  quantity: number,
+  context: SolverContext,
+  stack: readonly string[],
+): ProductionPlanningPlanEstimate {
+  const estimate = createEmptyEstimate();
+  const inputPorts = candidate.inputs.map((input) => ({
+    itemId: input.itemId,
+    perMinute: input.perMinute * quantity,
+  }));
+  if (candidate.recipeId !== null) {
+    const recipe = context.index.recipeById.get(candidate.recipeId);
+    if (recipe !== undefined) {
+      const amounts = resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
+      const cyclesPerMinute = quantity * 60 / recipe.durationSeconds;
+      for (const [itemId, amount] of amounts) {
+        inputPorts.push({
+          itemId,
+          perMinute: resolveDeviceMinimumConsumptionPerMinute(
+            amount,
+            cyclesPerMinute,
+            recipe.durationSeconds,
+            quantity,
+            context.sourceConfig.includeDeviceMinimumConsumption,
+          ),
+        });
+      }
+    }
+  }
+
+  for (const input of inputPorts) {
+    mergeEstimate(
+      estimate,
+      estimateSystemRecipeItem(input.itemId, input.perMinute, context, stack, new Set()),
+    );
+  }
+  return estimate;
+}
+
+function collectSystemRecipeDemandFootprint(
+  itemId: string,
+  demandPerMinute: number,
+  context: SolverContext,
+  stack: readonly string[],
+): Map<string, number> {
+  const footprint = new Map<string, number>();
+  if (demandPerMinute <= EPSILON) {
+    return footprint;
+  }
+  addSupply(footprint, itemId, demandPerMinute);
+  if (
+    stack.includes(itemId)
+    || stack.length >= MAX_RECURSION_DEPTH
+    || context.index.naturalResourceItemIds.has(itemId)
+    || isRawPlantResourceItem(itemId)
+    || context.infiniteItemIds.has(itemId)
+  ) {
+    return footprint;
+  }
+
+  const supplied = Math.min(context.manualSupplyRemaining.get(itemId) ?? 0, demandPerMinute);
+  const productionDemand = roundFlow(demandPerMinute - supplied);
+  if (productionDemand <= EPSILON) {
+    return footprint;
+  }
+
+  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => {
+      if (candidate.sourceType !== "system-recipe" || candidate.recipeId === null) {
+        return false;
+      }
+      const recipe = context.index.recipeById.get(candidate.recipeId);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+    });
+  if (candidates.length === 0) {
+    return footprint;
+  }
+
+  let bestCandidate = candidates[0]!;
+  let bestEstimate = estimateSystemRecipeCandidate(
+    bestCandidate,
+    itemId,
+    productionDemand,
+    context,
+    stack,
+    new Set(),
+  );
+  for (const candidate of candidates.slice(1)) {
+    const estimate = estimateSystemRecipeCandidate(
+      candidate,
+      itemId,
+      productionDemand,
+      context,
+      stack,
+      new Set(),
+    );
+    if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
+      bestCandidate = candidate;
+      bestEstimate = estimate;
+    }
+  }
+
+  const output = bestCandidate.outputs.find((port) => port.itemId === itemId);
+  if (output === undefined || output.perMinute <= EPSILON) {
+    return footprint;
+  }
+  const quantity = productionDemand / output.perMinute;
+  for (const input of bestCandidate.inputs) {
+    const inputFootprint = collectSystemRecipeDemandFootprint(
+      input.itemId,
+      input.perMinute * quantity,
+      context,
+      [...stack, itemId],
+    );
+    for (const [inputItemId, inputPerMinute] of inputFootprint) {
+      addSupply(footprint, inputItemId, inputPerMinute);
+    }
+  }
+  return footprint;
+}
+
+function estimateSystemRecipeItem(
+  itemId: string,
+  demandPerMinute: number,
+  context: SolverContext,
+  stack: readonly string[],
+  excludedCandidateIds: ReadonlySet<string>,
+): ProductionPlanningPlanEstimate {
+  if (demandPerMinute <= EPSILON) {
+    return createEmptyEstimate();
+  }
+  if (stack.includes(itemId) || stack.length >= MAX_RECURSION_DEPTH) {
+    return createUnresolvedEstimate(itemId, demandPerMinute);
+  }
+  if (context.index.naturalResourceItemIds.has(itemId) || isRawPlantResourceItem(itemId)) {
+    return createResourceEstimate(itemId, demandPerMinute);
+  }
+
+  const manualAvailable = context.manualSupplyRemaining.get(itemId) ?? 0;
+  if (manualAvailable > EPSILON || context.infiniteItemIds.has(itemId)) {
+    const supplied = context.infiniteItemIds.has(itemId)
+      ? demandPerMinute
+      : Math.min(demandPerMinute, manualAvailable);
+    const estimate = createResourceEstimate(itemId, supplied);
+    const remaining = demandPerMinute - supplied;
+    if (remaining > EPSILON) {
+      mergeEstimate(
+        estimate,
+        estimateSystemRecipeItem(itemId, remaining, context, stack, excludedCandidateIds),
+      );
+    }
+    return estimate;
+  }
+
+  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => {
+      if (
+        candidate.sourceType !== "system-recipe"
+        || excludedCandidateIds.has(candidate.id)
+        || candidate.recipeId === null
+      ) {
+        return false;
+      }
+      const recipe = context.index.recipeById.get(candidate.recipeId);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+    });
+  if (candidates.length === 0) {
+    return createUnresolvedEstimate(itemId, demandPerMinute);
+  }
+
+  let bestCandidate = candidates[0]!;
+  let bestEstimate = estimateSystemRecipeCandidate(
+    bestCandidate,
+    itemId,
+    demandPerMinute,
+    context,
+    stack,
+    excludedCandidateIds,
+  );
+  for (const candidate of candidates.slice(1)) {
+    const estimate = estimateSystemRecipeCandidate(
+      candidate,
+      itemId,
+      demandPerMinute,
+      context,
+      stack,
+      excludedCandidateIds,
+    );
+    if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
+      bestCandidate = candidate;
+      bestEstimate = estimate;
+    }
+  }
+  return bestEstimate;
+}
+
+function estimateSystemRecipeCandidate(
+  candidate: ProductionPlanningCandidate,
+  targetItemId: string,
+  demandPerMinute: number,
+  context: SolverContext,
+  stack: readonly string[],
+  excludedCandidateIds: ReadonlySet<string>,
+): ProductionPlanningPlanEstimate {
+  const output = candidate.outputs.find((port) => port.itemId === targetItemId);
+  if (output === undefined || output.perMinute <= EPSILON) {
+    return createUnresolvedEstimate(targetItemId, demandPerMinute);
+  }
+  const quantity = demandPerMinute / output.perMinute;
+  const estimate = createEmptyEstimate();
+  const inputPorts = candidate.inputs.map((input) => ({
+    itemId: input.itemId,
+    perMinute: input.perMinute * quantity,
+  }));
+  if (candidate.recipeId !== null) {
+    const recipe = context.index.recipeById.get(candidate.recipeId);
+    if (recipe !== undefined) {
+      const amounts = resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
+      const cyclesPerMinute = quantity * 60 / recipe.durationSeconds;
+      for (const [consumedItemId, amount] of amounts) {
+        inputPorts.push({
+          itemId: consumedItemId,
+          perMinute: resolveDeviceMinimumConsumptionPerMinute(
+            amount,
+            cyclesPerMinute,
+            recipe.durationSeconds,
+            quantity,
+            context.sourceConfig.includeDeviceMinimumConsumption,
+          ),
+        });
+      }
+    }
+  }
+  for (const input of inputPorts) {
+    mergeEstimate(
+      estimate,
+      estimateSystemRecipeItem(
+        input.itemId,
+        input.perMinute,
+        context,
+        [...stack, targetItemId],
+        excludedCandidateIds,
+      ),
+    );
+  }
+  return {
+    externalResources: estimate.externalResources,
+    unusedOutputs: estimate.unusedOutputs,
+    unresolvedResources: estimate.unresolvedResources,
+    depth: estimate.depth + 1,
+    nodeCount: estimate.nodeCount + 1,
+  };
+}
+
+function compareProductionPlanningEstimates(
+  left: ProductionPlanningPlanEstimate,
+  right: ProductionPlanningPlanEstimate,
+  leftCandidate: ProductionPlanningCandidate,
+  rightCandidate: ProductionPlanningCandidate,
+): number {
+  const unresolvedCompare = compareZeroAndDominance(left.unresolvedResources, right.unresolvedResources);
+  if (unresolvedCompare !== 0) {
+    return unresolvedCompare;
+  }
+  const unusedCompare = compareZeroAndDominance(left.unusedOutputs, right.unusedOutputs);
+  if (unusedCompare !== 0) {
+    return unusedCompare;
+  }
+  const resourceCompare = compareResourceDominance(left.externalResources, right.externalResources);
+  if (resourceCompare !== 0) {
+    return resourceCompare;
+  }
+  if (
+    leftCandidate.sourceType === "system-recipe"
+    && rightCandidate.sourceType === "system-recipe"
+    && !areResourceMapsEqual(left.externalResources, right.externalResources)
+  ) {
+    return leftCandidate.order - rightCandidate.order || leftCandidate.id.localeCompare(rightCandidate.id);
+  }
+  if (Math.abs(left.depth - right.depth) > EPSILON) {
+    return left.depth - right.depth;
+  }
+  if (Math.abs(left.nodeCount - right.nodeCount) > EPSILON) {
+    return left.nodeCount - right.nodeCount;
+  }
+  const sourceCompare = Number(leftCandidate.sourceType !== "system-recipe")
+    - Number(rightCandidate.sourceType !== "system-recipe");
+  if (sourceCompare !== 0) {
+    return sourceCompare;
+  }
+  return leftCandidate.order - rightCandidate.order || leftCandidate.id.localeCompare(rightCandidate.id);
+}
+
+function areResourceMapsEqual(
+  left: ReadonlyMap<string, number>,
+  right: ReadonlyMap<string, number>,
+): boolean {
+  const itemIds = new Set([...left.keys(), ...right.keys()]);
+  for (const itemId of itemIds) {
+    if (Math.abs((left.get(itemId) ?? 0) - (right.get(itemId) ?? 0)) > EPSILON) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function compareZeroAndDominance(left: ReadonlyMap<string, number>, right: ReadonlyMap<string, number>): number {
+  const leftHasValue = hasPositiveMapValue(left);
+  const rightHasValue = hasPositiveMapValue(right);
+  if (leftHasValue !== rightHasValue) {
+    return leftHasValue ? 1 : -1;
+  }
+  return compareResourceDominance(left, right);
+}
+
+function compareResourceDominance(left: ReadonlyMap<string, number>, right: ReadonlyMap<string, number>): number {
+  const itemIds = new Set([...left.keys(), ...right.keys()]);
+  let leftStrictlyLower = false;
+  let rightStrictlyLower = false;
+  for (const itemId of itemIds) {
+    const leftValue = left.get(itemId) ?? 0;
+    const rightValue = right.get(itemId) ?? 0;
+    if (leftValue < rightValue - EPSILON) {
+      leftStrictlyLower = true;
+    } else if (rightValue < leftValue - EPSILON) {
+      rightStrictlyLower = true;
+    }
+  }
+  if (leftStrictlyLower && !rightStrictlyLower) {
+    return -1;
+  }
+  if (rightStrictlyLower && !leftStrictlyLower) {
+    return 1;
+  }
+  return 0;
+}
+
+function hasPositiveMapValue(values: ReadonlyMap<string, number>): boolean {
+  return Array.from(values.values()).some((value) => value > EPSILON);
+}
+
+function createEmptyEstimate(): ProductionPlanningPlanEstimate {
+  return {
+    externalResources: new Map(),
+    unusedOutputs: new Map(),
+    unresolvedResources: new Map(),
+    depth: 0,
+    nodeCount: 0,
+  };
+}
+
+function createResourceEstimate(itemId: string, perMinute: number): ProductionPlanningPlanEstimate {
+  return {
+    externalResources: new Map([[itemId, roundFlow(perMinute)]]),
+    unusedOutputs: new Map(),
+    unresolvedResources: new Map(),
+    depth: 0,
+    nodeCount: 0,
+  };
+}
+
+function createUnresolvedEstimate(itemId: string, perMinute: number): ProductionPlanningPlanEstimate {
+  return {
+    externalResources: new Map(),
+    unusedOutputs: new Map(),
+    unresolvedResources: new Map([[itemId, roundFlow(perMinute)]]),
+    depth: 0,
+    nodeCount: 0,
+  };
+}
+
+function mergeEstimate(
+  target: {
+    externalResources: Map<string, number>;
+    unusedOutputs: Map<string, number>;
+    unresolvedResources: Map<string, number>;
+    depth: number;
+    nodeCount: number;
+  },
+  source: ProductionPlanningPlanEstimate,
+): void {
+  for (const [itemId, perMinute] of source.externalResources) {
+    addSupply(target.externalResources, itemId, perMinute);
+  }
+  for (const [itemId, perMinute] of source.unusedOutputs) {
+    addSupply(target.unusedOutputs, itemId, perMinute);
+  }
+  for (const [itemId, perMinute] of source.unresolvedResources) {
+    addSupply(target.unresolvedResources, itemId, perMinute);
+  }
+  target.depth = Math.max(target.depth, source.depth);
+  target.nodeCount += source.nodeCount;
+}
+
+function subtractEstimateResources(
+  target: Map<string, number>,
+  source: ReadonlyMap<string, number>,
+): void {
+  for (const [itemId, perMinute] of source) {
+    target.set(itemId, roundFlow((target.get(itemId) ?? 0) - perMinute));
+  }
+}
+
+function isRawPlantResourceItem(itemId: string): boolean {
+  return itemId.startsWith("item_plant_")
+    && !itemId.includes("_powder")
+    && !itemId.includes("_seed");
 }
 
 function consumeAvailableSupply(
@@ -939,9 +1791,12 @@ function aggregateRecipeTotals(
   const totals = new Map<string, ProductionPlanningRecipeTotal>();
 
   for (const node of recipeNodes) {
-    const total = totals.get(node.recipeId);
+    const total = totals.get(node.candidateId);
     if (total === undefined) {
-      totals.set(node.recipeId, {
+      totals.set(node.candidateId, {
+        candidateId: node.candidateId,
+        candidateSourceType: node.candidateSourceType,
+        module: node.module,
         recipeId: node.recipeId,
         durationSeconds: node.durationSeconds,
         cyclesPerMinute: node.cyclesPerMinute,
@@ -964,11 +1819,15 @@ function aggregateRecipeTotals(
   }
 
   return Array.from(totals.values()).sort((left, right) => {
-    const leftRecipe = index.recipeById.get(left.recipeId);
-    const rightRecipe = index.recipeById.get(right.recipeId);
-    const leftMachine = leftRecipe?.machineId ?? left.recipeId;
-    const rightMachine = rightRecipe?.machineId ?? right.recipeId;
-    return leftMachine.localeCompare(rightMachine) || left.recipeId.localeCompare(right.recipeId);
+    const leftRecipe = left.candidateSourceType === "system-recipe" && left.recipeId !== null
+      ? index.recipeById.get(left.recipeId)
+      : undefined;
+    const rightRecipe = right.candidateSourceType === "system-recipe" && right.recipeId !== null
+      ? index.recipeById.get(right.recipeId)
+      : undefined;
+    const leftMachine = leftRecipe?.machineId ?? left.module?.name ?? left.candidateId;
+    const rightMachine = rightRecipe?.machineId ?? right.module?.name ?? right.candidateId;
+    return leftMachine.localeCompare(rightMachine) || left.candidateId.localeCompare(right.candidateId);
   });
 }
 
@@ -1136,6 +1995,9 @@ function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecip
     nodes.push({
       id: createNodeId("recipe", context),
       kind: "recipe",
+      candidateId: createProductionPlanningRecipeCandidateId(dumperDef.recipeId),
+      candidateSourceType: "system-recipe",
+      module: null,
       recipeId: dumperDef.recipeId,
       targetItemId: itemId,
       durationSeconds: dumperDef.durationSeconds,
@@ -1176,6 +2038,9 @@ function buildWasteTreatmentRecipeNodes(context: SolverContext): ProductionPlann
     nodes.push({
       id: createNodeId("waste-treatment", context),
       kind: "recipe",
+      candidateId: createProductionPlanningRecipeCandidateId(treatmentDef.recipeId),
+      candidateSourceType: "system-recipe",
+      module: null,
       recipeId: treatmentDef.recipeId,
       targetItemId: itemId,
       durationSeconds: treatmentDef.durationSeconds,
@@ -1238,6 +2103,9 @@ function buildWaterPurifierRecipeNodes(
   return [{
     id: createNodeId("water-purifier", context),
     kind: "recipe",
+    candidateId: createProductionPlanningRecipeCandidateId(recipe.id),
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId: recipe.id,
     targetItemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
     durationSeconds: recipe.durationSeconds,

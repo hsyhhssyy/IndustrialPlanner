@@ -16,6 +16,8 @@ export class ProductionPlanningInputStore {
   supplies: ProductionPlanningPort[] = [];
   displayMode: ProductionPlanningDisplayMode = "item";
   viewMode: ProductionPlanningViewMode = "tree";
+  useModules = false;
+  /** 2026-08-29：字段名沿用持久化键，值现为带命名空间的生产候选 ID。 */
   recipeChoices: Record<string, string> = {};
   sourceConfig: ProductionPlanningSourceConfig = {
     waterPolicy: "use-byproduct",
@@ -38,6 +40,7 @@ export class ProductionPlanningInputStore {
     this.supplies = [];
     this.displayMode = "item";
     this.viewMode = "tree";
+    this.useModules = false;
     this.recipeChoices = {};
     this.sourceConfig = {
       waterPolicy: "use-byproduct",

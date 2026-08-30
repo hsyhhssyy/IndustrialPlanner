@@ -15,6 +15,7 @@ export interface ProcessNode {
   readonly type: ProcessNodeType;
   readonly iconSrc: string;
   readonly name: string;
+  readonly candidateId?: string;
   readonly recipeId?: string;
   readonly amount?: number;
   /** 该节点是否是可见行（null = 可见的展开符号/物品节点，否则=已展开） */

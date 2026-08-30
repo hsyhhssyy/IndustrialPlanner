@@ -218,7 +218,9 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
       ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
       : isExternal
         ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
-        : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate("productionPlanning.devices")} · ${formatProductionFlow(displayRate)}/min`;
+        : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate(
+          row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
+        )} · ${formatProductionFlow(displayRate)}/min`;
   const iconSrc = isDeviceMinimumConsumption || context.displayMode === "item"
     ? resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)
     : resolveLedgerRowMachineIconSrc(row, context.index);
@@ -259,6 +261,14 @@ function resolveLedgerRowMachineName(
   if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
     return translate("productionPlanning.externalSupply");
   }
+  if (row.recipeNode.module !== null) {
+    const sourceName = translate(
+      row.recipeNode.module.sourceType === "custom-module"
+        ? "moduleBalancing.customModules"
+        : "moduleBalancing.recommendedModules",
+    );
+    return `${row.recipeNode.module.name} · ${sourceName}`;
+  }
 
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   const recipe = index.recipeById.get(recipeId);
@@ -270,6 +280,9 @@ function resolveLedgerRowMachineName(
 }
 
 function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string | null {
+  if (row.recipeNode.module !== null) {
+    return null;
+  }
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   return index.recipeById.get(recipeId)?.machineId ?? null;
 }
@@ -277,6 +290,9 @@ function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: Prod
 function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string {
   if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
     return EXTERNAL_SUPPLY_ENTITY_ICON_SRC;
+  }
+  if (row.recipeNode.module !== null) {
+    return resolveProductionPlanningModuleIconSrc(row.recipeNode.module.iconId, index);
   }
 
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
@@ -643,20 +659,36 @@ function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext
     return;
   }
 
-  const recipe = context.index.recipeById.get(node.recipeId);
-  const title = recipe === undefined ? node.recipeId : resolveProductionPlanningRecipeName(recipe, context.index, context.translate);
+  const recipe = node.module === null && node.recipeId !== null
+    ? context.index.recipeById.get(node.recipeId)
+    : undefined;
+  const title = node.module?.name
+    ?? (recipe === undefined
+      ? node.recipeId ?? node.candidateId
+      : resolveProductionPlanningRecipeName(recipe, context.index, context.translate));
   const machineId = recipe?.machineId ?? "grinder_1";
   context.nodes.set(id, {
     id,
     kind: "recipe",
     tone: "normal",
     title,
-    subtitle: `${formatProductionDeviceCount(node.deviceCount)} devices · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
-    iconSrc: resolveProductionPlanningEntityIconSrc(machineId, context.index),
+    subtitle: `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(
+      node.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
+    )} · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
+    iconSrc: node.module === null
+      ? resolveProductionPlanningEntityIconSrc(machineId, context.index)
+      : resolveProductionPlanningModuleIconSrc(node.module.iconId, context.index),
     value: Math.max(sumPorts(node.inputs), sumPorts(node.outputs), 1),
-    recipeId: node.recipeId,
+    recipeId: node.recipeId ?? undefined,
     recipeNode: node,
   });
+}
+
+function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
+  if (index.entityById.has(iconId)) {
+    return resolveProductionPlanningEntityIconSrc(iconId, index);
+  }
+  return resolveProductionPlanningItemIconSrc(iconId, index);
 }
 
 function addLink(

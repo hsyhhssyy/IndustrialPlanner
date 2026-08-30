@@ -19,6 +19,8 @@ import LucideGitBranch from "~icons/lucide/git-branch";
 import type { AppHost } from "@/app/host/app-host";
 import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import type { ModuleBalancingRecommendedModule } from "@/app/toolbox-types";
+import { readRecommendedModuleLibrary } from "@/app/shell/module-balancing";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -41,6 +43,7 @@ import {
   formatProductionFlow,
   isWaterPurifierNodeRecipe,
   resolveProductionPlanningEntityIconSrc,
+  resolveProductionPlanningCandidateName,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
   resolveProductionPlanningRecipeName,
@@ -57,6 +60,11 @@ import {
   type ProductionPlanningWaterPurifierPolicy,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
+import {
+  createProductionPlanningRecipeCandidateId,
+  normalizeProductionPlanningCandidateChoiceId,
+  type ProductionPlanningCandidate,
+} from "./production-planning-candidate";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 import {
   buildProductionPlanningDeviceMinimumConsumptionRecipeId,
@@ -83,6 +91,7 @@ type ProductionPlanningCalculation = {
   readonly infiniteItemIds: ReadonlySet<string>;
   readonly recipeChoices: Readonly<Record<string, string>>;
   readonly sourceConfig: ProductionPlanningSourceConfig;
+  readonly useModules: boolean;
   readonly plan: ProductionPlanningResult;
 };
 
@@ -204,26 +213,85 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   isTouch: boolean;
 }) {
   const t = appHost.actions.translate;
+  const balancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
   const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
   const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
+  const [recommendedModules, setRecommendedModules] = useState<ModuleBalancingRecommendedModule[]>([]);
+  const [recommendedModulesReady, setRecommendedModulesReady] = useState(false);
+  const customModuleSignature = JSON.stringify(balancingState.customModules.map((module) => ({
+    id: module.id,
+    name: module.name,
+    color: module.color,
+    iconId: module.iconId,
+    notes: module.notes,
+    inputs: module.inputs,
+    outputs: module.outputs,
+  })));
   const index = useMemo(
-    () => buildProductionPlanningIndex(appHost.workspace.registry, {
-      includeInactiveActivityContent: showAllActivityContent,
-      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
-    }),
+    () => {
+      void customModuleSignature;
+      return buildProductionPlanningIndex(appHost.workspace.registry, {
+        includeInactiveActivityContent: showAllActivityContent,
+        activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
+        modules: [
+          ...balancingState.customModules,
+          ...recommendedModules.filter((module) => (
+            !balancingState.customModules.some((custom) => custom.id === module.id)
+          )),
+        ],
+      });
+    },
     [
       appHost.workspace.registry,
+      balancingState,
+      customModuleSignature,
+      recommendedModules,
       selectedActivityIds,
       showAllActivityContent,
     ],
   );
   const store = useLocalObservable(() => new ProductionPlanningInputStore());
   useEffect(() => hookPlannerIndexedDbPersistence(store), [store]);
+  useEffect(() => {
+    let active = true;
+    // AI-REMOVED 2026-08-29:
+    // Reason: 推荐模块目录读取必须同时维护 ready 状态，避免开启模块后在目录未完成快照时求解；重复读取没有意义。
+    // Trigger: ST2-RQ-019 推荐模块目录快照完整性约束。
+    // Evidence: 下方同一读取链在 finally 中设置 recommendedModulesReady。
+    // Replacement: 紧随其后的 readRecommendedModuleLibrary 调用。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // void readRecommendedModuleLibrary()
+    //   .then((library) => {
+    //     if (active) {
+    //       setRecommendedModules([...library.modules]);
+    //     }
+    //   })
+    //   .catch(() => undefined);
+    void readRecommendedModuleLibrary()
+      .then((library) => {
+        if (active) {
+          setRecommendedModules([...library.modules]);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setRecommendedModulesReady(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const {
     targets,
     supplies,
     displayMode,
     viewMode,
+    useModules,
     recipeChoices,
     sourceConfig,
     session,
@@ -344,7 +412,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   };
 
   useEffect(() => {
-    if (!hydrated || activeScreen !== "result" || calculation !== null) {
+    if (
+      !hydrated
+      || activeScreen !== "result"
+      || calculation !== null
+      || (useModules && !recommendedModulesReady)
+    ) {
       return;
     }
 
@@ -372,6 +445,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: new Map(Object.entries(calculationRecipeChoices)),
       sourceConfig: calculationSourceConfig,
+      useModules,
     }, index);
 
     setCalculation({
@@ -380,6 +454,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: calculationRecipeChoices,
       sourceConfig: calculationSourceConfig,
+      useModules,
       plan,
     });
 
@@ -395,6 +470,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     index,
     infiniteItemIds,
     recipeChoices,
+    recommendedModulesReady,
     sourceConfig.acidPolicy,
     sourceConfig.includeDeviceMinimumConsumption,
     sourceConfig.sewagePolicy,
@@ -403,6 +479,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     store,
     supplies,
     targets,
+    useModules,
   ]);
 
   const requestItemSelection = async (onSelect: (itemId: string) => void) => {
@@ -454,7 +531,10 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   };
 
   const selectRecipe = (itemId: string, recipeId: string | null) => {
-    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, recipeId);
+    const candidateId = recipeId === null
+      ? null
+      : normalizeProductionPlanningCandidateChoiceId(recipeId);
+    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, candidateId);
     runInAction(() => {
       store.recipeChoices = nextRecipeChoices;
     });
@@ -469,6 +549,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         infiniteItemIds: current.infiniteItemIds,
         recipeChoices: new Map(Object.entries(nextRecipeChoices)),
         sourceConfig: current.sourceConfig,
+        useModules: current.useModules,
       }, index);
 
       return {
@@ -487,7 +568,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
 
     if (selectedRecipeId !== null) {
-      selectRecipe(itemId, selectedRecipeId);
+      selectRecipe(itemId, createProductionPlanningRecipeCandidateId(selectedRecipeId));
     }
   };
 
@@ -512,6 +593,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         infiniteItemIds: current.infiniteItemIds,
         recipeChoices: new Map(Object.entries(current.recipeChoices)),
         sourceConfig: current.sourceConfig,
+        useModules: current.useModules,
       }, index);
 
       // 工序图重新收集可展开项（外部供给的物品不再展开）
@@ -544,6 +626,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         infiniteItemIds: current.infiniteItemIds,
         recipeChoices: new Map(Object.entries(current.recipeChoices)),
         sourceConfig: current.sourceConfig,
+        useModules: current.useModules,
       }, index);
 
       // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
@@ -567,6 +650,9 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   };
 
   const calculate = () => {
+    if (useModules && !recommendedModulesReady) {
+      return;
+    }
     const calculationTargets = targets.map(clonePort);
     const calculationSupplies = supplies.map(clonePort);
     const calculationInfiniteItemIds = new Set(infiniteItemIds);
@@ -584,6 +670,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: new Map(Object.entries(calculationRecipeChoices)),
       sourceConfig: calculationSourceConfig,
+      useModules,
     }, index);
 
     setCalculation({
@@ -592,6 +679,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: calculationRecipeChoices,
       sourceConfig: calculationSourceConfig,
+      useModules,
       plan,
     });
     setActiveScreen("result");
@@ -717,10 +805,22 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
             />
           </div>
           <div className={cm(styles, "production-planning-input-footer")}>
+            <label className={cm(styles, "production-planning-module-toggle")}>
+              <input
+                type="checkbox"
+                checked={useModules}
+                onChange={(event) => {
+                  runInAction(() => {
+                    store.useModules = event.currentTarget.checked;
+                  });
+                }}
+              />
+              <span>{t("productionPlanning.useModules")}</span>
+            </label>
             <button
               type="button"
               className={cm(styles, "production-planning-primary-button")}
-              disabled={targets.length === 0}
+              disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
               onClick={calculate}
             >
               <LucideCalculator />
@@ -791,6 +891,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   viewMode={viewMode}
                   plan={calculation.plan}
                   index={index}
+                  useModules={calculation.useModules}
                   recipeChoices={resultRecipeChoiceMap}
                   treeScrollTop={session.treeScrollTop}
                   processExpandedItems={session.processExpandedItems}
@@ -1256,6 +1357,7 @@ function PlanGraph({
   viewMode,
   plan,
   index,
+  useModules,
   recipeChoices,
   treeScrollTop,
   processExpandedItems,
@@ -1276,6 +1378,7 @@ function PlanGraph({
   viewMode: ProductionPlanningViewMode;
   plan: ProductionPlanningResult;
   index: ProductionPlanningIndex;
+  useModules: boolean;
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
   processExpandedItems: readonly string[];
@@ -1328,6 +1431,7 @@ function PlanGraph({
       displayMode={displayMode}
       plan={plan}
       index={index}
+      useModules={useModules}
       recipeChoices={recipeChoices}
       treeScrollTop={treeScrollTop}
       isTouch={isTouch}
@@ -1345,6 +1449,7 @@ function ProductionPlanningTreeTable({
   displayMode,
   plan,
   index,
+  useModules,
   recipeChoices,
   treeScrollTop,
   isTouch,
@@ -1358,6 +1463,7 @@ function ProductionPlanningTreeTable({
   displayMode: ProductionPlanningDisplayMode;
   plan: ProductionPlanningResult;
   index: ProductionPlanningIndex;
+  useModules: boolean;
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
   isTouch: boolean;
@@ -1478,6 +1584,7 @@ function ProductionPlanningTreeTable({
                 key={row.id}
                 row={row}
                 index={index}
+                useModules={useModules}
                 displayMode={displayMode}
                 collapsed={collapsedRowIds.has(row.id)}
                 selected={selectedRow?.id === row.id}
@@ -1502,6 +1609,7 @@ function ProductionPlanningTreeTable({
             row={selectedRow}
             rowById={rowById}
             index={index}
+            useModules={useModules}
             displayMode={displayMode}
             recipeChoices={recipeChoices}
             isTouch={isTouch}
@@ -1521,12 +1629,22 @@ function ProductionPlanningTreeTable({
 function ProductionPlanningTreeRowChip({
   row,
   index: _index,
+  useModules,
   t,
 }: {
   row: ProductionPlanningTreeRow;
   index: ProductionPlanningIndex;
+  useModules: boolean;
   t: (key: string) => string;
 }): ReactNode {
+  if (useModules && row.recipeNode.module !== null) {
+    return (
+      <span className={cm(styles, "production-planning-tree-table-chip")}>
+        {t("productionPlanning.modules")}
+      </span>
+    );
+  }
+
   if (!row.isByproduct) {
     return null;
   }
@@ -1541,6 +1659,7 @@ function ProductionPlanningTreeRowChip({
 function ProductionPlanningTreeTableRow({
   row,
   index,
+  useModules,
   displayMode,
   collapsed,
   selected,
@@ -1551,6 +1670,7 @@ function ProductionPlanningTreeTableRow({
 }: {
   row: ProductionPlanningTreeRow;
   index: ProductionPlanningIndex;
+  useModules: boolean;
   displayMode: ProductionPlanningDisplayMode;
   collapsed: boolean;
   selected: boolean;
@@ -1634,7 +1754,7 @@ function ProductionPlanningTreeTableRow({
                 {t("productionPlanning.shared")}
               </span>
             )}
-            {ProductionPlanningTreeRowChip({ row, index, t })}
+            {ProductionPlanningTreeRowChip({ row, index, useModules, t })}
           </button>
         </div>
       </td>
@@ -1775,16 +1895,24 @@ function ProductionPlanningTreeRowRate({
     );
   }
 
-  const recipe = index.recipeById.get(row.recipeId);
-  const machineId = recipe?.machineId ?? row.recipeNode.recipeId;
+  const module = row.recipeNode.module;
+  const recipe = module === null ? index.recipeById.get(row.recipeId) : undefined;
+  const machineId = recipe?.machineId ?? row.recipeNode.recipeId ?? row.recipeNode.candidateId;
   const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
   const logisticsItemId = resolveProductionPlanningRecipeDisplayItemId(row);
+  const productionUnitName = module?.name
+    ?? (recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey));
+  const productionUnitIconSrc = module === null
+    ? (recipe === undefined
+      ? createEntityIconAssetUrl(undefined)
+      : resolveProductionPlanningEntityIconSrc(machineId, index))
+    : resolveProductionPlanningModuleIconSrc(module.iconId, index);
 
   return (
     <div className={cm(styles, "production-planning-tree-table-rate")}>
-      <span className={cm(styles, "production-planning-tree-rate-piece")} title={recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey)}>
+      <span className={cm(styles, "production-planning-tree-rate-piece")} title={productionUnitName}>
         <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
-        <img alt="" src={recipe === undefined ? createEntityIconAssetUrl(undefined) : resolveProductionPlanningEntityIconSrc(machineId, index)} />
+        <img alt="" src={productionUnitIconSrc} />
       </span>
       <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
       <span className={cm(styles, "production-planning-tree-rate-piece")}>
@@ -1834,6 +1962,7 @@ function ProductionPlanningTreeDetail({
   row,
   rowById,
   index,
+  useModules,
   displayMode,
   recipeChoices,
   isTouch,
@@ -1847,6 +1976,7 @@ function ProductionPlanningTreeDetail({
   row: ProductionPlanningTreeRow;
   rowById: ReadonlyMap<string, ProductionPlanningTreeRow>;
   index: ProductionPlanningIndex;
+  useModules: boolean;
   displayMode: ProductionPlanningDisplayMode;
   recipeChoices: ReadonlyMap<string, string>;
   isTouch: boolean;
@@ -1907,21 +2037,39 @@ function ProductionPlanningTreeDetail({
     );
   }
 
-  const recipe = index.recipeById.get(row.recipeNode.recipeId);
+  const module = row.recipeNode.module;
+  const recipe = module === null && row.recipeNode.recipeId !== null
+    ? index.recipeById.get(row.recipeNode.recipeId)
+    : undefined;
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
   const productName = row.targetItemId.length > 0
     ? resolveProductionPlanningItemName(row.targetItemId, index, t)
     : isExternal
       ? ""
-      : recipe === undefined ? row.recipeId : resolveProductionPlanningRecipeName(recipe, index, t);
+      : module !== null
+        ? module.name
+        : recipe === undefined ? row.recipeId : resolveProductionPlanningRecipeName(recipe, index, t);
   const machineName = isExternal
     ? t("productionPlanning.externalSupply")
-    : machine === null ? row.recipeNode.recipeId : t(machine.nameKey);
+    : module !== null
+      ? module.name
+      : machine === null ? row.recipeNode.recipeId ?? row.recipeNode.candidateId : t(machine.nameKey);
   const title = displayMode === "item" ? productName : machineName;
+  const moduleSourceName = module === null
+    ? null
+    : t(
+      module.sourceType === "custom-module"
+        ? "moduleBalancing.customModules"
+        : "moduleBalancing.recommendedModules",
+    );
   const normalSubtitle = displayMode === "item"
-    ? (isExternal ? t("productionPlanning.externalSupply") : `由 ${machineName} 产出`)
-    : (isExternal ? `${t("productionPlanning.produced")} ${productName}` : `产出 ${productName}`);
+    ? (isExternal
+      ? t("productionPlanning.externalSupply")
+      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}由 ${machineName} 产出`)
+    : (isExternal
+      ? `${t("productionPlanning.produced")} ${productName}`
+      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}产出 ${productName}`);
   const subtitle = row.isDeviceMinimumConsumption
     ? `${t("productionPlanning.minimumConsumption")} · ${normalSubtitle}`
     : normalSubtitle;
@@ -1929,12 +2077,19 @@ function ProductionPlanningTreeDetail({
     ? resolveProductionPlanningItemIconSrc(row.targetItemId, index)
     : isExternal
       ? resolveProductionPlanningExternalSupplyIconSrc()
-      : machine === null
-        ? createEntityIconAssetUrl(undefined)
-        : resolveProductionPlanningEntityIconSrc(machine.id, index);
+      : module !== null
+        ? resolveProductionPlanningModuleIconSrc(module.iconId, index)
+        : machine === null
+          ? createEntityIconAssetUrl(undefined)
+          : resolveProductionPlanningEntityIconSrc(machine.id, index);
   const availableRecipes = row.targetItemId.length > 0
     ? (index.recipesByOutputItem.get(row.targetItemId) ?? [])
       .filter((candidate) => !isWaterPurifierNodeRecipe(candidate))
+    : [];
+  const availableCandidates = row.targetItemId.length > 0
+    ? (index.candidatesByOutputItem.get(row.targetItemId) ?? []).filter((candidate) => (
+      candidate.sourceType === "system-recipe" || useModules
+    ))
     : [];
   const detailClassName = [
     "production-planning-tree-detail-stack",
@@ -1967,13 +2122,16 @@ function ProductionPlanningTreeDetail({
       <RecipeChoiceControls
         itemId={row.targetItemId}
         recipes={availableRecipes}
+        candidates={availableCandidates}
         index={index}
         selectedRecipeId={row.targetItemId.length > 0 ? recipeChoices.get(row.targetItemId) ?? null : null}
         onRequestRecipeSelection={onRequestRecipeSelection}
         onSelectRecipe={onSelectRecipe}
         t={t}
       />
-      <RecipeDisplay recipeId={row.recipeNode.recipeId} index={index} isTouch={isTouch} t={t} />
+      {recipe !== undefined && (
+        <RecipeDisplay recipeId={recipe.id} index={index} isTouch={isTouch} t={t} />
+      )}
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.requiredInputs")} ports={row.recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.totalOutputs")} ports={row.recipeNode.outputs} index={index} t={t} />
@@ -2103,6 +2261,7 @@ function ProductionPlanningDeviceMinimumConsumptionDetail({
 function RecipeChoiceControls({
   itemId,
   recipes,
+  candidates,
   index,
   selectedRecipeId,
   onRequestRecipeSelection,
@@ -2111,59 +2270,88 @@ function RecipeChoiceControls({
 }: {
   itemId: string;
   recipes: readonly RecipeDefinition[];
+  candidates: readonly ProductionPlanningCandidate[];
   index: ProductionPlanningIndex;
   selectedRecipeId: string | null;
   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
   t: (key: string) => string;
 }) {
-  if (itemId.length === 0 || recipes.length <= 1) {
+  if (itemId.length === 0 || candidates.length <= 1) {
     return null;
   }
 
-  const selectedRecipe = selectedRecipeId === null
+  const normalizedSelectedCandidateId = selectedRecipeId === null
     ? null
-    : recipes.find((recipe) => recipe.id === selectedRecipeId) ?? null;
-  const label = selectedRecipe === null
+    : normalizeProductionPlanningCandidateChoiceId(selectedRecipeId);
+  const selectedCandidate = normalizedSelectedCandidateId === null
+    ? null
+    : candidates.find((candidate) => candidate.id === normalizedSelectedCandidateId) ?? null;
+  const label = selectedCandidate === null
     ? t("productionPlanning.autoRecipe")
-    : resolveProductionPlanningRecipeName(selectedRecipe, index, t);
+    : resolveProductionPlanningCandidateName(selectedCandidate, index, t);
 
   return (
     <div className={cm(styles, "production-planning-recipe-choice")}>
       <div className={cm(styles, "production-planning-recipe-choice-summary")}>
-        <span>{t("productionPlanning.recipe")}</span>
+        <span>{t("productionPlanning.productionCandidate")}</span>
         <strong>{label}</strong>
       </div>
+      <select
+        className={cm(styles, "production-planning-recipe-choice-candidate")}
+        aria-label={t("productionPlanning.productionCandidate")}
+        value={selectedCandidate?.id ?? ""}
+        onChange={(event) => onSelectRecipe(itemId, event.currentTarget.value || null)}
+      >
+        <option value="">{t("productionPlanning.autoRecipe")}</option>
+        {candidates.map((candidate) => (
+          <option key={candidate.id} value={candidate.id}>
+            {resolveProductionPlanningCandidateName(candidate, index, t)}
+          </option>
+        ))}
+      </select>
       <button
         type="button"
         className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-compact-auto")}
-        aria-pressed={selectedRecipeId === null}
+        aria-pressed={selectedCandidate === null}
         onClick={() => onSelectRecipe(itemId, null)}
       >
         <LucideRepeat />
         <span>{t("productionPlanning.autoRecipe")}</span>
       </button>
-      <button
-        type="button"
-        className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-select")}
-        onClick={() => onRequestRecipeSelection(itemId, recipes)}
-      >
-        <LucideListTree />
-        <span>{t("productionPlanning.chooseRecipe")}</span>
-      </button>
-      {selectedRecipeId !== null && (
+      {recipes.length > 1 && (
         <button
           type="button"
-          className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-wide-auto")}
-          onClick={() => onSelectRecipe(itemId, null)}
+          className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-select")}
+          onClick={() => onRequestRecipeSelection(itemId, recipes)}
         >
-          <LucideRepeat />
-          <span>{t("productionPlanning.autoRecipe")}</span>
+          <LucideListTree />
+          <span>{t("productionPlanning.chooseRecipe")}</span>
         </button>
       )}
     </div>
   );
 }
+
+// AI-REMOVED 2026-08-29:
+// Reason: 生产候选统一下拉框已经直接提供“自动”选项，原宽屏专用自动按钮与其重复。
+// Trigger: 模块与系统配方需要进入同一个手动候选控件。
+// Evidence: RecipeChoiceControls 现通过 production-planning-recipe-choice-candidate 展示自动、系统配方与模块。
+// Replacement: RecipeChoiceControls 内的 candidate select 与紧凑自动按钮。
+// Risk: Low；宽屏减少一个重复按钮，自动选择能力仍保留。
+// Human Review: Required
+//
+// Original code:
+// {selectedRecipeId !== null && (
+//   <button
+//     type="button"
+//     className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-wide-auto")}
+//     onClick={() => onSelectRecipe(itemId, null)}
+//   >
+//     <LucideRepeat />
+//     <span>{t("productionPlanning.autoRecipe")}</span>
+//   </button>
+// )}
 
 // AI-REMOVED 2026-05-24:
 // Reason: ledger 树不再生成 item row，旧 item 详情和内嵌 select 无法从当前树表进入。
@@ -2327,19 +2515,26 @@ function RecipeIdentity({
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
-  const recipe = index.recipeById.get(recipeNode.recipeId);
+  const module = recipeNode.module;
+  const recipe = module === null && recipeNode.recipeId !== null
+    ? index.recipeById.get(recipeNode.recipeId)
+    : undefined;
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const productItemId = targetItemId ?? recipeNode.targetItemId;
-  const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId);
+  const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId ?? "");
 
   const productName = productItemId.length > 0
     ? resolveProductionPlanningItemName(productItemId, index, t)
-    : recipe === undefined
-      ? recipeNode.recipeId
-      : resolveProductionPlanningRecipeName(recipe, index, t);
+    : module !== null
+      ? module.name
+      : recipe === undefined
+        ? recipeNode.recipeId ?? recipeNode.candidateId
+        : resolveProductionPlanningRecipeName(recipe, index, t);
   const machineName = isExternal
     ? t("productionPlanning.externalSupply")
-    : machine === null ? recipeNode.recipeId : t(machine.nameKey);
+    : module !== null
+      ? module.name
+      : machine === null ? recipeNode.recipeId ?? recipeNode.candidateId : t(machine.nameKey);
   const title = displayMode === "item" ? productName : machineName;
   const normalSubtitle = displayMode === "item" ? machineName : productName;
   const subtitle = isDeviceMinimumConsumption
@@ -2351,6 +2546,9 @@ function RecipeIdentity({
     }
     if (isExternal) {
       return resolveProductionPlanningExternalSupplyIconSrc();
+    }
+    if (module !== null) {
+      return resolveProductionPlanningModuleIconSrc(module.iconId, index);
     }
     return recipe === undefined
       ? createEntityIconAssetUrl(undefined)
@@ -2366,6 +2564,17 @@ function RecipeIdentity({
       </div>
     </div>
   );
+}
+
+function resolveProductionPlanningModuleIconSrc(
+  iconId: string,
+  index: ProductionPlanningIndex,
+): string {
+  if (index.entityById.has(iconId)) {
+    return resolveProductionPlanningEntityIconSrc(iconId, index);
+  }
+
+  return resolveProductionPlanningItemIconSrc(iconId, index);
 }
 
 type MutableProductionPlanningTreeRow = {
@@ -2458,7 +2667,10 @@ export function buildProductionPlanningTreeRows(
 }
 
 function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
-  const recipeTotals = new Map(plan.recipeTotals.map((total) => [total.recipeId, total]));
+  const recipeTotals = new Map(plan.recipeTotals.map((total) => [
+    total.recipeId ?? total.candidateId,
+    total,
+  ]));
   const rowById = new Map<string, MutableProductionPlanningTreeRow>();
   const producerRowIdsByItem = new Map<string, Set<string>>();
   const surplusProducerRowIdsByItem = new Map<string, Set<string>>();
@@ -2541,7 +2753,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
     }
 
     const recipeNode = createProductionPlanningExternalSupplyRecipeNode(node, perMinute);
-    return ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+    return ensureRecipeRow(recipeNode.recipeId ?? recipeNode.candidateId, recipeNode.targetItemId, recipeNode);
   };
 
   const registerRecipeOutputs = (recipeNode: ProductionPlanningRecipeNode) => {
@@ -2549,7 +2761,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       if (output.perMinute <= PRODUCTION_PLANNING_EPSILON) {
         continue;
       }
-      const row = ensureRecipeRow(recipeNode.recipeId, output.itemId, recipeNode);
+      const row = ensureRecipeRow(recipeNode.recipeId ?? recipeNode.candidateId, output.itemId, recipeNode);
       if (!isProductionPlanningDisposalRecipeId(row.recipeId) && !isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
         addRowIdByItem(producerRowIdsByItem, output.itemId, row.id);
         if (output.itemId !== recipeNode.targetItemId) {
@@ -2601,12 +2813,15 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       : total.inputs.slice(0, 1).map((input) => input.itemId);
 
     for (const targetItemId of targetItemIds) {
-      const row = ensureRecipeRow(total.recipeId, targetItemId, null);
+      const row = ensureRecipeRow(total.recipeId ?? total.candidateId, targetItemId, null);
       for (const input of total.inputs) {
         row.inputItemIds.add(input.itemId);
       }
       row.outputItemIds.add(targetItemId);
-      if (total.outputs.some((output) => output.itemId === targetItemId) && !isProductionPlanningDisposalRecipeId(total.recipeId)) {
+      if (
+        total.outputs.some((output) => output.itemId === targetItemId)
+        && !isProductionPlanningDisposalRecipeId(total.recipeId ?? total.candidateId)
+      ) {
         addRowIdByItem(producerRowIdsByItem, targetItemId, row.id);
       }
     }
@@ -2643,14 +2858,22 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
     }
 
     if (node.recipeNode !== null) {
-      const childRow = ensureRecipeRow(node.recipeNode.recipeId, node.recipeNode.targetItemId, node.recipeNode);
+      const childRow = ensureRecipeRow(
+        node.recipeNode.recipeId ?? node.recipeNode.candidateId,
+        node.recipeNode.targetItemId,
+        node.recipeNode,
+      );
       addProductionPlanningTreeEdge(rowById, parentRow.id, childRow.id);
       connectRecipeInputs(node.recipeNode);
     }
   };
 
   function connectRecipeInputs(recipeNode: ProductionPlanningRecipeNode): void {
-    const parentRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+    const parentRow = ensureRecipeRow(
+      recipeNode.recipeId ?? recipeNode.candidateId,
+      recipeNode.targetItemId,
+      recipeNode,
+    );
     for (const child of recipeNode.inputItems) {
       connectItemSources(child, parentRow);
     }
@@ -2662,7 +2885,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
 
       const consumptionNode = createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(recipeNode, input);
       const consumptionRow = ensureRecipeRow(
-        consumptionNode.recipeId,
+        consumptionNode.recipeId ?? consumptionNode.candidateId,
         input.itemId,
         consumptionNode,
         `${parentRow.id}:device-minimum-consumption:${input.itemId}`,
@@ -2700,7 +2923,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
     }
     if (root.recipeNode !== null) {
       rootSourceRowIds.add(buildProductionPlanningTreeDeviceProductRowId(
-        root.recipeNode.recipeId,
+        root.recipeNode.recipeId ?? root.recipeNode.candidateId,
         root.recipeNode.targetItemId,
       ));
     }
@@ -2841,6 +3064,16 @@ function createProductionPlanningTreeSharedDemandReferenceRow({
     sourceRow.targetItemId,
     consumedPerMinute,
   );
+  // AI-REMOVED 2026-08-29:
+  // Reason: 编辑目标匹配到错误的 recipeId 字段并生成了无效调用语法，且此作用域不存在 total。
+  // Trigger: 将模块汇总节点的 recipeId 改为可空真实配方 ID。
+  // Evidence: TypeScript 调用参数位置不能使用 recipeId: total.recipeId。
+  // Replacement: 上方位置参数 recipeId；真正的汇总节点赋值位于 createProductionPlanningTreeSyntheticRecipeNode。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // recipeId: total.recipeId,
 
   return {
     id: rowId,
@@ -2874,6 +3107,9 @@ function createProductionPlanningTreeSharedDemandRecipeNode(
   return {
     id: `${rowId}:recipe-node`,
     kind: "recipe",
+    candidateId: recipeId,
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId,
     targetItemId: itemId,
     durationSeconds: 0,
@@ -3372,6 +3608,9 @@ function createProductionPlanningTreeSyntheticRecipeNode(
     return fallback ?? {
       id: `total:${recipeId}`,
       kind: "recipe",
+      candidateId: recipeId,
+      candidateSourceType: "system-recipe",
+      module: null,
       recipeId,
       targetItemId,
       durationSeconds: 0,
@@ -3388,7 +3627,10 @@ function createProductionPlanningTreeSyntheticRecipeNode(
   return {
     id: fallback?.id ?? `total:${recipeId}`,
     kind: "recipe",
-    recipeId,
+    candidateId: total.candidateId,
+    candidateSourceType: total.candidateSourceType,
+    module: total.module,
+    recipeId: total.recipeId,
     targetItemId,
     durationSeconds: total.durationSeconds,
     cyclesPerMinute: total.cyclesPerMinute,
@@ -3408,6 +3650,9 @@ function mergeProductionPlanningTreeRecipeNodes(
   return {
     id: left.id,
     kind: "recipe",
+    candidateId: left.candidateId,
+    candidateSourceType: left.candidateSourceType,
+    module: left.module,
     recipeId: left.recipeId,
     targetItemId: left.targetItemId,
     durationSeconds: left.durationSeconds || right.durationSeconds,
@@ -3665,6 +3910,9 @@ function createProductionPlanningExternalSupplyRecipeNode(
   return {
     id: `${EXTERNAL_SUPPLY_RECIPE_ID_PREFIX}${node.id}`,
     kind: "recipe",
+    candidateId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
     targetItemId: node.itemId,
     durationSeconds: 0,
@@ -3682,10 +3930,15 @@ function createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(
   hostRecipeNode: ProductionPlanningRecipeNode,
   input: ProductionPlanningPort,
 ): ProductionPlanningRecipeNode {
-  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(hostRecipeNode.recipeId);
+  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(
+    hostRecipeNode.recipeId ?? hostRecipeNode.candidateId,
+  );
   return {
     id: `${recipeId}:${hostRecipeNode.id}:${input.itemId}`,
     kind: "recipe",
+    candidateId: recipeId,
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId,
     targetItemId: input.itemId,
     durationSeconds: 0,
@@ -3869,7 +4122,13 @@ function hasInactiveProductionPlanningContent(
     return true;
   }
 
-  return Object.values(store.recipeChoices).some((recipeId) => {
+  return Object.values(store.recipeChoices).some((candidateId) => {
+    if (candidateId.startsWith("module:")) {
+      return false;
+    }
+    const recipeId = candidateId.startsWith("recipe:")
+      ? candidateId.slice("recipe:".length)
+      : candidateId;
     const recipe = recipeById.get(recipeId);
     return recipe !== undefined && !isRecipeAvailableByActivity(recipe, activeActivityIds);
   });

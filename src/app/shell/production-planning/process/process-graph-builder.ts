@@ -8,6 +8,12 @@ import {
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type { ProcessGraph, ProcessNode } from "./process-graph-model";
 import type { ProductionPlanningDisplayMode } from "../production-planning-model";
+import {
+  createProductionPlanningRecipeCandidateId,
+  normalizeProductionPlanningCandidateChoiceId,
+  type ProductionPlanningCandidate,
+  type ProductionPlanningModuleSnapshot,
+} from "../production-planning-candidate";
 
 interface MutableProcessNode {
   itemId: string;
@@ -16,6 +22,7 @@ interface MutableProcessNode {
   type: ProcessNode["type"];
   iconSrc: string;
   name: string;
+  candidateId?: string;
   recipeId?: string;
   amount?: number;
   expandedRecipeId: string | null;
@@ -42,6 +49,16 @@ interface BuildState {
   links: MutableProcessLink[];
   /** Track recipe IDs to detect cycles */
   recipeStack: Set<string>;
+}
+
+interface ResolvedProcessProduction {
+  readonly id: string;
+  readonly recipeId: string | null;
+  readonly module: ProductionPlanningModuleSnapshot | null;
+  readonly inputs: readonly {
+    readonly itemId: string;
+    readonly amount: number;
+  }[];
 }
 
 export function buildProcessGraph(
@@ -88,10 +105,7 @@ export function buildProcessGraph(
     const iconSrc = resolveProductionPlanningItemIconSrc(targetItemId, index);
 
     // Place the target node at col 0
-    const targetRecipe = resolveProductionPlanningAutoRecipe(
-      index.recipesByOutputItem.get(targetItemId) ?? [],
-      index.naturalResourceItemIds.has(targetItemId),
-    );
+    const targetProduction = resolveRecipe(targetItemId, state);
     const targetNode: MutableProcessNode = {
       itemId: targetItemId,
       col: 0,
@@ -99,7 +113,8 @@ export function buildProcessGraph(
       type: "target",
       iconSrc,
       name,
-      recipeId: targetRecipe?.id,
+      candidateId: targetProduction?.id,
+      recipeId: targetProduction?.recipeId ?? undefined,
       expandedRecipeId: null,
     };
     state.nodes.push(targetNode);
@@ -187,23 +202,33 @@ function applyDeviceView(raw: RawProcessGraph, index: ProductionPlanningIndex, t
   const nodeKeyToDeviceKey = new Map<string, string>(); // "col:row" → deviceKey
 
   for (const n of raw.nodes) {
-    const recipeId = n.recipeId ?? (n.expandedRecipeId ?? undefined);
-    if (recipeId === undefined) continue;
+    const candidate = n.candidateId === undefined ? undefined : index.candidateById.get(n.candidateId);
+    const recipeId = candidate?.recipeId ?? n.recipeId ?? (n.expandedRecipeId ?? undefined);
+    const recipe = recipeId === undefined || recipeId === null ? undefined : index.recipeById.get(recipeId);
+    const module = candidate?.module ?? null;
+    if (recipe === undefined && module === null) continue;
 
-    const recipe = index.recipeById.get(recipeId);
-    if (recipe === undefined) continue;
-
-    const machineEntity = index.entityById.get(recipe.machineId);
+    const machineEntity = recipe === undefined ? undefined : index.entityById.get(recipe.machineId);
+    const productionUnitId = module?.id ?? recipe!.machineId;
     const deviceKey = `${n.col - 1}:${n.row}`;
     nodeKeyToDeviceKey.set(`${n.col}:${n.row}`, deviceKey);
 
     deviceNodes.push({
-      itemId: recipe.machineId,
+      itemId: productionUnitId,
       col: n.col - 1,
       row: n.row,
       type: "device",
-      iconSrc: resolveProductionPlanningEntityIconSrc(recipe.machineId, index),
-      name: machineEntity !== undefined ? translate(machineEntity.nameKey) : recipe.machineId,
+      iconSrc: module === null
+        ? resolveProductionPlanningEntityIconSrc(recipe!.machineId, index)
+        : resolveProductionPlanningModuleIconSrc(module.iconId, index),
+      name: module === null
+        ? (machineEntity !== undefined ? translate(machineEntity.nameKey) : recipe!.machineId)
+        : `${module.name} · ${translate(
+          module.sourceType === "custom-module"
+            ? "moduleBalancing.customModules"
+            : "moduleBalancing.recommendedModules",
+        )}`,
+      candidateId: candidate?.id,
       recipeId: undefined,
       amount: undefined,
       expandedRecipeId: null,
@@ -270,6 +295,13 @@ function applyDeviceView(raw: RawProcessGraph, index: ProductionPlanningIndex, t
   };
 }
 
+function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
+  if (index.entityById.has(iconId)) {
+    return resolveProductionPlanningEntityIconSrc(iconId, index);
+  }
+  return resolveProductionPlanningItemIconSrc(iconId, index);
+}
+
 /**
  * Expand the main ingredient chain starting from itemId.
  * Returns the row after all expanded content.
@@ -320,7 +352,8 @@ function expandMainChain(
       type: "cycle",
       iconSrc,
       name,
-      recipeId: recipe.id,
+      candidateId: recipe.id,
+      recipeId: recipe.recipeId ?? undefined,
       expandedRecipeId: null,
     });
     return startRow + 1;
@@ -345,7 +378,8 @@ function expandMainChain(
       type: "natural",
       iconSrc,
       name,
-      recipeId: recipe.id,
+      candidateId: recipe.id,
+      recipeId: recipe.recipeId ?? undefined,
       expandedRecipeId: null,
     });
     state.links.push({ fromCol: col - 1, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: col - 1 });
@@ -370,8 +404,9 @@ function expandMainChain(
     iconSrc: mainIconSrc,
     name: mainName,
     amount: mainInput.amount,
-    recipeId: isMainNatural ? mainRecipe?.id : undefined,
-    expandedRecipeId: isMainNatural ? null : (mainRecipe?.id ?? null),
+    candidateId: mainRecipe?.id,
+    recipeId: mainRecipe?.recipeId ?? undefined,
+    expandedRecipeId: isMainNatural ? null : (mainRecipe?.recipeId ?? null),
   });
   state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
 
@@ -403,18 +438,24 @@ function expandMainChain(
         iconSrc: secIconSrc,
         name: secName,
         amount: secInput.amount,
-        recipeId: secRecipe?.id,
+        candidateId: secRecipe?.id,
+        recipeId: secRecipe?.recipeId ?? undefined,
         expandedRecipeId: null,
       });
       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
       currentRow++;
     } else if (state.itemNodes.get(secInput.itemId)?.recipeNode === null) {
       // 外部供给或已完全满足 → 终端节点，不展开
+      // AI-CORRECTION 2026-08-29: 生产性循环来源仍保留为可展开的 secondary，不能伪装成自然/外部供给。
+      // AI-CORRECTION 2026-08-29: 被普通循环阻塞的来源同样保留为 secondary，由图层表达未展开依赖。
+      const solvedItemNode = state.itemNodes.get(secInput.itemId);
       state.nodes.push({
         itemId: secInput.itemId,
         col: mainCol,
         row: currentRow,
-        type: "natural",
+        type: solvedItemNode?.isCycleSource === true || solvedItemNode?.blockedByCycle === true
+          ? "secondary"
+          : "natural",
         iconSrc: secIconSrc,
         name: secName,
         amount: secInput.amount,
@@ -433,7 +474,9 @@ function expandMainChain(
         iconSrc: secIconSrc,
         name: secName,
         amount: secInput.amount,
-        expandedRecipeId: secRecipe?.id ?? null,
+        candidateId: secRecipe?.id,
+        recipeId: secRecipe?.recipeId ?? undefined,
+        expandedRecipeId: secRecipe?.recipeId ?? null,
       });
       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
       // Expand this secondary's main chain starting at currentRow
@@ -463,25 +506,107 @@ function expandMainChain(
 function resolveRecipe(
   itemId: string,
   state: BuildState,
-): RecipeDefinition | null {
-  // If user chose a specific recipe
-  const chosenRecipeId = state.recipeChoices.get(itemId);
-  if (chosenRecipeId !== undefined) {
-    const recipe = state.recipeById.get(chosenRecipeId);
-    if (recipe !== undefined && recipe.outputs.some((o) => o.itemId === itemId)) {
-      return recipe;
+): ResolvedProcessProduction | null {
+  const solvedRecipeNode = state.itemNodes.get(itemId)?.recipeNode;
+  if (solvedRecipeNode !== null && solvedRecipeNode !== undefined) {
+    const solvedCandidate = state.index.candidateById.get(solvedRecipeNode.candidateId);
+    if (solvedCandidate !== undefined) {
+      return resolveProcessProductionFromCandidate(solvedCandidate, state);
     }
   }
 
-  // AUTO fallback: first non-excluded recipe from recipesByOutputItem
+  const chosenRecipeId = state.recipeChoices.get(itemId);
+  if (chosenRecipeId !== undefined) {
+    const chosenCandidate = state.index.candidateById.get(
+      normalizeProductionPlanningCandidateChoiceId(chosenRecipeId),
+    );
+    if (chosenCandidate !== undefined && chosenCandidate.outputs.some((output) => output.itemId === itemId)) {
+      return resolveProcessProductionFromCandidate(chosenCandidate, state);
+    }
+  }
+
   // AI-CORRECTION 2026-08-20: 普通候选优先；没有普通候选时允许蓝铁粉末冶炼蓝铁块配方兜底。
   const recipes = state.index.recipesByOutputItem.get(itemId);
   if (recipes === undefined || recipes.length === 0) {
     return null;
   }
 
-  return resolveProductionPlanningAutoRecipe(
+  const fallbackRecipe = resolveProductionPlanningAutoRecipe(
     recipes,
     state.naturalResourceItemIds.has(itemId),
-  ) ?? null;
+  );
+  if (fallbackRecipe === undefined) {
+    return null;
+  }
+
+  return {
+    id: createProductionPlanningRecipeCandidateId(fallbackRecipe.id),
+    recipeId: fallbackRecipe.id,
+    module: null,
+    inputs: fallbackRecipe.inputs,
+  };
 }
+
+function resolveProcessProductionFromCandidate(
+  candidate: ProductionPlanningCandidate,
+  state: BuildState,
+): ResolvedProcessProduction | null {
+  if (candidate.module !== null) {
+    return {
+      id: candidate.id,
+      recipeId: null,
+      module: candidate.module,
+      inputs: candidate.inputs.map((input) => ({
+        itemId: input.itemId,
+        amount: input.perMinute,
+      })),
+    };
+  }
+
+  const recipe = candidate.recipeId === null ? undefined : state.recipeById.get(candidate.recipeId);
+  if (recipe === undefined) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    recipeId: recipe.id,
+    module: null,
+    inputs: recipe.inputs,
+  };
+}
+
+// AI-REMOVED 2026-08-29:
+// Reason: 工序图重新独立选择系统配方会偏离求解结果，并且无法表达模块候选。
+// Trigger: 产线规划统一生产候选后，四种结果视图必须消费同一份已求解候选。
+// Evidence: ProductionPlanningRecipeNode.candidateId 已记录真实候选；模块没有可供 recipeById 查询的 RecipeDefinition。
+// Replacement: resolveRecipe + resolveProcessProductionFromCandidate。
+// Risk: Medium；工序图现在忠实显示求解结果，重复物品节点仍沿用既有 itemId 索引策略。
+// Human Review: Required
+//
+// Original code:
+// function resolveRecipe(
+//   itemId: string,
+//   state: BuildState,
+// ): RecipeDefinition | null {
+//   // If user chose a specific recipe
+//   const chosenRecipeId = state.recipeChoices.get(itemId);
+//   if (chosenRecipeId !== undefined) {
+//     const recipe = state.recipeById.get(chosenRecipeId);
+//     if (recipe !== undefined && recipe.outputs.some((o) => o.itemId === itemId)) {
+//       return recipe;
+//     }
+//   }
+//
+//   // AUTO fallback: first non-excluded recipe from recipesByOutputItem
+//   // AI-CORRECTION 2026-08-20: 普通候选优先；没有普通候选时允许蓝铁粉末冶炼蓝铁块配方兜底。
+//   const recipes = state.index.recipesByOutputItem.get(itemId);
+//   if (recipes === undefined || recipes.length === 0) {
+//     return null;
+//   }
+//
+//   return resolveProductionPlanningAutoRecipe(
+//     recipes,
+//     state.naturalResourceItemIds.has(itemId),
+//   ) ?? null;
+// }

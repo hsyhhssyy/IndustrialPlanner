@@ -42,6 +42,7 @@ describe("sync change origin", () => {
       supplies: [],
       displayMode: "item",
       viewMode: "tree",
+      useModules: false,
       recipeChoices: {},
       recipeChoicesDemandSignature: null,
       sourceConfig: {

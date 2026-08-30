@@ -3,7 +3,13 @@ import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
-import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
+import {
+  resolveProductionPlanningEntityIconSrc,
+  resolveProductionPlanningItemIconSrc,
+  type ProductionPlanningDisplayMode,
+  type ProductionPlanningIndex,
+  type ProductionPlanningResult,
+} from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
@@ -91,9 +97,21 @@ export function ProcessGraphView({
     : null;
   const expandedNodeCanvasX = expandedNode !== null ? nodeCenterX(expandedNode.col) : 0;
   const expandedNodeCanvasY = expandedNode !== null ? nodeCenterY(expandedNode.row) : 0;
-  const expandedRecipeId = expandedNode?.recipeId ?? expandedNode?.expandedRecipeId ?? null;
+  const expandedCandidate = expandedNode?.candidateId === undefined
+    ? undefined
+    : index.candidateById.get(expandedNode.candidateId);
+  const expandedRecipeId = expandedCandidate?.recipeId
+    ?? expandedNode?.recipeId
+    ?? expandedNode?.expandedRecipeId
+    ?? null;
   const expandedRecipe = expandedRecipeId !== null ? index.recipeById.get(expandedRecipeId) ?? undefined : undefined;
   const expandedDevice = expandedRecipe !== undefined ? index.entityById.get(expandedRecipe.machineId) ?? null : null;
+  const expandedModule = expandedCandidate?.module ?? null;
+  const expandedModuleIconSrc = expandedModule === null
+    ? null
+    : index.entityById.has(expandedModule.iconId)
+      ? resolveProductionPlanningEntityIconSrc(expandedModule.iconId, index)
+      : resolveProductionPlanningItemIconSrc(expandedModule.iconId, index);
 
   const handleDetailToggle = useCallback((nodeKey: string) => {
     setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
@@ -271,7 +289,7 @@ export function ProcessGraphView({
           const isExpandable = node.type === "secondary";
           const isCollapsible = expandedItemIds.has(node.itemId);
           const nodeKey = `${node.col}:${node.row}`;
-          const hasRecipe = (node.recipeId ?? node.expandedRecipeId) !== null;
+          const hasRecipe = node.candidateId !== undefined || (node.recipeId ?? node.expandedRecipeId) !== null;
           // 设备节点不显示展开/收起和详情弹窗
           const showToggle = isDeviceNode ? undefined
             : (isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row)
@@ -320,6 +338,18 @@ export function ProcessGraphView({
                 src={createEntityIconAssetUrl(expandedDevice.iconPath)}
               />
               <span>{t(expandedDevice.nameKey)}</span>
+            </div>
+          )}
+          {expandedModule !== null && expandedModuleIconSrc !== null && (
+            <div className={styles["process-detail-popup-device"]}>
+              <img alt="" src={expandedModuleIconSrc} />
+              <span>
+                {expandedModule.name} · {t(
+                  expandedModule.sourceType === "custom-module"
+                    ? "moduleBalancing.customModules"
+                    : "moduleBalancing.recommendedModules",
+                )}
+              </span>
             </div>
           )}
         </div>

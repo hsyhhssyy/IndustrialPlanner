@@ -29,6 +29,7 @@ function createPlannerState(patch: Partial<PlannerPersistedState> = {}): Planner
     supplies: [],
     displayMode: "item",
     viewMode: "tree",
+    useModules: false,
     recipeChoices: {},
     recipeChoicesDemandSignature: null,
     sourceConfig: {
@@ -95,6 +96,19 @@ describe("production planning persistence", () => {
     await expect(loadPlannerState()).resolves.toEqual(state);
   });
 
+  it("persists module solving and a namespaced module candidate choice", async () => {
+    const state = createPlannerState({
+      useModules: true,
+      recipeChoices: {
+        item_iron_plate: "module:custom:test-iron-module",
+      },
+    });
+
+    await savePlannerState(state);
+
+    await expect(loadPlannerState()).resolves.toEqual(state);
+  });
+
   it("adds default session state when migrating legacy planner data", async () => {
     const legacyState = {
       targets: [{ id: "target-1", itemId: "item_iron_plate", perMinute: 60 }],
@@ -115,6 +129,8 @@ describe("production planning persistence", () => {
 
     expect(loaded).toEqual({
       ...legacyState,
+      useModules: false,
+      recipeChoices: { item_iron_plate: "recipe:recipe-1" },
       sourceConfig: {
         ...legacyState.sourceConfig,
         waterPurifierPolicy: "disabled",
@@ -169,6 +185,7 @@ describe("production planning persistence", () => {
       supplies: [
         { id: "supply-a", itemId: "item_iron_nugget", perMinute: 30, isInfinite: true },
       ],
+      useModules: false,
       sourceConfig,
     })).toBe(createProductionPlanningDemandSignature({
       targets: [
@@ -177,6 +194,23 @@ describe("production planning persistence", () => {
       supplies: [
         { id: "supply-b", itemId: "item_iron_nugget", perMinute: 30, isInfinite: true },
       ],
+      useModules: false,
+      sourceConfig,
+    }));
+
+    expect(createProductionPlanningDemandSignature({
+      targets: [
+        { id: "target-a", itemId: "item_carbon_mtl", perMinute: 60 },
+      ],
+      supplies: [],
+      useModules: false,
+      sourceConfig,
+    })).not.toBe(createProductionPlanningDemandSignature({
+      targets: [
+        { id: "target-a", itemId: "item_carbon_mtl", perMinute: 60 },
+      ],
+      supplies: [],
+      useModules: true,
       sourceConfig,
     }));
   });
@@ -199,7 +233,7 @@ describe("production planning persistence", () => {
     });
 
     expect(store.recipeChoices).toEqual({
-      item_iron_plate: "r_assembler_iron_plate_2",
+      item_iron_plate: "recipe:r_assembler_iron_plate_2",
     });
 
     dispose();

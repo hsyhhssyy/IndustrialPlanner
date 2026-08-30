@@ -73,6 +73,25 @@
   background: var(--surface-1);
 }
 
+.production-planning-module-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+}
+
+.production-planning-module-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .production-planning-workspace {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -764,6 +783,17 @@ Original code:
   white-space: nowrap;
 }
 
+.production-planning-recipe-choice-candidate {
+  min-width: 120px;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-0);
+  background: var(--surface-1);
+}
+
 .production-planning-recipe-choice-compact-auto {
   display: none;
 }
@@ -781,6 +811,11 @@ Original code:
 
 .production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-candidate {
+  width: 100%;
+  max-width: none;
 }
 
 .production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-compact-auto {

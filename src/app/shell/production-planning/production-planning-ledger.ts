@@ -37,7 +37,10 @@ const DEVICE_MINIMUM_CONSUMPTION_RECIPE_ID_PREFIX = "device-minimum-consumption:
 export function buildProductionPlanningLedgerRows(
   plan: ProductionPlanningResult,
 ): ProductionPlanningLedgerRow[] {
-  const recipeTotals = new Map(plan.recipeTotals.map((total) => [total.recipeId, total]));
+  const recipeTotals = new Map(plan.recipeTotals.map((total) => [
+    total.recipeId ?? total.candidateId,
+    total,
+  ]));
   const rowById = new Map<string, MutableProductionPlanningLedgerRow>();
   const byproductRowIds = new Set<string>();
   let nextOrder = 0;
@@ -99,7 +102,7 @@ export function buildProductionPlanningLedgerRows(
     }
 
     const recipeNode = createProductionPlanningExternalSupplyRecipeNode(node, perMinute);
-    return ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+    return ensureRecipeRow(recipeNode.recipeId ?? recipeNode.candidateId, recipeNode.targetItemId, recipeNode);
   };
 
   const registerRecipeOutputs = (recipeNode: ProductionPlanningRecipeNode) => {
@@ -108,7 +111,7 @@ export function buildProductionPlanningLedgerRows(
         continue;
       }
 
-      const row = ensureRecipeRow(recipeNode.recipeId, output.itemId, recipeNode);
+      const row = ensureRecipeRow(recipeNode.recipeId ?? recipeNode.candidateId, output.itemId, recipeNode);
       if (
         !isProductionPlanningDisposalRecipeId(row.recipeId)
         && !isProductionPlanningExternalSupplyRecipeId(row.recipeId)
@@ -127,7 +130,7 @@ export function buildProductionPlanningLedgerRows(
       }
 
       const consumptionNode = createProductionPlanningDeviceMinimumConsumptionRecipeNode(recipeNode, input);
-      ensureRecipeRow(consumptionNode.recipeId, input.itemId, consumptionNode);
+      ensureRecipeRow(consumptionNode.recipeId ?? consumptionNode.candidateId, input.itemId, consumptionNode);
     }
   };
 
@@ -158,7 +161,7 @@ export function buildProductionPlanningLedgerRows(
       : total.inputs.slice(0, 1).map((input) => input.itemId);
 
     for (const targetItemId of targetItemIds) {
-      const row = ensureRecipeRow(total.recipeId, targetItemId, null);
+      const row = ensureRecipeRow(total.recipeId ?? total.candidateId, targetItemId, null);
       for (const input of total.inputs) {
         row.inputItemIds.add(input.itemId);
       }
@@ -272,6 +275,9 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
     return fallback ?? {
       id: `total:${recipeId}`,
       kind: "recipe",
+      candidateId: recipeId,
+      candidateSourceType: "system-recipe",
+      module: null,
       recipeId,
       targetItemId,
       durationSeconds: 0,
@@ -288,7 +294,10 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
   return {
     id: fallback?.id ?? `total:${recipeId}`,
     kind: "recipe",
-    recipeId,
+    candidateId: total.candidateId,
+    candidateSourceType: total.candidateSourceType,
+    module: total.module,
+    recipeId: total.recipeId,
     targetItemId,
     durationSeconds: total.durationSeconds,
     cyclesPerMinute: total.cyclesPerMinute,
@@ -308,6 +317,9 @@ function mergeProductionPlanningLedgerRecipeNodes(
   return {
     id: left.id,
     kind: "recipe",
+    candidateId: left.candidateId,
+    candidateSourceType: left.candidateSourceType,
+    module: left.module,
     recipeId: left.recipeId,
     targetItemId: left.targetItemId,
     durationSeconds: left.durationSeconds || right.durationSeconds,
@@ -368,6 +380,9 @@ function createProductionPlanningExternalSupplyRecipeNode(
   return {
     id: `${EXTERNAL_SUPPLY_RECIPE_ID_PREFIX}${node.id}`,
     kind: "recipe",
+    candidateId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
     targetItemId: node.itemId,
     durationSeconds: 0,
@@ -385,10 +400,15 @@ function createProductionPlanningDeviceMinimumConsumptionRecipeNode(
   hostRecipeNode: ProductionPlanningRecipeNode,
   input: ProductionPlanningPort,
 ): ProductionPlanningRecipeNode {
-  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(hostRecipeNode.recipeId);
+  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(
+    hostRecipeNode.recipeId ?? hostRecipeNode.candidateId,
+  );
   return {
     id: `${recipeId}:${hostRecipeNode.id}:${input.itemId}`,
     kind: "recipe",
+    candidateId: recipeId,
+    candidateSourceType: "system-recipe",
+    module: null,
     recipeId,
     targetItemId: input.itemId,
     durationSeconds: 0,

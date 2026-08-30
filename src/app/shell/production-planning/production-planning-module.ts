@@ -93,7 +93,12 @@ function isNaturalResourceGatheringNode(
     return false;
   }
 
-  return index.recipeById.get(node.recipeNode.recipeId)
+  const recipeId = node.recipeNode.recipeId;
+  if (recipeId === null) {
+    return false;
+  }
+
+  return index.recipeById.get(recipeId)
     ?.tags.includes(NATURAL_RESOURCE_GATHERING_RECIPE_TAG) === true;
 }
 

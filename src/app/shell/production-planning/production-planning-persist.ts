@@ -43,6 +43,7 @@ export function hookPlannerIndexedDbPersistence(
         store.supplies = supplies;
         store.displayMode = normalizeDisplayMode(persisted.displayMode);
         store.viewMode = normalizeViewMode(persisted.viewMode);
+        store.useModules = persisted.useModules;
         store.recipeChoices = { ...persisted.recipeChoices };
         store.sourceConfig = sourceConfig;
         store.session = normalizePlannerSessionState(persisted.session);
@@ -99,6 +100,7 @@ function toPersistedState(
     supplies: store.supplies.map(clonePort),
     displayMode: store.displayMode,
     viewMode: store.viewMode,
+    useModules: store.useModules,
     recipeChoices: { ...store.recipeChoices },
     recipeChoicesDemandSignature: createProductionPlanningDemandSignature(store),
     sourceConfig: { ...store.sourceConfig },
@@ -109,11 +111,13 @@ function toPersistedState(
 export function createProductionPlanningDemandSignature(state: {
   targets: readonly ProductionPlanningPort[];
   supplies: readonly ProductionPlanningPort[];
+  useModules: boolean;
   sourceConfig: ProductionPlanningSourceConfig;
 }): string {
   return JSON.stringify({
     targets: normalizeDemandPortsForSignature(state.targets),
     supplies: normalizeDemandPortsForSignature(state.supplies),
+    useModules: state.useModules,
     sourceConfig: {
       waterPolicy: state.sourceConfig.waterPolicy,
       acidPolicy: state.sourceConfig.acidPolicy,
