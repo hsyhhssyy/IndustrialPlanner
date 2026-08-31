@@ -1355,7 +1355,7 @@ describe("GenericDeviceSprite", () => {
       tint: 0x666666,
       mask: null,
       texture: {
-        id: "/textures/scanline-45deg-50opacity.png",
+        id: "/textures/scanline-45deg-50opacity.webp",
       },
     })
     expect(previewBorderGraphics?.strokeCalls).toContainEqual({
@@ -1472,7 +1472,7 @@ describe("GenericDeviceSprite", () => {
       tint: 0x666666,
       mask: null,
       texture: {
-        id: "/textures/scanline-45deg-50opacity.png",
+        id: "/textures/scanline-45deg-50opacity.webp",
       },
     })
   })

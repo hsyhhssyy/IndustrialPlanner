@@ -1,4 +1,4 @@
-import { mkdir, readdir } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -7,6 +7,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultSourceDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprites');
 const defaultOutputDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
+const defaultOverrideDirectory = path.join(projectRoot, 'resources', 'device-sprite-mask-overrides');
 
 async function collectWebpFiles(directoryPath) {
   const entries = await readdir(directoryPath, { withFileTypes: true });
@@ -47,11 +48,26 @@ function createMaskBuffer(sourceBuffer, width, height, channels) {
   return maskBuffer;
 }
 
-async function convertSpriteToMask(sourceFilePath, sourceDirectory, outputDirectory) {
+async function fileExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function convertSpriteToMask(sourceFilePath, sourceDirectory, outputDirectory, overrideDirectory) {
   const relativeFilePath = path.relative(sourceDirectory, sourceFilePath);
   const outputFilePath = path.join(outputDirectory, relativeFilePath);
+  const overrideFilePath = path.join(overrideDirectory, relativeFilePath);
 
   await mkdir(path.dirname(outputFilePath), { recursive: true });
+
+  if (await fileExists(overrideFilePath)) {
+    await copyFile(overrideFilePath, outputFilePath);
+    return { outputFilePath, source: 'override' };
+  }
 
   const { data, info } = await sharp(sourceFilePath)
     .ensureAlpha()
@@ -69,12 +85,13 @@ async function convertSpriteToMask(sourceFilePath, sourceDirectory, outputDirect
     .webp({ lossless: true })
     .toFile(outputFilePath);
 
-  return outputFilePath;
+  return { outputFilePath, source: 'generated' };
 }
 
 async function main() {
   const sourceDirectory = path.resolve(process.argv[2] ?? defaultSourceDirectory);
   const outputDirectory = path.resolve(process.argv[3] ?? defaultOutputDirectory);
+  const overrideDirectory = path.resolve(process.argv[4] ?? defaultOverrideDirectory);
   const sourceFiles = await collectWebpFiles(sourceDirectory);
 
   if (sourceFiles.length === 0) {
@@ -82,11 +99,20 @@ async function main() {
     return;
   }
 
+  let overrideCount = 0;
   for (const sourceFilePath of sourceFiles) {
-    await convertSpriteToMask(sourceFilePath, sourceDirectory, outputDirectory);
+    const result = await convertSpriteToMask(
+      sourceFilePath,
+      sourceDirectory,
+      outputDirectory,
+      overrideDirectory,
+    );
+    if (result.source === 'override') {
+      overrideCount += 1;
+    }
   }
 
-  console.log(`Generated ${sourceFiles.length} sprite masks in ${outputDirectory}`);
+  console.log(`Generated ${sourceFiles.length - overrideCount} sprite masks and copied ${overrideCount} overrides in ${outputDirectory}`);
 }
 
 main().catch((error) => {

@@ -6,7 +6,7 @@ import sharp from 'sharp';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
 const outputFilePath = path.resolve(
-  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'flow-glow.png'),
+  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'flow-glow.webp'),
 );
 
 const TEXTURE_WIDTH = 512;
@@ -76,7 +76,7 @@ async function main() {
       channels: 4,
     },
   })
-    .png()
+    .webp({ lossless: true, effort: 6 })
     .toFile(outputFilePath);
 
   console.log(`Generated flow-glow texture (${TEXTURE_WIDTH}×${TEXTURE_HEIGHT}) at ${outputFilePath}`);

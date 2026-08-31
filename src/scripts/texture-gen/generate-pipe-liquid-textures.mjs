@@ -6,8 +6,12 @@ import sharp from 'sharp';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..', '..', '..');
 
-const SPRITE_DIR = path.join(PROJECT_ROOT, 'public', 'blueprint-view', 'sprites');
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'public', 'textures');
+const SPRITE_DIR = path.resolve(
+  process.argv[2] ?? path.join(PROJECT_ROOT, 'public', 'blueprint-view', 'sprites'),
+);
+const OUTPUT_DIR = path.resolve(
+  process.argv[3] ?? path.join(PROJECT_ROOT, 'public', 'textures'),
+);
 const CELL_SIZE = 128;
 
 // 亮度阈值：介于这两个值之间的像素视为内腔（排除纯黑管壁和纯白背景）
@@ -20,22 +24,22 @@ async function main() {
   // --- 直管液体贴图：内腔矩形 y=53~76，全宽 ---
   const straightRect = `<rect x="0" y="53" width="128" height="24" fill="white"/>`;
   const straightSvg = `<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">${straightRect}</svg>`;
-  const straightPath = path.join(OUTPUT_DIR, 'pipe_straight_1x1_liquid.png');
-  await sharp(Buffer.from(straightSvg)).png().toFile(straightPath);
+  const straightPath = path.join(OUTPUT_DIR, 'pipe_straight_1x1_liquid.webp');
+  await sharp(Buffer.from(straightSvg)).webp({ lossless: true, effort: 6 }).toFile(straightPath);
   console.log(`  ✓ ${path.relative(PROJECT_ROOT, straightPath)}`);
 
   // --- 弯管液体贴图：从任意一个弯管贴图检测内腔 ---
   // 两个弯管的内腔形状完全相同（差异仅在外壁），贴图可共用
-  const turnSpritePath = path.join(SPRITE_DIR, 'pipe_turn_cw_1x1.png');
+  const turnSpritePath = path.join(SPRITE_DIR, 'pipe_turn_cw_1x1.webp');
   const turnBuffer = await generateTurnLiquidBuffer(turnSpritePath);
 
-  const turnCwPath = path.join(OUTPUT_DIR, 'pipe_turn_cw_1x1_liquid.png');
-  const turnCcwPath = path.join(OUTPUT_DIR, 'pipe_turn_ccw_1x1_liquid.png');
+  const turnCwPath = path.join(OUTPUT_DIR, 'pipe_turn_cw_1x1_liquid.webp');
+  const turnCcwPath = path.join(OUTPUT_DIR, 'pipe_turn_ccw_1x1_liquid.webp');
 
   await sharp(turnBuffer, { raw: { width: CELL_SIZE, height: CELL_SIZE, channels: 4 } })
-    .png().toFile(turnCwPath);
+    .webp({ lossless: true, effort: 6 }).toFile(turnCwPath);
   await sharp(turnBuffer, { raw: { width: CELL_SIZE, height: CELL_SIZE, channels: 4 } })
-    .png().toFile(turnCcwPath);
+    .webp({ lossless: true, effort: 6 }).toFile(turnCcwPath);
 
   console.log(`  ✓ ${path.relative(PROJECT_ROOT, turnCwPath)}`);
   console.log(`  ✓ ${path.relative(PROJECT_ROOT, turnCcwPath)}`);

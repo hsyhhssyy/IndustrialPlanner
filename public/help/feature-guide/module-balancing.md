@@ -1,3 +1,3 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![占位图片](/help/__missing-tutorial-image__.webp)
 
 模块配平用于计算多阶段产线的输入输出比例。它适合处理多个生产模块互相供给的场景，帮助你确认每个模块应该建多少组、最终会缺什么或剩什么。

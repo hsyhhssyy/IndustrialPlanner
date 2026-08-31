@@ -173,7 +173,7 @@ export const FeedbackDialog = observer(function FeedbackDialog({
               </p>
             </div>
             <img
-              src="/qq-group-qrcode.png"
+              src="/qq-group-qrcode.webp"
               alt={t("feedbackDialog.qqgroup.qrcodeAlt")}
               className={cm(styles, "feedback-channel-card-qrcode")}
             />

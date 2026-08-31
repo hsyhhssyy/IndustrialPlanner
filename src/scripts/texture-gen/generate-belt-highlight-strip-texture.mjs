@@ -6,7 +6,7 @@ import sharp from 'sharp';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
 const outputFilePath = path.resolve(
-  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'belt-highlight-strip-texture.png'),
+  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'belt-highlight-strip-texture.webp'),
 );
 
 const TEXTURE_WIDTH = 256;
@@ -61,7 +61,7 @@ async function main() {
       channels: 4,
     },
   })
-    .png()
+    .webp({ lossless: true, effort: 6 })
     .toFile(outputFilePath);
 
   console.log(`Generated belt highlight strip texture (${TEXTURE_WIDTH}×${TEXTURE_HEIGHT}) at ${outputFilePath}`);

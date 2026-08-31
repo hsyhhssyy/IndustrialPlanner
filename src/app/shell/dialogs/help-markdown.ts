@@ -4,7 +4,7 @@ import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 export const FEATURE_GUIDE_INDEX_PATH = createPublicAssetUrl("help/feature-guide/index.json");
 export const CONFIG_GUIDE_INDEX_PATH = createPublicAssetUrl("help/config-guide/index.json");
-export const MISSING_HELP_TUTORIAL_IMAGE_PATH = createPublicAssetUrl("help/__missing-tutorial-image__.png");
+export const MISSING_HELP_TUTORIAL_IMAGE_PATH = createPublicAssetUrl("help/__missing-tutorial-image__.webp");
 
 export interface HelpTutorialImage {
   alt: string;

@@ -81,19 +81,10 @@ describe("TextureActions", () => {
     manager.destroy()
   })
 
-  it("prefix device-masks- maps to sprite-masks with webp fallback to png", async () => {
+  it("returns the fallback texture without requesting PNG when a device mask WebP fails", async () => {
     const maskKey = "device-masks-item_port_storager_1"
-    const maskTexture = createLoadedTextureMock("mask")
 
-    loadTexture.mockImplementation((path: string) => {
-      if (path === "/3d-top-view/sprite-masks/item_port_storager_1.webp") {
-        return Promise.reject(new Error("missing webp"))
-      }
-      if (path === "/3d-top-view/sprite-masks/item_port_storager_1.png") {
-        return Promise.resolve(maskTexture)
-      }
-      return Promise.reject(new Error("unexpected path"))
-    })
+    loadTexture.mockRejectedValue(new Error("missing webp"))
 
     const manager = createTextureActions({
       renderer: {} as never,
@@ -101,10 +92,36 @@ describe("TextureActions", () => {
     })
 
     const texture = await manager.getTexture(maskKey)
-    expect(texture).toBe(maskTexture)
+    expect(texture).toBeDefined()
+    expect(loadTexture).toHaveBeenCalledTimes(1)
     expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.webp")
-    expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.png")
 
+    manager.destroy()
+  })
+
+  it("maps every published raster resource family to a single WebP candidate", async () => {
+    const texture = createLoadedTextureMock("webp-only")
+    loadTexture.mockResolvedValue(texture)
+
+    const manager = createTextureActions({
+      renderer: {} as never,
+      app: null,
+    })
+
+    const cases = [
+      ["blueprint-sprite-item_port_storager_1", "/blueprint-view/sprites/item_port_storager_1.webp"],
+      ["blueprint-masks-item_port_storager_1", "/blueprint-view/sprite-masks/item_port_storager_1.webp"],
+      ["texture-scanline-45deg-50opacity", "/textures/scanline-45deg-50opacity.webp"],
+      ["device-masks-item_port_storager_1", "/3d-top-view/sprite-masks/item_port_storager_1.webp"],
+      ["item-icon-item_iron_ore", "/item-icons/item_iron_ore.webp"],
+    ] as const
+
+    for (const [key, expectedPath] of cases) {
+      await manager.getTexture(key)
+      expect(loadTexture).toHaveBeenLastCalledWith(expectedPath)
+    }
+
+    expect(loadTexture).toHaveBeenCalledTimes(cases.length)
     manager.destroy()
   })
 
@@ -122,7 +139,7 @@ describe("TextureActions", () => {
     const texture = await manager.getTexture(maskKey)
 
     expect(texture).toBe(maskTexture)
-    expect(loadTexture).toHaveBeenCalledWith("/blueprint-view/sprite-masks/item_port_storager_1.png")
+    expect(loadTexture).toHaveBeenCalledWith("/blueprint-view/sprite-masks/item_port_storager_1.webp")
 
     manager.destroy()
   })

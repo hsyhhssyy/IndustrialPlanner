@@ -114,6 +114,7 @@ class TextureActionsImpl implements TextureActions {
         return applyBitmapTextureConfig(texture, this.textureConfig)
       } catch {
         // Try next candidate
+        // AI-CORRECTION 2026-08-31: published raster 已收敛为单一 WebP 候选；失败后直接进入既有 fallback texture。
       }
     }
 
@@ -127,12 +128,12 @@ class TextureActionsImpl implements TextureActions {
 
     if (key.startsWith(PREFIX_BLUEPRINT_SPRITE)) {
       const id = key.slice(PREFIX_BLUEPRINT_SPRITE.length)
-      return [createPublicAssetUrl(`blueprint-view/sprites/${id}.png`)]
+      return [createPublicAssetUrl(`blueprint-view/sprites/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_BLUEPRINT_MASKS)) {
       const id = key.slice(PREFIX_BLUEPRINT_MASKS.length)
-      return [createPublicAssetUrl(`blueprint-view/sprite-masks/${id}.png`)]
+      return [createPublicAssetUrl(`blueprint-view/sprite-masks/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_TOP_VIEW_AVATAR)) {
@@ -147,20 +148,50 @@ class TextureActionsImpl implements TextureActions {
 
     if (key.startsWith(PREFIX_TEXTURE)) {
       const id = key.slice(PREFIX_TEXTURE.length)
-      return [createPublicAssetUrl(`textures/${id}.webp`), createPublicAssetUrl(`textures/${id}.png`)]
+      // AI-REMOVED 2026-08-31:
+      // Reason: public 发布位图已统一为 WebP，PNG 不再是有效运行时资源。
+      // Trigger: 用户要求删除 PNG 回退，避免 PWA 下载重复素材并让缺失 WebP fail-fast。
+      // Evidence: 当前浏览器目标支持 WebP；public raster policy 要求非 WebP 位图为 0。
+      // Replacement: 下方 WebP-only candidate。
+      // Risk: WebP 缺失时直接返回既有红色 fallback texture，不再静默加载旧 PNG。
+      // Human Review: Required
+      //
+      // Original code:
+      // return [createPublicAssetUrl(`textures/${id}.webp`), createPublicAssetUrl(`textures/${id}.png`)]
+      return [createPublicAssetUrl(`textures/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
       const id = key.slice(PREFIX_DEVICE_MASKS.length)
-      return [
-        createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`),
-        createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`),
-      ]
+      // AI-REMOVED 2026-08-31:
+      // Reason: top-view mask 已完成 WebP-only 迁移，同名 PNG 不是 active WebP 的等价回退。
+      // Trigger: 用户要求删除 PNG 回退并移除 PWA 重复下载。
+      // Evidence: 34 组 paired mask 解码像素均不同；8 个 PNG-only mask 已迁移为 lossless WebP。
+      // Replacement: 下方 WebP-only candidate。
+      // Risk: WebP 发布遗漏会显式进入 fallback texture，便于暴露产物错误。
+      // Human Review: Required
+      //
+      // Original code:
+      // return [
+      //   createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`),
+      //   createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`),
+      // ]
+      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_ITEM_ICON)) {
       const id = key.slice(PREFIX_ITEM_ICON.length)
-      return [createPublicAssetUrl(`item-icons/${id}.webp`), createPublicAssetUrl(`item-icons/${id}.png`)]
+      // AI-REMOVED 2026-08-31:
+      // Reason: item icon 发布边界只允许 WebP，不再维护不存在的 PNG 候选。
+      // Trigger: 用户要求全部 public 位图统一 WebP 并删除 PNG fallback。
+      // Evidence: public/item-icons 当前全部为 WebP，目标浏览器均支持 WebP。
+      // Replacement: 下方 WebP-only candidate。
+      // Risk: 缺失 WebP 时进入既有 fallback texture。
+      // Human Review: Required
+      //
+      // Original code:
+      // return [createPublicAssetUrl(`item-icons/${id}.webp`), createPublicAssetUrl(`item-icons/${id}.png`)]
+      return [createPublicAssetUrl(`item-icons/${id}.webp`)]
     }
 
     return []

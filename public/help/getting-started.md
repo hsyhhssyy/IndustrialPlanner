@@ -7,7 +7,7 @@
 
 ## 进入页面：先认识界面区域
 
-![界面区域总览](./getting-started/00-interface-overview.png)
+![界面区域总览](./getting-started/00-interface-overview.webp)
 
 教程里会反复提到这些区域：
 
@@ -31,7 +31,7 @@
 
 ### 第 0-1 步：打开基地面板
 
-![打开基地面板](./getting-started/01-open-base-panel.png)
+![打开基地面板](./getting-started/01-open-base-panel.webp)
 
 1. 把鼠标移动到最左侧的 **左工具栏**。
 2. 点击 **基地** 按钮。
@@ -45,7 +45,7 @@
 
 ### 第 0-2 步：选择天王坪援建点
 
-![选择天王坪援建点](./getting-started/02-select-tianwangping-dialog.png)
+![选择天王坪援建点](./getting-started/02-select-tianwangping-dialog.webp)
 
 1. 在「选择基地」对话框里找到 **天王坪援建点**。
 2. 单击 **天王坪援建点** 这张卡片，让它变成选中状态。
@@ -60,7 +60,7 @@
 
 ### 第 0-3 步：把协议核心和右侧空地都调整到视野里
 
-![协议核心初始位置](./getting-started/03-protocol-core-location.png)
+![协议核心初始位置](./getting-started/03-protocol-core-location.webp)
 
 1. 把鼠标移动到 **中央画布** 的空白网格上，不要按在协议核心上。
 2. 按住鼠标左键拖动画布，让协议核心完整出现在左侧。
@@ -74,7 +74,7 @@
 
 ### 第 0-4 步：选中协议核心并点击移动
 
-![移动协议核心演示](./getting-started/04-move-protocol-core.gif)
+![移动协议核心演示](./getting-started/04-move-protocol-core.webp)
 
 1. 把鼠标移动到协议核心中间位置。
 2. 单击鼠标左键一次，不要拖动。
@@ -119,7 +119,7 @@
 
 ### 第 1-1 步：打开放置模式并认识设备列表
 
-![打开放置模式](./getting-started/07-open-placement-panel.png)
+![打开放置模式](./getting-started/07-open-placement-panel.webp)
 
 1. 点击左工具栏里的 **放置模式**。
 2. 看左面板顶部的「操作」分类，这里有 **选择**、**批量选择**、**铺设传送带**、**铺设管道**。
@@ -134,7 +134,7 @@
 
 ### 第 1-2 步：掌握“点击按钮、移动预览、单击放下”的摆放动作
 
-![放置存取线源桩演示](./getting-started/08-place-source.gif)
+![放置存取线源桩演示](./getting-started/08-place-source.webp)
 
 1. 在左面板「仓库存取」分类里点击 **存取线源桩**。
 2. 点击按钮后，不要按住鼠标键拖动；只要把鼠标移到中央画布，建筑预览会跟着鼠标移动。
@@ -168,7 +168,7 @@
 
 ### 第 2-1 步：放下仓库取货口和分流器
 
-![放下取货口和分流器演示](./getting-started/09-place-unloader-splitter.gif)
+![放下取货口和分流器演示](./getting-started/09-place-unloader-splitter.webp)
 
 1. 如果当前不是放置模式，先点击左工具栏里的 **放置模式**。
 2. 在「仓库存取」分类里点击 **仓库取货口**。
@@ -185,7 +185,7 @@
 
 ### 第 2-2 步：给仓库取货口指定“息壤”
 
-![选择取货物品息壤演示](./getting-started/10-unloader-item-picker.gif)
+![选择取货物品息壤演示](./getting-started/10-unloader-item-picker.webp)
 
 1. 点击画布上的 **仓库取货口**，打开「设备属性」。
 2. 在「仓库物品链接」区域里，找到取货口的物品行。
@@ -209,7 +209,7 @@
 
 ### 第 3-1 步：放下清水设备并创建暗管链接
 
-![清水暗管创建链接演示](./getting-started/13-water-dark-pipe-link.gif)
+![清水暗管创建链接演示](./getting-started/13-water-dark-pipe-link.webp)
 
 1. 在「资源与电力」分类里点击 **抽水泵**。
 2. 把抽水泵放在产线左侧偏下的位置，单击左键放下。
@@ -229,7 +229,7 @@
 
 ### 第 3-2 步：铺清水管道并接上反应池
 
-![铺设清水管道演示](./getting-started/14-pipe-tool-water.gif)
+![铺设清水管道演示](./getting-started/14-pipe-tool-water.webp)
 
 1. 点击左面板「操作」里的 **铺设管道**。
 2. 在抽水泵输出侧单击一次，设定管道起点。
@@ -252,7 +252,7 @@
 
 ### 第 4-1 步：打开反应池配方选择
 
-![反应池配方选择](./getting-started/15-reactor-recipe-picker.png)
+![反应池配方选择](./getting-started/15-reactor-recipe-picker.webp)
 
 1. 点击画布上的 **反应池**，打开「设备属性」。
 2. 找到「配方状态」区域。
@@ -270,7 +270,7 @@
 
 ### 第 4-2 步：指定反应池两个液体输出
 
-![反应池输出端口配置](./getting-started/16-reactor-output-config.png)
+![反应池输出端口配置](./getting-started/16-reactor-output-config.webp)
 
 1. 保持反应池的「设备属性」打开。
 2. 向下找到「输出端口」区域。
@@ -293,7 +293,7 @@
 
 ### 第 5-1 步：放下污水暗管并配置槽位
 
-![污水暗管槽位配置](./getting-started/17-sewage-slot-config.png)
+![污水暗管槽位配置](./getting-started/17-sewage-slot-config.webp)
 
 1. 在「仓库存取」分类里点击 **暗管入口**，放在清水暗管下方或旁边，作为污水入口。
 2. 再点击 **暗管出口**，放在反应池附近，作为污水出口。
@@ -312,7 +312,7 @@
 
 ### 第 5-2 步：创建污水暗管链接并接到反应池
 
-![污水暗管链接和输入管道演示](./getting-started/18-sewage-dark-pipe-and-input.gif)
+![污水暗管链接和输入管道演示](./getting-started/18-sewage-dark-pipe-and-input.webp)
 
 1. 再次点击污水 **暗管入口**。
 2. 在「暗管链接」区域点击 **创建链接**。
@@ -329,7 +329,7 @@
 
 ### 第 5-3 步：放下废水处理机
 
-![放下废水处理机演示](./getting-started/18-place-wastewater-cleaner.gif)
+![放下废水处理机演示](./getting-started/18-place-wastewater-cleaner.webp)
 
 1. 在「基础生产」分类里点击 **废水处理机**。
 2. 把废水处理机放在反应池右下方或附近空地。
@@ -349,7 +349,7 @@
 
 ### 第 6-1 步：放下天有洪炉
 
-![放下天有洪炉演示](./getting-started/19-place-oven.gif)
+![放下天有洪炉演示](./getting-started/19-place-oven.webp)
 
 1. 在「合成制造」分类里点击 **天有洪炉**。
 2. 把天有洪炉放在反应池右上方的空地上。
@@ -364,7 +364,7 @@
 
 ### 第 6-2 步：放下协议存储箱
 
-![放下协议存储箱演示](./getting-started/20-place-storage.gif)
+![放下协议存储箱演示](./getting-started/20-place-storage.webp)
 
 1. 在「仓库存取」分类里点击 **协议存储箱**。
 2. 把协议存储箱放在天有洪炉产物输出侧附近。
@@ -385,7 +385,7 @@
 
 ### 第 7-1 步：从取货口铺到分流器
 
-![取货口到分流器传送带演示](./getting-started/22-belt-unloader-to-splitter.gif)
+![取货口到分流器传送带演示](./getting-started/22-belt-unloader-to-splitter.webp)
 
 1. 点击左面板「操作」里的 **铺设传送带**。
 2. 在仓库取货口输出侧单击一次，设定起点。
@@ -400,7 +400,7 @@
 
 ### 第 7-2 步：从分流器接到反应池
 
-![分流器到反应池传送带演示](./getting-started/23-belt-splitter-to-reactor.gif)
+![分流器到反应池传送带演示](./getting-started/23-belt-splitter-to-reactor.webp)
 
 1. 保持 **铺设传送带** 工具。
 2. 点击分流器向下的输出位置，作为支路起点。
@@ -414,7 +414,7 @@
 
 ### 第 7-3 步：从分流器接到天有洪炉
 
-![分流器到天有洪炉传送带演示](./getting-started/24-belt-splitter-to-oven.gif)
+![分流器到天有洪炉传送带演示](./getting-started/24-belt-splitter-to-oven.webp)
 
 1. 点击分流器右侧输出位置，作为主干起点。
 2. 移动鼠标到天有洪炉的物品输入侧。
@@ -427,7 +427,7 @@
 
 ### 第 7-4 步：从天有洪炉接到协议存储箱
 
-![天有洪炉到协议存储箱传送带演示](./getting-started/25-belt-oven-to-storage.gif)
+![天有洪炉到协议存储箱传送带演示](./getting-started/25-belt-oven-to-storage.webp)
 
 1. 点击天有洪炉产物输出侧，作为起点。
 2. 移动鼠标到协议存储箱输入侧。
@@ -441,7 +441,7 @@
 
 ### 第 7-5 步：连接两条废液管道
 
-![废液管道连接演示](./getting-started/26-waste-pipes-to-cleaner-and-oven.gif)
+![废液管道连接演示](./getting-started/26-waste-pipes-to-cleaner-and-oven.webp)
 
 1. 点击左面板「操作」里的 **铺设管道**。
 2. 从反应池的 **惰性壤晶废液** 输出端铺管道到废水处理机。
@@ -463,7 +463,7 @@
 
 ### 第 8-1 步：放下供电桩
 
-![放下供电桩演示](./getting-started/21-place-power.gif)
+![放下供电桩演示](./getting-started/21-place-power.webp)
 
 1. 在「资源与电力」分类里点击 **供电桩**。
 2. 把供电桩放在反应池、天有洪炉、废水处理机、抽水泵或暗管附近。
@@ -476,7 +476,7 @@
 
 ### 第 8-2 步：开始仿真并等待产出
 
-![基地仓库里出现重息壤](./getting-started/21-run-base-warehouse.png)
+![基地仓库里出现重息壤](./getting-started/21-run-base-warehouse.webp)
 
 1. 点击顶部工具条里的 **开始仿真**。
 2. 如果想更快看到结果，可以点击倍率按钮，把速度调高。
@@ -499,7 +499,7 @@
 
 ### 第 9-1 步：框选整条产线
 
-![框选整条产线并保存蓝图演示](./getting-started/22-save-blueprint-selection.gif)
+![框选整条产线并保存蓝图演示](./getting-started/22-save-blueprint-selection.webp)
 
 1. 如果仿真还在运行，可以先点击顶部工具条里的暂停或停止，避免画面一直变化。
 2. 点击左工具栏里的 **放置模式**。
@@ -517,7 +517,7 @@
 
 ### 第 9-2 步：填写并保存
 
-![保存蓝图对话框](./getting-started/23-save-blueprint-dialog.png)
+![保存蓝图对话框](./getting-started/23-save-blueprint-dialog.webp)
 
 1. 在「保存蓝图」对话框里点击 **蓝图名称** 输入框。
 2. 输入一个容易识别的名称，例如 **我的重息壤产线**。
@@ -539,7 +539,7 @@
 
 ### 第 10-1 步：从用户蓝图里打开并摆放
 
-![摆放用户蓝图](./getting-started/24-place-user-blueprint.png)
+![摆放用户蓝图](./getting-started/24-place-user-blueprint.webp)
 
 1. 点击左工具栏里的 **蓝图模式**。
 2. 在左面板里点击 **用户蓝图**。

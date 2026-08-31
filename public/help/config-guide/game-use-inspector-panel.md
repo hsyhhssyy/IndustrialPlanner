@@ -1,4 +1,4 @@
-![使用右侧面板与对话框对比](./game-use-inspector-panel.png)
+![使用右侧面板与对话框对比](./game-use-inspector-panel.webp)
 
 左侧为关闭此选项时，选中设备弹出对话框形式的设备属性。右侧为开启此选项时，设备属性以右侧面板形式展示。
 

@@ -11,7 +11,7 @@ const { fetchHelpTutorialPagesMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/app/shell/dialogs/help-markdown", () => ({
-  MISSING_HELP_TUTORIAL_IMAGE_PATH: "/help/__missing-tutorial-image__.png",
+  MISSING_HELP_TUTORIAL_IMAGE_PATH: "/help/__missing-tutorial-image__.webp",
   fetchHelpTutorialPages: fetchHelpTutorialPagesMock,
 }));
 
@@ -56,7 +56,7 @@ describe("MarkdownTutorialOverlay", () => {
     fetchHelpTutorialPagesMock.mockResolvedValueOnce([
       {
         image: {
-          src: "/help/tutorial-a.png",
+          src: "/help/tutorial-a.webp",
           alt: "教程图 A",
           title: null,
         },

@@ -1,3 +1,3 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![占位图片](/help/__missing-tutorial-image__.webp)
 
 物品百科用于浏览和查询物品、设备、配方的详细信息。需要确认某个物品来自哪里、会被哪些配方消耗，或设备支持哪些生产流程时，可以从这里快速定位。

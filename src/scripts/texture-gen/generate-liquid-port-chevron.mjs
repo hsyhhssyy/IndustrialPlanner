@@ -163,7 +163,9 @@ function resolveOutputDirectory() {
 
 async function renderTexture(outputFilePath, polygons, appearance) {
   await mkdir(path.dirname(outputFilePath), { recursive: true });
-  await sharp(Buffer.from(createSvgMarkup(polygons, appearance))).png().toFile(outputFilePath);
+  await sharp(Buffer.from(createSvgMarkup(polygons, appearance)))
+    .webp({ lossless: true, effort: 6 })
+    .toFile(outputFilePath);
 }
 
 // =============================================================================
@@ -171,12 +173,12 @@ async function renderTexture(outputFilePath, polygons, appearance) {
 // =============================================================================
 const TEXTURES = [
   // PC 版本
-  { fileName: 'liquid-port-chevron-input.png',  polygons: LIQUID_DOWN_POLYGONS },
-  { fileName: 'liquid-port-chevron-output.png', polygons: LIQUID_UP_POLYGONS },
+  { fileName: 'liquid-port-chevron-input.webp',  polygons: LIQUID_DOWN_POLYGONS },
+  { fileName: 'liquid-port-chevron-output.webp', polygons: LIQUID_UP_POLYGONS },
   // Mobile 版本
   // AI-CORRECTION 2026-06-18: 移动端参考游戏实机效果增加圆角轮廓与柔光，保持液体端口语义的同时统一视觉质感。
-  { fileName: 'liquid-port-chevron-input-mobile.png',  polygons: LIQUID_DOWN_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
-  { fileName: 'liquid-port-chevron-output-mobile.png', polygons: LIQUID_UP_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
+  { fileName: 'liquid-port-chevron-input-mobile.webp',  polygons: LIQUID_DOWN_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
+  { fileName: 'liquid-port-chevron-output-mobile.webp', polygons: LIQUID_UP_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
 ];
 
 async function main() {

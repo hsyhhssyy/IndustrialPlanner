@@ -104,7 +104,7 @@ export default defineConfig({
       registerType: "prompt",
       scope: "./",
       manifestFilename: "manifest.webmanifest",
-      includeAssets: ["pwa-icon.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
+      includeAssets: ["pwa-icon.svg", "pwa-icon-192.webp", "pwa-icon-512.webp"],
       manifest: {
         name: "集成工业仿真",
         short_name: "工业仿真",
@@ -117,15 +117,15 @@ export default defineConfig({
         theme_color: "#15231f",
         icons: [
           {
-            src: "pwa-icon-192.png",
+            src: "pwa-icon-192.webp",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/webp",
             purpose: "any maskable",
           },
           {
-            src: "pwa-icon-512.png",
+            src: "pwa-icon-512.webp",
             sizes: "512x512",
-            type: "image/png",
+            type: "image/webp",
             purpose: "any maskable",
           },
           {
@@ -137,7 +137,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,png,webp,svg,gif,jpg,jpeg,json,webmanifest,md}"],
+        globPatterns: ["**/*.{js,css,html,webp,svg,json,webmanifest,md}"],
         globIgnores: [
           "**/sw.js",
           "**/workbox-*.js",
@@ -146,6 +146,7 @@ export default defineConfig({
           // Trigger: 用户要求不做实时缓存，而是安装后真正离线可用。
           // Evidence: public/changelog 下存在图片资源；旧 globIgnores 会让这些资源永远不进入预缓存。
           // Replacement: globPatterns 已覆盖 gif/png/jpg/jpeg/webp/svg，SW 统一 cache-first。
+          // AI-CORRECTION 2026-08-31: public 发布位图已统一为 WebP，当前 globPatterns 仅需覆盖 webp/svg 图片格式。
           // Risk: 离线包体积增加；通过哈希复用和并发下载降低更新成本。
           // Human Review: Required
           //

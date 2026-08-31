@@ -1,3 +1,3 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![占位图片](/help/__missing-tutorial-image__.webp)
 
 产线规划用于分析物品的生产链条和消耗关系。选择目标产物后，可以逐层查看它依赖的原料、半成品和设备，适合在正式铺设前估算整条产线。

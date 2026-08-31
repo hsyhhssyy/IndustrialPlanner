@@ -1,4 +1,4 @@
-![显示手势测试窗口对比](./debug-show-gesture-diagnostics-window.png)
+![显示手势测试窗口对比](./debug-show-gesture-diagnostics-window.webp)
 
 开启后会显示用于测试鼠标、键盘和触控输入的诊断窗口。它主要服务调试，不建议在正常规划时保持开启。
 

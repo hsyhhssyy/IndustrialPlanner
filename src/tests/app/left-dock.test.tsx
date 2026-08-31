@@ -321,10 +321,10 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-entity-variant-mode-icon")).toHaveLength(7);
     expect(gasVariantTrigger?.title).toBe("气体模式");
     expect(gasVariantIcon?.style.maskImage).toContain(
-      "/assets/machine-mode-icons/icon_port_gastrans.png",
+      "/assets/machine-mode-icons/icon_port_gastrans.webp",
     );
     expect(normalVariantIcon?.style.maskImage).toContain(
-      "/assets/machine-mode-icons/icon_port_normal.png",
+      "/assets/machine-mode-icons/icon_port_normal.webp",
     );
     expect(
       visiblePanel.querySelector('[data-ui-button-id="placement-transmuter_2_solidtrans"]'),
@@ -428,8 +428,8 @@ describe("Left dock panel switching", () => {
       container.querySelectorAll<HTMLElement>(".placement-variant-menu-icon .placement-entity-variant-mode-icon"),
     ).map((icon) => icon.style.maskImage);
     expect(menuIconMasks).toEqual([
-      expect.stringContaining("/assets/machine-mode-icons/icon_port_normal.png"),
-      expect.stringContaining("/assets/machine-mode-icons/icon_port_liquid.png"),
+      expect.stringContaining("/assets/machine-mode-icons/icon_port_normal.webp"),
+      expect.stringContaining("/assets/machine-mode-icons/icon_port_liquid.webp"),
     ]);
 
     const liquidItem = container.querySelector(

@@ -181,7 +181,7 @@ export async function renderPortChevronTexture({ outputFilePath, polygons }) {
   await mkdir(path.dirname(outputFilePath), { recursive: true });
 
   await sharp(Buffer.from(createSvgMarkup({ polygons })))
-    .png()
+    .webp({ lossless: true, effort: 6 })
     .toFile(outputFilePath);
 }
 

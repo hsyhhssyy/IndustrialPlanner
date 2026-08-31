@@ -9,10 +9,12 @@
  * 2. 按 DEVICE_SPRITE_MAPPINGS 映射为运行时使用的 spriteId。
  * 3. 输出无损 WebP 精灵图到 public/3d-top-view/sprites。
  * 4. 基于原图 alpha 通道生成对应的遮罩图到 public/3d-top-view/sprite-masks。
+ * AI-CORRECTION 2026-08-31: 13 个定制遮罩优先复制 resources/device-sprite-mask-overrides 中的 WebP，其余遮罩继续由 alpha 生成。
  *
  * 用法：
  *   node src/scripts/sync-device-sprites.mjs [sourceDir] [spriteDir] [maskDir]
  *   node src/scripts/sync-device-sprites.mjs --blueprint
+ * AI-CORRECTION 2026-08-31: blueprint 模式可追加 [spriteDir] [maskDir]，用于隔离验证 WebP 生成结果。
  *
  * 参数：
  * - sourceDir: 原始 PNG 目录，默认 resources/device-sprite-original
@@ -21,7 +23,7 @@
  * - --blueprint: 为 public/blueprint-view/sprites 下的蓝图精灵生成 mask
  */
 
-import { mkdir, readdir } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -31,6 +33,7 @@ const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultSourceDirectory = path.join(projectRoot, 'resources', 'device-sprite-original');
 const defaultSpriteDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprites');
 const defaultMaskDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
+const defaultMaskOverrideDirectory = path.join(projectRoot, 'resources', 'device-sprite-mask-overrides');
 
 // 资源目录使用中文设备名，运行时资源使用 registry spriteId。
 // 三元组：[中文名, spriteId, rotation?]
@@ -103,7 +106,22 @@ function createMaskBuffer(sourceBuffer, width, height, channels) {
   return maskBuffer;
 }
 
-async function publishDeviceSprite(sourceFilePath, spriteOutputFilePath, maskOutputFilePath, rotation = 0) {
+async function fileExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function publishDeviceSprite(
+  sourceFilePath,
+  spriteOutputFilePath,
+  maskOutputFilePath,
+  maskOverrideFilePath,
+  rotation = 0,
+) {
   await mkdir(path.dirname(spriteOutputFilePath), { recursive: true });
   await mkdir(path.dirname(maskOutputFilePath), { recursive: true });
 
@@ -131,17 +149,21 @@ async function publishDeviceSprite(sourceFilePath, spriteOutputFilePath, maskOut
     .webp({ lossless: true, effort: 6 })
     .toFile(spriteOutputFilePath);
 
-  const maskBuffer = createMaskBuffer(data, info.width, info.height, info.channels);
+  if (await fileExists(maskOverrideFilePath)) {
+    await copyFile(maskOverrideFilePath, maskOutputFilePath);
+  } else {
+    const maskBuffer = createMaskBuffer(data, info.width, info.height, info.channels);
 
-  await sharp(maskBuffer, {
-    raw: {
-      width: info.width,
-      height: info.height,
-      channels: 4,
-    },
-  })
-    .webp({ lossless: true, effort: 6 })
-    .toFile(maskOutputFilePath);
+    await sharp(maskBuffer, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: 4,
+      },
+    })
+      .webp({ lossless: true, effort: 6 })
+      .toFile(maskOutputFilePath);
+  }
 
   return {
     width: info.width,
@@ -166,7 +188,7 @@ async function generateMaskOnly(sourceFilePath, maskOutputFilePath) {
       channels: 4,
     },
   })
-    .png()
+    .webp({ lossless: true, effort: 6 })
     .toFile(maskOutputFilePath);
 
   return {
@@ -175,26 +197,30 @@ async function generateMaskOnly(sourceFilePath, maskOutputFilePath) {
   };
 }
 
-async function processBlueprintMasks() {
-  const spriteDir = path.join(projectRoot, 'public', 'blueprint-view', 'sprites');
-  const maskDir = path.join(projectRoot, 'public', 'blueprint-view', 'sprite-masks');
+async function processBlueprintMasks(spriteDirectoryArgument, maskDirectoryArgument) {
+  const spriteDir = path.resolve(
+    spriteDirectoryArgument ?? path.join(projectRoot, 'public', 'blueprint-view', 'sprites'),
+  );
+  const maskDir = path.resolve(
+    maskDirectoryArgument ?? path.join(projectRoot, 'public', 'blueprint-view', 'sprite-masks'),
+  );
 
   const entries = await readdir(spriteDir, { withFileTypes: true });
-  const pngFiles = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.png'))
+  const webpFiles = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.webp'))
     .map((entry) => entry.name);
 
-  if (pngFiles.length === 0) {
-    console.log('No PNG files found in blueprint-view/sprites.');
+  if (webpFiles.length === 0) {
+    console.log('No WebP files found in blueprint-view/sprites.');
     return;
   }
 
-  console.log(`Found ${pngFiles.length} blueprint sprites. Generating masks...`);
+  console.log(`Found ${webpFiles.length} blueprint sprites. Generating masks...`);
 
-  for (const fileName of pngFiles) {
-    const spriteId = fileName.replace(/\.png$/, '');
+  for (const fileName of webpFiles) {
+    const spriteId = fileName.replace(/\.webp$/, '');
     const sourceFilePath = path.join(spriteDir, fileName);
-    const maskOutputFilePath = path.join(maskDir, `${spriteId}.png`);
+    const maskOutputFilePath = path.join(maskDir, `${spriteId}.webp`);
 
     const { width, height } = await generateMaskOnly(sourceFilePath, maskOutputFilePath);
     console.log(`  ${spriteId}: ${width}x${height}`);
@@ -207,7 +233,10 @@ async function main() {
   const isBlueprintMode = process.argv.includes('--blueprint');
 
   if (isBlueprintMode) {
-    await processBlueprintMasks();
+    const [spriteDirectoryArgument, maskDirectoryArgument] = process.argv
+      .slice(2)
+      .filter((argument) => argument !== '--blueprint');
+    await processBlueprintMasks(spriteDirectoryArgument, maskDirectoryArgument);
     return;
   }
 
@@ -220,10 +249,12 @@ async function main() {
     const sourceFilePath = path.join(sourceDirectory, sourceFileName);
     const spriteOutputFilePath = path.join(spriteDirectory, `${spriteId}.webp`);
     const maskOutputFilePath = path.join(maskDirectory, `${spriteId}.webp`);
+    const maskOverrideFilePath = path.join(defaultMaskOverrideDirectory, `${spriteId}.webp`);
     const { width, height } = await publishDeviceSprite(
       sourceFilePath,
       spriteOutputFilePath,
       maskOutputFilePath,
+      maskOverrideFilePath,
       rotation,
     );
 

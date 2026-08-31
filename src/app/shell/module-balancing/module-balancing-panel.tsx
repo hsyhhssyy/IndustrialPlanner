@@ -117,8 +117,8 @@ const CANVAS_FOLDER_DRAG_TYPE = "application/x-industrial-planner-module-balanci
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
 
 const DISPATCH_TICKET_ICON_SRCS = {
-  武陵: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_jinlong_coupon_hud.png"),
-  四号谷地: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_tundra_coupon_hud.png"),
+  武陵: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_jinlong_coupon_hud.webp"),
+  四号谷地: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_tundra_coupon_hud.webp"),
 } satisfies Record<ModuleBalancingDispatchTicketGroup["region"], string>;
 
 const CUSTOM_MODULE_COLORS = [

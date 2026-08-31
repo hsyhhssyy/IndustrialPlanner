@@ -110,7 +110,7 @@ async function renderTexture(outputFilePath, lines) {
   await mkdir(path.dirname(outputFilePath), { recursive: true });
   const raw = renderCrossToBuffer(lines);
   await sharp(raw, { raw: { width: TILE_SIZE, height: TILE_SIZE, channels: 4 } })
-    .png()
+    .webp({ lossless: true, effort: 6 })
     .toFile(outputFilePath);
 }
 
@@ -135,15 +135,15 @@ async function renderMobileTexture(outputFilePath, lines) {
     '</svg>',
   ].join('');
 
-  await sharp(Buffer.from(svg)).png().toFile(outputFilePath);
+  await sharp(Buffer.from(svg)).webp({ lossless: true, effort: 6 }).toFile(outputFilePath);
 }
 
 // =============================================================================
 // 主流程
 // =============================================================================
 const TEXTURES = [
-  { fileName: 'port-cross.png', lines: CROSS_PC_LINES },
-  { fileName: 'port-cross-mobile.png', lines: CROSS_MOBILE_LINES, mobileAppearance: true },
+  { fileName: 'port-cross.webp', lines: CROSS_PC_LINES },
+  { fileName: 'port-cross-mobile.webp', lines: CROSS_MOBILE_LINES, mobileAppearance: true },
 ];
 
 async function main() {

@@ -18,21 +18,21 @@ describe("infinite blueprint sprites", () => {
       {
         deviceId: "cheat_infinite_solid",
         spriteId: "cheat_infinite_solid",
-        iconAssetPath: "public/assets/machine-mode-icons/icon_port_solidtrans_infinite.png",
+        iconAssetPath: "public/assets/machine-mode-icons/icon_port_solidtrans_infinite.webp",
         repositoryAssetPath: "resources/blueprint-direct-sprites/cheat_infinite_solid.png",
         trimPx: 0,
       },
       {
         deviceId: "cheat_infinite_liquid",
         spriteId: "cheat_infinite_liquid",
-        iconAssetPath: "public/assets/machine-mode-icons/icon_port_liquidtrans_infinite.png",
+        iconAssetPath: "public/assets/machine-mode-icons/icon_port_liquidtrans_infinite.webp",
         repositoryAssetPath: "resources/blueprint-direct-sprites/cheat_infinite_liquid.png",
         trimPx: 0,
       },
       {
         deviceId: "cheat_infinite_gas",
         spriteId: "cheat_infinite_gas",
-        iconAssetPath: "public/assets/machine-mode-icons/icon_port_gastrans_infinite.png",
+        iconAssetPath: "public/assets/machine-mode-icons/icon_port_gastrans_infinite.webp",
         repositoryAssetPath: "resources/blueprint-direct-sprites/cheat_infinite_gas.png",
         trimPx: 0,
       },
@@ -47,9 +47,9 @@ describe("infinite blueprint sprites", () => {
     it(`publishes a port-free centered-icon sprite for ${mapping.deviceId}`, async () => {
       const icon = await readRgba(mapping.iconAssetPath);
       const resource = await readRgba(mapping.repositoryAssetPath);
-      const published = await readRgba(`public/blueprint-view/sprites/${mapping.spriteId}.png`);
+      const published = await readRgba(`public/blueprint-view/sprites/${mapping.spriteId}.webp`);
       const maskMetadata = await sharp(
-        path.resolve(PROJECT_ROOT, `public/blueprint-view/sprite-masks/${mapping.spriteId}.png`),
+        path.resolve(PROJECT_ROOT, `public/blueprint-view/sprite-masks/${mapping.spriteId}.webp`),
       ).metadata();
 
       expect({ width: icon.width, height: icon.height }).toEqual({

@@ -3187,13 +3187,13 @@ describe("WorkbenchApp", () => {
         title: "全新版本-v1.3.0",
         version: "1.3.0",
         kind: "main",
-        markdown: "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.png)",
+        markdown: "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.webp)",
       },
       "incremental/1.3.0/1.3.0.1.md": {
         title: "补丁更新-v1.3.0.1",
         version: "1.3.0.1",
         kind: "incremental",
-        markdown: "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.png)",
+        markdown: "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.webp)",
       },
     });
 
@@ -3219,8 +3219,8 @@ describe("WorkbenchApp", () => {
         .map((image) => image.getAttribute("src"))
         .sort(),
     ).toEqual([
-      "/changelog/images/v1.3.0/main.png",
-      "/changelog/images/v1.3.0/patch.png",
+      "/changelog/images/v1.3.0/main.webp",
+      "/changelog/images/v1.3.0/patch.webp",
     ]);
 
     const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));

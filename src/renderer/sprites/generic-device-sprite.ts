@@ -69,7 +69,7 @@ const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
 
-const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.png");
+const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp");
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
@@ -100,7 +100,7 @@ const SUPPRESSED_PIPE_COLOR = 0x448AFF;
 // const PREVIEW_BORDER_ALPHA = 0.5;
 
 // ---- Fallback 精灵纹理 ----
-const FALLBACK_SPRITE_TEXTURE_PATH = createPublicAssetUrl("textures/missing-sprite-texture.png");
+const FALLBACK_SPRITE_TEXTURE_PATH = createPublicAssetUrl("textures/missing-sprite-texture.webp");
 /** Fallback 纹理生成时每格像素密度（世界像素） */
 const FALLBACK_PX_PER_CELL = 128;
 /** Footprint 内收 padding（世界像素） */
@@ -971,6 +971,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   /**
    * 当设备 3D-top 精灵纹理加载失败时，使用 missing-sprite-texture.png 生成 fallback。
+   * AI-CORRECTION 2026-08-31: 当前 fallback 发布素材为 lossless WebP，路径是 missing-sprite-texture.webp。
    * 按 footprint 比例裁剪原图（保持高度，左右均匀裁切），内收 padding 后外描边。
    */
   private async loadFallbackTexture(activeLoadVersion: number): Promise<void> {

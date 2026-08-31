@@ -1,4 +1,4 @@
-![立即框选演示](./game-arknights-immediate-marquee.gif)
+![立即框选演示](./game-arknights-immediate-marquee.webp)
 
 开启后，从画布空白处按下并拖动会立即开始框选设备，不需要长按等待。这个选项主要影响鼠标操作。
 

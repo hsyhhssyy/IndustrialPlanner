@@ -212,7 +212,7 @@ async function createDeviceBlueprintSprite(definition) {
       ...liquidPortLayers,
       { input: borderOverlayBuffer, left: 0, top: 0 },
     ])
-    .png();
+    .webp({ lossless: true, effort: 6 });
 }
 
 function resolveOutputFilePath(deviceId, outputFileArgument) {
@@ -220,7 +220,7 @@ function resolveOutputFilePath(deviceId, outputFileArgument) {
     return path.resolve(outputFileArgument);
   }
 
-  return path.join(defaultOutputDirectory, `${deviceId}.png`);
+  return path.join(defaultOutputDirectory, `${deviceId}.webp`);
 }
 
 function resolveOutputDirectory(outputDirectoryArgument) {
@@ -267,7 +267,7 @@ async function generateBlueprintSprites(registryContract, outputDirectory) {
   const candidates = collectBlueprintGenerationCandidates(registryContract);
 
   for (const definition of candidates) {
-    const outputFilePath = path.join(outputDirectory, `${definition.spriteId}.png`);
+    const outputFilePath = path.join(outputDirectory, `${definition.spriteId}.webp`);
 
     try {
       await writeDeviceBlueprintSprite(definition, outputFilePath);

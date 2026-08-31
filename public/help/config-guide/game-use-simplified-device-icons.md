@@ -1,3 +1,3 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![占位图片](/help/__missing-tutorial-image__.webp)
 
 开启后，设备会使用更简化的图形显示。该文件保留给旧配置说明使用；当前设置项以「使用蓝图样式的设备图片」为准。

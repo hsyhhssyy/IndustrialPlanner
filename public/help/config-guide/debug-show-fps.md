@@ -1,4 +1,4 @@
-![显示 FPS/TPS 对比](./debug-show-fps.png)
+![显示 FPS/TPS 对比](./debug-show-fps.webp)
 
 开启后，画布右上角会显示可折叠的 FPS/TPS 指示面板，用来观察渲染和模拟是否稳定。
 

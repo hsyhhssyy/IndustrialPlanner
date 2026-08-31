@@ -91,12 +91,12 @@ describe("entity variant definitions", () => {
 
   it("uses MachineMode icons for every placement variant", () => {
     expect(createRegistryContract().entityVariantDefinitions).toMatchObject({
-      normal: { iconPath: "assets/machine-mode-icons/icon_port_normal.png" },
-      gas: { iconPath: "assets/machine-mode-icons/icon_port_gas.png" },
-      gastrans: { iconPath: "assets/machine-mode-icons/icon_port_gastrans.png" },
-      liquid: { iconPath: "assets/machine-mode-icons/icon_port_liquid.png" },
-      liquidtrans: { iconPath: "assets/machine-mode-icons/icon_port_liquidtrans.png" },
-      solidtrans: { iconPath: "assets/machine-mode-icons/icon_port_solidtrans.png" },
+      normal: { iconPath: "assets/machine-mode-icons/icon_port_normal.webp" },
+      gas: { iconPath: "assets/machine-mode-icons/icon_port_gas.webp" },
+      gastrans: { iconPath: "assets/machine-mode-icons/icon_port_gastrans.webp" },
+      liquid: { iconPath: "assets/machine-mode-icons/icon_port_liquid.webp" },
+      liquidtrans: { iconPath: "assets/machine-mode-icons/icon_port_liquidtrans.webp" },
+      solidtrans: { iconPath: "assets/machine-mode-icons/icon_port_solidtrans.webp" },
     });
   });
 

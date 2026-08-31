@@ -1,4 +1,4 @@
-![右侧面板随选择同步演示](./game-arknights-selection-right-dock-sync.gif)
+![右侧面板随选择同步演示](./game-arknights-selection-right-dock-sync.webp)
 
 开启「使用右侧面板显示设备属性」后，本选项会让右侧面板随当前选择自动同步。选择设备时，如果右侧面板未展开，会自动展开并显示该设备属性。
 

@@ -20,10 +20,10 @@ describe("public asset url", () => {
     window.history.replaceState(null, "", "/nested/prefix/v3/");
 
     expect(createPublicAssetUrl("help/getting-started.md")).toBe("./help/getting-started.md");
-    expect(createPublicAssetUrl("/textures/scanline-45deg-50opacity.png")).toBe("./textures/scanline-45deg-50opacity.png");
+    expect(createPublicAssetUrl("/textures/scanline-45deg-50opacity.webp")).toBe("./textures/scanline-45deg-50opacity.webp");
     expect(createDeviceIconAssetUrl("item_log_belt_01")).toBe("./device-icons/item_log_belt_01.webp");
     expect(createEntityIconAssetUrl("device-icons/custom-machine-icon.png")).toBe("./device-icons/custom-machine-icon.png");
-    expect(createEntityIconAssetUrl(undefined)).toBe("./textures/missing-sprite-texture.png");
+    expect(createEntityIconAssetUrl(undefined)).toBe("./textures/missing-sprite-texture.webp");
     expect(createItemIconAssetUrl("item_iron_ore")).toBe("./item-icons/item_iron_ore.webp");
     expect(createPublicAssetUrl("https://example.com/static.png")).toBe("https://example.com/static.png");
     expect(createAbsolutePublicAssetUrl("input-prompts/keyboard_w_outline.svg")).toBe(

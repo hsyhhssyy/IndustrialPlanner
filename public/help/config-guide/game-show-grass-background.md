@@ -1,4 +1,4 @@
-![草地背景对比](./game-show-grass-background.png)
+![草地背景对比](./game-show-grass-background.webp)
 
 开启后，画布背景会使用草地纹理。关闭后，背景更接近纯色网格，适合偏好更低视觉干扰的规划场景。
 

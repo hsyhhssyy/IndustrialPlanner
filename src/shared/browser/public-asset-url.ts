@@ -1,5 +1,5 @@
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
-const MISSING_ENTITY_ICON_ASSET_PATH = "textures/missing-sprite-texture.png";
+const MISSING_ENTITY_ICON_ASSET_PATH = "textures/missing-sprite-texture.webp";
 
 export function createPublicAssetUrl(path: string): string {
   if (URL_SCHEME_PATTERN.test(path) || path.startsWith("//")) {

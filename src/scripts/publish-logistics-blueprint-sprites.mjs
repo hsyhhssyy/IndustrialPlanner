@@ -25,7 +25,7 @@ async function main() {
       const sourceFilePath = mapping.repositoryAssetPath === undefined
         ? path.join(blueprintAssetDirectory, mapping.assetFileName)
         : path.resolve(projectRoot, mapping.repositoryAssetPath);
-      const outputFilePath = path.join(outputDirectory, `${mapping.spriteId}.png`);
+      const outputFilePath = path.join(outputDirectory, `${mapping.spriteId}.webp`);
 
       await publishTrimmedBlueprintSprite(
         sourceFilePath,
@@ -78,5 +78,5 @@ async function publishTrimmedBlueprintSprite(sourceFilePath, outputFilePath, tri
     });
   }
 
-  await pipeline.png().toFile(outputFilePath);
+  await pipeline.webp({ lossless: true, effort: 6 }).toFile(outputFilePath);
 }
