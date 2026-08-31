@@ -5,6 +5,7 @@ export interface ActivityDefinition {
   readonly id: string;
   readonly name: string;
   readonly icon: string;
+  readonly banner: string;
   readonly startTime?: number;
   readonly endTime?: number;
 }
@@ -20,6 +21,7 @@ export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
     id: ACTIVITY_LIMITED_FORMULA_1_ID,
     name: "集成援助·掌中救星",
     icon: "/item-icons/item_activity_xiranite_enr_hulu.webp",
+    banner: "/activity-banners/activity-limited-formula-1.webp",
     startTime: Date.parse("2026-04-28T00:00:00+08:00"),
     endTime: Date.parse("2026-05-19T00:00:00+08:00"),
   },
@@ -27,6 +29,7 @@ export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
     id: ACTIVITY_LIMITED_FORMULA_2_ID,
     name: "集成援助·泡泡出击",
     icon: "/item-icons/missing-item-icon.webp",
+    banner: "/activity-banners/activity-limited-formula-2.webp",
     startTime: Date.parse("2026-09-16T12:00:00+08:00"),
     endTime: Date.parse("2026-09-30T16:00:00+08:00"),
   },
@@ -45,6 +48,13 @@ export function isActivityOngoing(
   }
 
   return true;
+}
+
+export function resolveOngoingActivityDefinitions(
+  activities: readonly ActivityDefinition[] = ACTIVITY_DEFINITIONS,
+  now: number = Date.now(),
+): ActivityDefinition[] {
+  return activities.filter((activity) => isActivityOngoing(activity, now));
 }
 
 export function normalizeSelectedActivityIds(

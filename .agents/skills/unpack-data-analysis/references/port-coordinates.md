@@ -12,7 +12,7 @@
 
 ## 核心原则
 
-`buildings.buildingTable` 的端口位置和角色是 registry 默认朝向的逻辑真相源。解包三维坐标必须先按本页已校准的全局映射转换为项目二维坐标，不能原样抄入，也不能根据 `defaultRendererTemplate` 判断非默认变体需要反转输入和输出。
+`FactoryBuildingTable` 的端口位置和角色是 registry 默认朝向的逻辑真相源。解包三维坐标必须先按本页已校准的全局映射转换为项目二维坐标，不能原样抄入，也不能根据 `defaultRendererTemplate` 判断非默认变体需要反转输入和输出。
 
 1. `inputPorts` / `outputPorts` 表示端口角色；没有证据表明非默认 renderer 变体会统一反转角色。
 2. `position.x` / `position.z` 是游戏三维局部坐标中的平面位置，必须经过全局映射后才能与 registry 比较。
@@ -21,7 +21,7 @@
 
 ## 原始字段
 
-`buildings.buildingTable.<id>` 中的 `inputPorts` / `outputPorts`：
+`FactoryBuildingTable.<id>` 中的 `inputPorts` / `outputPorts`：
 
 - `position: { x, y, z }`：游戏三维局部坐标。
 - `position.y`：端口高度；通常不参与本项目 `localCellX/localCellY` 计算，但分析原始数据时仍需保留。
@@ -47,7 +47,7 @@
 
 ### 解包数据的全局归一化
 
-以已确认和解包数据一致的气液转换机 `transmuter_1_liquidtrans` 为校准锚点，`buildingTable` 中全部设备统一使用：
+以已确认和解包数据一致的气液转换机 `transmuter_1_liquidtrans` 为校准锚点，`FactoryBuildingTable` 中全部设备统一使用：
 
 ```text
 localCellX = range.width - 1 - position.x
@@ -63,7 +63,7 @@ localCellY = position.z
 | `position.z = 0` | N（北） |
 | `position.z = depth - 1` | S（南） |
 
-该映射是 `buildingTable` 到 registry 的项目级坐标约定，不按设备类型重新校准。设备精灵可能存在预处理旋转，但这只影响修改后的视觉验收，不改变逻辑端口对账结论。
+该映射是 `FactoryBuildingTable` 到 registry 的项目级坐标约定，不按设备类型重新校准。设备精灵可能存在预处理旋转，但这只影响修改后的视觉验收，不改变逻辑端口对账结论。
 
 端口位于角点时，仅凭坐标不能唯一决定 `edge`。朝向审计应先以“角色、`isPipe`、坐标”的多重集识别设备整体旋转；registry 的端口坐标和 `edge` 再作为同一整体一起旋转，不能用 `rotation.y` 为单个角点另造方向规则。
 
@@ -90,10 +90,10 @@ localCellY = position.z
 
 ## 分析步骤
 
-1. 通过 `buildingItemTable` 从物品 ID 找到真实 `buildingId`。
-2. 读取 `buildingTable[buildingId]` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
+1. 通过 `FactoryBuildingItemTable` 从物品 ID 找到真实 `buildingId`。
+2. 读取 `FactoryBuildingTable[buildingId]` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
 3. 用 `isPipe` 区分管道和传送带端口，保留 `inputPorts` / `outputPorts` 的角色语义。
-4. 对全部 `buildingTable` 记录应用全局映射，得到项目 `(localCellX, localCellY)`；不要逐设备重新校准。
+4. 对全部 `FactoryBuildingTable` 记录应用全局映射，得到项目 `(localCellX, localCellY)`；不要逐设备重新校准。
 5. 用“角色、`isPipe`、坐标”的多重集匹配 registry。多变体实体允许匹配原始 building 全部端口的子集，但不得改变角色或管道类型来凑结果。
 6. 按项目 `GridRotation` 约定（俯视坐标 Y 轴向下，90° 为顺时针）枚举 0°、90°、180°、270°。唯一非 0° 匹配表示 registry 默认朝向需要旋转；唯一 0° 匹配表示一致；多个匹配表示端口布局旋转对称，单靠端口不能确定视觉角度；无匹配表示映射、变体端口子集或 registry 相对布局存在其他问题。
 7. 把“解包标准端口旋转到当前 registry”的唯一匹配角记为 `A`：registry 端口及其视觉资源的修正角是 `-A mod 360`；为了保持既有设备在世界中的朝向，蓝图和基地文档中保存的设备旋转迁移量是 `+A mod 360`。不得把这两个方向混用。

@@ -784,6 +784,7 @@ const UI: Record<string, string> = {
     "topBar.device": "Device",
     "topBar.language": "Language",
     "topBar.leftPanel": "Left",
+    "topBar.ongoingActivity": "Current activity in progress: ",
     "topBar.rightPanel": "Right",
     "topBar.screen": "Screen",
     "topBar.settings": "Settings",

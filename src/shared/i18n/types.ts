@@ -774,6 +774,7 @@ export type UiKey =
   | "topBar.device"
   | "topBar.language"
   | "topBar.leftPanel"
+  | "topBar.ongoingActivity"
   | "topBar.rightPanel"
   | "topBar.screen"
   | "topBar.settings"

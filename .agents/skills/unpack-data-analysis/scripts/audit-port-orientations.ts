@@ -4,6 +4,12 @@ import { fileURLToPath } from "node:url";
 
 import { ENTITY_DEFINITIONS } from "../../../../src/registry/entity-definition";
 
+// @ts-expect-error 项目级只读脚本复用同技能目录下的 mjs 数据源实现，无需单独维护声明文件。
+import {
+  describeUnpackTableSource,
+  openUnpackTableSource,
+} from "./unpack-table-source.mjs";
+
 type OrthogonalRotation = 0 | 90 | 180 | 270;
 type PortDirection = "input" | "output" | "bidirectional";
 
@@ -73,11 +79,16 @@ function parseArguments(argv: readonly string[]): {
   );
   if (unknownOptions.length > 0 || positional.length > 1) {
     throw new Error(
-      "用法: audit-port-orientations.ts [导出文件路径] [--all] [--json]",
+      "用法: audit-port-orientations.ts <raw-table 来源目录 | legacy json-export 文件> [--all] [--json]",
+    );
+  }
+  if (positional.length === 0) {
+    throw new Error(
+      `必须显式指定解包来源；legacy 示例：${DEFAULT_EXPORT_PATH}`,
     );
   }
   return {
-    exportPath: resolve(PROJECT_ROOT, positional[0] ?? DEFAULT_EXPORT_PATH),
+    exportPath: resolve(PROJECT_ROOT, positional[0]),
     showAll: argv.includes("--all"),
     json: argv.includes("--json"),
   };
@@ -246,7 +257,7 @@ function audit(exportRoot: ExportRoot): {
 
 function printMarkdown(
   result: ReturnType<typeof audit>,
-  exportPath: string,
+  sourceDescription: string,
   showAll: boolean,
 ): void {
   const counts = new Map<AuditRecord["status"], number>([
@@ -260,7 +271,7 @@ function printMarkdown(
   }
 
   console.log("# 端口朝向审计\n");
-  console.log(`- 解包文件：${exportPath}`);
+  console.log(`- 解包来源：${sourceDescription}`);
   console.log(`- 已映射且双方有端口：${result.records.length}`);
   console.log(`- 需要旋转：${counts.get("changed")}`);
   console.log(`- 已一致：${counts.get("unchanged")}`);
@@ -286,11 +297,27 @@ function printMarkdown(
 }
 
 const options = parseArguments(process.argv.slice(2));
-const exportRoot = JSON.parse(readFileSync(options.exportPath, "utf8")) as ExportRoot;
+const source = openUnpackTableSource(
+  options.exportPath,
+  (filePath: string) => readFileSync(filePath, "utf8"),
+);
+const exportRoot: ExportRoot = {
+  buildings: {
+    buildingTable: source.readTable("FactoryBuildingTable") as ExportRoot["buildings"]["buildingTable"],
+  },
+};
 const result = audit(exportRoot);
 
 if (options.json) {
-  console.log(JSON.stringify({ exportPath: options.exportPath, ...result }, null, 2));
+  console.log(JSON.stringify({
+    source: {
+      kind: source.kind,
+      authority: source.authority,
+      sourceVersion: source.sourceVersion,
+      path: source.sourcePath,
+    },
+    ...result,
+  }, null, 2));
 } else {
-  printMarkdown(result, options.exportPath, options.showAll);
+  printMarkdown(result, describeUnpackTableSource(source), options.showAll);
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error 此脚本是直接由 Node 执行的 mjs，没有单独维护声明文件。
-import { buildExpectedDevices, compareDeviceRecords, generateDeviceI18n } from "../../scripts/compare-exported-devices.mjs";
+import { buildDeviceAnalysisInput, buildExpectedDevices, compareDeviceRecords, generateDeviceI18n } from "../../scripts/compare-exported-devices.mjs";
 
 function createExportFixture() {
   return {
@@ -45,6 +45,37 @@ describe("compare-exported-devices", () => {
       "transmuter_liquidtrans_0",
       "transmuter_liquidtrans_1",
     ]);
+  });
+
+  it("derives device names from lossless raw table i18n IDs", () => {
+    const tables = {
+      FactoryBuildingTable: {
+        normal_machine: {
+          name: { id: "6693873765078043271" },
+          defaultRendererTemplate: "normal__0",
+          rendererTemplateMap: {
+            normal__0: { machineModeType: "normal" },
+          },
+        },
+      },
+      FactoryBuildingItemTable: {
+        item_normal: { buildingId: "normal_machine", itemId: "item_normal" },
+      },
+      I18nTextTable_CN: { "6693873765078043271": "普通设备" },
+      I18nTextTable_EN: { "6693873765078043271": "Normal Machine" },
+    };
+    const input = buildDeviceAnalysisInput({
+      kind: "local",
+      readTable(tableName: keyof typeof tables) {
+        return tables[tableName];
+      },
+    });
+
+    expect(buildExpectedDevices(input).devices).toContainEqual(expect.objectContaining({
+      id: "normal_machine",
+      zhCN: "普通设备",
+      enUS: "Normal Machine",
+    }));
   });
 
   it("generates localized names from mode", () => {
@@ -106,7 +137,7 @@ describe("compare-exported-devices", () => {
     expect(comparison.removals).toContainEqual(expect.objectContaining({
       id: "item_normal_liquid",
       mode: "liquid",
-      templateId: "（导出文件中不存在）",
+      templateId: "（解包来源中不存在）",
     }));
   });
 });

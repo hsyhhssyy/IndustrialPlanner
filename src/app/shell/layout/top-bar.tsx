@@ -17,6 +17,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
@@ -43,8 +44,13 @@ import { cm } from "@/app/shell/shared/css-module-class";
 // Original code:
 // import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+import {
+  ACTIVITY_DEFINITIONS,
+  resolveOngoingActivityDefinitions,
+} from "@/shared/registry/activity-availability";
 import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 
+const ACTIVITY_STATUS_REFRESH_INTERVAL_MS = 60_000;
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
 const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 16] as const;
 
@@ -252,6 +258,74 @@ export const TimelineButton = observer(function TimelineButton({
   );
 });
 
+function MobileOngoingActivityStatus({ label }: { readonly label: string }) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const tooltipRef = useRef<HTMLSpanElement | null>(null);
+  const tooltipId = useId();
+
+  useEffect(() => {
+    if (!tooltipVisible) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        !(target instanceof Node)
+        || buttonRef.current?.contains(target)
+        || tooltipRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setTooltipVisible(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTooltipVisible(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [tooltipVisible]);
+
+  return (
+    <span className={cm(styles, "top-bar-ongoing-activity-mobile")}>
+      <button
+        aria-controls={tooltipVisible ? tooltipId : undefined}
+        aria-expanded={tooltipVisible}
+        aria-label={label}
+        className={cm(styles, "top-bar-ongoing-activity-button top-bar-icon-button")}
+        onClick={() => setTooltipVisible((visible) => !visible)}
+        ref={buttonRef}
+        title={label}
+        type="button"
+      >
+        <span className={cm(styles, "top-bar-toggle-icon")}>
+          <WorkbenchIcon kind="simulation" />
+        </span>
+        <span className={cm(styles, "sr-only")}>{label}</span>
+      </button>
+      {tooltipVisible ? (
+        <span
+          className={cm(styles, "top-bar-ongoing-activity-tooltip")}
+          id={tooltipId}
+          ref={tooltipRef}
+          role="tooltip"
+        >
+          {label}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export const TopBar = observer(function TopBar({
   appHost,
   isStandalone = false,
@@ -266,6 +340,24 @@ export const TopBar = observer(function TopBar({
     screenProfile,
     workbench: { topBarCollapsed },
   } = appHost.state;
+  const [activityNow, setActivityNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setActivityNow(Date.now());
+    }, ACTIVITY_STATUS_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const ongoingActivities = resolveOngoingActivityDefinitions(
+    ACTIVITY_DEFINITIONS,
+    activityNow,
+  );
+  const ongoingActivityLabel = ongoingActivities.length > 0
+    ? `${t("topBar.ongoingActivity")}${ongoingActivities.map((activity) => activity.name).join("、")}`
+    : null;
+  const isMobile = screenProfile.deviceClass === "mobile";
 
     // Reason: The right dock toggle controls were removed from TopBar.
   // Trigger: ESLint reported unused vars in TopBar.
@@ -302,14 +394,24 @@ export const TopBar = observer(function TopBar({
   return (
     <header className={cm(styles, "top-bar")}>
       <div className={cm(styles, "top-bar-title-block")}>
-        <div className={cm(styles, "top-bar-title")}>
-          {t("app.title")}
-          {window.__APP_VERSION__ ? (
-            <span className={cm(styles, "top-bar-version")}>{window.__APP_VERSION__}</span>
-          ) : (
-            <span className={cm(styles, "top-bar-version")}>(Dev)</span>
-          )}
+        <div className={cm(styles, "top-bar-title-stack")}>
+          <div className={cm(styles, "top-bar-title")}>
+            {t("app.title")}
+            {window.__APP_VERSION__ ? (
+              <span className={cm(styles, "top-bar-version")}>{window.__APP_VERSION__}</span>
+            ) : (
+              <span className={cm(styles, "top-bar-version")}>(Dev)</span>
+            )}
+          </div>
+          {ongoingActivityLabel !== null && !isMobile ? (
+            <div aria-live="polite" className={cm(styles, "top-bar-ongoing-activity-text")}>
+              {ongoingActivityLabel}
+            </div>
+          ) : null}
         </div>
+        {ongoingActivityLabel !== null && isMobile ? (
+          <MobileOngoingActivityStatus label={ongoingActivityLabel} />
+        ) : null}
         {/*
           AI-REMOVED 2026-08-19:
           Reason: 旧版从产品界面退出，不再向用户暴露返回入口。

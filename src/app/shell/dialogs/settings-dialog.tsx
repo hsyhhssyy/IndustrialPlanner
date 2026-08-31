@@ -1747,19 +1747,31 @@ function ActivitySelectionDialog({
           const isOngoing = isActivityOngoing(activity);
 
           return (
-            <label className={cm(styles, "activity-selection-row")} key={activity.id}>
-              <input
-                checked={isSelected}
-                onChange={(event) => onToggleActivity(activity.id, event.currentTarget.checked)}
-                type="checkbox"
+            <label
+              className={cm(styles, `activity-selection-row${isSelected ? " is-selected" : ""}`)}
+              key={activity.id}
+            >
+              <img
+                alt=""
+                draggable={false}
+                src={createPublicAssetUrl(activity.banner)}
               />
-              <img alt="" src={createPublicAssetUrl(activity.icon)} />
-              <span className={cm(styles, "activity-selection-row-copy")}>
-                <strong>{activity.name}</strong>
-                <span>{formatActivityTimeRange(activity.startTime, activity.endTime)}</span>
+              <span aria-hidden="true" className={cm(styles, "activity-selection-banner-tint")} />
+              <span className={cm(styles, "activity-selection-row-controls")}>
+                <input
+                  checked={isSelected}
+                  onChange={(event) => onToggleActivity(activity.id, event.currentTarget.checked)}
+                  type="checkbox"
+                />
+                <span className={cm(styles, "activity-selection-row-copy")}>
+                  <strong className={cm(styles, "sr-only")}>{activity.name}</strong>
+                  <span>{formatActivityTimeRange(activity.startTime, activity.endTime)}</span>
+                </span>
+                <span className={cm(styles, "activity-selection-row-badges")}>
+                  {isOngoing ? <span className={cm(styles, "activity-selection-badge")}>进行中</span> : null}
+                  {isEffective ? <span className={cm(styles, "activity-selection-badge")}>生效</span> : null}
+                </span>
               </span>
-              {isOngoing ? <span className={cm(styles, "activity-selection-badge")}>进行中</span> : null}
-              {isEffective ? <span className={cm(styles, "activity-selection-badge")}>生效</span> : null}
             </label>
           );
         })}

@@ -26,16 +26,77 @@
 .top-bar-title-block {
   display: flex;
   align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
+.top-bar-title-stack {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .top-bar-title {
+  flex: 0 0 auto;
+  min-width: 0;
   font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.top-bar-ongoing-activity-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+  color: var(--accent-strong);
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-bar-ongoing-activity-mobile {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.top-bar-ongoing-activity-button {
+  color: var(--accent-strong);
+}
+
+.top-bar-ongoing-activity-button[aria-expanded="true"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.top-bar-ongoing-activity-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border: 1px solid var(--floating-control-border);
+  border-radius: 8px;
+  background: var(--floating-control-bg);
+  color: var(--text-0);
+  box-shadow: 0 8px 24px var(--shadow-floating-control);
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: normal;
 }
 
 // AI-GENERATED 2026-05-20: CI build 写入的版本标签，紧跟标题显示。

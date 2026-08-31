@@ -4,9 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 
+import {
+  describeUnpackTableSource,
+  openUnpackTableSource,
+} from "../../.agents/skills/unpack-data-analysis/scripts/unpack-table-source.mjs";
+
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(SCRIPT_DIRECTORY, "../..");
-const DEFAULT_EXPORT_PATH = resolve(PROJECT_ROOT, ".temp/recipes-export.json");
+const DEFAULT_EXPORT_PATH = resolve(PROJECT_ROOT, ".temp/json-export.json");
 const ENTITY_SOURCE_PATH = resolve(PROJECT_ROOT, "src/registry/entity-definition.ts");
 const ZH_CN_SOURCE_PATH = resolve(PROJECT_ROOT, "src/shared/i18n/zh-cn/registry.ts");
 const EN_US_SOURCE_PATH = resolve(PROJECT_ROOT, "src/shared/i18n/en-us/registry.ts");
@@ -18,6 +23,7 @@ const MODE_I18N = Object.freeze({
   gas: { zhCN: "气体", enUS: "Gas" },
   liquid: { zhCN: "液体", enUS: "Liquid" },
   // recipes-export.json 当前还包含以下两种 mode；沿用项目已有领域含义。
+  // AI-CORRECTION 2026-08-31: 当前输入已改为 raw TableCfg 或 legacy json-export；两种来源仍包含以下 mode，原领域含义不变。
   solidtrans: { zhCN: "固体", enUS: "Solid" },
   gasliquid: { zhCN: "气液", enUS: "Gas/Liquid" },
 });
@@ -60,6 +66,66 @@ function resolveBaseNames(exportData, buildingId, building) {
   return {
     zhCN: readRequiredString(zhCN, `设备 ${buildingId} 的中文名`),
     enUS: readRequiredString(enUS, `设备 ${buildingId} 的英文名`),
+  };
+}
+
+function readRawI18nText(reference, i18nTable, label) {
+  const i18nReference = assertRecord(reference, `${label} i18n 引用`);
+  const id = i18nReference.id;
+  if (typeof id !== "string" && !Number.isSafeInteger(id)) {
+    throw new Error(`${label} i18n ID 必须是无损字符串或安全整数`);
+  }
+  if (String(id) === "0") return null;
+  return readRequiredString(i18nTable[String(id)], `${label} i18n 文本`);
+}
+
+export function buildDeviceAnalysisInput(source) {
+  if (source.kind === "legacy-json-export") {
+    return assertRecord(source.legacyRoot, "legacy json-export 根节点");
+  }
+
+  const buildingTable = assertRecord(
+    source.readTable("FactoryBuildingTable"),
+    "FactoryBuildingTable",
+  );
+  const buildingItemTable = assertRecord(
+    source.readTable("FactoryBuildingItemTable"),
+    "FactoryBuildingItemTable",
+  );
+  const zhCN = assertRecord(source.readTable("I18nTextTable_CN"), "I18nTextTable_CN");
+  const enUS = assertRecord(source.readTable("I18nTextTable_EN"), "I18nTextTable_EN");
+  const projectedBuildingTable = Object.fromEntries(
+    Object.entries(buildingTable).map(([buildingId, rawBuilding]) => {
+      const building = assertRecord(rawBuilding, `FactoryBuildingTable.${buildingId}`);
+      const zhCNName = readRawI18nText(building.name, zhCN, `${buildingId}.name.zhCN`);
+      const enUSName = readRawI18nText(building.name, enUS, `${buildingId}.name.enUS`);
+      if (zhCNName === null && enUSName === null) return [buildingId, building];
+      if (zhCNName === null || enUSName === null) {
+        throw new Error(`${buildingId} 的中英文名称 ID 状态不一致`);
+      }
+      return [buildingId, {
+        ...building,
+        _name: zhCNName,
+        _nameEn: enUSName,
+      }];
+    }),
+  );
+  const displayableBuildingItemTable = Object.fromEntries(
+    Object.entries(buildingItemTable).filter(([itemId, rawMapping]) => {
+      const buildingId = readRequiredString(
+        assertRecord(rawMapping, `FactoryBuildingItemTable.${itemId}`).buildingId,
+        `FactoryBuildingItemTable.${itemId}.buildingId`,
+      );
+      return typeof projectedBuildingTable[buildingId]?._name === "string";
+    }),
+  );
+
+  return {
+    buildings: {
+      buildingItemTable: displayableBuildingItemTable,
+      buildingTable: projectedBuildingTable,
+    },
+    i18n: { buildings: {} },
   };
 }
 
@@ -323,7 +389,7 @@ function resolveCurrentTemplate(entity, originalDeviceId, expectedById, template
   if (taggedMode && modeCandidates.length === 0) {
     return {
       mode: taggedMode,
-      templateId: "（导出文件中不存在）",
+      templateId: "（解包来源中不存在）",
     };
   }
   if (modeCandidates.length === 1) return modeCandidates[0];
@@ -463,13 +529,13 @@ function renderTable(rows) {
 export function renderComparisonReport(comparison, exportPath) {
   const consistent = comparison.removals.length === 0 && comparison.additions.length === 0;
   const scope = comparison.includeAllExported
-    ? "全部具备 buildingItem 映射和 renderer template 的导出设备"
+    ? "全部具备 buildingItem 映射、renderer template 和可解析名称的解包设备"
     : "当前 registry 已覆盖的原始设备族";
 
   return [
-    "# 设备导出对账",
+    "# 设备解包数据对账",
     "",
-    `- 导出文件：${exportPath}`,
+    `- 解包来源：${exportPath}`,
     `- 对账范围：${scope}`,
     `- 原始设备族：${comparison.comparedBuildingCount}`,
     `- 当前设备记录：${comparison.currentCount}`,
@@ -477,7 +543,7 @@ export function renderComparisonReport(comparison, exportPath) {
     `- 结果：${consistent ? "一致" : "不一致"}`,
     ...(comparison.includeAllExported || comparison.ignoredExportedBuildingCount === 0
       ? []
-      : [`- 未纳入的导出设备族：${comparison.ignoredExportedBuildingCount}（使用 --all-exported 可全部对账）`]),
+      : [`- 未纳入的解包设备族：${comparison.ignoredExportedBuildingCount}（使用 --all-exported 可全部对账）`]),
     "",
     `## 应移除的设备（${comparison.removals.length}）`,
     "",
@@ -491,11 +557,11 @@ export function renderComparisonReport(comparison, exportPath) {
 
 function printHelp() {
   console.log(`用法：
-  node src/scripts/compare-exported-devices.mjs [导出文件路径] [--all-exported]
+  node src/scripts/compare-exported-devices.mjs <raw-table 来源目录 | legacy json-export 文件> [--all-exported]
 
-默认导出文件：.temp/recipes-export.json
+必须显式选择来源；legacy 示例：${DEFAULT_EXPORT_PATH}
 默认只对账当前 registry 已覆盖的原始设备族。
---all-exported  对账导出文件中全部具备 buildingItem 映射和 renderer template 的设备。`);
+--all-exported  对账解包来源中全部具备 buildingItem 映射、renderer template 和可解析名称的设备。`);
 }
 
 function parseArguments(args) {
@@ -513,12 +579,15 @@ function parseArguments(args) {
     exportPath = resolve(PROJECT_ROOT, argument);
   }
 
-  return { exportPath: exportPath ?? DEFAULT_EXPORT_PATH, includeAllExported, help: false };
+  if (!exportPath) {
+    throw new Error(`必须显式指定解包来源；legacy 示例：${DEFAULT_EXPORT_PATH}`);
+  }
+  return { exportPath, includeAllExported, help: false };
 }
 
 async function resolveJsonPath(path) {
   if (extname(path).toLowerCase() === ".json") return path;
-  return resolve(path, "recipes-export.json");
+  return path;
 }
 
 export async function runComparison(args = process.argv.slice(2)) {
@@ -529,13 +598,13 @@ export async function runComparison(args = process.argv.slice(2)) {
   }
 
   const exportPath = await resolveJsonPath(options.exportPath);
-  const [exportText, entitySource, zhCNSource, enUSSource] = await Promise.all([
-    readFile(exportPath, "utf8"),
+  const source = openUnpackTableSource(exportPath);
+  const [entitySource, zhCNSource, enUSSource] = await Promise.all([
     readFile(ENTITY_SOURCE_PATH, "utf8"),
     readFile(ZH_CN_SOURCE_PATH, "utf8"),
     readFile(EN_US_SOURCE_PATH, "utf8"),
   ]);
-  const exportData = JSON.parse(exportText);
+  const exportData = buildDeviceAnalysisInput(source);
   const expectedData = buildExpectedDevices(exportData);
   const comparison = compareDeviceRecords({
     expectedData,
@@ -544,7 +613,7 @@ export async function runComparison(args = process.argv.slice(2)) {
     enUS: extractI18nRegistry(enUSSource, EN_US_SOURCE_PATH),
     includeAllExported: options.includeAllExported,
   });
-  console.log(renderComparisonReport(comparison, exportPath));
+  console.log(renderComparisonReport(comparison, describeUnpackTableSource(source)));
 
   return {
     consistent: comparison.removals.length === 0 && comparison.additions.length === 0,

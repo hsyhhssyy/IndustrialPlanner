@@ -60,9 +60,9 @@
 
 ## 解包数据
 
-本项目是游戏的仿真。游戏中的真实解包数据放置在 `.temp/json-export.json`，需要核对数据准确性时可以读取该文件参考。
+本项目是游戏的仿真。解包数据以 AKEData / 本地手动解包提供的原始 `TableCfg` 表结构为项目权威格式；本地 raw table 放置在 `.temp/unpack/` 下并携带来源 manifest。`.temp/json-export.json` 是可能有精度与字段损失的旧版聚合格式，只允许作为迁移期低权威来源。
 
-分析解包数据时必须使用 `unpack-data-analysis` skill，遵循其中的端口坐标与变体分析规范，不得自行推断坐标映射或端口反转。
+分析解包数据时必须使用 `unpack-data-analysis` skill，由用户选择 AKEData、本地 raw table 或旧版 json-export；遵循其中的数据源固定、无损读取、端口坐标与变体分析规范，不得自行推断坐标映射或端口反转。
 
 ---
 

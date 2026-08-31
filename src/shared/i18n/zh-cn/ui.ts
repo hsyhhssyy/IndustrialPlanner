@@ -777,6 +777,7 @@ const UI: Record<string, string> = {
     "topBar.device": "设备",
     "topBar.language": "语言",
     "topBar.leftPanel": "左侧",
+    "topBar.ongoingActivity": "当前活动进行中：",
     "topBar.rightPanel": "右侧",
     "topBar.screen": "屏幕",
     "topBar.settings": "设置",

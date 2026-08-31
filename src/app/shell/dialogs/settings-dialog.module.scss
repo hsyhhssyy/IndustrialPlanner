@@ -983,14 +983,34 @@
 }
 
 .activity-selection-row {
-  display: grid;
-  grid-template-columns: auto 36px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
+  position: relative;
+  display: block;
+  aspect-ratio: 5.5 / 1;
+  min-height: 88px;
+  overflow: hidden;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface-2);
+  cursor: pointer;
+  isolation: isolate;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.activity-selection-row:hover {
+  border-color: var(--line-strong);
+}
+
+.activity-selection-row:focus-within {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: 2px;
+}
+
+.activity-selection-row.is-selected {
+  border-color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
 }
 
 // ─── v2 数据迁移 ───
@@ -1186,17 +1206,64 @@
   width: 16px;
   height: 16px;
   margin: 0;
+  accent-color: var(--accent-strong);
 }
 
 .activity-selection-row img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.72) contrast(0.92) brightness(0.94);
+  transition: filter 160ms ease;
+  user-select: none;
+}
+
+.activity-selection-row:hover img {
+  filter: saturate(0.82) contrast(0.95) brightness(0.96);
+}
+
+.activity-selection-banner-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: transparent;
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: linear-gradient(
+      180deg,
+      transparent 58%,
+      color-mix(in srgb, var(--surface-2) 68%, transparent) 100%
+    );
+  }
+  pointer-events: none;
+}
+
+.activity-selection-row-controls {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 12px);
+  min-height: 28px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line) 76%, transparent);
+    background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  }
 }
 
 .activity-selection-row-copy {
-  display: grid;
-  gap: 2px;
+  display: block;
   min-width: 0;
 }
 
@@ -1213,17 +1280,27 @@
 }
 
 .activity-selection-row-copy span {
-  color: var(--text-1);
-  font-size: 0.78rem;
+  color: var(--text-0);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.activity-selection-row-badges {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .activity-selection-badge {
-  padding: 3px 6px;
+  padding: 2px 5px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--surface-3);
   color: var(--text-0);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 600;
   white-space: nowrap;
 }
