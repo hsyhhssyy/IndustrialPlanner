@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type PointerEvent } from "react";
+import { type CSSProperties, type PointerEvent } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -35,25 +35,25 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
     appHost.workspace.registry.entityDefinitions.map((definition) => [definition.id, definition]),
   );
 
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== "Escape") {
-        return;
-      }
-
-      event.preventDefault();
-      controller.cancel();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [controller, visible]);
+  // AI-REMOVED 2026-08-30:
+  // Reason: 重叠菜单不再绕过 GestureActionRouter 单独监听 Escape。
+  // Trigger: ST2-RQ-020 输入层 Route 统一。
+  // Evidence: hypergryph-overlap-entity-menu-guard 注册 overlap-entity-menu.cancel 固定 Route。
+  // Replacement: overlap-entity-menu.cancel Shortcut Route
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   if (!visible) return;
+  //   const handleKeyDown = (event: KeyboardEvent) => {
+  //     if (event.code !== "Escape") return;
+  //     event.preventDefault();
+  //     controller.cancel();
+  //   };
+  //   window.addEventListener("keydown", handleKeyDown);
+  //   return () => window.removeEventListener("keydown", handleKeyDown);
+  // }, [controller, visible]);
 
   if (!visible || position === null) {
     return null;

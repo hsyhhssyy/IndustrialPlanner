@@ -12,6 +12,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createRegistryContract } from "@/registry";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphEntityVariantSwitchGestureModule", () => {
   it("switches a single selected device from the inspector action button", () => {
@@ -36,22 +37,28 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     const marquee = createContext({ activeTool: "marquee", useInspectorPanel: true });
     const module = createHypergryphEntityVariantSwitchGestureModule();
 
-    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), panel.context)).toEqual({
-      status: "handled",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: panel.context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    })).toEqual({ status: "handled" });
     expect(panel.editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "selected-entity",
       "liquid_filling_pd_mc_1",
     );
 
-    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), dialog.context)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: dialog.context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    })).toEqual({ status: "ignored" });
     expect(dialog.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
 
-    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), marquee.context)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: marquee.context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    })).toEqual({ status: "ignored" });
     expect(marquee.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
   });
 

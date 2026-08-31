@@ -6,8 +6,11 @@ import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
   createHypergryphKeyboardViewportPanModule,
   type GestureActionContext,
+  type GestureMappingModule,
+  type KeyboardGestureEvent,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 // ─── 可控 RAF mock ───
 let rafCallbacks: Map<number, (now: number) => void>;
@@ -72,6 +75,14 @@ function keyUpEvent(
   modifiers: Partial<{ alt: boolean; ctrl: boolean; meta: boolean; shift: boolean }> = {},
 ) {
   return { ...keyEvent(code, key, modifiers), type: "key up" as const };
+}
+
+function handleShortcut(
+  module: GestureMappingModule<AppHost>,
+  context: GestureActionContext<AppHost>,
+  event: KeyboardGestureEvent,
+) {
+  return handleKeyboardShortcutThroughRouter({ module, context, event });
 }
 
 const PAN_SHORTCUT_CODE: Record<string, string> = {
@@ -210,7 +221,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    const downResult = module.handle(keyDownEvent("KeyW", "w"), context);
+    const downResult = handleShortcut(module, context, keyDownEvent("KeyW", "w"));
     expect(downResult).toEqual({ status: "handled" });
 
     // 首帧只记录基准时间
@@ -232,7 +243,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       const { context, moveViewportByClientPixelVector } = createContext({ gridCellPixelSize });
       const module = createHypergryphKeyboardViewportPanModule();
 
-      module.handle(keyDownEvent("KeyW", "w"), context);
+      handleShortcut(module, context, keyDownEvent("KeyW", "w"));
       advanceRafFrame(0);
       advanceRafFrame(1000);
 
@@ -241,7 +252,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
         endClientPixel: { x: 0, y: 1280 },
       });
 
-      module.handle(keyUpEvent("KeyW", "w"), context);
+      handleShortcut(module, context, keyUpEvent("KeyW", "w"));
     }
   });
 
@@ -257,7 +268,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       const { context, moveViewportByClientPixelVector } = createContext();
       const module = createHypergryphKeyboardViewportPanModule();
 
-      module.handle(keyDownEvent(code, key), context);
+      handleShortcut(module, context, keyDownEvent(code, key));
       advanceRafFrame(0);
       advanceRafFrame(1000);
 
@@ -278,9 +289,10 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       { shift: true },
     );
 
-    expect(module.handle(
-      keyDownEvent("KeyW", "w", { shift: true }),
+    expect(handleShortcut(
+      module,
       acceleratedContext,
+      keyDownEvent("KeyW", "w", { shift: true }),
     )).toEqual({ status: "handled" });
     advanceRafFrame(0);
     advanceRafFrame(1000);
@@ -295,22 +307,25 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(
-      keyDownEvent("KeyW", "w"),
+    handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["KeyW"]),
+      keyDownEvent("KeyW", "w"),
     );
     advanceRafFrame(0);
     advanceRafFrame(500);
 
-    expect(module.handle(
-      keyDownEvent("ShiftLeft", "Shift", { shift: true }),
+    expect(handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["KeyW", "ShiftLeft"], { shift: true }),
+      keyDownEvent("ShiftLeft", "Shift", { shift: true }),
     )).toEqual({ status: "ignored" });
     advanceRafFrame(1000);
 
-    expect(module.handle(
-      keyUpEvent("ShiftLeft", "Shift"),
+    expect(handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["KeyW"]),
+      keyUpEvent("ShiftLeft", "Shift"),
     )).toEqual({ status: "ignored" });
     advanceRafFrame(1500);
 
@@ -335,7 +350,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       const { context, moveViewportByClientPixelVector } = createContext();
       const module = createHypergryphKeyboardViewportPanModule();
 
-      module.handle(keyDownEvent(code, code), context);
+      handleShortcut(module, context, keyDownEvent(code, code));
       advanceRafFrame(0);
       advanceRafFrame(1000);
 
@@ -350,9 +365,10 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(
-      keyDownEvent("ArrowRight", "ArrowRight", { shift: true }),
+    handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["ShiftRight", "ArrowRight"], { shift: true }),
+      keyDownEvent("ArrowRight", "ArrowRight", { shift: true }),
     );
     advanceRafFrame(0);
     advanceRafFrame(1000);
@@ -367,8 +383,8 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(keyDownEvent("KeyW", "w"), context);
-    module.handle(keyDownEvent("KeyD", "d"), context);
+    handleShortcut(module, context, keyDownEvent("KeyW", "w"));
+    handleShortcut(module, context, keyDownEvent("KeyD", "d"));
     advanceRafFrame(0);
     advanceRafFrame(1000);
 
@@ -383,10 +399,10 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(keyDownEvent("KeyW", "w"), context);
-    module.handle(keyDownEvent("KeyD", "d"), context);
+    handleShortcut(module, context, keyDownEvent("KeyW", "w"));
+    handleShortcut(module, context, keyDownEvent("KeyD", "d"));
 
-    const upResult = module.handle(keyUpEvent("KeyD", "d"), context);
+    const upResult = handleShortcut(module, context, keyUpEvent("KeyD", "d"));
     expect(upResult).toEqual({ status: "handled" });
 
     advanceRafFrame(0);
@@ -398,7 +414,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       endClientPixel: { x: 0, y: 1280 },
     });
 
-    module.handle(keyUpEvent("KeyW", "w"), context);
+    handleShortcut(module, context, keyUpEvent("KeyW", "w"));
     // 全部松开后 RAF 被取消，后续帧不再移动
     expect(rafCallbacks.size).toBe(0);
     advanceRafFrame(2000);
@@ -409,17 +425,19 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(
-      keyDownEvent("KeyW", "w", { shift: true }),
+    handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["ShiftLeft", "KeyW"], { shift: true }),
+      keyDownEvent("KeyW", "w", { shift: true }),
     );
     advanceRafFrame(0);
     advanceRafFrame(1000);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
 
-    expect(module.handle(
-      keyUpEvent("KeyW", "w", { shift: true }),
+    expect(handleShortcut(
+      module,
       withKeyboardSnapshot(context, ["ShiftLeft"], { shift: true }),
+      keyUpEvent("KeyW", "w", { shift: true }),
     )).toEqual({ status: "handled" });
     expect(rafCallbacks.size).toBe(0);
   });
@@ -428,7 +446,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    module.handle(keyDownEvent("KeyW", "w"), context);
+    handleShortcut(module, context, keyDownEvent("KeyW", "w"));
     advanceRafFrame(0);
     advanceRafFrame(1000);
     expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
@@ -445,7 +463,7 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphKeyboardViewportPanModule();
 
-    const result = module.handle(keyDownEvent("KeyP", "p"), context);
+    const result = handleShortcut(module, context, keyDownEvent("KeyP", "p"));
     expect(result).toEqual({ status: "ignored" });
     expect(rafCallbacks.size).toBe(0);
     expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();

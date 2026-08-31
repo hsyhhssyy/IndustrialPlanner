@@ -12,6 +12,22 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
   return {
     id: "hypergryph-save-blueprint-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [{
+      id: "save-blueprint.selection",
+      actionId: SHORTCUT_KEY.SAVE_BLUEPRINT,
+      binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SAVE_BLUEPRINT },
+      scope: { inputLayers: ["canvas"], activeTools: ["select", "marquee"] },
+      triggerPolicy: { kind: "exact" },
+      claimsBrowserDefault: true,
+      handle(_event, context) {
+        if (!canSaveSelectionAsBlueprint(context.workspace)) {
+          return { status: "ignored" };
+        }
+
+        context.appHost.saveBlueprintDialog.openSelection();
+        return { status: "handled" };
+      },
+    }],
     handle(event, context) {
       const activeTool = context.appHost.internalState.activeTool;
 
@@ -20,18 +36,26 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
       }
 
       switch (event.type) {
-        case "key down":
-          if (!context.appHost.internalActions.isShortcutFor(
-            SHORTCUT_KEY.SAVE_BLUEPRINT,
-            event.code,
-            event.key,
-            event.modifiers,
-          )) {
-            return { status: "ignored" };
-          }
-
-          context.appHost.saveBlueprintDialog.openSelection();
-          return { status: "handled" };
+        // AI-REMOVED 2026-08-30:
+        // Reason: 保存蓝图快捷键由 save-blueprint.selection Route 统一匹配和执行。
+        // Trigger: ST2-RQ-020 可执行 Shortcut Route 迁移。
+        // Evidence: Route 作用域覆盖 select/marquee，并保留 canSaveSelectionAsBlueprint 瞬时条件。
+        // Replacement: shortcutRoutes[save-blueprint.selection] in this module
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // case "key down":
+        //   if (!context.appHost.internalActions.isShortcutFor(
+        //     SHORTCUT_KEY.SAVE_BLUEPRINT,
+        //     event.code,
+        //     event.key,
+        //     event.modifiers,
+        //   )) {
+        //     return { status: "ignored" };
+        //   }
+        //   context.appHost.saveBlueprintDialog.openSelection();
+        //   return { status: "handled" };
 
         case "ui-button-touch-tap":
           return isSaveBlueprintButton(event.uiButtonId)

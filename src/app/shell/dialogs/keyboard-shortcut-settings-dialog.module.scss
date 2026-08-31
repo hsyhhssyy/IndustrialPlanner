@@ -39,6 +39,21 @@
   text-align: center;
 }
 
+.keyboard-shortcut-group {
+  display: grid;
+}
+
+.keyboard-shortcut-group-title {
+  margin: 0;
+  padding: 9px 12px 6px;
+  border-bottom: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  color: var(--text-1);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
 .keyboard-shortcut-row {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(288px, auto);
@@ -201,6 +216,10 @@
     gap: 6px;
   }
 
+  .keyboard-shortcut-group-title {
+    padding-inline: 8px;
+  }
+
   .keyboard-shortcut-row {
     grid-template-columns: minmax(118px, 1fr) minmax(286px, auto);
     gap: 8px;
@@ -219,6 +238,10 @@
 }
 
 @media (max-height: 420px) {
+  .keyboard-shortcut-group-title {
+    padding-block: 6px 4px;
+  }
+
   .keyboard-shortcut-row {
     min-height: 44px;
     padding-block: 3px;

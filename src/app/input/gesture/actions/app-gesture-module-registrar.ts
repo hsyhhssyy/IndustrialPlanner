@@ -81,6 +81,7 @@ export class AppGestureModuleRegistrar {
         createGestureDiagnosticsModule(options.gestureDiagnostics),
       ),
     );
+    options.router.assertShortcutRouteIntegrity();
   }
 
   public dispose(): void {

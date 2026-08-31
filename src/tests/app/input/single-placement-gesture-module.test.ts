@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+// AI-REMOVED 2026-08-30:
+// Reason: 测试不再直接断言模块调用 isShortcutFor，SHORTCUT_KEY import 无剩余引用。
+// Trigger: ST2-RQ-020 测试迁移到 GestureActionRouter。
+// Evidence: ESLint @typescript-eslint/no-unused-vars。
+// Replacement: handleKeyboardShortcutThroughRouter in this test
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
@@ -17,6 +26,7 @@ import {
 import type { ClientPixelRect } from "@/domain/shared/client-pixel";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphSinglePlacementGestureModule", () => {
   it("enters mouse single-placement from a placement device button at the viewport center", () => {
@@ -73,7 +83,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Digit3", key: "3" }),
+    });
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
@@ -158,7 +172,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyG", key: "g" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyG", key: "g" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.runtime.selectingPlacementGroup).toBe("resourcePower");
@@ -171,7 +189,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Digit3", key: "3" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("single-placement");
@@ -196,7 +218,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       status: "ignored",
     });
 
-    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Digit3", key: "3" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("single-placement");
@@ -219,7 +245,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Digit0", key: "0" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Digit0", key: "0" }),
+    });
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
@@ -427,14 +457,13 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), keyboard.context)).toEqual({
-      status: "handled",
-    });
-    expect(keyboard.appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.ROTATE,
-      "KeyR",
-      "r",
-    );
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: keyboard.context,
+      event: keyDownEvent({ code: "KeyR", key: "r" }),
+    })).toEqual({ status: "handled" });
+    // AI-CORRECTION 2026-08-30: 快捷键匹配已由 GestureActionRouter 执行。
+    expect(keyboard.appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(keyboard.editor.actions.rotateCollectionAroundCenterPoint).toHaveBeenCalledWith(
       EntityCollectionType.preview,
       90,
@@ -488,14 +517,15 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.SWITCH_DEVICE_MODE,
-      "Tab",
-      "Tab",
-    );
+    // AI-CORRECTION 2026-08-30: 快捷键匹配已由 GestureActionRouter 执行。
+    expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "preview-entity",
       "liquid_filling_pd_mc_1",

@@ -9,6 +9,19 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
     id: "hypergryph-dark-pipe-link-gesture",
     priority: 130,
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [{
+      id: "dark-pipe-link.cancel",
+      actionId: "fixed.dark-pipe-link.cancel",
+      binding: { kind: "fixed", value: "Esc" },
+      scope: { inputLayers: ["canvas"], activeTools: ["dark-pipe-link"] },
+      triggerPolicy: { kind: "exact" },
+      handle(_event, context) {
+        const state = context.appHost.state.toolInfo.darkPipeLink;
+        if (state === null) return { status: "ignored" };
+        exitDarkPipeLinkTool(context.appHost, state.returnTool);
+        return { status: "handled" };
+      },
+    }],
     handle(event, context) {
       if (event.type === "on-exit-active-tool") {
         if (event.from !== DARK_PIPE_LINK_TOOL) {
@@ -53,10 +66,19 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
         return { status: "handled", consume: false };
       }
 
-      if (event.type === "key down" && event.code === "Escape") {
-        exitDarkPipeLinkTool(context.appHost, state.returnTool);
-        return { status: "handled" };
-      }
+      // AI-REMOVED 2026-08-30:
+      // Reason: 暗管取消 Escape 已迁入固定 Shortcut Route。
+      // Trigger: ST2-RQ-020 固定 Action 作用域统一。
+      // Evidence: dark-pipe-link.cancel 仅覆盖 canvas/dark-pipe-link。
+      // Replacement: shortcutRoutes[dark-pipe-link.cancel] in this module
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (event.type === "key down" && event.code === "Escape") {
+      //   exitDarkPipeLinkTool(context.appHost, state.returnTool);
+      //   return { status: "handled" };
+      // }
 
       if (event.type === "mouse tap") {
         if (event.button === 2) {

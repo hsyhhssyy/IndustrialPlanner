@@ -75,6 +75,65 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
   return {
     id: "hypergryph-move-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [
+      {
+        id: "move.enter-selection",
+        actionId: SHORTCUT_KEY.MOVE_SELECTION,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.MOVE_SELECTION },
+        scope: {
+          inputLayers: ["canvas", "inspector-dialog"],
+          activeTools: ["select", "marquee"],
+        },
+        triggerPolicy: { kind: "exact" },
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          return editor === null
+            ? { status: "ignored" }
+            : tryEnterMoveModeFromKeyboard(context.appHost, editor, lastMousePosition);
+        },
+      },
+      {
+        id: "move.switch-device-mode",
+        actionId: SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SWITCH_DEVICE_MODE },
+        scope: { inputLayers: ["canvas"], activeTools: ["move"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          return editor === null
+            ? { status: "ignored" }
+            : switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
+        },
+      },
+      {
+        id: "move.delete-operation",
+        actionId: SHORTCUT_KEY.DELETE_DEVICE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
+        scope: { inputLayers: ["canvas", "inspector-dialog"], activeTools: ["move"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          deleteMoveOperation(context.appHost, editor);
+          return { status: "handled" };
+        },
+      },
+      {
+        id: "current-operation.rotate-move",
+        actionId: SHORTCUT_KEY.ROTATE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE },
+        scope: { inputLayers: ["canvas"], activeTools: ["move"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          rotateMovePreview(context.appHost, editor, lastMousePosition);
+          return { status: "handled" };
+        },
+      },
+    ],
     acceptsLongPress(context) {
       const tool = context.appHost.internalState.activeTool;
       return tool === "select" || tool === "marquee";
@@ -117,6 +176,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           case "tap-long-press-ready":
             return { status: "handled" };
 
+          // AI-REMOVED 2026-08-30:
+          // Reason: move 内的 Tab/F/R 已拆为三条 allow-any-additional-modifiers Route。
+          // Trigger: ST2-RQ-020 操作模式快捷键自定义 modifier 兼容。
+          // Evidence: move.switch-device-mode、move.delete-operation、current-operation.rotate-move。
+          // Replacement: shortcutRoutes in createHypergryphMoveGestureModule
+          // Risk: Low
+          // Human Review: Required
+          //
+          // Original code:
+          /*
           case "key down":
             if (isSwitchDeviceModeShortcut({
               appHost: context.appHost,
@@ -148,6 +217,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
             rotateMovePreview(context.appHost, editor, lastMousePosition);
             return { status: "handled" };
+          */
 
           case "mouse dragstart":
             return handleMoveMouseDragStart({
@@ -376,6 +446,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             menuInitialMousePosition: null,
           });
 
+        // AI-REMOVED 2026-08-30:
+        // Reason: 移动选区入口已迁入 move.enter-selection Route，并显式支持 Inspector 穿透层。
+        // Trigger: ST2-RQ-020 输入层统一。
+        // Evidence: Route 覆盖 select/marquee 的 canvas 与 inspector-dialog。
+        // Replacement: shortcutRoutes[move.enter-selection] in this module
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        /*
         case "key down":
           if (!context.appHost.internalActions.isShortcutFor(
             SHORTCUT_KEY.MOVE_SELECTION,
@@ -387,6 +467,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           }
 
           return tryEnterMoveModeFromKeyboard(context.appHost, editor, lastMousePosition);
+        */
 
         default:
           return { status: "ignored" };
@@ -1490,6 +1571,16 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   }
 }
 
+// AI-REMOVED 2026-08-30:
+// Reason: 旧辅助函数绕过 Action Route，自行决定 modifier 匹配，造成运行时与设置冲突判定可漂移。
+// Trigger: ST2-RQ-020 要求作用域和触发策略来自实际可执行路由。
+// Evidence: 全仓调用检索仅命中这些定义；移动模式键盘入口已全部注册为 shortcutRoutes。
+// Replacement: createHypergryphMoveGestureModule().shortcutRoutes
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+/*
 function isRotateMoveShortcut(options: {
   appHost: AppHost;
   code: string | null;
@@ -1576,6 +1667,7 @@ function isSwitchDeviceModeShortcut(options: {
     options.key,
   );
 }
+*/
 
 function resolveSinglePreviewEntity(editor: EditorContract): WorldEntity | null {
   const preview = editor.state.collections[EntityCollectionType.preview];

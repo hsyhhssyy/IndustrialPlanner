@@ -11,6 +11,27 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
   return {
     id: "hypergryph-viewport-rotation",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [{
+      id: "rotate-viewport.non-operation",
+      actionId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+      binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT },
+      scope: {
+        inputLayers: ["canvas"],
+        activeTools: ["select", "marquee", "dark-pipe-link"],
+      },
+      triggerPolicy: { kind: "exact" },
+      claimsBrowserDefault: true,
+      handle(_event, context) {
+        const editor = context.workspace.editor;
+        if (editor === null) {
+          return { status: "ignored" };
+        }
+
+        rotateViewport(editor, "clockwise");
+        context.appHost.internalActions.alignCanvasFloatingToolbar();
+        return { status: "handled" };
+      },
+    }],
     handle(event, context) {
       const editor = context.workspace.editor;
       if (editor === null) {
@@ -28,19 +49,27 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
           context.appHost.internalActions.alignCanvasFloatingToolbar();
           return { status: "handled" };
 
-        case "key down":
-          if (!context.appHost.internalActions.isShortcutFor(
-            SHORTCUT_KEY.ROTATE_VIEWPORT,
-            event.code,
-            event.key,
-            event.modifiers,
-          )) {
-            return { status: "ignored" };
-          }
-
-          rotateViewport(editor, "clockwise");
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
-          return { status: "handled" };
+        // AI-REMOVED 2026-08-30:
+        // Reason: 画布旋转快捷键的非操作模式有效域已迁入 Shortcut Route。
+        // Trigger: ST2-RQ-020 的 R / Ctrl+R 基准冲突案例。
+        // Evidence: rotate-viewport.non-operation 仅覆盖 select/marquee/dark-pipe-link。
+        // Replacement: shortcutRoutes[rotate-viewport.non-operation] in this module
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // case "key down":
+        //   if (!context.appHost.internalActions.isShortcutFor(
+        //     SHORTCUT_KEY.ROTATE_VIEWPORT,
+        //     event.code,
+        //     event.key,
+        //     event.modifiers,
+        //   )) {
+        //     return { status: "ignored" };
+        //   }
+        //   rotateViewport(editor, "clockwise");
+        //   context.appHost.internalActions.alignCanvasFloatingToolbar();
+        //   return { status: "handled" };
 
         case "ui-button-touch-tap":
           if (event.uiButtonId !== ROTATE_VIEW_BUTTON_ID) {

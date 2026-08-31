@@ -23,6 +23,7 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphMarqueeGestureModule", () => {
   it("enters and exits marquee from the X key", () => {
@@ -31,13 +32,13 @@ describe("createHypergryphMarqueeGestureModule", () => {
     });
     const module = createHypergryphMarqueeGestureModule();
 
-    expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
-    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.MARQUEE,
-      "KeyX",
-      "x",
-      { alt: false, ctrl: false, meta: false, shift: false },
-    );
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent("KeyX"),
+    })).toEqual({ status: "handled" });
+    // AI-CORRECTION 2026-08-30: 匹配职责已移至 GestureActionRouter，模块不再调用 isShortcutFor。
+    expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
@@ -53,7 +54,11 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
     expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
 
-    expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent("KeyX"),
+    })).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
     expect(editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(appHost.internalState.activeTool).toBe("select");
@@ -270,7 +275,11 @@ describe("createHypergryphMarqueeGestureModule", () => {
       });
       const module = createHypergryphMarqueeGestureModule();
 
-      expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
+      expect(handleKeyboardShortcutThroughRouter({
+        module,
+        context,
+        event: keyDownEvent("KeyX"),
+      })).toEqual({ status: "handled" });
       expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
 
       expect(

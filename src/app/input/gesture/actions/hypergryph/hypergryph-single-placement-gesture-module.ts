@@ -27,7 +27,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
 import { runInAction } from "mobx";
 
-import type { GestureHandleResult, GestureMappingModule } from "../types";
+import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   didPreviewRectChange,
@@ -68,7 +68,7 @@ const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
   `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-off`;
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";
-const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+export const PLACEMENT_DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
 const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS = [
   { operationId: "pan-viewport", presentation: "shortcut" },
@@ -230,6 +230,65 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
   return {
     id: "hypergryph-single-placement-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [
+      ...(Object.entries(PLACEMENT_GROUP_SHORTCUTS) as Array<[PlacementGroup, ShortcutKeyId]>)
+        .filter(([group]) => group !== "beltLogistics" && group !== "pipeLogistics")
+        .map<ShortcutActionRoute<AppHost>>(([group, shortcutId]) => ({
+          id: `placement-group.${group}`,
+          actionId: shortcutId,
+          binding: { kind: "configurable" as const, shortcutId },
+          scope: { inputLayers: ["canvas"] as const, activeTools: ["select"] as const },
+          triggerPolicy: {
+            kind: "allow-additional-modifiers" as const,
+            modifiers: ["shift"] as const,
+          },
+          handle: (_event, context) => handleSelectPlacementGroup(context.appHost, group),
+        })),
+      ...PLACEMENT_DEVICE_SHORTCUT_KEYS.map<ShortcutActionRoute<AppHost>>((shortcut, shortcutIndex) => ({
+        id: `placement-device.${shortcutIndex}`,
+        actionId: `fixed.placement-device.${shortcutIndex}`,
+        binding: { kind: "fixed" as const, value: shortcut },
+        scope: { inputLayers: ["canvas"] as const, activeTools: ["select"] as const },
+        triggerPolicy: { kind: "exact" as const },
+        handle: (_event, context) => handleSelectPlacementDeviceShortcutIndex({
+          appHost: context.appHost,
+          editor: context.workspace.editor,
+          registry: context.workspace.registry,
+          lastMousePosition,
+          shortcutIndex,
+        }),
+      })),
+      {
+        id: "single-placement.switch-device-mode",
+        actionId: SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SWITCH_DEVICE_MODE },
+        scope: { inputLayers: ["canvas"], activeTools: ["single-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          return editor === null
+            ? { status: "ignored" }
+            : switchPlacementPreviewVariant(context.appHost, editor, lastMousePosition);
+        },
+      },
+      {
+        id: "current-operation.rotate-single-placement",
+        actionId: SHORTCUT_KEY.ROTATE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE },
+        scope: { inputLayers: ["canvas"], activeTools: ["single-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          rotatePlacementPreview(context.appHost, editor, {
+            pointerMode: context.appHost.internalState.runtime.singlePlacementPointerMode,
+            currentMousePosition: lastMousePosition,
+          });
+          return { status: "handled" };
+        },
+      },
+    ],
     handle(event, context) {
       if (event.type === "on-exit-active-tool") {
         if (event.from !== "single-placement" || event.to === "single-placement") {
@@ -333,6 +392,16 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         lastMousePosition = event.position;
       }
 
+      // AI-REMOVED 2026-08-30:
+      // Reason: select 下的 7 个放置分组与 10 个固定数字键已迁入独立 Route。
+      // Trigger: ST2-RQ-020 要求固定 Action 与可配置 Action 一起参与输入层关系。
+      // Evidence: placement-group.* 与 placement-device.* Route 均限定 canvas/select。
+      // Replacement: shortcutRoutes in createHypergryphSinglePlacementGestureModule
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      /*
       if (
         event.type === "key down"
         && context.appHost.internalState.activeTool === "select"
@@ -363,6 +432,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           modifiers: event.modifiers,
         });
       }
+      */
 
       const editor = context.workspace.editor;
       if (editor === null) {
@@ -405,6 +475,16 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         case "tap-long-press-ready":
           return { status: "handled" };
 
+        // AI-REMOVED 2026-08-30:
+        // Reason: 单体放置的 Tab 与 R 已迁入同 Action 的模式 Route。
+        // Trigger: ST2-RQ-020 操作模式 modifier 语义统一。
+        // Evidence: single-placement.switch-device-mode/current-operation.rotate-single-placement。
+        // Replacement: shortcutRoutes in createHypergryphSinglePlacementGestureModule
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        /*
         case "key down":
           if (isSwitchDeviceModeShortcut({
             appHost: context.appHost,
@@ -429,6 +509,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             currentMousePosition: lastMousePosition,
           });
           return { status: "handled" };
+        */
 
         case "mouse dragstart":
           if (!ensurePlacementDraftForMouse(context.appHost, editor, event.position)) {
@@ -642,45 +723,73 @@ function handlePlacementEntryButtonTap(options: {
   });
 }
 
-function handleSelectPlacementGroupShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): GestureHandleResult {
-  const group = resolvePlacementGroupByShortcut(options);
-  if (group === null) {
+// AI-REMOVED 2026-08-30:
+// Reason: Route 已确定放置分组，handler 不再重复解析按键。
+// Trigger: ST2-RQ-020 可执行 Route 单一事实源。
+// Evidence: placement-group.* Route 直接把 group 传入替代函数。
+// Replacement: handleSelectPlacementGroup in this file
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function handleSelectPlacementGroupShortcut(options: {
+//   appHost: AppHost;
+//   code: string | null;
+//   key: string | null;
+//   modifiers: { alt: boolean; ctrl: boolean; meta: boolean };
+// }): GestureHandleResult {
+//   const group = resolvePlacementGroupByShortcut(options);
+//   if (group === null) return { status: "ignored" };
+//   if (!hasPlaceableEntityDefinitionInCurrentBase(options.appHost, group)) {
+//     return { status: "ignored" };
+//   }
+//   options.appHost.internalState.runtime.selectingPlacementGroup = group;
+//   return { status: "handled" };
+// }
+function handleSelectPlacementGroup(appHost: AppHost, group: PlacementGroup): GestureHandleResult {
+  if (!hasPlaceableEntityDefinitionInCurrentBase(appHost, group)) {
     return { status: "ignored" };
   }
 
-  if (!hasPlaceableEntityDefinitionInCurrentBase(options.appHost, group)) {
-    return { status: "ignored" };
-  }
-
-  options.appHost.internalState.runtime.selectingPlacementGroup = group;
+  appHost.internalState.runtime.selectingPlacementGroup = group;
   return { status: "handled" };
 }
 
-function handleSelectPlacementDeviceShortcut(options: {
+// AI-REMOVED 2026-08-30:
+// Reason: 固定数字键 Route 已解析 shortcutIndex，handler 不再重复解析键盘事件。
+// Trigger: ST2-RQ-020 固定 Action 路由统一。
+// Evidence: placement-device.* Route 直接携带 shortcutIndex。
+// Replacement: handleSelectPlacementDeviceShortcutIndex below
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function handleSelectPlacementDeviceShortcut(options: {
+//   appHost: AppHost;
+//   editor: EditorContract;
+//   registry: RegistryContract;
+//   lastMousePosition: GesturePosition | null;
+//   code: string | null;
+//   key: string | null;
+//   modifiers: {
+//     alt: boolean;
+//     ctrl: boolean;
+//     meta: boolean;
+//     shift: boolean;
+//   };
+// }): GestureHandleResult {
+//   const shortcutIndex = resolveDeviceShortcutIndex(options);
+//   if (shortcutIndex === null) {
+//     return { status: "ignored" };
+//   }
+function handleSelectPlacementDeviceShortcutIndex(options: {
   appHost: AppHost;
-  editor: EditorContract;
+  editor: EditorContract | null;
   registry: RegistryContract;
   lastMousePosition: GesturePosition | null;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-    shift: boolean;
-  };
+  shortcutIndex: number;
 }): GestureHandleResult {
-  const shortcutIndex = resolveDeviceShortcutIndex(options);
-  if (shortcutIndex === null) {
+  if (options.editor === null) {
     return { status: "ignored" };
   }
 
@@ -692,7 +801,7 @@ function handleSelectPlacementDeviceShortcut(options: {
   const deviceId = resolveDeviceIdForPlacementGroupShortcut({
     registry: options.registry,
     group: selectingGroup,
-    shortcutIndex,
+    shortcutIndex: options.shortcutIndex,
     collapseDeviceModes: options.appHost.state.settings.collapseDeviceModes,
     selectedVariantNameByCraftGroup:
       options.appHost.state.workbench.selectedPlacementVariantByCraftGroup,
@@ -1511,6 +1620,16 @@ function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
     && left.height === right.height;
 }
 
+// AI-REMOVED 2026-08-30:
+// Reason: 旧辅助函数自行解释 modifier 和模式，形成与可执行 Shortcut Route 并列的第二套作用域真相。
+// Trigger: ST2-RQ-020 要求运行时执行与设置冲突判定共用同一条 Action Route。
+// Evidence: 全仓调用检索仅命中这些定义；实际键盘入口已迁移到本模块 shortcutRoutes。
+// Replacement: createHypergryphSinglePlacementGestureModule().shortcutRoutes
+// Risk: 若仓库外部曾直接导入两个 export helper，需要同步改为查询 GestureActionRouter。
+// Human Review: Required
+//
+// Original code:
+/*
 function isRotatePlacementShortcut(options: {
   appHost: AppHost;
   code: string | null;
@@ -1628,26 +1747,27 @@ export function resolveDeviceShortcutIndex(options: {
   }
 
   const key = options.key?.trim() ?? "";
-  const shortcut = DEVICE_SHORTCUT_KEYS.find((candidate) => candidate === key)
+  const shortcut = PLACEMENT_DEVICE_SHORTCUT_KEYS.find((candidate) => candidate === key)
     ?? resolveDeviceShortcutFromCode(options.code);
 
   if (shortcut === undefined) {
     return null;
   }
 
-  const index = DEVICE_SHORTCUT_KEYS.indexOf(shortcut);
+  const index = PLACEMENT_DEVICE_SHORTCUT_KEYS.indexOf(shortcut);
   return index >= 0 ? index : null;
 }
 
-function resolveDeviceShortcutFromCode(code: string | null): typeof DEVICE_SHORTCUT_KEYS[number] | undefined {
+function resolveDeviceShortcutFromCode(code: string | null): typeof PLACEMENT_DEVICE_SHORTCUT_KEYS[number] | undefined {
   const match = code?.match(/^(?:Digit|Numpad)([0-9])$/);
   const digit = match?.[1];
   if (digit === undefined) {
     return undefined;
   }
 
-  return DEVICE_SHORTCUT_KEYS.find((shortcut) => shortcut === digit);
+  return PLACEMENT_DEVICE_SHORTCUT_KEYS.find((shortcut) => shortcut === digit);
 }
+*/
 
 export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;

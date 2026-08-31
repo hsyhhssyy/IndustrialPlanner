@@ -12,6 +12,7 @@ import type { GridPoint } from "@/domain/shared/grid";
 import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 
 import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
+import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { TOUCH_PREVIEW_HIT_SLOP_PX } from "./mobile-preview-bounds";
 import {
@@ -48,8 +49,6 @@ const BLUEPRINT_PLACEMENT_UI_OPTIONS = {
   rightDockToolbarItems: BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS,
 } as const;
 
-type TempBlueprintShortcut = "copy" | "paste";
-
 export function createHypergryphBlueprintPlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastTempBlueprint: BlueprintLibraryRecord | null = null;
   let lastMousePosition: GesturePosition | null = null;
@@ -57,6 +56,62 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
   return {
     id: "hypergryph-blueprint-placement-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [
+      {
+        id: "temp-blueprint.copy",
+        actionId: SHORTCUT_KEY.COPY_SELECTION,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.COPY_SELECTION },
+        scope: { inputLayers: ["canvas"], activeTools: ["marquee"] },
+        triggerPolicy: { kind: "exact" },
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          const result = copySelectionAsTempBlueprint({
+            context,
+            editor,
+            source: "mouse",
+            initialMousePosition: lastMousePosition,
+          });
+          if (result.status === "handled") {
+            lastTempBlueprint = context.appHost.internalState.runtime.blueprintPlacementRecord;
+          }
+          return result;
+        },
+      },
+      {
+        id: "temp-blueprint.paste",
+        actionId: SHORTCUT_KEY.PASTE_SELECTION,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.PASTE_SELECTION },
+        scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
+        triggerPolicy: { kind: "exact" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null || lastTempBlueprint === null) return { status: "ignored" };
+          return enterBlueprintPlacement({
+            appHost: context.appHost,
+            editor,
+            record: lastTempBlueprint,
+            source: "mouse",
+            initialMousePosition: lastMousePosition,
+          });
+        },
+      },
+      {
+        id: "current-operation.rotate-blueprint",
+        actionId: SHORTCUT_KEY.ROTATE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE },
+        scope: { inputLayers: ["canvas"], activeTools: ["blueprint-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          rotateBlueprintPlacementPreview(context.appHost, editor, lastMousePosition);
+          return { status: "handled" };
+        },
+      },
+    ],
     handle(event, context) {
       if (
         event.type === "mouse move"
@@ -66,6 +121,16 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         lastMousePosition = event.position;
       }
 
+      // AI-REMOVED 2026-08-30:
+      // Reason: 临时蓝图复制/粘贴快捷键已拆为带正式作用域的可执行 Route。
+      // Trigger: ST2-RQ-020 输入层和 Action Route 统一。
+      // Evidence: temp-blueprint.copy 仅覆盖 marquee；temp-blueprint.paste 覆盖画布全工具。
+      // Replacement: shortcutRoutes[temp-blueprint.copy/temp-blueprint.paste] in this module
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      /*
       if (event.type === "key down") {
         const shortcut = resolveTempBlueprintShortcut({
           appHost: context.appHost,
@@ -110,6 +175,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
         }
       }
+      */
 
       if (event.type === "on-exit-active-tool") {
         if (event.from !== "blueprint-placement" || event.to === "blueprint-placement") {
@@ -219,6 +285,16 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         case "tap-long-press-ready":
           return { status: "handled" };
 
+        // AI-REMOVED 2026-08-30:
+        // Reason: 蓝图放置旋转已由 current-operation.rotate-blueprint Route 接管。
+        // Trigger: ST2-RQ-020 修复操作 Action 自定义 modifier 后无法触发。
+        // Evidence: Route 使用 allow-any-additional-modifiers，但仍要求用户绑定自身 modifier。
+        // Replacement: shortcutRoutes[current-operation.rotate-blueprint] in this module
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        /*
         case "key down":
           if (!isRotatePlacementShortcut({
             appHost: context.appHost,
@@ -231,6 +307,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 
           rotateBlueprintPlacementPreview(context.appHost, editor, lastMousePosition);
           return { status: "handled" };
+        */
 
         case "mouse dragstart":
           return handlePlacementMouseDragStart({
@@ -661,34 +738,31 @@ function normalizeRotationSteps(rotationSteps: number): number {
   return ((Math.trunc(rotationSteps) % 4) + 4) % 4;
 }
 
-function isRotatePlacementShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 放置模式快捷键不再拒绝修饰键组合
-  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 放置模式下 Ctrl+R 不再旋转画布（预期）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.ROTATE,
-    options.code,
-    options.key,
-  );
-}
+// AI-REMOVED 2026-08-30:
+// Reason: 蓝图旋转的按键匹配由 current-operation.rotate-blueprint Route 负责。
+// Trigger: ST2-RQ-020 修复自定义 modifier 绑定无法触发。
+// Evidence: Route 的 allow-any-additional-modifiers 策略同时表达必需绑定 modifier 和额外 modifier。
+// Replacement: shortcutRoutes[current-operation.rotate-blueprint] in this module
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function isRotatePlacementShortcut(options: {
+//   appHost: AppHost;
+//   code: string | null;
+//   key: string | null;
+//   modifiers: {
+//     alt: boolean;
+//     ctrl: boolean;
+//     meta: boolean;
+//   };
+// }): boolean {
+//   return options.appHost.internalActions.isShortcutFor(
+//     SHORTCUT_KEY.ROTATE,
+//     options.code,
+//     options.key,
+//   );
+// }
 
 function createTempBlueprintRecord(
   context: GestureActionContext<AppHost>,
@@ -732,37 +806,45 @@ function copySelectionAsTempBlueprint(options: {
   });
 }
 
-function resolveTempBlueprintShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-    shift: boolean;
-  };
-}): TempBlueprintShortcut | null {
-  if (options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.COPY_SELECTION,
-    options.code,
-    options.key,
-    options.modifiers,
-  )) {
-    return "copy";
-  }
-
-  if (options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.PASTE_SELECTION,
-    options.code,
-    options.key,
-    options.modifiers,
-  )) {
-    return "paste";
-  }
-
-  return null;
-}
+// AI-REMOVED 2026-08-30:
+// Reason: 复制和粘贴已是两条独立可执行 Route，不再需要先反查快捷键种类。
+// Trigger: ST2-RQ-020 Action Route 统一。
+// Evidence: temp-blueprint.copy/temp-blueprint.paste 直接持有对应 Action ID 与 handler。
+// Replacement: shortcutRoutes in createHypergryphBlueprintPlacementGestureModule
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// type TempBlueprintShortcut = "copy" | "paste";
+// function resolveTempBlueprintShortcut(options: {
+//   appHost: AppHost;
+//   code: string | null;
+//   key: string | null;
+//   modifiers: {
+//     alt: boolean;
+//     ctrl: boolean;
+//     meta: boolean;
+//     shift: boolean;
+//   };
+// }): TempBlueprintShortcut | null {
+//   if (options.appHost.internalActions.isShortcutFor(
+//     SHORTCUT_KEY.COPY_SELECTION,
+//     options.code,
+//     options.key,
+//     options.modifiers,
+//   )) {
+//     return "copy";
+//   }
+//   if (options.appHost.internalActions.isShortcutFor(
+//     SHORTCUT_KEY.PASTE_SELECTION,
+//     options.code,
+//     options.key,
+//     options.modifiers,
+//   )) {
+//     return "paste";
+//   }
+//   return null;
+// }
 
 // AI-REMOVED 2026-08-03:
 // Reason: 临时蓝图复制/粘贴已统一通过 KeyboardShortcutManager 匹配，不再需要本地硬编码键名比较。
@@ -784,38 +866,32 @@ function resolveTempBlueprintShortcut(options: {
 //   return options.code === code || options.key?.toLowerCase() === key;
 // }
 
-function isEditableKeyboardTarget(sourceEvent: unknown): boolean {
-  const target = (sourceEvent as { target?: unknown } | null)?.target;
-
-  if (!isElementLikeTarget(target)) {
-    return false;
-  }
-
-  const tagName = typeof target.tagName === "string"
-    ? target.tagName.toLowerCase()
-    : "";
-
-  if (tagName === "input" || tagName === "textarea") {
-    return true;
-  }
-
-  if (target.isContentEditable === true) {
-    return true;
-  }
-
-  if (typeof target.closest === "function") {
-    return target.closest(
-      "input, textarea, [contenteditable=''], [contenteditable='true'], [contenteditable='plaintext-only']",
-    ) !== null;
-  }
-
-  return false;
-}
-
-function isElementLikeTarget(target: unknown): target is {
-  readonly tagName?: string;
-  readonly isContentEditable?: boolean;
-  readonly closest?: (selector: string) => unknown;
-} {
-  return typeof target === "object" && target !== null;
-}
+// AI-REMOVED 2026-08-30:
+// Reason: 可编辑目标由统一 DOM 输入层在事件进入 GestureAdapter 前阻断，业务模块不再重复判断 DOM。
+// Trigger: ST2-RQ-020 输入层统一。
+// Evidence: Workbench 键盘入口的 isEditableKeyboardTarget 与 Route inputLayers 共同限定可达性。
+// Replacement: workbench-app.tsx isEditableKeyboardTarget and Shortcut Route scope
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function isEditableKeyboardTarget(sourceEvent: unknown): boolean {
+//   const target = (sourceEvent as { target?: unknown } | null)?.target;
+//   if (!isElementLikeTarget(target)) return false;
+//   const tagName = typeof target.tagName === "string" ? target.tagName.toLowerCase() : "";
+//   if (tagName === "input" || tagName === "textarea") return true;
+//   if (target.isContentEditable === true) return true;
+//   if (typeof target.closest === "function") {
+//     return target.closest(
+//       "input, textarea, [contenteditable=''], [contenteditable='true'], [contenteditable='plaintext-only']",
+//     ) !== null;
+//   }
+//   return false;
+// }
+// function isElementLikeTarget(target: unknown): target is {
+//   readonly tagName?: string;
+//   readonly isContentEditable?: boolean;
+//   readonly closest?: (selector: string) => unknown;
+// } {
+//   return typeof target === "object" && target !== null;
+// }

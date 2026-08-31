@@ -1,11 +1,22 @@
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureAdapter, GestureEvent } from "@/app/input/gesture/adapter";
+import { SHORTCUT_ACTION_SPECS, type ShortcutKeyId } from "@/app/actions";
+import type { ActiveTool } from "@/domain/app";
 import type {
   GestureActionContext,
   GestureActionRouterDispatchResult,
   GestureMappingModule,
+  KeyboardGestureEvent,
+  ShortcutActionRoute,
+  ShortcutInputLayer,
+  ShortcutRouteConflict,
 } from "./types";
 import { DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS } from "@/shared/debug-performance-statistics";
+import {
+  doesShortcutRouteMatchKeyboardEvent,
+  shortcutScopesIntersect,
+  shortcutTriggerSetsOverlap,
+} from "./shortcut-route-matching";
 
 interface RegisteredGestureMappingModule<THost> {
   readonly module: GestureMappingModule<THost>;
@@ -16,6 +27,12 @@ export interface GestureActionRouterOptions<THost = unknown> {
   readonly gestureAdapter: GestureAdapter;
   readonly workspace: WorkspaceContract;
   readonly getAppHost: () => THost;
+  readonly getShortcutBinding?: (shortcutId: ShortcutKeyId) => string;
+  readonly getShortcutInputLayer?: (
+    event: KeyboardGestureEvent,
+    context: GestureActionContext<THost>,
+  ) => ShortcutInputLayer;
+  readonly getActiveTool?: (context: GestureActionContext<THost>) => ActiveTool;
   readonly modules?: readonly GestureMappingModule<THost>[];
 }
 
@@ -50,6 +67,12 @@ export class GestureActionRouter<THost = unknown> {
   private readonly gestureAdapter: GestureAdapter;
   private readonly workspace: WorkspaceContract;
   private readonly getAppHost: () => THost;
+  private readonly getShortcutBinding: ((shortcutId: ShortcutKeyId) => string) | null;
+  private readonly getShortcutInputLayer: ((
+    event: KeyboardGestureEvent,
+    context: GestureActionContext<THost>,
+  ) => ShortcutInputLayer) | null;
+  private readonly getActiveTool: ((context: GestureActionContext<THost>) => ActiveTool) | null;
   private readonly unsubscribeAdapter: () => void;
   private readonly modules = new Map<string, RegisteredGestureMappingModule<THost>>();
   private readonly dragClaims = new Map<string, string>();
@@ -61,6 +84,9 @@ export class GestureActionRouter<THost = unknown> {
     this.gestureAdapter = options.gestureAdapter;
     this.workspace = options.workspace;
     this.getAppHost = options.getAppHost;
+    this.getShortcutBinding = options.getShortcutBinding ?? null;
+    this.getShortcutInputLayer = options.getShortcutInputLayer ?? null;
+    this.getActiveTool = options.getActiveTool ?? null;
 
     for (const module of options.modules ?? []) {
       this.registerModule(module);
@@ -119,6 +145,246 @@ export class GestureActionRouter<THost = unknown> {
     return this.getSortedModules().map((entry) => entry.module.id);
   }
 
+  public getRegisteredShortcutRoutes(): readonly ShortcutActionRoute<THost>[] {
+    return this.getSortedModules().flatMap((entry) => entry.module.shortcutRoutes ?? []);
+  }
+
+  public findShortcutConflicts(options: {
+    readonly shortcutId: ShortcutKeyId;
+    readonly slotIndex: 0 | 1;
+    readonly nextBinding: string;
+  }): readonly ShortcutRouteConflict[] {
+    if (this.getShortcutBinding === null || options.nextBinding === "") {
+      return [];
+    }
+
+    const routes = this.getRegisteredShortcutRoutes();
+    const targetRoutes = routes.filter((route) => (
+      route.binding.kind === "configurable"
+      && route.binding.shortcutId === options.shortcutId
+    ));
+    const conflicts = new Map<string, ShortcutRouteConflict>();
+
+    for (const targetRoute of targetRoutes) {
+      for (const conflictingRoute of routes) {
+        if (!shortcutRouteEventsIntersect(targetRoute, conflictingRoute)) {
+          continue;
+        }
+        if (!shortcutScopesIntersect(targetRoute.scope, conflictingRoute.scope)) {
+          continue;
+        }
+        if (areShortcutRoutesExplicitlyComposable(targetRoute, conflictingRoute)) {
+          continue;
+        }
+
+        if (conflictingRoute.binding.kind === "fixed") {
+          if (!shortcutTriggerSetsOverlap({
+            leftBinding: options.nextBinding,
+            leftPolicy: targetRoute.triggerPolicy,
+            rightBinding: conflictingRoute.binding.value,
+            rightPolicy: conflictingRoute.triggerPolicy,
+          })) {
+            continue;
+          }
+
+          const key = `fixed:${conflictingRoute.id}`;
+          upsertShortcutConflict(conflicts, key, {
+            kind: "fixed",
+            actionId: conflictingRoute.actionId,
+            binding: conflictingRoute.binding.value,
+            targetRouteId: targetRoute.id,
+            conflictingRouteId: conflictingRoute.id,
+            overlappingInputLayers: intersectValues(
+              targetRoute.scope.inputLayers,
+              conflictingRoute.scope.inputLayers,
+            ),
+            overlappingActiveTools: intersectValues(
+              targetRoute.scope.activeTools,
+              conflictingRoute.scope.activeTools,
+            ),
+          });
+          continue;
+        }
+
+        const occupiedSlots = splitShortcutSlots(
+          this.getShortcutBinding(conflictingRoute.binding.shortcutId),
+        );
+        for (const [slotIndex, occupiedBinding] of occupiedSlots.entries()) {
+          if (
+            conflictingRoute.binding.shortcutId === options.shortcutId
+            && slotIndex === options.slotIndex
+          ) {
+            continue;
+          }
+          if (!shortcutTriggerSetsOverlap({
+            leftBinding: options.nextBinding,
+            leftPolicy: targetRoute.triggerPolicy,
+            rightBinding: occupiedBinding,
+            rightPolicy: conflictingRoute.triggerPolicy,
+          })) {
+            continue;
+          }
+
+          const normalizedSlotIndex = slotIndex as 0 | 1;
+          const key = `configurable:${conflictingRoute.binding.shortcutId}:${normalizedSlotIndex}`;
+          upsertShortcutConflict(conflicts, key, {
+            kind: "configurable",
+            actionId: conflictingRoute.actionId,
+            binding: occupiedBinding,
+            shortcutId: conflictingRoute.binding.shortcutId,
+            slotIndex: normalizedSlotIndex,
+            targetRouteId: targetRoute.id,
+            conflictingRouteId: conflictingRoute.id,
+            overlappingInputLayers: intersectValues(
+              targetRoute.scope.inputLayers,
+              conflictingRoute.scope.inputLayers,
+            ),
+            overlappingActiveTools: intersectValues(
+              targetRoute.scope.activeTools,
+              conflictingRoute.scope.activeTools,
+            ),
+          });
+        }
+      }
+    }
+
+    return Array.from(conflicts.values());
+  }
+
+  public assertShortcutRouteIntegrity(): void {
+    const routes = this.getRegisteredShortcutRoutes();
+    const routeIds = new Set<string>();
+    const actionSpecById = new Map(SHORTCUT_ACTION_SPECS.map((spec) => [spec.id, spec]));
+    const routedActionIds = new Set<string>();
+
+    for (const route of routes) {
+      if (routeIds.has(route.id)) {
+        throw new Error(`Shortcut action route "${route.id}" is already registered.`);
+      }
+      routeIds.add(route.id);
+      const actionSpec = actionSpecById.get(route.actionId);
+      if (actionSpec === undefined) {
+        throw new Error(`Shortcut action route "${route.id}" has no ActionSpec.`);
+      }
+      routedActionIds.add(route.actionId);
+
+      if (route.binding.kind === "configurable") {
+        if (!actionSpec.configurable || actionSpec.id !== route.binding.shortcutId) {
+          throw new Error(`Shortcut action route "${route.id}" does not match its configurable ActionSpec.`);
+        }
+        continue;
+      }
+
+      if (actionSpec.configurable) {
+        throw new Error(`Shortcut action route "${route.id}" does not match its fixed ActionSpec.`);
+      }
+      if (route.binding.value !== actionSpec.defaultBindings[0]) {
+        throw new Error(
+          `Fixed shortcut action route "${route.id}" binding does not match its ActionSpec.`,
+        );
+      }
+    }
+
+    const missing = SHORTCUT_ACTION_SPECS
+      .map((spec) => spec.id)
+      .filter((actionId) => !routedActionIds.has(actionId));
+    if (missing.length > 0) {
+      throw new Error(`Shortcut ActionSpec has no executable route: ${missing.join(", ")}`);
+    }
+
+    const defaultBindingByShortcutId = new Map(
+      SHORTCUT_ACTION_SPECS
+        .filter((spec) => spec.configurable)
+        .map((spec) => [spec.id, spec.defaultBindings.join(";")]),
+    );
+    for (let leftIndex = 0; leftIndex < routes.length; leftIndex += 1) {
+      const left = routes[leftIndex];
+      if (left === undefined) continue;
+      for (let rightIndex = leftIndex + 1; rightIndex < routes.length; rightIndex += 1) {
+        const right = routes[rightIndex];
+        if (right === undefined) continue;
+        if (!shortcutRouteEventsIntersect(left, right)) continue;
+        if (!shortcutScopesIntersect(left.scope, right.scope)) continue;
+        if (areShortcutRoutesExplicitlyComposable(left, right)) continue;
+
+        const leftBinding = left.binding.kind === "configurable"
+          ? defaultBindingByShortcutId.get(left.binding.shortcutId) ?? ""
+          : left.binding.value;
+        const rightBinding = right.binding.kind === "configurable"
+          ? defaultBindingByShortcutId.get(right.binding.shortcutId) ?? ""
+          : right.binding.value;
+        if (!shortcutTriggerSetsOverlap({
+          leftBinding,
+          leftPolicy: left.triggerPolicy,
+          rightBinding,
+          rightPolicy: right.triggerPolicy,
+        })) {
+          continue;
+        }
+
+        throw new Error(
+          `Default shortcut routes conflict: "${left.id}" and "${right.id}".`,
+        );
+      }
+    }
+  }
+
+  public claimsBrowserDefaultForKeyboardEvent(options: {
+    readonly type: "key down" | "key up";
+    readonly code: string | null;
+    readonly key: string | null;
+    readonly keyCode: number | null;
+    readonly modifiers: {
+      readonly alt: boolean;
+      readonly ctrl: boolean;
+      readonly meta: boolean;
+      readonly shift: boolean;
+    };
+    readonly sourceEvent: unknown;
+  }): boolean {
+    if (
+      this.disposed
+      || this.getShortcutBinding === null
+      || this.getShortcutInputLayer === null
+      || this.getActiveTool === null
+    ) {
+      return false;
+    }
+
+    const event: KeyboardGestureEvent = {
+      ...options,
+      gestureId: "shortcut-browser-default-query",
+    };
+    const context = this.createContext();
+    const inputLayer = this.getShortcutInputLayer(event, context);
+    const activeTool = this.getActiveTool(context);
+
+    return this.getSortedModules().some((entry) => {
+      if (!this.moduleMatches(entry.module, context)) {
+        return false;
+      }
+
+      return entry.module.shortcutRoutes?.some((route) => {
+        if (route.claimsBrowserDefault !== true) return false;
+        if (!(route.events ?? ["key down"]).includes(event.type)) return false;
+        if (
+          !route.scope.inputLayers.includes(inputLayer)
+          || !route.scope.activeTools.includes(activeTool)
+        ) {
+          return false;
+        }
+        const binding = route.binding.kind === "configurable"
+          ? this.getShortcutBinding?.(route.binding.shortcutId) ?? ""
+          : route.binding.value;
+        return doesShortcutRouteMatchKeyboardEvent({
+          binding,
+          triggerPolicy: route.triggerPolicy,
+          event,
+        });
+      }) === true;
+    });
+  }
+
   public getDragClaimOwner(gestureId: string): string | null {
     return this.dragClaims.get(gestureId) ?? null;
   }
@@ -160,7 +426,7 @@ export class GestureActionRouter<THost = unknown> {
       }
 
       const moduleStartedAtMs = perfWindow !== null ? performance.now() : 0
-      const result = entry.module.handle(event, context);
+      const result = this.handleModuleEvent(entry.module, event, context);
       if (perfWindow !== null) {
         const moduleMs = performance.now() - moduleStartedAtMs
         const existing = perfWindow.timingsMs.get(entry.module.id) ?? 0
@@ -228,6 +494,61 @@ export class GestureActionRouter<THost = unknown> {
     }
 
     return false;
+  }
+
+  private handleModuleEvent(
+    module: GestureMappingModule<THost>,
+    event: GestureEvent,
+    context: GestureActionContext<THost>,
+  ): ReturnType<GestureMappingModule<THost>["handle"]> {
+    if (
+      !isKeyboardGestureEvent(event)
+      || module.shortcutRoutes === undefined
+      || this.getShortcutBinding === null
+      || this.getShortcutInputLayer === null
+      || this.getActiveTool === null
+    ) {
+      return module.handle(event, context);
+    }
+
+    const inputLayer = this.getShortcutInputLayer(event, context);
+    const activeTool = this.getActiveTool(context);
+    let matchedRoute = false;
+
+    for (const route of module.shortcutRoutes) {
+      if (!(route.events ?? ["key down"]).includes(event.type)) {
+        continue;
+      }
+      if (
+        !route.scope.inputLayers.includes(inputLayer)
+        || !route.scope.activeTools.includes(activeTool)
+      ) {
+        continue;
+      }
+
+      const binding = route.binding.kind === "configurable"
+        ? this.getShortcutBinding(route.binding.shortcutId)
+        : route.binding.value;
+      if (!doesShortcutRouteMatchKeyboardEvent({
+        binding,
+        triggerPolicy: route.triggerPolicy,
+        event,
+      })) {
+        continue;
+      }
+
+      matchedRoute = true;
+      const result = route.handle(event, context);
+      if (result.status !== "ignored") {
+        return result;
+      }
+    }
+
+    if (matchedRoute) {
+      return { status: "ignored" };
+    }
+
+    return module.handle(event, context);
   }
 
   private dispatchToClaimOwner(
@@ -355,6 +676,67 @@ function isDragEndEvent(event: GestureEvent): boolean {
 
 function isActiveToolLifecycleEvent(event: GestureEvent): boolean {
   return event.type === "on-enter-active-tool" || event.type === "on-exit-active-tool";
+}
+
+function isKeyboardGestureEvent(event: GestureEvent): event is KeyboardGestureEvent {
+  return event.type === "key down" || event.type === "key up";
+}
+
+function shortcutRouteEventsIntersect<THost>(
+  left: ShortcutActionRoute<THost>,
+  right: ShortcutActionRoute<THost>,
+): boolean {
+  const leftEvents = left.events ?? ["key down"];
+  const rightEvents = right.events ?? ["key down"];
+
+  return leftEvents.some((eventType) => rightEvents.includes(eventType));
+}
+
+function areShortcutRoutesExplicitlyComposable<THost>(
+  left: ShortcutActionRoute<THost>,
+  right: ShortcutActionRoute<THost>,
+): boolean {
+  return left.composableWithActionIds?.includes(right.actionId) === true
+    || right.composableWithActionIds?.includes(left.actionId) === true;
+}
+
+function splitShortcutSlots(value: string): readonly [string, string] {
+  const [first = "", second = ""] = value.split(";", 2);
+
+  return [first.trim(), second.trim()];
+}
+
+function upsertShortcutConflict(
+  conflicts: Map<string, ShortcutRouteConflict>,
+  key: string,
+  nextConflict: ShortcutRouteConflict,
+): void {
+  const existing = conflicts.get(key);
+  if (existing === undefined) {
+    conflicts.set(key, nextConflict);
+    return;
+  }
+
+  conflicts.set(key, {
+    ...existing,
+    overlappingInputLayers: mergeDistinctValues(
+      existing.overlappingInputLayers,
+      nextConflict.overlappingInputLayers,
+    ),
+    overlappingActiveTools: mergeDistinctValues(
+      existing.overlappingActiveTools,
+      nextConflict.overlappingActiveTools,
+    ),
+  });
+}
+
+function intersectValues<T>(left: readonly T[], right: readonly T[]): readonly T[] {
+  const rightValues = new Set(right);
+  return left.filter((value) => rightValues.has(value));
+}
+
+function mergeDistinctValues<T>(left: readonly T[], right: readonly T[]): readonly T[] {
+  return Array.from(new Set([...left, ...right]));
 }
 
 function emptyDispatchResult(): GestureActionRouterDispatchResult {

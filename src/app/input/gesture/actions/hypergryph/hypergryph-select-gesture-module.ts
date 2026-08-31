@@ -20,15 +20,41 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
     id: "hypergryph-select-gesture",
     priority: 100,
     when: isHypergryphGestureEnabled,
-    handle(event, context) {
-      if (event.type === "key down") {
-        if (event.code !== "Escape" && event.key !== "Escape") {
-          return { status: "ignored" };
-        }
-
+    shortcutRoutes: [{
+      id: "active-tool.cancel-to-select",
+      actionId: "fixed.active-tool.cancel-to-select",
+      binding: { kind: "fixed", value: "Esc" },
+      scope: {
+        inputLayers: ["canvas"],
+        activeTools: [
+          "move",
+          "marquee",
+          "blueprint-placement",
+          "single-placement",
+          "logistics-placement",
+        ],
+      },
+      triggerPolicy: { kind: "exact" },
+      handle(_event, context) {
         context.appHost.internalActions.setActiveTool("select");
         return { status: "handled" };
-      }
+      },
+    }],
+    handle(event, context) {
+      // AI-REMOVED 2026-08-30:
+      // Reason: 返回选择模式的 Escape 已迁入固定 Shortcut Route。
+      // Trigger: ST2-RQ-020 固定 Action 与输入层统一。
+      // Evidence: active-tool.cancel-to-select 显式限定五种可取消工具。
+      // Replacement: shortcutRoutes[active-tool.cancel-to-select] in this module
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (event.type === "key down") {
+      //   if (event.code !== "Escape" && event.key !== "Escape") return { status: "ignored" };
+      //   context.appHost.internalActions.setActiveTool("select");
+      //   return { status: "handled" };
+      // }
 
       if (event.type === "ui-button-touch-tap" || event.type === "ui-button-mouse-tap") {
         if (event.uiButtonId !== "placement-tool-select") {

@@ -17,6 +17,24 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
   return {
     id: "hypergryph-delete-selection-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [{
+      id: "delete-selection.selection",
+      actionId: SHORTCUT_KEY.DELETE_DEVICE,
+      binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
+      scope: {
+        inputLayers: ["canvas", "inspector-dialog"],
+        activeTools: ["select", "marquee"],
+      },
+      triggerPolicy: { kind: "exact" },
+      handle(_event, context) {
+        const editor = context.workspace.editor;
+        if (editor === null) {
+          return { status: "ignored" };
+        }
+
+        return deleteSelection(context.appHost, editor, context.appHost.internalState.activeTool);
+      },
+    }],
     handle(event, context) {
       const editor = context.workspace.editor;
       const activeTool = context.appHost.internalState.activeTool;
@@ -26,17 +44,25 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
       }
 
       switch (event.type) {
-        case "key down":
-          if (!context.appHost.internalActions.isShortcutFor(
-            SHORTCUT_KEY.DELETE_DEVICE,
-            event.code,
-            event.key,
-            event.modifiers,
-          )) {
-            return { status: "ignored" };
-          }
-
-          return deleteSelection(context.appHost, editor, activeTool);
+        // AI-REMOVED 2026-08-30:
+        // Reason: 选择删除快捷键已迁入包含 canvas/inspector-dialog 的可执行 Route。
+        // Trigger: ST2-RQ-020 输入层与冲突判断统一。
+        // Evidence: delete-selection.selection Route 直接调用 deleteSelection。
+        // Replacement: shortcutRoutes[delete-selection.selection] in this module
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // case "key down":
+        //   if (!context.appHost.internalActions.isShortcutFor(
+        //     SHORTCUT_KEY.DELETE_DEVICE,
+        //     event.code,
+        //     event.key,
+        //     event.modifiers,
+        //   )) {
+        //     return { status: "ignored" };
+        //   }
+        //   return deleteSelection(context.appHost, editor, activeTool);
 
         case "ui-button-touch-tap":
           if (event.uiButtonId === FLOATING_DELETE_UPSTREAM_BUTTON_ID) {

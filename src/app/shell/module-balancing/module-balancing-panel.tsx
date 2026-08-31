@@ -20,6 +20,7 @@ import LucideUpload from "~icons/lucide/upload";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import type {
@@ -114,6 +115,11 @@ const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-modu
 const CUSTOM_MODULE_FOLDER_DRAG_TYPE = "application/x-industrial-planner-module-balancing-custom-module";
 const CANVAS_FOLDER_DRAG_TYPE = "application/x-industrial-planner-module-balancing-canvas";
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
+
+const DISPATCH_TICKET_ICON_SRCS = {
+  武陵: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_jinlong_coupon_hud.png"),
+  四号谷地: createPublicAssetUrl("assets/dispatch-ticket-icons/item_domain_tundra_coupon_hud.png"),
+} satisfies Record<ModuleBalancingDispatchTicketGroup["region"], string>;
 
 const CUSTOM_MODULE_COLORS = [
   "#4f8cff",
@@ -2856,7 +2862,12 @@ function SummaryPanel({
           .replace("{region}", t(regionNameKey));
         return (
           <div className={cm(styles, "module-balancing-dispatch-list")} key={group.region}>
-            <h4>{title}</h4>
+            <div className={cm(styles, "module-balancing-dispatch-header")}>
+              <span className={cm(styles, "module-balancing-dispatch-icon")} aria-hidden="true">
+                <img alt="" src={DISPATCH_TICKET_ICON_SRCS[group.region]} />
+              </span>
+              <h4>{title}</h4>
+            </div>
             {group.items.map((summary) => (
               <div className={cm(styles, "module-balancing-warehouse-row")} key={summary.itemId}>
                 <img alt="" src={resolveItemIconSrc(summary.itemId, index)} />

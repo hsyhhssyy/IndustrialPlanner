@@ -2106,6 +2106,7 @@
 }
 
 .module-balancing-dispatch-list {
+  display: grid;
   grid-column: 2;
   align-content: start;
   gap: 8px;
@@ -2113,6 +2114,39 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-2);
+}
+
+.module-balancing-dispatch-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 2px 4px;
+}
+
+.module-balancing-dispatch-header h4 {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.module-balancing-dispatch-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.module-balancing-dispatch-icon img {
+  width: 52px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .module-balancing-dispatch-total {

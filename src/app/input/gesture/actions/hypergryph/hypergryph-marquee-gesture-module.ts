@@ -13,6 +13,7 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
+import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
@@ -74,6 +75,23 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
   return {
     id: "hypergryph-marquee-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [{
+      id: "marquee.toggle",
+      actionId: SHORTCUT_KEY.MARQUEE,
+      binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.MARQUEE },
+      scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
+      triggerPolicy: { kind: "exact" },
+      handle(_event, context) {
+        const editor = context.workspace.editor;
+        if (context.appHost.internalState.activeTool === "marquee") {
+          exitMarqueeToSelect(context.appHost, editor);
+          return { status: "handled" };
+        }
+
+        enterMarqueeMode({ appHost: context.appHost, editor, source: "mouse" });
+        return { status: "handled" };
+      },
+    }],
     acceptsLongPress(context, gridHasEntity) {
       const tool = context.appHost.internalState.activeTool;
       if (tool === "marquee") {
@@ -116,6 +134,16 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
           return { status: "handled" };
 
+        // AI-REMOVED 2026-08-30:
+        // Reason: X 由 marquee.toggle Route 执行；Escape 由更高优先级的固定取消 Route 执行。
+        // Trigger: ST2-RQ-020 固定与可配置键盘 Action 统一。
+        // Evidence: marquee.toggle 声明 canvas 全工具作用域；active-tool.cancel-to-select 声明取消工具域。
+        // Replacement: marquee.toggle and active-tool.cancel-to-select Shortcut Routes
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        /*
         case "key down":
           if (event.code === "Escape" && context.appHost.internalState.activeTool === "marquee") {
             exitMarqueeToSelect(context.appHost, editor);
@@ -142,6 +170,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             source: "mouse",
           });
           return { status: "handled" };
+        */
 
         case "ui-button-touch-tap":
           return handleUiButtonTap({

@@ -6,6 +6,7 @@ import {
   AppGestureModuleRegistrar,
   createGestureActionRouter,
   GestureActionRouter,
+  type ShortcutInputLayer,
 } from "../input/gesture/actions";
 import {
   createGestureDiagnosticsStore,
@@ -122,6 +123,9 @@ export function createAppHost(
     gestureAdapter,
     workspace,
     getAppHost: () => host,
+    getShortcutBinding: (shortcutId) => host.internalActions.getKeyboardShortcutFor(shortcutId),
+    getShortcutInputLayer: (_event, context) => resolveShortcutInputLayer(context.appHost),
+    getActiveTool: (context) => context.appHost.internalState.activeTool,
   });
 
   // 将 router 的长按查询能力回注到 gestureAdapter，由 adapter 在显示长按圆圈前询问
@@ -241,4 +245,24 @@ export function createAppHost(
   // disposers.push(hookWebDavSyncAppService(host));
 
   return host;
+}
+
+function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
+  const visibleDialogIds = Object.entries(appHost.internalState.workbench.dialogState)
+    .filter(([, dialogState]) => dialogState?.visible === true)
+    .map(([dialogId]) => dialogId);
+  if (visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
+    return "dialog";
+  }
+  if (visibleDialogIds.includes("inspector")) {
+    return "inspector-dialog";
+  }
+  if (appHost.overlapEntityMenu.visible) {
+    return "overlap-entity-menu";
+  }
+  if (appHost.internalState.runtime.quickPlace.visible) {
+    return "quick-place";
+  }
+
+  return "canvas";
 }

@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo } from "react";
 
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { SHORTCUT_KEY } from "@/app/actions";
 import type { AppSettings } from "@/domain/app/types/app-types";
 import type { DeviceClass } from "@/domain/app/types/screen-profile";
 import styles from "@/app/shell/app-shell.module.scss";

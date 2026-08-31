@@ -44,4 +44,12 @@ export type {
   GestureActionRouterDispatchResult,
   GestureHandleResult,
   GestureMappingModule,
+  KeyboardGestureEvent,
+  ShortcutActionRoute,
+  ShortcutInputLayer,
+  ShortcutModifier,
+  ShortcutRouteBinding,
+  ShortcutRouteConflict,
+  ShortcutScope,
+  ShortcutTriggerPolicy,
 } from "./types";

@@ -19,6 +19,7 @@ import {
 } from "@/app/input/gesture/actions";
 import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { EntityCollection } from "@/domain/editor/types/editor-types";
@@ -655,13 +656,14 @@ describe("createHypergryphSelectGestureModule", () => {
     const { context, isShortcutFor, setActiveTool } = createContext("logistics-placement");
     const module = createHypergryphSelectGestureModule();
 
-    const result = module.handle(
-      keyDownEvent({
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({
         code: "Escape",
         key: "Escape",
       }),
-      context,
-    );
+    });
 
     expect(result).toEqual({ status: "handled" });
     // AI-REMOVED 2026-08-03:
@@ -687,9 +689,11 @@ describe("createHypergryphSelectGestureModule", () => {
     const { context, setActiveTool } = createContext("single-placement");
     const module = createHypergryphSelectGestureModule();
 
-    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyR", key: "r" }),
+    })).toEqual({ status: "ignored" });
     expect(setActiveTool).not.toHaveBeenCalled();
   });
 

@@ -23,9 +23,18 @@ import {
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
   removeQuickPlaceFavoriteAtSlot,
-  resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
 } from "@/app/quick-place";
+// AI-REMOVED 2026-08-30:
+// Reason: 快速放置固定按键由 quick-place Shortcut Routes 解析。
+// Trigger: ST2-RQ-020 输入层统一。
+// Evidence: quick-place.favorite-* Route 直接携带 slotIndex。
+// Replacement: quick-place-gesture-module.ts shortcutRoutes
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveQuickPlaceSlotIndexFromKey } from "@/app/quick-place";
 import type { AppHost } from "@/app/host/app-host";
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -59,10 +68,20 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
-  const [activeResultId, setActiveResultId] = useState<string | null>(null);
+  // AI-REMOVED 2026-08-30:
+  // Reason: 当前高亮结果必须由 UI 与 Shortcut Route 共享，不能继续保存在组件局部 state。
+  // Trigger: ST2-RQ-020 快速放置键盘 Route 迁移。
+  // Evidence: ArrowUp/ArrowDown/Enter handler 已位于 quick-place-gesture-module.ts。
+  // Replacement: appHost.internalState.runtime.quickPlace.activeResultId
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const [activeResultId, setActiveResultId] = useState<string | null>(null);
   const deviceListId = useId();
   const t = appHost.actions.translate;
   const runtime = appHost.internalState.runtime.quickPlace;
+  const activeResultId = runtime.activeResultId;
   const anchor = runtime.anchor;
   const visible = runtime.visible && anchor !== null;
   const currentBaseId = documentSnapshot?.baseId ?? null;
@@ -126,11 +145,23 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       return;
     }
 
-    setActiveResultId(null);
+    // AI-REMOVED 2026-08-30:
+    // Reason: activeResultId 已迁入共享 QuickPlaceRuntime。
+    // Trigger: ST2-RQ-020 Route 与 UI 共享高亮结果。
+    // Evidence: runtime.activeResultId 同时由本 effect 与 quick-place Route 更新。
+    // Replacement: runInAction assignment below
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // setActiveResultId(null);
+    runInAction(() => {
+      runtime.activeResultId = null;
+    });
     if (runtime.openSource === "keyboard-shortcut") {
       searchInputRef.current?.focus({ preventScroll: true });
     }
-  }, [runtime.openSource, visible]);
+  }, [runtime, runtime.openSource, visible]);
 
   useEffect(() => {
     if (activeResultId === null) {
@@ -175,6 +206,16 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     favorites[index] ?? null
   );
 
+  // AI-REMOVED 2026-08-30:
+  // Reason: 快速放置固定按键必须通过 GestureActionRouter 执行，避免组件内形成独立输入层和触发规则。
+  // Trigger: ST2-RQ-020 运行时与冲突系统使用同一可执行 Route。
+  // Evidence: quick-place.close、favorite-*、result-*、confirm Route 已覆盖下方全部旧分支。
+  // Replacement: quick-place-gesture-module.ts shortcutRoutes
+  // Risk: 键盘事件改由 native event 进入 Adapter；真实浏览器三档验证已覆盖捕获链路。
+  // Human Review: Required
+  //
+  // Original code:
+  /*
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -268,6 +309,20 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       const nextIndex = clamp(currentIndex + delta, 0, filteredEntries.length - 1);
       return filteredEntries[nextIndex]?.id ?? null;
     });
+  }
+  */
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (appHost.gestureAdapter.handleKeyDown(event.nativeEvent)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  function handleKeyUp(event: KeyboardEvent<HTMLDivElement>) {
+    if (appHost.gestureAdapter.handleKeyUp(event.nativeEvent)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   function selectDevice(deviceId: string, options: {
@@ -416,6 +471,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       aria-label={t("workbench.quickPlace.title")}
       className={cm(styles, "quick-place-popup panel-surface")}
       onKeyDownCapture={handleKeyDown}
+      onKeyUpCapture={handleKeyUp}
       ref={rootRef}
       role="dialog"
       style={popupStyle}
@@ -514,8 +570,18 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             className={cm(styles, "quick-place-search-input")}
             onChange={(event) => {
               const nextSearchQuery = event.currentTarget.value;
-              setActiveResultId(null);
+              // AI-REMOVED 2026-08-30:
+              // Reason: activeResultId 已迁入可供 Shortcut Route 与 UI 共享的 MobX runtime。
+              // Trigger: ST2-RQ-020 快速放置键盘 Route 统一。
+              // Evidence: quickPlace.activeResultId 由 Route 更新，组件只负责展示。
+              // Replacement: runtime.activeResultId assignment below
+              // Risk: Low
+              // Human Review: Required
+              //
+              // Original code:
+              // setActiveResultId(null);
               runInAction(() => {
+                runtime.activeResultId = null;
                 runtime.searchQuery = nextSearchQuery;
               });
             }}
@@ -586,6 +652,7 @@ function closeQuickPlace(appHost: AppHost): void {
     appHost.internalState.runtime.quickPlace.anchor = null;
     appHost.internalState.runtime.quickPlace.searchQuery = "";
     appHost.internalState.runtime.quickPlace.openSource = null;
+    appHost.internalState.runtime.quickPlace.activeResultId = null;
   });
 }
 

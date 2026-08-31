@@ -19,6 +19,7 @@ import {
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphMoveGestureModule", () => {
   it("opens the overlap entity menu before entering move from a stacked long-press cell", () => {
@@ -241,10 +242,11 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    const result = module.handle(
-      keyDownEvent({ code: "KeyM", key: "m" }),
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
       context,
-    );
+      event: keyDownEvent({ code: "KeyM", key: "m" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
@@ -257,10 +259,11 @@ describe("createHypergryphMoveGestureModule", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphMoveGestureModule();
 
-    const result = module.handle(
-      keyDownEvent({ code: "KeyM", key: "m" }),
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
       context,
-    );
+      event: keyDownEvent({ code: "KeyM", key: "m" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
@@ -276,10 +279,11 @@ describe("createHypergryphMoveGestureModule", () => {
     // Clear selection
     selection.replace([]);
 
-    const result = module.handle(
-      keyDownEvent({ code: "KeyM", key: "m" }),
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
       context,
-    );
+      event: keyDownEvent({ code: "KeyM", key: "m" }),
+    });
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
@@ -580,14 +584,15 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyR", key: "r" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.ROTATE,
-      "KeyR",
-      "r",
-    );
+    // AI-CORRECTION 2026-08-30: 快捷键匹配已由 GestureActionRouter 执行。
+    expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledWith(
       EntityCollectionType.preview,
       90,
@@ -608,7 +613,11 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     vi.mocked(editor.actions.moveCollectionCenterPointTo).mockClear();
 
-    const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyR", key: "r" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.rotateCollectionAroundCenterPoint).toHaveBeenCalledWith(
@@ -649,9 +658,11 @@ describe("createHypergryphMoveGestureModule", () => {
     const module = createHypergryphMoveGestureModule();
     vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
 
-    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context)).toEqual({
-      status: "handled",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyR", key: "r" }),
+    })).toEqual({ status: "handled" });
     expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
       collectionType: EntityCollectionType.preview,
       trigger: "before-rotate",
@@ -683,9 +694,11 @@ describe("createHypergryphMoveGestureModule", () => {
       };
     });
 
-    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), context)).toEqual({
-      status: "handled",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    })).toEqual({ status: "handled" });
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "preview-entity",
       "liquid_filling_pd_mc_1",
@@ -740,10 +753,11 @@ describe("createHypergryphMoveGestureModule", () => {
       BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST,
     );
 
-    expect(module.handle(
-      keyDownEvent({ code: "Tab", key: "Tab" }),
-      batch.context,
-    )).toEqual({ status: "ignored" });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: batch.context,
+      event: keyDownEvent({ code: "Tab", key: "Tab" }),
+    })).toEqual({ status: "ignored" });
     expect(batch.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
   });
 

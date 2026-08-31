@@ -8,6 +8,7 @@ import {
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 const SHORTCUT_DEFAULTS: Record<string, string> = {
   [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
@@ -24,7 +25,11 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyL", key: "l" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyL", key: "l" }),
+    });
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.setActivePanel).toHaveBeenCalledWith("blueprint");
@@ -38,7 +43,11 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyK", key: "k" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyK", key: "k" }),
+    });
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.setActivePanel).toHaveBeenCalledWith("base");
@@ -52,7 +61,11 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyK", key: "k" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyK", key: "k" }),
+    });
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
@@ -66,7 +79,11 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyP", key: "p" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyP", key: "p" }),
+    });
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
@@ -80,7 +97,11 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: null, key: "H" }), context);
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: null, key: "H" }),
+    });
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.setActivePanel).toHaveBeenCalledWith("history");
@@ -93,22 +114,27 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    expect(module.handle(keyDownEvent({ code: "KeyM", key: "m" }), context)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent({ code: "KeyM", key: "m" }),
+    })).toEqual({ status: "ignored" });
     expect(
-      module.handle(
-        keyDownEvent({
+      handleKeyboardShortcutThroughRouter({
+        module,
+        context,
+        event: keyDownEvent({
           code: "KeyP",
           key: "p",
           modifiers: { alt: false, ctrl: true, meta: false, shift: false },
         }),
-        context,
-      ),
+      }),
     ).toEqual({ status: "ignored" });
-    expect(module.handle(keyUpEvent({ code: "KeyP", key: "p" }), context)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyUpEvent({ code: "KeyP", key: "p" }),
+    })).toEqual({ status: "ignored" });
 
     expect(internalActions.setActivePanel).not.toHaveBeenCalled();
     expect(internalActions.toggleLeftDock).not.toHaveBeenCalled();

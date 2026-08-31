@@ -101,6 +101,7 @@ interface DialogShellProps {
   onOffsetChange?: (offsetX: number, offsetY: number) => void;
   onResize?: (width: number, height: number) => void;
   onWindowKeyDown?: (event: KeyboardEvent) => boolean;
+  onWindowKeyUp?: (event: KeyboardEvent) => boolean;
   children?: ReactNode;
 }
 
@@ -131,6 +132,7 @@ export const DialogShell = observer(function DialogShell({
   onOffsetChange,
   onResize,
   onWindowKeyDown,
+  onWindowKeyUp,
   children,
 }: DialogShellProps) {
   const dragCleanupRef = useRef<(() => void) | null>(null);
@@ -193,16 +195,29 @@ export const DialogShell = observer(function DialogShell({
       }
     };
 
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!overlayLayer.isTop) {
+        return;
+      }
+
+      if (onWindowKeyUp?.(event)) {
+        event.stopImmediatePropagation();
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [
     dialogState.visible,
     dismissible,
     onClose,
     onWindowKeyDown,
+    onWindowKeyUp,
     overlayLayer.isTop,
   ]);
 

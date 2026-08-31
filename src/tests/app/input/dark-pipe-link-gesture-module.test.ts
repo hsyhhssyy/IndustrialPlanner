@@ -13,6 +13,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 const disposers: Array<() => void> = [];
 
@@ -62,15 +63,19 @@ describe("createHypergryphDarkPipeLinkGestureModule", () => {
     const module = createHypergryphDarkPipeLinkGestureModule();
     enterDarkPipeLinkTool(appHost);
 
-    expect(module.handle({
-      type: "key down",
-      gestureId: "dark-pipe-link-escape",
-      code: "Escape",
-      key: "Escape",
-      keyCode: 27,
-      modifiers: emptyModifiers(),
-      sourceEvent: null,
-    }, context)).toEqual({ status: "handled" });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: {
+        type: "key down",
+        gestureId: "dark-pipe-link-escape",
+        code: "Escape",
+        key: "Escape",
+        keyCode: 27,
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+    })).toEqual({ status: "handled" });
     expect(appHost.state.activeTool).toBe("select");
     expect(appHost.state.toolInfo.darkPipeLink).toBeNull();
   });

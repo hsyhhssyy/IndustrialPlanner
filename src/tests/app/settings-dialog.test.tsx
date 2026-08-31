@@ -232,6 +232,39 @@ describe("SettingsDialog", () => {
 
     const shortcutDialog = document.querySelector('[data-dialog-key="keyboard-shortcut-settings"]');
     expect(shortcutDialog).not.toBeNull();
+    const shortcutGroups = shortcutDialog?.querySelectorAll<HTMLElement>("[data-shortcut-group]");
+    expect(shortcutGroups).toHaveLength(5);
+    expect(shortcutDialog?.querySelectorAll("[data-shortcut-group] > article")).toHaveLength(28);
+
+    const expectedGroups = new Map([
+      ["quick-access", { title: "快速访问与面板", actionCount: 6 }],
+      ["placement", { title: "放置入口", actionCount: 7 }],
+      ["operation", { title: "当前操作与选区", actionCount: 8 }],
+      ["viewport", { title: "视口", actionCount: 5 }],
+      ["history", { title: "历史", actionCount: 2 }],
+    ]);
+    for (const group of shortcutGroups ?? []) {
+      const groupId = group.dataset.shortcutGroup ?? "";
+      const expectation = expectedGroups.get(groupId);
+      if (expectation === undefined) {
+        throw new Error(`Unexpected shortcut group: ${groupId}`);
+      }
+      expect(group.querySelector("h2")?.textContent).toBe(expectation.title);
+      expect(group.querySelectorAll(":scope > article")).toHaveLength(
+        expectation.actionCount,
+      );
+      expectedGroups.delete(groupId);
+    }
+    expect(expectedGroups.size).toBe(0);
+
+    expect(shortcutDialog
+      ?.querySelector('[data-shortcut-id="shortcut-rotate"]')
+      ?.closest<HTMLElement>("[data-shortcut-group]")
+      ?.dataset.shortcutGroup).toBe("operation");
+    expect(shortcutDialog
+      ?.querySelector('[data-shortcut-id="shortcut-rotate-viewport"]')
+      ?.closest<HTMLElement>("[data-shortcut-group]")
+      ?.dataset.shortcutGroup).toBe("viewport");
     expect(shortcutDialog?.querySelectorAll('[data-shortcut-id="shortcut-pan-viewport-up"]')).toHaveLength(2);
 
     const panUpImages = shortcutDialog?.querySelectorAll(
@@ -302,6 +335,7 @@ describe("SettingsDialog", () => {
     expect(conflictDialog?.style.height).toBe("auto");
     expect(parseFloat(conflictDialog?.style.minHeight ?? "")).toBe(0);
     expect(conflictDialog?.querySelector('img[data-key-token="E"]')).not.toBeNull();
+    expect(conflictDialog?.textContent).toContain("布设传送带（E）");
     const replaceButton = [...conflictDialog?.querySelectorAll("button") ?? []].find((button) => (
       button.textContent === "更换"
     ));

@@ -22,15 +22,25 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 
-import type { GestureHandleResult, GestureMappingModule } from "../types";
+import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   closeCompactLeftDockOnPlacementEnter,
+  PLACEMENT_DEVICE_SHORTCUT_KEYS,
   resolveDeviceIdForPlacementGroupShortcut,
-  resolveDeviceShortcutIndex,
-  resolvePlacementGroupByShortcut,
   setPendingSinglePlacementEnter,
 } from "./hypergryph-single-placement-gesture-module";
+// AI-REMOVED 2026-08-30:
+// Reason: 物流快捷键的 key-to-action 解析已由本模块 Shortcut Route 完成。
+// Trigger: ST2-RQ-020 可执行 Route 单一事实源。
+// Evidence: Route 直接携带 logistics kind 或 shortcutIndex。
+// Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveDeviceShortcutIndex, resolvePlacementGroupByShortcut }
+// from "./hypergryph-single-placement-gesture-module";
 
 const LOGISTICS_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
@@ -111,6 +121,58 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
   return {
     id: "hypergryph-logistics-placement-gesture",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: [
+      ...([
+        [SHORTCUT_KEY.PLACE_CONVEYOR, LOGISTICS_KIND.belt],
+        [SHORTCUT_KEY.PLACE_PIPE, LOGISTICS_KIND.pipe],
+      ] as const).map<ShortcutActionRoute<AppHost>>(([shortcutId, kind]) => ({
+        id: `logistics-placement.switch-${kind}`,
+        actionId: shortcutId,
+        binding: { kind: "configurable", shortcutId },
+        scope: { inputLayers: ["canvas"], activeTools: ["select", "logistics-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        handle(_event, context) {
+          if (kind === LOGISTICS_KIND.pipe && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+            return { status: "ignored" };
+          }
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          enterLogisticsPlacementMode({
+            appHost: context.appHost,
+            editor,
+            kind,
+            pointerMode: "mouse",
+          });
+          return { status: "handled" };
+        },
+      })),
+      ...PLACEMENT_DEVICE_SHORTCUT_KEYS.map<ShortcutActionRoute<AppHost>>((shortcut, shortcutIndex) => ({
+        id: `logistics-placement.device-${shortcutIndex}`,
+        actionId: `fixed.placement-device.${shortcutIndex}`,
+        binding: { kind: "fixed", value: shortcut },
+        scope: { inputLayers: ["canvas"], activeTools: ["logistics-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        handle: (_event, context) => handleLogisticsDeviceShortcutIndex({
+          appHost: context.appHost,
+          editor: context.workspace.editor,
+          shortcutIndex,
+        }),
+      })),
+      {
+        id: "current-operation.flip-logistics-route",
+        actionId: SHORTCUT_KEY.ROTATE,
+        binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE },
+        scope: { inputLayers: ["canvas"], activeTools: ["logistics-placement"] },
+        triggerPolicy: { kind: "allow-any-additional-modifiers" },
+        claimsBrowserDefault: true,
+        handle(_event, context) {
+          const editor = context.workspace.editor;
+          if (editor === null) return { status: "ignored" };
+          handleRouteOrderChange(context.appHost, editor);
+          return { status: "handled" };
+        },
+      },
+    ],
     handle(event, context) {
       if (event.type === "on-exit-active-tool") {
         if (event.from !== "logistics-placement" || event.to === "logistics-placement") {
@@ -142,6 +204,16 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         context.appHost.internalState.runtime.logisticsPlacement.lastMousePosition = event.position;
       }
 
+      // AI-REMOVED 2026-08-30:
+      // Reason: 物流模式 E/Q 切换已迁入两条 allow-any-additional-modifiers Route。
+      // Trigger: ST2-RQ-020 操作模式 modifier 绑定兼容。
+      // Evidence: logistics-placement.switch-belt/pipe 直接持有 kind 和 handler。
+      // Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      /*
       if (event.type === "key down") {
         // 2026-08-02 订正：物流放置模式下允许修饰键组合（Ctrl 连续放置时按 E/Q 切换种类仍生效）；
         // select 模式进入物流放置的入口保持拒绝修饰键，避免影响全局快捷键（如 Ctrl+E 浏览器地址栏）。
@@ -173,6 +245,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           return { status: "handled" };
         }
       }
+      */
 
       if (editor === null) {
         if (
@@ -240,6 +313,16 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       switch (event.type) {
+        // AI-REMOVED 2026-08-30:
+        // Reason: R 路径翻转与 1-0 设备选择已迁入可执行 Route。
+        // Trigger: ST2-RQ-020 固定 Action 与操作 Action 统一。
+        // Evidence: current-operation.flip-logistics-route 和 logistics-placement.device-*。
+        // Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        /*
         case "key down":
           if (handleRouteOrderShortcut({
             appHost: context.appHost,
@@ -258,6 +341,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             key: event.key,
             modifiers: event.modifiers,
           });
+        */
 
         case "touch tap":
           return handleTouchTap({
@@ -1137,6 +1221,16 @@ function exitLogisticsPlacementToSelect(
   appHost.internalActions.setActiveTool("select");
 }
 
+// AI-REMOVED 2026-08-30:
+// Reason: R 的物理匹配由 current-operation.flip-logistics-route Route 负责，业务函数只翻转路径。
+// Trigger: ST2-RQ-020 修复组合绑定在操作模式失效。
+// Evidence: Route 使用 allow-any-additional-modifiers，并在命中后调用替代函数。
+// Replacement: handleRouteOrderChange and shortcutRoutes[current-operation.flip-logistics-route]
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+/*
 function handleRouteOrderShortcut(options: {
   appHost: AppHost;
   editor: NonNullable<AppHost["workspace"]["editor"]>;
@@ -1193,20 +1287,71 @@ function handleRouteOrderShortcut(options: {
 
   return true;
 }
+*/
+function handleRouteOrderChange(
+  appHost: AppHost,
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+): void {
+  const runtime = appHost.internalState.runtime.logisticsPlacement;
+  runtime.routeOrder = flipRouteOrder(runtime.routeOrder);
 
-function handleLogisticsDeviceShortcut(options: {
+  const gridPoint = resolveGridPointFromGesturePosition(editor, runtime.lastMousePosition);
+  if (
+    gridPoint !== null
+    && editor.queries.resolveLogisticsDraftState() !== null
+    && !runtime.isHoverPreview
+  ) {
+    const result = editor.actions.moveLogisticEnd({
+      pointerGridPoint: gridPoint,
+      ...resolveMoveLogisticsDraftBehaviorOptions(appHost),
+      routeMode: {
+        type: "single-bend",
+        routeOrder: runtime.routeOrder,
+        allowTemporaryOrderFlip: true,
+      },
+    });
+    updateRuntimeFromResult({
+      appHost,
+      pointerMode: "mouse",
+      phase: result.targetEntityId === null ? "drawing" : "snapped-target",
+      result,
+    });
+  }
+}
+
+// 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
+// AI-CORRECTION 2026-08-30: modifier 匹配已由 logistics-placement.device-* Route 负责；
+// 本函数现在只接收 Route 已解析的 shortcutIndex，并继续保持原业务行为。
+// AI-REMOVED 2026-08-30:
+// Reason: 设备数字键解析已由 logistics-placement.device-* 固定 Route 完成。
+// Trigger: ST2-RQ-020 固定 Action 路由统一。
+// Evidence: 每条 Route 直接携带 shortcutIndex。
+// Replacement: handleLogisticsDeviceShortcutIndex signature below
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function handleLogisticsDeviceShortcut(options: {
+//   appHost: AppHost;
+//   editor: NonNullable<AppHost["workspace"]["editor"]>;
+//   code: string | null;
+//   key: string | null;
+//   modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean };
+// }): GestureHandleResult {
+//   // 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
+//   const shortcutIndex = resolveDeviceShortcutIndex({
+//     ...options,
+//     allowModifierKeys: true,
+//   });
+//   if (shortcutIndex === null) {
+//     return { status: "ignored" };
+//   }
+function handleLogisticsDeviceShortcutIndex(options: {
   appHost: AppHost;
-  editor: NonNullable<AppHost["workspace"]["editor"]>;
-  code: string | null;
-  key: string | null;
-  modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean };
+  editor: AppHost["workspace"]["editor"];
+  shortcutIndex: number;
 }): GestureHandleResult {
-  // 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
-  const shortcutIndex = resolveDeviceShortcutIndex({
-    ...options,
-    allowModifierKeys: true,
-  });
-  if (shortcutIndex === null) {
+  if (options.editor === null) {
     return { status: "ignored" };
   }
 
@@ -1222,7 +1367,7 @@ function handleLogisticsDeviceShortcut(options: {
   const deviceId = resolveDeviceIdForPlacementGroupShortcut({
     registry: options.appHost.workspace.registry,
     group,
-    shortcutIndex,
+    shortcutIndex: options.shortcutIndex,
     canUseDefinition: (definition) => canPlaceEntityDefinitionInCurrentBase(
       options.appHost,
       definition,

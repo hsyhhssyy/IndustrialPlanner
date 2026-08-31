@@ -1,7 +1,8 @@
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureMappingModule } from "../types";
+import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 /**
@@ -15,7 +16,7 @@ const PAN_ACCELERATION_MULTIPLIER = 2;
 
 type PanDirection = "up" | "down" | "left" | "right";
 
-const PAN_DIRECTION_SHORTCUTS: ReadonlyArray<readonly [string, PanDirection]> = [
+const PAN_DIRECTION_SHORTCUTS: ReadonlyArray<readonly [ShortcutKeyId, PanDirection]> = [
   [SHORTCUT_KEY.PAN_VIEWPORT_UP, "up"],
   [SHORTCUT_KEY.PAN_VIEWPORT_DOWN, "down"],
   [SHORTCUT_KEY.PAN_VIEWPORT_LEFT, "left"],
@@ -98,6 +99,16 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
     lastTickMs = nowMs;
   };
 
+  // AI-REMOVED 2026-08-30:
+  // Reason: 平移方向不再由 handler 遍历全部绑定反查，而由每条 Shortcut Route 直接携带。
+  // Trigger: ST2-RQ-020 可执行路由与触发策略统一。
+  // Evidence: 下方 shortcutRoutes 从 PAN_DIRECTION_SHORTCUTS 生成，并显式声明 Shift 可组合。
+  // Replacement: shortcutRoutes and handlePanKeyEvent in this function
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  /*
   const resolvePressedDirection = (
     context: Parameters<GestureMappingModule<AppHost>["handle"]>[1],
     event: { code: string | null; key: string | null; modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean } },
@@ -127,10 +138,46 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
 
     return null;
   };
+  */
+  const handlePanKeyEvent = (
+    direction: PanDirection,
+    context: Parameters<GestureMappingModule<AppHost>["handle"]>[1],
+    event: { type: "key down" | "key up" },
+  ) => {
+    isAccelerated = context.keyboard.modifiers.shift
+      || context.keyboard.pressedKeys.has("ShiftLeft")
+      || context.keyboard.pressedKeys.has("ShiftRight");
+
+    if (event.type === "key down") {
+      pressedDirections.add(direction);
+      panWorkspace = context.workspace;
+      if (rafId === null) {
+        lastTickMs = null;
+        rafId = requestAnimationFrame(panTick);
+      }
+      return { status: "handled" as const };
+    }
+
+    pressedDirections.delete(direction);
+    if (pressedDirections.size === 0) {
+      stopPanLoop();
+    }
+    return { status: "handled" as const };
+  };
 
   return {
     id: "hypergryph-keyboard-viewport-pan",
     when: isHypergryphGestureEnabled,
+    shortcutRoutes: PAN_DIRECTION_SHORTCUTS.map(([shortcutId, direction]) => ({
+      id: `viewport-pan.${direction}`,
+      actionId: shortcutId,
+      binding: { kind: "configurable" as const, shortcutId },
+      scope: { inputLayers: ["canvas"] as const, activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
+      triggerPolicy: { kind: "allow-additional-modifiers" as const, modifiers: ["shift"] as const },
+      events: ["key down", "key up"] as const,
+      claimsBrowserDefault: true,
+      handle: (event, context) => handlePanKeyEvent(direction, context, event),
+    })),
     handle(event, context) {
       if (event.type === "key down" || event.type === "key up") {
         isAccelerated = context.keyboard.modifiers.shift
@@ -138,6 +185,16 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
           || context.keyboard.pressedKeys.has("ShiftRight");
       }
 
+      // AI-REMOVED 2026-08-30:
+      // Reason: W/A/S/D 与方向键的 keydown/keyup 生命周期已由 viewport-pan.* Route 接管。
+      // Trigger: ST2-RQ-020 要求双槽位、Shift 加速和 keyup 使用同一触发定义。
+      // Evidence: shortcutRoutes 声明 key down/key up 与 allow-additional-modifiers(shift)。
+      // Replacement: shortcutRoutes and handlePanKeyEvent in this function
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      /*
       switch (event.type) {
         case "key down": {
           const direction = resolvePressedDirection(context, event);
@@ -173,6 +230,8 @@ export function createHypergryphKeyboardViewportPanModule(): GestureMappingModul
         default:
           return { status: "ignored" };
       }
+      */
+      return { status: "ignored" };
     },
   };
 }

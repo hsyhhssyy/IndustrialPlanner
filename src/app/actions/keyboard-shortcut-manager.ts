@@ -5,6 +5,7 @@ import {
   saveToLocalStorageWithVersion,
   type StorageMigration,
 } from "@/shared/storage/migration";
+import type { UiKey } from "@/shared/i18n";
 
 // ─── Key 常量定义 ───
 /** 所有快捷键 key 的常量对象。新增快捷键只需在此添加。 */
@@ -59,51 +60,162 @@ export interface ShortcutEventModifiers {
   readonly shift?: boolean;
 }
 
+export type ShortcutActionGroup =
+  | "quick-access"
+  | "placement"
+  | "operation"
+  | "viewport"
+  | "history";
+
+export interface ConfigurableShortcutActionSpec {
+  readonly id: ShortcutKeyId;
+  readonly group: ShortcutActionGroup;
+  readonly labelKey: UiKey;
+  readonly defaultBindings: readonly [string, string?];
+  readonly configurable: true;
+}
+
+export interface FixedShortcutActionSpec {
+  readonly id: string;
+  readonly labelKey: UiKey;
+  readonly defaultBindings: readonly [string];
+  readonly configurable: false;
+}
+
+export type ShortcutActionSpec = ConfigurableShortcutActionSpec | FixedShortcutActionSpec;
+
+export interface ShortcutActionGroupSpec {
+  readonly id: ShortcutActionGroup;
+  readonly labelKey: UiKey;
+}
+
 /** 所有有效的 key id 集合（用于运行时校验） */
 const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.values(SHORTCUT_KEY));
 
 // ─── 默认值 ───
-/** 所有快捷键的默认值（鹰角网络模式下的固定值）。 */
-const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
-  [SHORTCUT_KEY.PLACE_CONVEYOR]:   "E",
-  [SHORTCUT_KEY.PLACE_PIPE]:       "Q",
-  [SHORTCUT_KEY.RESOURCES_POWER]:  "G",
-  [SHORTCUT_KEY.WAREHOUSE]:        "C",
-  [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
-  [SHORTCUT_KEY.SYNTHESIS]:        "B",
-  [SHORTCUT_KEY.CHEAT]:            "U",
-  [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
-  // AI-REMOVED 2026-08-03:
-  // Reason: 返回选择使用硬编码 Escape，不再属于可配置快捷键默认值。
-  // Trigger: ST2-RQ-002 禁止绑定 Escape。
-  // Evidence: SHORTCUT_KEY.RETURN_SELECT 已从有效快捷键常量中归档。
-  // Replacement: hypergryph-select-gesture-module.ts 的 Escape 硬编码判断。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // [SHORTCUT_KEY.RETURN_SELECT]:    "Esc",
-  [SHORTCUT_KEY.ROTATE]:           "R",
-  [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
-  [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
-  [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
-  [SHORTCUT_KEY.MOVE_SELECTION]:   "M",
-  [SHORTCUT_KEY.COPY_SELECTION]:   "Ctrl+C",
-  [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
-  [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
-  [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
-  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
-  [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
-  [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
-  [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
-  [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
-  [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
-  [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W;ArrowUp",
-  [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S;ArrowDown",
-  [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A;ArrowLeft",
-  [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D;ArrowRight",
-  [SHORTCUT_KEY.MARQUEE]:                "X",
-};
+/** 可配置 Action 的产品元数据。作用域只能由可执行 Shortcut Route 定义。 */
+// AI-CORRECTION 2026-08-31: 上述标题与注释对应下方 SHORTCUT_ACTION_SPECS；
+// 分组标题元数据先行登记，供设置页按同一 Action registry 分段展示。
+// AI-CORRECTION 2026-08-31: 统一 registry 纳入固定 Action 后，可配置元数据现由
+// CONFIGURABLE_SHORTCUT_ACTION_SPECS 提供，SHORTCUT_ACTION_SPECS 表示全部键盘 Action。
+/** 可配置 Action 的展示分组元数据；分组只影响设置页信息架构。 */
+export const SHORTCUT_ACTION_GROUP_SPECS: readonly ShortcutActionGroupSpec[] = [
+  { id: "quick-access", labelKey: "keyboardShortcutDialog.group.quickAccess" },
+  { id: "placement", labelKey: "keyboardShortcutDialog.group.placement" },
+  { id: "operation", labelKey: "keyboardShortcutDialog.group.operation" },
+  { id: "viewport", labelKey: "keyboardShortcutDialog.group.viewport" },
+  { id: "history", labelKey: "keyboardShortcutDialog.group.history" },
+];
+
+/** 可配置 Action 的名称、分组与默认双槽位元数据。 */
+export const CONFIGURABLE_SHORTCUT_ACTION_SPECS: readonly ConfigurableShortcutActionSpec[] = [
+  { id: SHORTCUT_KEY.QUICK_PLACE, group: "quick-access", labelKey: "settingsField.shortcut-quick-place", defaultBindings: ["Z"], configurable: true },
+  { id: SHORTCUT_KEY.OPEN_TOOLBOX, group: "quick-access", labelKey: "settingsField.shortcut-open-toolbox", defaultBindings: ["T"], configurable: true },
+  { id: SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-placement-panel", defaultBindings: ["P"], configurable: true },
+  { id: SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-blueprint-panel", defaultBindings: ["L"], configurable: true },
+  { id: SHORTCUT_KEY.TOGGLE_HISTORY_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-history-panel", defaultBindings: ["H"], configurable: true },
+  { id: SHORTCUT_KEY.TOGGLE_BASE_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-base-panel", defaultBindings: ["K"], configurable: true },
+  { id: SHORTCUT_KEY.PLACE_CONVEYOR, group: "placement", labelKey: "settingsField.shortcut-place-conveyor", defaultBindings: ["E"], configurable: true },
+  { id: SHORTCUT_KEY.PLACE_PIPE, group: "placement", labelKey: "settingsField.shortcut-place-pipe", defaultBindings: ["Q"], configurable: true },
+  { id: SHORTCUT_KEY.RESOURCES_POWER, group: "placement", labelKey: "settingsField.shortcut-resources-power", defaultBindings: ["G"], configurable: true },
+  { id: SHORTCUT_KEY.WAREHOUSE, group: "placement", labelKey: "settingsField.shortcut-warehouse", defaultBindings: ["C"], configurable: true },
+  { id: SHORTCUT_KEY.BASIC_PRODUCTION, group: "placement", labelKey: "settingsField.shortcut-basic-production", defaultBindings: ["V"], configurable: true },
+  { id: SHORTCUT_KEY.SYNTHESIS, group: "placement", labelKey: "settingsField.shortcut-synthesis", defaultBindings: ["B"], configurable: true },
+  { id: SHORTCUT_KEY.CHEAT, group: "placement", labelKey: "settingsField.shortcut-cheat", defaultBindings: ["U"], configurable: true },
+  { id: SHORTCUT_KEY.SAVE_BLUEPRINT, group: "operation", labelKey: "settingsField.shortcut-save-blueprint", defaultBindings: ["Ctrl+S"], configurable: true },
+  { id: SHORTCUT_KEY.ROTATE, group: "operation", labelKey: "settingsField.shortcut-rotate", defaultBindings: ["R"], configurable: true },
+  { id: SHORTCUT_KEY.SWITCH_DEVICE_MODE, group: "operation", labelKey: "settingsField.shortcut-switch-device-mode", defaultBindings: ["Tab"], configurable: true },
+  { id: SHORTCUT_KEY.MARQUEE, group: "operation", labelKey: "settingsField.shortcut-marquee", defaultBindings: ["X"], configurable: true },
+  { id: SHORTCUT_KEY.DELETE_DEVICE, group: "operation", labelKey: "settingsField.shortcut-delete-device", defaultBindings: ["F"], configurable: true },
+  { id: SHORTCUT_KEY.MOVE_SELECTION, group: "operation", labelKey: "settingsField.shortcut-move-selection", defaultBindings: ["M"], configurable: true },
+  { id: SHORTCUT_KEY.COPY_SELECTION, group: "operation", labelKey: "settingsField.shortcut-copy-selection", defaultBindings: ["Ctrl+C"], configurable: true },
+  { id: SHORTCUT_KEY.PASTE_SELECTION, group: "operation", labelKey: "settingsField.shortcut-paste-selection", defaultBindings: ["Ctrl+V"], configurable: true },
+  { id: SHORTCUT_KEY.ROTATE_VIEWPORT, group: "viewport", labelKey: "settingsField.shortcut-rotate-viewport", defaultBindings: ["Ctrl+R"], configurable: true },
+  { id: SHORTCUT_KEY.PAN_VIEWPORT_UP, group: "viewport", labelKey: "settingsField.shortcut-pan-viewport-up", defaultBindings: ["W", "ArrowUp"], configurable: true },
+  { id: SHORTCUT_KEY.PAN_VIEWPORT_DOWN, group: "viewport", labelKey: "settingsField.shortcut-pan-viewport-down", defaultBindings: ["S", "ArrowDown"], configurable: true },
+  { id: SHORTCUT_KEY.PAN_VIEWPORT_LEFT, group: "viewport", labelKey: "settingsField.shortcut-pan-viewport-left", defaultBindings: ["A", "ArrowLeft"], configurable: true },
+  { id: SHORTCUT_KEY.PAN_VIEWPORT_RIGHT, group: "viewport", labelKey: "settingsField.shortcut-pan-viewport-right", defaultBindings: ["D", "ArrowRight"], configurable: true },
+  { id: SHORTCUT_KEY.UNDO, group: "history", labelKey: "settingsField.shortcut-undo", defaultBindings: ["Ctrl+Z"], configurable: true },
+  { id: SHORTCUT_KEY.REDO, group: "history", labelKey: "settingsField.shortcut-redo", defaultBindings: ["Ctrl+Y"], configurable: true },
+];
+
+const FIXED_DIGIT_BINDINGS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+
+/** 固定 Action 仍进入统一注册表，但不会出现在普通快捷键设置中。 */
+export const FIXED_SHORTCUT_ACTION_SPECS: readonly FixedShortcutActionSpec[] = [
+  { id: "fixed.quick-place.close", labelKey: "keyboardShortcutAction.quickPlaceClose", defaultBindings: ["Esc"], configurable: false },
+  ...FIXED_DIGIT_BINDINGS.map((binding, index): FixedShortcutActionSpec => ({
+    id: `fixed.quick-place.favorite-${index}`,
+    labelKey: "keyboardShortcutAction.quickPlaceFavorite",
+    defaultBindings: [binding],
+    configurable: false,
+  })),
+  { id: "fixed.quick-place.result-next", labelKey: "keyboardShortcutAction.quickPlaceResultNext", defaultBindings: ["ArrowDown"], configurable: false },
+  { id: "fixed.quick-place.result-previous", labelKey: "keyboardShortcutAction.quickPlaceResultPrevious", defaultBindings: ["ArrowUp"], configurable: false },
+  { id: "fixed.quick-place.confirm", labelKey: "keyboardShortcutAction.quickPlaceConfirm", defaultBindings: ["Enter"], configurable: false },
+  ...FIXED_DIGIT_BINDINGS.map((binding, index): FixedShortcutActionSpec => ({
+    id: `fixed.placement-device.${index}`,
+    labelKey: "keyboardShortcutAction.placementDeviceSlot",
+    defaultBindings: [binding],
+    configurable: false,
+  })),
+  { id: "fixed.active-tool.cancel-to-select", labelKey: "keyboardShortcutAction.cancelToSelect", defaultBindings: ["Esc"], configurable: false },
+  { id: "fixed.dark-pipe-link.cancel", labelKey: "keyboardShortcutAction.cancelDarkPipeLink", defaultBindings: ["Esc"], configurable: false },
+  { id: "fixed.overlap-entity-menu.cancel", labelKey: "keyboardShortcutAction.closeOverlapEntityMenu", defaultBindings: ["Esc"], configurable: false },
+];
+
+/** 所有键盘 Action 的统一元数据注册表；作用域仍只由可执行 Shortcut Route 定义。 */
+export const SHORTCUT_ACTION_SPECS: readonly ShortcutActionSpec[] = [
+  ...CONFIGURABLE_SHORTCUT_ACTION_SPECS,
+  ...FIXED_SHORTCUT_ACTION_SPECS,
+];
+assertShortcutActionSpecs(SHORTCUT_ACTION_SPECS);
+assertShortcutActionGroups(SHORTCUT_ACTION_GROUP_SPECS, CONFIGURABLE_SHORTCUT_ACTION_SPECS);
+
+// AI-REMOVED 2026-08-30:
+// Reason: 默认值必须由 ActionSpec.defaultBindings 单点生成，避免设置、重置和运行时出现双默认真相。
+// Trigger: ST2-RQ-020 的 P0 默认重置门槛。
+// Evidence: SHORTCUT_ACTION_SPECS 已覆盖全部 28 个 ShortcutKeyId，并由下方 SHORTCUT_DEFAULTS 派生。
+// Replacement: SHORTCUT_ACTION_SPECS in this file
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
+//   [SHORTCUT_KEY.PLACE_CONVEYOR]:   "E",
+//   [SHORTCUT_KEY.PLACE_PIPE]:       "Q",
+//   [SHORTCUT_KEY.RESOURCES_POWER]:  "G",
+//   [SHORTCUT_KEY.WAREHOUSE]:        "C",
+//   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
+//   [SHORTCUT_KEY.SYNTHESIS]:        "B",
+//   [SHORTCUT_KEY.CHEAT]:            "U",
+//   [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
+//   [SHORTCUT_KEY.ROTATE]:           "R",
+//   [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
+//   [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
+//   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
+//   [SHORTCUT_KEY.MOVE_SELECTION]:   "M",
+//   [SHORTCUT_KEY.COPY_SELECTION]:   "Ctrl+C",
+//   [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
+//   [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
+//   [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
+//   [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
+//   [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
+//   [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
+//   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
+//   [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
+//   [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
+//   [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W;ArrowUp",
+//   [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S;ArrowDown",
+//   [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A;ArrowLeft",
+//   [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D;ArrowRight",
+//   [SHORTCUT_KEY.MARQUEE]:                "X",
+// };
+// AI-CORRECTION 2026-08-31: 上述历史 Evidence 与 Replacement 中的 28 项来源现为
+// CONFIGURABLE_SHORTCUT_ACTION_SPECS；SHORTCUT_ACTION_SPECS 已扩展为可配置与固定 Action 的统一 registry。
+const SHORTCUT_DEFAULTS = Object.fromEntries(
+  CONFIGURABLE_SHORTCUT_ACTION_SPECS.map((spec) => [spec.id, spec.defaultBindings.join(";")]),
+) as Readonly<Record<ShortcutKeyId, string>>;
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.SAVE_BLUEPRINT]: "N",
@@ -266,9 +378,8 @@ export class KeyboardShortcutManager {
    * 不受鹰角网络模式限制，直接写入 shortcuts 并触发持久化。
    */
   public readonly resetAllShortcutsToDefaults = (): void => {
-    for (const key of Object.values(SHORTCUT_KEY)) {
-      this.shortcuts[key] = SHORTCUT_DEFAULTS[key];
-    }
+    this.appHost.gestureActionRouter.assertShortcutRouteIntegrity();
+    Object.assign(this.shortcuts, createDefaultShortcutState());
   };
 
   /** 释放资源 */
@@ -366,7 +477,7 @@ function isShortcutValueOccupiedByOtherKey(
   return false;
 }
 
-function doesShortcutMatchKeyEvent(options: {
+export function doesShortcutMatchKeyEvent(options: {
   shortcut: string;
   code: string | null;
   key: string | null;
@@ -375,17 +486,20 @@ function doesShortcutMatchKeyEvent(options: {
   const parsedShortcuts = parseShortcutBindings(options.shortcut);
 
   return parsedShortcuts.some((parsedShortcut) => (
-    doShortcutModifiersMatch(parsedShortcut.modifiers, options.modifiers)
+    doShortcutModifiersMatch(
+      parsedShortcut.modifiers,
+      omitPrimaryModifier(parsedShortcut.primaryKey, options.modifiers),
+    )
     && doesShortcutPrimaryKeyMatch(parsedShortcut.primaryKey, options.code, options.key)
   ));
 }
 
-function doesShortcutPrimaryKeyMatch(
+export function doesShortcutPrimaryKeyMatch(
   primaryKey: string,
   code: string | null,
   eventKey: string | null,
 ): boolean {
-  const key = normalizeShortcut(eventKey ?? "");
+  const key = normalizeShortcutKeyToken(eventKey ?? "");
   if (key === primaryKey) {
     return true;
   }
@@ -402,12 +516,12 @@ function doesShortcutPrimaryKeyMatch(
   return normalizeShortcutCode(normalizedCode) === primaryKey;
 }
 
-interface ParsedShortcutBinding {
+export interface ParsedShortcutBinding {
   readonly modifiers: Required<ShortcutEventModifiers>;
   readonly primaryKey: string;
 }
 
-function parseShortcutBindings(shortcut: string): readonly ParsedShortcutBinding[] {
+export function parseShortcutBindings(shortcut: string): readonly ParsedShortcutBinding[] {
   return shortcut
     .split(";")
     .slice(0, 2)
@@ -415,10 +529,10 @@ function parseShortcutBindings(shortcut: string): readonly ParsedShortcutBinding
     .filter((binding): binding is ParsedShortcutBinding => binding !== null);
 }
 
-function parseShortcutBinding(shortcut: string): ParsedShortcutBinding | null {
+export function parseShortcutBinding(shortcut: string): ParsedShortcutBinding | null {
   const parts = shortcut
     .split("+")
-    .map((part) => normalizeShortcut(part))
+    .map((part) => normalizeShortcutKeyToken(part))
     .filter((part) => part !== "");
 
   if (parts.length === 0) {
@@ -462,7 +576,15 @@ function parseShortcutBinding(shortcut: string): ParsedShortcutBinding | null {
   }
 
   if (primaryKey === null) {
-    return null;
+    if (parts.length !== 1 || !isCanonicalModifier(parts[0] ?? "")) {
+      return null;
+    }
+
+    primaryKey = parts[0] ?? null;
+    if (primaryKey === null) {
+      return null;
+    }
+    modifiers[primaryKey as keyof typeof modifiers] = false;
   }
 
   return {
@@ -483,10 +605,55 @@ function doShortcutModifiersMatch(
   );
 }
 
+function omitPrimaryModifier(
+  primaryKey: string,
+  modifiers: ShortcutEventModifiers,
+): ShortcutEventModifiers {
+  if (!isCanonicalModifier(primaryKey)) {
+    return modifiers;
+  }
+
+  return {
+    ...modifiers,
+    [primaryKey]: false,
+  };
+}
+
 function normalizeShortcut(shortcut: string): string {
   const normalized = shortcut.trim().toLowerCase();
 
   return normalized === "+" ? "plus" : normalized;
+}
+
+function normalizeShortcutKeyToken(value: string): string {
+  const normalized = normalizeShortcut(value);
+  if (
+    normalized === "control"
+    || normalized === "controlleft"
+    || normalized === "controlright"
+  ) {
+    return "ctrl";
+  }
+  if (normalized === "shiftleft" || normalized === "shiftright") {
+    return "shift";
+  }
+  if (normalized === "altleft" || normalized === "altright" || normalized === "option") {
+    return "alt";
+  }
+  if (
+    normalized === "metaleft"
+    || normalized === "metaright"
+    || normalized === "cmd"
+    || normalized === "command"
+  ) {
+    return "meta";
+  }
+
+  return normalized;
+}
+
+function isCanonicalModifier(value: string): value is keyof Required<ShortcutEventModifiers> {
+  return value === "alt" || value === "ctrl" || value === "meta" || value === "shift";
 }
 
 function normalizeShortcutCode(code: string): string {
@@ -510,7 +677,7 @@ function normalizeShortcutCode(code: string): string {
     return "right";
   }
 
-  return code.trim().toLowerCase();
+  return normalizeShortcutKeyToken(code);
 }
 
 function normalizeConfigurableShortcutValue(value: string): string {
@@ -519,8 +686,8 @@ function normalizeConfigurableShortcutValue(value: string): string {
     .split(";", 2)
     .map((binding) => binding.trim());
   const normalizedSlots: [string, string] = [
-    isReservedEscapeBinding(first) ? "" : first,
-    isReservedEscapeBinding(second) ? "" : second,
+    isReservedEscapeBinding(first) ? "" : normalizeModifierOnlyBinding(first),
+    isReservedEscapeBinding(second) ? "" : normalizeModifierOnlyBinding(second),
   ];
 
   if (normalizedSlots[1] === "") {
@@ -528,6 +695,77 @@ function normalizeConfigurableShortcutValue(value: string): string {
   }
 
   return `${normalizedSlots[0]};${normalizedSlots[1]}`;
+}
+
+function normalizeModifierOnlyBinding(binding: string): string {
+  const parsed = parseShortcutBinding(binding);
+  if (parsed === null || !isCanonicalModifier(parsed.primaryKey)) {
+    return binding;
+  }
+
+  const hasRequiredModifier = Object.values(parsed.modifiers).some(Boolean);
+  if (hasRequiredModifier) {
+    return binding;
+  }
+
+  return parsed.primaryKey === "ctrl"
+    ? "Ctrl"
+    : parsed.primaryKey[0]?.toUpperCase() + parsed.primaryKey.slice(1);
+}
+
+function createDefaultShortcutState(): AppShortcutState {
+  return { ...SHORTCUT_DEFAULTS };
+}
+
+function assertShortcutActionSpecs(specs: readonly ShortcutActionSpec[]): void {
+  const expectedIds = new Set(Object.values(SHORTCUT_KEY));
+  const actualIds = new Set<string>();
+  const configurableIds = new Set<ShortcutKeyId>();
+  for (const spec of specs) {
+    if (actualIds.has(spec.id)) {
+      throw new Error(`Duplicate ShortcutActionSpec: ${spec.id}`);
+    }
+    const defaultBindingCount: number = spec.defaultBindings.length;
+    if (defaultBindingCount === 0 || defaultBindingCount > 2) {
+      throw new Error(`ShortcutActionSpec has invalid default slots: ${spec.id}`);
+    }
+    actualIds.add(spec.id);
+    if (spec.configurable) {
+      configurableIds.add(spec.id);
+    }
+  }
+
+  const missing = Array.from(expectedIds).filter((shortcutId) => !configurableIds.has(shortcutId));
+  const unknown = Array.from(configurableIds).filter((shortcutId) => !expectedIds.has(shortcutId));
+  if (missing.length > 0 || unknown.length > 0) {
+    throw new Error(
+      `ShortcutActionSpec registry mismatch. missing=${missing.join(",")} unknown=${unknown.join(",")}`,
+    );
+  }
+}
+
+function assertShortcutActionGroups(
+  groups: readonly ShortcutActionGroupSpec[],
+  actions: readonly ConfigurableShortcutActionSpec[],
+): void {
+  const groupIds = new Set<ShortcutActionGroup>();
+  for (const group of groups) {
+    if (groupIds.has(group.id)) {
+      throw new Error(`Duplicate ShortcutActionGroupSpec: ${group.id}`);
+    }
+    groupIds.add(group.id);
+  }
+
+  const missingGroupIds = new Set(
+    actions
+      .map((action) => action.group)
+      .filter((groupId) => !groupIds.has(groupId)),
+  );
+  if (missingGroupIds.size > 0) {
+    throw new Error(
+      `ShortcutActionGroupSpec registry mismatch. missing=${Array.from(missingGroupIds).join(",")}`,
+    );
+  }
 }
 
 function isReservedEscapeBinding(binding: string): boolean {

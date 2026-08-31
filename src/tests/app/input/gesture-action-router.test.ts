@@ -9,7 +9,9 @@ import {
   type GestureActionContext,
   type GestureHandleResult,
   type GestureMappingModule,
+  type ShortcutActionRoute,
 } from "@/app/input/gesture/actions";
+import { SHORTCUT_KEY } from "@/app/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -47,6 +49,7 @@ function createModule(
     readonly id: string;
     readonly priority?: number;
     readonly when?: (context: GestureActionContext<FakeAppHost>) => boolean;
+    readonly shortcutRoutes?: readonly ShortcutActionRoute<FakeAppHost>[];
     readonly handle?: (
       event: GestureEvent,
       context: GestureActionContext<FakeAppHost>,
@@ -57,6 +60,7 @@ function createModule(
     id: options.id,
     priority: options.priority,
     when: options.when,
+    shortcutRoutes: options.shortcutRoutes,
     handle: options.handle ?? (() => ({ status: "ignored" })),
   };
 }
@@ -524,5 +528,232 @@ describe("GestureActionRouter", () => {
     });
 
     expect(calls).toEqual(["exit-first", "enter-first"]);
+  });
+
+  it("executes configurable routes from the current executable scope", () => {
+    const adapterHost = createAdapterHost("move");
+    const adapter = createGestureAdapter(adapterHost);
+    const handleRotate = vi.fn(() => ({ status: "handled" } as const));
+
+    createGestureActionRouter({
+      gestureAdapter: adapter,
+      workspace: createWorkspace(),
+      getAppHost: () => ({ id: "host" }),
+      getShortcutBinding: (shortcutId) => (
+        shortcutId === SHORTCUT_KEY.ROTATE ? "R" : ""
+      ),
+      getShortcutInputLayer: () => "canvas",
+      getActiveTool: () => adapterHost.internalState.activeTool,
+      modules: [
+        createModule({
+          id: "move-rotate",
+          shortcutRoutes: [
+            {
+              id: "move.rotate",
+              actionId: SHORTCUT_KEY.ROTATE,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.ROTATE,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["move"],
+              },
+              triggerPolicy: { kind: "allow-any-additional-modifiers" },
+              handle: handleRotate,
+            },
+          ],
+        }),
+      ],
+    });
+
+    const handled = adapter.handleKeyDown({
+      code: "KeyR",
+      key: "r",
+      keyCode: 82,
+      altKey: false,
+      ctrlKey: true,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(handled).toBe(true);
+    expect(handleRotate).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows R and Ctrl+R when their executable scopes do not intersect", () => {
+    const bindings = new Map<string, string>([
+      [SHORTCUT_KEY.ROTATE, "R"],
+      [SHORTCUT_KEY.ROTATE_VIEWPORT, "Ctrl+R"],
+    ]);
+    const router = createGestureActionRouter({
+      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      workspace: createWorkspace(),
+      getAppHost: () => ({ id: "host" }),
+      getShortcutBinding: (shortcutId) => bindings.get(shortcutId) ?? "",
+      getShortcutInputLayer: () => "canvas",
+      getActiveTool: () => "select",
+      modules: [
+        createModule({
+          id: "rotation-routes",
+          shortcutRoutes: [
+            {
+              id: "move.rotate",
+              actionId: SHORTCUT_KEY.ROTATE,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.ROTATE,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["move"],
+              },
+              triggerPolicy: { kind: "allow-any-additional-modifiers" },
+              handle: () => ({ status: "handled" }),
+            },
+            {
+              id: "selection.rotate-viewport",
+              actionId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["select"],
+              },
+              triggerPolicy: { kind: "exact" },
+              handle: () => ({ status: "handled" }),
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(router.findShortcutConflicts({
+      shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+      slotIndex: 0,
+      nextBinding: "Ctrl+R",
+    })).toEqual([]);
+  });
+
+  it("reports trigger overlap only when executable scopes intersect", () => {
+    const bindings = new Map<string, string>([
+      [SHORTCUT_KEY.DELETE_DEVICE, "F"],
+      [SHORTCUT_KEY.ROTATE_VIEWPORT, "Ctrl+F"],
+    ]);
+    const router = createGestureActionRouter({
+      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      workspace: createWorkspace(),
+      getAppHost: () => ({ id: "host" }),
+      getShortcutBinding: (shortcutId) => bindings.get(shortcutId) ?? "",
+      getShortcutInputLayer: () => "canvas",
+      getActiveTool: () => "move",
+      modules: [
+        createModule({
+          id: "overlapping-routes",
+          shortcutRoutes: [
+            {
+              id: "move.delete-device",
+              actionId: SHORTCUT_KEY.DELETE_DEVICE,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.DELETE_DEVICE,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["move"],
+              },
+              triggerPolicy: { kind: "allow-any-additional-modifiers" },
+              handle: () => ({ status: "handled" }),
+            },
+            {
+              id: "move.other-operation",
+              actionId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["move"],
+              },
+              triggerPolicy: { kind: "exact" },
+              handle: () => ({ status: "handled" }),
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(router.findShortcutConflicts({
+      shortcutId: SHORTCUT_KEY.DELETE_DEVICE,
+      slotIndex: 0,
+      nextBinding: "F",
+    })).toEqual([
+      expect.objectContaining({
+        kind: "configurable",
+        shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT,
+        slotIndex: 0,
+        binding: "Ctrl+F",
+      }),
+    ]);
+  });
+
+  it("reports fixed routes as non-replaceable conflicts", () => {
+    const router = createGestureActionRouter({
+      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      workspace: createWorkspace(),
+      getAppHost: () => ({ id: "host" }),
+      getShortcutBinding: (shortcutId) => (
+        shortcutId === SHORTCUT_KEY.QUICK_PLACE ? "Z" : ""
+      ),
+      getShortcutInputLayer: () => "canvas",
+      getActiveTool: () => "select",
+      modules: [
+        createModule({
+          id: "fixed-conflict-routes",
+          shortcutRoutes: [
+            {
+              id: "quick-place.open",
+              actionId: SHORTCUT_KEY.QUICK_PLACE,
+              binding: {
+                kind: "configurable",
+                shortcutId: SHORTCUT_KEY.QUICK_PLACE,
+              },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["select"],
+              },
+              triggerPolicy: { kind: "exact" },
+              handle: () => ({ status: "handled" }),
+            },
+            {
+              id: "placement-device.0",
+              actionId: "fixed.placement-device.0",
+              binding: { kind: "fixed", value: "1" },
+              scope: {
+                inputLayers: ["canvas"],
+                activeTools: ["select"],
+              },
+              triggerPolicy: { kind: "exact" },
+              handle: () => ({ status: "handled" }),
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(router.findShortcutConflicts({
+      shortcutId: SHORTCUT_KEY.QUICK_PLACE,
+      slotIndex: 0,
+      nextBinding: "1",
+    })).toEqual([
+      expect.objectContaining({
+        kind: "fixed",
+        actionId: "fixed.placement-device.0",
+        binding: "1",
+      }),
+    ]);
   });
 });

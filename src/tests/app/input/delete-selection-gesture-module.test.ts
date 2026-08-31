@@ -11,6 +11,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { EntityCollection } from "@/domain/editor/types/editor-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphDeleteSelectionGestureModule", () => {
   it("deletes the current selection from the delete-device shortcut and hides selection toolbars", () => {
@@ -23,13 +24,15 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     } = createContext();
     const module = createHypergryphDeleteSelectionGestureModule();
 
-    const result = module.handle(
-      keyDownEvent({ code: "KeyF", key: "f" }),
+    const result = handleKeyboardShortcutThroughRouter({
+      module,
       context,
-    );
+      event: keyDownEvent({ code: "KeyF", key: "f" }),
+    });
 
     expect(result).toEqual({ status: "handled" });
-    expect(isShortcutFor).toHaveBeenCalledWith(SHORTCUT_KEY.DELETE_DEVICE, "KeyF", "f", { alt: false, ctrl: false, meta: false, shift: false });
+    // AI-CORRECTION 2026-08-30: 快捷键匹配已由 GestureActionRouter 完成，模块不再调用 isShortcutFor。
+    expect(isShortcutFor).not.toHaveBeenCalled();
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
     expect(hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
@@ -159,11 +162,17 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     const emptySelectionContext = createContext({ selectedEntityIds: [] }).context;
 
     expect(module.when?.(disabledContext)).toBe(false);
-    expect(module.handle(keyDownEvent({ code: "KeyF", key: "f" }), moveContext)).toEqual({
-      status: "ignored",
-    });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context: moveContext,
+      event: keyDownEvent({ code: "KeyF", key: "f" }),
+    })).toEqual({ status: "ignored" });
     expect(
-      module.handle(keyDownEvent({ code: "KeyF", key: "f" }), emptySelectionContext),
+      handleKeyboardShortcutThroughRouter({
+        module,
+        context: emptySelectionContext,
+        event: keyDownEvent({ code: "KeyF", key: "f" }),
+      }),
     ).toEqual({ status: "ignored" });
   });
 });

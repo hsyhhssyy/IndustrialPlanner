@@ -21,6 +21,7 @@ import {
   setLogLevel,
   type LogLevel,
 } from "@/shared/logging/logger";
+import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("logistics placement debug logging", () => {
   let previousLogLevel: LogLevel;
@@ -122,15 +123,23 @@ describe("logistics placement debug logging", () => {
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
-    expect(module.handle(keyDownEvent("KeyR", "r"), context)).toEqual({ status: "ignored" });
+    const shortcutBindings = { [SHORTCUT_KEY.ROTATE]: "T" };
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent("KeyR", "r"),
+      shortcutBindings,
+    })).toEqual({ status: "ignored" });
     expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("vertical-first");
-    expect(module.handle(keyDownEvent("KeyT", "t"), context)).toEqual({ status: "handled" });
+    expect(handleKeyboardShortcutThroughRouter({
+      module,
+      context,
+      event: keyDownEvent("KeyT", "t"),
+      shortcutBindings,
+    })).toEqual({ status: "handled" });
     expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("horizontal-first");
-    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.ROTATE,
-      "KeyT",
-      "t",
-    );
+    // AI-CORRECTION 2026-08-30: 自定义绑定由 GestureActionRouter 解析，模块不再调用 isShortcutFor。
+    expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
   });
 
   it("shows logistics shortcuts from kind and placement phase", () => {

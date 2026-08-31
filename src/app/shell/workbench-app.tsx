@@ -962,20 +962,24 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
     const handleWindowKeyDown = (event: KeyboardEvent) => {
 
-      // inspector dialog 特判：允许 M/Del 绑定的快捷键穿透
       const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
       const isInspectorDialogVisible = inspectorDialogState?.visible === true;
-      const isMoveKey = appHost.internalActions.isShortcutFor?.("shortcut-move-selection", event.code, event.key) || false;
-      const isDeleteKey = appHost.internalActions.isShortcutFor?.("shortcut-delete-device", event.code, event.key) || false;
-
-      if (hasVisibleDialogShell) {
-        // inspector dialog 且是主操作快捷键，允许穿透
-        if (isInspectorDialogVisible && (isMoveKey || isDeleteKey)) {
-          // 允许事件继续
-        } else {
-          return;
-        }
+      if (hasVisibleDialogShell && !isInspectorDialogVisible) {
+        return;
       }
+
+      // AI-REMOVED 2026-08-30:
+      // Reason: Inspector 不再在 DOM 入口按字符串特判 M/F；由 Route 的 inspector-dialog 作用域决定穿透。
+      // Trigger: ST2-RQ-020 输入层与冲突系统统一。
+      // Evidence: move.enter-selection、delete-selection.selection、move.delete-operation 显式声明该输入层。
+      // Replacement: GestureActionRouter Shortcut Route scope
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const isMoveKey = appHost.internalActions.isShortcutFor("shortcut-move-selection", event.code, event.key);
+      // const isDeleteKey = appHost.internalActions.isShortcutFor("shortcut-delete-device", event.code, event.key);
+      // if (hasVisibleDialogShell && !(isInspectorDialogVisible && (isMoveKey || isDeleteKey))) return;
 
       if (isEditableKeyboardTarget(event)) {
         return;
@@ -988,17 +992,27 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
       // 即使 gesture module 未消费，只要匹配任意已配置快捷键就拦截浏览器默认行为
       // （例如 Ctrl+S 在非多选状态下仍应阻止浏览器保存网页对话框）
-      if (event.cancelable && appHost.internalActions.matchesAnyShortcut?.(
-        event.code,
-        event.key,
-        { ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey, meta: event.metaKey },
-      )) {
+      // 订正（2026-08-30）：匹配范围收敛为当前输入层和 activeTool 中声明按键所有权的 Route。
+      if (event.cancelable && appHost.gestureActionRouter.claimsBrowserDefaultForKeyboardEvent({
+        type: "key down",
+        code: event.code,
+        key: event.key,
+        keyCode: event.keyCode,
+        modifiers: {
+          ctrl: event.ctrlKey,
+          shift: event.shiftKey,
+          alt: event.altKey,
+          meta: event.metaKey,
+        },
+        sourceEvent: event,
+      })) {
         event.preventDefault();
       }
     };
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
-      if (hasVisibleDialogShell) {
+      const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
+      if (hasVisibleDialogShell && inspectorDialogState?.visible !== true) {
         return;
       }
 
