@@ -8,25 +8,51 @@ import {
   describeUnpackTableSource,
   openUnpackTableSource,
 } from "../../.agents/skills/unpack-data-analysis/scripts/unpack-table-source.mjs";
+import {
+  resolveRawBuildingAlias,
+} from "../../.agents/skills/unpack-data-analysis/scripts/device-building-aliases.mjs";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(SCRIPT_DIRECTORY, "../..");
 const DEFAULT_EXPORT_PATH = resolve(PROJECT_ROOT, ".temp/json-export.json");
 const ENTITY_SOURCE_PATH = resolve(PROJECT_ROOT, "src/registry/entity-definition.ts");
+const RECIPE_SOURCE_PATH = resolve(PROJECT_ROOT, "src/registry/recipe-definition.ts");
 const ZH_CN_SOURCE_PATH = resolve(PROJECT_ROOT, "src/shared/i18n/zh-cn/registry.ts");
 const EN_US_SOURCE_PATH = resolve(PROJECT_ROOT, "src/shared/i18n/en-us/registry.ts");
 
-const MODE_I18N = Object.freeze({
-  normal: { zhCN: "", enUS: "" },
-  gastrans: { zhCN: "气体", enUS: "Gas" },
-  liquidtrans: { zhCN: "液体", enUS: "Liquid" },
-  gas: { zhCN: "气体", enUS: "Gas" },
-  liquid: { zhCN: "液体", enUS: "Liquid" },
-  // recipes-export.json 当前还包含以下两种 mode；沿用项目已有领域含义。
-  // AI-CORRECTION 2026-08-31: 当前输入已改为 raw TableCfg 或 legacy json-export；两种来源仍包含以下 mode，原领域含义不变。
-  solidtrans: { zhCN: "固体", enUS: "Solid" },
-  gasliquid: { zhCN: "气液", enUS: "Gas/Liquid" },
+const APPROVED_NAME_EXCEPTIONS = Object.freeze({
+  log_hongs_bus: Object.freeze({
+    currentZhCN: "存取线基段",
+    rawZhCN: "仓库存取线基段",
+    reason: "raw 中文建筑名称超过 5 个字，需要特殊审阅；用户已明确将项目显示名压缩为 5 个字。",
+  }),
+  log_hongs_bus_source: Object.freeze({
+    currentZhCN: "存取线源桩",
+    rawZhCN: "仓库存取线源桩",
+    reason: "raw 中文建筑名称超过 5 个字，需要特殊审阅；用户已明确将项目显示名压缩为 5 个字。",
+  }),
 });
+
+// AI-REMOVED 2026-08-31:
+// Reason: raw i18n 只提供 building 级名称；按 mode 人工拼接名称会把项目显示策略伪装成解包事实。
+// Trigger: 用户要求按“单个 raw building 转换为多个项目变体”的既有机制修正技能和对账脚本。
+// Evidence: FactoryMachineCrafterTable.modeMap 提供变体映射，但 FactoryBuildingTable.name 不提供变体名称。
+// Replacement: generateDeviceI18n 直接保留 raw building 名称；变体身份由 modeMap 与 registry tag 对账。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const MODE_I18N = Object.freeze({
+//   normal: { zhCN: "", enUS: "" },
+//   gastrans: { zhCN: "气体", enUS: "Gas" },
+//   liquidtrans: { zhCN: "液体", enUS: "Liquid" },
+//   gas: { zhCN: "气体", enUS: "Gas" },
+//   liquid: { zhCN: "液体", enUS: "Liquid" },
+//   // recipes-export.json 当前还包含以下两种 mode；沿用项目已有领域含义。
+//   // AI-CORRECTION 2026-08-31: 当前输入已改为 raw TableCfg 或 legacy json-export；两种来源仍包含以下 mode，原领域含义不变。
+//   solidtrans: { zhCN: "固体", enUS: "Solid" },
+//   gasliquid: { zhCN: "气液", enUS: "Gas/Liquid" },
+// });
 
 function assertRecord(value, label) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -92,6 +118,14 @@ export function buildDeviceAnalysisInput(source) {
     source.readTable("FactoryBuildingItemTable"),
     "FactoryBuildingItemTable",
   );
+  const machineCrafterTable = assertRecord(
+    source.readTable("FactoryMachineCrafterTable"),
+    "FactoryMachineCrafterTable",
+  );
+  const machineCraftTable = assertRecord(
+    source.readTable("FactoryMachineCraftTable"),
+    "FactoryMachineCraftTable",
+  );
   const zhCN = assertRecord(source.readTable("I18nTextTable_CN"), "I18nTextTable_CN");
   const enUS = assertRecord(source.readTable("I18nTextTable_EN"), "I18nTextTable_EN");
   const projectedBuildingTable = Object.fromEntries(
@@ -124,28 +158,19 @@ export function buildDeviceAnalysisInput(source) {
     buildings: {
       buildingItemTable: displayableBuildingItemTable,
       buildingTable: projectedBuildingTable,
+      machineCrafterTable,
     },
+    recipes: machineCraftTable,
     i18n: { buildings: {} },
   };
 }
 
-export function generateDeviceI18n(baseNames, mode) {
-  const suffix = MODE_I18N[mode];
-  if (!suffix) {
-    throw new Error(`未配置 mode=${mode} 的设备 i18n 生成规则`);
-  }
-  if (mode === "normal") return { ...baseNames };
-
-  return {
-    zhCN: `${baseNames.zhCN}(${suffix.zhCN})`,
-    enUS: `${baseNames.enUS} (${suffix.enUS})`,
-  };
+export function generateDeviceI18n(baseNames) {
+  return { ...baseNames };
 }
 
-function buildDeviceId(buildingId, mode, groupIndex, groupCount) {
-  const modeSuffix = mode === "normal" ? "" : `_${mode}`;
-  const groupSuffix = groupCount === 1 ? "" : `_${groupIndex}`;
-  return `${buildingId}${modeSuffix}${groupSuffix}`;
+function buildRawVariantKey(buildingId, mode) {
+  return JSON.stringify([buildingId, mode]);
 }
 
 function buildBuildingItemIndex(exportData) {
@@ -174,74 +199,151 @@ function buildBuildingItemIndex(exportData) {
   return { buildingIdByItemId, itemMappedBuildingIds };
 }
 
-export function buildExpectedDevices(exportData) {
+function buildFormulaIdsByGroup(machineCraftTable) {
+  const formulaIdsByGroup = new Map();
+  for (const [tableKey, rawFormula] of Object.entries(machineCraftTable)) {
+    const formula = assertRecord(rawFormula, `machineCraftTable.${tableKey}`);
+    const formulaId = readRequiredString(
+      formula.id ?? tableKey,
+      `machineCraftTable.${tableKey}.id`,
+    );
+    const formulaGroupId = readRequiredString(
+      formula.formulaGroupId,
+      `machineCraftTable.${tableKey}.formulaGroupId`,
+    );
+    const formulaIds = formulaIdsByGroup.get(formulaGroupId) ?? [];
+    formulaIds.push(formulaId);
+    formulaIdsByGroup.set(formulaGroupId, formulaIds);
+  }
+  for (const formulaIds of formulaIdsByGroup.values()) formulaIds.sort();
+  return formulaIdsByGroup;
+}
+
+function collectRawVariantEvidence(
+  buildingId,
+  building,
+  machineCrafterTable,
+  formulaIdsByGroup,
+) {
+  const evidenceByMode = new Map();
+  const ensureEvidence = (mode) => {
+    const existing = evidenceByMode.get(mode);
+    if (existing) return existing;
+    const evidence = {
+      mode,
+      formulaGroupIds: new Set(),
+      rendererTemplateIds: new Set(),
+      isEnvironmentMode: false,
+      isDefaultRendererMode: false,
+    };
+    evidenceByMode.set(mode, evidence);
+    return evidence;
+  };
+
+  const rawCrafter = machineCrafterTable[buildingId];
+  if (rawCrafter !== undefined) {
+    const crafter = assertRecord(rawCrafter, `machineCrafterTable.${buildingId}`);
+    if (!Array.isArray(crafter.modeMap)) {
+      throw new Error(`machineCrafterTable.${buildingId}.modeMap 必须是数组`);
+    }
+    for (const [index, rawMode] of crafter.modeMap.entries()) {
+      const modeEntry = assertRecord(rawMode, `machineCrafterTable.${buildingId}.modeMap.${index}`);
+      const mode = readRequiredString(
+        modeEntry.modeName,
+        `machineCrafterTable.${buildingId}.modeMap.${index}.modeName`,
+      );
+      const groupName = modeEntry.groupName;
+      if (typeof groupName !== "string") {
+        throw new Error(
+          `machineCrafterTable.${buildingId}.modeMap.${index}.groupName 必须是字符串`,
+        );
+      }
+      const evidence = ensureEvidence(mode);
+      if (groupName.length > 0) evidence.formulaGroupIds.add(groupName);
+      if (modeEntry.isEnvMode === true) evidence.isEnvironmentMode = true;
+    }
+  }
+
+  const hasSemanticModes = evidenceByMode.size > 0;
+  const rendererTemplateMap = assertRecord(
+    building.rendererTemplateMap,
+    `buildingTable.${buildingId}.rendererTemplateMap`,
+  );
+  for (const [templateId, rawTemplate] of Object.entries(rendererTemplateMap)) {
+    const template = assertRecord(rawTemplate, `${buildingId}.${templateId}`);
+    const declaredMode = readRequiredString(
+      template.machineModeType,
+      `${buildingId}.${templateId}.machineModeType`,
+    );
+    const { mode } = parseTemplateId(templateId, declaredMode, buildingId);
+    const evidence = hasSemanticModes ? evidenceByMode.get(mode) : ensureEvidence(mode);
+    if (evidence === undefined) continue;
+    evidence.rendererTemplateIds.add(templateId);
+    if (building.defaultRendererTemplate === templateId) {
+      evidence.isDefaultRendererMode = true;
+    }
+  }
+
+  return [...evidenceByMode.values()]
+    .map((evidence) => ({
+      mode: evidence.mode,
+      formulaGroupIds: [...evidence.formulaGroupIds].sort(),
+      formulaIds: [...evidence.formulaGroupIds]
+        .flatMap((formulaGroupId) => formulaIdsByGroup.get(formulaGroupId) ?? [])
+        .sort(),
+      rendererTemplateIds: [...evidence.rendererTemplateIds].sort(),
+      isEnvironmentMode: evidence.isEnvironmentMode,
+      isDefaultRendererMode: evidence.isDefaultRendererMode,
+    }))
+    .sort((left, right) => left.mode.localeCompare(right.mode));
+}
+
+export function buildRawDeviceVariants(exportData) {
   assertRecord(exportData, "导出文件根节点");
   const buildingTable = assertRecord(
     exportData.buildings?.buildingTable,
     "buildings.buildingTable",
   );
+  const machineCrafterTable = assertRecord(
+    exportData.buildings?.machineCrafterTable,
+    "buildings.machineCrafterTable",
+  );
+  const machineCraftTable = assertRecord(exportData.recipes, "recipes");
+  const formulaIdsByGroup = buildFormulaIdsByGroup(machineCraftTable);
   const { buildingIdByItemId, itemMappedBuildingIds } = buildBuildingItemIndex(exportData);
-  const devices = [];
-  const templatesByBuildingId = new Map();
+  const rawVariants = [];
+  const variantsByBuildingId = new Map();
 
   for (const buildingId of [...itemMappedBuildingIds].sort()) {
     const building = assertRecord(buildingTable[buildingId], `buildingTable.${buildingId}`);
-    const rendererTemplateMap = assertRecord(
-      building.rendererTemplateMap,
-      `buildingTable.${buildingId}.rendererTemplateMap`,
-    );
-    const templateEntries = [];
-
-    for (const [templateId, rawTemplate] of Object.entries(rendererTemplateMap)) {
-      const template = assertRecord(rawTemplate, `${buildingId}.${templateId}`);
-      const declaredMode = readRequiredString(
-        template.machineModeType,
-        `${buildingId}.${templateId}.machineModeType`,
-      );
-      const { mode, groupIndex } = parseTemplateId(templateId, declaredMode, buildingId);
-      templateEntries.push({ templateId, mode, groupIndex });
-    }
-
-    if (templateEntries.length === 0) continue;
-
     const baseNames = resolveBaseNames(exportData, buildingId, building);
-    const groupCountByMode = new Map();
-    for (const template of templateEntries) {
-      groupCountByMode.set(template.mode, (groupCountByMode.get(template.mode) ?? 0) + 1);
-    }
+    const names = generateDeviceI18n(baseNames);
+    const buildingVariants = collectRawVariantEvidence(
+      buildingId,
+      building,
+      machineCrafterTable,
+      formulaIdsByGroup,
+    ).map((evidence) => ({
+      variantKey: buildRawVariantKey(buildingId, evidence.mode),
+      ...names,
+      originalDeviceId: buildingId,
+      ...evidence,
+    }));
 
-    const buildingTemplates = templateEntries
-      .map((template) => {
-        const names = generateDeviceI18n(baseNames, template.mode);
-        return {
-          id: buildDeviceId(
-            buildingId,
-            template.mode,
-            template.groupIndex,
-            groupCountByMode.get(template.mode),
-          ),
-          ...names,
-          originalDeviceId: buildingId,
-          mode: template.mode,
-          templateId: template.templateId,
-          isDefaultTemplate: building.defaultRendererTemplate === template.templateId,
-        };
-      })
-      .sort(compareDeviceRows);
-
-    templatesByBuildingId.set(buildingId, buildingTemplates);
-    devices.push(...buildingTemplates);
+    if (buildingVariants.length === 0) continue;
+    variantsByBuildingId.set(buildingId, buildingVariants);
+    rawVariants.push(...buildingVariants);
   }
 
-  const duplicateIds = findDuplicates(devices.map((device) => device.id));
-  if (duplicateIds.length > 0) {
-    throw new Error(`导出数据生成了重复设备 ID：${duplicateIds.join(", ")}`);
+  const duplicateVariantKeys = findDuplicates(rawVariants.map((variant) => variant.variantKey));
+  if (duplicateVariantKeys.length > 0) {
+    throw new Error(`解包数据生成了重复变体键：${duplicateVariantKeys.join(", ")}`);
   }
 
   return {
-    devices: devices.sort(compareDeviceRows),
+    rawVariants: rawVariants.sort(compareRawVariantRows),
     buildingIdByItemId,
-    templatesByBuildingId,
+    variantsByBuildingId,
   };
 }
 
@@ -323,6 +425,47 @@ export function extractCurrentEntities(sourceText, fileName = "entity-definition
   return entities.sort((left, right) => left.id.localeCompare(right.id));
 }
 
+export function extractCurrentRecipeAssignments(
+  sourceText,
+  fileName = "recipe-definition.ts",
+) {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const assignments = new Map();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== "RECIPE_DEFINITIONS") {
+        continue;
+      }
+      if (!declaration.initializer || !ts.isArrayLiteralExpression(declaration.initializer)) {
+        throw new Error(`${fileName} 的 RECIPE_DEFINITIONS 必须使用数组字面量`);
+      }
+      for (const element of declaration.initializer.elements) {
+        if (!ts.isObjectLiteralExpression(element)) continue;
+        const formulaId = readLiteralString(findObjectProperty(element, "id"));
+        const machineId = readLiteralString(findObjectProperty(element, "machineId"));
+        if (formulaId === undefined || machineId === undefined) continue;
+        if (assignments.has(formulaId)) {
+          throw new Error(`当前 registry 存在重复配方 ID：${formulaId}`);
+        }
+        assignments.set(formulaId, machineId);
+      }
+    }
+  }
+
+  if (assignments.size === 0) {
+    throw new Error(`${fileName} 中没有找到 RECIPE_DEFINITIONS 配方归属`);
+  }
+  return assignments;
+}
+
 export function extractI18nRegistry(sourceText, fileName = "registry.ts") {
   const sourceFile = ts.createSourceFile(
     fileName,
@@ -355,152 +498,262 @@ export function extractI18nRegistry(sourceText, fileName = "registry.ts") {
   return translations;
 }
 
-function resolveOriginalDeviceId(entity, expectedById, buildingIdByItemId, buildingIds) {
-  const exactExpected = expectedById.get(entity.id);
-  if (exactExpected) return exactExpected.originalDeviceId;
-
+function resolveOriginalDeviceId(entity, buildingIdByItemId, buildingIds) {
   const alterBase = entity.tags
     .find((tag) => tag.startsWith("alter:"))
     ?.slice("alter:".length);
   if (alterBase) {
-    if (buildingIds.has(alterBase)) return alterBase;
+    const aliasedAlterBase = resolveRawBuildingAlias(alterBase);
+    if (buildingIds.has(aliasedAlterBase)) return aliasedAlterBase;
     const mappedAlterBase = buildingIdByItemId.get(alterBase);
     if (mappedAlterBase) return mappedAlterBase;
   }
 
-  if (buildingIds.has(entity.id)) return entity.id;
+  const aliasedEntityId = resolveRawBuildingAlias(entity.id);
+  if (buildingIds.has(aliasedEntityId)) return aliasedEntityId;
   return buildingIdByItemId.get(entity.id);
 }
 
-function resolveCurrentTemplate(entity, originalDeviceId, expectedById, templatesByBuildingId) {
-  const exactExpected = expectedById.get(entity.id);
-  if (exactExpected) return exactExpected;
-
-  const candidates = templatesByBuildingId.get(originalDeviceId) ?? [];
+function resolveCurrentVariant(entity, originalDeviceId, variantsByBuildingId) {
+  const candidates = variantsByBuildingId.get(originalDeviceId) ?? [];
   const taggedMode = entity.tags
     .find((tag) => tag.startsWith("alter-variant:"))
     ?.slice("alter-variant:".length);
-  const defaultTemplate = candidates.find((candidate) => candidate.isDefaultTemplate);
-  const mode = taggedMode ?? defaultTemplate?.mode;
-  const modeCandidates = mode
-    ? candidates.filter((candidate) => candidate.mode === mode)
-    : candidates;
-
-  if (taggedMode && modeCandidates.length === 0) {
+  if (taggedMode) {
     return {
       mode: taggedMode,
-      templateId: "（解包来源中不存在）",
+      rawVariant: candidates.find((candidate) => candidate.mode === taggedMode) ?? null,
+      resolution: "tag",
     };
   }
-  if (modeCandidates.length === 1) return modeCandidates[0];
-  if (mode && modeCandidates.length > 1) {
-    const escapedMode = mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const indexMatch = new RegExp(`_${escapedMode}_([0-9]+)$`).exec(entity.id);
-    if (indexMatch) {
-      const templateId = `${mode}__${indexMatch[1]}`;
-      const indexedTemplate = modeCandidates.find((candidate) => candidate.templateId === templateId);
-      if (indexedTemplate) return indexedTemplate;
-    }
+
+  if (candidates.length === 1) {
+    return {
+      mode: candidates[0].mode,
+      rawVariant: candidates[0],
+      resolution: "single-variant",
+    };
   }
 
-  return defaultTemplate ?? modeCandidates[0];
+  const defaultRendererVariants = candidates.filter((candidate) =>
+    candidate.isDefaultRendererMode
+  );
+  if (defaultRendererVariants.length === 1) {
+    return {
+      mode: defaultRendererVariants[0].mode,
+      rawVariant: defaultRendererVariants[0],
+      resolution: "default-renderer",
+    };
+  }
+  return {
+    mode: null,
+    rawVariant: null,
+    resolution: "unresolved",
+    reason: `raw building ${originalDeviceId} 有 ${candidates.length} 个变体，但实体没有 alter-variant tag，且默认 renderer mode 不唯一`,
+  };
 }
 
 function currentEntityToRow(
   entity,
-  expectedById,
-  buildingIdByItemId,
-  templatesByBuildingId,
+  originalDeviceId,
+  variantsByBuildingId,
   zhCN,
   enUS,
 ) {
-  const buildingIds = new Set(templatesByBuildingId.keys());
-  const originalDeviceId = resolveOriginalDeviceId(
-    entity,
-    expectedById,
-    buildingIdByItemId,
-    buildingIds,
-  );
-  if (!originalDeviceId) return undefined;
-
-  const template = resolveCurrentTemplate(
+  const resolvedVariant = resolveCurrentVariant(
     entity,
     originalDeviceId,
-    expectedById,
-    templatesByBuildingId,
+    variantsByBuildingId,
   );
-  if (!template) return undefined;
+  if (resolvedVariant.mode === null) {
+    return {
+      unresolved: true,
+      id: entity.id,
+      originalDeviceId,
+      reason: resolvedVariant.reason,
+    };
+  }
+
+  const rawNames = (variantsByBuildingId.get(originalDeviceId) ?? [])[0];
+  const rawVariant = resolvedVariant.rawVariant;
 
   return {
+    unresolved: false,
     id: entity.id,
-    zhCN: zhCN.get(entity.nameKey) ?? "（缺少中文翻译）",
-    enUS: enUS.get(entity.nameKey) ?? "(missing English translation)",
+    currentZhCN: zhCN.get(entity.nameKey) ?? "（缺少中文翻译）",
+    currentEnUS: enUS.get(entity.nameKey) ?? "(missing English translation)",
+    rawZhCN: rawNames?.zhCN ?? "（解包来源中不存在）",
+    rawEnUS: rawNames?.enUS ?? "(missing from unpack source)",
     originalDeviceId,
-    mode: template.mode,
-    templateId: template.templateId,
+    mode: resolvedVariant.mode,
+    variantKey: buildRawVariantKey(originalDeviceId, resolvedVariant.mode),
+    formulaGroupIds: rawVariant?.formulaGroupIds ?? [],
+    rendererTemplateIds: rawVariant?.rendererTemplateIds ?? [],
+    rawVariantExists: rawVariant !== null,
+    resolution: resolvedVariant.resolution,
   };
 }
 
 function deviceRecordKey(device) {
-  return JSON.stringify([
-    device.id,
-    device.zhCN,
-    device.enUS,
-    device.originalDeviceId,
-    device.mode,
-    device.templateId,
-  ]);
+  return device.variantKey;
 }
 
-function compareDeviceRows(left, right) {
-  return left.id.localeCompare(right.id)
-    || left.templateId.localeCompare(right.templateId)
+function compareRawVariantRows(left, right) {
+  return left.originalDeviceId.localeCompare(right.originalDeviceId)
     || left.mode.localeCompare(right.mode);
 }
 
+function compareDeviceRows(left, right) {
+  return left.originalDeviceId.localeCompare(right.originalDeviceId)
+    || left.mode.localeCompare(right.mode)
+    || left.id.localeCompare(right.id);
+}
+
 export function compareDeviceRecords({
-  expectedData,
+  rawData,
   currentEntities,
+  currentRecipeMachineIdById = new Map(),
   zhCN,
   enUS,
   includeAllExported = false,
 }) {
-  const expectedById = new Map(expectedData.devices.map((device) => [device.id, device]));
   const representedBuildingIds = new Set();
-  const buildingIds = new Set(expectedData.templatesByBuildingId.keys());
+  const buildingIds = new Set(rawData.variantsByBuildingId.keys());
+  const originalDeviceIdByEntityId = new Map();
+  const unresolvedCurrentMappings = [];
 
   for (const entity of currentEntities) {
     const originalDeviceId = resolveOriginalDeviceId(
       entity,
-      expectedById,
-      expectedData.buildingIdByItemId,
+      rawData.buildingIdByItemId,
       buildingIds,
     );
-    if (originalDeviceId) representedBuildingIds.add(originalDeviceId);
+    if (originalDeviceId) {
+      representedBuildingIds.add(originalDeviceId);
+      originalDeviceIdByEntityId.set(entity.id, originalDeviceId);
+      continue;
+    }
+
+    const alterBase = entity.tags
+      .find((tag) => tag.startsWith("alter:"))
+      ?.slice("alter:".length);
+    if (alterBase) {
+      unresolvedCurrentMappings.push({
+        id: entity.id,
+        originalDeviceId: alterBase,
+        reason: `alter:${alterBase} 无法映射到 FactoryBuildingTable 或 FactoryBuildingItemTable`,
+      });
+    }
   }
 
   const scopedBuildingIds = includeAllExported ? buildingIds : representedBuildingIds;
-  const expectedRows = expectedData.devices
-    .filter((device) => scopedBuildingIds.has(device.originalDeviceId))
-    .map(({ isDefaultTemplate: _isDefaultTemplate, ...device }) => device);
-  const currentRows = currentEntities
-    .map((entity) => currentEntityToRow(
+  const rawVariantRows = rawData.rawVariants
+    .filter((variant) => scopedBuildingIds.has(variant.originalDeviceId));
+  const currentRows = [];
+  for (const entity of currentEntities) {
+    const originalDeviceId = originalDeviceIdByEntityId.get(entity.id);
+    if (!originalDeviceId || !scopedBuildingIds.has(originalDeviceId)) continue;
+    const primaryRow = currentEntityToRow(
       entity,
-      expectedById,
-      expectedData.buildingIdByItemId,
-      expectedData.templatesByBuildingId,
+      originalDeviceId,
+      rawData.variantsByBuildingId,
       zhCN,
       enUS,
-    ))
-    .filter((device) => device && scopedBuildingIds.has(device.originalDeviceId));
-  const expectedKeys = new Set(expectedRows.map(deviceRecordKey));
-  const currentKeys = new Set(currentRows.map(deviceRecordKey));
+    );
+    const rowsByVariantKey = new Map();
+    if (!primaryRow.unresolved) {
+      rowsByVariantKey.set(primaryRow.variantKey, primaryRow);
+    }
+
+    const candidates = rawData.variantsByBuildingId.get(originalDeviceId) ?? [];
+    for (const rawVariant of candidates) {
+      const isCoveredByProjectRecipes = (rawVariant.formulaIds ?? []).some((formulaId) =>
+        currentRecipeMachineIdById.get(formulaId) === entity.id
+      );
+      if (!isCoveredByProjectRecipes) continue;
+      rowsByVariantKey.set(rawVariant.variantKey, {
+        unresolved: false,
+        id: entity.id,
+        currentZhCN: zhCN.get(entity.nameKey) ?? "（缺少中文翻译）",
+        currentEnUS: enUS.get(entity.nameKey) ?? "(missing English translation)",
+        rawZhCN: rawVariant.zhCN,
+        rawEnUS: rawVariant.enUS,
+        originalDeviceId,
+        mode: rawVariant.mode,
+        variantKey: rawVariant.variantKey,
+        formulaGroupIds: rawVariant.formulaGroupIds,
+        rendererTemplateIds: rawVariant.rendererTemplateIds,
+        rawVariantExists: true,
+        resolution: "recipe-assignment",
+      });
+    }
+
+    if (primaryRow.unresolved && rowsByVariantKey.size === 0) {
+      unresolvedCurrentMappings.push(primaryRow);
+      continue;
+    }
+    currentRows.push(...rowsByVariantKey.values());
+  }
+
+  const matchedCurrentRows = currentRows.filter((row) => row.rawVariantExists);
+  const matchedRowsByVariantKey = new Map();
+  for (const row of matchedCurrentRows) {
+    const rows = matchedRowsByVariantKey.get(deviceRecordKey(row)) ?? [];
+    rows.push(row);
+    matchedRowsByVariantKey.set(deviceRecordKey(row), rows);
+  }
+
+  const duplicateProjectVariants = [...matchedRowsByVariantKey.entries()]
+    .filter(([, rows]) => rows.length > 1)
+    .map(([variantKey, rows]) => ({
+      variantKey,
+      originalDeviceId: rows[0].originalDeviceId,
+      mode: rows[0].mode,
+      projectEntityIds: rows.map((row) => row.id).sort(),
+    }))
+    .sort(compareRawVariantRows);
+  const missingProjectVariants = rawVariantRows
+    .filter((variant) => !matchedRowsByVariantKey.has(deviceRecordKey(variant)))
+    .sort(compareRawVariantRows);
+  const unsupportedProjectVariants = currentRows
+    .filter((row) => !row.rawVariantExists)
+    .sort(compareDeviceRows);
+  const approvedNameExceptions = [];
+  const nameModifications = [];
+  const comparedNameEntityIds = new Set();
+  for (const row of matchedCurrentRows) {
+    if (comparedNameEntityIds.has(row.id)) continue;
+    comparedNameEntityIds.add(row.id);
+    const approvedException = APPROVED_NAME_EXCEPTIONS[row.id];
+    const isApprovedZhDifference = approvedException !== undefined
+      && row.currentZhCN === approvedException.currentZhCN
+      && row.rawZhCN === approvedException.rawZhCN;
+    if (isApprovedZhDifference) {
+      approvedNameExceptions.push({ ...row, reason: approvedException.reason });
+    }
+
+    const hasUnapprovedZhDifference = row.currentZhCN !== row.rawZhCN
+      && !isApprovedZhDifference;
+    const hasEnglishDifference = row.currentEnUS !== row.rawEnUS;
+    if (hasUnapprovedZhDifference || hasEnglishDifference) {
+      nameModifications.push(row);
+    }
+  }
+  approvedNameExceptions.sort(compareDeviceRows);
+  nameModifications.sort(compareDeviceRows);
 
   return {
-    removals: currentRows.filter((device) => !expectedKeys.has(deviceRecordKey(device))).sort(compareDeviceRows),
-    additions: expectedRows.filter((device) => !currentKeys.has(deviceRecordKey(device))).sort(compareDeviceRows),
-    expectedCount: expectedRows.length,
+    nameModifications,
+    approvedNameExceptions,
+    missingProjectVariants,
+    unsupportedProjectVariants,
+    duplicateProjectVariants,
+    unresolvedCurrentMappings: unresolvedCurrentMappings.sort((left, right) =>
+      left.id.localeCompare(right.id)
+    ),
+    rawVariantCount: rawVariantRows.length,
     currentCount: currentRows.length,
+    matchedVariantCount: matchedRowsByVariantKey.size,
     comparedBuildingCount: scopedBuildingIds.size,
     ignoredExportedBuildingCount: buildingIds.size - scopedBuildingIds.size,
     includeAllExported,
@@ -511,25 +764,32 @@ function escapeMarkdownCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll("\n", "<br>");
 }
 
-function renderTable(rows) {
+function renderTable(headers, rows) {
   if (rows.length === 0) return "（无）";
-  const header = "| id | 中文 | 英文 | 原始设备 ID | mode | template ID |";
-  const divider = "| --- | --- | --- | --- | --- | --- |";
-  const body = rows.map((row) => [
-    row.id,
-    row.zhCN,
-    row.enUS,
-    row.originalDeviceId,
-    row.mode,
-    row.templateId,
-  ].map(escapeMarkdownCell).join(" | "));
-  return [header, divider, ...body.map((line) => `| ${line} |`)].join("\n");
+  const header = `| ${headers.map(escapeMarkdownCell).join(" | ")} |`;
+  const divider = `| ${headers.map(() => "---").join(" | ")} |`;
+  const body = rows.map((cells) =>
+    `| ${cells.map(escapeMarkdownCell).join(" | ")} |`
+  );
+  return [header, divider, ...body].join("\n");
+}
+
+function formatEvidenceIds(values) {
+  return values.length > 0 ? values.join(", ") : "（无）";
+}
+
+function isComparisonConsistent(comparison) {
+  return comparison.nameModifications.length === 0
+    && comparison.missingProjectVariants.length === 0
+    && comparison.unsupportedProjectVariants.length === 0
+    && comparison.duplicateProjectVariants.length === 0
+    && comparison.unresolvedCurrentMappings.length === 0;
 }
 
 export function renderComparisonReport(comparison, exportPath) {
-  const consistent = comparison.removals.length === 0 && comparison.additions.length === 0;
+  const consistent = isComparisonConsistent(comparison);
   const scope = comparison.includeAllExported
-    ? "全部具备 buildingItem 映射、renderer template 和可解析名称的解包设备"
+    ? "全部具备 buildingItem 映射、变体证据和可解析名称的解包设备"
     : "当前 registry 已覆盖的原始设备族";
 
   return [
@@ -538,20 +798,87 @@ export function renderComparisonReport(comparison, exportPath) {
     `- 解包来源：${exportPath}`,
     `- 对账范围：${scope}`,
     `- 原始设备族：${comparison.comparedBuildingCount}`,
-    `- 当前设备记录：${comparison.currentCount}`,
-    `- 期望设备记录：${comparison.expectedCount}`,
+    `- raw 语义变体：${comparison.rawVariantCount}`,
+    `- 当前项目变体映射：${comparison.currentCount}`,
+    `- 已匹配语义变体：${comparison.matchedVariantCount}`,
     `- 结果：${consistent ? "一致" : "不一致"}`,
     ...(comparison.includeAllExported || comparison.ignoredExportedBuildingCount === 0
       ? []
       : [`- 未纳入的解包设备族：${comparison.ignoredExportedBuildingCount}（使用 --all-exported 可全部对账）`]),
     "",
-    `## 应移除的设备（${comparison.removals.length}）`,
+    `## 名称修改（${comparison.nameModifications.length}）`,
     "",
-    renderTable(comparison.removals),
+    renderTable(
+      ["项目实体 ID", "raw building ID", "mode", "当前中文", "raw 中文", "当前英文", "raw 英文"],
+      comparison.nameModifications.map((row) => [
+        row.id,
+        row.originalDeviceId,
+        row.mode,
+        row.currentZhCN,
+        row.rawZhCN,
+        row.currentEnUS,
+        row.rawEnUS,
+      ]),
+    ),
     "",
-    `## 应新增的设备（${comparison.additions.length}）`,
+    `## 已审阅名称例外（${comparison.approvedNameExceptions.length}）`,
     "",
-    renderTable(comparison.additions),
+    renderTable(
+      ["项目实体 ID", "raw building ID", "当前中文", "raw 中文", "审阅说明"],
+      comparison.approvedNameExceptions.map((row) => [
+        row.id,
+        row.originalDeviceId,
+        row.currentZhCN,
+        row.rawZhCN,
+        row.reason,
+      ]),
+    ),
+    "",
+    `## 项目缺少的 raw 变体（${comparison.missingProjectVariants.length}）`,
+    "",
+    renderTable(
+      ["raw building ID", "mode", "formula group", "renderer template", "环境模式"],
+      comparison.missingProjectVariants.map((row) => [
+        row.originalDeviceId,
+        row.mode,
+        formatEvidenceIds(row.formulaGroupIds),
+        formatEvidenceIds(row.rendererTemplateIds),
+        row.isEnvironmentMode ? "是" : "否",
+      ]),
+    ),
+    "",
+    `## 缺少 raw 证据的项目变体（${comparison.unsupportedProjectVariants.length}）`,
+    "",
+    renderTable(
+      ["项目实体 ID", "raw building ID", "mode"],
+      comparison.unsupportedProjectVariants.map((row) => [
+        row.id,
+        row.originalDeviceId,
+        row.mode,
+      ]),
+    ),
+    "",
+    `## 重复映射的项目变体（${comparison.duplicateProjectVariants.length}）`,
+    "",
+    renderTable(
+      ["raw building ID", "mode", "项目实体 ID"],
+      comparison.duplicateProjectVariants.map((row) => [
+        row.originalDeviceId,
+        row.mode,
+        row.projectEntityIds.join(", "),
+      ]),
+    ),
+    "",
+    `## 无法解析的项目映射（${comparison.unresolvedCurrentMappings.length}）`,
+    "",
+    renderTable(
+      ["项目实体 ID", "目标 raw building ID", "原因"],
+      comparison.unresolvedCurrentMappings.map((row) => [
+        row.id,
+        row.originalDeviceId,
+        row.reason,
+      ]),
+    ),
   ].join("\n");
 }
 
@@ -561,7 +888,7 @@ function printHelp() {
 
 必须显式选择来源；legacy 示例：${DEFAULT_EXPORT_PATH}
 默认只对账当前 registry 已覆盖的原始设备族。
---all-exported  对账解包来源中全部具备 buildingItem 映射、renderer template 和可解析名称的设备。`);
+--all-exported  对账解包来源中全部具备 buildingItem 映射、变体证据和可解析名称的设备。`);
 }
 
 function parseArguments(args) {
@@ -599,16 +926,21 @@ export async function runComparison(args = process.argv.slice(2)) {
 
   const exportPath = await resolveJsonPath(options.exportPath);
   const source = openUnpackTableSource(exportPath);
-  const [entitySource, zhCNSource, enUSSource] = await Promise.all([
+  const [entitySource, recipeSource, zhCNSource, enUSSource] = await Promise.all([
     readFile(ENTITY_SOURCE_PATH, "utf8"),
+    readFile(RECIPE_SOURCE_PATH, "utf8"),
     readFile(ZH_CN_SOURCE_PATH, "utf8"),
     readFile(EN_US_SOURCE_PATH, "utf8"),
   ]);
   const exportData = buildDeviceAnalysisInput(source);
-  const expectedData = buildExpectedDevices(exportData);
+  const rawData = buildRawDeviceVariants(exportData);
   const comparison = compareDeviceRecords({
-    expectedData,
+    rawData,
     currentEntities: extractCurrentEntities(entitySource, ENTITY_SOURCE_PATH),
+    currentRecipeMachineIdById: extractCurrentRecipeAssignments(
+      recipeSource,
+      RECIPE_SOURCE_PATH,
+    ),
     zhCN: extractI18nRegistry(zhCNSource, ZH_CN_SOURCE_PATH),
     enUS: extractI18nRegistry(enUSSource, EN_US_SOURCE_PATH),
     includeAllExported: options.includeAllExported,
@@ -616,7 +948,7 @@ export async function runComparison(args = process.argv.slice(2)) {
   console.log(renderComparisonReport(comparison, describeUnpackTableSource(source)));
 
   return {
-    consistent: comparison.removals.length === 0 && comparison.additions.length === 0,
+    consistent: isComparisonConsistent(comparison),
     help: false,
     comparison,
   };

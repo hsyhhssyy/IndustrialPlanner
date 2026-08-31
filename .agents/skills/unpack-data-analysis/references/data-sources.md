@@ -88,12 +88,14 @@ node .agents/skills/unpack-data-analysis/scripts/fetch-akedata-tables.mjs \
 
 ## Legacy json-export
 
-旧 `.temp/json-export.json` 是人工聚合和格式化结果，只提供两个已确认的过渡映射：
+旧 `.temp/json-export.json` 是人工聚合和格式化结果，只提供四个已确认的过渡映射：
 
 | Legacy 路径 | 分析表名 |
 | --- | --- |
 | `buildings.buildingTable` | `FactoryBuildingTable` |
 | `buildings.buildingItemTable` | `FactoryBuildingItemTable` |
+| `recipes` | `FactoryMachineCraftTable` |
+| `buildings.machineCrafterTable` | `FactoryMachineCrafterTable` |
 
 该映射只用于既有端口和设备分析，不声明与 raw table 完全等价。请求其他表时加载器必须失败；不得返回空表、推导表或把 `items` / `recipes` 等聚合结果冒充原始表。
 
@@ -102,6 +104,7 @@ node .agents/skills/unpack-data-analysis/scripts/fetch-akedata-tables.mjs \
 | 任务 | 首选原始表 |
 | --- | --- |
 | 设备占地、供电、端口、renderer mode | `FactoryBuildingTable` |
+| 制造设备语义变体与配方组 | `FactoryMachineCrafterTable.modeMap` |
 | 建筑物品到设备 ID | `FactoryBuildingItemTable` |
 | renderer template 细节 | `FactoryBuildingRendererTemplateTable`，并结合 `FactoryBuildingTable.rendererTemplateMap` |
 | 工厂物品 | `FactoryItemTable`、`ItemTable` |
@@ -123,4 +126,3 @@ AKEData raw JSON 会把 Int64 写成未加引号的 JSON number。项目加载�
 - 实际读取的表及 manifest SHA-256。
 
 下游分析可以创建派生视图，但不能覆盖或改写 `TableCfg` 文件。
-

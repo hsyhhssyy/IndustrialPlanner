@@ -86,19 +86,22 @@ localCellY = position.z
 - `planter_1` 对应普通种植机和液体种植机。
 - `filling_powder_mc_1` 对应普通、液体等灌装模式。
 
-`rendererTemplateMap`、配方 `formulaGroupId`、端口 `isPipe` 和原料 / 产物类型用于识别变体及其端口子集，但不能代替坐标归一化，也不能据此创建“非默认变体统一反转端口”的规则。当前解包文件中的 `rendererTemplateMap` 没有独立的数值坐标变换。
+`FactoryMachineCrafterTable[buildingId].modeMap` 是语义变体的直接来源：`modeName` 对应项目 `alter-variant:`，非空 `groupName` 对应 `FactoryMachineCraftTable.formulaGroupId`；空 `groupName` 表示该 mode 没有制造配方组，但不能据此删除 mode。`rendererTemplateMap` 只补充已知语义 mode 的 renderer 证据；它可能缺少配方变体，也可能声明与唯一语义 mode 不同的 renderer mode，因此不能单独用于生成项目实体。项目同一实体可通过当前配方 ID 的 `machineId` 归属覆盖多个 raw mode。
+
+配方 `formulaGroupId`、端口 `isPipe` 和原料 / 产物类型用于验证每个语义变体的配方内容及端口子集。它们不能代替坐标归一化，也不能据此创建“非默认变体统一反转端口”的规则。当前解包文件中的 `rendererTemplateMap` 没有独立的数值坐标变换。
 
 ## 分析步骤
 
 1. 通过 `FactoryBuildingItemTable` 从物品 ID 找到真实 `buildingId`。
-2. 读取 `FactoryBuildingTable[buildingId]` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
-3. 用 `isPipe` 区分管道和传送带端口，保留 `inputPorts` / `outputPorts` 的角色语义。
-4. 对全部 `FactoryBuildingTable` 记录应用全局映射，得到项目 `(localCellX, localCellY)`；不要逐设备重新校准。
-5. 用“角色、`isPipe`、坐标”的多重集匹配 registry。多变体实体允许匹配原始 building 全部端口的子集，但不得改变角色或管道类型来凑结果。
-6. 按项目 `GridRotation` 约定（俯视坐标 Y 轴向下，90° 为顺时针）枚举 0°、90°、180°、270°。唯一非 0° 匹配表示 registry 默认朝向需要旋转；唯一 0° 匹配表示一致；多个匹配表示端口布局旋转对称，单靠端口不能确定视觉角度；无匹配表示映射、变体端口子集或 registry 相对布局存在其他问题。
-7. 把“解包标准端口旋转到当前 registry”的唯一匹配角记为 `A`：registry 端口及其视觉资源的修正角是 `-A mod 360`；为了保持既有设备在世界中的朝向，蓝图和基地文档中保存的设备旋转迁移量是 `+A mod 360`。不得把这两个方向混用。
-8. 修改完成后再校验精灵、mask、renderer 输出和 `spriteOffset`；发现视觉不一致时调整视觉资源，不得回头否定已经唯一确定的数据对账结果。
-9. 只有数据结果为旋转对称或无匹配、且排除映射和变体问题后，视觉检查或游戏内实测才用于消除剩余歧义。
+2. 读取 `FactoryMachineCrafterTable[buildingId].modeMap`，用 `modeName` 建立语义变体，用 `groupName` 关联配方组。
+3. 读取 `FactoryBuildingTable[buildingId]` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
+4. 用 `isPipe` 区分管道和传送带端口，保留 `inputPorts` / `outputPorts` 的角色语义。
+5. 对全部 `FactoryBuildingTable` 记录应用全局映射，得到项目 `(localCellX, localCellY)`；不要逐设备重新校准。
+6. 用“角色、`isPipe`、坐标”的多重集匹配 registry。多变体实体允许匹配原始 building 全部端口的子集，但不得改变角色或管道类型来凑结果。
+7. 按项目 `GridRotation` 约定（俯视坐标 Y 轴向下，90° 为顺时针）枚举 0°、90°、180°、270°。唯一非 0° 匹配表示 registry 默认朝向需要旋转；唯一 0° 匹配表示一致；多个匹配表示端口布局旋转对称，单靠端口不能确定视觉角度；无匹配表示映射、变体端口子集或 registry 相对布局存在其他问题。
+8. 把“解包标准端口旋转到当前 registry”的唯一匹配角记为 `A`：registry 端口及其视觉资源的修正角是 `-A mod 360`；为了保持既有设备在世界中的朝向，蓝图和基地文档中保存的设备旋转迁移量是 `+A mod 360`。不得把这两个方向混用。
+9. 修改完成后再校验精灵、mask、renderer 输出和 `spriteOffset`；发现视觉不一致时调整视觉资源，不得回头否定已经唯一确定的数据对账结果。
+10. 只有数据结果为旋转对称或无匹配、且排除映射和变体问题后，视觉检查或游戏内实测才用于消除剩余歧义。
 
 ## 既有错误结论
 

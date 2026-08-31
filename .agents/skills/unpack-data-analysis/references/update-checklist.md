@@ -28,12 +28,15 @@
 ## 4. 设备、端口与变体
 
 - [ ] 根据 `FactoryBuildingItemTable` 建立物品 ID → `buildingId` 映射。
+- [ ] 根据 `FactoryMachineCrafterTable.modeMap` 建立 raw building → 语义变体 → `formulaGroupId` 映射；不得只使用 renderer mode。
+- [ ] 根据 `FactoryMachineCraftTable` 的配方 ID 与当前 `recipe-definition.ts.machineId` 核对项目实体覆盖的全部 raw mode；不得假设一项目实体只能映射一个 mode。
 - [ ] 根据 `FactoryBuildingTable` 核对占地、`needPower`、`powerConsume`、类型、端口和 `rendererTemplateMap`。
 - [ ] 按 [端口坐标与变体规则](port-coordinates.md) 核对端口角色、`isPipe`、坐标和默认朝向。
 - [ ] 核对 `src/registry/entity-definition.ts`。
 - [ ] 核对 `src/registry/entity-variant-definition.ts`。
 - [ ] 核对 `src/registry/logistics-definition-ids.ts`。
 - [ ] 核对设备中英文 registry i18n。
+- [ ] 核对脚本报告中的已审阅名称例外；超过 5 个字的 raw 中文建筑名称必须人工审阅，只有实体 ID、当前中文和 raw 中文均精确匹配的用户批准记录可以保留。
 - [ ] 多变体设备必须区分 building 的全部潜在端口与具体 mode 使用的端口子集。
 
 ## 5. 视觉资源
@@ -61,4 +64,3 @@
 - [ ] 运行对应只读对账脚本；存在 `symmetric` 或 `unresolved` 时不得自动修改数据。
 - [ ] 按项目测试规范执行验证；涉及视觉行为时再执行所需 Screen Profile 验收。
 - [ ] 最终报告按“新增 / 修改 / 删除 / 未支持 / 仅视觉变化”汇总，并列出仍需人工复核项。
-

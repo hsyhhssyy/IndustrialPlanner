@@ -2,10 +2,10 @@
 
 本技能提供两类只读对账：
 
-- `src/scripts/compare-exported-devices.mjs` 对账设备 ID、名称和 renderer mode。
+- `src/scripts/compare-exported-devices.mjs` 对账 raw building、语义变体、项目实体映射和 building 级名称。
 - `.agents/skills/unpack-data-analysis/scripts/audit-port-orientations.ts` 对账解包逻辑端口与 registry 默认朝向。
 
-两者用途不同。设备记录对账通过，不代表端口朝向一致；端口朝向审计也不负责生成或修改 registry。
+两者用途不同。设备变体对账通过，不代表端口朝向或具体变体端口子集一致；端口朝向审计也不负责生成或修改 registry。
 
 ## 端口朝向审计
 
@@ -31,20 +31,7 @@
 
 端口角点的 `edge` 不作为独立匹配键：用户维护的 registry 已保证端口相对布局正确，设备整体旋转时坐标和 `edge` 必须一起旋转；解包 `rotation.y` 不能为角点提供稳定的一一方向映射。
 
-## 设备记录对账
-
-`src/scripts/compare-exported-devices.mjs` 根据解包来源生成期望的设备 ID、中英文名称，并与当前 `entity-definition.ts` 和 i18n 翻译对账，输出应新增、应移除的设备清单。
-
-raw-table 来源读取：
-
-- `FactoryBuildingTable`
-- `FactoryBuildingItemTable`
-- `I18nTextTable_CN`
-- `I18nTextTable_EN`
-
-名称通过 `FactoryBuildingTable.name.id` 的无损字符串查找 i18n 表，不依赖 raw table 中不存在的 `_name` / `_nameEn`。legacy 来源继续读取已有派生名称，但报告权威级别固定为 `legacy-lossy`。
-
-### 运行
+## 设备变体对账
 
 ```bash
 node src/scripts/compare-exported-devices.mjs \
@@ -52,59 +39,67 @@ node src/scripts/compare-exported-devices.mjs \
 ```
 
 - 必须显式传入 raw-table 来源目录或 legacy JSON 文件。
-- `--all-exported`：对账全部具备 buildingItem 映射、renderer template 和可解析名称的设备；默认只对账当前 registry 覆盖的原始设备族。raw 来源中 `name.id=0` 的隐藏记录不参与设备名称对账。
-- `--help` / `-h`：打印帮助。
+- 默认只对账当前 registry 已覆盖的 raw building 家族。
+- `--all-exported` 对账全部具备 buildingItem 映射、变体证据和可解析名称的 raw building。
+- `--help` / `-h` 打印帮助。
 
-### 核心逻辑
+raw-table 来源固定读取：
 
-1. 解析 `FactoryBuildingTable` 的 `rendererTemplateMap`，提取 mode 和分组序号。
-2. 从 `FactoryBuildingItemTable` 建立物品 ID 到设备 ID 的映射。
-3. raw 来源通过 `name.id` 查询中英文原始 i18n 表；legacy 来源从 `_name` / `_nameEn` 或 `i18n.buildings` 读取派生名称。
-4. 按 mode 生成设备 ID 和名称：
+- `FactoryBuildingTable`
+- `FactoryBuildingItemTable`
+- `FactoryMachineCraftTable`
+- `FactoryMachineCrafterTable`
+- `I18nTextTable_CN`
+- `I18nTextTable_EN`
 
-| mode | deviceId 格式 | 中文后缀 | 英文后缀 |
-| --- | --- | --- | --- |
-| `normal` | `{buildingId}` | 无 | 无 |
-| `gas` | `{buildingId}_gas` | (气体) | (Gas) |
-| `liquid` | `{buildingId}_liquid` | (液体) | (Liquid) |
-| `gastrans` | `{buildingId}_gastrans` | (气体) | (Gas) |
-| `liquidtrans` | `{buildingId}_liquidtrans` | (液体) | (Liquid) |
-| `solidtrans` | `{buildingId}_solidtrans` | (固体) | (Solid) |
-| `gasliquid` | `{buildingId}_gasliquid` | (气液) | (Gas/Liquid) |
+legacy 来源读取同名的受限映射；报告权威级别仍为 `legacy-lossy`。
 
-同名 mode 有多个变体时，deviceId 追加 `_{groupIndex}`。
+### Raw building 到项目变体
 
-5. 使用 TypeScript Compiler API 解析 `entity-definition.ts` 中 `createEntityDefinition` 调用的 `id`、`nameKey`、`tags`，以及 i18n `REGISTRY` 翻译条目。
-6. 通过 `alter:` / `alter-variant:` tag 把当前实体映射回原始设备 ID 和 mode，再执行对账。
+raw 的一个 building 可以对应多个项目实体。转换必须先建立语义变体，再解析项目 ID：
 
-### 输出示例
+1. `FactoryBuildingItemTable` 建立物品 ID → `buildingId` 映射。
+2. `FactoryMachineCrafterTable[buildingId].modeMap` 提供配方语义变体：
+   - `modeName` 是语义变体名，对应项目 `alter-variant:`；
+   - 非空 `groupName` 是配方组 ID，对应 `FactoryMachineCraftTable.formulaGroupId`；空字符串表示该 mode 没有制造配方组，但 mode 仍然有效；
+   - `isEnvMode` 标记环境模式。
+3. `FactoryMachineCraftTable` 按 `formulaGroupId` 提供每个语义变体的配方 ID；当前 `recipe-definition.ts` 中同配方 ID 的 `machineId` 用于证明项目实体实际覆盖哪些 raw mode。一个项目实体可以覆盖多个 raw mode。
+4. `FactoryBuildingTable.rendererTemplateMap` 只给 `modeMap` 中已存在的语义 mode 补充 template ID，不能把同 mode 的多个 renderer template 展开成多个项目设备。仅当 building 没有任何 `modeMap` 语义变体时，renderer mode 才作为回退变体来源。
+5. 项目实体通过以下规则映射：
+   - `alter:<buildingId 或 buildingItemId>` 解析 raw building；
+   - `alter-variant:<modeName>` 解析语义变体；
+   - 没有 `alter:` 时，实体 ID 或 buildingItem ID 可以直接匹配 raw building；
+   - raw building 只有一个语义变体时，该变体无条件视为默认，不受 `defaultRendererTemplate` 的 mode 名影响；
+   - 多语义变体且没有 `alter-variant:` 时，使用唯一默认 renderer mode；
+   - 无论默认映射为何，只要 raw mode 的配方 ID 在当前 registry 中归属于该项目实体，该实体同时覆盖该 raw mode；其余情况输出“无法解析”或“项目缺少的 raw 变体”。
 
-```markdown
-# 设备导出对账
+`furnance_1`、`planter_1` 是必须覆盖的回归案例：它们的 `rendererTemplateMap` 只有 `normal`，但 `FactoryMachineCrafterTable.modeMap` 同时包含 `normal` 和 `liquid`；项目分别拆为普通实体与液体实体。
 
-- 解包来源：kind=akedata, authority=raw-table, version=1.4.4@9599201-14, path=.temp/unpack/akedata/1.4.4@9599201-14
-- 对账范围：当前 registry 已覆盖的原始设备族
-- 原始设备族：42
-- 当前设备记录：128
-- 期望设备记录：130
-- 结果：不一致
+### 稳定 ID 与名称
 
-## 应移除的设备（0）
+- `(buildingId, modeName)` 是 raw 对账主键，不是项目稳定 ID。
+- 项目稳定 ID 以 registry 为准。不得从 mode 机械生成 `{buildingId}_{mode}`，也不得根据 renderer template 分组序号生成项目 ID。
+- `FactoryBuildingTable.name.id` 是 building 级名称引用。通过无损 ID 查询中英文 i18n 后，与映射到该 building 的项目实体名称比较。
+- raw 没有变体专属名称时，不得人工拼接“(液体)”“(气体)”等后缀并作为权威名称。
+- 超过 5 个字的 raw 中文建筑名称需要特殊审阅。只有脚本中显式记录项目实体 ID、当前中文、raw 中文和用户审阅理由的精确例外可以保留；不得按长度自动忽略差异。当前已审阅例外为 `log_hongs_bus` 的“存取线基段”与 `log_hongs_bus_source` 的“存取线源桩”，均由用户明确压缩为 5 个字。
 
-（无）
+### 报告分类
 
-## 应新增的设备（2）
+脚本输出字段级结果，不把修改伪装成删除/新增：
 
-| id | 中文 | 英文 | 原始设备 ID | mode | template ID |
-| --- | --- | --- | --- | --- | --- |
-| furnace_1_gas | 精炼炉(气体) | Furnace (Gas) | furnace_1 | gas | gas__1 |
-| planter_1_liquid | 种植机(液体) | Planter (Liquid) | planter_1 | liquid | liquid__1 |
-```
+- `名称修改`：项目实体已匹配 raw 语义变体，但中英文名称与 building 级 raw i18n 不同。
+- `已审阅名称例外`：项目中文与 raw 中文不同，但精确命中用户批准的显示名压缩记录；该分类不导致命令失败。英文差异、当前中文或 raw 中文再次变化时仍归入 `名称修改`。
+- `项目缺少的 raw 变体`：`modeMap` 或 renderer 提供了语义变体，当前 registry 没有实体映射。
+- `缺少 raw 证据的项目变体`：registry 的 `alter-variant:` 在该 raw building 的变体集合中不存在。
+- `重复映射的项目变体`：多个项目实体映射到同一 `(buildingId, modeName)`。
+- `无法解析的项目映射`：`alter:` 无法解析，或多变体 building 缺少可唯一确定 mode 的 tag / 默认 renderer。
+
+除 `已审阅名称例外` 外，任一分类非空时命令以不一致状态退出；脚本只读，不自动修改 registry 或 i18n。
 
 ## 限制
 
-- 两个脚本都依赖 raw table 文件名和 tag 约定；`entity-definition.ts` 结构、历史别名或 `alter:` 规则变化时必须同步更新。
+- 设备变体对账证明的是 building、mode、配方组引用和项目实体映射，不证明具体配方内容一致。配方输入、输出、数量和时间需另读 `FactoryMachineCraftTable` 及关联子表。
+- 多变体端口子集没有直接编码在 `rendererTemplateMap` 中；必须结合配方物态、`isPipe` 和 registry 端口子集按 [端口坐标与变体规则](port-coordinates.md) 审计。
 - raw 来源必须通过 `source-manifest.json` 的路径与 SHA-256 校验；legacy 只支持技能文档列出的有限映射。
-- `generateDeviceI18n` 使用固定后缀，不能覆盖需要特殊命名的设备。
-- 多变体的端口子集没有直接编码在 `rendererTemplateMap` 中；脚本以 registry 当前端口作为候选子集，因此会识别整体旋转，但不会证明某变体是否遗漏了端口。
-- 脚本只对账，不自动修改源文件。
+- `entity-definition.ts` 结构或 `alter:` / `alter-variant:` 约定变化时必须同步更新解析器与测试。
+- `recipe-definition.ts` 的配方 ID 或 `machineId` 归属变化时必须同步验证多 mode 覆盖结果；不得为已由配方归属证明的 mode 增加逐设备例外。

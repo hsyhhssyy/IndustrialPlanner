@@ -9,6 +9,8 @@ import {
   describeUnpackTableSource,
   openUnpackTableSource,
 } from "./unpack-table-source.mjs";
+// @ts-expect-error 项目级只读脚本复用同技能目录下的 mjs 别名事实表，无需单独维护声明文件。
+import { resolveRawBuildingAlias } from "./device-building-aliases.mjs";
 
 type OrthogonalRotation = 0 | 90 | 180 | 270;
 type PortDirection = "input" | "output" | "bidirectional";
@@ -58,15 +60,24 @@ const PROJECT_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const DEFAULT_EXPORT_PATH = resolve(PROJECT_ROOT, ".temp/json-export.json");
 const ROTATIONS: readonly OrthogonalRotation[] = [0, 90, 180, 270];
 
-const BUILDING_ID_BY_REGISTRY_ID: Readonly<Record<string, string>> = {
-  cmpt_mc_1: "component_mc_1",
-  filling_pd_mc_1: "filling_powder_mc_1",
-  liquid_filling_pd_mc_1: "filling_powder_mc_1",
-  power_sta_1: "power_station_1",
-  seedcol_1: "seedcollector_1",
-  tools_asm_mc_1: "tools_assebling_mc_1",
-  water_pump_1: "pump_1",
-};
+// AI-REMOVED 2026-08-31:
+// Reason: 设备记录对账与端口审计必须共享同一份项目 ID → raw building ID 历史别名，避免两套事实漂移。
+// Trigger: 用户要求修正 raw 单 building 到项目多变体的技能和脚本实现。
+// Evidence: filling_pd_mc_1 需要在两个对账脚本中一致映射到 filling_powder_mc_1。
+// Replacement: ./device-building-aliases.mjs#RAW_BUILDING_ID_BY_PROJECT_ID
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const BUILDING_ID_BY_REGISTRY_ID: Readonly<Record<string, string>> = {
+//   cmpt_mc_1: "component_mc_1",
+//   filling_pd_mc_1: "filling_powder_mc_1",
+//   liquid_filling_pd_mc_1: "filling_powder_mc_1",
+//   power_sta_1: "power_station_1",
+//   seedcol_1: "seedcollector_1",
+//   tools_asm_mc_1: "tools_assebling_mc_1",
+//   water_pump_1: "pump_1",
+// };
 
 function parseArguments(argv: readonly string[]): {
   readonly exportPath: string;
@@ -101,7 +112,7 @@ function resolveBuildingId(
   const alterTag = definition.tags.find((tag) => tag.startsWith("alter:"));
   const taggedId = alterTag?.slice("alter:".length);
   const candidateId = taggedId ?? definition.id;
-  const buildingId = BUILDING_ID_BY_REGISTRY_ID[candidateId] ?? candidateId;
+  const buildingId = resolveRawBuildingAlias(candidateId);
   return buildingTable[buildingId] === undefined ? null : buildingId;
 }
 

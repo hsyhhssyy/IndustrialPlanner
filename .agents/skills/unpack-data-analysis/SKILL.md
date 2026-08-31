@@ -10,6 +10,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 用户未指定解包来源时，先按 [数据源选择与 Raw Table 契约](references/data-sources.md) 使用结构化提问让用户选择；支持 `AskQuestion` 的客户端调用 `AskQuestion`。
 - 读取或获取数据前必须固定单一来源和版本，并使用同一 reference 中的 manifest、hash 与无损整数规则。
 - 分析端口与变体时读取 [端口坐标与变体规则](references/port-coordinates.md)。
+- 分析 raw building 与项目实体的多对多关系时，必须以 `FactoryMachineCrafterTable.modeMap` 建立语义变体，再按 [设备对账脚本](references/reconciliation.md) 结合配方归属映射项目实体；`rendererTemplateMap` 只补充 renderer 证据。
 - 查询设备核心属性时读取 [设备属性来源](references/device-properties.md)。
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
 - 取得解包数据后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。
@@ -23,4 +24,5 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 不得把解包三维坐标直接当成本项目二维坐标，也不得仅凭 `rotation.y` 或 renderer 变体推断端口方位或输入输出反转。
 - 不得用精灵现状、renderer 输出、Git 历史或游戏内观感否定 `FactoryBuildingTable` 归一化后的逻辑端口差异；这些视觉资源是 registry 修改后的被校验对象。
 - 不得把 `rendererTemplateMap` 当作第二套坐标变换；它只用于识别模式，端口子集还需结合配方、端口类型和 registry 变体确定，除非解包数据未来新增了可验证的数值变换字段。
+- 不得把每个 renderer template 机械生成为项目设备，不得用 `{buildingId}_{mode}` 猜项目稳定 ID，也不得给 raw building 名称人工拼接 mode 后缀。
 - 不得用领域子表缺少字段证明设备没有该属性。

@@ -11,6 +11,8 @@ const INTEGER_TOKEN_PATTERN = /^-?(?:0|[1-9][0-9]*)$/;
 const LEGACY_TABLE_PATHS = Object.freeze({
   FactoryBuildingItemTable: ["buildings", "buildingItemTable"],
   FactoryBuildingTable: ["buildings", "buildingTable"],
+  FactoryMachineCraftTable: ["recipes"],
+  FactoryMachineCrafterTable: ["buildings", "machineCrafterTable"],
 });
 
 function assertRecord(value, label) {
@@ -200,4 +202,3 @@ export function describeUnpackTableSource(source) {
     `path=${source.sourcePath}`,
   ].join(", ");
 }
-

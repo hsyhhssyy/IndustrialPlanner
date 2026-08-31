@@ -82,6 +82,20 @@ describe("unpack-table-source", () => {
       buildings: {
         buildingItemTable: { item_machine: { buildingId: "machine" } },
         buildingTable: { machine: { id: "machine" } },
+        machineCrafterTable: {
+          machine: {
+            modeMap: [
+              { groupName: "group_machine_normal", isEnvMode: false, modeName: "normal" },
+            ],
+          },
+        },
+      },
+      recipes: {
+        formula_normal: {
+          id: "formula_normal",
+          formulaGroupId: "group_machine_normal",
+          machineId: "machine",
+        },
       },
     }));
 
@@ -91,9 +105,22 @@ describe("unpack-table-source", () => {
     expect(source.readTable("FactoryBuildingTable")).toEqual({
       machine: { id: "machine" },
     });
+    expect(source.readTable("FactoryMachineCrafterTable")).toEqual({
+      machine: {
+        modeMap: [
+          { groupName: "group_machine_normal", isEnvMode: false, modeName: "normal" },
+        ],
+      },
+    });
+    expect(source.readTable("FactoryMachineCraftTable")).toEqual({
+      formula_normal: {
+        id: "formula_normal",
+        formulaGroupId: "group_machine_normal",
+        machineId: "machine",
+      },
+    });
     expect(() => source.readTable("I18nTextTable_CN")).toThrow(
       "legacy json-export 不支持 raw table I18nTextTable_CN",
     );
   });
 });
-
