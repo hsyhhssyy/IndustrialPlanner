@@ -15,12 +15,15 @@
 - [ ] 根据 `FactoryItemTable`、`ItemTable` 检查稳定物品 ID、类型、堆叠/容量、领域属性和名称引用。
 - [ ] 核对 `src/registry/item-definition.ts`。
 - [ ] 核对 `src/shared/i18n/zh-cn/registry.ts` 与 `src/shared/i18n/en-us/registry.ts`。
+- [ ] 带 `container:` 与 `container-item:` tag 的物品按项目组合命名规则核对：通过灌装与拆解配方确认 raw 成品映射，验证“容器名称（内容物名称）”，不与 raw 罐装成品通用名直接比较。
+- [ ] 缺少直接语言条目与名称文本不同必须分开报告；运行时默认语言回退不得归入该语言的名称差异。
 - [ ] 核对 `public/item-icons/` 中新增、替换和废弃图标。
 - [ ] 若涉及调度券，核对 `调度券地区:*` 与 `调度券价值:*` tags，不能只根据物品名称推断地区或价值。
 
 ## 3. 配方
 
 - [ ] 根据 `FactoryMachineCraftTable` 及关联 craft 子表核对配方 ID、时间、输入、输出、数量和 mode。
+- [ ] 精确保留已审阅的水泵能力合并：项目 `water_pump_1` 有意合并 raw `pump_1` 与 `pump_2`，因此 `r_pump_acid_basic` 应与 `pump_2` 的沉积酸抽取能力核对，不得按 `water_pump_1 -> pump_1` 单一别名误报；其他配方字段仍需逐项核对。
 - [ ] 核对 `src/registry/recipe-definition.ts`。
 - [ ] 核对设备可用配方组、变体 mode 和多产物共享语义。
 - [ ] 区分正式删除、活动限时、版本门控和本次来源缺失。

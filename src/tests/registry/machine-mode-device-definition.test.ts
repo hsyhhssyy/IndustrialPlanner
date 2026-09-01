@@ -135,7 +135,8 @@ describe("machine-mode entity definitions", () => {
       .toMatchObject({
         durationSeconds: 3,
         // 水驱矿机采矿配方刻意不消耗水，防止产线规划中错误地将采矿用水计入水消耗统计
-        inputs: [],
+        // AI-CORRECTION 2026-09-01: 原始配方恢复清水输入，产线规划改由求解层精确排除。
+        inputs: [{ itemId: "item_liquid_water", amount: 1 }],
         outputs: [{ itemId: "item_copper_ore", amount: 1 }],
         machineId: "miner_4",
       });

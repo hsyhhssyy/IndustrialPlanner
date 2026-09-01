@@ -5096,6 +5096,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["不可摆放"],
+    requiresPower: true,
+    powerDemand: 10,
   }),
 
   /**
@@ -5215,6 +5217,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["不可摆放"],
+    requiresPower: true,
+    powerDemand: 5,
   }),
 
   /**
@@ -5230,6 +5234,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["不可摆放"],
+    requiresPower: true,
+    powerDemand: 10,
   }),
 
   /**

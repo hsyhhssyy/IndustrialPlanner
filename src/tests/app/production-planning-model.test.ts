@@ -125,6 +125,30 @@ describe("production planning model", () => {
     expect(result.recipeTotals.map((recipe) => recipe.recipeId)).not.toContain(hiddenRecipe.id);
   });
 
+  it("ignores the copper miner's water input in solved plans and tree rows", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_copper_ore", 20)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const root = result.roots[0];
+    expect(root?.recipeNode?.recipeId).toBe("r_miner_copper_ore_basic");
+    expect(root?.recipeNode?.inputs).toEqual([]);
+    expect(root?.recipeNode?.inputItems).toEqual([]);
+    expect(result.recipeTotals.find((total) => total.recipeId === "r_miner_copper_ore_basic")?.inputs)
+      .toEqual([]);
+    expect(result.itemTotals.some((total) => total.itemId === "item_liquid_water")).toBe(false);
+
+    const rows = buildProductionPlanningTreeRows(result, "item");
+    const copperRow = rows.find((row) => row.recipeId === "r_miner_copper_ore_basic");
+    expect(copperRow?.inputItemIds).toEqual([]);
+    expect(rows.some((row) => row.targetItemId === "item_liquid_water")).toBe(false);
+  });
+
   it("uses provided supply before recipe production", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({

@@ -3598,7 +3598,9 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     //
     // Original code:
     // inputs: [{ itemId: "item_liquid_water", amount: 1 }],
-    inputs: [],
+    // AI-CORRECTION 2026-09-01:
+    // 按用户确认恢复解包数据中的每轮清水消耗；产线规划仅在求解输入层精确忽略该配方的清水，registry、模块配平与工序图继续保留真实输入。
+    inputs: [{ itemId: "item_liquid_water", amount: 1 }],
     outputs: [{ itemId: "item_copper_ore", amount: 1 }],
     machineId: "miner_4",
     recipeType: "immediate-consume",

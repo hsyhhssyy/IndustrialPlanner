@@ -137,11 +137,23 @@ describe("buildProcessGraph", () => {
     expect(copperTargetNode).toBeDefined();
 
     // 自然资源目标是零输入配方，不应有对应的 natural 节点
+    // AI-CORRECTION 2026-09-01: 赤铜采集已恢复清水输入；赤铜仍不重复为 natural 节点，但工序图必须显示其清水条件。
     const naturalNodes = graph.nodes.filter((n) => n.type === "natural");
     const copperNaturalNode = naturalNodes.find(
       (n) => n.itemId === "item_copper_ore",
     );
     expect(copperNaturalNode).toBeUndefined();
+
+    const waterNaturalNode = naturalNodes.find(
+      (n) => n.itemId === "item_liquid_water",
+    );
+    expect(waterNaturalNode).toMatchObject({ amount: 1 });
+    expect(graph.links).toContainEqual(expect.objectContaining({
+      fromCol: waterNaturalNode?.col,
+      fromRow: waterNaturalNode?.row,
+      toCol: copperTargetNode?.col,
+      toRow: copperTargetNode?.row,
+    }));
   });
 
   it("detects cycles and stops recursion", () => {

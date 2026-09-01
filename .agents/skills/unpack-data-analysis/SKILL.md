@@ -13,6 +13,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 分析 raw building 与项目实体的多对多关系时，必须以 `FactoryMachineCrafterTable.modeMap` 建立语义变体，再按 [设备对账脚本](references/reconciliation.md) 结合配方归属映射项目实体；`rendererTemplateMap` 只补充 renderer 证据。
 - 查询设备核心属性时读取 [设备属性来源](references/device-properties.md)。
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
+- 对账物品中英文名称时读取 [物品名称对账](references/item-reconciliation.md)，并使用其中的脚本区分普通物品、缺少直接翻译和项目组合命名物品。
 - 取得解包数据后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。
 - 端口朝向任务必须先完成“解包逻辑端口 → registry”的数据对账，再把精灵、mask、renderer 输出和 `spriteOffset` 作为修改后的视觉验收项。
 
@@ -26,3 +27,5 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 不得把 `rendererTemplateMap` 当作第二套坐标变换；它只用于识别模式，端口子集还需结合配方、端口类型和 registry 变体确定，除非解包数据未来新增了可验证的数值变换字段。
 - 不得把每个 renderer template 机械生成为项目设备，不得用 `{buildingId}_{mode}` 猜项目稳定 ID，也不得给 raw building 名称人工拼接 mode 后缀。
 - 不得用领域子表缺少字段证明设备没有该属性。
+- 不得把带 `container:` 与 `container-item:` tag 的项目组合名直接和 raw 罐装成品通用名比较；必须按项目“容器名称（内容物名称）”规则及正反配方映射验证。
+- 不得把某语言缺少直接 registry 条目产生的默认语言回退当成该语言名称差异。

@@ -52,6 +52,11 @@ export const PRODUCTION_PLANNING_BYPRODUCT_ITEM_IDS = new Set([
   "item_liquid_acid",
 ]);
 
+// 水驱矿机的清水是设备运行条件，不参与产线规划的物料供需；原始配方仍保留该输入，供 registry、模块配平与工序图使用。
+const PRODUCTION_PLANNING_IGNORED_RECIPE_INPUT_ITEM_IDS = new Map<string, ReadonlySet<string>>([
+  ["r_miner_copper_ore_basic", new Set(["item_liquid_water"])],
+]);
+
 export type ProductionPlanningByproductPolicy = "use-byproduct" | "dump-byproduct";
 export type ProductionPlanningSewagePolicy = "external-supply" | "self-produce";
 export type ProductionPlanningWaterPurifierPolicy = "disabled" | "use-when-available";
@@ -301,7 +306,7 @@ function buildProductionPlanningCandidates(
     candidates.push({
       id: createProductionPlanningRecipeCandidateId(recipe.id),
       sourceType: "system-recipe",
-      inputs: recipe.inputs.map((input) => ({
+      inputs: resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
         itemId: input.itemId,
         perMinute: roundFlow(input.amount * multiplier),
       })),
@@ -615,7 +620,9 @@ export function resolveProductionPlanningAutoRecipe(
     : recipes.filter(isIronPowderToNuggetRecipe);
 
   if (preferInputlessRecipe) {
-    const inputlessRecipe = candidates.find((recipe) => recipe.inputs.length === 0);
+    const inputlessRecipe = candidates.find(
+      (recipe) => resolveProductionPlanningRecipeInputs(recipe).length === 0,
+    );
     if (inputlessRecipe !== undefined) {
       return inputlessRecipe;
     }
@@ -632,6 +639,16 @@ export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
 function isIronPowderToNuggetRecipe(recipe: RecipeDefinition): boolean {
   return recipe.inputs.some((input) => input.itemId === "item_iron_powder")
     && recipe.outputs.some((output) => output.itemId === "item_iron_nugget");
+}
+
+function resolveProductionPlanningRecipeInputs(
+  recipe: RecipeDefinition,
+): readonly RecipeDefinition["inputs"][number][] {
+  const ignoredItemIds = PRODUCTION_PLANNING_IGNORED_RECIPE_INPUT_ITEM_IDS.get(recipe.id);
+  if (ignoredItemIds === undefined) {
+    return recipe.inputs;
+  }
+  return recipe.inputs.filter((input) => !ignoredItemIds.has(input.itemId));
 }
 
 export function createProductionPlanningId(prefix: string): string {
@@ -794,7 +811,7 @@ function resolveDemand(
       itemId: input.itemId,
       perMinute: roundFlow(input.perMinute * deviceCount),
     }))
-    : recipe.inputs.map((input) => ({
+    : resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
       id: `${candidate.id}-in-${input.itemId}`,
       itemId: input.itemId,
       perMinute: roundFlow(input.amount * cyclesPerMinute),

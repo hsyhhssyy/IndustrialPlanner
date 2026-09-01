@@ -157,6 +157,23 @@ describe("production planning flow graph", () => {
     expect(layout.nodes.every((node) => Number.isFinite(node.y0) && Number.isFinite(node.y1))).toBe(true);
   });
 
+  it("omits the copper miner's water input from item and device flow graphs", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_copper_ore", 20)],
+      supplies: [],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    for (const displayMode of ["item", "device"] as const) {
+      const graph = buildProductionFlowGraph(result, index, t, displayMode);
+      expect(graph.nodes.some((node) => node.itemId === "item_liquid_water")).toBe(false);
+      expect(graph.links.some((link) => link.itemId === "item_liquid_water")).toBe(false);
+    }
+  });
+
   it("keeps recipe outputs as separate byproduct nodes in device mode", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
