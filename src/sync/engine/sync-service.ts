@@ -1030,7 +1030,12 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           });
         }
         await options.afterSync?.(session, passSettings, resolution.results);
-        await session.complete?.();
+        // 未来 schema 必须保留 provider 全局游标，使升级后的客户端仍会重新读取同一远端版本。
+        await session.complete?.({
+          advanceAppliedRevision: !resolution.results.some((result) =>
+            result.remoteStateIncomplete === true
+          ),
+        });
         // 只有全部 adapter 的 scope 都完整覆盖后，才能用脏标证明未命中的资产为 clean；
         // clean 资产随后可直接复用持久化 touch hash，无需重算正文 hash。
         if (options.adapters.every((adapter) =>
@@ -1324,7 +1329,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       await session.localState.setLastSyncedHash(assetKey, contentHash);
     }
     // markApplied：本 collection 有已提交上传时不写 etag，使下次检查重新探测。
+    // AI-CORRECTION 2026-09-01: 含未来 schema 的 collection 未被当前客户端完整理解，禁止推进 revision/ETag。
     for (const result of adapterResults) {
+      if (result.remoteStateIncomplete === true) {
+        continue;
+      }
       const adapter = options.adapters.find((candidate) =>
         candidate.id === result.adapterId
       );

@@ -21,10 +21,11 @@ function makePort(itemId: string, perMinute: number, infinite?: boolean): Module
 
 function makeCustomModule(overrides: Partial<ModuleBalancingCustomModule> = {}): ModuleBalancingCustomModule {
   return {
+    schemaVersion: 2,
     id: createModuleBalancingId(),
     name: "Test Module",
     color: "#4f8cff",
-    iconId: "gear",
+    iconItemIds: ["gear"],
     notes: "",
     inputs: [makePort("iron", 30)],
     outputs: [makePort("plate", 15)],
@@ -52,7 +53,7 @@ function makeCanvas(overrides: Partial<ModuleBalancingCanvas> = {}): ModuleBalan
 
 function makeExport(overrides: Partial<CanvasExportData> = {}): CanvasExportData {
   return {
-    version: 1,
+    version: 2,
     canvas: {
       name: "Test",
       folderId: null,
@@ -74,7 +75,7 @@ describe("buildCanvasExportData", () => {
 
     const result = buildCanvasExportData(canvas, customModules);
 
-    expect(result.version).toBe(1);
+    expect(result.version).toBe(2);
     expect(result.canvas.name).toBe("My Canvas");
     expect(result.canvas.warehouseCapacity).toBe(200);
     expect(result.canvas.globalInputs).toHaveLength(1);
@@ -139,7 +140,7 @@ describe("buildCanvasExportData", () => {
       id: "custom-full",
       name: "Full Module",
       color: "#ff0000",
-      iconId: "ore",
+      iconItemIds: ["ore", "plate", "iron", "copper"],
       notes: "Some notes",
       inputs: [makePort("iron", 30), makePort("copper", 15)],
       outputs: [makePort("plate", 20)],
@@ -160,7 +161,7 @@ describe("buildCanvasExportData", () => {
     expect(exportedModule.id).toBe("custom-full");
     expect(exportedModule.name).toBe("Full Module");
     expect(exportedModule.color).toBe("#ff0000");
-    expect(exportedModule.iconId).toBe("ore");
+    expect(exportedModule.iconItemIds).toEqual(["ore", "plate", "iron", "copper"]);
     expect(exportedModule.notes).toBe("Some notes");
     expect(exportedModule.inputs).toHaveLength(2);
     expect(exportedModule.outputs).toHaveLength(1);
@@ -196,7 +197,7 @@ describe("parseCanvasImportData", () => {
   });
 
   it("rejects wrong version", () => {
-    const result = parseCanvasImportData({ version: 2, canvas: {}, modules: [] });
+    const result = parseCanvasImportData({ version: 3, canvas: {}, modules: [] });
     expect(result).toBeNull();
   });
 
@@ -255,6 +256,28 @@ describe("parseCanvasImportData", () => {
     const result = parseCanvasImportData(data);
     expect(result?.modules).toHaveLength(1);
     expect(result?.modules[0]!.id).toBe("custom-x");
+  });
+
+  it("migrates a legacy single icon when parsing a version 1 canvas", () => {
+    const rawModule = {
+      ...makeCustomModule({ id: "custom-legacy" }),
+      schemaVersion: undefined,
+      iconItemIds: undefined,
+      iconId: "item_port_grinder_1",
+    };
+    const result = parseCanvasImportData({
+      ...makeExport({
+        canvas: {
+          ...makeExport().canvas,
+          stages: [{ id: "s1", name: "S1", entries: [{ moduleId: "custom-legacy", quantity: 1 }] }],
+        },
+      }),
+      version: 1,
+      modules: [rawModule],
+    });
+
+    expect(result?.version).toBe(2);
+    expect(result?.modules[0]?.iconItemIds).toEqual(["plate"]);
   });
 
   it("filters out invalid custom modules", () => {

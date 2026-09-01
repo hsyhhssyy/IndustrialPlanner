@@ -28,7 +28,7 @@ const SCREEN_PROFILES = [
   },
 ] as const;
 
-test("production planning converts a solved route into an automatically selected module", async ({ browser }) => {
+test("production planning opens the generated module editor before persisting the module", async ({ browser }) => {
   test.setTimeout(180_000);
 
   for (const profile of SCREEN_PROFILES) {
@@ -70,6 +70,17 @@ test("production planning converts a solved route into an automatically selected
       });
 
       await press(page.getByRole("button", { name: "转为模块", exact: true }), profile.isMobile);
+      const moduleEditorTitle = page.getByRole("heading", { name: "编辑模块", exact: true });
+      await expect(moduleEditorTitle, profile.name).toBeVisible();
+      await expect(page.getByLabel("模块名称"), profile.name).toHaveValue("未命名模块");
+      await expect.poll(() => page.evaluate(() => (
+        window.__industrialPlannerAppHost?.internalState.workbench.toolbox
+          .moduleBalancing.customModules.length ?? -1
+      )), { message: profile.name }).toBe(0);
+
+      await page.getByLabel("模块名称").fill("息壤产线模块");
+      await press(page.getByRole("button", { name: "保存模块", exact: true }), profile.isMobile);
+      await expect(moduleEditorTitle, profile.name).toBeHidden();
       await expect.poll(() => page.evaluate(() => {
         const modules = window.__industrialPlannerAppHost?.internalState.workbench.toolbox
           .moduleBalancing.customModules;
@@ -109,7 +120,7 @@ test("production planning converts a solved route into an automatically selected
           outputs: value.outputs.map((output) => ({ itemId: output.itemId, perMinute: output.perMinute })),
         };
       });
-      expect(moduleState?.name, profile.name).toBe("未命名模块");
+      expect(moduleState?.name, profile.name).toBe("息壤产线模块");
       expect(moduleState?.outputs, profile.name).toEqual([
         { itemId: "item_xiranite_powder", perMinute: 30 },
       ]);
@@ -128,9 +139,9 @@ test("production planning converts a solved route into an automatically selected
       // expect.objectContaining({ itemId: "item_plant_moss_1", perMinute: 30 }),
 
       await press(page.getByText("产线规划", { exact: true }), profile.isMobile);
-      await expect(candidateSelect.locator("option", { hasText: "未命名模块 · 自定义模块" }), profile.name)
+      await expect(candidateSelect.locator("option", { hasText: "息壤产线模块 · 自定义模块" }), profile.name)
         .toHaveCount(1);
-      await expect(page.getByText("自定义模块 · 由 未命名模块 产出", { exact: true }), profile.name)
+      await expect(page.getByText("自定义模块 · 由 息壤产线模块 产出", { exact: true }), profile.name)
         .toBeVisible();
       await expect(moduleSwitch, profile.name).toBeChecked();
       await test.info().attach(`${profile.name}-module-plan.yaml`, {

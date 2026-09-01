@@ -78,6 +78,17 @@ function expectFluidBasePorts(portGroup: PortGroupDefinition): void {
 }
 
 describe("gas item and device definitions", () => {
+  it("registers the gas shaper recipe only under its AKEData ID", () => {
+    const gasShaperRecipes = RECIPE_DEFINITIONS.filter((recipe) =>
+      recipe.machineId === "shaper_1_gas"
+      && recipe.outputs.some((output) => output.itemId === "item_copper_jar"),
+    );
+
+    expect(gasShaperRecipes.map((recipe) => recipe.id)).toEqual([
+      "shaper_gas_copper_jar_1",
+    ]);
+  });
+
   it("marks registered gas resources as natural resources", () => {
     for (const itemId of ["item_gas_inert", "item_gas_xiranite"]) {
       const item = ITEM_DEFINITIONS.find((candidate) => candidate.id === itemId);

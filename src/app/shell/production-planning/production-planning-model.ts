@@ -3,6 +3,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -573,6 +574,21 @@ export function resolveProductionPlanningCandidateName(
 export function resolveProductionPlanningItemIconSrc(itemId: string, index: ProductionPlanningIndex): string {
   const item = index.itemById.get(itemId);
   return createItemIconAssetUrl(item?.iconId ?? itemId);
+}
+
+export function resolveProductionPlanningModuleIconSrcs(
+  module: ProductionPlanningModuleSnapshot,
+  index: ProductionPlanningIndex,
+): string[] {
+  const validIconItemIds = module.iconItemIds.filter((itemId) => index.itemById.has(itemId));
+  const itemIds = validIconItemIds.length > 0
+    ? validIconItemIds
+    : collectDefaultModuleIconItemIds(
+      module.outputs.map((port) => port.itemId),
+      module.inputs.map((port) => port.itemId),
+    );
+  return (itemIds.length > 0 ? itemIds : module.iconItemIds)
+    .map((itemId) => resolveProductionPlanningItemIconSrc(itemId, index));
 }
 
 export function resolveProductionPlanningEntityIconSrc(

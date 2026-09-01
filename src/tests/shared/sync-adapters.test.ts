@@ -154,15 +154,17 @@ async function createAdapterRun(
     }
     // AI-CORRECTION 2026-08-13: 与引擎一致，终局推进 markApplied（含 collection ETag），
     // 使后续同步的远端无变化快路径可用。
-    await session.markApplied({
-      collection: adapter.collection,
-      assetIds: result.changedAssetIds,
-      scopeComplete: true,
-      collectionRevision: result.collectionRevision ?? null,
-      collectionEtag: uploads.length > 0
-        ? null
-        : result.collectionEtag ?? undefined,
-    });
+    if (result.remoteStateIncomplete !== true) {
+      await session.markApplied({
+        collection: adapter.collection,
+        assetIds: result.changedAssetIds,
+        scopeComplete: true,
+        collectionRevision: result.collectionRevision ?? null,
+        collectionEtag: uploads.length > 0
+          ? null
+          : result.collectionEtag ?? undefined,
+      });
+    }
   };
 
   return {
@@ -368,6 +370,132 @@ describe("sync-adapters", () => {
 
     await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
     expect(entries.find((entry) => entry.id === "blueprint-b")?.value).toEqual({ name: "B" });
+  });
+
+  it("rewrites a normalized legacy full-with-revision value with the current schema", async () => {
+    type VersionedValue = {
+      readonly schemaVersion?: number;
+      readonly name: string;
+    };
+    const client = new MemoryStorageClient();
+    const seedAdapter = createFullWithRevisionAdapter<VersionedValue>({
+      id: "versioned-modules",
+      indexPath: "assets/versioned-modules/index.json",
+      entryPath: (id) => `assets/versioned-modules/${id}.json`,
+      listLocal: async () => [{
+        id: "module-a",
+        value: { schemaVersion: 1, name: "A" },
+        deletedAt: null,
+      }],
+      writeLocal: async () => undefined,
+    });
+    await expect(syncAdapter(seedAdapter, client)).resolves.toMatchObject({
+      status: "uploaded",
+    });
+    localStorage.clear();
+
+    const adapter = createFullWithRevisionAdapter<VersionedValue>({
+      id: "versioned-modules",
+      indexPath: "assets/versioned-modules/index.json",
+      entryPath: (id) => `assets/versioned-modules/${id}.json`,
+      listLocal: async () => [{
+        id: "module-a",
+        value: { schemaVersion: 2, name: "A" },
+        deletedAt: null,
+      }],
+      writeLocal: async () => undefined,
+      normalizeRemote: (value) => {
+        if (
+          typeof value !== "object"
+          || value === null
+          || typeof (value as { name?: unknown }).name !== "string"
+        ) {
+          return null;
+        }
+        return {
+          schemaVersion: 2,
+          name: (value as { name: string }).name,
+        };
+      },
+    });
+
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
+      status: "uploaded",
+    });
+    expect(JSON.parse(
+      client.files.get("assets/versioned-modules/module-a.json") ?? "null",
+    )).toEqual({ schemaVersion: 2, name: "A" });
+  });
+
+  it("skips a future full-with-revision value without writing or advancing metadata", async () => {
+    type VersionedValue = {
+      readonly schemaVersion: number;
+      readonly name: string;
+    };
+    const client = new MemoryStorageClient();
+    const seedAdapter = createFullWithRevisionAdapter<VersionedValue>({
+      id: "future-modules",
+      indexPath: "assets/future-modules/index.json",
+      entryPath: (id) => `assets/future-modules/${id}.json`,
+      listLocal: async () => [{
+        id: "module-a",
+        value: { schemaVersion: 3, name: "Future" },
+        deletedAt: null,
+      }],
+      writeLocal: async () => undefined,
+    });
+    await syncAdapter(seedAdapter, client);
+    localStorage.clear();
+
+    const writeLocal = vi.fn();
+    const adapter = createFullWithRevisionAdapter<VersionedValue>({
+      id: "future-modules",
+      indexPath: "assets/future-modules/index.json",
+      entryPath: (id) => `assets/future-modules/${id}.json`,
+      listLocal: async () => [{
+        id: "module-a",
+        value: { schemaVersion: 2, name: "Current" },
+        deletedAt: null,
+      }],
+      writeLocal,
+      isRemoteVersionUnsupported: (value) => (
+        typeof value === "object"
+        && value !== null
+        && (value as { schemaVersion?: unknown }).schemaVersion === 3
+      ),
+      normalizeRemote: (value) => (
+        typeof value === "object"
+        && value !== null
+        && (value as { schemaVersion?: unknown }).schemaVersion === 2
+        && typeof (value as { name?: unknown }).name === "string"
+          ? value as VersionedValue
+          : null
+      ),
+    });
+
+    const run = await createAdapterRun(adapter, client);
+
+    expect(run.outcome.result).toMatchObject({
+      status: "skipped",
+      changedAssetIds: [],
+      remoteStateIncomplete: true,
+    });
+    expect(run.outcome.items).toHaveLength(0);
+    expect(writeLocal).not.toHaveBeenCalled();
+    expect(run.outcome.result).not.toHaveProperty("collectionRevision");
+    const revisionBeforeFinalize = await run.session.localState.getRemoteRevision(
+      adapter.collection.stateKey,
+    );
+    await run.outcome.finalize();
+    await expect(run.session.localState.getLastSyncedHash(
+      "future-modules:module-a",
+    )).resolves.toBeNull();
+    await expect(run.session.localState.getRemoteRevision(
+      adapter.collection.stateKey,
+    )).resolves.toBe(revisionBeforeFinalize);
+    expect(JSON.parse(
+      client.files.get("assets/future-modules/module-a.json") ?? "null",
+    )).toEqual({ schemaVersion: 3, name: "Future" });
   });
 
   it("reuses persisted touch hashes for clean collection assets", async () => {

@@ -6,6 +6,10 @@ import type {
 } from "@/app/state/state-impl";
 import { createDefaultModuleBalancingState } from "@/app/state/state-impl";
 import {
+  migrateModuleBalancingCustomModuleIconItemIds,
+  MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
+} from "@/app/module-balancing-schema";
+import {
   readFromIndexedDbWithMigration,
   saveToIndexedDbWithVersion,
   type StorageMigration,
@@ -37,7 +41,7 @@ const MODULE_BALANCING_STORE_LOCATION: IndexedDbStorageLocation = {
   key: "v1",
 };
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 // AI-REMOVED 2026-08-08:
 // Reason: 模块墓碑不应跨 Cloudflare/WebDAV 目标共享，也不应留在全局 localStorage。
 // Trigger: 用户要求同步属性和缓存全部收归对应同步存储。
@@ -51,6 +55,10 @@ const CURRENT_VERSION = 1;
 const MIGRATIONS: StorageMigration<ModuleBalancingStateReadWrite>[] = [
   {
     version: 1,
+    migrate: (raw) => normalizeModuleBalancingState(raw),
+  },
+  {
+    version: 2,
     migrate: (raw) => normalizeModuleBalancingState(raw),
   },
 ];
@@ -264,10 +272,11 @@ export function cloneModuleBalancingState(
     })),
     canvasFolders: state.canvasFolders.map((folder) => ({ ...folder })),
     customModules: state.customModules.map((module) => ({
+      schemaVersion: module.schemaVersion,
       id: module.id,
       name: module.name,
       color: module.color,
-      iconId: module.iconId,
+      iconItemIds: [...module.iconItemIds],
       notes: module.notes,
       folderId: module.folderId,
       inputs: module.inputs.map((input) => ({ ...input })),
@@ -358,21 +367,30 @@ function normalizeCustomModules(
 
     const id = normalizeNonEmptyString(module.id);
     const name = normalizeNonEmptyString(module.name);
-    const iconId = normalizeNonEmptyString(module.iconId);
-    if (id === null || name === null || iconId === null || seen.has(id)) {
+    const inputs = normalizePorts(module.inputs);
+    const outputs = normalizePorts(module.outputs);
+    const iconItemIds = migrateModuleBalancingCustomModuleIconItemIds({
+      schemaVersion: module.schemaVersion,
+      iconItemIds: module.iconItemIds,
+      legacyIconId: module.iconId,
+      inputItemIds: inputs.map((port) => port.itemId),
+      outputItemIds: outputs.map((port) => port.itemId),
+    });
+    if (id === null || name === null || iconItemIds === null || seen.has(id)) {
       return [];
     }
     seen.add(id);
 
     return [{
+      schemaVersion: MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
       id,
       name,
       color: typeof module.color === "string" ? module.color : "#4f8cff",
-      iconId,
+      iconItemIds,
       notes: typeof module.notes === "string" ? module.notes : "",
       folderId: typeof module.folderId === "string" && folderIds.has(module.folderId) ? module.folderId : null,
-      inputs: normalizePorts(module.inputs),
-      outputs: normalizePorts(module.outputs),
+      inputs,
+      outputs,
       sourceType: "custom",
     }];
   });

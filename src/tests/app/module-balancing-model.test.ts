@@ -12,7 +12,7 @@ import {
   matchesModuleSearchQuery,
   resolveInfiniteSystemInputItemIds,
   resolveModuleDisplayTitle,
-  resolveModuleIconSrc,
+  resolveModuleIconSrcs,
   resolveModuleInputs,
   resolveDispatchTicketRegion,
   resolveDispatchTicketValue,
@@ -138,10 +138,11 @@ function createState(): ModuleBalancingState {
     canvases: [],
     customModules: [
       {
+        schemaVersion: 2,
         id: "custom_loop",
         name: "Loop",
         color: "#4f8cff",
-        iconId: "gear",
+        iconItemIds: ["gear", "plate"],
         notes: "",
         sourceType: "custom",
         inputs: [{ itemId: "gear", perMinute: 5 }],
@@ -229,7 +230,9 @@ describe("module-balancing-model", () => {
     })[key] ?? key;
 
     expect(resolveModuleDisplayTitle(module!, index, translate)).toBe("铁板 · 齿轮 · 装配机");
-    expect(resolveModuleIconSrc(module!, index)).toContain("device-icons/assembler-ui-icon.webp");
+    expect(resolveModuleIconSrcs(module!, index)).toEqual([
+      expect.stringContaining("device-icons/assembler-ui-icon.webp"),
+    ]);
   });
 
   it("searches every output and device names by Chinese, full pinyin, and pinyin initials", () => {
@@ -353,7 +356,7 @@ describe("module-balancing-model", () => {
         id: "recommended:starter",
         name: "Starter",
         color: "#4f8cff",
-        iconId: "gear",
+        iconItemIds: ["gear"],
         notes: "",
         inputs: [{ itemId: "plate", perMinute: 30 }],
         outputs: [{ itemId: "gear", perMinute: 15 }],

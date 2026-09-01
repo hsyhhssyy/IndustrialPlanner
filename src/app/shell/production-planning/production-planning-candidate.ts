@@ -19,7 +19,7 @@ export interface ProductionPlanningModuleSnapshot {
   readonly sourceType: "custom-module" | "recommended-module";
   readonly name: string;
   readonly color: string;
-  readonly iconId: string;
+  readonly iconItemIds: readonly string[];
   readonly notes: string;
   readonly inputs: readonly ProductionPlanningCandidatePort[];
   readonly outputs: readonly ProductionPlanningCandidatePort[];
@@ -66,7 +66,7 @@ export function createProductionPlanningModuleSnapshot(
     sourceType: module.sourceType === "custom" ? "custom-module" : "recommended-module",
     name: module.name,
     color: module.color,
-    iconId: module.iconId,
+    iconItemIds: [...module.iconItemIds],
     notes: module.notes,
     inputs: module.inputs.map(cloneCandidatePort),
     outputs: module.outputs.map(cloneCandidatePort),

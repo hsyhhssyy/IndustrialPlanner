@@ -122,6 +122,16 @@ export interface ToolboxStateReadWrite extends ToolboxState {
   bottomDockHeight: number;
   wiki: ToolboxWikiStateReadWrite;
   moduleBalancing: ModuleBalancingStateReadWrite;
+  moduleBalancingLibraryUi: ModuleBalancingLibraryUiStateReadWrite;
+}
+
+export interface ModuleBalancingLibraryUiStateReadWrite {
+  expandedSections: {
+    system: boolean;
+    recommended: boolean;
+    custom: boolean;
+  };
+  collapsedFolderIds: string[];
 }
 
 export interface ToolboxWikiStateReadWrite extends ToolboxWikiState {
@@ -164,7 +174,7 @@ export interface ModuleBalancingCustomModuleReadWrite extends ModuleBalancingCus
   id: string;
   name: string;
   color: string;
-  iconId: string;
+  iconItemIds: string[];
   notes: string;
   folderId: string | null;
   inputs: ModuleBalancingIOPortReadWrite[];
@@ -377,6 +387,17 @@ export function createDefaultModuleBalancingState(): ModuleBalancingStateReadWri
     customModules: [],
     folders: [],
     activeCanvasId: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  };
+}
+
+export function createDefaultModuleBalancingLibraryUiState(): ModuleBalancingLibraryUiStateReadWrite {
+  return {
+    expandedSections: {
+      system: true,
+      recommended: true,
+      custom: true,
+    },
+    collapsedFolderIds: [],
   };
 }
 
@@ -602,6 +623,7 @@ class ToolboxStateReadWriteImpl implements ToolboxStateReadWrite {
   bottomDockHeight = DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT;
   wiki: ToolboxWikiStateReadWrite = new ToolboxWikiStateReadWriteImpl();
   moduleBalancing: ModuleBalancingStateReadWrite = createDefaultModuleBalancingState();
+  moduleBalancingLibraryUi: ModuleBalancingLibraryUiStateReadWrite = createDefaultModuleBalancingLibraryUiState();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

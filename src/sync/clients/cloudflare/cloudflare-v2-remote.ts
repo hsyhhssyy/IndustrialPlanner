@@ -19,6 +19,7 @@ import type {
   SyncLocalState,
   SyncRemote,
   SyncRemoteCollection,
+  SyncRemoteCompleteOptions,
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
@@ -402,7 +403,7 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     // Cloudflare v2 没有目录维护步骤。
   }
 
-  public async complete(): Promise<void> {
+  public async complete(options?: SyncRemoteCompleteOptions): Promise<void> {
     // AI-REMOVED 2026-08-25:
     // Reason: collection 到齐门禁是对局部 local-change scope 的补救；它只能阻止漏变更，
     //   却同时造成成功 commit 后全局 revision 不前推、下一轮重复 plan 和伪下载阶段。
@@ -444,14 +445,18 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     // const targetRevision = allCollectionsApplied
     //   ? this.latestCommittedRevision ?? this.planCache?.revision ?? null
     //   : null;
-    const targetRevision = this.latestCommittedRevision
-      ?? this.planCache?.revision
-      ?? null;
-    if (targetRevision !== null) {
-      await this.request<void>({
-        type: "state-write-applied-revision",
-        revision: targetRevision,
-      });
+    // AI-CORRECTION 2026-09-01: 未来业务 schema 使本轮语义分类不完整时，
+    // 仍确认已完成的上传日志，但不推进全局 applied revision。
+    if (options?.advanceAppliedRevision !== false) {
+      const targetRevision = this.latestCommittedRevision
+        ?? this.planCache?.revision
+        ?? null;
+      if (targetRevision !== null) {
+        await this.request<void>({
+          type: "state-write-applied-revision",
+          revision: targetRevision,
+        });
+      }
     }
     if (this.pendingJournalAck) {
       await this.request<void>({ type: "ack-pending-upload" });

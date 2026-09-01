@@ -1,4 +1,6 @@
 import type { ModuleBalancingIOPort } from "@/app/toolbox-types";
+import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
+import { MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION } from "@/app/module-balancing-schema";
 
 import {
   createProductionPlanningId,
@@ -12,7 +14,6 @@ import {
 } from "./production-planning-model";
 
 const PRODUCTION_PLANNING_MODULE_COLOR = "#4f8cff";
-const PRODUCTION_PLANNING_MODULE_FALLBACK_ICON_ID = "grinder_1";
 const NATURAL_RESOURCE_GATHERING_RECIPE_TAG = "自然资源采集";
 const FLOW_EPSILON = 0.0001;
 
@@ -37,12 +38,16 @@ export function createProductionPlanningModule(
     .join(", ");
 
   return {
+    schemaVersion: MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
     id: createProductionPlanningId("custom-module"),
     name: options.translate("moduleBalancing.modulePlaceholder"),
     color: PRODUCTION_PLANNING_MODULE_COLOR,
-    iconId: outputs[0]?.itemId
-      ?? inputs[0]?.itemId
-      ?? PRODUCTION_PLANNING_MODULE_FALLBACK_ICON_ID,
+    iconItemIds: collectDefaultModuleIconItemIds(
+      options.targets
+        .filter((target) => target.itemId.length > 0 && target.perMinute > FLOW_EPSILON)
+        .map((target) => target.itemId),
+      [...outputs, ...inputs].map((port) => port.itemId),
+    ),
     notes: options.translate("productionPlanning.generatedModuleNotes")
       .replace("{targets}", targetDescription),
     folderId: null,

@@ -63,6 +63,11 @@ export interface SyncRemoteSessionContext {
   readonly focusedAssets?: readonly RemoteAssetRef[];
 }
 
+export interface SyncRemoteCompleteOptions {
+  /** false 表示本轮未完整理解远端内容，不得推进 provider 的全局已应用游标。 */
+  readonly advanceAppliedRevision: boolean;
+}
+
 export interface SyncLocalState {
   getLastSyncedHash(assetKey: string): Promise<string | null>;
   setLastSyncedHash(assetKey: string, hash: string | null): Promise<void>;
@@ -93,7 +98,7 @@ export interface SyncRemoteSession {
   beginWriteBatch(): SyncRemoteWriteBatch;
   markApplied(result: RemoteApplyResult): Promise<void>;
   prepareCollections?(collections: readonly SyncRemoteCollection[]): Promise<void>;
-  complete?(): Promise<void>;
+  complete?(options?: SyncRemoteCompleteOptions): Promise<void>;
   dispose?(): void;
 }
 

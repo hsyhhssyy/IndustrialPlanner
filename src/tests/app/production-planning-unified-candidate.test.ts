@@ -46,10 +46,11 @@ function module(
   outputs: readonly { itemId: string; perMinute: number }[],
 ): ModuleBalancingCustomModule {
   return {
+    schemaVersion: 2,
     id,
     name: id,
     color: "#4f8cff",
-    iconId: outputs[0]?.itemId ?? "test_a",
+    iconItemIds: [outputs[0]?.itemId ?? "test_a"],
     notes: "",
     inputs,
     outputs,

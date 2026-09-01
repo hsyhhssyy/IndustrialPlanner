@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
+import { CompositeItemIcon } from "@/app/shell/shared";
 import { buildProductionFlowGraph, type ProductionFlowLink, type ProductionFlowNode } from "./flow-graph-builder";
 import { createSankeyLayout, updateSankeyLinkBreadths, type SankeyGraph, type SankeyLink, type SankeyNode } from "./sankey-layout";
 import styles from "../production-planning-panel.module.scss";
@@ -408,7 +409,7 @@ function FlowNode({
       }}
       onPointerDown={(event) => onPointerDown(event, node)}
     >
-      <img alt="" src={node.source.iconSrc} />
+      <CompositeItemIcon iconSrcs={node.source.iconSrcs} size={32} />
       <div>
         <strong>{node.source.title}</strong>
         <span>{metric}</span>

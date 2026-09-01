@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
@@ -15,6 +15,7 @@ import LucidePackagePlus from "~icons/lucide/package-plus";
 import LucidePlus from "~icons/lucide/plus";
 import LucideSave from "~icons/lucide/save";
 import LucideSearch from "~icons/lucide/search";
+import LucideShare2 from "~icons/lucide/share-2";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideUpload from "~icons/lucide/upload";
 import LucideX from "~icons/lucide/x";
@@ -23,11 +24,19 @@ import type { AppHost } from "@/app/host/app-host";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
+import { CompositeItemIcon } from "@/app/shell/shared";
+import {
+  collectDefaultModuleIconItemIds,
+  MODULE_ICON_ITEM_COUNT_MAX,
+  parseModuleIconItemIds,
+} from "@/app/module-icon";
+import { MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION } from "@/app/module-balancing-schema";
 import type {
   ModuleBalancingCanvasReadWrite,
   ModuleBalancingCustomModuleReadWrite,
   ModuleBalancingFolderReadWrite,
   ModuleBalancingIOPortReadWrite,
+  ModuleBalancingLibraryUiStateReadWrite,
   ModuleBalancingStageReadWrite,
 } from "@/app/state/state-impl";
 import {
@@ -48,6 +57,7 @@ import type {
   //
   // Original code:
   // ModuleBalancingSystemRecipeModule,
+  // AI-CORRECTION 2026-09-01: 图标解析接口现为 resolveModuleIconSrcs，可返回 1～4 个物品图标资源。
 } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
@@ -61,13 +71,12 @@ import {
   matchesModuleSearchQuery,
   moduleContainsInactiveActivityContent,
   resolveCanvasActivityIds,
-  resolveAnyIconSrc,
   resolveItemIconSrc,
   resolveItemName,
   resolveModule,
   resolveModuleActivityIds,
   resolveModuleDisplayTitle,
-  resolveModuleIconSrc,
+  resolveModuleIconSrcs,
   resolveModuleInputs,
   resolveModuleOutputs,
   resolveInfiniteSystemInputItemIds,
@@ -79,10 +88,16 @@ import {
 import {
   buildCanvasExportData,
   buildCanvasImportPlan,
+  buildModuleCollectionExportData,
+  buildModuleCollectionImportPlan,
   downloadCanvasExportJson,
+  downloadModuleCollectionExportJson,
   parseCanvasImportData,
+  parseModuleCollectionImportData,
   applyCanvasImport,
+  applyModuleCollectionImport,
   type CanvasImportPlan,
+  type ModuleCollectionImportPlan,
 } from "@/app/shell/module-balancing/canvas-io";
 import {
   readRecommendedCanvasLibrary,
@@ -162,7 +177,7 @@ interface CustomModuleFormState {
   id: string | null;
   name: string;
   color: string;
-  iconId: string;
+  iconItemIds: string[];
   notes: string;
   folderId: string | null;
   inputs: ModuleBalancingIOPort[];
@@ -176,12 +191,17 @@ interface PendingPortTarget {
 export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   appHost,
   isTouch,
+  onPendingCustomModuleDraftConsumed,
+  pendingCustomModuleDraft,
 }: {
   appHost: AppHost;
   isTouch: boolean;
+  onPendingCustomModuleDraftConsumed: () => void;
+  pendingCustomModuleDraft: ModuleBalancingCustomModule | null;
 }) {
   const t = appHost.actions.translate;
   const balancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
+  const libraryUiState = appHost.internalState.workbench.toolbox.moduleBalancingLibraryUi;
   const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
   const activeActivityIds = resolveEffectiveActivityIds({
     selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
@@ -215,6 +235,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [expandedBalanceIds, setExpandedBalanceIds] = useState<Set<string>>(() => new Set());
   const [quantityDraft, setQuantityDraft] = useState<QuantityDraft | null>(null);
   const [customModuleForm, setCustomModuleForm] = useState<CustomModuleFormState | null>(null);
+  const [moduleImportPlan, setModuleImportPlan] = useState<ModuleCollectionImportPlan | null>(null);
   const libraryLayer = useOverlayStackLayer({
     layerId: "module-balancing:library",
     visible: libraryOpen,
@@ -388,7 +409,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       id: null,
       name: "",
       color: CUSTOM_MODULE_COLORS[0],
-      iconId: index.allItems[0]?.id ?? index.allEntities[0]?.id ?? "grinder_1",
+      iconItemIds: [],
       notes: "",
       folderId: null,
       inputs: [],
@@ -396,18 +417,31 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     });
   };
 
-  const openEditCustomModuleForm = (customModule: ModuleBalancingCustomModule) => {
+  const openEditCustomModuleForm = useCallback((customModule: ModuleBalancingCustomModule) => {
     setCustomModuleForm({
       id: customModule.id,
       name: customModule.name,
       color: customModule.color,
-      iconId: customModule.iconId,
+      iconItemIds: [...customModule.iconItemIds],
       notes: customModule.notes,
       folderId: customModule.folderId ?? null,
       inputs: customModule.inputs.map(clonePort),
       outputs: customModule.outputs.map(clonePort),
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (pendingCustomModuleDraft === null) {
+      return;
+    }
+
+    openEditCustomModuleForm(pendingCustomModuleDraft);
+    onPendingCustomModuleDraftConsumed();
+  }, [
+    onPendingCustomModuleDraftConsumed,
+    openEditCustomModuleForm,
+    pendingCustomModuleDraft,
+  ]);
 
   const openStageAsCustomModuleForm = (stage: ModuleBalancingStageReadWrite) => {
     if (activeCanvas === null) {
@@ -430,7 +464,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       id: null,
       name: stage.name,
       color: CUSTOM_MODULE_COLORS[0],
-      iconId: outputs[0]?.itemId ?? inputs[0]?.itemId ?? index.allItems[0]?.id ?? "grinder_1",
+      iconItemIds: collectDefaultModuleIconItemIds(
+        outputs.map((port) => port.itemId),
+        inputs.map((port) => port.itemId),
+      ),
       notes: "",
       folderId: null,
       inputs,
@@ -446,15 +483,21 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     const normalizedName = draft.name.trim();
     const inputs = draft.inputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0);
     const outputs = draft.outputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0);
-    if (normalizedName.length === 0 || (inputs.length === 0 && outputs.length === 0)) {
+    const iconItemIds = parseModuleIconItemIds(draft.iconItemIds);
+    if (
+      normalizedName.length === 0
+      || iconItemIds === null
+      || (inputs.length === 0 && outputs.length === 0)
+    ) {
       return;
     }
 
     const nextModule: ModuleBalancingCustomModuleReadWrite = {
+      schemaVersion: MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
       id: draft.id ?? createModuleBalancingId(),
       name: normalizedName,
       color: draft.color,
-      iconId: draft.iconId,
+      iconItemIds,
       notes: draft.notes,
       folderId: draft.folderId,
       inputs: inputs.map(clonePort),
@@ -643,6 +686,91 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     downloadCanvasExportJson(exportData, activeCanvas.name);
   };
 
+  const exportModuleCollection = (options: {
+    readonly name: string;
+    readonly folders: readonly ModuleBalancingFolderReadWrite[];
+    readonly modules: readonly ModuleBalancingCustomModule[];
+  }) => {
+    const exportData = buildModuleCollectionExportData(options);
+    downloadModuleCollectionExportJson(exportData, options.name);
+  };
+
+  const handleExportCustomModule = (customModule: ModuleBalancingCustomModule) => {
+    exportModuleCollection({
+      name: customModule.name,
+      folders: [],
+      modules: [customModule],
+    });
+  };
+
+  const handleExportCustomModuleFolder = (folder: ModuleBalancingFolderReadWrite) => {
+    exportModuleCollection({
+      name: folder.name,
+      folders: [folder],
+      modules: balancingState.customModules.filter((module) => module.folderId === folder.id),
+    });
+  };
+
+  const handleExportCustomModuleRoot = () => {
+    exportModuleCollection({
+      name: t("moduleBalancing.customModules"),
+      folders: balancingState.folders,
+      modules: balancingState.customModules,
+    });
+  };
+
+  const applyPendingModuleCollectionImport = (plan: ModuleCollectionImportPlan) => {
+    runInAction(() => {
+      applyModuleCollectionImport(
+        plan,
+        balancingState.customModules,
+        balancingState.folders,
+      );
+    });
+  };
+
+  const handleImportModuleCollection = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        return;
+      }
+
+      let raw: unknown;
+      try {
+        raw = JSON.parse(reader.result);
+      } catch {
+        return;
+      }
+
+      const data = parseModuleCollectionImportData(raw);
+      if (data === null) {
+        return;
+      }
+
+      const plan = buildModuleCollectionImportPlan(data, balancingState.customModules);
+      const hasConflicts = plan.moduleActions.some((action) => action.kind === "conflict");
+      if (hasConflicts) {
+        setModuleImportPlan(plan);
+        return;
+      }
+
+      applyPendingModuleCollectionImport(plan);
+    };
+    reader.onerror = () => {
+      // 文件读取失败时不修改现有模块库。
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmModuleCollectionImportWithConflicts = () => {
+    if (moduleImportPlan === null) {
+      return;
+    }
+    applyPendingModuleCollectionImport(moduleImportPlan);
+    setModuleImportPlan(null);
+  };
+
   const [importPlan, setImportPlan] = useState<CanvasImportPlan | null>(null);
 
   const handleImportCanvas = (file: File) => {
@@ -698,6 +826,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           if (localIndex >= 0) {
             balancingState.customModules[localIndex] = {
               ...action.importModule,
+              iconItemIds: [...action.importModule.iconItemIds],
               folderId: balancingState.customModules[localIndex]!.folderId,
               inputs: action.importModule.inputs.map((p) => ({ ...p })),
               outputs: action.importModule.outputs.map((p) => ({ ...p })),
@@ -710,7 +839,17 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     runInAction(() => {
       const newCanvasId = applyCanvasImport(
         {
-          version: 1,
+          // AI-REMOVED 2026-09-01:
+          // Reason: 画布导出结构已升级到 v2，内部构造不能继续声明为 v1。
+          // Trigger: 自定义模块图标由 iconId 升级为 iconItemIds。
+          // Evidence: CanvasExportData.version 的当前唯一合法类型为 2。
+          // Replacement: version: 2
+          // Risk: Low；解析器仍兼容外部 v1 导入。
+          // Human Review: Required
+          //
+          // Original code:
+          // version: 1,
+          version: 2,
           canvas: {
             name: importPlan.canvasData.name,
             folderId: importPlan.canvasData.folderId,
@@ -1038,6 +1177,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         index={index}
         isTouch={isTouch}
         folders={balancingState.folders}
+        libraryUiState={libraryUiState}
         onAddModule={addModuleToSelectedStage}
         onCreateCustomModule={openNewCustomModuleForm}
         onCreateFolder={() => {
@@ -1046,6 +1186,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         }}
         onDeleteCustomModule={deleteCustomModule}
         onEditCustomModule={openEditCustomModuleForm}
+        onExportCustomModule={handleExportCustomModule}
+        onExportCustomModuleFolder={handleExportCustomModuleFolder}
+        onExportCustomModuleRoot={handleExportCustomModuleRoot}
+        onImportModuleCollection={handleImportModuleCollection}
         onMoveCustomModule={moveCustomModuleToFolder}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -1168,6 +1312,62 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           </OverlayStackLayer>
         );
       })() : null}
+      {moduleImportPlan !== null ? (() => {
+        const conflictActions = moduleImportPlan.moduleActions.filter(
+          (action): action is {
+            kind: "conflict";
+            importId: string;
+            importName: string;
+            localName: string;
+            importModule: ModuleBalancingCustomModule;
+          } => action.kind === "conflict",
+        );
+        const firstConflict = conflictActions[0];
+        return (
+          <OverlayStackLayer layerId="module-balancing:module-import-conflict" visible>
+            {({ zIndex }) => (
+              <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setModuleImportPlan(null);
+                }
+              }} style={{ zIndex }}>
+                <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
+                  <header className={cm(styles, "module-balancing-form-header")}>
+                    <h3>{t("moduleBalancing.importModuleConflict")}</h3>
+                    <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setModuleImportPlan(null)} aria-label={t("action.close")}>
+                      <LucideX aria-hidden="true" />
+                    </button>
+                  </header>
+                  {conflictActions.length === 1 && firstConflict !== undefined ? (
+                    <p style={{ margin: "12px 0" }}>
+                      {t("moduleBalancing.importModuleConflictMessage").replace("{importName}", firstConflict.importName)}
+                    </p>
+                  ) : (
+                    <div style={{ margin: "12px 0" }}>
+                      <p>{t("moduleBalancing.importModuleConflict")}：</p>
+                      <ul>
+                        {conflictActions.map((action) => (
+                          <li key={action.importId}>
+                            {t("moduleBalancing.importModuleConflictMessage").replace("{importName}", action.importName)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <footer className={cm(styles, "module-balancing-form-actions")}>
+                    <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={() => setModuleImportPlan(null)}>
+                      {t("action.cancel")}
+                    </button>
+                    <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={confirmModuleCollectionImportWithConflicts}>
+                      {t("action.confirm")}
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            )}
+          </OverlayStackLayer>
+        );
+      })() : null}
       {newFolderDialogOpen ? (
         <OverlayStackLayer layerId="module-balancing:new-folder" visible>
           {({ zIndex }) => (
@@ -1217,16 +1417,29 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             index={index}
             onCancel={closeCustomModuleForm}
             onOpenPortPicker={(target) => { void requestPortSelection(target); }}
-            onPickIcon={() => {
+            onPickIconItem={(iconIndex) => {
               void (async () => {
+                const selectedItemIds = customModuleForm.iconItemIds;
                 const itemId = await appHost.encyclopediaPicker.pickItem({
+                  filterItem: (item) => !selectedItemIds.some((selectedItemId, selectedIndex) => (
+                    selectedIndex !== iconIndex && selectedItemId === item.id
+                  )),
                   includeInactiveActivityItems: showAllActivityContent,
                   title: t("moduleBalancing.moduleIcon"),
                 });
                 if (itemId === null) return;
                 setCustomModuleForm((draft) => {
                   if (!draft) return draft;
-                  return { ...draft, iconId: itemId };
+                  const iconItemIds = [...draft.iconItemIds];
+                  if (iconIndex === null) {
+                    if (iconItemIds.length >= MODULE_ICON_ITEM_COUNT_MAX || iconItemIds.includes(itemId)) {
+                      return draft;
+                    }
+                    iconItemIds.push(itemId);
+                  } else if (iconItemIds[iconIndex] !== undefined) {
+                    iconItemIds[iconIndex] = itemId;
+                  }
+                  return { ...draft, iconItemIds };
                 });
               })();
             }}
@@ -1287,11 +1500,16 @@ function ModuleLibrary({
   highlight,
   index,
   isTouch,
+  libraryUiState,
   onAddModule,
   onCreateCustomModule,
   onCreateFolder,
   onDeleteCustomModule,
   onEditCustomModule,
+  onExportCustomModule,
+  onExportCustomModuleFolder,
+  onExportCustomModuleRoot,
+  onImportModuleCollection,
   onMoveCustomModule,
   searchQuery,
   setSearchQuery,
@@ -1304,11 +1522,16 @@ function ModuleLibrary({
   highlight: boolean;
   index: ModuleBalancingIndex;
   isTouch: boolean;
+  libraryUiState: ModuleBalancingLibraryUiStateReadWrite;
   onAddModule: (moduleId: string) => void;
   onCreateCustomModule: () => void;
   onCreateFolder: () => void;
   onDeleteCustomModule: (moduleId: string) => void;
   onEditCustomModule: (module: ModuleBalancingCustomModule) => void;
+  onExportCustomModule: (module: ModuleBalancingCustomModule) => void;
+  onExportCustomModuleFolder: (folder: ModuleBalancingFolderReadWrite) => void;
+  onExportCustomModuleRoot: () => void;
+  onImportModuleCollection: (file: File) => void;
   onMoveCustomModule: (moduleId: string, folderId: string | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -1317,14 +1540,15 @@ function ModuleLibrary({
 }) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const isSearching = normalizedQuery.length > 0;
-  const [expandedSections, setExpandedSections] = useState<Record<ModuleLibrarySectionId, boolean>>({
-    system: true,
-    recommended: true,
-    custom: true,
-  });
-  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+  const [expandedSections, setExpandedSections] = useState<Record<ModuleLibrarySectionId, boolean>>(
+    () => ({ ...libraryUiState.expandedSections }),
+  );
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(
+    () => new Set(libraryUiState.collapsedFolderIds),
+  );
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
   const activeDragModuleIdRef = useRef<string | null>(null);
+  const moduleImportInputRef = useRef<HTMLInputElement | null>(null);
   const systemModules = index.systemModules.filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
   const recommendedModules = Array.from(index.recommendedModuleById.values())
     .filter((module) =>
@@ -1367,10 +1591,29 @@ function ModuleLibrary({
   // }, [isSearching]);
 
   const toggleSection = (sectionId: ModuleLibrarySectionId) => {
-    setExpandedSections((current) => ({
-      ...current,
-      [sectionId]: !current[sectionId],
-    }));
+    setExpandedSections((current) => {
+      const next = {
+        ...current,
+        [sectionId]: !current[sectionId],
+      };
+      if (!isSearching) {
+        runInAction(() => {
+          libraryUiState.expandedSections = next;
+        });
+      }
+      return next;
+    });
+  };
+  const updateCollapsedFolderIds = (
+    updater: (current: ReadonlySet<string>) => Set<string>,
+  ) => {
+    setCollapsedFolderIds((current) => {
+      const next = updater(current);
+      runInAction(() => {
+        libraryUiState.collapsedFolderIds = Array.from(next);
+      });
+      return next;
+    });
   };
   const handleFolderDrop = (event: DragEvent<HTMLElement>, folderId: string) => {
     event.preventDefault();
@@ -1382,7 +1625,7 @@ function ModuleLibrary({
     }
 
     onMoveCustomModule(moduleId, folderId);
-    setCollapsedFolderIds((current) => {
+    updateCollapsedFolderIds((current) => {
       const next = new Set(current);
       next.delete(folderId);
       return next;
@@ -1407,13 +1650,32 @@ function ModuleLibrary({
           value={searchQuery}
           onChange={(event) => {
             const nextQuery = event.currentTarget.value;
-            if (nextQuery.trim().length > 0) {
+            const nextIsSearching = nextQuery.trim().length > 0;
+            if (nextIsSearching && !isSearching) {
               setExpandedSections({
                 system: true,
                 recommended: true,
                 custom: true,
               });
+            } else if (!nextIsSearching && isSearching) {
+              setExpandedSections({ ...libraryUiState.expandedSections });
             }
+            // AI-REMOVED 2026-09-01:
+            // Reason: 搜索触发的临时展开不应覆盖用户持久化的折叠偏好。
+            // Trigger: 用户要求模块库折叠状态仅在本机持久化。
+            // Evidence: expandedSections 现在区分搜索期临时状态与 libraryUiState 中的用户偏好。
+            // Replacement: 上方 nextIsSearching 分支；退出搜索时恢复 libraryUiState.expandedSections。
+            // Risk: Low
+            // Human Review: Required
+            //
+            // Original code:
+            // if (nextQuery.trim().length > 0) {
+            //   setExpandedSections({
+            //     system: true,
+            //     recommended: true,
+            //     custom: true,
+            //   });
+            // }
             setSearchQuery(nextQuery);
           }}
         />
@@ -1451,6 +1713,18 @@ function ModuleLibrary({
         />
       </ModuleSection>
       <ModuleSection
+        actions={(
+          <button
+            aria-label={t("moduleBalancing.exportModuleLibrary")}
+            className={cm(styles, "module-balancing-mini-icon-button")}
+            disabled={folders.length === 0 && index.customModuleById.size === 0}
+            title={t("moduleBalancing.exportModuleLibrary")}
+            type="button"
+            onClick={onExportCustomModuleRoot}
+          >
+            <LucideShare2 aria-hidden="true" />
+          </button>
+        )}
         count={customModules.length}
         expanded={expandedSections.custom}
         onToggle={() => toggleSection("custom")}
@@ -1467,6 +1741,7 @@ function ModuleLibrary({
             onCustomModuleDragStart={handleCustomModuleDragStart}
             onDeleteCustomModule={onDeleteCustomModule}
             onEditCustomModule={onEditCustomModule}
+            onExportCustomModule={onExportCustomModule}
             showActivityIcons={showActivityIcons}
             t={t}
           />
@@ -1481,6 +1756,7 @@ function ModuleLibrary({
               onCustomModuleDragStart={handleCustomModuleDragStart}
               onDeleteCustomModule={onDeleteCustomModule}
               onEditCustomModule={onEditCustomModule}
+              onExportCustomModule={onExportCustomModule}
               showActivityIcons={showActivityIcons}
               t={t}
             />
@@ -1525,15 +1801,28 @@ function ModuleLibrary({
                       <span>{folder.name}</span>
                       <small>({folderModules.length})</small>
                     </span>
-                    <button
-                      aria-expanded={expanded}
-                      className={cm(styles, "module-balancing-section-toggle")}
-                      type="button"
-                      onClick={() => setCollapsedFolderIds(toggleSetValue(collapsedFolderIds, folder.id))}
-                    >
-                      {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
-                      <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
-                    </button>
+                    <span className={cm(styles, "module-balancing-library-header-actions")}>
+                      <button
+                        aria-label={t("moduleBalancing.exportModuleFolder")}
+                        className={cm(styles, "module-balancing-mini-icon-button")}
+                        title={t("moduleBalancing.exportModuleFolder")}
+                        type="button"
+                        onClick={() => onExportCustomModuleFolder(folder)}
+                      >
+                        <LucideShare2 aria-hidden="true" />
+                      </button>
+                      <button
+                        aria-expanded={expanded}
+                        className={cm(styles, "module-balancing-section-toggle")}
+                        type="button"
+                        onClick={() => updateCollapsedFolderIds(
+                          (current) => toggleSetValue(current, folder.id),
+                        )}
+                      >
+                        {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                        <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
+                      </button>
+                    </span>
                   </header>
                   {expanded ? (
                     <ModuleList
@@ -1545,6 +1834,7 @@ function ModuleLibrary({
                       onCustomModuleDragStart={handleCustomModuleDragStart}
                       onDeleteCustomModule={onDeleteCustomModule}
                       onEditCustomModule={onEditCustomModule}
+                      onExportCustomModule={onExportCustomModule}
                       showActivityIcons={showActivityIcons}
                       t={t}
                     />
@@ -1555,6 +1845,19 @@ function ModuleLibrary({
           </>
         )}
         <div className={cm(styles, "module-balancing-library-create-actions")}>
+          <input
+            ref={moduleImportInputRef}
+            accept=".json,application/json"
+            hidden
+            type="file"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file !== undefined) {
+                onImportModuleCollection(file);
+              }
+              event.currentTarget.value = "";
+            }}
+          />
           <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateCustomModule}>
             <LucidePlus aria-hidden="true" />
             <span>{t("moduleBalancing.newModule")}</span>
@@ -1562,6 +1865,10 @@ function ModuleLibrary({
           <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateFolder}>
             <LucideFolderPlus aria-hidden="true" />
             <span>{t("moduleBalancing.newFolder")}</span>
+          </button>
+          <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={() => moduleImportInputRef.current?.click()}>
+            <LucideFolderInput aria-hidden="true" />
+            <span>{t("moduleBalancing.importModules")}</span>
           </button>
         </div>
       </ModuleSection>
@@ -1573,6 +1880,7 @@ function ModuleLibrary({
 }
 
 function ModuleSection({
+  actions,
   children,
   count,
   expanded,
@@ -1580,6 +1888,7 @@ function ModuleSection({
   t,
   title,
 }: {
+  actions?: ReactNode;
   children: ReactNode;
   count: number;
   expanded: boolean;
@@ -1591,15 +1900,18 @@ function ModuleSection({
     <section className={cm(styles, "module-balancing-library-section")}>
       <header className={cm(styles, "module-balancing-library-section-header")}>
         <h3>{title} <span>({count})</span></h3>
-        <button
-          aria-expanded={expanded}
-          className={cm(styles, "module-balancing-section-toggle")}
-          type="button"
-          onClick={onToggle}
-        >
-          {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
-          <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
-        </button>
+        <span className={cm(styles, "module-balancing-library-header-actions")}>
+          {actions}
+          <button
+            aria-expanded={expanded}
+            className={cm(styles, "module-balancing-section-toggle")}
+            type="button"
+            onClick={onToggle}
+          >
+            {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+            <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
+          </button>
+        </span>
       </header>
       {expanded ? children : null}
     </section>
@@ -1615,6 +1927,7 @@ function ModuleList({
   onCustomModuleDragStart,
   onDeleteCustomModule,
   onEditCustomModule,
+  onExportCustomModule,
   showActivityIcons,
   t,
 }: {
@@ -1626,6 +1939,7 @@ function ModuleList({
   onCustomModuleDragStart?: (moduleId: string) => void;
   onDeleteCustomModule?: (moduleId: string) => void;
   onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
+  onExportCustomModule?: (module: ModuleBalancingCustomModule) => void;
   showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
@@ -1646,6 +1960,7 @@ function ModuleList({
           onCustomModuleDragStart={onCustomModuleDragStart}
           onDeleteCustomModule={onDeleteCustomModule}
           onEditCustomModule={onEditCustomModule}
+          onExportCustomModule={onExportCustomModule}
           showActivityIcons={showActivityIcons}
           t={t}
         />
@@ -1663,6 +1978,7 @@ function ModuleCard({
   onCustomModuleDragStart,
   onDeleteCustomModule,
   onEditCustomModule,
+  onExportCustomModule,
   showActivityIcons,
   t,
 }: {
@@ -1674,6 +1990,7 @@ function ModuleCard({
   onCustomModuleDragStart?: (moduleId: string) => void;
   onDeleteCustomModule?: (moduleId: string) => void;
   onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
+  onExportCustomModule?: (module: ModuleBalancingCustomModule) => void;
   showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
@@ -1719,7 +2036,11 @@ function ModuleCard({
         }
       }}
     >
-      <img alt="" className={cm(styles, "module-balancing-module-icon")} src={resolveModuleIconSrc(module, index)} />
+      <CompositeItemIcon
+        className={cm(styles, "module-balancing-module-icon")}
+        iconSrcs={resolveModuleIconSrcs(module, index)}
+        size={32}
+      />
       <span className={cm(styles, "module-balancing-module-card-copy")}>
         <span className={cm(styles, "module-balancing-module-title-row")}>
           <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
@@ -1739,6 +2060,7 @@ function ModuleCard({
             ) : null}
         */}
         {/* AI-CORRECTION 2026-07-27: 用户澄清新外观只约束头部，原有 RecipeDisplay 需要继续显示在头部下方。 */}
+        {/* AI-CORRECTION 2026-09-01: 当前头部通过 resolveModuleIconSrcs 渲染 1～4 个物品组合图标，系统配方仍保持单设备图标。 */}
         {module.sourceType === "system-recipe" ? (
           <RecipeDisplay recipeId={module.recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
         ) : null}
@@ -1768,6 +2090,15 @@ function ModuleCard({
             onClick={() => onDeleteCustomModule?.(module.id)}
           >
             <LucideTrash2 aria-hidden="true" />
+          </button>
+          <button
+            aria-label={t("moduleBalancing.exportModule")}
+            className={cm(styles, "module-balancing-mini-icon-button")}
+            title={t("moduleBalancing.exportModule")}
+            type="button"
+            onClick={() => onExportCustomModule?.(module)}
+          >
+            <LucideShare2 aria-hidden="true" />
           </button>
         </span>
       ) : null}
@@ -2726,7 +3057,10 @@ function StageEntryGrid({
               onMoveEntry(Number(rawFromIndex), entryIndex);
             }}
           >
-            <img alt="" src={resolveModuleIconSrc(module, index)} />
+            <CompositeItemIcon
+              className={cm(styles, "module-balancing-stage-entry-icon")}
+              iconSrcs={resolveModuleIconSrcs(module, index)}
+            />
             <span className={cm(styles, "module-balancing-stage-entry-title")}>
               <span>{resolveModuleTitle(module, index, t)}</span>
               <ActivityIconStrip activityIds={activityIds} />
@@ -2911,7 +3245,7 @@ function CustomModuleForm({
   index,
   onCancel,
   onOpenPortPicker,
-  onPickIcon,
+  onPickIconItem,
   onRequestPickItem,
   onSave,
   onUpdate,
@@ -2922,16 +3256,18 @@ function CustomModuleForm({
   index: ModuleBalancingIndex;
   onCancel: () => void;
   onOpenPortPicker: (target: PendingPortTarget) => void;
-  onPickIcon: () => void;
-  onRequestPickItem: (kind: 'input' | 'output', portIndex: number) => void;
+  onPickIconItem: (iconIndex: number | null) => void;
+  onRequestPickItem: (kind: "input" | "output", portIndex: number) => void;
   onSave: () => void;
   onUpdate: (draft: CustomModuleFormState | null) => void;
   t: (key: string) => string;
 }) {
-  const canSave = draft.name.trim().length > 0 && (
-    draft.inputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
-    || draft.outputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
-  );
+  const canSave = draft.name.trim().length > 0
+    && parseModuleIconItemIds(draft.iconItemIds) !== null
+    && (
+      draft.inputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
+      || draft.outputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
+    );
 
   return (
     <section className={cm(styles, "module-balancing-custom-form")}>
@@ -2963,9 +3299,56 @@ function CustomModuleForm({
       <div className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleIcon")}</span>
         <div className={cm(styles, "module-balancing-icon-color-row")}>
-          <button className={cm(styles, "module-balancing-icon-picker")} type="button" onClick={onPickIcon}>
-            <img alt="" src={resolveAnyIconSrc(draft.iconId, index)} />
-          </button>
+          <div className={cm(styles, "module-balancing-icon-editor")}>
+            <span className={cm(styles, "module-balancing-icon-picker")}>
+              {draft.iconItemIds.length > 0 ? (
+                <CompositeItemIcon
+                  iconSrcs={draft.iconItemIds.map((itemId) => resolveItemIconSrc(itemId, index))}
+                  size={42}
+                />
+              ) : (
+                <LucidePlus aria-hidden="true" />
+              )}
+            </span>
+            <span className={cm(styles, "module-balancing-icon-item-slots")}>
+              {draft.iconItemIds.map((itemId, iconIndex) => (
+                <span className={cm(styles, "module-balancing-icon-item-slot")} key={`${iconIndex}:${itemId}`}>
+                  <button
+                    aria-label={t("moduleBalancing.replaceIconItem").replace("{position}", String(iconIndex + 1))}
+                    className={cm(styles, "module-balancing-icon-item-button")}
+                    title={resolveItemName(itemId, index, t)}
+                    type="button"
+                    onClick={() => onPickIconItem(iconIndex)}
+                  >
+                    <img alt="" src={resolveItemIconSrc(itemId, index)} />
+                    <small>{iconIndex + 1}</small>
+                  </button>
+                  <button
+                    aria-label={t("moduleBalancing.removeIconItem").replace("{position}", String(iconIndex + 1))}
+                    className={cm(styles, "module-balancing-icon-item-remove")}
+                    disabled={draft.iconItemIds.length === 1}
+                    type="button"
+                    onClick={() => onUpdate({
+                      ...draft,
+                      iconItemIds: draft.iconItemIds.filter((_, index) => index !== iconIndex),
+                    })}
+                  >
+                    <LucideX aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+              {draft.iconItemIds.length < MODULE_ICON_ITEM_COUNT_MAX ? (
+                <button
+                  aria-label={t("moduleBalancing.addIconItem")}
+                  className={cm(styles, "module-balancing-icon-item-add")}
+                  type="button"
+                  onClick={() => onPickIconItem(null)}
+                >
+                  <LucidePlus aria-hidden="true" />
+                </button>
+              ) : null}
+            </span>
+          </div>
           <div className={cm(styles, "module-balancing-color-row")}>
             {CUSTOM_MODULE_COLORS.map((color) => (
               <button
@@ -2991,7 +3374,7 @@ function CustomModuleForm({
         <PortListEditor
           index={index}
           onChange={(ports) => onUpdate({ ...draft, inputs: ports })}
-          onRequestPickItem={(portIndex) => onRequestPickItem('input', portIndex)}
+          onRequestPickItem={(portIndex) => onRequestPickItem("input", portIndex)}
           ports={draft.inputs}
           t={t}
         />
@@ -3007,7 +3390,7 @@ function CustomModuleForm({
         <PortListEditor
           index={index}
           onChange={(ports) => onUpdate({ ...draft, outputs: ports })}
-          onRequestPickItem={(portIndex) => onRequestPickItem('output', portIndex)}
+          onRequestPickItem={(portIndex) => onRequestPickItem("output", portIndex)}
           ports={draft.outputs}
           t={t}
         />
@@ -3178,7 +3561,7 @@ function QuantityEditor({
           </button>
         </header>
         <div className={cm(styles, "module-balancing-quantity-module")}>
-          <img alt="" src={resolveModuleIconSrc(module, index)} />
+          <CompositeItemIcon iconSrcs={resolveModuleIconSrcs(module, index)} size={42} />
           <div>
             <strong>{resolveModuleTitle(module, index, t)}</strong>
             <span>{formatModuleTooltip(module, index, t)}</span>
@@ -3295,7 +3678,7 @@ function moveStageEntry(stage: ModuleBalancingStageReadWrite, fromIndex: number,
   });
 }
 
-function toggleSetValue(source: Set<string>, value: string): Set<string> {
+function toggleSetValue(source: ReadonlySet<string>, value: string): Set<string> {
   const next = new Set(source);
   if (next.has(value)) {
     next.delete(value);

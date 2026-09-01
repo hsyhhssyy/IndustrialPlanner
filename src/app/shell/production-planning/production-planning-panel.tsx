@@ -19,7 +19,10 @@ import LucideGitBranch from "~icons/lucide/git-branch";
 import type { AppHost } from "@/app/host/app-host";
 import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import type { ModuleBalancingRecommendedModule } from "@/app/toolbox-types";
+import type {
+  ModuleBalancingCustomModule,
+  ModuleBalancingRecommendedModule,
+} from "@/app/toolbox-types";
 import { readRecommendedModuleLibrary } from "@/app/shell/module-balancing";
 import {
   isItemAvailableByActivity,
@@ -43,6 +46,7 @@ import {
   formatProductionFlow,
   isWaterPurifierNodeRecipe,
   resolveProductionPlanningEntityIconSrc,
+  resolveProductionPlanningModuleIconSrcs,
   resolveProductionPlanningCandidateName,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
@@ -78,6 +82,7 @@ import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { CompositeItemIcon } from "@/app/shell/shared";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
@@ -208,9 +213,11 @@ function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): str
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
   isTouch,
+  onOpenGeneratedModuleEditor,
 }: {
   appHost: AppHost;
   isTouch: boolean;
+  onOpenGeneratedModuleEditor: (module: ModuleBalancingCustomModule) => void;
 }) {
   const t = appHost.actions.translate;
   const balancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
@@ -222,7 +229,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     id: module.id,
     name: module.name,
     color: module.color,
-    iconId: module.iconId,
+    iconItemIds: module.iconItemIds,
     notes: module.notes,
     inputs: module.inputs,
     outputs: module.outputs,
@@ -733,9 +740,19 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       targets: calculation.targets,
       translate: t,
     });
-    runInAction(() => {
-      appHost.internalState.workbench.toolbox.moduleBalancing.customModules.push(nextModule);
-    });
+    onOpenGeneratedModuleEditor(nextModule);
+    // AI-REMOVED 2026-09-01:
+    // Reason: 产线规划生成的模块必须先作为草稿进入编辑器，用户确认保存后才写入模块库。
+    // Trigger: 用户反馈“转为模块”会静默创建未命名模块，仍需手动查找并编辑。
+    // Evidence: 当前路径直接 push customModules 后只切换 tab，没有向模块编辑器传递新模块。
+    // Replacement: onOpenGeneratedModuleEditor(nextModule)
+    // Risk: Low；取消编辑将不再残留未命名模块。
+    // Human Review: Required
+    //
+    // Original code:
+    // runInAction(() => {
+    //   appHost.internalState.workbench.toolbox.moduleBalancing.customModules.push(nextModule);
+    // });
     appHost.internalActions.setDialogTab("toolbox", "module-balancing");
     appHost.internalActions.setToolboxBottomDockCollapsed(false);
   };
@@ -1902,17 +1919,17 @@ function ProductionPlanningTreeRowRate({
   const logisticsItemId = resolveProductionPlanningRecipeDisplayItemId(row);
   const productionUnitName = module?.name
     ?? (recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey));
-  const productionUnitIconSrc = module === null
-    ? (recipe === undefined
+  const productionUnitIconSrcs = module === null
+    ? [recipe === undefined
       ? createEntityIconAssetUrl(undefined)
-      : resolveProductionPlanningEntityIconSrc(machineId, index))
-    : resolveProductionPlanningModuleIconSrc(module.iconId, index);
+      : resolveProductionPlanningEntityIconSrc(machineId, index)]
+    : resolveProductionPlanningModuleIconSrcs(module, index);
 
   return (
     <div className={cm(styles, "production-planning-tree-table-rate")}>
       <span className={cm(styles, "production-planning-tree-rate-piece")} title={productionUnitName}>
         <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
-        <img alt="" src={productionUnitIconSrc} />
+        <CompositeItemIcon iconSrcs={productionUnitIconSrcs} size={18} />
       </span>
       <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
       <span className={cm(styles, "production-planning-tree-rate-piece")}>
@@ -2073,15 +2090,15 @@ function ProductionPlanningTreeDetail({
   const subtitle = row.isDeviceMinimumConsumption
     ? `${t("productionPlanning.minimumConsumption")} · ${normalSubtitle}`
     : normalSubtitle;
-  const iconSrc = displayMode === "item" && row.targetItemId.length > 0
-    ? resolveProductionPlanningItemIconSrc(row.targetItemId, index)
+  const iconSrcs = displayMode === "item" && row.targetItemId.length > 0
+    ? [resolveProductionPlanningItemIconSrc(row.targetItemId, index)]
     : isExternal
-      ? resolveProductionPlanningExternalSupplyIconSrc()
+      ? [resolveProductionPlanningExternalSupplyIconSrc()]
       : module !== null
-        ? resolveProductionPlanningModuleIconSrc(module.iconId, index)
+        ? resolveProductionPlanningModuleIconSrcs(module, index)
         : machine === null
-          ? createEntityIconAssetUrl(undefined)
-          : resolveProductionPlanningEntityIconSrc(machine.id, index);
+          ? [createEntityIconAssetUrl(undefined)]
+          : [resolveProductionPlanningEntityIconSrc(machine.id, index)];
   const availableRecipes = row.targetItemId.length > 0
     ? (index.recipesByOutputItem.get(row.targetItemId) ?? [])
       .filter((candidate) => !isWaterPurifierNodeRecipe(candidate))
@@ -2103,7 +2120,7 @@ function ProductionPlanningTreeDetail({
   return (
     <article ref={detailRef} className={cm(styles, detailClassName)}>
       <div className={cm(styles, "production-planning-recipe-header")}>
-        <img alt="" src={iconSrc} />
+        <CompositeItemIcon iconSrcs={iconSrcs} size={24} />
         <div>
           <h4>{title}</h4>
           <span>{subtitle}</span>
@@ -2540,24 +2557,24 @@ function RecipeIdentity({
   const subtitle = isDeviceMinimumConsumption
     ? `${t("productionPlanning.minimumConsumption")} · ${normalSubtitle}`
     : normalSubtitle;
-  const iconSrc = (() => {
+  const iconSrcs = (() => {
     if (displayMode === "item" && productItemId.length > 0) {
-      return resolveProductionPlanningItemIconSrc(productItemId, index);
+      return [resolveProductionPlanningItemIconSrc(productItemId, index)];
     }
     if (isExternal) {
-      return resolveProductionPlanningExternalSupplyIconSrc();
+      return [resolveProductionPlanningExternalSupplyIconSrc()];
     }
     if (module !== null) {
-      return resolveProductionPlanningModuleIconSrc(module.iconId, index);
+      return resolveProductionPlanningModuleIconSrcs(module, index);
     }
     return recipe === undefined
-      ? createEntityIconAssetUrl(undefined)
-      : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
+      ? [createEntityIconAssetUrl(undefined)]
+      : [resolveProductionPlanningEntityIconSrc(recipe.machineId, index)];
   })();
 
   return (
     <div className={cm(styles, "production-planning-recipe-identity")}>
-      <img alt="" src={iconSrc} />
+      <CompositeItemIcon iconSrcs={iconSrcs} size={26} />
       <div>
         <strong>{title}</strong>
         <span>{subtitle}</span>
@@ -2566,16 +2583,25 @@ function RecipeIdentity({
   );
 }
 
-function resolveProductionPlanningModuleIconSrc(
-  iconId: string,
-  index: ProductionPlanningIndex,
-): string {
-  if (index.entityById.has(iconId)) {
-    return resolveProductionPlanningEntityIconSrc(iconId, index);
-  }
-
-  return resolveProductionPlanningItemIconSrc(iconId, index);
-}
+// AI-REMOVED 2026-09-01:
+// Reason: 产线规划模块图标已统一为物品图标数组，文件内单值解析会造成多处实现漂移。
+// Trigger: 用户要求模块使用 1～4 个物品组合图标。
+// Evidence: production-planning-model.ts 现统一导出 resolveProductionPlanningModuleIconSrcs。
+// Replacement: resolveProductionPlanningModuleIconSrcs
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function resolveProductionPlanningModuleIconSrc(
+//   iconId: string,
+//   index: ProductionPlanningIndex,
+// ): string {
+//   if (index.entityById.has(iconId)) {
+//     return resolveProductionPlanningEntityIconSrc(iconId, index);
+//   }
+//
+//   return resolveProductionPlanningItemIconSrc(iconId, index);
+// }
 
 type MutableProductionPlanningTreeRow = {
   id: string;

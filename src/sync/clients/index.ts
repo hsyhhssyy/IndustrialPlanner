@@ -19,6 +19,7 @@ export type {
   SyncRemoteAdapterMode,
   SyncRemoteAssetIdCodec,
   SyncRemoteCollection,
+  SyncRemoteCompleteOptions,
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWebDavBinding,

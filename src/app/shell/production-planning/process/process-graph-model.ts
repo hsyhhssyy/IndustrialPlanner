@@ -13,7 +13,17 @@ export interface ProcessNode {
   readonly col: number;
   readonly row: number;
   readonly type: ProcessNodeType;
-  readonly iconSrc: string;
+  // AI-REMOVED 2026-09-01:
+  // Reason: 模块图标已由单个资源升级为 1～4 个物品图标的组合布局。
+  // Trigger: 模块编辑、模块配平与产线规划统一显示组合图标的需求。
+  // Evidence: ProductionPlanningModuleSnapshot.iconItemIds 是模块图标的唯一数据源。
+  // Replacement: ProcessNode.iconSrcs
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly iconSrc: string;
+  readonly iconSrcs: readonly string[];
   readonly name: string;
   readonly candidateId?: string;
   readonly recipeId?: string;

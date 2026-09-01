@@ -24,10 +24,11 @@ function createModuleBalancingState(canvas: ModuleBalancingCanvas): ModuleBalanc
     canvases: [canvas],
     customModules: [
       {
+        schemaVersion: 2,
         id: "custom_activity_module",
         name: "Activity Module",
         color: "#4f8cff",
-        iconId: ACTIVITY_ITEM_ID,
+        iconItemIds: [ACTIVITY_ITEM_ID],
         notes: "",
         sourceType: "custom",
         inputs: [],

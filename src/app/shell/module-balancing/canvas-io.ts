@@ -1,6 +1,7 @@
 import type {
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
+  ModuleBalancingFolder,
   ModuleBalancingIOPort,
   ModuleBalancingStage,
   ModuleBalancingStageModuleEntry,
@@ -8,14 +9,20 @@ import type {
 import type {
   ModuleBalancingCanvasReadWrite,
   ModuleBalancingCustomModuleReadWrite,
+  ModuleBalancingFolderReadWrite,
 } from "@/app/state/state-impl";
 import {
   createModuleBalancingId,
 } from "@/app/shell/module-balancing/module-balancing-model";
+import {
+  migrateModuleBalancingCustomModuleIconItemIds,
+  MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
+} from "@/app/module-balancing-schema";
 
 // ── 导出数据结构 ──
 
-const CANVAS_EXPORT_VERSION = 1;
+const CANVAS_EXPORT_VERSION = 2;
+const LEGACY_CANVAS_EXPORT_VERSION = 1;
 
 export interface CanvasExportData {
   readonly version: typeof CANVAS_EXPORT_VERSION;
@@ -56,6 +63,30 @@ export interface CanvasImportPlan {
   };
   readonly moduleActions: readonly ImportModuleAction[];
   /** 导入 ID → 本地 ID 的映射（用于 create 和 reuse 场景）。 */
+  readonly moduleIdMapping: ReadonlyMap<string, string>;
+}
+
+// ── 自定义模块集合导入导出 ──
+
+const MODULE_COLLECTION_EXPORT_VERSION = 2;
+const LEGACY_MODULE_COLLECTION_EXPORT_VERSION = 1;
+const MODULE_COLLECTION_EXPORT_KIND = "module-collection";
+
+/**
+ * 单模块、文件夹和整个自定义模块库共用这一集合格式。
+ * 单模块集合的 modules 长度为 1，且 folders 为空。
+ */
+export interface ModuleCollectionExportData {
+  readonly kind: typeof MODULE_COLLECTION_EXPORT_KIND;
+  readonly version: typeof MODULE_COLLECTION_EXPORT_VERSION;
+  readonly name: string;
+  readonly folders: readonly ModuleBalancingFolder[];
+  readonly modules: readonly ModuleBalancingCustomModule[];
+}
+
+export interface ModuleCollectionImportPlan {
+  readonly data: ModuleCollectionExportData;
+  readonly moduleActions: readonly ImportModuleAction[];
   readonly moduleIdMapping: ReadonlyMap<string, string>;
 }
 
@@ -129,6 +160,43 @@ export function downloadCanvasExportJson(data: CanvasExportData, filename: strin
   URL.revokeObjectURL(url);
 }
 
+export function buildModuleCollectionExportData(options: {
+  readonly name: string;
+  readonly folders: readonly ModuleBalancingFolder[];
+  readonly modules: readonly ModuleBalancingCustomModule[];
+}): ModuleCollectionExportData {
+  const folderIds = new Set(options.folders.map((folder) => folder.id));
+  return {
+    kind: MODULE_COLLECTION_EXPORT_KIND,
+    version: MODULE_COLLECTION_EXPORT_VERSION,
+    name: options.name,
+    folders: options.folders.map((folder) => ({ ...folder })),
+    modules: options.modules.map((module) => ({
+      ...module,
+      iconItemIds: [...module.iconItemIds],
+      folderId: typeof module.folderId === "string" && folderIds.has(module.folderId)
+        ? module.folderId
+        : null,
+      inputs: module.inputs.map((port) => ({ ...port })),
+      outputs: module.outputs.map((port) => ({ ...port })),
+    })),
+  };
+}
+
+export function downloadModuleCollectionExportJson(
+  data: ModuleCollectionExportData,
+  filename: string,
+): void {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${filename}.modules.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── 导入解析 ──
 
 export function parseCanvasImportData(raw: unknown): CanvasExportData | null {
@@ -136,7 +204,7 @@ export function parseCanvasImportData(raw: unknown): CanvasExportData | null {
     return null;
   }
 
-  if (raw.version !== CANVAS_EXPORT_VERSION) {
+  if (raw.version !== CANVAS_EXPORT_VERSION && raw.version !== LEGACY_CANVAS_EXPORT_VERSION) {
     return null;
   }
 
@@ -191,6 +259,65 @@ export function parseCanvasImportData(raw: unknown): CanvasExportData | null {
       stages,
       warehouseCapacity,
     },
+    modules,
+  };
+}
+
+export function parseModuleCollectionImportData(raw: unknown): ModuleCollectionExportData | null {
+  if (!isRecord(raw)
+    || raw.kind !== MODULE_COLLECTION_EXPORT_KIND
+    || (raw.version !== MODULE_COLLECTION_EXPORT_VERSION
+      && raw.version !== LEGACY_MODULE_COLLECTION_EXPORT_VERSION)
+    || typeof raw.name !== "string"
+    || raw.name.trim().length === 0
+    || !Array.isArray(raw.folders)
+    || !Array.isArray(raw.modules)) {
+    return null;
+  }
+
+  const folders: ModuleBalancingFolder[] = [];
+  const folderIds = new Set<string>();
+  for (const folderRaw of raw.folders as unknown[]) {
+    const folder = validateModuleCollectionFolder(folderRaw);
+    if (folder === null || folderIds.has(folder.id)) {
+      return null;
+    }
+    folderIds.add(folder.id);
+    folders.push(folder);
+  }
+
+  const modules: ModuleBalancingCustomModule[] = [];
+  const moduleIds = new Set<string>();
+  for (const moduleRaw of raw.modules as unknown[]) {
+    const module = validateCustomModule(moduleRaw);
+    if (module === null) {
+      continue;
+    }
+    if (moduleIds.has(module.id)) {
+      return null;
+    }
+
+    const importedFolderId = isRecord(moduleRaw) && typeof moduleRaw.folderId === "string"
+      ? moduleRaw.folderId.trim()
+      : null;
+    moduleIds.add(module.id);
+    modules.push({
+      ...module,
+      folderId: importedFolderId !== null && folderIds.has(importedFolderId)
+        ? importedFolderId
+        : null,
+    });
+  }
+
+  if (folders.length === 0 && modules.length === 0) {
+    return null;
+  }
+
+  return {
+    kind: MODULE_COLLECTION_EXPORT_KIND,
+    version: MODULE_COLLECTION_EXPORT_VERSION,
+    name: raw.name.trim(),
+    folders,
     modules,
   };
 }
@@ -274,6 +401,30 @@ export function buildCanvasImportPlan(
   };
 }
 
+/** 复用画布导入的模块匹配逻辑，确保两种入口具有完全一致的冲突语义。 */
+export function buildModuleCollectionImportPlan(
+  data: ModuleCollectionExportData,
+  existingCustomModules: readonly ModuleBalancingCustomModule[],
+): ModuleCollectionImportPlan {
+  const canvasPlan = buildCanvasImportPlan({
+    version: CANVAS_EXPORT_VERSION,
+    canvas: {
+      name: data.name,
+      folderId: null,
+      globalInputs: [],
+      stages: [],
+      warehouseCapacity: null,
+    },
+    modules: data.modules,
+  }, existingCustomModules);
+
+  return {
+    data,
+    moduleActions: canvasPlan.moduleActions,
+    moduleIdMapping: canvasPlan.moduleIdMapping,
+  };
+}
+
 /** 在导入确认后，将导入数据写入 state。 */
 export function applyCanvasImport(
   importData: CanvasExportData,
@@ -293,6 +444,7 @@ export function applyCanvasImport(
       customModules.push({
         ...importModule,
         id: mappedId,
+        iconItemIds: [...importModule.iconItemIds],
         folderId: importModule.folderId ?? null,
         inputs: importModule.inputs.map((p) => ({ ...p })),
         outputs: importModule.outputs.map((p) => ({ ...p })),
@@ -322,10 +474,77 @@ export function applyCanvasImport(
   return newCanvasId;
 }
 
+/**
+ * 应用模块集合：导入文件夹始终生成新的本地 ID；复用模块保持原状；
+ * 冲突模块覆盖内容但保留其本地文件夹归属。
+ */
+export function applyModuleCollectionImport(
+  plan: ModuleCollectionImportPlan,
+  customModules: ModuleBalancingCustomModuleReadWrite[],
+  folders: ModuleBalancingFolderReadWrite[],
+): void {
+  const importedFolderIdMapping = new Map<string, string>();
+  for (const importedFolder of plan.data.folders) {
+    const localFolderId = createModuleBalancingId();
+    importedFolderIdMapping.set(importedFolder.id, localFolderId);
+    folders.push({
+      id: localFolderId,
+      name: importedFolder.name,
+    });
+  }
+
+  for (const action of plan.moduleActions) {
+    if (action.kind === "reuse") {
+      continue;
+    }
+
+    if (action.kind === "create") {
+      const importedFolderId = action.module.folderId ?? null;
+      customModules.push({
+        ...action.module,
+        iconItemIds: [...action.module.iconItemIds],
+        folderId: importedFolderId === null
+          ? null
+          : importedFolderIdMapping.get(importedFolderId) ?? null,
+        inputs: action.module.inputs.map((port) => ({ ...port })),
+        outputs: action.module.outputs.map((port) => ({ ...port })),
+      });
+      continue;
+    }
+
+    const localModuleIndex = customModules.findIndex((module) => module.id === action.importId);
+    const localModule = customModules[localModuleIndex];
+    if (localModuleIndex < 0 || localModule === undefined) {
+      continue;
+    }
+    customModules[localModuleIndex] = {
+      ...action.importModule,
+      iconItemIds: [...action.importModule.iconItemIds],
+      folderId: localModule.folderId ?? null,
+      inputs: action.importModule.inputs.map((port) => ({ ...port })),
+      outputs: action.importModule.outputs.map((port) => ({ ...port })),
+    };
+  }
+}
+
 // ── 校验辅助 ──
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateModuleCollectionFolder(raw: unknown): ModuleBalancingFolder | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const id = typeof raw.id === "string" ? raw.id.trim() : "";
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  if (id.length === 0 || name.length === 0) {
+    return null;
+  }
+
+  return { id, name };
 }
 
 function validateIOPort(raw: unknown): ModuleBalancingIOPort | null {
@@ -416,12 +635,23 @@ function validateCustomModule(raw: unknown): ModuleBalancingCustomModule | null 
   if (inputs.length === 0 && outputs.length === 0) {
     return null;
   }
+  const iconItemIds = migrateModuleBalancingCustomModuleIconItemIds({
+    schemaVersion: raw.schemaVersion,
+    iconItemIds: raw.iconItemIds,
+    legacyIconId: raw.iconId,
+    inputItemIds: inputs.map((port) => port.itemId),
+    outputItemIds: outputs.map((port) => port.itemId),
+  });
+  if (iconItemIds === null) {
+    return null;
+  }
 
   return {
+    schemaVersion: MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
     id,
     name,
     color: typeof raw.color === "string" && /^#[0-9a-f]{6}$/i.test(raw.color) ? raw.color : "#4f8cff",
-    iconId: typeof raw.iconId === "string" ? raw.iconId.trim() : "gear",
+    iconItemIds,
     notes: typeof raw.notes === "string" ? raw.notes : "",
     folderId: null, // 导入时重置文件夹归组
     inputs,

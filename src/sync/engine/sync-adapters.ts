@@ -38,6 +38,8 @@ export interface SyncAdapterResult {
   readonly mode: SyncAdapterMode;
   readonly status: SyncAdapterStatus;
   readonly changedAssetIds: readonly string[];
+  /** 存在当前客户端无法解释的远端版本；禁止推进 collection/global 已应用游标。 */
+  readonly remoteStateIncomplete?: boolean;
   /** 本轮观察到的 collection revision；引擎在 commit 成功后用于 markApplied。 */
   readonly collectionRevision?: number | null;
   /** 本轮观察到的 collection ETag；本 adapter 有上传时传 null 使检查重新探测。 */
@@ -218,6 +220,7 @@ export interface FullWithRevisionAdapterOptions<TValue> {
     scope?: SyncAdapterScope,
   ) => Promise<readonly FullWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: FullWithRevisionEntry<TValue>) => Promise<void>;
+  readonly isRemoteVersionUnsupported?: (value: unknown) => boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }
@@ -340,6 +343,8 @@ async function readRemoteAssetValue<TValue>(
   collection: SyncRemoteCollection,
   assetId: string,
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
+  isRemoteVersionUnsupported?: (value: unknown) => boolean,
+  onUnsupportedRemoteVersion?: () => void,
 ): Promise<NormalizedRemoteAsset<TValue> | null> {
   const asset = await session.readAsset({ collection, assetId });
   if (asset === null) {
@@ -377,6 +382,13 @@ async function readRemoteAssetValue<TValue>(
   // }
   // AI-CORRECTION 2026-08-12: JSON 解析已下沉到 provider 边界；适配器只消费结构化值。
   const parsed = asset.value;
+  if (isRemoteVersionUnsupported?.(parsed) === true) {
+    logger.info(
+      `Remote asset ${collection.adapterId}/${assetId} uses a newer schema version → skipping`,
+    );
+    onUnsupportedRemoteVersion?.();
+    return null;
+  }
   const value = normalizeRemote === undefined
     ? parsed as TValue
     : normalizeRemote(parsed);
@@ -1614,6 +1626,20 @@ async function syncFullWithRevision<TValue>(
   const remoteIndexState = await session.readIndex(collection);
   const changedAssetIds: string[] = [];
   let status: SyncAdapterStatus = "idle";
+  let remoteStateIncomplete = false;
+  const unsupportedRemoteAssetIds = new Set<string>();
+  const readRemoteEntry = async (assetId: string): Promise<NormalizedRemoteAsset<TValue> | null> =>
+    await readRemoteAssetValue(
+      session,
+      collection,
+      assetId,
+      options.normalizeRemote,
+      options.isRemoteVersionUnsupported,
+      () => {
+        remoteStateIncomplete = true;
+        unsupportedRemoteAssetIds.add(assetId);
+      },
+    );
   const localHashStatesById = await resolveLocalHashStates({
     session,
     collection,
@@ -1641,12 +1667,7 @@ async function syncFullWithRevision<TValue>(
       return [];
     }
 
-    return [readRemoteAssetValue(
-      session,
-      collection,
-      entry.id,
-      options.normalizeRemote,
-    ).then((value) => [entry.id, value] as const)];
+    return [readRemoteEntry(entry.id).then((value) => [entry.id, value] as const)];
   })));
 
   const createEntryItem = (
@@ -1684,8 +1705,7 @@ async function syncFullWithRevision<TValue>(
           deletedAt: remoteDeletedAt,
         });
       },
-      readRemoteValue: async () =>
-        await readRemoteAssetValue(session, collection, localEntry.id, options.normalizeRemote),
+      readRemoteValue: async () => await readRemoteEntry(localEntry.id),
       createPutParams: async (value, contentHash) => ({
         collection,
         assetId: localEntry.id,
@@ -1878,6 +1898,9 @@ async function syncFullWithRevision<TValue>(
     }
 
     if (remoteValue === null) {
+      if (unsupportedRemoteAssetIds.has(localEntry.id)) {
+        continue;
+      }
       // 索引有条目但正文读取为空：罕见异常，跳过本资产避免误判。
       logger.warn(`${options.id}/${localEntry.id}: remote entry exists but asset unreadable → skipping`);
       continue;
@@ -1895,6 +1918,18 @@ async function syncFullWithRevision<TValue>(
 
     if (classification.kind === "idle") {
       transaction.stageTouch(assetKey, localContentHash);
+      if (remoteValue.normalizationChanged) {
+        // 远端旧 schema 规范化后与本地语义一致，仍需回写当前 schema，完成逐条迁移。
+        transaction.recordItem(createEntryItem(localEntry, "upload", {
+          remoteValue: remoteValue.value,
+          remoteHash: remoteValue.contentHash,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
+        }));
+        status = mergeStatus(status, "uploaded");
+        changedAssetIds.push(localEntry.id);
+      }
       continue;
     }
     if (classification.kind === "upload") {
@@ -1972,12 +2007,7 @@ async function syncFullWithRevision<TValue>(
       isAssetIncludedInScope(entryId, scope)
         && !localEntryById.has(entryId)
         && remoteEntry.deletedAt === null
-        ? [readRemoteAssetValue(
-          session,
-          collection,
-          entryId,
-          options.normalizeRemote,
-        ).then((value) => ({ entryId, value }))]
+        ? [readRemoteEntry(entryId).then((value) => ({ entryId, value }))]
         : []
     ),
   );
@@ -2005,8 +2035,7 @@ async function syncFullWithRevision<TValue>(
         await options.writeLocal({ id: entryId, value, deletedAt });
       },
       applyRemoteTombstone: null,
-      readRemoteValue: async () =>
-        await readRemoteAssetValue(session, collection, entryId, options.normalizeRemote),
+      readRemoteValue: async () => await readRemoteEntry(entryId),
       createPutParams: async (value, contentHash) => ({
         collection,
         assetId: entryId,
@@ -2026,10 +2055,15 @@ async function syncFullWithRevision<TValue>(
   return {
     adapterId: options.id,
     mode: "full-with-revision",
-    status,
+    status: status === "idle" && remoteStateIncomplete ? "skipped" : status,
     changedAssetIds: Array.from(new Set(changedAssetIds)),
-    collectionRevision: remoteIndexState.revision,
-    collectionEtag: remoteIndexState.etag ?? null,
+    remoteStateIncomplete,
+    ...(remoteStateIncomplete
+      ? {}
+      : {
+          collectionRevision: remoteIndexState.revision,
+          collectionEtag: remoteIndexState.etag ?? null,
+        }),
   };
 }
 

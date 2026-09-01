@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProductionPlanningIndex,
   computeProductionPlan,
+  resolveProductionPlanningItemIconSrc,
   type ProductionPlanningIndex,
   type ProductionPlanningItemNode,
   type ProductionPlanningPort,
@@ -12,7 +13,11 @@ import {
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionFlowGraph, createSankeyLayout } from "@/app/shell/production-planning/flow";
 import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
-import { createProductionPlanningRecipeCandidateId } from "@/app/shell/production-planning/production-planning-candidate";
+import {
+  createProductionPlanningModuleCandidateId,
+  createProductionPlanningRecipeCandidateId,
+} from "@/app/shell/production-planning/production-planning-candidate";
+import type { ModuleBalancingCustomModule } from "@/app/toolbox-types";
 import { createRegistryContract } from "@/registry";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
@@ -128,6 +133,37 @@ function makeInfiniteItemIds(
 const t = (key: string) => key;
 
 describe("production planning flow graph", () => {
+  it("keeps every selected module icon item in device mode", () => {
+    const module: ModuleBalancingCustomModule = {
+      schemaVersion: 2,
+      id: "custom-iron",
+      name: "Iron Module",
+      color: "#4f8cff",
+      iconItemIds: ["item_iron_nugget", "item_iron_ore"],
+      notes: "",
+      inputs: [{ itemId: "item_iron_ore", perMinute: 60 }],
+      outputs: [{ itemId: "item_iron_nugget", perMinute: 60 }],
+      sourceType: "custom",
+    };
+    const index = buildProductionPlanningIndex(createRegistryContract(), { modules: [module] });
+    const candidateId = createProductionPlanningModuleCandidateId("custom", module.id);
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 60)],
+      supplies: [],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map([["item_iron_nugget", candidateId]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+      useModules: true,
+    }, index);
+
+    const graph = buildProductionFlowGraph(result, index, t, "device");
+    const moduleNode = graph.nodes.find((node) => node.recipeNode?.module?.id === module.id);
+
+    expect(moduleNode?.iconSrcs).toEqual(module.iconItemIds.map((itemId) => (
+      resolveProductionPlanningItemIconSrc(itemId, index)
+    )));
+  });
+
   it("lays out a simple directed graph from left to right", () => {
     const layout = createSankeyLayout({
       nodes: [

@@ -3038,19 +3038,28 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
-  {
-    id: "r_shaper_gas_copper_jar",
-    nameKey: "registry.recipe.shaper_gas_copper_jar_1.name",
-    durationSeconds: 2,
-    inputs: [
-      { itemId: "item_copper_nugget", amount: 2 },
-      { itemId: "item_gas_inert", amount: 1 },
-    ],
-    outputs: [{ itemId: "item_copper_jar", amount: 1 }],
-    machineId: "shaper_1_gas",
-    recipeType: "immediate-consume",
-    tags: [],
-  },
+  // AI-REMOVED 2026-09-01:
+  // Reason: 该项目自定义 ID 与 AKEData 原始配方 shaper_gas_copper_jar_1 重复，且不应作为独立配方注册。
+  // Trigger: 用户要求删除错误配方，仅保留 AKEData ID。
+  // Evidence: 两条记录的耗时、输入、输出和设备完全相同；塑形设备不能手选该配方，不存在蓝图配方引用迁移需求。
+  // Replacement: 本文件下方 id 为 shaper_gas_copper_jar_1 的配方定义。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // {
+  //   id: "r_shaper_gas_copper_jar",
+  //   nameKey: "registry.recipe.shaper_gas_copper_jar_1.name",
+  //   durationSeconds: 2,
+  //   inputs: [
+  //     { itemId: "item_copper_nugget", amount: 2 },
+  //     { itemId: "item_gas_inert", amount: 1 },
+  //   ],
+  //   outputs: [{ itemId: "item_copper_jar", amount: 1 }],
+  //   machineId: "shaper_1_gas",
+  //   recipeType: "immediate-consume",
+  //   tags: [],
+  // },
   {
     id: "xiranite_oven_xiranite_powder_1",
     nameKey: "registry.recipe.xiranite_oven_xiranite_powder_1.name",

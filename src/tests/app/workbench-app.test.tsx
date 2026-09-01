@@ -209,6 +209,24 @@ function createModuleBalancingStorageSnapshot(options: {
   };
 }
 
+function createModuleBalancingLibraryUiStorageSnapshot(options: {
+  expandedSections?: {
+    system: boolean;
+    recommended: boolean;
+    custom: boolean;
+  };
+  collapsedFolderIds?: string[];
+} = {}) {
+  return {
+    expandedSections: options.expandedSections ?? {
+      system: true,
+      recommended: true,
+      custom: true,
+    },
+    collapsedFolderIds: options.collapsedFolderIds ?? [],
+  };
+}
+
 function createWorkbenchStorageSnapshot(options: {
   leftDockOpen?: boolean;
   rightDockOpen?: boolean;
@@ -233,6 +251,7 @@ function createWorkbenchStorageSnapshot(options: {
   timelineBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
+  moduleBalancingLibraryUi?: ReturnType<typeof createModuleBalancingLibraryUiStorageSnapshot>;
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
@@ -261,6 +280,8 @@ function createWorkbenchStorageSnapshot(options: {
       bottomDockHeight: options.toolboxBottomDockHeight ?? DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
+      moduleBalancingLibraryUi:
+        options.moduleBalancingLibraryUi ?? createModuleBalancingLibraryUiStorageSnapshot(),
     },
     timelineDockPreference: options.timelineDockPreference ?? "floating",
     timelineBottomDockCollapsed: options.timelineBottomDockCollapsed ?? false,

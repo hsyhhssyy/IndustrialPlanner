@@ -291,6 +291,32 @@ describe("sync-service", () => {
     ]);
   });
 
+  it("does not advance collection or provider cursors after skipping a future schema", async () => {
+    const markApplied = vi.fn<SyncRemoteSession["markApplied"]>(async () => undefined);
+    const complete = vi.fn<NonNullable<SyncRemoteSession["complete"]>>(
+      async () => undefined,
+    );
+    const adapter = createNamedAdapter("custom-modules", []);
+    adapter.sync.mockResolvedValue({
+      adapterId: "custom-modules",
+      mode: "full-with-revision",
+      status: "skipped",
+      changedAssetIds: [],
+      remoteStateIncomplete: true,
+    });
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote: () => createTestRemote({ markApplied, complete }),
+      adapters: [adapter],
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(status.phase).toBe("idle");
+    expect(markApplied).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledWith({ advanceAppliedRevision: false });
+  });
+
   it("classifies every adapter on local change and marks the pass complete", async () => {
     vi.useFakeTimers();
     const markApplied = vi.fn<SyncRemoteSession["markApplied"]>(async () => undefined);

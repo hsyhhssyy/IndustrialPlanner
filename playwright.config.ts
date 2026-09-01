@@ -11,10 +11,18 @@ export default defineConfig({
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: "npm run dev -- --port 4174",
-    url: "http://127.0.0.1:4174",
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "npm run dev -- --port 4174",
+      url: "http://127.0.0.1:4174",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      command: "node scripts/e2e/start-webdav-e2e-server.mjs",
+      url: "http://127.0.0.1:4175",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  ],
 });

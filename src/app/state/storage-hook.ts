@@ -1,6 +1,10 @@
 import { reaction, runInAction } from "mobx";
 
 import { isLegacyModuleBalancingId, createModuleBalancingId } from "../shell/module-balancing/module-balancing-model";
+import {
+  migrateModuleBalancingCustomModuleIconItemIds,
+  MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
+} from "@/app/module-balancing-schema";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
@@ -18,6 +22,7 @@ import type {
   ModuleBalancingCustomModuleReadWrite,
   ModuleBalancingFolderReadWrite,
   ModuleBalancingIOPortReadWrite,
+  ModuleBalancingLibraryUiStateReadWrite,
   ModuleBalancingStageModuleEntryReadWrite,
   ModuleBalancingStageReadWrite,
   ModuleBalancingStateReadWrite,
@@ -30,6 +35,7 @@ import {
   clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
+  createDefaultModuleBalancingLibraryUiState,
   createDefaultModuleBalancingState,
   createDefaultToolboxWikiOpenedPage,
   DIALOG_KEYS,
@@ -397,6 +403,48 @@ function normalizePersistedToolboxState(
       persistedToolboxState.moduleBalancing,
       fallback.moduleBalancing,
     ),
+    moduleBalancingLibraryUi: normalizePersistedModuleBalancingLibraryUiState(
+      persistedToolboxState.moduleBalancingLibraryUi,
+      fallback.moduleBalancingLibraryUi,
+    ),
+  };
+}
+
+function normalizePersistedModuleBalancingLibraryUiState(
+  persistedState: unknown,
+  fallback: ModuleBalancingLibraryUiStateReadWrite,
+): ModuleBalancingLibraryUiStateReadWrite {
+  const defaultState = createDefaultModuleBalancingLibraryUiState();
+  if (!isRecord(persistedState)) {
+    return {
+      expandedSections: { ...fallback.expandedSections },
+      collapsedFolderIds: [...fallback.collapsedFolderIds],
+    };
+  }
+
+  const persistedExpandedSections = isRecord(persistedState.expandedSections)
+    ? persistedState.expandedSections
+    : {};
+  const collapsedFolderIds = Array.isArray(persistedState.collapsedFolderIds)
+    ? Array.from(new Set(persistedState.collapsedFolderIds.flatMap((value) => {
+        const folderId = normalizeNonEmptyString(value);
+        return folderId === null ? [] : [folderId];
+      })))
+    : [...fallback.collapsedFolderIds];
+
+  return {
+    expandedSections: {
+      system: typeof persistedExpandedSections.system === "boolean"
+        ? persistedExpandedSections.system
+        : defaultState.expandedSections.system,
+      recommended: typeof persistedExpandedSections.recommended === "boolean"
+        ? persistedExpandedSections.recommended
+        : defaultState.expandedSections.recommended,
+      custom: typeof persistedExpandedSections.custom === "boolean"
+        ? persistedExpandedSections.custom
+        : defaultState.expandedSections.custom,
+    },
+    collapsedFolderIds,
   };
 }
 
@@ -569,10 +617,11 @@ function cloneCustomModule(
   customModule: ModuleBalancingCustomModuleReadWrite,
 ): ModuleBalancingCustomModuleReadWrite {
   return {
+    schemaVersion: customModule.schemaVersion,
     id: customModule.id,
     name: customModule.name,
     color: customModule.color,
-    iconId: customModule.iconId,
+    iconItemIds: [...customModule.iconItemIds],
     notes: customModule.notes,
     folderId: customModule.folderId,
     inputs: customModule.inputs.map(cloneIOPort),
@@ -688,26 +737,30 @@ function normalizePersistedCustomModules(
 
     const id = normalizeNonEmptyString(customModule.id);
     const name = normalizeNonEmptyString(customModule.name);
-    const historicalIconId = normalizeNonEmptyString(customModule.iconId);
-    if (id === null || name === null || historicalIconId === null || seenModuleIds.has(id)) {
+    const inputs = normalizePersistedIOPorts(customModule.inputs);
+    const outputs = normalizePersistedIOPorts(customModule.outputs);
+    const iconItemIds = migrateModuleBalancingCustomModuleIconItemIds({
+      schemaVersion: customModule.schemaVersion,
+      iconItemIds: customModule.iconItemIds,
+      legacyIconId: customModule.iconId,
+      inputItemIds: inputs.map((port) => port.itemId),
+      outputItemIds: outputs.map((port) => port.itemId),
+    });
+    if (id === null || name === null || iconItemIds === null || seenModuleIds.has(id)) {
       return [];
     }
     seenModuleIds.add(id);
 
-    const iconId = migrateBlueprintDeviceReference(historicalIconId)?.deviceId
-      ?? historicalIconId;
-
-    const inputs = normalizePersistedIOPorts(customModule.inputs);
-    const outputs = normalizePersistedIOPorts(customModule.outputs);
     if (inputs.length === 0 && outputs.length === 0) {
       return [];
     }
 
     return [{
+      schemaVersion: MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
       id,
       name,
       color: normalizeCssColor(customModule.color),
-      iconId,
+      iconItemIds,
       notes: typeof customModule.notes === "string" ? customModule.notes : "",
       folderId: typeof customModule.folderId === "string" && folderIds.has(customModule.folderId)
         ? customModule.folderId

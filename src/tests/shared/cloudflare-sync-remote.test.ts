@@ -511,6 +511,45 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
+  it("keeps the applied revision when the session contains an unsupported schema", async () => {
+    let checkUrl = "";
+    fetchMock
+      .add("GET:/plan", () => ({
+        json: v2Plan([{
+          assetType: "planner-state",
+          assetId: "default",
+          contentHash: BLOB_HASH,
+        }]),
+      }))
+      .add("GET:/check", (request) => {
+        checkUrl = request.url;
+        return {
+          json: {
+            revision: 1,
+            epoch: 1,
+            changed: true,
+            planRequired: true,
+            serverTime: "",
+          },
+        };
+      });
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    await session.prefetchIndexes([collection]);
+
+    await session.complete?.({ advanceAppliedRevision: false });
+    await session.checkCollections([collection]);
+
+    expect(checkUrl).toContain("knownRevision=0");
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
   it("preserves opaque protocol revisions and only projects them at the SyncRemote boundary", async () => {
     const opaqueRevision = "abcdef0123456789-1786492800123";
     let checkUrl = "";

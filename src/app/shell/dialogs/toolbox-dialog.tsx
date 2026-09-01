@@ -1,12 +1,14 @@
 import {
   useEffect,
   useRef,
+  useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { ModuleBalancingCustomModule } from "@/app/toolbox-types";
 import { DialogShell, type DialogShellTab } from "@/app/shell/shared/dialog-shell";
 import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import { ModuleBalancingPanel } from "@/app/shell/module-balancing/module-balancing-panel";
@@ -96,8 +98,17 @@ const TOOLBOX_DIALOG_TABS: Array<{
 function createToolboxTabs(options: {
   appHost: AppHost;
   isTouch: boolean;
+  onOpenGeneratedModuleEditor: (module: ModuleBalancingCustomModule) => void;
+  onPendingCustomModuleDraftConsumed: () => void;
+  pendingCustomModuleDraft: ModuleBalancingCustomModule | null;
 }): DialogShellTab[] {
-  const { appHost, isTouch } = options;
+  const {
+    appHost,
+    isTouch,
+    onOpenGeneratedModuleEditor,
+    onPendingCustomModuleDraftConsumed,
+    pendingCustomModuleDraft,
+  } = options;
   const t = appHost.actions.translate;
   const tabContents: Record<string, ReactNode> = {
     [TOOLBOX_DIALOG_TAB_IDS[0]]: renderInitialSyncLockedContent({
@@ -108,12 +119,25 @@ function createToolboxTabs(options: {
     [TOOLBOX_DIALOG_TAB_IDS[1]]: renderInitialSyncLockedContent({
       appHost,
       feature: "toolbox",
-      content: <ProductionPlanningPanel appHost={appHost} isTouch={isTouch} />,
+      content: (
+        <ProductionPlanningPanel
+          appHost={appHost}
+          isTouch={isTouch}
+          onOpenGeneratedModuleEditor={onOpenGeneratedModuleEditor}
+        />
+      ),
     }),
     [TOOLBOX_DIALOG_TAB_IDS[2]]: renderInitialSyncLockedContent({
       appHost,
       feature: "modules",
-      content: <ModuleBalancingPanel appHost={appHost} isTouch={isTouch} />,
+      content: (
+        <ModuleBalancingPanel
+          appHost={appHost}
+          isTouch={isTouch}
+          onPendingCustomModuleDraftConsumed={onPendingCustomModuleDraftConsumed}
+          pendingCustomModuleDraft={pendingCustomModuleDraft}
+        />
+      ),
     }),
   };
 
@@ -136,19 +160,34 @@ function createToolboxTabs(options: {
   return tabs;
 }
 
+function useToolboxTabs(options: {
+  appHost: AppHost;
+  isTouch: boolean;
+}): DialogShellTab[] {
+  const [pendingCustomModuleDraft, setPendingCustomModuleDraft] =
+    useState<ModuleBalancingCustomModule | null>(null);
+
+  return createToolboxTabs({
+    ...options,
+    onOpenGeneratedModuleEditor: setPendingCustomModuleDraft,
+    onPendingCustomModuleDraftConsumed: () => setPendingCustomModuleDraft(null),
+    pendingCustomModuleDraft,
+  });
+}
+
 export const ToolboxDialog = observer(function ToolboxDialog({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const dialogState = appHost.internalState.workbench.dialogState.toolbox;
+  const isTouch = shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile);
+  const tabs = useToolboxTabs({ appHost, isTouch });
 
   if (shouldRenderToolboxBottomDock(appHost)) {
     return null;
   }
 
-  const isTouch = shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile);
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const dockToBottomTitle = t("toolboxDialog.dockToBottom");
   const canDockToBottom = canUseToolboxBottomDock(appHost.state.screenProfile);
-  const tabs = createToolboxTabs({ appHost, isTouch });
 
   return (
     <DialogShell
@@ -204,7 +243,7 @@ export const ToolboxBottomDock = observer(function ToolboxBottomDock({ appHost }
   const toolboxState = appHost.internalState.workbench.toolbox;
   const isTouch = shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
-  const tabs = createToolboxTabs({ appHost, isTouch });
+  const tabs = useToolboxTabs({ appHost, isTouch });
   const activeTab = tabs.find((tab) => tab.id === dialogState.activeTab) ?? tabs[0] ?? null;
   const collapsed = toolboxState.bottomDockCollapsed;
   const collapseTitle = collapsed

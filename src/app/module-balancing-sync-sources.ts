@@ -18,6 +18,7 @@ import {
 } from "@/app/storage/module-balancing-storage";
 import type { SyncAssetEntry, SyncAssetSource } from "@/domain/sync";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
+import { isUnsupportedModuleBalancingCustomModuleVersion } from "@/app/module-balancing-schema";
 
 /**
  * 模块平衡业务对同步模块的唯一数据端口。
@@ -53,6 +54,10 @@ export function createModuleBalancingSyncSources(
       indexPath: "assets/custom-modules/index.json",
       remotePath: (moduleId) => `assets/custom-modules/${moduleId}.json`,
       listLocal: listModuleBalancingCustomModuleEntries,
+      isRemoteVersionUnsupported: isUnsupportedModuleBalancingCustomModuleVersion,
+      normalizeRemote: (value) => normalizeModuleBalancingState({
+        customModules: [value],
+      }).customModules[0] ?? null,
       writeLocal: async (entry) => {
         await writeModuleBalancingCustomModuleEntry(
           entry as SyncAssetEntry<ModuleBalancingCustomModuleReadWrite>,

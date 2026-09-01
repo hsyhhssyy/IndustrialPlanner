@@ -24,7 +24,7 @@ describe("recommended-module-library", () => {
         id: "recommended:starter",
         name: "Starter",
         color: "#4f8cff",
-        iconId: "gear",
+        iconItemIds: ["gear"],
         notes: "",
         inputs: [{ itemId: "plate", perMinute: 30 }],
         outputs: [{ itemId: "gear", perMinute: 15 }],
@@ -33,11 +33,25 @@ describe("recommended-module-library", () => {
     });
   });
 
+  it("preserves the selected item order for composite icons", () => {
+    expect(normalizeRecommendedModuleLibrary({
+      version: "2",
+      modules: [{
+        id: "recommended:composite",
+        name: "Composite",
+        iconItemIds: ["gear", "plate", "ore"],
+        inputs: [{ itemId: "ore", perMinute: 30 }],
+        outputs: [{ itemId: "gear", perMinute: 15 }],
+        sourceType: "recommended",
+      }],
+    })?.modules[0]?.iconItemIds).toEqual(["gear", "plate", "ore"]);
+  });
+
   it("rejects duplicated ids and malformed ports", () => {
     const module = {
       id: "recommended:starter",
       name: "Starter",
-      iconId: "gear",
+      iconItemIds: ["gear"],
       inputs: [],
       outputs: [{ itemId: "gear", perMinute: 15 }],
       sourceType: "recommended",

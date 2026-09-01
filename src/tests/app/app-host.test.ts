@@ -139,6 +139,24 @@ function createModuleBalancingStorageSnapshot(options: {
   };
 }
 
+function createModuleBalancingLibraryUiStorageSnapshot(options: {
+  expandedSections?: {
+    system: boolean;
+    recommended: boolean;
+    custom: boolean;
+  };
+  collapsedFolderIds?: string[];
+} = {}) {
+  return {
+    expandedSections: options.expandedSections ?? {
+      system: true,
+      recommended: true,
+      custom: true,
+    },
+    collapsedFolderIds: options.collapsedFolderIds ?? [],
+  };
+}
+
 function createWorkbenchStorageSnapshot(options: {
   leftDockOpen?: boolean;
   rightDockOpen?: boolean;
@@ -163,6 +181,7 @@ function createWorkbenchStorageSnapshot(options: {
   timelineBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
+  moduleBalancingLibraryUi?: ReturnType<typeof createModuleBalancingLibraryUiStorageSnapshot>;
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
@@ -191,6 +210,8 @@ function createWorkbenchStorageSnapshot(options: {
       bottomDockHeight: options.toolboxBottomDockHeight ?? DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
+      moduleBalancingLibraryUi:
+        options.moduleBalancingLibraryUi ?? createModuleBalancingLibraryUiStorageSnapshot(),
     },
     timelineDockPreference: options.timelineDockPreference ?? "floating",
     timelineBottomDockCollapsed: options.timelineBottomDockCollapsed ?? false,
@@ -273,8 +294,8 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.workbench.quickPlaceFavoriteEntityIds).toEqual(["storager_1"]);
     expect(
-      appHost.internalState.workbench.toolbox.moduleBalancing.customModules[0]?.iconId,
-    ).toBe("grinder_1");
+      appHost.internalState.workbench.toolbox.moduleBalancing.customModules[0]?.iconItemIds,
+    ).toEqual(["originium_ore"]);
     appHost.dispose();
   });
 
@@ -348,6 +369,56 @@ describe("createAppHost", () => {
       "folder-production",
       null,
     ]);
+    appHost.dispose();
+  });
+
+  it("normalizes and locally persists module library collapse preferences", () => {
+    const persistedWorkbench = createWorkbenchStorageSnapshot();
+    persistedWorkbench.toolbox.moduleBalancingLibraryUi = {
+      expandedSections: {
+        system: false,
+        recommended: "invalid" as unknown as boolean,
+        custom: false,
+      },
+      collapsedFolderIds: ["folder-production", "", "folder-production"],
+    };
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(persistedWorkbench),
+    );
+
+    const appHost = createAppHost(createWorkspace());
+    const libraryUi = appHost.internalState.workbench.toolbox.moduleBalancingLibraryUi;
+
+    expect(libraryUi).toEqual({
+      expandedSections: {
+        system: false,
+        recommended: true,
+        custom: false,
+      },
+      collapsedFolderIds: ["folder-production"],
+    });
+
+    runInAction(() => {
+      libraryUi.expandedSections.recommended = false;
+      libraryUi.collapsedFolderIds.push("folder-logistics");
+    });
+
+    const nextPersistedWorkbench = JSON.parse(
+      localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY) ?? "null",
+    ) as {
+      toolbox?: {
+        moduleBalancingLibraryUi?: unknown;
+      };
+    } | null;
+    expect(nextPersistedWorkbench?.toolbox?.moduleBalancingLibraryUi).toEqual({
+      expandedSections: {
+        system: false,
+        recommended: false,
+        custom: false,
+      },
+      collapsedFolderIds: ["folder-production", "folder-logistics"],
+    });
     appHost.dispose();
   });
 

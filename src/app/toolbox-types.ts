@@ -64,10 +64,11 @@ export interface ModuleBalancingFolder {
 }
 
 export interface ModuleBalancingCustomModule {
+  readonly schemaVersion: number;
   readonly id: string;
   readonly name: string;
   readonly color: string;
-  readonly iconId: string;
+  readonly iconItemIds: readonly string[];
   readonly notes: string;
   readonly folderId?: string | null;
   readonly inputs: readonly ModuleBalancingIOPort[];
@@ -79,7 +80,7 @@ export interface ModuleBalancingRecommendedModule {
   readonly id: string;
   readonly name: string;
   readonly color: string;
-  readonly iconId: string;
+  readonly iconItemIds: readonly string[];
   readonly notes: string;
   readonly inputs: readonly ModuleBalancingIOPort[];
   readonly outputs: readonly ModuleBalancingIOPort[];

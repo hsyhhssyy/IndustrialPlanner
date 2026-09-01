@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   listModuleBalancingCustomModuleEntries,
   loadModuleBalancingState,
+  normalizeModuleBalancingState,
   saveModuleBalancingState,
   writeModuleBalancingCustomModuleEntry,
 } from "@/app/storage/module-balancing-storage";
@@ -17,15 +18,54 @@ describe("module-balancing-storage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("migrates legacy single icons to an item array", () => {
+    const state = normalizeModuleBalancingState({
+      customModules: [{
+        id: "module-legacy",
+        name: "Legacy",
+        color: "#4f8cff",
+        iconId: "grinder_1",
+        notes: "",
+        inputs: [{ itemId: "item-a", perMinute: 1 }],
+        outputs: [{ itemId: "item-b", perMinute: 2 }],
+        sourceType: "custom",
+      }],
+    });
+
+    expect(state.customModules[0]).toMatchObject({
+      schemaVersion: 2,
+      iconItemIds: ["item-b"],
+    });
+  });
+
+  it("does not interpret a future custom module schema", () => {
+    const state = normalizeModuleBalancingState({
+      customModules: [{
+        schemaVersion: 3,
+        id: "module-future",
+        name: "Future",
+        color: "#4f8cff",
+        iconItemIds: ["item-a"],
+        notes: "",
+        inputs: [],
+        outputs: [{ itemId: "item-a", perMinute: 2 }],
+        sourceType: "custom",
+      }],
+    });
+
+    expect(state.customModules).toEqual([]);
+  });
+
   it("persists module balancing state in IndexedDB", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const state = createDefaultModuleBalancingState();
     state.customModules.push({
+      schemaVersion: 2,
       id: "module-a",
       name: "模块 A",
       color: "#4f8cff",
-      iconId: "device-a",
+      iconItemIds: ["item-a", "item-b"],
       notes: "",
       folderId: null,
       inputs: [{ itemId: "item-a", perMinute: 1 }],
@@ -46,10 +86,11 @@ describe("module-balancing-storage", () => {
 
     const state = createDefaultModuleBalancingState();
     state.customModules.push({
+      schemaVersion: 2,
       id: "module-a",
       name: "模块 A",
       color: "#4f8cff",
-      iconId: "device-a",
+      iconItemIds: ["item-a", "item-b"],
       notes: "",
       folderId: null,
       inputs: [{ itemId: "item-a", perMinute: 1 }],
@@ -70,10 +111,11 @@ describe("module-balancing-storage", () => {
     await writeModuleBalancingCustomModuleEntry({
       id: "module-a",
       value: {
+        schemaVersion: 2,
         id: "module-a",
         name: "模块 A restored",
         color: "#4f8cff",
-        iconId: "device-a",
+        iconItemIds: ["item-a", "item-b"],
         notes: "",
         folderId: null,
         inputs: [{ itemId: "item-a", perMinute: 1 }],
@@ -84,7 +126,11 @@ describe("module-balancing-storage", () => {
     });
 
     await expect(listModuleBalancingCustomModuleEntries()).resolves.toMatchObject([
-      { id: "module-a", deletedAt: null, value: { name: "模块 A restored" } },
+      {
+        id: "module-a",
+        deletedAt: null,
+        value: { name: "模块 A restored", iconItemIds: ["item-a", "item-b"] },
+      },
     ]);
   });
 });

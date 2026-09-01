@@ -4,6 +4,7 @@ import {
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
+  resolveProductionPlanningModuleIconSrcs,
 } from "../production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type { ProcessGraph, ProcessNode } from "./process-graph-model";
@@ -20,7 +21,7 @@ interface MutableProcessNode {
   col: number;
   row: number;
   type: ProcessNode["type"];
-  iconSrc: string;
+  iconSrcs: string[];
   name: string;
   candidateId?: string;
   recipeId?: string;
@@ -111,7 +112,7 @@ export function buildProcessGraph(
       col: 0,
       row: nextRow,
       type: "target",
-      iconSrc,
+      iconSrcs: [iconSrc],
       name,
       candidateId: targetProduction?.id,
       recipeId: targetProduction?.recipeId ?? undefined,
@@ -218,9 +219,9 @@ function applyDeviceView(raw: RawProcessGraph, index: ProductionPlanningIndex, t
       col: n.col - 1,
       row: n.row,
       type: "device",
-      iconSrc: module === null
-        ? resolveProductionPlanningEntityIconSrc(recipe!.machineId, index)
-        : resolveProductionPlanningModuleIconSrc(module.iconId, index),
+      iconSrcs: module === null
+        ? [resolveProductionPlanningEntityIconSrc(recipe!.machineId, index)]
+        : resolveProductionPlanningModuleIconSrcs(module, index),
       name: module === null
         ? (machineEntity !== undefined ? translate(machineEntity.nameKey) : recipe!.machineId)
         : `${module.name} · ${translate(
@@ -295,12 +296,21 @@ function applyDeviceView(raw: RawProcessGraph, index: ProductionPlanningIndex, t
   };
 }
 
-function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
-  if (index.entityById.has(iconId)) {
-    return resolveProductionPlanningEntityIconSrc(iconId, index);
-  }
-  return resolveProductionPlanningItemIconSrc(iconId, index);
-}
+// AI-REMOVED 2026-09-01:
+// Reason: 旧函数只能解析单个图标，无法表达模块的 1～4 个物品组合图标。
+// Trigger: 产线规划流程图需要直接消费模块快照中的 iconItemIds。
+// Evidence: resolveProductionPlanningModuleIconSrcs 已集中处理合法物品与端口回退。
+// Replacement: src/app/shell/production-planning/production-planning-model.ts::resolveProductionPlanningModuleIconSrcs
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
+//   if (index.entityById.has(iconId)) {
+//     return resolveProductionPlanningEntityIconSrc(iconId, index);
+//   }
+//   return resolveProductionPlanningItemIconSrc(iconId, index);
+// }
 
 /**
  * Expand the main ingredient chain starting from itemId.
@@ -331,7 +341,7 @@ function expandMainChain(
         col: col - 1,
         row: startRow,
         type: "natural",
-        iconSrc,
+        iconSrcs: [iconSrc],
         name,
         expandedRecipeId: null,
       });
@@ -350,7 +360,7 @@ function expandMainChain(
       col: col - 1,
       row: startRow,
       type: "cycle",
-      iconSrc,
+      iconSrcs: [iconSrc],
       name,
       candidateId: recipe.id,
       recipeId: recipe.recipeId ?? undefined,
@@ -376,7 +386,7 @@ function expandMainChain(
       col: col - 1,
       row: startRow,
       type: "natural",
-      iconSrc,
+      iconSrcs: [iconSrc],
       name,
       candidateId: recipe.id,
       recipeId: recipe.recipeId ?? undefined,
@@ -401,7 +411,7 @@ function expandMainChain(
     col: mainCol,
     row: startRow,
     type: mainNodeType,
-    iconSrc: mainIconSrc,
+    iconSrcs: [mainIconSrc],
     name: mainName,
     amount: mainInput.amount,
     candidateId: mainRecipe?.id,
@@ -435,7 +445,7 @@ function expandMainChain(
         col: mainCol,
         row: currentRow,
         type: "natural",
-        iconSrc: secIconSrc,
+        iconSrcs: [secIconSrc],
         name: secName,
         amount: secInput.amount,
         candidateId: secRecipe?.id,
@@ -456,7 +466,7 @@ function expandMainChain(
         type: solvedItemNode?.isCycleSource === true || solvedItemNode?.blockedByCycle === true
           ? "secondary"
           : "natural",
-        iconSrc: secIconSrc,
+        iconSrcs: [secIconSrc],
         name: secName,
         amount: secInput.amount,
         expandedRecipeId: null,
@@ -471,7 +481,7 @@ function expandMainChain(
         col: mainCol,
         row: currentRow,
         type: "main",
-        iconSrc: secIconSrc,
+        iconSrcs: [secIconSrc],
         name: secName,
         amount: secInput.amount,
         candidateId: secRecipe?.id,
@@ -489,7 +499,7 @@ function expandMainChain(
         col: mainCol,
         row: currentRow,
         type: "secondary",
-        iconSrc: secIconSrc,
+        iconSrcs: [secIconSrc],
         name: secName,
         amount: secInput.amount,
         expandedRecipeId: null,

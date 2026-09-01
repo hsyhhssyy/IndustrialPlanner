@@ -51,6 +51,7 @@ import type {
   SyncLocalState,
   SyncRemote,
   SyncRemoteCollection,
+  SyncRemoteCompleteOptions,
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
@@ -693,7 +694,9 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     // Cloudflare v2 无目录概念
   }
 
-  public async complete(): Promise<void> {
+  public async complete(options?: SyncRemoteCompleteOptions): Promise<void> {
+    // AI-CORRECTION 2026-09-01: 未来业务 schema 未被理解时保留旧 applied revision，等待客户端升级后重读。
+    if (options?.advanceAppliedRevision === false) return;
     if (this.context.reason === "local-change" || this.planCache === null) return;
     const state = await this.localState.readState();
     // AI-CORRECTION 2026-08-10: Math.max → 直接使用 planCache.revision，

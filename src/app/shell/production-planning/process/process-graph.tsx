@@ -4,15 +4,25 @@ import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
 import {
-  resolveProductionPlanningEntityIconSrc,
-  resolveProductionPlanningItemIconSrc,
+  resolveProductionPlanningModuleIconSrcs,
   type ProductionPlanningDisplayMode,
   type ProductionPlanningIndex,
   type ProductionPlanningResult,
 } from "../production-planning-model";
+// AI-REMOVED 2026-09-01:
+// Reason: 模块详情图标已统一由组合图标解析函数生成，不再在视图内分别判断实体与物品。
+// Trigger: ESLint 检出组合图标接入后遗留的未使用导入。
+// Evidence: expandedModuleIconSrcs 只调用 resolveProductionPlanningModuleIconSrcs。
+// Replacement: resolveProductionPlanningModuleIconSrcs import
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveProductionPlanningEntityIconSrc, resolveProductionPlanningItemIconSrc } from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
+import { CompositeItemIcon } from "@/app/shell/shared";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "./process-graph.module.scss";
 
@@ -107,11 +117,9 @@ export function ProcessGraphView({
   const expandedRecipe = expandedRecipeId !== null ? index.recipeById.get(expandedRecipeId) ?? undefined : undefined;
   const expandedDevice = expandedRecipe !== undefined ? index.entityById.get(expandedRecipe.machineId) ?? null : null;
   const expandedModule = expandedCandidate?.module ?? null;
-  const expandedModuleIconSrc = expandedModule === null
+  const expandedModuleIconSrcs = expandedModule === null
     ? null
-    : index.entityById.has(expandedModule.iconId)
-      ? resolveProductionPlanningEntityIconSrc(expandedModule.iconId, index)
-      : resolveProductionPlanningItemIconSrc(expandedModule.iconId, index);
+    : resolveProductionPlanningModuleIconSrcs(expandedModule, index);
 
   const handleDetailToggle = useCallback((nodeKey: string) => {
     setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
@@ -340,9 +348,9 @@ export function ProcessGraphView({
               <span>{t(expandedDevice.nameKey)}</span>
             </div>
           )}
-          {expandedModule !== null && expandedModuleIconSrc !== null && (
+          {expandedModule !== null && expandedModuleIconSrcs !== null && (
             <div className={styles["process-detail-popup-device"]}>
-              <img alt="" src={expandedModuleIconSrc} />
+              <CompositeItemIcon iconSrcs={expandedModuleIconSrcs} size={24} />
               <span>
                 {expandedModule.name} · {t(
                   expandedModule.sourceType === "custom-module"
@@ -399,7 +407,7 @@ function ProcessNodeCard({
         onClick={onDetailToggle}
       >
         <div className={styles["process-node-header"]}>
-          <img alt="" src={node.iconSrc} />
+          <CompositeItemIcon iconSrcs={node.iconSrcs} size={24} />
           <span>{node.name}</span>
         </div>
       </div>

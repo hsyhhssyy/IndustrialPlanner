@@ -2,6 +2,7 @@ import type {
   ModuleBalancingIOPort,
   ModuleBalancingRecommendedModule,
 } from "@/app/toolbox-types";
+import { migrateModuleIconItemIds } from "@/app/module-icon";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 const RECOMMENDED_MODULE_INDEX_PATH = "module-balancing/recommended-modules/index.json";
@@ -57,13 +58,20 @@ function normalizeRecommendedModule(value: unknown): ModuleBalancingRecommendedM
 
   const id = normalizeNonEmptyString(value.id);
   const name = normalizeNonEmptyString(value.name);
-  const iconId = normalizeNonEmptyString(value.iconId);
   const inputs = normalizePorts(value.inputs);
   const outputs = normalizePorts(value.outputs);
+  const iconItemIds = inputs === null || outputs === null
+    ? null
+    : migrateModuleIconItemIds(
+      value.iconItemIds,
+      value.iconId,
+      inputs.map((port) => port.itemId),
+      outputs.map((port) => port.itemId),
+    );
   if (
     id === null
     || name === null
-    || iconId === null
+    || iconItemIds === null
     || inputs === null
     || outputs === null
     || (inputs.length === 0 && outputs.length === 0)
@@ -75,7 +83,7 @@ function normalizeRecommendedModule(value: unknown): ModuleBalancingRecommendedM
     id,
     name,
     color: normalizeNonEmptyString(value.color) ?? "#4f8cff",
-    iconId,
+    iconItemIds,
     notes: typeof value.notes === "string" ? value.notes : "",
     inputs,
     outputs,

@@ -185,6 +185,8 @@ export interface SyncAssetSource<TValue = unknown> {
   readonly remotePath: (assetId: string) => string;
   readonly listLocal: () => Promise<readonly SyncAssetEntry<TValue>[]>;
   readonly writeLocal: (entry: SyncAssetEntry<TValue>) => Promise<void>;
+  /** 未来 schema 由旧客户端静默跳过，不得落地、回写或推进同步游标。 */
+  readonly isRemoteVersionUnsupported?: (value: unknown) => boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly subscribe: (listener: () => void) => () => void;
 }

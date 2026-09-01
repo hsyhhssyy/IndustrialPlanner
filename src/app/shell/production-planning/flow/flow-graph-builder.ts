@@ -11,6 +11,7 @@ import {
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
+  resolveProductionPlanningModuleIconSrcs,
   resolveProductionPlanningRecipeName,
 } from "../production-planning-model";
 import {
@@ -34,7 +35,17 @@ export interface ProductionFlowNode extends SankeyInputNode {
   readonly tone: ProductionFlowNodeTone;
   readonly title: string;
   readonly subtitle: string;
-  readonly iconSrc: string;
+  // AI-REMOVED 2026-09-01:
+  // Reason: 模块节点需要承载 1～4 个物品图标，单一字符串无法表达组合布局。
+  // Trigger: 模块图标机制升级并要求流向图沿用同一图标。
+  // Evidence: ProductionPlanningModuleSnapshot.iconItemIds 是模块图标的唯一数据源。
+  // Replacement: ProductionFlowNode.iconSrcs
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly iconSrc: string;
+  readonly iconSrcs: readonly string[];
   readonly itemId?: string;
   readonly recipeId?: string;
   readonly isTransient?: boolean;
@@ -221,9 +232,9 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
         : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate(
           row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
         )} · ${formatProductionFlow(displayRate)}/min`;
-  const iconSrc = isDeviceMinimumConsumption || context.displayMode === "item"
-    ? resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)
-    : resolveLedgerRowMachineIconSrc(row, context.index);
+  const iconSrcs = isDeviceMinimumConsumption || context.displayMode === "item"
+    ? [resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)]
+    : resolveLedgerRowMachineIconSrcs(row, context.index);
 
   context.nodes.set(row.id, {
     id: row.id,
@@ -231,7 +242,7 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
     tone: resolveLedgerRowTone(row),
     title,
     subtitle,
-    iconSrc,
+    iconSrcs,
     value: Math.max(flowPerMinute, 1),
     itemId: row.targetItemId,
     recipeId: row.recipeId,
@@ -287,19 +298,19 @@ function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: Prod
   return index.recipeById.get(recipeId)?.machineId ?? null;
 }
 
-function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string {
+function resolveLedgerRowMachineIconSrcs(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string[] {
   if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
-    return EXTERNAL_SUPPLY_ENTITY_ICON_SRC;
+    return [EXTERNAL_SUPPLY_ENTITY_ICON_SRC];
   }
   if (row.recipeNode.module !== null) {
-    return resolveProductionPlanningModuleIconSrc(row.recipeNode.module.iconId, index);
+    return resolveProductionPlanningModuleIconSrcs(row.recipeNode.module, index);
   }
 
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   const recipe = index.recipeById.get(recipeId);
-  return recipe === undefined
+  return [recipe === undefined
     ? createEntityIconAssetUrl(undefined)
-    : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
+    : resolveProductionPlanningEntityIconSrc(recipe.machineId, index)];
 }
 
 function resolveLedgerRowConsumerPorts(row: ProductionPlanningLedgerRow): ProductionPlanningRecipeNode["inputs"] {
@@ -494,7 +505,7 @@ function addTransientItemNode(itemId: string, value: number, context: LedgerBuil
     tone: context.plan.byproductItemIds.has(itemId) ? "byproduct" : "normal",
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     subtitle: `${formatProductionFlow(value)}/min`,
-    iconSrc: resolveProductionPlanningItemIconSrc(itemId, context.index),
+    iconSrcs: [resolveProductionPlanningItemIconSrc(itemId, context.index)],
     value: Math.max(value, 1),
     itemId,
     isTransient: true,
@@ -615,7 +626,7 @@ function addItemNode(node: ProductionPlanningItemNode, context: BuildContext): v
     tone,
     title: resolveProductionPlanningItemName(node.itemId, context.index, context.translate),
     subtitle: `${formatProductionFlow(node.demandPerMinute)}/min`,
-    iconSrc: resolveProductionPlanningItemIconSrc(node.itemId, context.index),
+    iconSrcs: [resolveProductionPlanningItemIconSrc(node.itemId, context.index)],
     value: rate,
     itemId: node.itemId,
     itemNode: node,
@@ -647,7 +658,7 @@ function addByproductNode(
     tone: "byproduct",
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     subtitle: `${formatProductionFlow(perMinute)}/min`,
-    iconSrc: resolveProductionPlanningItemIconSrc(itemId, context.index),
+    iconSrcs: [resolveProductionPlanningItemIconSrc(itemId, context.index)],
     value: Math.max(perMinute, 1),
     itemId,
   });
@@ -675,21 +686,30 @@ function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext
     subtitle: `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(
       node.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
     )} · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
-    iconSrc: node.module === null
-      ? resolveProductionPlanningEntityIconSrc(machineId, context.index)
-      : resolveProductionPlanningModuleIconSrc(node.module.iconId, context.index),
+    iconSrcs: node.module === null
+      ? [resolveProductionPlanningEntityIconSrc(machineId, context.index)]
+      : resolveProductionPlanningModuleIconSrcs(node.module, context.index),
     value: Math.max(sumPorts(node.inputs), sumPorts(node.outputs), 1),
     recipeId: node.recipeId ?? undefined,
     recipeNode: node,
   });
 }
 
-function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
-  if (index.entityById.has(iconId)) {
-    return resolveProductionPlanningEntityIconSrc(iconId, index);
-  }
-  return resolveProductionPlanningItemIconSrc(iconId, index);
-}
+// AI-REMOVED 2026-09-01:
+// Reason: 旧函数只能返回单个资源地址，且重复了产线规划模型的解析规则。
+// Trigger: 流向图需要统一渲染模块的 1～4 个物品组合图标。
+// Evidence: resolveProductionPlanningModuleIconSrcs 已集中处理选择值和端口回退。
+// Replacement: src/app/shell/production-planning/production-planning-model.ts::resolveProductionPlanningModuleIconSrcs
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
+//   if (index.entityById.has(iconId)) {
+//     return resolveProductionPlanningEntityIconSrc(iconId, index);
+//   }
+//   return resolveProductionPlanningItemIconSrc(iconId, index);
+// }
 
 function addLink(
   link: Pick<ProductionFlowLink, "id" | "source" | "target" | "itemId" | "value">,

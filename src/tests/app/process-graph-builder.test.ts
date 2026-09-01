@@ -2,9 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   buildProductionPlanningIndex,
   computeProductionPlan,
+  resolveProductionPlanningItemIconSrc,
   type ProductionPlanningPort,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
+import { createProductionPlanningModuleCandidateId } from "@/app/shell/production-planning/production-planning-candidate";
+import type { ModuleBalancingCustomModule } from "@/app/toolbox-types";
 import { buildProcessGraph } from "@/app/shell/production-planning/process/process-graph-builder";
 import { createRegistryContract } from "@/registry";
 
@@ -56,6 +59,51 @@ function createPlanWithChoices(
 }
 
 describe("buildProcessGraph", () => {
+  it("keeps every selected module icon item in device view", () => {
+    const registry = createRegistryContract();
+    const module: ModuleBalancingCustomModule = {
+      schemaVersion: 2,
+      id: "custom-iron",
+      name: "Iron Module",
+      color: "#4f8cff",
+      iconItemIds: ["item_iron_nugget", "item_iron_ore"],
+      notes: "",
+      inputs: [{ itemId: "item_iron_ore", perMinute: 60 }],
+      outputs: [{ itemId: "item_iron_nugget", perMinute: 60 }],
+      sourceType: "custom",
+    };
+    const index = buildProductionPlanningIndex(registry, { modules: [module] });
+    const candidateId = createProductionPlanningModuleCandidateId("custom", module.id);
+    const plan = computeProductionPlan({
+      targets: [{ id: "target", itemId: "item_iron_nugget", perMinute: 60 }],
+      supplies: [],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map([["item_iron_nugget", candidateId]]),
+      sourceConfig: {
+        waterPolicy: "use-byproduct",
+        acidPolicy: "use-byproduct",
+        sewagePolicy: "external-supply",
+        waterPurifierPolicy: "disabled",
+        includeDeviceMinimumConsumption: "none",
+      },
+      useModules: true,
+    }, index);
+
+    const graph = buildProcessGraph(
+      plan,
+      index,
+      new Map([["item_iron_nugget", candidateId]]),
+      new Set(),
+      (key) => key,
+      "device",
+    );
+    const moduleNode = graph.nodes.find((node) => node.type === "device" && node.itemId === module.id);
+
+    expect(moduleNode?.iconSrcs).toEqual(module.iconItemIds.map((itemId) => (
+      resolveProductionPlanningItemIconSrc(itemId, index)
+    )));
+  });
+
   it("builds process graph for 重息壤", () => {
     const registry = createRegistryContract();
     const index = buildProductionPlanningIndex(registry);

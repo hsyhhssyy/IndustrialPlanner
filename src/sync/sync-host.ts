@@ -1456,6 +1456,7 @@ function createAdapterFromSource(
     writeLocal: async (entry: SyncAssetEntry) => {
       await source.writeLocal(entry);
     },
+    isRemoteVersionUnsupported: source.isRemoteVersionUnsupported,
     normalizeRemote: source.normalizeRemote,
     resolveConflict,
   };

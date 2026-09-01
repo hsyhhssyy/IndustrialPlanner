@@ -45,6 +45,7 @@ describe("production planning module conversion", () => {
       translate: (key) => lookupText("zh-CN", key) ?? key,
     });
 
+    expect(module.schemaVersion).toBe(2);
     expect(module.inputs).toContainEqual({
       itemId: "item_iron_ore",
       perMinute: 60,
@@ -83,6 +84,11 @@ describe("production planning module conversion", () => {
       { itemId: "item_liquid_xiranite_lowpoly", perMinute: 30 },
     ]));
     expect(module.outputs).toHaveLength(2);
-    expect(module.iconId).toBe("item_liquid_xiranite_poly");
+    expect(module.iconItemIds).toEqual([
+      "item_liquid_xiranite_poly",
+      "item_liquid_xiranite_lowpoly",
+      "item_liquid_xiranite",
+      "item_liquid_sewage",
+    ]);
   });
 });

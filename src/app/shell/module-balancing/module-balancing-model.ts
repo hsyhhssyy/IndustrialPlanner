@@ -14,8 +14,18 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
+// AI-REMOVED 2026-09-01:
+// Reason: 模块图标已收敛为 1～4 个物品 ID，不再接受设备 ID。
+// Trigger: 用户要求模块图标只能由所选物品按数量组合渲染。
+// Evidence: ModuleBalancingCustomModule.iconItemIds 已成为唯一图标字段。
+// Replacement: resolveModuleIconSrcs
+// Risk: Low；历史设备图标在存储迁移时改用模块输出或输入物品。
+// Human Review: Required
+//
+// Original code:
+// import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
   buildDeviceRunningConsumptionRecipesByMachine,
   resolveCompanionDeviceRunningConsumptionRecipe,
@@ -507,17 +517,25 @@ export function matchesModuleSearchQuery(
   return pinyinSearch.full.includes(compactQuery) || pinyinSearch.initial.includes(compactQuery);
 }
 
-export function resolveModuleIconSrc(
+export function resolveModuleIconSrcs(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
-): string {
+): string[] {
   if (module.sourceType !== "system-recipe") {
-    return resolveAnyIconSrc(module.iconId, index);
+    const validIconItemIds = module.iconItemIds.filter((itemId) => index.itemById.has(itemId));
+    const itemIds = validIconItemIds.length > 0
+      ? validIconItemIds
+      : collectDefaultModuleIconItemIds(
+        module.outputs.map((port) => port.itemId),
+        module.inputs.map((port) => port.itemId),
+      );
+    return (itemIds.length > 0 ? itemIds : module.iconItemIds)
+      .map((itemId) => resolveItemIconSrc(itemId, index));
   }
 
   const recipe = index.recipeById.get(module.recipeId);
   if (recipe === undefined) {
-    return createEntityIconAssetUrl(undefined);
+    return [createEntityIconAssetUrl(undefined)];
   }
 
   // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标
@@ -535,21 +553,30 @@ export function resolveModuleIconSrc(
   // if (primaryId !== undefined) {
   //   return resolveItemIconSrc(primaryId, index);
   // }
-  return resolveEntityIconSrc(recipe.machineId, index);
+  return [resolveEntityIconSrc(recipe.machineId, index)];
 }
 
-export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): string {
-  if (index.itemById.has(iconId)) {
-    return resolveItemIconSrc(iconId, index);
-  }
-
-  const migratedDeviceId = migrateBlueprintDeviceReference(iconId)?.deviceId ?? iconId;
-  if (index.entityById.has(migratedDeviceId)) {
-    return resolveEntityIconSrc(migratedDeviceId, index);
-  }
-
-  return createItemIconAssetUrl(iconId);
-}
+// AI-REMOVED 2026-09-01:
+// Reason: 单值物品/设备混合解析会绕过新的物品数组模型。
+// Trigger: 用户要求模块图标只允许选择 1～4 个物品。
+// Evidence: resolveModuleIconSrcs 已按正式数组解析全部模块图标。
+// Replacement: resolveModuleIconSrcs
+// Risk: Low；非模块设备图标继续走 resolveEntityIconSrc。
+// Human Review: Required
+//
+// Original code:
+// export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): string {
+//   if (index.itemById.has(iconId)) {
+//     return resolveItemIconSrc(iconId, index);
+//   }
+//
+//   const migratedDeviceId = migrateBlueprintDeviceReference(iconId)?.deviceId ?? iconId;
+//   if (index.entityById.has(migratedDeviceId)) {
+//     return resolveEntityIconSrc(migratedDeviceId, index);
+//   }
+//
+//   return createItemIconAssetUrl(iconId);
+// }
 
 export function formatFlow(value: number): string {
   if (Math.abs(value) < 0.005) {
