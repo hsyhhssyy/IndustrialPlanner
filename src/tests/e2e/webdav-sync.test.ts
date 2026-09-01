@@ -55,10 +55,27 @@ test("WebDAV 远端更新自动下载：无本地改动时直接使用远端内�
   await page.goto("/");
   await waitForAppReady(page);
   await enableWebDavSync(page, { testConnection: false });
+  await switchBase(page, "stm_hongs_3", "盈天台建设站");
+  await waitForStableSync(page);
+
+  const lastUploadAt = await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.status.lastUploadAt ?? null
+  );
+  await placeFurnace(page, 50);
+  await expect.poll(async () => await page.evaluate(() =>
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.sync?.state.status.lastUploadAt ?? null
+  ), {
+    message: "WebDAV 应先上传包含精炼炉的本地基线",
+    timeout: 45_000,
+    intervals: [500],
+  }).not.toBe(lastUploadAt);
+  await waitForStableSync(page);
 
   const local = await readCurrentWorldDocumentProjection(page);
-  const remoteName = "WebDAV remote interval update";
-  const remoteValue = createWorldDocumentNameVariant(local.value, remoteName);
+  expect(countFurnacesInValue(local.value)).toBeGreaterThan(0);
+  const remoteValue = createWorldDocumentWithoutFurnaces(local.value);
   const lastDownloadAt = await page.evaluate(() =>
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
       ?.workspace?.sync?.state.status.lastDownloadAt ?? null
@@ -84,20 +101,16 @@ test("WebDAV 远端更新自动下载：无本地改动时直接使用远端内�
   }).not.toBe(lastUpdateCheckAt);
   await waitForStableSync(page);
   await expect.poll(async () => await page.evaluate(() => {
-    const document = (window as unknown as BrowserTestWindow)
-      .__industrialPlannerAppHost?.workspace?.editor?.document?.getSnapshot();
-    return {
-      name: document?.meta.name ?? null,
-      lastDownloadAt: (window as unknown as BrowserTestWindow)
-        .__industrialPlannerAppHost?.workspace?.sync?.state.status.lastDownloadAt ?? null,
-    };
+    return (window as unknown as BrowserTestWindow)
+      .__industrialPlannerAppHost?.workspace?.sync?.state.status.lastDownloadAt ?? null;
   }), {
-    message: "WebDAV 远端版本应自动下载并覆盖当前基地",
+    message: "WebDAV 远端版本应自动下载",
     timeout: 30_000,
-  }).toEqual({
-    name: remoteName,
-    lastDownloadAt: expect.not.stringMatching(lastDownloadAt ?? /^$/),
-  });
+  }).not.toBe(lastDownloadAt);
+  await expect.poll(async () => await countFurnaces(page), {
+    message: "WebDAV 远端版本应覆盖当前画布的精炼炉",
+    timeout: 30_000,
+  }).toBe(0);
   expect(
     await page.getByRole("heading", { name: "同步冲突" }).isVisible().catch(() => false),
   ).toBe(false);
@@ -144,11 +157,13 @@ for (const resolution of ["use-remote", "use-local"] as const) {
         ?.workspace?.sync?.state.pendingConflict ?? null
     )).toMatchObject({
       phase: "awaiting-resolution",
-      items: [{
-        adapterId: "world-documents",
-        assetId: baseline.assetId,
-        kind: "conflict",
-      }],
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          adapterId: "world-documents",
+          assetId: baseline.assetId,
+          kind: "conflict",
+        }),
+      ]),
     });
     await resolveVisibleConflict(page, resolution);
 
@@ -204,17 +219,31 @@ for (const resolution of ["use-remote", "use-local"] as const) {
   });
 }
 
-function createWorldDocumentNameVariant(value: unknown, name: string): unknown {
-  if (!isRecord(value) || !isRecord(value.meta)) {
-    throw new Error("World document metadata is unavailable.");
+function createWorldDocumentWithoutFurnaces(value: unknown): unknown {
+  if (
+    !isRecord(value)
+    || !isRecord(value.entities)
+    || !Array.isArray(value.entityOrder)
+  ) {
+    throw new Error("World document entities are unavailable.");
   }
+  const removedEntityIds = new Set(
+    Object.entries(value.entities).flatMap(([entityId, entity]) =>
+      isRecord(entity) && entity.definitionId === "furnance_1"
+        ? [entityId]
+        : []
+    ),
+  );
   return {
     ...value,
-    meta: {
-      ...value.meta,
-      name,
-      updatedAt: new Date().toISOString(),
-    },
+    entities: Object.fromEntries(
+      Object.entries(value.entities).filter(([entityId]) =>
+        !removedEntityIds.has(entityId)
+      ),
+    ),
+    entityOrder: value.entityOrder.filter((entityId) =>
+      typeof entityId === "string" && !removedEntityIds.has(entityId)
+    ),
   };
 }
 

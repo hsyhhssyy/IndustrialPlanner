@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { openSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -107,8 +108,9 @@ async function main() {
     }],
   }, null, 2));
 
+  const logFileDescriptor = openSync(join(runtimeDirectory, "server.log"), "a");
   const server = spawn(executablePath, ["--config", configPath], {
-    stdio: ["ignore", "inherit", "inherit"],
+    stdio: ["ignore", logFileDescriptor, logFileDescriptor],
     windowsHide: true,
   });
   let shuttingDown = false;

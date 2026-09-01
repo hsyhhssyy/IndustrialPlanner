@@ -349,7 +349,7 @@ export async function writeRemoteAsset(options: {
   readonly value: unknown;
 }): Promise<WebDavRemoteAssetSnapshot> {
   return await withRemoteControlPage(options.browser, async (page) =>
-    await page.evaluate(async ({ assetId, kind, value, connection }) => {
+    await (page.evaluate(async ({ assetId, kind, value, connection }) => {
       const clientModuleUrl = "/src/sync/clients/webdav/webdav-client.ts";
       const remoteModuleUrl = "/src/sync/clients/webdav/webdav-remote.ts";
       const collectionsModuleUrl = "/src/sync/remote-collections.ts";
@@ -451,7 +451,7 @@ export async function writeRemoteAsset(options: {
         username: WEBDAV_E2E_USERNAME,
         password: WEBDAV_E2E_PASSWORD,
       },
-    }) as Promise<WebDavRemoteAssetSnapshot>
+    }) as Promise<WebDavRemoteAssetSnapshot>)
   );
 }
 
@@ -461,7 +461,7 @@ export async function readRemoteAsset(options: {
   readonly assetId: string;
 }): Promise<WebDavRemoteAssetSnapshot | null> {
   return await withRemoteControlPage(options.browser, async (page) =>
-    await page.evaluate(async ({ assetId, kind, connection }) => {
+    await (page.evaluate(async ({ assetId, kind, connection }) => {
       const clientModuleUrl = "/src/sync/clients/webdav/webdav-client.ts";
       const remoteModuleUrl = "/src/sync/clients/webdav/webdav-remote.ts";
       const collectionsModuleUrl = "/src/sync/remote-collections.ts";
@@ -530,7 +530,7 @@ export async function readRemoteAsset(options: {
         username: WEBDAV_E2E_USERNAME,
         password: WEBDAV_E2E_PASSWORD,
       },
-    }) as Promise<WebDavRemoteAssetSnapshot | null>
+    }) as Promise<WebDavRemoteAssetSnapshot | null>)
   );
 }
 
