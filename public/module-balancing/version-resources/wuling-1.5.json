@@ -1,0 +1,35 @@
+{
+  "id": "version-resource:wuling-1.5",
+  "name": "武陵1.5版本资源",
+  "regionTag": "武陵",
+  "inputs": [
+    {
+      "itemId": "item_originium_ore",
+      "perMinute": 540
+    },
+    {
+      "itemId": "item_iron_ore",
+      "perMinute": 120
+    },
+    {
+      "itemId": "item_copper_ore",
+      "perMinute": 510
+    },
+    {
+      "itemId": "item_gas_inert",
+      "perMinute": 200
+    },
+    {
+      "itemId": "item_gas_xiranite",
+      "perMinute": 150
+    },
+    {
+      "itemId": "item_liquid_water",
+      "infinite": true
+    },
+    {
+      "itemId": "item_liquid_acid",
+      "infinite": true
+    }
+  ]
+}

@@ -23,111 +23,145 @@ const PRIOR_ACTIVITY_RECIPE_IDS = [
 ] as const;
 
 const BUBBLE_STRIKE_ITEMS = [
-  { id: "item_activity_limited_formula_2_1", name: "息壤块", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_2", name: "息壤壳", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_3", name: "息壤骨架", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_4", name: "息壤龙泡泡", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_5", name: "重息壤块", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_6", name: "重息壤壳", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_7", name: "实验息壤铜气", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "gas"] },
-  { id: "item_activity_limited_formula_2_8", name: "实验息壤铜块", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_9", name: "实验息壤铜零件", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_10", name: "重息壤骨架", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_limited_formula_2_11", name: "重息壤龙泡泡", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_nugget", nameZh: "实验息壤块", nameEn: "Proto Xiranite", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_box", nameZh: "实验龙泡泡外壳", nameEn: "Proto Chubby Lung Shell", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_copper_xiranite_tool", nameZh: "实验铜骨骼", nameEn: "Proto Cuprium Frame", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_lung", nameZh: "息壤龙泡泡", nameEn: "Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_enr_nugget", nameZh: "实验重息壤块", nameEn: "Proto Heavy Xiranite", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_enr_box", nameZh: "实验龙泡泡重壳", nameEn: "Proto Chubby Lung Heavy Shell", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_copper_poly_gas", nameZh: "实验息壤铜气", nameEn: "Proto Xiran-Cuprium Gas", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "gas"] },
+  { id: "item_activity_copper_poly", nameZh: "实验息壤铜锭", nameEn: "Proto Xiran-Cuprium", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_copper_poly_cmpt", nameZh: "实验息壤铜零件", nameEn: "Proto Xiran-Cuprium Part", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_copper_poly_tool", nameZh: "实验息壤铜骨骼", nameEn: "Proto Xiran-Cuprium Frame", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_enr_lung", nameZh: "重息壤龙泡泡", nameEn: "Heavy Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
 ] as const;
 
 const BUBBLE_STRIKE_RECIPES = [
   {
-    id: "r_furnace_activity_limited_formula_2_1",
+    id: "furnance_activity_xiranite_nugget_1",
+    nameZh: "实验息壤块生产",
+    nameEn: "Proto Xiranite Production",
     durationSeconds: 2,
     inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_1", amount: 1 }],
+    outputs: [{ itemId: "item_activity_xiranite_nugget", amount: 1 }],
     machineId: "furnance_1",
   },
   {
-    id: "r_component_activity_limited_formula_2_2",
+    id: "shaper_activity_xiranite_box_1",
+    nameZh: "实验龙泡泡外壳生产",
+    nameEn: "Proto Chubby Lung Shell Production",
     durationSeconds: 2,
-    inputs: [{ itemId: "item_activity_limited_formula_2_1", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_2", amount: 1 }],
-    machineId: "cmpt_mc_1",
+    inputs: [{ itemId: "item_activity_xiranite_nugget", amount: 1 }],
+    outputs: [{ itemId: "item_activity_xiranite_box", amount: 1 }],
+    machineId: "shaper_1",
   },
   {
-    id: "r_packaging_activity_limited_formula_2_3",
+    id: "tools_proc_activity_xiranite_copper_tool_1",
+    nameZh: "实验铜骨骼合成",
+    nameEn: "Proto Cuprium Frame Production",
     durationSeconds: 2,
     inputs: [
-      { itemId: "item_xiranite_powder", amount: 1 },
       { itemId: "item_copper_cmpt", amount: 4 },
+      { itemId: "item_xiranite_powder", amount: 1 },
     ],
-    outputs: [{ itemId: "item_activity_limited_formula_2_3", amount: 1 }],
+    outputs: [{ itemId: "item_activity_copper_xiranite_tool", amount: 1 }],
     machineId: "tools_asm_mc_1",
   },
   {
-    id: "r_packaging_activity_limited_formula_2_4",
+    id: "tools_proc_activity_xiranite_lung",
+    nameZh: "息壤龙泡泡合成",
+    nameEn: "Xiranite Chubby Lung Production",
     durationSeconds: 10,
     inputs: [
-      { itemId: "item_activity_limited_formula_2_3", amount: 5 },
-      { itemId: "item_activity_limited_formula_2_2", amount: 5 },
+      { itemId: "item_activity_xiranite_box", amount: 5 },
+      { itemId: "item_activity_copper_xiranite_tool", amount: 5 },
     ],
-    outputs: [{ itemId: "item_activity_limited_formula_2_4", amount: 1 }],
+    outputs: [{ itemId: "item_activity_xiranite_lung", amount: 1 }],
     machineId: "tools_asm_mc_1",
   },
   {
-    id: "r_furnace_activity_limited_formula_2_5",
+    id: "furnance_activity_xiranite_enr_nugget_1",
+    nameZh: "实验重息壤块生产",
+    nameEn: "Proto Heavy Xiranite Production",
     durationSeconds: 10,
     inputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_5", amount: 1 }],
+    outputs: [{ itemId: "item_activity_xiranite_enr_nugget", amount: 1 }],
     machineId: "furnance_1",
   },
   {
-    id: "r_component_activity_limited_formula_2_6",
+    id: "shaper_gas_activity_xiranite_enr_box_1",
+    nameZh: "实验龙泡泡重壳生产",
+    nameEn: "Proto Chubby Lung Heavy Shell Production",
     durationSeconds: 10,
-    inputs: [{ itemId: "item_activity_limited_formula_2_5", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_6", amount: 1 }],
-    machineId: "cmpt_mc_1",
+    inputs: [
+      { itemId: "item_activity_xiranite_enr_nugget", amount: 1 },
+      { itemId: "item_gas_inert", amount: 5 },
+    ],
+    outputs: [{ itemId: "item_activity_xiranite_enr_box", amount: 1 }],
+    machineId: "shaper_1_gas",
   },
   {
-    id: "r_gas_reactor_activity_limited_formula_2_7",
+    id: "gas_reactor_activity_copper_poly_gas_1",
+    nameZh: "实验息壤铜气生产",
+    nameEn: "Proto Xiran-Cuprium Gas Production",
     durationSeconds: 2,
     inputs: [
       { itemId: "item_gas_copper", amount: 2 },
       { itemId: "item_gas_xiranite", amount: 1 },
     ],
-    outputs: [{ itemId: "item_activity_limited_formula_2_7", amount: 1 }],
+    outputs: [{ itemId: "item_activity_copper_poly_gas", amount: 1 }],
     machineId: "gas_reactor_1",
     requiredGasDiffusion: "item_gas_inert",
   },
   {
-    id: "r_transmuter_2_solid_activity_limited_formula_2_8",
+    id: "liquid_transmuter_2_activity_copper_poly_1",
+    nameZh: "实验息壤铜锭转化",
+    nameEn: "Proto Xiran-Cuprium Transmutation",
     durationSeconds: 2,
-    inputs: [{ itemId: "item_activity_limited_formula_2_7", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_8", amount: 1 }],
+    inputs: [{ itemId: "item_activity_copper_poly_gas", amount: 1 }],
+    outputs: [{ itemId: "item_activity_copper_poly", amount: 1 }],
     machineId: "transmuter_2_solidtrans",
   },
   {
-    id: "r_component_activity_limited_formula_2_9",
+    id: "liquid_transmuter_2_activity_copper_poly_gas_1",
+    nameZh: "实验息壤铜气转化",
+    nameEn: "Proto Xiran-Cuprium Gas Transmutation",
     durationSeconds: 2,
-    inputs: [{ itemId: "item_activity_limited_formula_2_8", amount: 1 }],
-    outputs: [{ itemId: "item_activity_limited_formula_2_9", amount: 1 }],
+    inputs: [{ itemId: "item_activity_copper_poly", amount: 1 }],
+    outputs: [{ itemId: "item_activity_copper_poly_gas", amount: 1 }],
+    machineId: "transmuter_2_gastrans",
+  },
+  {
+    id: "component_activity_copper_poly_cmpt",
+    nameZh: "实验息壤铜零件生产",
+    nameEn: "Proto Xiran-Cuprium Part Production",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_activity_copper_poly", amount: 5 }],
+    outputs: [{ itemId: "item_activity_copper_poly_cmpt", amount: 1 }],
     machineId: "cmpt_mc_1",
   },
   {
-    id: "r_packaging_activity_limited_formula_2_10",
+    id: "tools_proc_activity_copper_poly_tool_1",
+    nameZh: "实验息壤铜骨骼合成",
+    nameEn: "Proto Xiran-Cuprium Frame Production",
     durationSeconds: 10,
     inputs: [
-      { itemId: "item_activity_limited_formula_2_9", amount: 5 },
-      { itemId: "item_activity_limited_formula_2_5", amount: 1 },
+      { itemId: "item_activity_copper_poly_cmpt", amount: 1 },
+      { itemId: "item_xiranite_enr_powder", amount: 1 },
     ],
-    outputs: [{ itemId: "item_activity_limited_formula_2_10", amount: 1 }],
+    outputs: [{ itemId: "item_activity_copper_poly_tool", amount: 1 }],
     machineId: "tools_asm_mc_1",
   },
   {
-    id: "r_packaging_activity_limited_formula_2_11",
+    id: "tools_proc_activity_xiranite_enr_lung",
+    nameZh: "重息壤龙泡泡合成",
+    nameEn: "Heavy Xiranite Chubby Lung Production",
     durationSeconds: 10,
     inputs: [
-      { itemId: "item_activity_limited_formula_2_10", amount: 1 },
-      { itemId: "item_activity_limited_formula_2_6", amount: 1 },
+      { itemId: "item_activity_xiranite_enr_box", amount: 1 },
+      { itemId: "item_activity_copper_poly_tool", amount: 1 },
     ],
-    outputs: [{ itemId: "item_activity_limited_formula_2_11", amount: 1 }],
+    outputs: [{ itemId: "item_activity_xiranite_enr_lung", amount: 1 }],
     machineId: "tools_asm_mc_1",
   },
 ] as const;
@@ -142,11 +176,11 @@ describe("activity registry definitions", () => {
     for (const expected of BUBBLE_STRIKE_ITEMS) {
       const item = bubbleStrikeItems.find((candidate) => candidate.id === expected.id);
       expect(item).toMatchObject({
-        iconId: "missing-item-icon",
+        iconId: expected.id,
         tags: expected.tags,
       });
-      expect(lookupText("zh-CN", item?.nameKey ?? "")).toBe(expected.name);
-      expect(lookupText("en-US", item?.nameKey ?? "")).toBe(expected.name);
+      expect(lookupText("zh-CN", item?.nameKey ?? "")).toBe(expected.nameZh);
+      expect(lookupText("en-US", item?.nameKey ?? "")).toBe(expected.nameEn);
     }
 
     expect(PRIOR_ACTIVITY_ITEM_IDS.every(
@@ -163,11 +197,15 @@ describe("activity registry definitions", () => {
     expect(bubbleStrikeRecipes.map((recipe) => recipe.id).sort())
       .toEqual(BUBBLE_STRIKE_RECIPES.map((recipe) => recipe.id).sort());
     for (const expected of BUBBLE_STRIKE_RECIPES) {
-      expect(bubbleStrikeRecipes.find((recipe) => recipe.id === expected.id)).toMatchObject({
-        ...expected,
+      const { nameZh, nameEn, ...expectedDefinition } = expected;
+      const recipe = bubbleStrikeRecipes.find((candidate) => candidate.id === expected.id);
+      expect(recipe).toMatchObject({
+        ...expectedDefinition,
         recipeType: "immediate-consume",
         tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
       });
+      expect(lookupText("zh-CN", recipe?.nameKey ?? "")).toBe(nameZh);
+      expect(lookupText("en-US", recipe?.nameKey ?? "")).toBe(nameEn);
     }
 
     expect(PRIOR_ACTIVITY_RECIPE_IDS.every(

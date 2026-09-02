@@ -1,6 +1,7 @@
 {
   "version": "1",
   "resources": [
+    "wuling-1.5",
     "wuling-1.4"
   ]
 }

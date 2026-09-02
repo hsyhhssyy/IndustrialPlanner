@@ -28,7 +28,7 @@ export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
   {
     id: ACTIVITY_LIMITED_FORMULA_2_ID,
     name: "集成援助·泡泡出击",
-    icon: "/item-icons/missing-item-icon.webp",
+    icon: "/item-icons/item_activity_xiranite_enr_lung.webp",
     banner: "/activity-banners/activity-limited-formula-2.webp",
     startTime: Date.parse("2026-09-16T12:00:00+08:00"),
     endTime: Date.parse("2026-09-30T16:00:00+08:00"),

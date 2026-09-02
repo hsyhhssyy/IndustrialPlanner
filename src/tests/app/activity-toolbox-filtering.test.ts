@@ -15,8 +15,8 @@ import {
 
 const ACTIVITY_ITEM_ID = "item_activity_xiranite_cmpt";
 const ACTIVITY_RECIPE_ID = "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic";
-const BUBBLE_STRIKE_ITEM_ID = "item_activity_limited_formula_2_4";
-const BUBBLE_STRIKE_RECIPE_ID = "r_packaging_activity_limited_formula_2_4";
+const BUBBLE_STRIKE_ITEM_ID = "item_activity_xiranite_lung";
+const BUBBLE_STRIKE_RECIPE_ID = "tools_proc_activity_xiranite_lung";
 
 function createModuleBalancingState(canvas: ModuleBalancingCanvas): ModuleBalancingState {
   return {
