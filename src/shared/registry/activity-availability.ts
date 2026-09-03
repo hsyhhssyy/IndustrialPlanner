@@ -22,8 +22,8 @@ export const ACTIVITY_DEFINITIONS: readonly ActivityDefinition[] = [
     name: "集成援助·掌中救星",
     icon: "/item-icons/item_activity_xiranite_enr_hulu.webp",
     banner: "/activity-banners/activity-limited-formula-1.webp",
-    startTime: Date.parse("2026-04-28T00:00:00+08:00"),
-    endTime: Date.parse("2026-05-19T00:00:00+08:00"),
+    startTime: Date.parse("2026-04-28T12:00:00+08:00"),
+    endTime: Date.parse("2026-05-13T16:00:00+08:00"),
   },
   {
     id: ACTIVITY_LIMITED_FORMULA_2_ID,

@@ -19,8 +19,8 @@ const LIMITED_ACTIVITY = {
   name: "集成援助·掌中救星",
   icon: "/item-icons/item_activity_xiranite_enr_hulu.webp",
   banner: "/activity-banners/activity-limited-formula-1.webp",
-  startTime: Date.parse("2026-04-28T00:00:00+08:00"),
-  endTime: Date.parse("2026-05-19T00:00:00+08:00"),
+  startTime: Date.parse("2026-04-28T12:00:00+08:00"),
+  endTime: Date.parse("2026-05-13T16:00:00+08:00"),
 };
 
 describe("activity availability", () => {
@@ -45,21 +45,24 @@ describe("activity availability", () => {
   });
 
   it("uses inclusive start time and exclusive end time", () => {
+    expect(ACTIVITY_DEFINITIONS.find(
+      (activity) => activity.id === ACTIVITY_LIMITED_FORMULA_1_ID,
+    )).toEqual(LIMITED_ACTIVITY);
     expect(isActivityOngoing(
       LIMITED_ACTIVITY,
-      Date.parse("2026-04-27T23:59:59+08:00"),
+      Date.parse("2026-04-28T11:59:59+08:00"),
     )).toBe(false);
     expect(isActivityOngoing(
       LIMITED_ACTIVITY,
-      Date.parse("2026-04-28T00:00:00+08:00"),
+      Date.parse("2026-04-28T12:00:00+08:00"),
     )).toBe(true);
     expect(isActivityOngoing(
       LIMITED_ACTIVITY,
-      Date.parse("2026-05-18T23:59:59+08:00"),
+      Date.parse("2026-05-13T15:59:59+08:00"),
     )).toBe(true);
     expect(isActivityOngoing(
       LIMITED_ACTIVITY,
-      Date.parse("2026-05-19T00:00:00+08:00"),
+      Date.parse("2026-05-13T16:00:00+08:00"),
     )).toBe(false);
   });
 

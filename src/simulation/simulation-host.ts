@@ -40,13 +40,26 @@ import { TimelineWorkerRuntime } from "./timeline-worker-runtime";
 import type {
   CompiledSimulationTopology,
   SimulationRuntimeExport,
-  RuntimeTickSnapshot,
+  // AI-REMOVED 2026-09-03:
+  // Reason: Host 查询已改为依赖内部 PresentationProjection，不再依赖 legacy 完整快照类型。
+  // Trigger: ST2-RQ-023 Phase A 要求解除 Query 与 RuntimeTickSnapshot 的类型绑定。
+  // Evidence: 下方所有 Query helper 只读取 SimulationPresentationProjection。
+  // Replacement: src/simulation/projection/presentation-projection.ts
+  // Risk: Low；legacy adapter 仍读取同一个 internalState.currentSnapshot。
+  // Human Review: Required
+  //
+  // Original code:
+  // RuntimeTickSnapshot,
   SimulationTopologyMigration,
 } from "./types";
 import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
 } from "@/shared/worker/attach-worker-runtime";
+import {
+  LegacySnapshotPresentationProjection,
+  type SimulationPresentationProjection,
+} from "./projection/presentation-projection";
 
 export interface SimulationHost extends SimulationContract {
   workspace: WorkspaceContract;
@@ -77,6 +90,9 @@ export function createSimulationHost(
   const disposers: Array<() => void> = [];
   const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);
   const internalState = createSimulationStateReadWrite();
+  const presentation = new LegacySnapshotPresentationProjection(
+    () => internalState.currentSnapshot,
+  );
   const actionImpl = new SimulationActionImpl({
     workspace,
     state: internalState,
@@ -108,20 +124,20 @@ export function createSimulationHost(
   }
 
   const requestPausedCurrentTickDebugRefresh = (): void => {
-    const currentSnapshot = internalState.currentSnapshot;
+    const currentTickNumber = presentation.tickNumber;
     if (
       options.getDebugDataEnabled?.() !== true
       || internalState.runningState !== "pause"
       || internalState.regionalTotalPowerDemand !== null
-      || currentSnapshot === null
-      || currentSnapshot.debugData !== undefined
+      || currentTickNumber === null
+      || presentation.debugData !== undefined
       || currentTickDebugRefreshInFlight
     ) {
       return;
     }
 
     currentTickDebugRefreshInFlight = true;
-    void internalActions.syncToTick(currentSnapshot.tickNumber)
+    void internalActions.syncToTick(currentTickNumber)
       .catch((error: unknown) => {
         console.error("[SimHost] Failed to refresh current tick debug data.", error);
       })
@@ -167,6 +183,7 @@ export function createSimulationHost(
     queries: {
       getStatusRuntimeJson: () => {
         requestPausedCurrentTickDebugRefresh();
+        const currentTickNumber = presentation.tickNumber;
         return JSON.stringify({
           state: {
             runningState: internalState.runningState,
@@ -174,17 +191,17 @@ export function createSimulationHost(
             currentPlaybackTickNumber: internalState.currentPlaybackTickNumber,
           },
           runtimeStatus: internalState.runtimeStatus,
-          currentTick: internalState.currentSnapshot === null
+          currentTick: currentTickNumber === null
             ? null
             : {
-                tickNumber: internalState.currentSnapshot.tickNumber,
-                status: internalState.currentSnapshot.status,
-                totalPowerDemand: internalState.currentSnapshot.totalPowerDemand,
-                transferCount: internalState.currentSnapshot.transfers.length,
-                diagnosticCount: internalState.currentSnapshot.diagnostics.length,
+                tickNumber: currentTickNumber,
+                status: presentation.status,
+                totalPowerDemand: presentation.totalPowerDemand,
+                transferCount: presentation.getTransfers().length,
+                diagnosticCount: presentation.getDiagnostics().length,
                 ...(options.getDebugDataEnabled?.() === true
-                  && internalState.currentSnapshot.debugData !== undefined
-                  ? { debugData: internalState.currentSnapshot.debugData }
+                  && presentation.debugData !== undefined
+                  ? { debugData: presentation.debugData }
                   : {}),
               },
         });
@@ -200,10 +217,10 @@ export function createSimulationHost(
               ? override
               : topology.totalPowerDemand;
         return {
-          tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
+          tickNumber: presentation.tickNumber,
           totalPowerDemand: effectiveTotalPowerDemand,
-          currentPowerGeneration: internalState.currentSnapshot?.currentPowerGeneration ?? null,
-          isPowerOutage: internalState.currentSnapshot?.isPowerOutage ?? false,
+          currentPowerGeneration: presentation.currentPowerGeneration,
+          isPowerOutage: presentation.isPowerOutage,
         };
       },
       getDeviceRuntimeStatus: (() => {
@@ -224,7 +241,7 @@ export function createSimulationHost(
           return resolveDeviceRuntimeStatus({
             topology,
             deviceId,
-            snapshot: internalState.currentSnapshot,
+            presentation,
             shareCapSlotIds: cachedShareCapSlotIds,
           });
         };
@@ -233,12 +250,15 @@ export function createSimulationHost(
         runningState: internalState.runningState,
         topology: topologyStore.getSnapshot(),
         deviceId,
-        snapshot: internalState.currentSnapshot,
+        presentation,
       }),
       isPipeDeviceSlotOccupied: (deviceId: string) => {
         const topology = topologyStore.getSnapshot();
-        const snapshot = internalState.currentSnapshot;
-        if (internalState.runningState === "stop" || topology === null || snapshot === null) {
+        if (
+          internalState.runningState === "stop"
+          || topology === null
+          || presentation.tickNumber === null
+        ) {
           return false;
         }
 
@@ -259,8 +279,8 @@ export function createSimulationHost(
             continue;
           }
           for (const slotId of node.slotIds) {
-            const slotSnapshot = snapshot.slots[slotId];
-            if (slotSnapshot !== undefined && slotSnapshot.itemType !== null) {
+            const slotSnapshot = presentation.getSlot(slotId);
+            if (slotSnapshot !== null && slotSnapshot.itemType !== null) {
               return true;
             }
           }
@@ -269,16 +289,15 @@ export function createSimulationHost(
         return false;
       },
       getActiveGasDiffusionRanges: () =>
-        (internalState.currentSnapshot?.gasDiffusions ?? []).map((diffusion) => ({
+        presentation.getGasDiffusions().map((diffusion) => ({
           sourceDeviceId: diffusion.sourceDeviceId,
           gasItemId: diffusion.gasItemId,
           gridRect: { ...diffusion.gridRect },
         })),
       getDeviceActiveGasItemIds: (deviceId: string): readonly string[] | null => {
-        const snapshot = internalState.currentSnapshot;
         const topology = topologyStore.getSnapshot();
-        if (snapshot === null || topology === null) return null;
-        const diffusions = snapshot.gasDiffusions;
+        if (presentation.tickNumber === null || topology === null) return null;
+        const diffusions = presentation.getGasDiffusions();
         if (diffusions.length === 0) return null;
         const compiledDeviceId = resolveCompiledDeviceId(topology, deviceId);
         if (compiledDeviceId === null) return null;
@@ -287,13 +306,13 @@ export function createSimulationHost(
         return itemIds !== undefined ? [...itemIds] : null;
       },
       getWarehouseStats: (): WarehouseStatsReadModel | null => {
-        const snapshot = internalState.currentSnapshot;
-        if (snapshot === null || snapshot.warehouseStats === null) {
+        const warehouseStats = presentation.getWarehouseStats();
+        if (warehouseStats === null) {
           return null;
         }
         return {
           items: Object.fromEntries(
-            Object.entries(snapshot.warehouseStats.items).map(([itemType, stats]) => [
+            Object.entries(warehouseStats.items).map(([itemType, stats]) => [
               itemType,
               {
                 producedPerMinute: stats.producedPerMinute,
@@ -304,7 +323,7 @@ export function createSimulationHost(
               },
             ]),
           ),
-          statsWindowReady: snapshot.warehouseStats.statsWindowReady,
+          statsWindowReady: warehouseStats.statsWindowReady,
         };
       },
     },
@@ -336,9 +355,13 @@ function resolvePipeFluidItemId(options: {
   runningState: SimulationStateReadWrite["runningState"];
   topology: CompiledSimulationTopology | null;
   deviceId: string;
-  snapshot: RuntimeTickSnapshot | null;
+  presentation: SimulationPresentationProjection;
 }): string | null {
-  if (options.runningState === "stop" || options.topology === null || options.snapshot === null) {
+  if (
+    options.runningState === "stop"
+    || options.topology === null
+    || options.presentation.tickNumber === null
+  ) {
     return null;
   }
 
@@ -353,16 +376,17 @@ function resolvePipeFluidItemId(options: {
     return null;
   }
 
-  return options.snapshot.transportComponentDomain[componentId] ?? null;
+  return options.presentation.getTransportComponentItemType(componentId);
 }
 
 function resolveDeviceRuntimeStatus(options: {
   topology: CompiledSimulationTopology | null;
   deviceId: string;
-  snapshot: RuntimeTickSnapshot | null;
+  presentation: SimulationPresentationProjection;
   shareCapSlotIds: Set<string> | null;
 }): SimulationDeviceRuntimeStatusReadModel | null {
-  if (options.topology === null || options.snapshot === null) {
+  const currentTickNumber = options.presentation.tickNumber;
+  if (options.topology === null || currentTickNumber === null) {
     return null;
   }
 
@@ -371,8 +395,8 @@ function resolveDeviceRuntimeStatus(options: {
     return null;
   }
 
-  const deviceSnapshot = options.snapshot.devices[compiledDeviceId];
-  if (deviceSnapshot === undefined) {
+  const deviceSnapshot = options.presentation.getDevice(compiledDeviceId);
+  if (deviceSnapshot === null) {
     return null;
   }
 
@@ -436,9 +460,9 @@ function resolveDeviceRuntimeStatus(options: {
         const windowTicks = options.topology!.standardTickRate * 10;
         // AI-CORRECTION 2026-08-04: 窗口对齐起点复用 resolveCounterWindowStartTick 逻辑（tick 1 相位）。
         const currentWindowStartTick = options.topology!.standardTickRate > 0
-          ? 1 + Math.floor(Math.max(0, options.snapshot!.tickNumber - 1) / windowTicks) * windowTicks
+          ? 1 + Math.floor(Math.max(0, currentTickNumber - 1) / windowTicks) * windowTicks
           : 1;
-        const cutoff = options.snapshot!.tickNumber - options.topology!.standardTickRate * 60;
+        const cutoff = currentTickNumber - options.topology!.standardTickRate * 60;
         // pastWindowCounts 存 6 个已完成窗口：[0]=最旧（可能部分超出 60s）, [1..5]=完整窗口。
         // oneMinuteCount = 精算最旧窗口在 cutoff 内的部分 + 累加 [1..5] + 当前窗口。
         const oldestWindowStart = currentWindowStartTick - ADMISSION_RATE_WINDOWS_PER_MINUTE * windowTicks;
@@ -468,7 +492,7 @@ function resolveDeviceRuntimeStatus(options: {
     slotItems: resolveDeviceRuntimeSlotItems({
       topology: options.topology,
       compiledDeviceId,
-      snapshot: options.snapshot,
+      presentation: options.presentation,
       shareCapSlotIds: options.shareCapSlotIds,
     }),
   };
@@ -505,7 +529,7 @@ function resolveShareCapSlotIds(
 function resolveDeviceRuntimeSlotItems(options: {
   topology: CompiledSimulationTopology;
   compiledDeviceId: string;
-  snapshot: RuntimeTickSnapshot;
+  presentation: SimulationPresentationProjection;
   shareCapSlotIds: Set<string> | null;
 }): SimulationDeviceRuntimeSlotItemReadModel[] {
   const device = options.topology.devices[options.compiledDeviceId];
@@ -523,8 +547,8 @@ function resolveDeviceRuntimeSlotItems(options: {
 
     for (const compiledSlotId of node.slotIds) {
       const compiledSlot = options.topology.slots[compiledSlotId];
-      const slotSnapshot = options.snapshot.slots[compiledSlotId];
-      if (compiledSlot === undefined || slotSnapshot === undefined) {
+      const slotSnapshot = options.presentation.getSlot(compiledSlotId);
+      if (compiledSlot === undefined || slotSnapshot === null) {
         continue;
       }
 

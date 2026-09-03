@@ -8,7 +8,9 @@ type DispatchTicketRegion = typeof DISPATCH_TICKET_REGIONS[number];
 const EXPECTED_DISPATCH_TICKET_VALUES: Record<DispatchTicketRegion, Record<string, number>> = {
   武陵: {
     item_activity_xiranite_enr_hulu: 120,
+    item_activity_xiranite_enr_lung: 200,
     item_activity_xiranite_hulu: 40,
+    item_activity_xiranite_lung: 100,
     item_bottled_food_4: 16,
     item_bottled_food_5: 22,
     item_bottled_rec_hp_4: 16,

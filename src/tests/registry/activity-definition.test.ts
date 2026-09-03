@@ -26,14 +26,14 @@ const BUBBLE_STRIKE_ITEMS = [
   { id: "item_activity_xiranite_nugget", nameZh: "实验息壤块", nameEn: "Proto Xiranite", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_xiranite_box", nameZh: "实验龙泡泡外壳", nameEn: "Proto Chubby Lung Shell", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_copper_xiranite_tool", nameZh: "实验铜骨骼", nameEn: "Proto Cuprium Frame", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_xiranite_lung", nameZh: "息壤龙泡泡", nameEn: "Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_lung", nameZh: "息壤龙泡泡", nameEn: "Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "调度券地区:武陵", "调度券价值:100"] },
   { id: "item_activity_xiranite_enr_nugget", nameZh: "实验重息壤块", nameEn: "Proto Heavy Xiranite", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_xiranite_enr_box", nameZh: "实验龙泡泡重壳", nameEn: "Proto Chubby Lung Heavy Shell", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_copper_poly_gas", nameZh: "实验息壤铜气", nameEn: "Proto Xiran-Cuprium Gas", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "gas"] },
   { id: "item_activity_copper_poly", nameZh: "实验息壤铜锭", nameEn: "Proto Xiran-Cuprium", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_copper_poly_cmpt", nameZh: "实验息壤铜零件", nameEn: "Proto Xiran-Cuprium Part", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
   { id: "item_activity_copper_poly_tool", nameZh: "实验息壤铜骨骼", nameEn: "Proto Xiran-Cuprium Frame", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
-  { id: "item_activity_xiranite_enr_lung", nameZh: "重息壤龙泡泡", nameEn: "Heavy Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG] },
+  { id: "item_activity_xiranite_enr_lung", nameZh: "重息壤龙泡泡", nameEn: "Heavy Xiranite Chubby Lung", tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "调度券地区:武陵", "调度券价值:200"] },
 ] as const;
 
 const BUBBLE_STRIKE_RECIPES = [
