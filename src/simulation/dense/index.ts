@@ -11,8 +11,35 @@ export {
 export { DenseIndexSet } from "./dense-index-set";
 export { DenseRuntimeState } from "./dense-runtime-state";
 export {
+  DenseSimulationKernel,
+  type DenseKernelTickResult,
+  type DenseKernelTransferBatch,
+} from "./dense-simulation-kernel";
+export { DenseFrameEmitter } from "./dense-frame-emitter";
+export {
+  DenseLocalRegionalBasePort,
+  type DenseLocalRegionalBasePortOptions,
+} from "./dense-regional-base-port";
+export {
+  DenseRegionalSimulationSession,
+  type DenseRegionalBaseInput,
+  type DenseRegionalCommittedEpoch,
+} from "./dense-regional-session";
+export { DenseWorkerRuntime } from "./dense-worker-runtime";
+export {
+  createDenseEngineBridge,
+  releaseDenseResponseBuffers,
+  type DenseEngineBridge,
+  type DenseEngineSessionIdentity,
+} from "./dense-engine-bridge";
+export {
   DenseFrameDeltaEncoder,
   DenseProjectionStore,
+  FRAME_STATUS_INITIAL,
+  FRAME_STATUS_RUNNING,
+  WAREHOUSE_CLEARED,
+  WAREHOUSE_PATCHED,
+  WAREHOUSE_UNCHANGED,
   collectDenseFrameTransferables,
   type DenseFrameDelta,
   type DenseProjectionReadModel,

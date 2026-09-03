@@ -45,6 +45,7 @@ import {
   WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/state/settings-dialog-state";
+import type { SimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
 import {
   ACTIVITY_DEFINITIONS,
   isActivityOngoing,
@@ -103,6 +104,7 @@ interface SettingsDialogProps {
   controller: WorkbenchSettingsDialogController;
   pwaController: PwaController;
   migrationController?: V2MigrationController;
+  simulationEngineLaunchPreference: SimulationEngineLaunchPreference;
 }
 
 function shouldUseImmersiveMaximizedDialog(
@@ -116,6 +118,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   controller,
   migrationController,
   pwaController,
+  simulationEngineLaunchPreference,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
   const sync = appHost.workspace.sync;
@@ -235,6 +238,16 @@ export const SettingsDialog = observer(function SettingsDialog({
     offsetX: 0,
     offsetY: 0,
     width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const reloadSimulationEngineConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 460,
     height: null,
     activeTab: null,
   }), []);
@@ -778,6 +791,36 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [resetAllConfirmDialogState]);
 
+  const reloadPageWithSimulationEngineSetting = useCallback(() => {
+    window.location.reload();
+  }, []);
+
+  const handleReloadSimulationEngine = useCallback(() => {
+    const runningState = appHost.workspace.simulation?.state.runningState ?? "stop";
+    if (runningState === "stop") {
+      reloadPageWithSimulationEngineSetting();
+
+      return;
+    }
+
+    runInAction(() => {
+      reloadSimulationEngineConfirmDialogState.visible = true;
+    });
+  }, [appHost, reloadPageWithSimulationEngineSetting, reloadSimulationEngineConfirmDialogState]);
+
+  const handleReloadSimulationEngineConfirm = useCallback(() => {
+    runInAction(() => {
+      reloadSimulationEngineConfirmDialogState.visible = false;
+    });
+    reloadPageWithSimulationEngineSetting();
+  }, [reloadPageWithSimulationEngineSetting, reloadSimulationEngineConfirmDialogState]);
+
+  const handleReloadSimulationEngineCancel = useCallback(() => {
+    runInAction(() => {
+      reloadSimulationEngineConfirmDialogState.visible = false;
+    });
+  }, [reloadSimulationEngineConfirmDialogState]);
+
   const handleOpenActivityDialog = useCallback(() => {
     runInAction(() => {
       activityDialogState.visible = true;
@@ -1163,6 +1206,14 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "other" && (
                   <>
+                    {!experimentalEnabled && simulationEngineLaunchPreference.needsRestart ? (
+                      <SettingsActionCard
+                        buttonLabel={t("settingsAction.reload-and-apply")}
+                        description={t("settingsField.experimental-dense-simulation-engine-restart-pendingDescription")}
+                        onClick={handleReloadSimulationEngine}
+                        title={t("settingsField.experimental-dense-simulation-engine-restart-pending")}
+                      />
+                    ) : null}
                     {/*
                       AI-REMOVED 2026-06-15:
                       Reason: 全部重置操作需要与普通设置项使用同一张卡片，避免按钮脱离设置列表。
@@ -1197,6 +1248,14 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "experimental" && (
                   <>
+                    {simulationEngineLaunchPreference.needsRestart ? (
+                      <SettingsActionCard
+                        buttonLabel={t("settingsAction.reload-and-apply")}
+                        description={t("settingsField.experimental-dense-simulation-engine-restart-pendingDescription")}
+                        onClick={handleReloadSimulationEngine}
+                        title={t("settingsField.experimental-dense-simulation-engine-restart-pending")}
+                      />
+                    ) : null}
                     {controller.getValue("sync-provider") === "webdav" ? (
                       <WebDavSyncStatusCard
                         enabled={sync?.state.settings.enabled === true
@@ -1245,6 +1304,17 @@ export const SettingsDialog = observer(function SettingsDialog({
         onConfirm={handleResetAllConfirm}
         t={t}
         titleKey="settingsAction.resetAllSettings"
+      />
+    )}
+    {reloadSimulationEngineConfirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={reloadSimulationEngineConfirmDialogState}
+        confirmLabelKey="settingsAction.reload-and-apply"
+        confirmMessageKey="settingsField.experimental-dense-simulation-engine-reload-confirm"
+        onCancel={handleReloadSimulationEngineCancel}
+        onConfirm={handleReloadSimulationEngineConfirm}
+        t={t}
+        titleKey="settingsField.experimental-dense-simulation-engine-restart-pending"
       />
     )}
     {clearStorageConfirmDialogState.visible && (
@@ -2127,6 +2197,7 @@ interface ConfirmResetDialogProps {
   t: AppHost["actions"]["translate"];
   titleKey?: string;
   confirmMessageKey?: string;
+  confirmLabelKey?: string;
 }
 
 function ConfirmResetDialog({
@@ -2136,6 +2207,7 @@ function ConfirmResetDialog({
   t,
   titleKey,
   confirmMessageKey,
+  confirmLabelKey,
 }: ConfirmResetDialogProps) {
   const title = titleKey ? t(titleKey as Parameters<typeof t>[0]) : t("settingsAction.resetOperationAndShortcuts");
   const message = confirmMessageKey
@@ -2173,7 +2245,9 @@ function ConfirmResetDialog({
             onClick={onConfirm}
             type="button"
           >
-            {t("action.confirm")}
+            {confirmLabelKey === undefined
+              ? t("action.confirm")
+              : t(confirmLabelKey as Parameters<typeof t>[0])}
           </button>
         </div>
       </div>

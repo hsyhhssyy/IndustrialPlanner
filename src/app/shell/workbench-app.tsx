@@ -58,6 +58,10 @@ import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
+import {
+  captureSimulationEngineLaunchPreference,
+  type SimulationEngineLaunchPreference,
+} from "@/app/shell/state/simulation-engine-launch-preference";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { writeRegionalMultiBaseExperimentalEnabled } from "@/shared/storage/regional-simulation-settings";
 import { RightDock } from "@/app/shell/layout/right-dock";
@@ -207,8 +211,17 @@ function writeChangelogReadState(state: ChangelogReadState): void {
   localStorage.setItem(LEGACY_LAST_READ_VERSION_KEY, state.version);
 }
 
-export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
+export const WorkbenchApp = observer(function WorkbenchApp({
+  appHost,
+  simulationEngineLaunchPreference: providedSimulationEngineLaunchPreference,
+}: {
+  appHost: AppHost;
+  simulationEngineLaunchPreference?: SimulationEngineLaunchPreference;
+}) {
   const t = appHost.actions.translate;
+  const [simulationEngineLaunchPreference] = useState(
+    () => providedSimulationEngineLaunchPreference ?? captureSimulationEngineLaunchPreference(),
+  );
   const [pwaController] = useState(() => new PwaController());
   const [migrationController] = useState(() => new V2MigrationController());
   const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController({
@@ -1258,6 +1271,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           controller={settingsDialog}
           migrationController={migrationController}
           pwaController={pwaController}
+          simulationEngineLaunchPreference={simulationEngineLaunchPreference}
         />
         <V2MigrationDialog appHost={appHost} controller={migrationController} />
         <PwaGateway appHost={appHost} pwaController={pwaController} />

@@ -100,6 +100,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
+        "experimental-dense-simulation-engine": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
@@ -227,6 +228,21 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(controller.values["game-always-show-grid-lines"]).toBe(true);
     expect(controller.values["game-show-grass-background"]).toBe(false);
+  });
+
+  it("allows the dense simulation engine preference only under the experimental master switch", () => {
+    const controller = new WorkbenchSettingsDialogController();
+
+    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(false);
+    expect(controller.isSettingEditable("experimental-dense-simulation-engine")).toBe(false);
+
+    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
+    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(false);
+
+    controller.updateSwitchValue("other-experimental-features", true);
+    expect(controller.isSettingEditable("experimental-dense-simulation-engine")).toBe(true);
+    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
+    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(true);
   });
 
   it("locks device icons on when simplified device icons are enabled", () => {
@@ -377,6 +393,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
+        "experimental-dense-simulation-engine": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",

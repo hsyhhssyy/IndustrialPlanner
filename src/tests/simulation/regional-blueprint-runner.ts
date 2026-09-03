@@ -23,6 +23,8 @@ import {
   RegionalSimulationSession,
   type RegionalBaseTopologyInput,
 } from "@/simulation/regional";
+import { DenseLocalRegionalBasePort } from "@/simulation/dense";
+import type { SimulationEngineKind } from "@/simulation/simulation-host";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import type {
   CompiledRegionalResourceSupply,
@@ -50,6 +52,7 @@ export interface RegionalBlueprintScenario {
 export interface RunRegionalBlueprintSimulationOptions {
   readonly scenario: RegionalBlueprintScenario;
   readonly registry: RegistryContract;
+  readonly engineKind?: SimulationEngineKind;
 }
 
 export interface RegionalBlueprintBaseTickSummary {
@@ -82,6 +85,7 @@ export async function runRegionalBlueprintSimulation(
 ): Promise<RegionalBlueprintSimulationReport> {
   const startedAt = performance.now();
   const { scenario, registry } = options;
+  const engineKind = options.engineKind ?? resolveRegionalSimulationEngineKind();
   const captureTicks = normalizeCaptureTicks(scenario);
   const documents = createRegionalBlueprintDocuments(scenario, registry);
   const workspace = createRunnerWorkspace(registry);
@@ -125,18 +129,28 @@ export async function runRegionalBlueprintSimulation(
     simulationSpeed: 1,
     currentBaseDynamicTickRate: 20,
     backgroundDynamicTickRate: 2,
-  }, topologies.map((input) => new LocalRegionalBasePort({
-    registry,
-    baseId: input.baseId,
-    regionBaseOrderIndex: input.regionBaseOrderIndex,
-    topology: input.topology,
-    table: admission.table!,
-    initialWarehouseCounts,
-    isCurrentBase: input.baseId === scenario.currentBaseId,
-    simulationSpeed: 1,
-    fixedDynamicTickRate: input.baseId === scenario.currentBaseId ? 20 : 2,
-    advanceMode: input.baseId === scenario.currentBaseId ? "per-tick" : "coarse",
-  })), null);
+  }, topologies.map((input) => engineKind === "dense-v2"
+    ? new DenseLocalRegionalBasePort({
+        registry,
+        baseId: input.baseId,
+        topology: input.topology,
+        table: admission.table!,
+        initialWarehouseCounts,
+        isCurrentBase: input.baseId === scenario.currentBaseId,
+        advanceMode: input.baseId === scenario.currentBaseId ? "per-tick" : "coarse",
+      })
+    : new LocalRegionalBasePort({
+        registry,
+        baseId: input.baseId,
+        regionBaseOrderIndex: input.regionBaseOrderIndex,
+        topology: input.topology,
+        table: admission.table!,
+        initialWarehouseCounts,
+        isCurrentBase: input.baseId === scenario.currentBaseId,
+        simulationSpeed: 1,
+        fixedDynamicTickRate: input.baseId === scenario.currentBaseId ? 20 : 2,
+        advanceMode: input.baseId === scenario.currentBaseId ? "per-tick" : "coarse",
+      })), null);
 
   try {
     await session.setCurrentBaseAdvanceMode("coarse");
@@ -180,6 +194,17 @@ export async function runRegionalBlueprintSimulation(
   } finally {
     session.dispose();
   }
+}
+
+function resolveRegionalSimulationEngineKind(): SimulationEngineKind {
+  const configured = process.env.SIMULATION_TEST_ENGINE;
+  if (configured === undefined || configured === "" || configured === "legacy") {
+    return "legacy";
+  }
+  if (configured === "dense-v2") return configured;
+  throw new Error(
+    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected "legacy" or "dense-v2".`,
+  );
 }
 
 export function createRegionalBlueprintDocuments(

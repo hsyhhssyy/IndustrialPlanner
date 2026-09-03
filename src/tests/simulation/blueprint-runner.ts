@@ -8,7 +8,10 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
-import { createSimulationHost } from "@/simulation/simulation-host";
+import {
+  createSimulationHost,
+  type SimulationEngineKind,
+} from "@/simulation/simulation-host";
 import type {
   CompiledSimulationTopology,
   RegionalResourceSupplySetting,
@@ -25,6 +28,8 @@ export interface RunBlueprintSimulationOptions {
   /** 启用轻量性能统计，输出逐 tick 阶段耗时报告 */
   readonly perfEnabled?: boolean;
   readonly regionalResources?: readonly RegionalResourceSupplySetting[];
+  /** 默认保持 legacy；仅测试显式指定时使用新版求解器。 */
+  readonly engineKind?: SimulationEngineKind;
 }
 
 export interface BlueprintSimulationReport {
@@ -112,7 +117,9 @@ export async function runBlueprintSimulation(
 
   const document = createWorldDocumentFromBlueprint(options.blueprint);
   const workspace = createHeadlessWorkspace(document, options.registry);
+  const engineKind = options.engineKind ?? resolveBlueprintSimulationEngineKind();
   const host = createSimulationHost(workspace, {
+    engineKind,
     workerMode: "runtime",
     getPerfEnabled: options.perfEnabled ? () => true : undefined,
     ...(options.regionalResources === undefined
@@ -201,6 +208,19 @@ export async function runBlueprintSimulation(
   } finally {
     host.dispose();
   }
+}
+
+function resolveBlueprintSimulationEngineKind(): SimulationEngineKind {
+  const configured = process.env.SIMULATION_TEST_ENGINE;
+  if (configured === undefined || configured === "" || configured === "legacy") {
+    return "legacy";
+  }
+  if (configured === "dense-v2") {
+    return configured;
+  }
+  throw new Error(
+    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected "legacy" or "dense-v2".`,
+  );
 }
 
 export function createHeadlessWorkspace(documentSnapshot: WorldDocument, registry: RegistryContract): WorkspaceContract {

@@ -15,11 +15,11 @@ import {
 } from "./dense-topology";
 
 const SLOT_FLAG_IGNORE_STOCK = 1;
-const FRAME_STATUS_INITIAL = 0;
-const FRAME_STATUS_RUNNING = 1;
-const WAREHOUSE_UNCHANGED = 0;
-const WAREHOUSE_CLEARED = 1;
-const WAREHOUSE_PATCHED = 2;
+export const FRAME_STATUS_INITIAL = 0;
+export const FRAME_STATUS_RUNNING = 1;
+export const WAREHOUSE_UNCHANGED = 0;
+export const WAREHOUSE_CLEARED = 1;
+export const WAREHOUSE_PATCHED = 2;
 
 export interface DenseFrameDelta {
   readonly protocolVersion: typeof DENSE_SIMULATION_PROTOCOL_VERSION;
@@ -375,8 +375,34 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     return this.currentIsPowerOutage;
   }
 
+  public get batteryJoules(): number {
+    return this.baseBatteryJoules;
+  }
+
+  public get batteryCapacity(): number {
+    return this.baseBatteryCapacity;
+  }
+
   public apply(delta: DenseFrameDelta): void {
     this.validateDelta(delta);
+    this.commitDelta(delta);
+  }
+
+  public replaceCheckpoint(delta: DenseFrameDelta): void {
+    this.validateDelta(delta, { allowBackwards: true, requireFullCoverage: true });
+    this.slots.fill(null);
+    this.devices.fill(null);
+    this.nodes.fill(null);
+    for (const key of Object.keys(this.routingCursors)) delete this.routingCursors[key];
+    for (const componentId of this.dictionary.componentIds) {
+      this.transportComponentDomain[componentId] = null;
+    }
+    this.warehouseItems = null;
+    this.warehouseStatsWindowReady = false;
+    this.commitDelta(delta);
+  }
+
+  private commitDelta(delta: DenseFrameDelta): void {
     this.applySlotChanges(delta);
     this.applyDeviceChanges(delta);
     this.applyNodeChanges(delta);
@@ -480,7 +506,13 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     };
   }
 
-  private validateDelta(delta: DenseFrameDelta): void {
+  private validateDelta(
+    delta: DenseFrameDelta,
+    options: {
+      readonly allowBackwards?: boolean;
+      readonly requireFullCoverage?: boolean;
+    } = {},
+  ): void {
     if (delta.protocolVersion !== DENSE_SIMULATION_PROTOCOL_VERSION) {
       throw new Error(`Unsupported dense simulation protocol ${delta.protocolVersion}.`);
     }
@@ -513,7 +545,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
         `Dense projection received invalid tick range ${delta.fromTickNumber}..${delta.tickNumber}.`,
       );
     }
-    if (this.initialized && delta.tickNumber < this.currentTickNumber) {
+    if (this.initialized && !options.allowBackwards && delta.tickNumber < this.currentTickNumber) {
       throw new Error(
         `Dense projection cannot move backwards from tick ${this.currentTickNumber} to ${delta.tickNumber}.`,
       );
@@ -608,7 +640,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       "removed warehouse item",
     );
 
-    if (!this.initialized) {
+    if (!this.initialized || options.requireFullCoverage === true) {
       assertInitialFrameCoverage(
         delta.changedSlotIndexes,
         this.dictionary.slotIds.length,

@@ -16,10 +16,16 @@ import {
 import {
   createBlueprint,
   createEntity,
+  getDevice,
+  getTick,
   createWorldDocumentFromBlueprint,
 } from "./blueprint-test-helpers";
-import { createHeadlessWorkspace } from "./blueprint-runner";
+import {
+  createHeadlessWorkspace,
+  runBlueprintSimulation,
+} from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 
 const DENSE_TEST_SESSION = {
   sessionId: "dense-projection-test",
@@ -38,6 +44,89 @@ function createDenseProjectionBlueprint(): BlueprintDocument {
 }
 
 describe("ST2-RQ-023 dense projection", () => {
+  it("runs a real blueprint through the explicitly selected dense-v2 host", async () => {
+    const report = await runBlueprintSimulation({
+      blueprint: createBlueprint("dense-v2-host", [
+        createEntity("storage", "storager_1", 0, 0, 0, {
+          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+          "storageSlotGroups[0].slots[0].initialCount": 20,
+        }),
+      ]),
+      registry: createRegistryContract(),
+      maxTickNumber: 1,
+      engineKind: "dense-v2",
+    });
+
+    expect(getTick(report, 0).status).toBe("initial");
+    expect(getTick(report, 1).status).toBe("running");
+    expect(getTick(report, 1).transfers).toEqual([]);
+    expect(getDevice(report, 1, "storage").slotItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "storage_slot_1",
+          slotId: "slot_1",
+          itemType: "item_iron_ore",
+          count: 20,
+        }),
+      ]),
+    );
+  });
+
+  it("executes transport recipes in dense-v2 without delegating to legacy runtime", async () => {
+    const report = await runBlueprintSimulation({
+      blueprint: createDenseProjectionBlueprint(),
+      registry: createRegistryContract(),
+      maxTickNumber: 41,
+      engineKind: "dense-v2",
+    });
+
+    expect(getTick(report, 1).transfers).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        itemType: "item_iron_ore",
+        amount: 1,
+      }),
+    ]));
+    expect(getTick(report, 41).transfers.some((transfer) =>
+      transfer.sourceSlotId.includes("device:belt")
+      && transfer.targetSlotId.includes("device:sink-storage")
+    )).toBe(true);
+    expect(getDevice(report, 41, "belt").channelRecipes.default?.recipeId)
+      .toBe("belt_straight_1x1:dynamic-belt-transfer");
+  });
+
+  it("matches legacy warehouse production statistics after the first full minute", async () => {
+    const blueprint = createBlueprint("dense-v2-warehouse-stats", [
+      createEntity("pump", "water_pump_1", 0, 0, 0, {
+        channelRecipes: { default: "r_pump_water_basic" },
+      }),
+      createEntity("power", "power_diffuser_1", 4, 0),
+    ]);
+    const maxTickNumber = 60 * STANDARD_TICK_RATE_PER_SECOND;
+    const registry = createRegistryContract();
+    const [legacy, dense] = await Promise.all([
+      runBlueprintSimulation({ blueprint, registry, maxTickNumber }),
+      runBlueprintSimulation({
+        blueprint,
+        registry,
+        maxTickNumber,
+        engineKind: "dense-v2",
+      }),
+    ]);
+
+    expect(getTick(dense, 0).warehouseStats).toEqual(getTick(legacy, 0).warehouseStats);
+    expect(getTick(dense, maxTickNumber).warehouseStats)
+      .toEqual(getTick(legacy, maxTickNumber).warehouseStats);
+    expect(getTick(dense, maxTickNumber).warehouseStats).toMatchObject({
+      statsWindowReady: true,
+      items: {
+        item_liquid_water: {
+          producedPerMinute: expect.any(Number),
+          lastChangedTick: expect.any(Number),
+        },
+      },
+    });
+  }, 120_000);
+
   it("round-trips consecutive real simulation frames through dense deltas", async () => {
     const registry = createRegistryContract();
     const workspace = createHeadlessWorkspace(

@@ -603,6 +603,17 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
       {
+        id: "experimental-dense-simulation-engine",
+        kind: "switch",
+        labelKey: "settingsField.experimental-dense-simulation-engine",
+        descriptionKey: "settingsField.experimental-dense-simulation-engineDescription",
+        defaultValue: false,
+        editableWhen: {
+          settingId: "other-experimental-features",
+          equals: true,
+        },
+      },
+      {
         id: "sync-provider",
         kind: "select",
         labelKey: "settingsField.sync-provider" as UiKey,

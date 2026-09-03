@@ -60,6 +60,7 @@ import {
   LegacySnapshotPresentationProjection,
   type SimulationPresentationProjection,
 } from "./projection/presentation-projection";
+import { createDenseSimulationHost } from "./dense-simulation-host";
 
 export interface SimulationHost extends SimulationContract {
   workspace: WorkspaceContract;
@@ -70,8 +71,10 @@ export interface SimulationHost extends SimulationContract {
 }
 
 export type SimulationHostWorkerMode = "auto" | "runtime";
+export type SimulationEngineKind = "legacy" | "dense-v2";
 
 export interface CreateSimulationHostOptions {
+  readonly engineKind?: SimulationEngineKind;
   readonly workerMode?: SimulationHostWorkerMode;
   /** 调试模式下的轻量性能统计开关。 */
   readonly getPerfEnabled?: () => boolean;
@@ -86,6 +89,9 @@ export function createSimulationHost(
   workspace: WorkspaceContract,
   options: CreateSimulationHostOptions = {},
 ): SimulationHost {
+  if (options.engineKind === "dense-v2") {
+    return createDenseSimulationHost(workspace, options);
+  }
   const bridge = createSimulationWorkerBridge(options.workerMode ?? "auto", workspace.registry);
   const disposers: Array<() => void> = [];
   const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);

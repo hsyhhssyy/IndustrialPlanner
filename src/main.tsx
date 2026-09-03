@@ -5,6 +5,7 @@ import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+import { captureSimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
 import { createSyncHost } from "@/sync";
 import "@/styles/global.scss";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
@@ -28,6 +29,7 @@ declare global {
 }
 
 const registry = createRegistryContract();
+const simulationEngineLaunchPreference = captureSimulationEngineLaunchPreference();
 
 const workspace : WorkspaceContract = {
   state: createWorkspaceState(),
@@ -64,6 +66,7 @@ await createSyncHost(workspace, {
 });
 await createRenderHost(workspace);
 const simulationHost = createSimulationHost(workspace, {
+  engineKind: simulationEngineLaunchPreference.activeDenseEnabled ? "dense-v2" : "legacy",
   getPerfEnabled: () => appHost.internalState.settings.debugMode,
   getDebugDataEnabled: () => appHost.internalState.settings.debugMode
     && appHost.internalState.settings.debugSimulationWorkerDetailedReport,
@@ -102,6 +105,9 @@ reaction(
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <WorkbenchApp appHost={appHost} />
+    <WorkbenchApp
+      appHost={appHost}
+      simulationEngineLaunchPreference={simulationEngineLaunchPreference}
+    />
   </React.StrictMode>,
 );

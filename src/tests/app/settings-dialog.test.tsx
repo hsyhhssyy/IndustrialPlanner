@@ -8,9 +8,16 @@ import { createAppHost } from "@/app/host/app-host";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
+import type { SimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+
+const LEGACY_ENGINE_LAUNCH_PREFERENCE: SimulationEngineLaunchPreference = {
+  activeDenseEnabled: false,
+  desiredDenseEnabled: false,
+  needsRestart: false,
+};
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -165,6 +172,7 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
+          simulationEngineLaunchPreference={LEGACY_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });
@@ -210,6 +218,7 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
+          simulationEngineLaunchPreference={LEGACY_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });
