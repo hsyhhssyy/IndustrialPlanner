@@ -514,6 +514,73 @@ export class DenseSimulationKernel {
     this.state.clearDirtyState();
   }
 
+  public restoreMigratedRuntime(
+    previous: DenseSimulationKernel,
+    resetDeviceIds: readonly string[],
+  ): void {
+    if (previous.topology.standardTickRate !== this.topology.standardTickRate) {
+      throw new Error("Dense topology migration cannot change the standard tick rate.");
+    }
+
+    const resetDevices = new Set(resetDeviceIds);
+    const preservedDeviceIds = new Set<string>();
+    this.currentTickNumber = previous.currentTickNumber;
+    this.baseBatteryJoulesValue = previous.baseBatteryJoulesValue;
+    this.nextRecipeRunId = previous.nextRecipeRunId;
+
+    for (let deviceIndex = 0; deviceIndex < this.layout.dictionary.deviceIds.length; deviceIndex += 1) {
+      const deviceId = this.layout.dictionary.deviceIds[deviceIndex]!;
+      const previousDeviceIndex = previous.lookup.deviceIndexById.get(deviceId);
+      const device = this.topology.devices[deviceId];
+      if (
+        resetDevices.has(deviceId)
+        || previousDeviceIndex === undefined
+        || device === undefined
+      ) {
+        continue;
+      }
+      preservedDeviceIds.add(deviceId);
+      this.state.deviceFlags[deviceIndex] = previous.state.deviceFlags[previousDeviceIndex]!;
+      this.waterPurifierManualRemainders[deviceIndex] =
+        previous.waterPurifierManualRemainders[previousDeviceIndex] ?? 0;
+
+      for (const nodeId of device.nodeIds) {
+        const node = this.topology.nodes[nodeId];
+        if (node === undefined) continue;
+        for (const slotId of node.slotIds) {
+          const slotIndex = this.lookup.slotIndexById.get(slotId);
+          const previousSlotIndex = previous.lookup.slotIndexById.get(slotId);
+          if (slotIndex === undefined || previousSlotIndex === undefined) continue;
+          const previousStorageIndex = previous.layout.slotStorageIndexes[previousSlotIndex]!;
+          const previousOwnsStorage = previousStorageIndex === previousSlotIndex;
+          const previousItemIndex = previousOwnsStorage
+            ? previous.state.slotItemIndexes[previousSlotIndex]!
+            : DENSE_INDEX_NONE;
+          this.state.slotItemIndexes[slotIndex] = mapDenseItemIndex(
+            previous.layout,
+            this.lookup,
+            previousItemIndex,
+          );
+          this.state.slotCounts[slotIndex] = previousOwnsStorage
+            ? previous.state.slotCounts[previousSlotIndex]!
+            : 0;
+          this.state.slotReserved[slotIndex] = 0;
+          this.state.slotFlags[slotIndex] = this.layout.slotInitialFlags[slotIndex]!;
+        }
+      }
+    }
+
+    this.normalizeMigratedSlotAliases();
+    this.restoreMigratedRecipeChannels(previous, preservedDeviceIds);
+    this.restoreMigratedAdmissionCounters(previous, preservedDeviceIds);
+    this.restoreMigratedRoutingCursors(previous, preservedDeviceIds);
+    this.resetConflictingMigratedTransportComponents();
+    this.updateDeviceBlockStates();
+    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    this.refreshPowerState(false);
+    this.state.clearDirtyState();
+  }
+
   public createWarehouseStatsDelta(
     includeAll: boolean,
     changedStorageIndexes: readonly number[],
@@ -1553,6 +1620,233 @@ export class DenseSimulationKernel {
     this.state.dirtyDeviceIndexes.add(deviceIndex);
   }
 
+  private normalizeMigratedSlotAliases(): void {
+    for (let slotIndex = 0; slotIndex < this.layout.dictionary.slotIds.length; slotIndex += 1) {
+      const storageIndex = this.layout.slotStorageIndexes[slotIndex]!;
+      if (storageIndex === slotIndex) continue;
+      const sourceCount = this.state.slotCounts[slotIndex]!;
+      const sourceItemIndex = this.state.slotItemIndexes[slotIndex]!;
+      if (sourceCount > 0 && sourceItemIndex !== DENSE_INDEX_NONE) {
+        if (this.state.slotItemIndexes[storageIndex] === DENSE_INDEX_NONE) {
+          this.state.slotItemIndexes[storageIndex] = sourceItemIndex;
+        }
+        this.state.slotCounts[storageIndex] = this.state.slotCounts[storageIndex]! + sourceCount;
+      }
+      this.state.slotItemIndexes[slotIndex] = DENSE_INDEX_NONE;
+      this.state.slotCounts[slotIndex] = 0;
+      this.state.slotReserved[slotIndex] = 0;
+    }
+  }
+
+  private restoreMigratedRecipeChannels(
+    previous: DenseSimulationKernel,
+    preservedDeviceIds: ReadonlySet<string>,
+  ): void {
+    for (const channel of this.recipePrograms.channels) {
+      const deviceId = this.layout.dictionary.deviceIds[channel.deviceIndex]!;
+      if (!preservedDeviceIds.has(deviceId)) continue;
+      const previousDeviceIndex = previous.lookup.deviceIndexById.get(deviceId);
+      if (previousDeviceIndex === undefined) continue;
+      const previousChannel = previous.findRecipeChannel(
+        previousDeviceIndex,
+        channel.channelId,
+      );
+      if (
+        previousChannel === null
+        || previous.channelStates[previousChannel.index] === CHANNEL_IDLE
+      ) {
+        continue;
+      }
+
+      const previousRecipe = previous.getRunningProgram(previousChannel);
+      const recipeIndex = channel.candidates.findIndex((candidate) =>
+        candidate.recipeId === previousRecipe.recipeId
+        && candidate.recipeType === previousRecipe.recipeType
+        && candidate.durationTicks === previousRecipe.durationTicks
+      );
+      if (recipeIndex < 0) continue;
+      const reservations = this.mapMigratedReservations(
+        previous,
+        previous.channelReservations[previousChannel.index] ?? [],
+      );
+      const inputItems = this.mapMigratedInputItems(
+        previous,
+        previous.channelInputItems[previousChannel.index] ?? [],
+      );
+      if (reservations === null || inputItems === null) continue;
+
+      const reservedByStorageIndex = new Map<number, number>();
+      for (const reservation of reservations) {
+        if (reservation.ignoreStock) continue;
+        const storageIndex = this.layout.slotStorageIndexes[reservation.slotIndex]!;
+        reservedByStorageIndex.set(
+          storageIndex,
+          (reservedByStorageIndex.get(storageIndex) ?? 0) + reservation.amount,
+        );
+      }
+      if ([...reservedByStorageIndex].some(([storageIndex, amount]) =>
+        this.state.slotReserved[storageIndex]! + amount
+          > this.state.slotCounts[storageIndex]!
+      )) {
+        continue;
+      }
+
+      this.channelRecipeIndexes[channel.index] = recipeIndex;
+      this.channelProgressTicks[channel.index] =
+        previous.channelProgressTicks[previousChannel.index]!;
+      this.channelStates[channel.index] = previous.channelStates[previousChannel.index]!;
+      this.channelRunIds[channel.index] = previous.channelRunIds[previousChannel.index]!;
+      this.channelReservations[channel.index] = reservations;
+      this.channelInputItems[channel.index] = inputItems;
+      for (const [storageIndex, amount] of reservedByStorageIndex) {
+        this.state.slotReserved[storageIndex] =
+          this.state.slotReserved[storageIndex]! + amount;
+      }
+    }
+  }
+
+  private findRecipeChannel(
+    deviceIndex: number,
+    channelId: string,
+  ): DenseRecipeChannelProgram | null {
+    const start = this.recipePrograms.deviceChannelOffsets[deviceIndex]!;
+    const end = this.recipePrograms.deviceChannelOffsets[deviceIndex + 1]!;
+    for (let offset = start; offset < end; offset += 1) {
+      const channel = this.recipePrograms.channels[
+        this.recipePrograms.deviceChannelIndexes[offset]!
+      ];
+      if (channel?.channelId === channelId) return channel;
+    }
+    return null;
+  }
+
+  private mapMigratedReservations(
+    previous: DenseSimulationKernel,
+    reservations: readonly DenseRecipeReservation[],
+  ): readonly DenseRecipeReservation[] | null {
+    const mapped: DenseRecipeReservation[] = [];
+    for (const reservation of reservations) {
+      const slotId = previous.layout.dictionary.slotIds[reservation.slotIndex];
+      const slotIndex = slotId === undefined
+        ? undefined
+        : this.lookup.slotIndexById.get(slotId);
+      const itemIndex = mapDenseItemIndex(
+        previous.layout,
+        this.lookup,
+        reservation.itemIndex,
+      );
+      if (slotIndex === undefined || itemIndex === DENSE_INDEX_NONE) return null;
+      mapped.push({
+        slotIndex,
+        itemIndex,
+        amount: reservation.amount,
+        ignoreStock: reservation.ignoreStock,
+      });
+    }
+    return mapped;
+  }
+
+  private mapMigratedInputItems(
+    previous: DenseSimulationKernel,
+    inputItems: readonly DenseRecipeInputItem[],
+  ): readonly DenseRecipeInputItem[] | null {
+    const mapped: DenseRecipeInputItem[] = [];
+    for (const item of inputItems) {
+      const itemIndex = mapDenseItemIndex(previous.layout, this.lookup, item.itemIndex);
+      if (itemIndex === DENSE_INDEX_NONE) return null;
+      mapped.push({ itemIndex, amount: item.amount });
+    }
+    return mapped;
+  }
+
+  private restoreMigratedAdmissionCounters(
+    previous: DenseSimulationKernel,
+    preservedDeviceIds: ReadonlySet<string>,
+  ): void {
+    for (let index = 0; index < this.admission.portIds.length; index += 1) {
+      const portId = this.admission.portIds[index]!;
+      const port = this.topology.ports[portId];
+      const previousPort = previous.topology.ports[portId];
+      const previousIndex = previous.admission.portIndexesById.get(portId);
+      if (
+        port === undefined
+        || previousPort === undefined
+        || previousIndex === undefined
+        || !preservedDeviceIds.has(port.deviceId)
+        || port.admissionRule?.itemId !== previousPort.admissionRule?.itemId
+      ) {
+        continue;
+      }
+      this.admission.counts[index] = previous.admission.counts[previousIndex]!;
+      this.admission.windowCounts[index] = previous.admission.windowCounts[previousIndex]!;
+      this.admission.windowStartTicks[index] =
+        previous.admission.windowStartTicks[previousIndex]!;
+      this.admission.pastWindowCounts[index] = [
+        ...(previous.admission.pastWindowCounts[previousIndex] ?? []),
+      ];
+      this.admission.moveTicks[index] = [
+        ...(previous.admission.moveTicks[previousIndex] ?? []),
+      ];
+    }
+  }
+
+  private restoreMigratedRoutingCursors(
+    previous: DenseSimulationKernel,
+    preservedDeviceIds: ReadonlySet<string>,
+  ): void {
+    const previousIndexByKey = new Map(
+      previous.layout.dictionary.routingCursorKeys.map((key, index) => [key, index]),
+    );
+    for (
+      let index = 0;
+      index < this.layout.dictionary.routingCursorKeys.length;
+      index += 1
+    ) {
+      const key = this.layout.dictionary.routingCursorKeys[index]!;
+      const nodeMarkerIndex = key.indexOf(":node:");
+      const preservesDevice = nodeMarkerIndex > 0
+        && preservedDeviceIds.has(key.slice(0, nodeMarkerIndex));
+      const previousIndex = previousIndexByKey.get(key);
+      if (!preservesDevice || previousIndex === undefined) continue;
+      this.state.routingCursors[index] = previous.state.routingCursors[previousIndex]!;
+    }
+  }
+
+  private resetConflictingMigratedTransportComponents(): void {
+    for (
+      let componentIndex = 0;
+      componentIndex < this.layout.dictionary.componentIds.length;
+      componentIndex += 1
+    ) {
+      const itemIndexes = new Set<number>();
+      const slotStart = this.layout.componentSlotOffsets[componentIndex]!;
+      const slotEnd = this.layout.componentSlotOffsets[componentIndex + 1]!;
+      for (let offset = slotStart; offset < slotEnd; offset += 1) {
+        const storageIndex = this.layout.componentSlotIndexes[offset]!;
+        if (this.state.slotCounts[storageIndex]! > 0) {
+          itemIndexes.add(this.state.slotItemIndexes[storageIndex]!);
+        }
+      }
+      if (itemIndexes.size > 1) {
+        const deviceStart = this.layout.componentDeviceOffsets[componentIndex]!;
+        const deviceEnd = this.layout.componentDeviceOffsets[componentIndex + 1]!;
+        for (let offset = deviceStart; offset < deviceEnd; offset += 1) {
+          const deviceIndex = this.layout.componentDeviceIndexes[offset]!;
+          this.cancelDeviceRecipes(deviceIndex);
+          this.state.deviceFlags[deviceIndex] = 0;
+        }
+        for (let offset = slotStart; offset < slotEnd; offset += 1) {
+          const storageIndex = this.layout.componentSlotIndexes[offset]!;
+          this.state.slotItemIndexes[storageIndex] =
+            this.layout.slotInitialItemIndexes[storageIndex]!;
+          this.state.slotCounts[storageIndex] = this.layout.slotInitialCounts[storageIndex]!;
+          this.state.slotReserved[storageIndex] = 0;
+        }
+      }
+      this.refreshTransportComponent(componentIndex);
+    }
+  }
+
   private refreshPowerState(consumeBattery: boolean): void {
     let currentPowerGeneration = BASE_POWER_GENERATION_KW;
     for (const channel of this.recipePrograms.channels) {
@@ -2354,6 +2648,17 @@ function resolveDeviceCenteredRangeRect(
     width: range,
     height: range,
   };
+}
+
+function mapDenseItemIndex(
+  previousLayout: DenseTopologyLayout,
+  nextLookup: DenseTopologyLookup,
+  previousItemIndex: number,
+): number {
+  if (previousItemIndex === DENSE_INDEX_NONE) return DENSE_INDEX_NONE;
+  const itemId = previousLayout.dictionary.itemIds[previousItemIndex];
+  if (itemId === undefined) return DENSE_INDEX_NONE;
+  return nextLookup.itemIndexById.get(itemId) ?? DENSE_INDEX_NONE;
 }
 
 function assertDenseKernelTopologySupported(

@@ -3,7 +3,10 @@ import type {
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
 
-import type { CompiledSimulationTopology } from "../types";
+import type {
+  CompiledSimulationTopology,
+  SimulationTopologyMigration,
+} from "../types";
 import type {
   RegionWarehouseDeposit,
   RegionalWarehouseOutletTable,
@@ -59,6 +62,7 @@ export type DenseWorkerRequest =
       readonly debugDataEnabled: boolean;
       readonly powerMode: "real" | "infinite";
       readonly powerConsumptionOverride: number | undefined;
+      readonly migration?: SimulationTopologyMigration;
       readonly regional?: {
         readonly baseId: string;
         readonly table: RegionalWarehouseOutletTable;

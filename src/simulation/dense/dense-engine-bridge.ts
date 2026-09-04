@@ -3,8 +3,13 @@ import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
 } from "@/shared/worker/attach-worker-runtime";
+import { ActiveTimeWatchdog } from "@/shared/worker/active-time-watchdog";
+import { createLogger } from "@/shared/logging/logger";
 
-import type { CompiledSimulationTopology } from "../types";
+import type {
+  CompiledSimulationTopology,
+  SimulationTopologyMigration,
+} from "../types";
 import type { RegionalWarehouseOutletTable } from "../regional/types";
 import { collectDenseFrameTransferables } from "./dense-frame-delta";
 import { DENSE_SIMULATION_PROTOCOL_VERSION } from "./dense-topology";
@@ -15,6 +20,11 @@ import type {
   DenseWorkerRequest,
   DenseWorkerResponse,
 } from "./dense-worker-protocol";
+
+const DENSE_RPC_SLOW_WARNING_MS = 5_000;
+const DENSE_RPC_TIMEOUT_MS = 30_000;
+const DENSE_INITIALIZE_TIMEOUT_MS = 90_000;
+const logger = createLogger("dense-simulation-worker-bridge");
 
 export interface DenseEngineSessionIdentity {
   readonly sessionId: string;
@@ -29,6 +39,7 @@ export interface DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly migration?: SimulationTopologyMigration;
     readonly regional?: {
       readonly baseId: string;
       readonly table: RegionalWarehouseOutletTable;
@@ -87,6 +98,7 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly migration?: SimulationTopologyMigration;
     readonly regional?: {
       readonly baseId: string;
       readonly table: RegionalWarehouseOutletTable;
@@ -104,6 +116,7 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
       debugDataEnabled: options.debugDataEnabled,
       powerMode: options.powerMode,
       powerConsumptionOverride: options.powerConsumptionOverride,
+      ...(options.migration === undefined ? {} : { migration: options.migration }),
       ...(options.regional === undefined ? {} : { regional: options.regional }),
     }), "topology-ready"));
   }
@@ -225,7 +238,14 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
   private readonly pending = new Map<number, {
     readonly resolve: (response: DenseWorkerResponse) => void;
     readonly reject: (error: Error) => void;
+    readonly watchdog: ActiveTimeWatchdog;
   }>();
+  private readonly handleVisibilityChange = (): void => {
+    const active = this.isPageActive();
+    for (const pending of this.pending.values()) {
+      pending.watchdog.setActive(active);
+    }
+  };
 
   public constructor() {
     this.worker = new Worker(new URL("../dense-simulation-worker.ts", import.meta.url), {
@@ -238,6 +258,9 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     });
     this.worker.addEventListener("message", this.handleMessage);
     this.worker.addEventListener("error", this.handleError);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    }
   }
 
   public async initialize(options: {
@@ -247,6 +270,7 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly migration?: SimulationTopologyMigration;
     readonly regional?: {
       readonly baseId: string;
       readonly table: RegionalWarehouseOutletTable;
@@ -265,6 +289,7 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
       debugDataEnabled: options.debugDataEnabled,
       powerMode: options.powerMode,
       powerConsumptionOverride: options.powerConsumptionOverride,
+      ...(options.migration === undefined ? {} : { migration: options.migration }),
       ...(options.regional === undefined ? {} : { regional: options.regional }),
     }, "topology-ready");
   }
@@ -345,6 +370,9 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     this.rejectAll(new Error("Dense simulation worker disposed."));
     this.worker.removeEventListener("message", this.handleMessage);
     this.worker.removeEventListener("error", this.handleError);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    }
     this.runtimeAttachment.dispose();
     this.worker.terminate();
     this.identity = null;
@@ -352,21 +380,26 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
 
   private readonly handleMessage = (event: MessageEvent<DenseWorkerResponse>): void => {
     const response = event.data;
+    const identity = this.identity;
+    if (
+      identity === null
+      || response.sessionId !== identity.sessionId
+      || response.topologyVersion !== identity.topologyVersion
+    ) {
+      return;
+    }
     const pending = this.pending.get(response.sequence);
     if (pending === undefined) {
       return;
     }
     this.pending.delete(response.sequence);
+    pending.watchdog.complete();
     if (response.type === "protocol-error") {
       pending.reject(createDenseProtocolError(response));
       return;
     }
-    const identity = this.identity;
     if (
-      identity === null
-      || response.protocolVersion !== DENSE_SIMULATION_PROTOCOL_VERSION
-      || response.sessionId !== identity.sessionId
-      || response.topologyVersion !== identity.topologyVersion
+      response.protocolVersion !== DENSE_SIMULATION_PROTOCOL_VERSION
     ) {
       pending.reject(new Error("Dense worker response identity mismatch."));
       return;
@@ -392,8 +425,42 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
 
   private requestAny(request: DenseWorkerRequest): Promise<DenseWorkerResponse> {
     return new Promise((resolve, reject) => {
-      this.pending.set(request.sequence, { resolve, reject });
-      this.worker.postMessage(request);
+      const timeoutMs = request.type === "initialize-session"
+        ? DENSE_INITIALIZE_TIMEOUT_MS
+        : DENSE_RPC_TIMEOUT_MS;
+      const createDiagnostic = (activeElapsedMs: number): Readonly<Record<string, unknown>> => ({
+        operation: request.type,
+        sessionId: request.sessionId,
+        topologyVersion: request.topologyVersion,
+        sequence: request.sequence,
+        activeElapsedMs: Math.round(activeElapsedMs),
+      });
+      const watchdog = new ActiveTimeWatchdog({
+        slowWarningMs: DENSE_RPC_SLOW_WARNING_MS,
+        timeoutMs,
+        initiallyActive: this.isPageActive(),
+        onSlow: (activeElapsedMs) => {
+          logger.warn("Dense worker RPC is slow.", createDiagnostic(activeElapsedMs));
+        },
+        onTimeout: (activeElapsedMs) => {
+          const pending = this.pending.get(request.sequence);
+          if (pending === undefined) return;
+          this.pending.delete(request.sequence);
+          const diagnostic = createDiagnostic(activeElapsedMs);
+          logger.error("Dense worker RPC timed out.", diagnostic);
+          pending.reject(new Error(
+            `Dense worker request "${request.type}" timed out after ${Math.round(activeElapsedMs)}ms.`,
+          ));
+        },
+      });
+      this.pending.set(request.sequence, { resolve, reject, watchdog });
+      try {
+        this.worker.postMessage(request);
+      } catch (error) {
+        watchdog.complete();
+        this.pending.delete(request.sequence);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
@@ -414,9 +481,14 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
 
   private rejectAll(error: Error): void {
     for (const pending of this.pending.values()) {
+      pending.watchdog.complete();
       pending.reject(error);
     }
     this.pending.clear();
+  }
+
+  private isPageActive(): boolean {
+    return typeof document === "undefined" || document.visibilityState === "visible";
   }
 }
 

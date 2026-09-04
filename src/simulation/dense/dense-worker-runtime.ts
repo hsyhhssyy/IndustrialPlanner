@@ -78,6 +78,17 @@ export class DenseWorkerRuntime {
   private initialize(
     request: Extract<DenseWorkerRequest, { readonly type: "initialize-session" }>,
   ): Extract<DenseWorkerResponse, { readonly type: "topology-ready" }> {
+    const previousSession = this.session;
+    if (request.migration !== undefined) {
+      if (previousSession === null) {
+        throw new Error("Dense topology migration requires an active previous session.");
+      }
+      if (request.migration.baseTickNumber !== previousSession.kernel.tickNumber) {
+        throw new Error(
+          `Dense topology migration anchor ${request.migration.baseTickNumber} does not match current tick ${previousSession.kernel.tickNumber}.`,
+        );
+      }
+    }
     const identity = {
       sessionId: request.sessionId,
       topologyVersion: request.topologyVersion,
@@ -91,10 +102,18 @@ export class DenseWorkerRuntime {
       this.registry,
       request.regional,
     );
+    if (request.migration !== undefined && previousSession !== null) {
+      kernel.restoreMigratedRuntime(
+        previousSession.kernel,
+        request.migration.resetDeviceIds,
+      );
+    }
     kernel.setPowerMode(request.powerMode);
     kernel.setPowerConsumptionOverride(request.powerConsumptionOverride);
     const emitter = new DenseFrameEmitter(request.topology, layout, identity);
-    const initialDelta = emitter.emitInitial(kernel);
+    const initialDelta = request.migration === undefined
+      ? emitter.emitInitial(kernel)
+      : emitter.emitCheckpoint(kernel);
     this.session = {
       identity,
       gate,
@@ -102,11 +121,15 @@ export class DenseWorkerRuntime {
       emitter,
       topology: request.topology,
       layout,
-      checkpoints: new Map([[0, kernel.createCheckpoint()]]),
+      checkpoints: new Map([[kernel.tickNumber, kernel.createCheckpoint()]]),
       captureIntermediateRegionalFrames:
         request.regional?.captureIntermediateFrames ?? false,
-      runningState: "stop",
-      simulationSpeed: 1,
+      runningState: request.migration === undefined
+        ? "stop"
+        : (previousSession?.runningState ?? "stop"),
+      simulationSpeed: request.migration === undefined
+        ? 1
+        : (previousSession?.simulationSpeed ?? 1),
       pendingRegionalGrant: null,
     };
     return {
@@ -340,7 +363,7 @@ export class DenseWorkerRuntime {
     };
   }
 
-  private requireSession(request: DenseWorkerRequest): DenseWorkerSession {
+  private requireSession(_request: DenseWorkerRequest): DenseWorkerSession {
     const session = this.session;
     if (session === null) {
       throw new Error("Dense worker session is not initialized.");

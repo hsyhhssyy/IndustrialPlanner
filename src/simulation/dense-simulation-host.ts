@@ -13,6 +13,7 @@ import type {
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+import { createLogger } from "@/shared/logging/logger";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
@@ -45,7 +46,11 @@ import {
   type SimulationStateReadWrite,
 } from "./state-impl";
 import { convertSimulationTicksToSeconds } from "./tick-rate";
-import { compileSimulationTopology } from "./topology-compiler";
+import {
+  compileSimulationTopology,
+  createSimulationDocumentHash,
+} from "./topology-compiler";
+import { createSimulationTopologyMigration } from "./topology-migration";
 import type {
   CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
@@ -53,6 +58,7 @@ import type {
   WarehouseStats,
   SimulationStartResult,
   SimulationTickPullStatus,
+  SimulationTopologyMigration,
 } from "./types";
 
 let nextDenseSessionId = 1;
@@ -61,6 +67,7 @@ const DENSE_TIMELINE_RULER_DURATION_SECONDS = 300;
 const DENSE_TIMELINE_STEP_STANDARD_TICKS = 10;
 const DENSE_TIMELINE_ORIGIN_STANDARD_TICK = 1;
 const DENSE_TIMELINE_CAPACITY_TICKS = 600;
+const logger = createLogger("dense-simulation-runtime");
 
 export function createDenseSimulationHost(
   workspace: WorkspaceContract,
@@ -99,8 +106,11 @@ export function createDenseSimulationHost(
   workspace.simulation = host;
   const documentStore = workspace.editor?.document;
   if (documentStore !== undefined) {
-    disposers.push(documentStore.subscribe(() => {
-      if (internalState.hasStarted) {
+    disposers.push(documentStore.subscribe((document) => {
+      if (
+        internalState.hasStarted
+        && controller.hasSimulationRelevantDocumentChange(document)
+      ) {
         void controller.refreshFromCurrentDocument();
       }
     }));
@@ -128,7 +138,12 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   // private emitter: DenseFrameEmitter | null = null;
   private topologyVersion = 0;
   private playbackRemainderTicks = 0;
+  private playbackTargetTickNumber = 0;
+  private playbackAdvanceInFlight: Promise<void> | null = null;
   private primaryTickNumber = 0;
+  private compiledDocument: WorldDocument | null = null;
+  private sourceDocumentSignature: string | null = null;
+  private topologyRefreshQueue: Promise<void> | null = null;
   private timelinePresentationActive = false;
   private regionalSession: DenseRegionalSimulationSession | null = null;
   private readonly regionalPlaybackDeltas = new Map<number, DenseFrameDelta>();
@@ -173,6 +188,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     return this.regionalWarehouseStats
       ?? this.projection?.getWarehouseStats()
       ?? null;
+  }
+
+  public hasSimulationRelevantDocumentChange(document: WorldDocument): boolean {
+    return this.sourceDocumentSignature !== createDenseSimulationSourceSignature(document);
   }
 
   public readonly start: SimulationContract["actions"]["start"] = async () => {
@@ -227,6 +246,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   public readonly stop: SimulationContract["actions"]["stop"] = action(() => {
     this.state.runningState = "stop";
+    this.playbackRemainderTicks = 0;
+    this.playbackTargetTickNumber = this.projection?.tickNumber ?? 0;
     if (this.projection !== null && this.regionalSession === null) {
       this.sendCommands([{ type: "stop" }]);
     }
@@ -260,23 +281,39 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const wholeTicks = Math.floor(this.playbackRemainderTicks);
     if (wholeTicks <= 0) return;
     this.playbackRemainderTicks -= wholeTicks;
-    if (this.regionalSession !== null) {
-      await this.advanceRegionalPresentationToTick(
-        (this.projection?.tickNumber ?? 0) + wholeTicks,
-      );
-      return;
+    this.playbackTargetTickNumber = Math.max(
+      this.playbackTargetTickNumber,
+      this.projection?.tickNumber ?? 0,
+    ) + wholeTicks;
+    const activeTopologyRefresh = this.topologyRefreshQueue;
+    if (activeTopologyRefresh !== null) {
+      await activeTopologyRefresh;
+      if (this.state.runningState !== "start") return;
     }
-    await this.syncToTick((this.projection?.tickNumber ?? 0) + wholeTicks);
+    if (this.playbackAdvanceInFlight === null) {
+      const drain = this.drainPlaybackAdvances();
+      const tracked = drain.finally(() => {
+        if (this.playbackAdvanceInFlight === tracked) {
+          this.playbackAdvanceInFlight = null;
+        }
+      });
+      this.playbackAdvanceInFlight = tracked;
+    }
+    await this.playbackAdvanceInFlight.catch(() => undefined);
   };
 
   public readonly patchRuntimeSlot: SimulationContract["actions"]["patchRuntimeSlot"] = async (patch) => {
     if (this.state.runningState === "stop" || this.projection === null) return;
+    const activeTopologyRefresh = this.topologyRefreshQueue;
+    if (activeTopologyRefresh !== null) await activeTopologyRefresh;
     await this.bridge.sendCommands([{ type: "patch-runtime-slot", patch }]);
     await this.syncToTick(this.projection.tickNumber ?? 0);
   };
 
   public readonly resetAdmissionCounter: SimulationContract["actions"]["resetAdmissionCounter"] = async (reset) => {
     if (this.state.runningState === "stop" || this.projection === null) return;
+    const activeTopologyRefresh = this.topologyRefreshQueue;
+    if (activeTopologyRefresh !== null) await activeTopologyRefresh;
     await this.bridge.sendCommands([{ type: "reset-admission-counter", reset }]);
     await this.syncToTick(this.projection.tickNumber ?? 0);
   };
@@ -349,10 +386,44 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     }
   };
 
-  public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = async () => {
+  public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = () => {
+    const queuedRefresh = this.topologyRefreshQueue;
+    const refresh = queuedRefresh === null
+      ? this.refreshFromCurrentDocumentNow()
+      : queuedRefresh.then(() => this.refreshFromCurrentDocumentNow());
+    const completion = refresh.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.topologyRefreshQueue = completion;
+    void completion.then(() => {
+      if (this.topologyRefreshQueue === completion) {
+        this.topologyRefreshQueue = null;
+      }
+    });
+    return refresh;
+  };
+
+  private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
     this.assertNotDisposed();
     if (this.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
+      if (this.regionalSession !== null) {
+        const document = this.workspace.editor?.document.getSnapshot();
+        if (document !== undefined) {
+          this.sourceDocumentSignature = createDenseSimulationSourceSignature(document);
+        }
+        const topology = this.topologyStore.getSnapshot();
+        return {
+          status: "started",
+          topologyId: topology?.topologyId ?? null,
+          diagnostics: topology?.diagnostics ?? [],
+        };
+      }
       return this.startRegionalSimulation();
+    }
+    const activePlaybackAdvance = this.playbackAdvanceInFlight;
+    if (activePlaybackAdvance !== null) {
+      await activePlaybackAdvance;
     }
     const document = this.workspace.editor?.document.getSnapshot();
     if (document === undefined) {
@@ -369,25 +440,51 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       });
       const compileError = topology.diagnostics.find((diagnostic) => diagnostic.severity === "error");
       if (compileError !== undefined) {
-        return this.failStart(compileError.message, topology.diagnostics);
+        return this.failRefresh(compileError.message, topology.diagnostics);
       }
 
-      this.topologyVersion += 1;
-      const session = {
-        sessionId: `dense-session-${nextDenseSessionId}`,
-        topologyVersion: this.topologyVersion,
-      } as const;
-      nextDenseSessionId += 1;
-      const response = await this.bridge.initialize({
-        identity: session,
-        topology,
-        perfEnabled: this.options.getPerfEnabled?.() ?? false,
-        debugDataEnabled: this.options.getDebugDataEnabled?.() ?? false,
-        powerMode: document.documentSettings.powerMode ?? "infinite",
-        powerConsumptionOverride: normalizePowerConsumptionOverride(
-          document.documentSettings.powerConsumptionOverride,
-        ),
-      });
+      const previousTopology = this.topologyStore.getSnapshot();
+      const migration = this.compiledDocument === null
+        || previousTopology === null
+        || this.projection === null
+        ? null
+        : createSimulationTopologyMigration({
+            previousDocument: this.compiledDocument,
+            nextDocument: document,
+            previousTopology,
+            nextTopology: topology,
+            baseTickNumber: this.primaryTickNumber,
+          });
+      let migrationApplied = migration !== null;
+      let initialized: {
+        readonly identity: {
+          readonly sessionId: string;
+          readonly topologyVersion: number;
+        };
+        readonly response: Awaited<ReturnType<DenseEngineBridge["initialize"]>>;
+      };
+      try {
+        initialized = await this.initializeDenseTopology({
+          document,
+          topology,
+          migration: migration ?? undefined,
+        });
+      } catch (migrationError) {
+        if (migration === null) throw migrationError;
+        migrationApplied = false;
+        logger.warn("Dense topology migration failed; rebuilding the runtime explicitly.", {
+          baseTickNumber: migration.baseTickNumber,
+          resetDeviceIds: migration.resetDeviceIds,
+          error: migrationError instanceof Error
+            ? migrationError.message
+            : String(migrationError),
+        });
+        initialized = await this.initializeDenseTopology({
+          document,
+          topology,
+        });
+      }
+      const { identity: session, response } = initialized;
       const projection = new DenseProjectionStore(response.layout.dictionary, session);
       projection.apply(response.initialDelta);
 
@@ -408,19 +505,24 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       // this.kernel = kernel;
       // this.emitter = emitter;
       this.projection = projection;
-      this.primaryTickNumber = 0;
+      this.primaryTickNumber = response.initialDelta.tickNumber;
+      this.playbackTargetTickNumber = migrationApplied
+        ? Math.max(this.playbackTargetTickNumber, response.initialDelta.tickNumber)
+        : response.initialDelta.tickNumber;
       this.timelinePresentationActive = false;
+      this.compiledDocument = cloneWorldDocument(document);
+      this.sourceDocumentSignature = createDenseSimulationSourceSignature(document);
       this.topologyStore.setSnapshot(topology);
       this.publishProjectionSnapshot();
       runInAction(() => {
         this.state.hasStarted = true;
-        this.state.currentPlaybackTickNumber = 0;
+        this.state.currentPlaybackTickNumber = response.initialDelta.tickNumber;
         this.state.runtimeStatus = {
           mode: "running",
           topologyId: topology.topologyId,
           documentHash: topology.documentHash,
-          retainedFromTick: 0,
-          latestTickNumber: 0,
+          retainedFromTick: response.initialDelta.tickNumber,
+          latestTickNumber: response.initialDelta.tickNumber,
           bufferSize: 1,
           maxBufferSize: 1,
           dynamicTickRate: topology.standardTickRate,
@@ -437,8 +539,38 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     }
   };
 
+  private async initializeDenseTopology(options: {
+    readonly document: WorldDocument;
+    readonly topology: CompiledSimulationTopology;
+    readonly migration?: SimulationTopologyMigration;
+  }): Promise<{
+    readonly identity: { readonly sessionId: string; readonly topologyVersion: number };
+    readonly response: Awaited<ReturnType<DenseEngineBridge["initialize"]>>;
+  }> {
+    this.topologyVersion += 1;
+    const identity = {
+      sessionId: `dense-session-${nextDenseSessionId}`,
+      topologyVersion: this.topologyVersion,
+    } as const;
+    nextDenseSessionId += 1;
+    const response = await this.bridge.initialize({
+      identity,
+      topology: options.topology,
+      perfEnabled: this.options.getPerfEnabled?.() ?? false,
+      debugDataEnabled: this.options.getDebugDataEnabled?.() ?? false,
+      powerMode: options.document.documentSettings.powerMode ?? "infinite",
+      powerConsumptionOverride: normalizePowerConsumptionOverride(
+        options.document.documentSettings.powerConsumptionOverride,
+      ),
+      ...(options.migration === undefined ? {} : { migration: options.migration }),
+    });
+    return { identity, response };
+  }
+
   public readonly syncToTick: SimulationInternalAction["syncToTick"] = async (tickNumber) => {
     this.assertNotDisposed();
+    const activeTopologyRefresh = this.topologyRefreshQueue;
+    if (activeTopologyRefresh !== null) await activeTopologyRefresh;
     if (this.regionalSession !== null) {
       if (tickNumber < (this.projection?.tickNumber ?? 0)) {
         return createNotFoundTickStatus(tickNumber);
@@ -499,7 +631,11 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.disposeRegionalSession();
     this.projection = null;
     this.playbackRemainderTicks = 0;
+    this.playbackTargetTickNumber = 0;
+    this.playbackAdvanceInFlight = null;
     this.primaryTickNumber = 0;
+    this.compiledDocument = null;
+    this.sourceDocumentSignature = null;
     this.timelinePresentationActive = false;
     this.topologyStore.setSnapshot(null);
     this.state.runningState = "stop";
@@ -526,13 +662,22 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const editor = this.workspace.editor;
     const sourceDocument = editor?.document.getSnapshot();
     if (editor === null || editor === undefined || sourceDocument === undefined) {
-      return this.failRegionalStart("Regional simulation requires an editor document provider.");
+      return this.failRegionalStart(
+        "Regional simulation requires an editor document provider.",
+        { code: "editor-document-unavailable" },
+      );
     }
     const currentBase = this.workspace.registry.baseDefinitions.find(
       (definition) => definition.id === sourceDocument.baseId,
     );
     if (currentBase === undefined) {
-      return this.failRegionalStart(`Unknown current base "${sourceDocument.baseId}".`);
+      return this.failRegionalStart(
+        `Unknown current base "${sourceDocument.baseId}".`,
+        {
+          code: "unknown-current-base",
+          currentBaseId: sourceDocument.baseId,
+        },
+      );
     }
     const regionBases = this.workspace.registry.baseDefinitions.filter(
       (definition) => definition.tag === currentBase.tag,
@@ -540,17 +685,36 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (regionBases.length < 2) {
       return this.failRegionalStart(
         `区域 ${currentBase.tag} 至少需要两个基地才能启动多基地仿真。`,
+        {
+          code: "insufficient-regional-bases",
+          currentBaseId: sourceDocument.baseId,
+          regionBaseCount: regionBases.length,
+          regionTag: currentBase.tag,
+        },
       );
     }
     if (regionBases.length > 5) {
       return this.failRegionalStart(
         `区域 ${currentBase.tag} 包含 ${regionBases.length} 个基地，超过 5 个上限。`,
+        {
+          code: "regional-base-limit-exceeded",
+          currentBaseId: sourceDocument.baseId,
+          regionBaseCount: regionBases.length,
+          regionTag: currentBase.tag,
+        },
       );
     }
 
+    const regionalBaseIds = regionBases.map((definition) => definition.id);
+    let startStage = "read-base-documents";
+    logger.info("Dense regional simulation start requested.", {
+      currentBaseId: sourceDocument.baseId,
+      regionTag: currentBase.tag,
+      regionalBaseIds,
+    });
     try {
       const latestDocuments = await editor.queries.readLatestBaseDocuments(
-        regionBases.map((definition) => definition.id),
+        regionalBaseIds,
       );
       const documents = regionBases.map((definition, index) =>
         appendBaseBuiltinEntities({
@@ -563,6 +727,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const regionalResources = normalizeRegionalResources(
         this.options.getRegionalResourceSettings?.(currentBase.tag) ?? [],
       );
+      startStage = "compile-topologies";
       const topologies = documents.map((document, regionBaseOrderIndex) => ({
         baseId: document.baseId,
         regionBaseOrderIndex,
@@ -575,11 +740,24 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
           regionalResources,
         }),
       }));
-      const compileError = topologies.flatMap((input) => input.topology.diagnostics)
-        .find((diagnostic) => diagnostic.severity === "error");
-      if (compileError !== undefined) {
-        return this.failRegionalStart(compileError.message);
+      const compileFailure = topologies.flatMap((input) =>
+        input.topology.diagnostics.map((diagnostic) => ({
+          baseId: input.baseId,
+          diagnostic,
+        })))
+        .find(({ diagnostic }) => diagnostic.severity === "error");
+      if (compileFailure !== undefined) {
+        return this.failRegionalStart(
+          compileFailure.diagnostic.message,
+          {
+            code: "topology-compile-failed",
+            currentBaseId: sourceDocument.baseId,
+            failedBaseId: compileFailure.baseId,
+            diagnostic: compileFailure.diagnostic,
+          },
+        );
       }
+      startStage = "validate-warehouse-admission";
       const admission = buildRegionalWarehouseOutletTable({
         registry: this.workspace.registry,
         topologies,
@@ -587,11 +765,17 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       if (!admission.ok || admission.table === null) {
         return this.failRegionalStart(
           admission.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+          {
+            code: "regional-warehouse-admission-failed",
+            currentBaseId: sourceDocument.baseId,
+            diagnostics: admission.diagnostics,
+          },
         );
       }
 
       this.disposeRegionalSession();
       this.topologyVersion += 1;
+      startStage = "initialize-workers";
       const created = await DenseRegionalSimulationSession.create({
         sessionId: `dense-regional-${nextDenseSessionId}`,
         currentBaseId: sourceDocument.baseId,
@@ -614,7 +798,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.regionalSession = created.session;
       this.projection = created.currentBasePresentationProjection;
       this.primaryTickNumber = 0;
+      this.playbackTargetTickNumber = 0;
       this.timelinePresentationActive = false;
+      this.compiledDocument = null;
+      this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
       const currentTopology = topologies.find(
         (input) => input.baseId === sourceDocument.baseId,
       )?.topology ?? null;
@@ -623,6 +810,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         currentTopology?.regionalResourceSupply,
       );
       this.publishProjectionSnapshot();
+      startStage = "commit-first-epoch";
       await this.fillOneRegionalEpoch();
       runInAction(() => {
         this.state.hasStarted = true;
@@ -640,17 +828,39 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
           error: null,
         };
       });
+      logger.info("Dense regional simulation started.", {
+        currentBaseId: sourceDocument.baseId,
+        regionTag: currentBase.tag,
+        regionalBaseIds,
+        latestTickNumber: this.latestRegionalBufferedTick(),
+      });
       return {
         status: "started",
         topologyId: currentTopology?.topologyId ?? null,
         diagnostics: currentTopology?.diagnostics ?? [],
       };
     } catch (error) {
-      return this.failRegionalStart(error instanceof Error ? error.message : String(error));
+      return this.failRegionalStart(
+        error instanceof Error ? error.message : String(error),
+        {
+          code: "regional-start-exception",
+          currentBaseId: sourceDocument.baseId,
+          regionTag: currentBase.tag,
+          regionalBaseIds,
+          stage: startStage,
+        },
+      );
     }
   }
 
-  private failRegionalStart(message: string): SimulationStartResult {
+  private failRegionalStart(
+    message: string,
+    context: Readonly<Record<string, unknown>>,
+  ): SimulationStartResult {
+    logger.error("Dense regional simulation start rejected.", {
+      ...context,
+      error: message,
+    });
     this.disposeRegionalSession();
     runInAction(() => {
       this.state.runningState = "stop";
@@ -688,6 +898,19 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     });
     const tracked = this.regionalEpochInFlight;
     await tracked;
+  }
+
+  private async drainPlaybackAdvances(): Promise<void> {
+    while (this.state.runningState === "start") {
+      const currentTickNumber = this.projection?.tickNumber ?? 0;
+      const targetTickNumber = this.playbackTargetTickNumber;
+      if (targetTickNumber <= currentTickNumber) return;
+      if (this.regionalSession !== null) {
+        await this.advanceRegionalPresentationToTick(targetTickNumber);
+      } else {
+        await this.syncToTick(targetTickNumber);
+      }
+    }
   }
 
   private async advanceRegionalPresentationToTick(targetTickNumber: number): Promise<void> {
@@ -767,6 +990,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     diagnostics: SimulationStartResult["diagnostics"] = [],
   ): SimulationStartResult {
     this.projection = null;
+    this.compiledDocument = null;
+    this.sourceDocumentSignature = null;
     this.topologyStore.setSnapshot(null);
     runInAction(() => {
       this.state.hasStarted = false;
@@ -778,6 +1003,29 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       };
     });
     return { status: "failed", topologyId: null, diagnostics, error: message };
+  }
+
+  private failRefresh(
+    message: string,
+    diagnostics: SimulationStartResult["diagnostics"],
+  ): SimulationStartResult {
+    const topology = this.topologyStore.getSnapshot();
+    if (this.projection === null || topology === null) {
+      return this.failStart(message, diagnostics);
+    }
+    runInAction(() => {
+      this.state.runtimeStatus = {
+        ...this.state.runtimeStatus,
+        mode: "error",
+        error: message,
+      };
+    });
+    return {
+      status: "failed",
+      topologyId: topology.topologyId,
+      diagnostics,
+      error: message,
+    };
   }
 
   private assertNotDisposed(): void {
@@ -1090,6 +1338,22 @@ function normalizePowerConsumptionOverride(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? value
     : undefined;
+}
+
+function createDenseSimulationSourceSignature(document: WorldDocument): string {
+  const powerMode = document.documentSettings.powerMode ?? "infinite";
+  const powerConsumptionOverride = normalizePowerConsumptionOverride(
+    document.documentSettings.powerConsumptionOverride,
+  );
+  return [
+    createSimulationDocumentHash(document),
+    powerMode,
+    powerConsumptionOverride ?? "default",
+  ].join("|");
+}
+
+function cloneWorldDocument(document: WorldDocument): WorldDocument {
+  return JSON.parse(JSON.stringify(document)) as WorldDocument;
 }
 
 function computePoweredEntityIds(
