@@ -21,6 +21,35 @@ import {
 const CONTRACT_ENGINE_KINDS = ["legacy", "dense-v2"] as const satisfies readonly SimulationEngineKind[];
 
 describe("ST2-RQ-023 dense host regressions", () => {
+  it.each([
+    { requestedEngineKind: undefined, expectedEngineKind: "legacy" },
+    { requestedEngineKind: "legacy", expectedEngineKind: "legacy" },
+    { requestedEngineKind: "dense-v2", expectedEngineKind: "dense-v2" },
+  ] as const)(
+    "reports $expectedEngineKind as the current engine for $requestedEngineKind selection",
+    ({ requestedEngineKind, expectedEngineKind }) => {
+      const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+      const workspace = createDenseTestWorkspace({
+        currentDocument,
+        readLatestBaseDocuments: async (baseIds) =>
+          baseIds.map((baseId) => createWorldDocument({ baseId })),
+      });
+      const host = createSimulationHost(
+        workspace,
+        requestedEngineKind === undefined
+          ? { workerMode: "runtime" }
+          : { engineKind: requestedEngineKind, workerMode: "runtime" },
+      );
+
+      try {
+        expect(host.engineKind).toBe(expectedEngineKind);
+        expect(workspace.simulation?.engineKind).toBe(expectedEngineKind);
+      } finally {
+        host.dispose();
+      }
+    },
+  );
+
   describe.each(CONTRACT_ENGINE_KINDS)("%s topology refresh contract", (engineKind) => {
     it("preserves existing inventory and recipe progress when adding an unrelated building", async () => {
       const document = createWorldDocumentFromBlueprint(createBlueprint(
@@ -277,6 +306,151 @@ describe("ST2-RQ-023 dense host regressions", () => {
       expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(10);
     } finally {
       host.dispose();
+    }
+  });
+
+  it("starts dense regional simulation after excluding unknown entities from a background base", async () => {
+    const registry = createRegistryContract();
+    const currentDocument = createWorldDocument({ baseId: "wuling_tianwangping_aid" });
+    const staleEntity = createEntity("transmuter_2:1", "transmuter_2", 3, 4);
+    const protocolCoreDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    protocolCoreDocument.entities = { [staleEntity.id]: staleEntity };
+    protocolCoreDocument.entityOrder = [staleEntity.id];
+    protocolCoreDocument.slotLinks = [{
+      id: "stale-warehouse-link",
+      linkType: "share-all",
+      source: {
+        entityId: staleEntity.id,
+        storageSlotGroupId: "output",
+        slotId: "slot",
+      },
+      target: {
+        entityId: "warehouse",
+        storageSlotGroupId: "warehouse",
+        slotId: "item_copper_ore",
+      },
+    }];
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      registry,
+      readLatestBaseDocuments: async (baseIds) => baseIds.map((baseId) => {
+        if (baseId === protocolCoreDocument.baseId) return protocolCoreDocument;
+        if (baseId === currentDocument.baseId) return currentDocument;
+        return createWorldDocument({ baseId });
+      }),
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+
+      expect(host.state.runningState).toBe("start");
+      expect(host.internalState.runtimeStatus).toMatchObject({
+        mode: "running",
+        error: null,
+      });
+      expect(protocolCoreDocument.entities[staleEntity.id]).toBe(staleEntity);
+      expect(protocolCoreDocument.entityOrder).toEqual([staleEntity.id]);
+      expect(protocolCoreDocument.slotLinks).toHaveLength(1);
+      expect(consoleWarn).toHaveBeenCalledWith(
+        "[industrial-planner:dense-simulation-runtime] Dense simulation ignored unknown document entities.",
+        {
+          baseId: "wuling_protocol_core",
+          ignoredEntityCount: 1,
+          ignoredEntities: [{
+            entityId: "transmuter_2:1",
+            definitionId: "transmuter_2",
+            position: { x: 3, y: 4 },
+            relatedSlotLinkCount: 1,
+          }],
+        },
+      );
+    } finally {
+      host.dispose();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("starts dense single-base simulation with an unknown entity admission warning", async () => {
+    const staleEntity = createEntity("transmuter_2:1", "transmuter_2", 3, 4);
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    currentDocument.entities = { [staleEntity.id]: staleEntity };
+    currentDocument.entityOrder = [staleEntity.id];
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      readLatestBaseDocuments: async (baseIds) =>
+        baseIds.map((baseId) => createWorldDocument({ baseId })),
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      await host.actions.start();
+
+      expect(host.state.runningState).toBe("start");
+      expect(host.topology.getSnapshot()?.diagnostics).toContainEqual({
+        severity: "warning",
+        code: "ignored-unknown-entity-definition",
+        message: "Ignored unknown entity \"transmuter_2:1\" with missing definition \"transmuter_2\".",
+        entityId: "transmuter_2:1",
+        definitionId: "transmuter_2",
+      });
+      expect(host.queries.getDeviceRuntimeStatus(staleEntity.id)).toBeNull();
+      expect(currentDocument.entities[staleEntity.id]).toBe(staleEntity);
+    } finally {
+      host.dispose();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("keeps a missing dense base-builtin definition as a fatal registry error", async () => {
+    const registry = createRegistryContract();
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    registry.baseDefinitions = registry.baseDefinitions.map((definition) =>
+      definition.id === currentDocument.baseId
+        ? {
+            ...definition,
+            builtinEntities: [{
+              id: "broken",
+              definitionId: "missing-builtin-definition",
+              position: { x: 0, y: 0 },
+              rotation: 0,
+            }],
+          }
+        : definition
+    );
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      registry,
+      readLatestBaseDocuments: async (baseIds) =>
+        baseIds.map((baseId) => createWorldDocument({ baseId })),
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+
+      expect(host.state.runningState).toBe("stop");
+      expect(host.internalState.runtimeStatus).toMatchObject({
+        mode: "error",
+        error: "Missing entity definition \"missing-builtin-definition\".",
+      });
+    } finally {
+      host.dispose();
+      consoleError.mockRestore();
     }
   });
 

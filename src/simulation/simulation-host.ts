@@ -5,9 +5,11 @@ import type {
   SimulationAdmissionCounterReset,
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
+  SimulationEngineKind,
   SimulationDeviceRuntimeStatusReadModel,
   WarehouseStatsReadModel,
 } from "@/domain/simulation/types/simulation-types";
+export type { SimulationEngineKind } from "@/domain/simulation/types/simulation-types";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
@@ -71,7 +73,6 @@ export interface SimulationHost extends SimulationContract {
 }
 
 export type SimulationHostWorkerMode = "auto" | "runtime";
-export type SimulationEngineKind = "legacy" | "dense-v2";
 
 export interface CreateSimulationHostOptions {
   readonly engineKind?: SimulationEngineKind;
@@ -179,6 +180,7 @@ export function createSimulationHost(
   }
 
   const host: SimulationHost = {
+    engineKind: "legacy",
     workspace,
     internalState,
     internalActions,

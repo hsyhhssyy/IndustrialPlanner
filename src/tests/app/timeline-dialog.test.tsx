@@ -59,6 +59,7 @@ function createTimelineReadinessWorkspace(
     editor: null,
     render: null,
     simulation: {
+      engineKind: "legacy",
       state: {
       runningState: "pause",
       simulationMode: "single-base",
@@ -139,6 +140,7 @@ describe("TimelineDialog", () => {
       editor: null,
       render: null,
       simulation: {
+        engineKind: "legacy",
         state: {
         runningState: "pause",
         simulationMode: "single-base",

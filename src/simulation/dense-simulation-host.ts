@@ -25,6 +25,10 @@ import {
 } from "@/shared/geometry/power-range";
 import { buildDeviceGasCoverage } from "./runtime/gas-diffusion";
 import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
+import {
+  admitWorldDocumentForSimulation,
+  type UnknownWorldEntityDefinitionIssue,
+} from "@/shared/world-document-unknown-entities";
 
 import type { SimulationInternalAction } from "./action-impl";
 import {
@@ -89,6 +93,7 @@ export function createDenseSimulationHost(
   });
   const actions: SimulationContract["actions"] = controller;
   const host: SimulationHost = {
+    engineKind: "dense-v2",
     workspace,
     topology: topologyStore,
     internalState,
@@ -425,19 +430,28 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (activePlaybackAdvance !== null) {
       await activePlaybackAdvance;
     }
-    const document = this.workspace.editor?.document.getSnapshot();
-    if (document === undefined) {
+    const sourceDocument = this.workspace.editor?.document.getSnapshot();
+    if (sourceDocument === undefined) {
       return this.failStart("Simulation cannot start before editor document is available.");
     }
 
     try {
-      const topology = compileSimulationTopology({
+      const admission = prepareDenseSimulationDocument({
+        document: sourceDocument,
+        workspace: this.workspace,
+      });
+      const document = admission.document;
+      const compiledTopology = compileSimulationTopology({
         document,
         registry: this.workspace.registry,
         poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
         simulationMode: this.state.simulationMode,
         activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
       });
+      const topology = appendUnknownEntityAdmissionDiagnostics(
+        compiledTopology,
+        admission.excludedIssues,
+      );
       const compileError = topology.diagnostics.find((diagnostic) => diagnostic.severity === "error");
       if (compileError !== undefined) {
         return this.failRefresh(compileError.message, topology.diagnostics);
@@ -511,7 +525,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         : response.initialDelta.tickNumber;
       this.timelinePresentationActive = false;
       this.compiledDocument = cloneWorldDocument(document);
-      this.sourceDocumentSignature = createDenseSimulationSourceSignature(document);
+      this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
       this.topologyStore.setSnapshot(topology);
       this.publishProjectionSnapshot();
       runInAction(() => {
@@ -716,8 +730,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const latestDocuments = await editor.queries.readLatestBaseDocuments(
         regionalBaseIds,
       );
-      const documents = regionBases.map((definition, index) =>
-        appendBaseBuiltinEntities({
+      const admissions = regionBases.map((definition, index) =>
+        prepareDenseSimulationDocument({
           document: definition.id === sourceDocument.baseId
             ? sourceDocument
             : (latestDocuments[index] ?? sourceDocument),
@@ -728,17 +742,23 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         this.options.getRegionalResourceSettings?.(currentBase.tag) ?? [],
       );
       startStage = "compile-topologies";
-      const topologies = documents.map((document, regionBaseOrderIndex) => ({
-        baseId: document.baseId,
+      const topologies = admissions.map((admission, regionBaseOrderIndex) => ({
+        baseId: admission.document.baseId,
         regionBaseOrderIndex,
-        topology: compileSimulationTopology({
-          document,
-          registry: this.workspace.registry,
-          poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
-          simulationMode: SIMULATION_MODE.regionalMultiBase,
-          activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
-          regionalResources,
-        }),
+        topology: appendUnknownEntityAdmissionDiagnostics(
+          compileSimulationTopology({
+            document: admission.document,
+            registry: this.workspace.registry,
+            poweredEntityIds: computePoweredEntityIds(
+              admission.document,
+              this.workspace.registry,
+            ),
+            simulationMode: SIMULATION_MODE.regionalMultiBase,
+            activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
+            regionalResources,
+          }),
+          admission.excludedIssues,
+        ),
       }));
       const compileFailure = topologies.flatMap((input) =>
         input.topology.diagnostics.map((diagnostic) => ({
@@ -781,7 +801,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         currentBaseId: sourceDocument.baseId,
         table: admission.table,
         bases: topologies.map((input) => {
-          const document = documents.find((candidate) => candidate.baseId === input.baseId)!;
+          const document = admissions.find(
+            (candidate) => candidate.document.baseId === input.baseId,
+          )!.document;
           return {
             baseId: input.baseId,
             topology: input.topology,
@@ -1408,6 +1430,50 @@ function appendBaseBuiltinEntities(options: {
     entityOrder: [
       ...builtinEntities.map((entity) => entity.id),
       ...options.document.entityOrder.filter((entityId) => !builtinIds.has(entityId)),
+    ],
+  };
+}
+
+function prepareDenseSimulationDocument(options: {
+  readonly document: WorldDocument;
+  readonly workspace: WorkspaceContract;
+}): ReturnType<typeof admitWorldDocumentForSimulation> {
+  const admission = admitWorldDocumentForSimulation({
+    document: appendBaseBuiltinEntities(options),
+    entityDefinitions: options.workspace.registry.entityDefinitions,
+  });
+  if (admission.excludedIssues.length > 0) {
+    logger.warn("Dense simulation ignored unknown document entities.", {
+      baseId: options.document.baseId,
+      ignoredEntityCount: admission.excludedIssues.length,
+      ignoredEntities: admission.excludedIssues.map((issue) => ({
+        entityId: issue.entityId,
+        definitionId: issue.definitionId,
+        position: issue.position,
+        relatedSlotLinkCount: issue.relatedSlotLinkCount,
+      })),
+    });
+  }
+  return admission;
+}
+
+function appendUnknownEntityAdmissionDiagnostics(
+  topology: CompiledSimulationTopology,
+  excludedIssues: readonly UnknownWorldEntityDefinitionIssue[],
+): CompiledSimulationTopology {
+  if (excludedIssues.length === 0) return topology;
+
+  return {
+    ...topology,
+    diagnostics: [
+      ...excludedIssues.map((issue) => ({
+        severity: "warning" as const,
+        code: "ignored-unknown-entity-definition",
+        message: `Ignored unknown entity "${issue.entityId}" with missing definition "${issue.definitionId}".`,
+        entityId: issue.entityId,
+        definitionId: issue.definitionId,
+      })),
+      ...topology.diagnostics,
     ],
   };
 }

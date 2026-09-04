@@ -62,6 +62,7 @@ function attachSimulationStub(
   }));
 
   workspace.simulation = {
+    engineKind: "legacy",
     state,
     topology: createSnapshotStore(null),
     queries: {

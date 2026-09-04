@@ -120,6 +120,7 @@ function attachSimulationStub(
   const getDeviceRuntimeStatus = vi.fn(() => options.runtimeStatus);
 
   workspace.simulation = {
+    engineKind: "legacy",
     state: {
       runningState: options.state,
       simulationMode: "single-base",

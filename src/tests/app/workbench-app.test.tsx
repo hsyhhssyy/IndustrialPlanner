@@ -1280,6 +1280,7 @@ describe("WorkbenchApp", () => {
 
     const workspace = createWorkspace();
     workspace.simulation = {
+      engineKind: "legacy",
       state: {
         runningState: "stop",
         simulationMode: "single-base",

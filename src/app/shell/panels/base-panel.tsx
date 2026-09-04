@@ -44,6 +44,10 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 // import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { isCustomPortPriorityGroupsEnabled } from "@/shared/port-priority-groups";
 import { resolveBaseMaxPipeLogistics } from "@/shared/base-tags";
+import {
+  collectUnknownWorldEntityDefinitionIssues,
+  type UnknownWorldEntityDefinitionIssue,
+} from "@/shared/world-document-unknown-entities";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import {
@@ -60,6 +64,12 @@ const BASE_PANEL_PROBLEM_INTERVAL_MS = 250;
 const REGIONAL_MULTI_BASE_HELP_PATH = createPublicAssetUrl(
   "help/config-guide/experimental-regional-multi-base.md",
 );
+
+interface RegionalUnknownEntityProblem {
+  readonly baseId: string;
+  readonly baseName: string;
+  readonly issue: UnknownWorldEntityDefinitionIssue;
+}
 
 function areStringSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
   return left.size === right.size && [...left].every((value) => right.has(value));
@@ -82,6 +92,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
   const t = appHost.actions.translate;
   const editor = appHost.workspace.editor;
   const currentDocument = useEditorDocumentSnapshot(editor);
+  const activeDocumentBaseId = currentDocument?.baseId ?? null;
   const currentBaseId = currentDocument?.baseId ?? DEFAULT_WORLD_BASE_ID;
   const currentBase = appHost.workspace.registry.baseDefinitions.find(
     (definition) => definition.id === currentBaseId,
@@ -128,6 +139,10 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     readonly tooltip: string;
     /** 关联的设备 ID，用于点击聚焦 */
     readonly entityId?: string;
+    readonly unknownEntity?: {
+      readonly baseId: string;
+      readonly entityId: string;
+    };
   }
 
   /** 根据 definitionId 解析设备中文名 */
@@ -191,6 +206,81 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
   // Original code:
   // const simulation = appHost.workspace.simulation;
   const multiBaseEnabled = appHost.regionalSettings.multiBaseEnabled;
+  const currentUnknownEntityProblems = useMemo<RegionalUnknownEntityProblem[]>(() => {
+    if (currentDocument === null) return [];
+    return collectUnknownWorldEntityDefinitionIssues({
+      document: currentDocument,
+      entityDefinitions: appHost.workspace.registry.entityDefinitions,
+    })
+      .filter((issue) => issue.origin === "document")
+      .map((issue) => ({
+        baseId: currentDocument.baseId,
+        baseName: currentBaseName,
+        issue,
+      }));
+  }, [
+    appHost.workspace.registry.entityDefinitions,
+    currentBaseName,
+    currentDocument,
+  ]);
+  const [siblingUnknownEntityProblems, setSiblingUnknownEntityProblems] = useState<
+    readonly RegionalUnknownEntityProblem[]
+  >([]);
+  useEffect(() => {
+    if (
+      !multiBaseEnabled
+      || activeDocumentBaseId === null
+      || currentBase === null
+      || editor === null
+    ) {
+      setSiblingUnknownEntityProblems([]);
+      return;
+    }
+
+    const siblingBases = appHost.workspace.registry.baseDefinitions.filter((definition) =>
+      definition.tag === currentBase.tag
+      && definition.id !== activeDocumentBaseId
+    );
+    if (siblingBases.length === 0) {
+      setSiblingUnknownEntityProblems([]);
+      return;
+    }
+
+    let cancelled = false;
+    void editor.queries.readLatestBaseDocuments(
+      siblingBases.map((definition) => definition.id),
+    ).then((documents) => {
+      if (cancelled) return;
+      const problems = siblingBases.flatMap((definition, index) => {
+        const document = documents[index];
+        if (document === undefined) return [];
+        return collectUnknownWorldEntityDefinitionIssues({
+          document,
+          entityDefinitions: appHost.workspace.registry.entityDefinitions,
+        })
+          .filter((issue) => issue.origin === "document")
+          .map((issue) => ({
+            baseId: definition.id,
+            baseName: definition.name,
+            issue,
+          }));
+      });
+      setSiblingUnknownEntityProblems(problems);
+    }).catch(() => {
+      if (!cancelled) setSiblingUnknownEntityProblems([]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    appHost.workspace.registry.baseDefinitions,
+    appHost.workspace.registry.entityDefinitions,
+    activeDocumentBaseId,
+    currentBase,
+    editor,
+    multiBaseEnabled,
+  ]);
 
   const baseProblems = useMemo<BaseProblem[]>(() => {
     const problems: BaseProblem[] = [];
@@ -198,6 +288,31 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
 
     const entities = Object.values(currentDocument.entities);
     const invalidIds = editor.state.collections[EntityCollectionType.invalidPlacement];
+
+    for (const problem of [
+      ...currentUnknownEntityProblems,
+      ...siblingUnknownEntityProblems,
+    ]) {
+      const prefix = problem.baseId === currentDocument.baseId
+        ? ""
+        : `${problem.baseName}：`;
+      const message = `${prefix}存在无法识别的设备「${problem.issue.entityId}」，仿真时将忽略`;
+      const relatedLinkText = problem.issue.relatedSlotLinkCount === 0
+        ? "没有关联链接"
+        : `关联的 ${problem.issue.relatedSlotLinkCount} 条链接也会在仿真时忽略`;
+      const handlingText = problem.baseId === currentDocument.baseId
+        ? "可在此处确认删除这条失效数据。"
+        : `请先切换至「${problem.baseName}」处理。`;
+      problems.push({
+        message,
+        severity: "error",
+        tooltip: `设备定义「${problem.issue.definitionId}」不存在；位置 (${problem.issue.position.x}, ${problem.issue.position.y})；${relatedLinkText}。${handlingText}`,
+        unknownEntity: {
+          baseId: problem.baseId,
+          entityId: problem.issue.entityId,
+        },
+      });
+    }
 
     // ① 无效放置
     for (const entityId of invalidIds) {
@@ -243,26 +358,69 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     appHost.workspace.registry.itemDefinitions,
     currentDocument,
     currentBase,
+    currentUnknownEntityProblems,
     deviceStats.pipeLogisticsDevices,
     editor,
     multiBaseEnabled,
     resolveDeviceName,
     runtimeInfiniteStorageEntityIds,
+    siblingUnknownEntityProblems,
   ]);
 
   const [activeProblemTooltip, setActiveProblemTooltip] = useState<number | null>(null);
   const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
+  const [pendingUnknownEntityDeleteId, setPendingUnknownEntityDeleteId] = useState<
+    string | null
+  >(null);
   const problemRowRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const problemPopoverRef = useRef<HTMLDivElement | null>(null);
+
+  const deleteUnknownEntity = useCallback((entityId: string) => {
+    if (editor === null) return;
+    const document = editor.document.getSnapshot();
+    const entity = document.entities[entityId];
+    if (
+      entity === undefined
+      || appHost.workspace.registry.entityDefinitions.some(
+        (definition) => definition.id === entity.definitionId,
+      )
+    ) {
+      setPendingUnknownEntityDeleteId(null);
+      return;
+    }
+
+    const preservedSelection = [...editor.state.collections.selection]
+      .filter((selectedEntityId) => selectedEntityId !== entityId);
+    runInAction(() => {
+      editor.actions.clearCollection(EntityCollectionType.selection);
+      editor.actions.addToCollection({
+        collectionType: EntityCollectionType.selection,
+        entityId,
+      });
+      editor.actions.deleteCollection(EntityCollectionType.selection);
+      for (const selectedEntityId of preservedSelection) {
+        editor.actions.addToCollection({
+          collectionType: EntityCollectionType.selection,
+          entityId: selectedEntityId,
+        });
+      }
+    });
+    setPendingUnknownEntityDeleteId(null);
+    setActiveProblemTooltip(null);
+    setPopoverRect(null);
+  }, [appHost.workspace.registry.entityDefinitions, editor]);
 
   // 点击外部关闭 popover
   const handleDocumentPointerDown = useCallback((e: PointerEvent) => {
     const target = e.target as Node | null;
     if (target === null) return;
+    if (problemPopoverRef.current?.contains(target)) return;
     // 点击在触发按钮所在行上 → 不关闭
     if (activeProblemTooltip !== null) {
       const rowEl = problemRowRefs.current.get(activeProblemTooltip);
       if (rowEl?.contains(target)) return;
     }
+    setPendingUnknownEntityDeleteId(null);
     setActiveProblemTooltip(null);
     setPopoverRect(null);
   }, [activeProblemTooltip]);
@@ -349,6 +507,11 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
   const powerRowClassName = isPowerOutage && !isInfinite
     ? cm(styles, "power-bar-label", "power-bar-outage")
     : cm(styles, "power-bar-label");
+  const activeBaseProblem = activeProblemTooltip === null
+    ? null
+    : (baseProblems[activeProblemTooltip] ?? null);
+  const activeUnknownEntity = activeBaseProblem?.unknownEntity ?? null;
+  const activeUnknownEntityId = activeUnknownEntity?.entityId ?? null;
 
   return (
     <div className={cm(styles, "stack")}>
@@ -564,6 +727,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
                     e.stopPropagation();
                     const problem = baseProblems[index];
                     if (problem === undefined) return;
+                    setPendingUnknownEntityDeleteId(null);
                     // 若关联了设备，聚焦到该设备
                     if (problem.entityId !== undefined && editor !== null) {
                       editor.actions.focusOnEntity(problem.entityId);
@@ -594,6 +758,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
           ? createPortal(
             <div
               className={cm(panelStyles, "base-problem-popover")}
+              ref={problemPopoverRef}
               style={{
                 position: "fixed",
                 top: `${popoverRect.top}px`,
@@ -601,8 +766,33 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
               }}
             >
               <div className={cm(panelStyles, "base-problem-popover-text")}>
-                {baseProblems[activeProblemTooltip]?.tooltip}
+                {activeBaseProblem?.tooltip}
               </div>
+              {activeUnknownEntity?.baseId === currentDocument?.baseId ? (
+                <button
+                  className={cm(
+                    panelStyles,
+                    pendingUnknownEntityDeleteId === activeUnknownEntityId
+                      ? "base-problem-delete-button is-confirm"
+                      : "base-problem-delete-button",
+                  )}
+                  onClick={() => {
+                    const entityId = activeUnknownEntityId;
+                    if (entityId === null) return;
+                    if (pendingUnknownEntityDeleteId !== entityId) {
+                      setPendingUnknownEntityDeleteId(entityId);
+                      return;
+                    }
+                    deleteUnknownEntity(entityId);
+                  }}
+                  type="button"
+                >
+                  <LucideTrash2 aria-hidden="true" />
+                  {pendingUnknownEntityDeleteId === activeUnknownEntityId
+                    ? "确认删除失效数据"
+                    : "从基地中删除"}
+                </button>
+              ) : null}
             </div>,
             document.body,
           )

@@ -3,6 +3,7 @@ export type { SimulationQuery } from "./simulation-query";
 export type { SimulationContract } from "./simulation-contract";
 export type { SimulationState } from "./types/simulation-types";
 export type {
+	SimulationEngineKind,
 	SimulationRunState,
 	SimulationRuntimeStatistics,
 	SimulationDeviceRuntimeStatusReadModel,

@@ -2290,6 +2290,31 @@
   word-break: break-word;
 }
 
+.base-problem-delete-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+  border-radius: 6px;
+  color: var(--danger);
+  background: transparent;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.base-problem-delete-button:hover,
+.base-problem-delete-button.is-confirm {
+  color: var(--floating-control-bg);
+  background: var(--danger);
+}
+
+.base-problem-delete-button svg {
+  width: 13px;
+  height: 13px;
+}
+
 .base-problem-empty {
   padding: 9px 10px;
   color: var(--text-0);

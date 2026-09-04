@@ -398,6 +398,7 @@ describe("CanvasPanel", () => {
       isSeeking: false,
     };
     workspace.simulation = {
+      engineKind: "legacy",
       state: {
       runningState: "start",
       simulationMode: "single-base",

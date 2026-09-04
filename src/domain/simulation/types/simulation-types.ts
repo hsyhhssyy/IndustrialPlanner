@@ -1,5 +1,6 @@
 import type { SimulationMode } from "../../shared/simulation-mode";
 
+export type SimulationEngineKind = "legacy" | "dense-v2";
 export type SimulationRunState = "stop" | "starting" | "start" | "pause";
 
 export interface SimulationRuntimeStatistics {
