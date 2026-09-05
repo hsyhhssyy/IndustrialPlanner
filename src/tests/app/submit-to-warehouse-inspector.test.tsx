@@ -174,6 +174,7 @@ function createRuntimeStatus(): SimulationDeviceRuntimeStatusReadModel {
         recipeId: "r_warehouse_submit",
         progressSeconds: 2.4,
         desiredSeconds: 10,
+        isProgressing: true,
         state: "running",
       },
     },

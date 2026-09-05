@@ -32,8 +32,20 @@ import {
   resolveConsumptionChannelCount,
 } from "./consumption-channel";
 import { completeRecipeIfPossible } from "./recipe-completion";
-import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
-import type { Stage1AdvanceResult } from "./stage-1-advance-devices";
+import {
+  canDeviceTransferAtCurrentPhase,
+  canRecipeLifecycleTransitionAtCurrentPhase,
+} from "./phase-gating";
+// AI-REMOVED 2026-09-04:
+// Reason: Stage5 不再接收 Stage1 overflow 结果类型。
+// Trigger: ST2-RQ-024 禁止 remainder 结转。
+// Evidence: settleRecipes 新签名只接收 regionalWarehouse 作为末参数。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import type { Stage1AdvanceResult } from "./stage-1-advance-devices";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 // AI-REMOVED 2026-07-23:
@@ -54,6 +66,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
  *   每次完成后重新选择配方；剩余不足一轮时启动最后一轮并写入非零进度。
  * instant 配方在结算阶段直接消耗输入并尝试输出；reserved-item 配方只预留输入，完成时再扣除。
  */
+/** AI-CORRECTION 2026-09-04: ST2-RQ-024 取消 overflow 交接；Stage5 仅在 0.5 秒相位边界以 progress=0 启动一轮配方。 */
 /** AI-CORRECTION 2026-05-12: immediate-consume 与 reserved-item 都会在启动后进入 running，并按 durationTicks 累积进度；前者只是在启动时立即扣除输入，不会在同一 tick 直接完成。 */
 export function settleRecipes(
   registry: RegistryContract,
@@ -62,13 +75,25 @@ export function settleRecipes(
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
-  stage1AdvanceResult?: Stage1AdvanceResult,
   regionalWarehouse?: RegionalWarehouseWriteContext,
 ): void {
-  const remainingOverflowTicksByDeviceChannel = cloneOverflowTicks(
-    stage1AdvanceResult?.overflowTicksByDeviceChannel,
-  );
+  // AI-REMOVED 2026-09-04:
+  // Reason: Stage5 不再接收或复制 Stage1 overflow。
+  // Trigger: ST2-RQ-024 禁止下一轮继承上一轮 overrun。
+  // Evidence: startIdleDeviceChannels 只启动一轮 progress=0 配方。
+  // Replacement: regionalWarehouse 直接作为末参数。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // stage1AdvanceResult?: Stage1AdvanceResult,
+  // const remainingOverflowTicksByDeviceChannel = cloneOverflowTicks(
+  //   stage1AdvanceResult?.overflowTicksByDeviceChannel,
+  // );
   settleWaitingOutputs(registry, topology, state, regionalWarehouse);
+  if (!canRecipeLifecycleTransitionAtCurrentPhase(topology, state)) {
+    return;
+  }
   startIdleDeviceChannels({
     registry,
     topology,
@@ -77,7 +102,6 @@ export function settleRecipes(
     powerMode,
     currentPowerGeneration,
     effectiveTotalPowerDemand,
-    remainingOverflowTicksByDeviceChannel,
   });
   state.transient.activeConsumptionDeviceIds =
     computeActiveConsumptionDeviceIds(topology, state);
@@ -90,7 +114,6 @@ export function settleRecipes(
     powerMode,
     currentPowerGeneration,
     effectiveTotalPowerDemand,
-    remainingOverflowTicksByDeviceChannel,
   });
 }
 
@@ -133,7 +156,6 @@ function startIdleDeviceChannels(options: {
   powerMode: "real" | "infinite";
   currentPowerGeneration: number;
   effectiveTotalPowerDemand: number;
-  remainingOverflowTicksByDeviceChannel: Record<string, Record<string, number>>;
   regionalWarehouse?: RegionalWarehouseWriteContext;
 }): void {
   const powerInsufficient = options.powerMode === "real"
@@ -184,56 +206,78 @@ function startIdleDeviceChannels(options: {
         continue;
       }
 
-      let remainingOverflowTicks =
-        options.remainingOverflowTicksByDeviceChannel[deviceId]?.[channel.id] ?? 0;
-
-      while (deviceState.channelRecipes[channel.id] === undefined
-        || deviceState.channelRecipes[channel.id] === null) {
-        const recipe = selectStartableRecipe(
-          options.registry,
-          options.topology,
-          options.state,
-          device,
-          channel,
-        );
-        if (recipe === null) {
-          remainingOverflowTicks = 0;
-          break;
-        }
-
-        commitStartedRecipe(options.registry, options.state, device, recipe);
-        deviceState.channelRecipes[channel.id] = recipe;
-
-        if (remainingOverflowTicks < recipe.durationTicks) {
-          recipe.progressTicks = remainingOverflowTicks;
-          remainingOverflowTicks = 0;
-          break;
-        }
-
-        recipe.progressTicks = recipe.durationTicks;
-        recipe.state = "waiting-output";
-        if (!completeRecipeIfPossible({
-          registry: options.registry,
-          topology: options.topology,
-          state: options.state,
-          deviceId,
-          recipe,
-          regionalWarehouse: options.regionalWarehouse,
-        })) {
-          remainingOverflowTicks = 0;
-          deviceState.block = true;
-          break;
-        }
-
-        remainingOverflowTicks -= recipe.durationTicks;
-        deviceState.channelRecipes[channel.id] = null;
-        deviceState.block = false;
+      const recipe = selectStartableRecipe(
+        options.registry,
+        options.topology,
+        options.state,
+        device,
+        channel,
+      );
+      if (recipe === null) {
+        continue;
       }
+      commitStartedRecipe(options.registry, options.state, device, recipe);
+      deviceState.channelRecipes[channel.id] = recipe;
 
-      const deviceOverflow = options.remainingOverflowTicksByDeviceChannel[deviceId];
-      if (deviceOverflow !== undefined) {
-        deviceOverflow[channel.id] = remainingOverflowTicks;
-      }
+      // AI-REMOVED 2026-09-04:
+      // Reason: Stage5 不得用 Stage1 overrun 连续启动、完成或预推进下一轮配方。
+      // Trigger: ST2-RQ-024 要求完成过量钳制并丢弃，下一轮必须从 0 开始。
+      // Evidence: 上方只选择一次配方并以 selectStartableRecipe 的 progressTicks=0 提交。
+      // Replacement: 上方单次 selectStartableRecipe + commitStartedRecipe。
+      // Risk: Legacy 粗粒度 tick 的同帧多轮产出被移除；这是明确的新时间语义。
+      // Human Review: Required
+      //
+      // Original code:
+      // let remainingOverflowTicks =
+      //   options.remainingOverflowTicksByDeviceChannel[deviceId]?.[channel.id] ?? 0;
+      //
+      // while (deviceState.channelRecipes[channel.id] === undefined
+      //   || deviceState.channelRecipes[channel.id] === null) {
+      //   const recipe = selectStartableRecipe(
+      //     options.registry,
+      //     options.topology,
+      //     options.state,
+      //     device,
+      //     channel,
+      //   );
+      //   if (recipe === null) {
+      //     remainingOverflowTicks = 0;
+      //     break;
+      //   }
+      //
+      //   commitStartedRecipe(options.registry, options.state, device, recipe);
+      //   deviceState.channelRecipes[channel.id] = recipe;
+      //
+      //   if (remainingOverflowTicks < recipe.durationTicks) {
+      //     recipe.progressTicks = remainingOverflowTicks;
+      //     remainingOverflowTicks = 0;
+      //     break;
+      //   }
+      //
+      //   recipe.progressTicks = recipe.durationTicks;
+      //   recipe.state = "waiting-output";
+      //   if (!completeRecipeIfPossible({
+      //     registry: options.registry,
+      //     topology: options.topology,
+      //     state: options.state,
+      //     deviceId,
+      //     recipe,
+      //     regionalWarehouse: options.regionalWarehouse,
+      //   })) {
+      //     remainingOverflowTicks = 0;
+      //     deviceState.block = true;
+      //     break;
+      //   }
+      //
+      //   remainingOverflowTicks -= recipe.durationTicks;
+      //   deviceState.channelRecipes[channel.id] = null;
+      //   deviceState.block = false;
+      // }
+      //
+      // const deviceOverflow = options.remainingOverflowTicksByDeviceChannel[deviceId];
+      // if (deviceOverflow !== undefined) {
+      //   deviceOverflow[channel.id] = remainingOverflowTicks;
+      // }
     }
     
     if (options.channelType === "normal-channel") {
@@ -292,22 +336,31 @@ function commitStartedRecipe(
   // }
 }
 
-function cloneOverflowTicks(
-  overflowTicksByDeviceChannel:
-    | Stage1AdvanceResult["overflowTicksByDeviceChannel"]
-    | undefined,
-): Record<string, Record<string, number>> {
-  if (overflowTicksByDeviceChannel === undefined) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(overflowTicksByDeviceChannel).map(([deviceId, channelOverflow]) => [
-      deviceId,
-      { ...channelOverflow },
-    ]),
-  );
-}
+// AI-REMOVED 2026-09-04:
+// Reason: Stage5 不再复制或消费 Stage1 overflow map。
+// Trigger: ST2-RQ-024 禁止 remainder 结转。
+// Evidence: settleRecipes 已移除 Stage1AdvanceResult 参数。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function cloneOverflowTicks(
+//   overflowTicksByDeviceChannel:
+//     | Stage1AdvanceResult["overflowTicksByDeviceChannel"]
+//     | undefined,
+// ): Record<string, Record<string, number>> {
+//   if (overflowTicksByDeviceChannel === undefined) {
+//     return {};
+//   }
+//
+//   return Object.fromEntries(
+//     Object.entries(overflowTicksByDeviceChannel).map(([deviceId, channelOverflow]) => [
+//       deviceId,
+//       { ...channelOverflow },
+//     ]),
+//   );
+// }
 
 // AI-REMOVED 2026-07-23:
 // Reason: 旧实现只启动一轮 progress=0 配方，无法消费 Stage1 延迟交接的粗步长 overflowTicks。

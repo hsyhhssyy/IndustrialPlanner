@@ -38,6 +38,8 @@ describe("simulation playback backpressure", () => {
     });
 
     await action.advancePlaybackByDeltaMs(100);
+    // AI-CORRECTION 2026-09-04: 公开游标每帧最多跨过一个真实 tick 区间，墙钟欠账保留在私有目标中逐帧消费。
+    // AI-CORRECTION 2026-09-04: 上一行已被实现审计否定；真实 tick 区间只钳制 progress 展示，播放游标仍按本帧墙钟目标推进。
     expect(state.currentPlaybackTickNumber).toBe(32);
     expect(getTickSnapshotRange).toHaveBeenLastCalledWith(1, 20, 0, 16);
 
@@ -46,8 +48,22 @@ describe("simulation playback backpressure", () => {
     await Promise.resolve();
 
     await action.advancePlaybackByDeltaMs(0);
+    // AI-REMOVED 2026-09-04:
+    // Reason: 播放游标无需逐真实 tick 追赶；范围响应应直接发布目标之前最新的真实快照。
+    // Trigger: 回放边界审计确认单区间限制属于 progress 展示层。
+    // Evidence: 单次 advancePlaybackByDeltaMs(0) 已从稀疏范围选中 tick 17。
+    // Replacement: 上方单次 advancePlaybackByDeltaMs(0)。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // for (let frame = 1; frame < 17; frame += 1) {
+    //   await action.advancePlaybackByDeltaMs(0);
+    // }
 
     expect(state.currentSnapshot?.tickNumber).toBe(17);
+    await Promise.resolve();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(acknowledgePresentedTick).toHaveBeenCalledWith(17, 0);
     await Promise.resolve();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -58,6 +74,18 @@ describe("simulation playback backpressure", () => {
     await Promise.resolve();
     await Promise.resolve();
     await action.advancePlaybackByDeltaMs(0);
+    // AI-REMOVED 2026-09-04:
+    // Reason: 第二段范围同样应一次选择不晚于墙钟目标的最新真实快照。
+    // Trigger: 回放边界审计确认播放游标不受单真实 tick 区间限制。
+    // Evidence: 第二段响应包含 tick 18..37，目标 tick 32 可直接发布。
+    // Replacement: 上方单次 advancePlaybackByDeltaMs(0)。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // for (let frame = 1; frame < 15; frame += 1) {
+    //   await action.advancePlaybackByDeltaMs(0);
+    // }
 
     expect(state.currentSnapshot?.tickNumber).toBe(32);
     expect(acknowledgePresentedTick).toHaveBeenCalledWith(32, 0);
@@ -306,6 +334,8 @@ function createTickSnapshot(tickNumber: number): RuntimeTickSnapshot {
     topologyId: "topology:test",
     documentHash: "document:test",
     tickNumber,
+    standardTickRate: 20,
+    tickRate: 20,
     status: tickNumber === 0 ? "initial" : "running",
     totalPowerDemand: 0,
     currentPowerGeneration: 0,

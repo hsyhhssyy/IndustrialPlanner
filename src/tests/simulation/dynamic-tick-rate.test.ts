@@ -68,6 +68,17 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       transportClass: "anchor" as const,
     };
 
+    // AI-REMOVED 2026-09-04:
+    // Reason: 测试准备阶段误加了与下方相位断言重复的 tick 赋值。
+    // Trigger: ST2-RQ-024 测试改写时匹配到了同形的 topology/state 初始化片段。
+    // Evidence: 下方首个断言前已经显式设置 state.tickNumber = 1。
+    // Replacement: 下方逐相位赋值。
+    // Risk: None
+    // Human Review: Required
+    //
+    // Original code:
+    // state.tickNumber = 1;
+
     state.tickNumber = 1;
     expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 2;
@@ -119,7 +130,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     runtime.advanceToTick(20);
 
-    expect(runtime.getStatus().dynamicTickRate).toBe(4);
+    expect(runtime.getStatus().dynamicTickRate).toBe(2);
 
     runtime.handleRequest({
       type: "set-simulation-speed",
@@ -399,18 +410,18 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const normal = readProductionStatsAtSpeed(1);
     const dynamic = readProductionStatsAtSpeed(4);
 
-    expect(normal.producedPerMinute).toBe(240);
+    expect(normal.producedPerMinute).toBe(120);
     expect(dynamic.initialDynamicTickRate).toBeLessThan(20);
-    expect(dynamic.producedPerMinute).toBe(240);
+    expect(dynamic.producedPerMinute).toBe(120);
   });
 
-  it("carries production overflow across successful output writes", () => {
+  it("discards production overrun and starts the next run at zero", () => {
     const topology = createProductionOverflowTopology(10);
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    const stage1AdvanceResult = advanceDevices(registry, topology, state, 7);
-    expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main).toBe(5);
+    advanceDevices(registry, topology, state, 7);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -425,12 +436,11 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       "infinite",
       Infinity,
       topology.totalPowerDemand,
-      stage1AdvanceResult,
     );
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
-      count: 2,
+      count: 1,
     });
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
       recipeId: "recipe:test",
@@ -439,20 +449,23 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
   });
 
-  it("pins production progress at 100 percent and discards overflow when output is blocked", () => {
+  it("pins production progress at 100 percent and discards overrun when output is blocked", () => {
     const topology = createProductionOverflowTopology(1);
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
+    state.persistent.slots["slot:out"] = { itemType: "item_test", count: 1 };
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    const stage1AdvanceResult = advanceDevices(registry, topology, state, 9);
+    advanceDevices(registry, topology, state, 9);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
       count: 1,
     });
-    expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
-      .toBe(7);
-    expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
+    expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
+      progressTicks: 10,
+      state: "waiting-output",
+    });
 
     settleRecipes(
       registry,
@@ -461,7 +474,6 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       "infinite",
       Infinity,
       topology.totalPowerDemand,
-      stage1AdvanceResult,
     );
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
@@ -470,10 +482,90 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
       recipeId: "recipe:test",
-      progressTicks: 5,
+      progressTicks: 10,
       state: "waiting-output",
     });
   });
+
+  // AI-REMOVED 2026-09-04:
+  // Reason: 旧回归测试把 Stage1 overrun 作为跨阶段公开结果，并要求 Stage5 把余量推进到下一轮。
+  // Trigger: ST2-RQ-024 明确禁止 overflow remainder chain。
+  // Evidence: 新用例分别验证成功完成后下一轮 progress=0，以及输出阻塞时 progress 钳制在 duration。
+  // Replacement: 上方两个 overrun 回归用例。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // it("carries production overflow across successful output writes", () => {
+  //   const topology = createProductionOverflowTopology(10);
+  //   const state = createSimulationMutableRuntimeState(topology);
+  //   state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
+  //
+  //   const stage1AdvanceResult = advanceDevices(registry, topology, state, 7);
+  //   expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main).toBe(5);
+  //
+  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
+  //     itemType: "item_test",
+  //     count: 1,
+  //   });
+  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
+  //
+  //   settleRecipes(
+  //     registry,
+  //     topology,
+  //     state,
+  //     "infinite",
+  //     Infinity,
+  //     topology.totalPowerDemand,
+  //     stage1AdvanceResult,
+  //   );
+  //
+  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
+  //     itemType: "item_test",
+  //     count: 2,
+  //   });
+  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
+  //     recipeId: "recipe:test",
+  //     progressTicks: 0,
+  //     state: "running",
+  //   });
+  // });
+  //
+  // it("pins production progress at 100 percent and discards overflow when output is blocked", () => {
+  //   const topology = createProductionOverflowTopology(1);
+  //   const state = createSimulationMutableRuntimeState(topology);
+  //   state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
+  //
+  //   const stage1AdvanceResult = advanceDevices(registry, topology, state, 9);
+  //
+  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
+  //     itemType: "item_test",
+  //     count: 1,
+  //   });
+  //   expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
+  //     .toBe(7);
+  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
+  //
+  //   settleRecipes(
+  //     registry,
+  //     topology,
+  //     state,
+  //     "infinite",
+  //     Infinity,
+  //     topology.totalPowerDemand,
+  //     stage1AdvanceResult,
+  //   );
+  //
+  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
+  //     itemType: "item_test",
+  //     count: 1,
+  //   });
+  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
+  //     recipeId: "recipe:test",
+  //     progressTicks: 5,
+  //     state: "waiting-output",
+  //   });
+  // });
 
   // AI-REMOVED 2026-07-23:
   // Reason: Stage1 已成功完成旧配方时必须保存 overflow=7；输出阻塞发生在 Stage5 尝试完成下一配方时。
@@ -495,8 +587,9 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   it("does not commit partial recipe outputs when local transaction preflight fails", () => {
     const topology = createProductionOverflowTopology(1);
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
     state.persistent.devices["device:maker"]!.channelRecipes["main"] =
-      createRunningRecipe(5, 2);
+      createRunningRecipe(9, 2);
 
     advanceDevices(registry, topology, state, 1);
 
@@ -506,7 +599,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"])
       .toMatchObject({
-        progressTicks: 5,
+        progressTicks: 10,
         state: "waiting-output",
       });
   });
@@ -541,7 +634,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       simulationSpeed: 1,
     });
 
-    for (let tickNumber = 1; tickNumber <= 7; tickNumber += 1) {
+    for (let tickNumber = 1; tickNumber <= 12; tickNumber += 1) {
       runtime.advanceToTick(tickNumber);
     }
 
@@ -780,7 +873,7 @@ function createRunningRecipe(
   const plan: CompiledSimulationRecipePlan = {
     recipeId: "recipe:test",
     recipeType: "immediate-consume",
-    durationTicks: 5,
+    durationTicks: 10,
     inputs: [],
     outputs: [{ itemId: "item_test", amount: outputAmount }],
     ingredientNodeIds: [],
@@ -794,7 +887,7 @@ function createRunningRecipe(
     recipeId: "recipe:test",
     recipeType: "immediate-consume" as const,
     progressTicks,
-    durationTicks: 5,
+    durationTicks: 10,
     state: "running" as const,
     plan,
     reservations: [],
@@ -811,7 +904,7 @@ function createTestRecipe(
   return {
     id,
     nameKey: `test.recipe.${id}`,
-    durationSeconds: 0.25,
+    durationSeconds: 0.5,
     inputs,
     outputs,
     machineId,

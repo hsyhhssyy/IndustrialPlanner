@@ -21,6 +21,7 @@ import type {
   CompiledSimulationTopology,
   SimulationRecipeType,
 } from "../types";
+import { convertSimulationSecondsToTicksExact } from "../tick-rate";
 import {
   DENSE_INDEX_NONE,
   createDenseTopologyLookup,
@@ -171,9 +172,10 @@ function compileChannelCandidates(options: {
         ? "dynamic-belt-transfer"
         : "dynamic-pipe-transfer"}`,
       recipeType: "reserved-item",
-      durationTicks: Math.max(
-        1,
-        Math.round(durationSeconds * options.topology.standardTickRate),
+      durationTicks: requireExactDurationTicks(
+        durationSeconds,
+        options.topology.standardTickRate,
+        `${options.device.definitionId}:transport`,
       ),
       inputs: [{ kind: DENSE_RECIPE_ITEM_ANY, value: DENSE_INDEX_NONE, amount: 1 }],
       outputs: [{
@@ -243,7 +245,11 @@ function compileRecipeProgram(
   return {
     recipeId: recipe.id,
     recipeType: recipe.recipeType,
-    durationTicks: Math.max(1, Math.round(recipe.durationSeconds * topology.standardTickRate)),
+    durationTicks: requireExactDurationTicks(
+      recipe.durationSeconds,
+      topology.standardTickRate,
+      recipe.id,
+    ),
     inputs: recipe.inputs.map((input) => compileItemRule(input, itemIndexById, false)),
     outputs: recipe.outputs.map((output) => compileItemRule(output, itemIndexById, true)),
     requiredGasItemIndex: recipe.requiredGasDiffusion === undefined
@@ -333,17 +339,42 @@ function resolveTransportPeriodTicks(
 ): number {
   if (registry.queries.isBeltFamily(definitionId)) {
     return Math.min(
-      Math.max(1, Math.round(BELT_TRANSPORT_DURATION_SECONDS * topology.standardTickRate)),
+      requireExactDurationTicks(
+        BELT_TRANSPORT_DURATION_SECONDS,
+        topology.standardTickRate,
+        `${definitionId}:belt-transport`,
+      ),
       topology.standardTickRate,
     );
   }
   if (registry.queries.isPipeFamily(definitionId)) {
     return Math.min(
-      Math.max(1, Math.round(PIPE_TRANSPORT_DURATION_SECONDS * topology.standardTickRate)),
+      requireExactDurationTicks(
+        PIPE_TRANSPORT_DURATION_SECONDS,
+        topology.standardTickRate,
+        `${definitionId}:pipe-transport`,
+      ),
       topology.standardTickRate,
     );
   }
   return 0;
+}
+
+function requireExactDurationTicks(
+  durationSeconds: number,
+  standardTickRate: number,
+  recipeId: string,
+): number {
+  const durationTicks = convertSimulationSecondsToTicksExact(
+    durationSeconds,
+    standardTickRate,
+  );
+  if (durationTicks === null) {
+    throw new Error(
+      `Dense recipe "${recipeId}" duration ${durationSeconds}s is not exactly representable at ${standardTickRate} TPS.`,
+    );
+  }
+  return durationTicks;
 }
 
 function requireItemIndex(index: ReadonlyMap<string, number>, itemId: string): number {

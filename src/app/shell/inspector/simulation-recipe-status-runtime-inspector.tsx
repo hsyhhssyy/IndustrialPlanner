@@ -14,6 +14,8 @@ import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { isAutomaticRecipeChannelMode } from "@/shared/recipe-channel-behavior";
 import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
+import { useSimulationRecipePresentation } from "./use-simulation-recipe-presentation";
 
 export const SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY =
   "simulation-recipe-status-runtime-inspector";
@@ -21,9 +23,11 @@ export const SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY =
 // AI-CORRECTION 2026-05-29: 新增 channel 级别的进度计算。
 function resolveChannelProgressPercent(
   channelStatus: SimulationDeviceRuntimeChannelRecipeStatus | null,
+  presentedProgressSeconds = channelStatus?.progressSeconds ?? null,
 ): number | null {
   if (channelStatus === null) return null;
-  const { desiredSeconds, progressSeconds } = channelStatus;
+  const { desiredSeconds } = channelStatus;
+  const progressSeconds = presentedProgressSeconds;
   if (progressSeconds === null || desiredSeconds === null || desiredSeconds <= 0) return null;
   const pct = progressSeconds / desiredSeconds * 100;
   if (!Number.isFinite(pct)) return null;
@@ -76,6 +80,18 @@ export function SimulationRecipeStatusRuntimeInspector({
   entity,
   definition,
 }: SimulationRecipeStatusRuntimeInspectorProps) {
+  const shouldAnimate = Object.values(runtimeStatus?.channelRecipes ?? {})
+    .some((status) => status?.isProgressing === true);
+  const presentation = useSimulationRecipePresentation(appHost, shouldAnimate);
+  const resolveProgressPercent = (
+    status: SimulationDeviceRuntimeChannelRecipeStatus | null,
+  ): number | null => resolveChannelProgressPercent(
+    status,
+    resolvePresentedRecipeProgressSeconds({
+      channelStatus: status,
+      ...presentation,
+    }),
+  );
   // 气体环境 tag（必须在所有 early return 之前调用，遵循 hooks 规则）
   const gasEnvTag = (() => {
     if (!appHost || !entity || !definition) return null;
@@ -190,6 +206,7 @@ export function SimulationRecipeStatusRuntimeInspector({
           channelRecipeStatus={channelRecipeStatus}
           index={index}
           t={t}
+          resolveProgressPercent={resolveProgressPercent}
         />
       )}
       {hasAuto && hasManual && (
@@ -205,6 +222,7 @@ export function SimulationRecipeStatusRuntimeInspector({
           appHost={appHost}
           entity={entity}
           definition={definition}
+          resolveProgressPercent={resolveProgressPercent}
           allowDuplicateRecipesAcrossChannels={
             recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false
           }
@@ -223,6 +241,9 @@ interface AutoRecipeSectionProps {
   channelRecipeStatus: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null>;
   index: ProductionPlanningIndex;
   t: (key: string) => string;
+  resolveProgressPercent: (
+    status: SimulationDeviceRuntimeChannelRecipeStatus | null,
+  ) => number | null;
 }
 
 function AutoRecipeSection({
@@ -230,6 +251,7 @@ function AutoRecipeSection({
   channelRecipeStatus,
   index,
   t,
+  resolveProgressPercent,
 }: AutoRecipeSectionProps) {
   // 收集运行时正在运行的自动 channel
   const runningChannels: { ch: RecipeChannelDefinition; status: SimulationDeviceRuntimeChannelRecipeStatus }[] = [];
@@ -248,7 +270,7 @@ function AutoRecipeSection({
       {Array.from({ length: displayCount }).map((_, i) => {
         const running = runningChannels[i] ?? null;
         if (running !== null) {
-          const pct = resolveChannelProgressPercent(running.status);
+          const pct = resolveProgressPercent(running.status);
           return (
             <div key={running.ch.id} className={cm(styles, "recipe-channel-row")} data-recipe-row-mode="locked">
               <RecipeDisplay
@@ -294,6 +316,9 @@ interface ManualRecipeSectionProps {
   entity?: WorldEntity;
   definition?: EntityDefinition;
   allowDuplicateRecipesAcrossChannels: boolean;
+  resolveProgressPercent: (
+    status: SimulationDeviceRuntimeChannelRecipeStatus | null,
+  ) => number | null;
 }
 
 function ManualRecipeSection({
@@ -306,6 +331,7 @@ function ManualRecipeSection({
   entity,
   definition,
   allowDuplicateRecipesAcrossChannels,
+  resolveProgressPercent,
 }: ManualRecipeSectionProps) {
   // 已填充的手动 channel（在 entity config 中有配方记录）
   const filledChannels = manualChannels.filter(
@@ -351,7 +377,7 @@ function ManualRecipeSection({
       {filledChannels.map((ch) => {
         const recipeId = storedRecipes[ch.id];
         const status = channelRecipeStatus[ch.id] ?? null;
-        const pct = resolveChannelProgressPercent(status);
+        const pct = resolveProgressPercent(status);
         return (
           <div key={ch.id} className={cm(styles, "recipe-channel-row")} data-recipe-row-mode="removable">
             <RecipeDisplay

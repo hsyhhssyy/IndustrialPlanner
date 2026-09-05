@@ -261,6 +261,8 @@ describe("ProblemInspector", () => {
     const appHost = createMockAppHost({
       documentRuntimeStatus: {
         tickNumber: 100,
+        standardTickRate: 2,
+        tickRate: 2,
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
@@ -293,6 +295,8 @@ describe("ProblemInspector", () => {
     const appHost = createMockAppHost({
       documentRuntimeStatus: {
         tickNumber: 100,
+        standardTickRate: 2,
+        tickRate: 2,
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
@@ -324,6 +328,8 @@ describe("ProblemInspector", () => {
     const appHost = createMockAppHost({
       documentRuntimeStatus: {
         tickNumber: 100,
+        standardTickRate: 2,
+        tickRate: 2,
         totalPowerDemand: 100,
         currentPowerGeneration: 120,
         isPowerOutage: false,
@@ -364,6 +370,7 @@ describe("ProblemInspector", () => {
           progressSeconds: 2,
           desiredSeconds: 2,
           state: "waiting-output",
+          isProgressing: false,
         },
       },
       slotItems: [],
@@ -398,6 +405,7 @@ describe("ProblemInspector", () => {
           progressSeconds: 0.5,
           desiredSeconds: 2,
           state: "running",
+          isProgressing: true,
         },
       },
       slotItems: [],
@@ -456,6 +464,8 @@ describe("ProblemInspector", () => {
       },
       documentRuntimeStatus: {
         tickNumber: 100,
+        standardTickRate: 2,
+        tickRate: 2,
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
@@ -470,6 +480,7 @@ describe("ProblemInspector", () => {
           progressSeconds: 2,
           desiredSeconds: 2,
           state: "waiting-output",
+          isProgressing: false,
         },
       },
       slotItems: [],
@@ -505,6 +516,8 @@ describe("ProblemInspector", () => {
       placementValidation: { canPlace: true, reasons: [] },
       documentRuntimeStatus: {
         tickNumber: 100,
+        standardTickRate: 2,
+        tickRate: 2,
         totalPowerDemand: 100,
         currentPowerGeneration: 120,
         isPowerOutage: false,

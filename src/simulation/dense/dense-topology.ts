@@ -11,7 +11,7 @@ import type {
   SimulationPortDirection,
 } from "../types";
 
-export const DENSE_SIMULATION_PROTOCOL_VERSION = 1 as const;
+export const DENSE_SIMULATION_PROTOCOL_VERSION = 2 as const;
 export const DENSE_INDEX_NONE = -1;
 
 export interface DenseTopologyDictionary {

@@ -7,6 +7,8 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
+import { useSimulationRecipePresentation } from "./use-simulation-recipe-presentation";
 
 export const SUBMIT_TO_WAREHOUSE_INSPECTOR_KEY = "submit-to-warehouse";
 const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
@@ -29,6 +31,11 @@ export function SubmitToWarehouseInspector({
 }: SubmitToWarehouseInspectorProps) {
   const registry = appHost.workspace.registry;
   const storedRecipes = (entity.config?.channelRecipes as Record<string, string> | undefined) ?? {};
+  const submitRuntimeStatus = resolveSubmitChannelStatus(runtimeStatus);
+  const presentation = useSimulationRecipePresentation(
+    appHost,
+    submitRuntimeStatus?.isProgressing === true,
+  );
   const submitChannel = definition.recipeChannels.find(
     (ch) => ch.id === WAREHOUSE_SUBMIT_CHANNEL_ID && ch.manualRecipeOnly,
   );
@@ -43,7 +50,15 @@ export function SubmitToWarehouseInspector({
   }
 
   const isSelected = storedRecipes[submitChannel.id] === WAREHOUSE_SUBMIT_RECIPE_ID;
-  const remainingSeconds = isSelected ? resolveSubmitRemainingSeconds(runtimeStatus) : null;
+  const remainingSeconds = isSelected
+    ? resolveSubmitRemainingSeconds(
+        submitRuntimeStatus,
+        resolvePresentedRecipeProgressSeconds({
+          channelStatus: submitRuntimeStatus,
+          ...presentation,
+        }),
+      )
+    : null;
 
   const handleToggle = () => {
     const editor = appHost.workspace.editor;
@@ -180,9 +195,9 @@ export function SubmitToWarehouseInspector({
   );
 }
 
-function resolveSubmitRemainingSeconds(
+function resolveSubmitChannelStatus(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
-): number | null {
+): SimulationDeviceRuntimeStatusReadModel["channelRecipes"][string] | null {
   // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从
   //   SimulationDeviceRuntimeStatusReadModel 删除，改为从 channelRecipes 中
   //   查找正在运行 r_warehouse_submit 的 channel 并读取其进度。
@@ -192,9 +207,15 @@ function resolveSubmitRemainingSeconds(
         ([, chStatus]) => chStatus?.recipeId === WAREHOUSE_SUBMIT_RECIPE_ID,
       )
     : undefined;
-  const submitChannelStatus = submitChannelEntry?.[1] ?? null;
+  return submitChannelEntry?.[1] ?? null;
+}
+
+function resolveSubmitRemainingSeconds(
+  submitChannelStatus: SimulationDeviceRuntimeStatusReadModel["channelRecipes"][string] | null,
+  presentedProgressSeconds: number | null,
+): number | null {
   const isRunning = submitChannelStatus !== null;
-  const progressSeconds = submitChannelStatus?.progressSeconds ?? 0;
+  const progressSeconds = presentedProgressSeconds ?? 0;
   const desiredSeconds = submitChannelStatus?.desiredSeconds ?? 0;
 
   return isRunning && desiredSeconds > 0

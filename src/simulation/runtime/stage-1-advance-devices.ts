@@ -30,17 +30,28 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 //   finishRecipeIfPossible,
 // } from "./runtime-slot-access";
 // import { submitSlotsToWarehouse } from "./warehouse-submit";
+// AI-CORRECTION 2026-09-04: ST2-RQ-024 取消 Stage1 → Stage5 overflow 交接；
+// Stage1 现在只钳制并完成当前配方，任何超出 durationTicks 的步长都被丢弃。
 
-export interface Stage1AdvanceResult {
-  readonly overflowTicksByDeviceChannel: Readonly<
-    Record<string, Readonly<Record<string, number>>>
-  >;
-}
-
-interface AdvanceChannelRecipeResult {
-  readonly recipe: RuntimeDeviceRecipeState | null;
-  readonly overflowTicks: number;
-}
+// AI-REMOVED 2026-09-04:
+// Reason: 配方完成时超出的步长不得结转到下一轮，Stage1 不再向 Stage5 传递 overflow。
+// Trigger: ST2-RQ-024 要求完成时钳制并丢弃 overrun，禁止 remainder 链式结转。
+// Evidence: advanceChannelRecipe 现将 progressTicks 钳制到 durationTicks，Stage5 只以 progress=0 启动一轮。
+// Replacement: advanceChannelRecipe 返回 RuntimeDeviceRecipeState | null。
+// Risk: 粗粒度 Legacy tick 下不再通过同一 tick 连续完成多轮；这是需求规定的新语义。
+// Human Review: Required
+//
+// Original code:
+// export interface Stage1AdvanceResult {
+//   readonly overflowTicksByDeviceChannel: Readonly<
+//     Record<string, Readonly<Record<string, number>>>
+//   >;
+// }
+//
+// interface AdvanceChannelRecipeResult {
+//   readonly recipe: RuntimeDeviceRecipeState | null;
+//   readonly overflowTicks: number;
+// }
 /**
  * 对应《仿真运行原理》§5.1 Tick 阶段 1：推进设备内部状态。
  * 该阶段只处理已经启动的配方：累计进度，完成后尝试把产物写入输出缓存；
@@ -56,11 +67,30 @@ export function advanceDevices(
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
   regionalWarehouse?: RegionalWarehouseWriteContext,
-): Stage1AdvanceResult {
+): void {
+  // AI-REMOVED 2026-09-04:
+  // Reason: advanceDevices 不再返回跨阶段 overflow 结果。
+  // Trigger: ST2-RQ-024 禁止 remainder 结转。
+  // Evidence: 所有调用方均改为 void 调用。
+  // Replacement: void
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // ): Stage1AdvanceResult {
   const progressTicks = Math.max(1, Math.trunc(standardStepTicks));
   const powerInsufficient = powerMode === "real"
     && currentPowerGeneration < effectiveTotalPowerDemand;
-  const overflowTicksByDeviceChannel: Record<string, Record<string, number>> = {};
+  // AI-REMOVED 2026-09-04:
+  // Reason: Stage1 不再收集配方 overrun。
+  // Trigger: ST2-RQ-024 禁止将完成超量结转到下一轮。
+  // Evidence: advanceChannelRecipe 只返回当前 channel 的运行态。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const overflowTicksByDeviceChannel: Record<string, Record<string, number>> = {};
 
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
@@ -93,7 +123,7 @@ export function advanceDevices(
         }
       }
 
-      const result = advanceChannelRecipe({
+      deviceState.channelRecipes[chId] = advanceChannelRecipe({
         registry,
         topology,
         state,
@@ -103,16 +133,33 @@ export function advanceDevices(
         progressTicks,
         regionalWarehouse,
       });
-      deviceState.channelRecipes[chId] = result.recipe;
-      if (result.overflowTicks > 0) {
-        const deviceOverflow = overflowTicksByDeviceChannel[deviceId] ?? {};
-        deviceOverflow[chId] = result.overflowTicks;
-        overflowTicksByDeviceChannel[deviceId] = deviceOverflow;
-      }
+      // AI-REMOVED 2026-09-04:
+      // Reason: 完成超量不得写入 per-device/channel remainder map。
+      // Trigger: ST2-RQ-024 禁止 overflow remainder chain。
+      // Evidence: advanceChannelRecipe 已在完成边界钳制 progressTicks。
+      // Replacement: 上方直接保存 advanceChannelRecipe 返回值。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // deviceState.channelRecipes[chId] = result.recipe;
+      // if (result.overflowTicks > 0) {
+      //   const deviceOverflow = overflowTicksByDeviceChannel[deviceId] ?? {};
+      //   deviceOverflow[chId] = result.overflowTicks;
+      //   overflowTicksByDeviceChannel[deviceId] = deviceOverflow;
+      // }
     }
   }
-
-  return { overflowTicksByDeviceChannel };
+  // AI-REMOVED 2026-09-04:
+  // Reason: Stage1 已无跨阶段 overflow 结果。
+  // Trigger: ST2-RQ-024 禁止 remainder 结转。
+  // Evidence: 调用方不再接收 Stage1AdvanceResult。
+  // Replacement: void return
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // return { overflowTicksByDeviceChannel };
 }
 
 function advanceChannelRecipe(options: {
@@ -124,18 +171,30 @@ function advanceChannelRecipe(options: {
   readonly recipe: RuntimeDeviceRecipeState;
   readonly progressTicks: number;
   readonly regionalWarehouse?: RegionalWarehouseWriteContext;
-}): AdvanceChannelRecipeResult {
+}): RuntimeDeviceRecipeState | null {
   const recipe = options.recipe;
 
   if (recipe.state === "running") {
-    recipe.progressTicks += options.progressTicks;
+    recipe.progressTicks = Math.min(
+      recipe.durationTicks,
+      recipe.progressTicks + options.progressTicks,
+    );
     if (recipe.progressTicks < recipe.durationTicks) {
-      return { recipe, overflowTicks: 0 };
+      return recipe;
     }
     recipe.state = "waiting-output";
   }
 
-  const overflowTicks = Math.max(0, recipe.progressTicks - recipe.durationTicks);
+  // AI-REMOVED 2026-09-04:
+  // Reason: progress 已在完成边界钳制，禁止计算或结转 overflow。
+  // Trigger: ST2-RQ-024 明确要求 overrun 丢弃。
+  // Evidence: 上方 Math.min(durationTicks, progressTicks + stepTicks)。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const overflowTicks = Math.max(0, recipe.progressTicks - recipe.durationTicks);
   if (!completeRecipeIfPossible({
     registry: options.registry,
     topology: options.topology,
@@ -147,11 +206,11 @@ function advanceChannelRecipe(options: {
     recipe.progressTicks = recipe.durationTicks;
     recipe.state = "waiting-output";
     options.deviceState.block = true;
-    return { recipe, overflowTicks: 0 };
+    return recipe;
   }
 
   options.deviceState.block = false;
-  return { recipe: null, overflowTicks };
+  return null;
 }
 
 // AI-REMOVED 2026-07-23:

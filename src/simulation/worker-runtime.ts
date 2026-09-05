@@ -260,9 +260,18 @@ export class SimulationWorkerRuntime {
   private regionalAuthorityState: RegionWarehouseAuthorityState | null = null;
   private regionalActiveArbitration: RegionWarehouseArbitrationResult | null = null;
   private regionalAdvancePerTick = false;
-  private regionalGateStage1AdvanceResult:
-    | ReturnType<typeof advanceDevices>
-    | undefined = undefined;
+  // AI-REMOVED 2026-09-04:
+  // Reason: 区域模式不再跨 Stage 保存配方 overrun。
+  // Trigger: ST2-RQ-024 禁止 remainder 结转。
+  // Evidence: advanceDevices 返回 void，settleRecipes 不再接收 Stage1 结果。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private regionalGateStage1AdvanceResult:
+  //   | ReturnType<typeof advanceDevices>
+  //   | undefined = undefined;
   private regionalGateCurrentPowerGeneration = Infinity;
   private regionalGatePowerOutage = false;
   private regionalGateLastAdvancedTickNumber = 0;
@@ -755,7 +764,6 @@ export class SimulationWorkerRuntime {
       tickNumber,
       cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
     );
-    this.nextTickNumber = tickNumber + 1;
     this.retainedFromTick = tickNumber;
     this.latestTickNumber = tickNumber;
     this.lastRequestedTickNumber = tickNumber;
@@ -776,6 +784,9 @@ export class SimulationWorkerRuntime {
     // Original code:
     // this.forceHighestDynamicTickRateAtNextLegalPoint = false;
     this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+    this.nextTickNumber = tickNumber === 0
+      ? 1
+      : tickNumber + this.standardStepTicks;
     this.mode = "running";
     this.error = null;
     this.stopLineTick = this.nextTickNumber + MAX_RETAINED_TICKS;
@@ -805,9 +816,20 @@ export class SimulationWorkerRuntime {
     if (this.topology === null || resolveStandardStepTicks(dynamicTickRate, this.topology.standardTickRate) === null) {
       return;
     }
+    if (
+      this.runtimeState !== null
+      && !canAdjustDynamicTickRateAtTick({
+        registry: this.registry,
+        topology: this.topology,
+        standardTick: this.runtimeState.tickNumber,
+      })
+    ) {
+      return;
+    }
 
     this.fixedDynamicTickRate = dynamicTickRate;
     this.setDynamicTickRate(dynamicTickRate);
+    this.synchronizeCurrentTickRateInterval();
   }
 
   public createSparseTickSnapshot(tickNumber: number): RuntimeTickSnapshot | null {
@@ -828,7 +850,7 @@ export class SimulationWorkerRuntime {
         this.retainedFromTick ?? targetTickNumber,
         targetTickNumber,
       );
-      this.nextTickNumber = targetTickNumber + 1;
+      this.nextTickNumber = targetTickNumber + this.standardStepTicks;
       return snapshot;
     } catch (error) {
       this.mode = "error";
@@ -860,7 +882,13 @@ export class SimulationWorkerRuntime {
     state.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(this.topology, state);
     state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.registry, this.topology, state);
-    return createTickSnapshot(this.topology, state, isPowerOutage, currentPowerGeneration);
+    return createTickSnapshot(
+      this.topology,
+      state,
+      isPowerOutage,
+      currentPowerGeneration,
+      this.dynamicTickRate,
+    );
   }
 
   private patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): void {
@@ -1096,22 +1124,24 @@ export class SimulationWorkerRuntime {
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
     const baseTickNumber = this.runtimeState.tickNumber;
+    this.dynamicTickRate = topology.standardTickRate;
+    this.standardStepTicks = 1;
+    this.lastDynamicRateAdjustmentTick = null;
+    this.adjustDynamicTickRateAtLegalPoint(baseTickNumber);
     const baseSnapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
     this.tickSnapshots.set(baseTickNumber, baseSnapshot);
     this.tickRuntimeStates.set(
       baseTickNumber,
       cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
     );
-    this.nextTickNumber = baseTickNumber + 1;
+    this.nextTickNumber = baseTickNumber === 0
+      ? 1
+      : baseTickNumber + this.standardStepTicks;
     this.retainedFromTick = baseTickNumber;
     this.latestTickNumber = baseTickNumber;
     this.lastRequestedTickNumber = baseTickNumber;
     this.migrationAnchorTickNumber = baseTickNumber;
     this.presentationGeneration = null;
-    this.dynamicTickRate = topology.standardTickRate;
-    this.standardStepTicks = 1;
-    this.lastDynamicRateAdjustmentTick = null;
-    this.adjustDynamicTickRateAtLegalPoint(baseTickNumber);
     this.mode = "running";
     this.error = null;
 
@@ -1302,31 +1332,14 @@ export class SimulationWorkerRuntime {
       normalizedToTickNumber,
       this.latestTickNumber,
     );
-    for (
-      let tickNumber = normalizedFromTickNumber;
-      tickNumber <= availableToTickNumber;
-      tickNumber += 1
-    ) {
-      const snapshot = this.tickSnapshots.get(tickNumber);
-      if (snapshot === undefined) {
-        if (snapshots.length === 0) {
-          return {
-            generation,
-            fromTickNumber: normalizedFromTickNumber,
-            toTickNumber: normalizedToTickNumber,
-            status: createNotFoundStatus(
-              normalizedFromTickNumber,
-              "unknown",
-              this.retainedFromTick,
-              this.latestTickNumber,
-              this.tickSnapshots.size,
-            ),
-            snapshots: [],
-          };
-        }
-        break;
-      }
-
+    const availableTickNumbers = [...this.tickSnapshots.keys()]
+      .filter((tickNumber) => (
+        tickNumber >= normalizedFromTickNumber
+        && tickNumber <= availableToTickNumber
+      ))
+      .sort((left, right) => left - right);
+    for (const tickNumber of availableTickNumbers) {
+      const snapshot = this.tickSnapshots.get(tickNumber)!;
       snapshots.push(
         this.debugDataEnabled
           ? this.createDebugSnapshotReadModel(
@@ -1336,6 +1349,49 @@ export class SimulationWorkerRuntime {
           : snapshot,
       );
     }
+    // AI-REMOVED 2026-09-04:
+    // Reason: 连续整数扫描会在第一个非运行标准 tick 处截断合法的真实 tick 序列。
+    // Trigger: ST2-RQ-024 要求 Worker 只缓存和传输真实运行 tick。
+    // Evidence: standardStepTicks > 1 时真实键为 1、1+step、1+2*step……。
+    // Replacement: 上方按缓存键过滤请求范围并排序。
+    // Risk: Low；响应仍保持严格递增。
+    // Human Review: Required
+    //
+    // Original code:
+    // for (
+    //   let tickNumber = normalizedFromTickNumber;
+    //   tickNumber <= availableToTickNumber;
+    //   tickNumber += 1
+    // ) {
+    //   const snapshot = this.tickSnapshots.get(tickNumber);
+    //   if (snapshot === undefined) {
+    //     if (snapshots.length === 0) {
+    //       return {
+    //         generation,
+    //         fromTickNumber: normalizedFromTickNumber,
+    //         toTickNumber: normalizedToTickNumber,
+    //         status: createNotFoundStatus(
+    //           normalizedFromTickNumber,
+    //           "unknown",
+    //           this.retainedFromTick,
+    //           this.latestTickNumber,
+    //           this.tickSnapshots.size,
+    //         ),
+    //         snapshots: [],
+    //       };
+    //     }
+    //     break;
+    //   }
+    //
+    //   snapshots.push(
+    //     this.debugDataEnabled
+    //       ? this.createDebugSnapshotReadModel(
+    //           snapshot,
+    //           this.tickRuntimeStates.get(tickNumber) ?? this.runtimeState,
+    //         )
+    //       : snapshot,
+    //   );
+    // }
 
     this.scheduleBackgroundFill();
     return {
@@ -1523,7 +1579,7 @@ export class SimulationWorkerRuntime {
           this.retainedFromTick ?? this.nextTickNumber,
           this.nextTickNumber,
         );
-        this.nextTickNumber += 1;
+        this.nextTickNumber += this.standardStepTicks;
       } catch (error) {
         this.mode = "error";
         this.error = error instanceof Error ? error.message : String(error);
@@ -1679,7 +1735,6 @@ export class SimulationWorkerRuntime {
       this.powerMode,
       this.regionalGateCurrentPowerGeneration,
       this.effectiveTotalPowerDemand,
-      this.regionalGateStage1AdvanceResult,
       this.regionalGate.writeContext,
     );
     applyBlockageAutoClearance(this.topology, this.runtimeState);
@@ -1720,12 +1775,14 @@ export class SimulationWorkerRuntime {
     }
 
     this.regionalGate.setWarehouseProjection(this.runtimeState, options.nextWarehouseCounts);
+    this.adjustDynamicTickRateAtLegalPoint(gateTick);
     const snapshot = options.includeSnapshot
       ? createTickSnapshot(
           this.topology,
           this.runtimeState,
           this.regionalGatePowerOutage,
           this.regionalGateCurrentPowerGeneration,
+          this.dynamicTickRate,
         )
       : null;
     if (snapshot !== null && options.retainSnapshot !== false) {
@@ -1734,14 +1791,20 @@ export class SimulationWorkerRuntime {
       // 后台基地不保留边界展示快照，但仍推进到 gate tick 之后。
       this.latestTickNumber = gateTick;
       this.retainedFromTick = Math.min(this.retainedFromTick ?? gateTick, gateTick);
-      this.nextTickNumber = gateTick + 1;
+      this.nextTickNumber = gateTick + this.standardStepTicks;
     }
     this.regionalGatePausedTick = null;
     this.pendingRegionalDemand = [];
-    this.regionalGateStage1AdvanceResult = undefined;
-    if (snapshot !== null) {
-      this.adjustDynamicTickRateAtLegalPoint(gateTick);
-    }
+    // AI-REMOVED 2026-09-04:
+    // Reason: 区域模式不再保存或清空 Stage1 overflow 结果。
+    // Trigger: ST2-RQ-024 禁止 remainder 结转。
+    // Evidence: settleRecipes 已直接从零进度启动下一轮。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.regionalGateStage1AdvanceResult = undefined;
     return { tickNumber: gateTick, snapshot };
   }
 
@@ -1883,7 +1946,17 @@ export class SimulationWorkerRuntime {
     );
     rebuildExcludedItemTypesForTick(topology, state);
 
-    const stage1AdvanceResult = advanceDevices(
+    // AI-REMOVED 2026-09-04:
+    // Reason: 区域 Stage1 不再返回 overflow 交接对象。
+    // Trigger: ST2-RQ-024 禁止 remainder 结转。
+    // Evidence: advanceDevices 返回 void。
+    // Replacement: 下方直接调用 advanceDevices。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const stage1AdvanceResult = advanceDevices(
+    advanceDevices(
       this.registry,
       topology,
       state,
@@ -1913,7 +1986,16 @@ export class SimulationWorkerRuntime {
 
     this.regionalGateCurrentPowerGeneration = currentPowerGeneration;
     this.regionalGatePowerOutage = isPowerOutageRun;
-    this.regionalGateStage1AdvanceResult = stage1AdvanceResult;
+    // AI-REMOVED 2026-09-04:
+    // Reason: 区域 Stage1 不再产生可结转的 overflow 结果。
+    // Trigger: ST2-RQ-024 禁止 remainder 结转。
+    // Evidence: advanceDevices 返回 void。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.regionalGateStage1AdvanceResult = stage1AdvanceResult;
     this.regionalGatePausedTick = tickNumber;
     this.pendingRegionalDemand = gate.collectDemandBatch(this.registry, state, epochNumber);
     return {
@@ -1936,7 +2018,7 @@ export class SimulationWorkerRuntime {
       this.retainedFromTick ?? tickNumber,
       tickNumber,
     );
-    this.nextTickNumber = tickNumber + 1;
+    this.nextTickNumber = tickNumber + this.standardStepTicks;
   }
 
   private fillOneTick(): void {
@@ -1959,7 +2041,7 @@ export class SimulationWorkerRuntime {
         this.retainedFromTick ?? this.nextTickNumber,
         this.nextTickNumber,
       );
-      this.nextTickNumber += 1;
+      this.nextTickNumber += this.standardStepTicks;
     } catch (error) {
       this.mode = "error";
       this.error = error instanceof Error ? error.message : String(error);
@@ -2003,8 +2085,19 @@ export class SimulationWorkerRuntime {
     // AI-CORRECTION 2026-07-17: 动态帧率与严格物流统一以 tick 1 为相位原点。
     // 粗步长 10 必须在 1、11、21... 执行；否则从时间轴 tick 301 导入后会在 311、321...
     // 运行仿真，却因严格物流仍等待 10、20... 相位而永久停止交付。
-    const isDynamicStepBoundary = (tickNumber - 1) % this.standardStepTicks === 0;
-    const shouldRunRuntime = shouldAdvance && isDynamicStepBoundary;
+    const shouldRunRuntime = shouldAdvance;
+    // AI-CORRECTION 2026-09-04: nextTickNumber 现在只指向真实运行 tick；
+    // createNextTickSnapshot 不再为标准 tick 间隙生成虚拟快照，因此 shouldAdvance 即 shouldRunRuntime。
+    // AI-REMOVED 2026-09-04:
+    // Reason: 真实 tick 调度器已经按 standardStepTicks 跳过非运行标准 tick，不再需要二次相位判断。
+    // Trigger: ST2-RQ-024 禁止生成或公开虚拟 tick 快照。
+    // Evidence: fillOneTick/advanceToTick 在每次提交后以 standardStepTicks 更新 nextTickNumber。
+    // Replacement: shouldRunRuntime = shouldAdvance。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const isDynamicStepBoundary = (tickNumber - 1) % this.standardStepTicks === 0;
     // AI-REMOVED 2026-07-17:
     // Reason: 仅按 lastAdvancedTickNumber 累计步长会把动态帧率固定在 tick 0 相位。
     // Trigger: 严格物流相位改为 tick 1 后，正常动态帧率与时间轴粗步长必须使用同一相位原点。
@@ -2024,40 +2117,49 @@ export class SimulationWorkerRuntime {
       hotPath: undefined as TickPerfHotPathDetails | undefined,
     } : null;
 
-    if (shouldAdvance && !shouldRunRuntime) {
-      // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
-      const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, this.runtimeState);
-      const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
-      this.runtimeState.transient = createEmptyTransientState();
-      this.runtimeState.transient.isPowerOutage = isPowerOutage;
-      this.runtimeState.transient.activeConsumptionDeviceIds =
-        computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
-        this.registry,
-        this.topology,
-        this.runtimeState,
-      );
-      const t0 = this.perfEnabled ? performance.now() : 0;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
-      if (this.perfEnabled) {
-        perfTiming!.stages["createSnapshot"] = performance.now() - t0;
-        this.perfEntries.push({
-          tickNumber,
-          totalMs: performance.now() - perfTiming!.start,
-          stages: {
-            advanceDevices: 0,
-            buildSolveGraph: 0,
-            solveTransferGraph: 0,
-            rotateRoutingCursors: 0,
-            settleRecipes: 0,
-            maintainDomains: 0,
-            createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
-          },
-        });
-      }
-      this.adjustDynamicTickRateAtLegalPoint(tickNumber);
-      return snapshot;
-    }
+    // AI-REMOVED 2026-09-04:
+    // Reason: 非运行标准 tick 不再进入 Worker 缓存、协议或展示链路。
+    // Trigger: ST2-RQ-024 要求 Legacy 只输出真实运行 tick。
+    // Evidence: nextTickNumber 仅按当前 standardStepTicks 前进，范围查询只枚举真实缓存键。
+    // Replacement: 下方 shouldRunRuntime 分支。
+    // Risk: 调试输出不再包含非运行标准 tick；这是需求规定的新协议语义。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (shouldAdvance && !shouldRunRuntime) {
+    //   // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
+    //   const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, this.runtimeState);
+    //   const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
+    //   this.runtimeState.transient = createEmptyTransientState();
+    //   this.runtimeState.transient.isPowerOutage = isPowerOutage;
+    //   this.runtimeState.transient.activeConsumptionDeviceIds =
+    //     computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
+    //   this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+    //     this.registry,
+    //     this.topology,
+    //     this.runtimeState,
+    //   );
+    //   const t0 = this.perfEnabled ? performance.now() : 0;
+    //   const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
+    //   if (this.perfEnabled) {
+    //     perfTiming!.stages["createSnapshot"] = performance.now() - t0;
+    //     this.perfEntries.push({
+    //       tickNumber,
+    //       totalMs: performance.now() - perfTiming!.start,
+    //       stages: {
+    //         advanceDevices: 0,
+    //         buildSolveGraph: 0,
+    //         solveTransferGraph: 0,
+    //         rotateRoutingCursors: 0,
+    //         settleRecipes: 0,
+    //         maintainDomains: 0,
+    //         createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
+    //       },
+    //     });
+    //   }
+    //   this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+    //   return snapshot;
+    // }
 
     if (shouldRunRuntime) {
       // 在 Stage 1 之前计算动态发电量
@@ -2110,7 +2212,17 @@ export class SimulationWorkerRuntime {
       applySingleBaseRegionalResourceSupply(this.topology, this.runtimeState);
 
       const t0 = this.perfEnabled ? performance.now() : 0;
-      const stage1AdvanceResult = advanceDevices(
+      // AI-REMOVED 2026-09-04:
+      // Reason: 单基地 Stage1 不再返回 overflow 交接对象。
+      // Trigger: ST2-RQ-024 禁止 remainder 结转。
+      // Evidence: advanceDevices 返回 void，Stage5 只从 progress=0 启动下一轮。
+      // Replacement: 下方直接调用 advanceDevices。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const stage1AdvanceResult = advanceDevices(
+      advanceDevices(
         this.registry,
         this.topology,
         this.runtimeState,
@@ -2191,7 +2303,6 @@ export class SimulationWorkerRuntime {
         this.powerMode,
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
-        stage1AdvanceResult,
       );
       applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
@@ -2216,7 +2327,14 @@ export class SimulationWorkerRuntime {
       this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 
       const t6 = this.perfEnabled ? performance.now() : 0;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun, currentPowerGeneration);
+      this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+      const snapshot = createTickSnapshot(
+        this.topology,
+        this.runtimeState,
+        isPowerOutageRun,
+        currentPowerGeneration,
+        this.dynamicTickRate,
+      );
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;
         const total = performance.now() - perfTiming!.start;
@@ -2236,7 +2354,6 @@ export class SimulationWorkerRuntime {
           hotPath: perfTiming!.hotPath,
         });
       }
-      this.adjustDynamicTickRateAtLegalPoint(tickNumber);
       return snapshot;
     }
 
@@ -2257,7 +2374,14 @@ export class SimulationWorkerRuntime {
     );
 
     const t1 = this.perfEnabled ? performance.now() : 0;
-    const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageForSnapshot, currentPowerGenForSnapshot);
+    this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+    const snapshot = createTickSnapshot(
+      this.topology,
+      this.runtimeState,
+      isPowerOutageForSnapshot,
+      currentPowerGenForSnapshot,
+      this.dynamicTickRate,
+    );
     if (this.perfEnabled) {
       perfTiming!.stages["createSnapshot"] = performance.now() - t1;
       const total = performance.now() - perfTiming!.start;
@@ -2275,7 +2399,6 @@ export class SimulationWorkerRuntime {
         },
       });
     }
-    this.adjustDynamicTickRateAtLegalPoint(tickNumber);
     return snapshot;
   }
 
@@ -2298,7 +2421,30 @@ export class SimulationWorkerRuntime {
     // }
     this.simulationSpeed = value;
     if (this.topology !== null && this.runtimeState !== null) {
+      const previousDynamicTickRate = this.dynamicTickRate;
       this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
+      if (this.dynamicTickRate !== previousDynamicTickRate) {
+        this.synchronizeCurrentTickRateInterval();
+      }
+    }
+  }
+
+  private synchronizeCurrentTickRateInterval(): void {
+    if (this.topology === null || this.runtimeState === null) {
+      return;
+    }
+    const currentTickNumber = this.runtimeState.tickNumber;
+    const currentSnapshot = this.tickSnapshots.get(currentTickNumber);
+    if (currentSnapshot !== undefined) {
+      this.tickSnapshots.set(currentTickNumber, {
+        ...currentSnapshot,
+        tickRate: this.dynamicTickRate,
+      });
+    }
+    if (this.latestTickNumber === currentTickNumber) {
+      this.nextTickNumber = currentTickNumber === 0
+        ? 1
+        : currentTickNumber + this.standardStepTicks;
     }
   }
 

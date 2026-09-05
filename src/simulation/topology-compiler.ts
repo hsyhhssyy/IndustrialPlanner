@@ -36,7 +36,12 @@ import {
 } from "@/shared/water-purifier-node";
 
 import { hashStable } from "./deterministic";
-import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";
+import {
+  RECIPE_PHASE_DURATION_SECONDS,
+  STANDARD_TICK_RATE_PER_SECOND,
+  convertSimulationSecondsToTicksExact,
+  resolveRecipePhaseTicks,
+} from "./tick-rate";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationNode,
@@ -80,6 +85,7 @@ interface CompileOptions {
   readonly simulationMode: SimulationMode;
   readonly activeActivityIds?: readonly string[];
   readonly regionalResources?: readonly RegionalResourceSupplySetting[];
+  readonly standardTickRate?: number;
 }
 
 interface DeviceCompileResult {
@@ -111,7 +117,7 @@ export function createSimulationDocumentHash(document: WorldDocument): string {
 export function compileSimulationTopology(
   options: CompileOptions,
 ): CompiledSimulationTopology {
-  const standardTickRate = STANDARD_TICK_RATE_PER_SECOND;
+  const standardTickRate = options.standardTickRate ?? STANDARD_TICK_RATE_PER_SECOND;
   const diagnostics: SimulationCompileDiagnostic[] = [];
   const entityDefinitionMap = new Map(
     options.registry.entityDefinitions.map((definition) => [definition.id, definition]),
@@ -346,6 +352,12 @@ export function compileSimulationTopology(
   });
   const documentHash = createSimulationDocumentHash(options.document);
   const totalPowerDemand = computeTotalPowerDemand(devices);
+  diagnostics.push(...validateRecipeTiming({
+    registry: options.registry,
+    devices,
+    activeRecipeIds,
+    standardTickRate,
+  }));
   const deviceOrderIndexById = Object.fromEntries(
     deviceOrder.map((deviceId, index) => [deviceId, index]),
   );
@@ -410,6 +422,49 @@ export function compileSimulationTopology(
     transportComponents,
     diagnostics,
   };
+}
+
+function validateRecipeTiming(options: {
+  readonly registry: RegistryContract;
+  readonly devices: Readonly<Record<string, CompiledSimulationDevice>>;
+  readonly activeRecipeIds: ReadonlySet<string>;
+  readonly standardTickRate: number;
+}): SimulationCompileDiagnostic[] {
+  const diagnostics: SimulationCompileDiagnostic[] = [];
+  if (resolveRecipePhaseTicks(options.standardTickRate) === null) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-standard-tick-rate-for-recipe-phase",
+      message: `Standard tick rate ${options.standardTickRate} cannot represent the ${RECIPE_PHASE_DURATION_SECONDS}s recipe phase exactly.`,
+    });
+    return diagnostics;
+  }
+
+  const definitionIds = new Set(
+    Object.values(options.devices).map((device) => device.definitionId),
+  );
+  for (const recipe of options.registry.recipeDefinitions) {
+    if (
+      !options.activeRecipeIds.has(recipe.id)
+      || !definitionIds.has(recipe.machineId)
+    ) {
+      continue;
+    }
+    const phaseUnits = recipe.durationSeconds / RECIPE_PHASE_DURATION_SECONDS;
+    const durationTicks = convertSimulationSecondsToTicksExact(
+      recipe.durationSeconds,
+      options.standardTickRate,
+    );
+    if (!Number.isSafeInteger(phaseUnits) || durationTicks === null) {
+      diagnostics.push({
+        severity: "error",
+        code: "invalid-recipe-duration-phase",
+        message: `Recipe "${recipe.id}" duration ${recipe.durationSeconds}s must be a positive multiple of ${RECIPE_PHASE_DURATION_SECONDS}s and exactly representable at ${options.standardTickRate} TPS.`,
+        definitionId: recipe.machineId,
+      });
+    }
+  }
+  return diagnostics;
 }
 
 function addDeviceCompileResult(options: {

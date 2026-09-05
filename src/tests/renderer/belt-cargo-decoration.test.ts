@@ -204,6 +204,80 @@ import { ITEM_ICON_TEXTURE_INSET_PX } from "@/renderer/texture"
 import { createRegistryContract } from "@/registry"
 
 describe("createBeltCargoDecoration", () => {
+  it("presents recipe progress continuously and resets the phase after pause", () => {
+    const decoration = createBeltCargoDecoration()
+    const documentSnapshot = {}
+    const ctx = createContext({
+      getTexture: vi.fn().mockResolvedValue({ id: "unused" }),
+      documentSnapshot,
+      nowMs: 1000,
+      documentRuntimeStatus: {
+        tickNumber: 7,
+        standardTickRate: 2,
+        tickRate: 2,
+        totalPowerDemand: 0,
+        currentPowerGeneration: 0,
+        isPowerOutage: false,
+      },
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.25,
+        runtimeStatus: {
+          channelRecipes: {
+            default: {
+              recipeId: "belt_1:dynamic-belt-transfer",
+              progressSeconds: 0.25,
+              desiredSeconds: 1,
+              isProgressing: true,
+              state: "running",
+            },
+          },
+          slotItems: [{
+            slotType: "ingredient",
+            storageGroupId: "item_buffer",
+            slotId: "input_slot_1",
+            viewRole: "input-view",
+            itemType: "item_iron_ore",
+            count: 1,
+            reserved: 1,
+          }],
+        },
+      }],
+    })
+
+    decoration.sync(ctx as never)
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    const authorityX = cargoRoot.x
+
+    ctx.nowMs = 1250
+    decoration.sync(ctx as never)
+    expect(cargoRoot.x).toBeGreaterThan(authorityX)
+
+    const simulationState = (ctx as unknown as {
+      renderHost: {
+        workspace: {
+          simulation: {
+            state: { runningState: "start" | "pause" };
+          };
+        };
+      };
+    }).renderHost.workspace.simulation.state
+    simulationState.runningState = "pause"
+    ctx.nowMs = 3000
+    decoration.sync(ctx as never)
+    expect(cargoRoot.x).toBeCloseTo(authorityX)
+
+    simulationState.runningState = "start"
+    ctx.nowMs = 5000
+    decoration.sync(ctx as never)
+    expect(cargoRoot.x).toBeCloseTo(authorityX)
+
+    decoration.destroy()
+  })
+
   it("draws the moving cargo box and only requests each item icon once", async () => {
     const decoration = createBeltCargoDecoration()
     const iconTexture = createIconTexture(32, 32)
@@ -820,7 +894,13 @@ function createContext(options: {
     itemId: string;
     progress: number;
     runtimeStatus?: {
-      channelRecipes?: Record<string, { recipeId: string | null; progressSeconds: number | null; desiredSeconds: number | null } | null>;
+      channelRecipes?: Record<string, {
+        recipeId: string | null;
+        progressSeconds: number | null;
+        desiredSeconds: number | null;
+        isProgressing?: boolean;
+        state?: "running" | "waiting-output" | null;
+      } | null>;
       slotItems: Array<{
         slotType: "ingredient" | "product" | "universal";
         storageGroupId: string;
@@ -846,6 +926,14 @@ function createContext(options: {
   simplifiedDeviceIcons?: boolean;
   nowMs?: number;
   documentSnapshot?: object;
+  documentRuntimeStatus?: {
+    tickNumber: number | null;
+    standardTickRate: number;
+    tickRate: number;
+    totalPowerDemand: number | null;
+    currentPowerGeneration: number | null;
+    isPowerOutage: boolean;
+  };
 }) {
   const registry = createRegistryContract()
   const entries = options.entries ?? [{
@@ -948,8 +1036,10 @@ function createContext(options: {
             runningState: "start",
             simulationSpeed: 1,
             bufferSize: 0,
+            timeline: { isSeeking: false },
           },
           queries: {
+            getDocumentRuntimeStatus: () => options.documentRuntimeStatus ?? null,
             getDeviceRuntimeStatus: (entityId: string) => {
               const entry = entriesByEntityId.get(entityId)
               if (entry === undefined) {
@@ -962,6 +1052,8 @@ function createContext(options: {
                     recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
                     progressSeconds: entry.progress,
                     desiredSeconds: 1,
+                    isProgressing: true,
+                    state: "running",
                   },
                 },
                 slotItems: [{

@@ -86,6 +86,8 @@ function attachSimulationStub(
       }),
       getDocumentRuntimeStatus: () => ({
         tickNumber: state.runningState === "stop" ? null : 0,
+        standardTickRate: 20,
+        tickRate: 20,
         totalPowerDemand: null,
         currentPowerGeneration: null,
         isPowerOutage: false,

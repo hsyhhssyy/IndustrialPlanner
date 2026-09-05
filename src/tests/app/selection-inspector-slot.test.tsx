@@ -151,6 +151,8 @@ function attachSimulationStub(
       }),
       getDocumentRuntimeStatus: () => ({
         tickNumber: null,
+        standardTickRate: 20,
+        tickRate: 20,
         totalPowerDemand: null,
         currentPowerGeneration: null,
         isPowerOutage: false,
@@ -550,6 +552,7 @@ describe("SelectionInspectorSlot", () => {
             recipeId: "r_crusher_originium_powder_basic",
             progressSeconds: 1,
             desiredSeconds: 2,
+            isProgressing: true,
             state: "running",
           },
         },

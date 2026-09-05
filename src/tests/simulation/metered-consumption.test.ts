@@ -105,6 +105,7 @@ describe("consumption channel device mechanism", () => {
     ]), false);
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
     const slotId = getConsumptionSlotId(topology, device.id);
     putItems(state, slotId, "item_liquid_xiranite", 1);
 
@@ -146,6 +147,7 @@ describe("consumption channel device mechanism", () => {
     ]));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
     const slotId = getConsumptionSlotId(topology, device.id);
     const normalInputSlotId = getStorageSlotId(topology, device.id, "liquid_input_buffer");
     const normalChannel = device.recipeChannels.find((channel) => channel.type === "normal-channel")!;
@@ -187,6 +189,7 @@ describe("consumption channel device mechanism", () => {
     ]));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
+    state.tickNumber = 1;
     const consumptionSlotId = getConsumptionSlotId(topology, device.id);
     const outputSlotId = topology.nodes[`${device.id}/node:gas_output_buffer`]!.slotIds[0]!;
     const normalChannel = device.recipeChannels.find((channel) => channel.type === "normal-channel")!;

@@ -1,18 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { BLUEPRINT_SIMULATION_ENGINE_KINDS } from "../blueprint-runner";
 import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { runRegionalBlueprintSimulation } from "../regional-blueprint-runner";
 
 const BLUEPRINT_PATH = "public/blueprints/v1.4-4-core-xiranite.json";
 const XIRANITE_ITEM_ID = "item_xiranite_powder";
 const EXPECTED_XIRANITE_PER_MINUTE = 480;
-const TICKS_PER_MINUTE = 1_200;
+const SECONDS_PER_MINUTE = 60;
 const WARMUP_MINUTES = 2;
 const OBSERVATION_MINUTES = 3;
 const CURRENT_BASE_ID = "wuling_tianwangping_aid";
 
-describe("Regional Blueprint Runner - 武陵多基地吞吐量", () => {
+describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
+  "Regional Blueprint Runner - 武陵多基地吞吐量 [%s]",
+  (engineKind) => {
   it("预热两分钟后连续三分钟达到 480 息壤/分钟", async () => {
     const registry = createRegistryContract();
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
@@ -20,6 +23,7 @@ describe("Regional Blueprint Runner - 武陵多基地吞吐量", () => {
       .filter((definition) => definition.tag === "武陵")
       .map((definition) => definition.id);
     const report = await runRegionalBlueprintSimulation({
+      engineKind,
       registry,
       scenario: {
         name: "wuling-multi-base-throughput",
@@ -28,17 +32,19 @@ describe("Regional Blueprint Runner - 武陵多基地吞吐量", () => {
         placementsByBaseId: Object.fromEntries(
           wulingBaseIds.map((baseId) => [baseId, [{ blueprint }]]),
         ),
-        captureTicks: Array.from(
+        captureSeconds: Array.from(
           { length: OBSERVATION_MINUTES },
-          (_value, index) => (WARMUP_MINUTES + index + 1) * TICKS_PER_MINUTE,
+          (_value, index) => (WARMUP_MINUTES + index + 1) * SECONDS_PER_MINUTE,
         ),
-        untilTick: (WARMUP_MINUTES + OBSERVATION_MINUTES) * TICKS_PER_MINUTE,
+        untilSeconds: (WARMUP_MINUTES + OBSERVATION_MINUTES) * SECONDS_PER_MINUTE,
         timeoutMs: 90_000,
       },
     });
 
     for (let minute = 1; minute <= OBSERVATION_MINUTES; minute += 1) {
-      const targetTickNumber = (WARMUP_MINUTES + minute) * TICKS_PER_MINUTE;
+      const targetTickNumber = (WARMUP_MINUTES + minute)
+        * SECONDS_PER_MINUTE
+        * report.standardTickRate;
       const capture = report.captures.find(
         (candidate) => candidate.requestedTickNumber === targetTickNumber,
       );
@@ -92,4 +98,5 @@ describe("Regional Blueprint Runner - 武陵多基地吞吐量", () => {
       })),
     }));
   });
-});
+  },
+);

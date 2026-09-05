@@ -203,6 +203,8 @@ export function createSimulationHost(
             ? null
             : {
                 tickNumber: currentTickNumber,
+                standardTickRate: presentation.standardTickRate,
+                tickRate: presentation.tickRate,
                 status: presentation.status,
                 totalPowerDemand: presentation.totalPowerDemand,
                 transferCount: presentation.getTransfers().length,
@@ -226,6 +228,9 @@ export function createSimulationHost(
               : topology.totalPowerDemand;
         return {
           tickNumber: presentation.tickNumber,
+          standardTickRate: presentation.standardTickRate
+            ?? topology.standardTickRate,
+          tickRate: presentation.tickRate ?? topology.standardTickRate,
           totalPowerDemand: effectiveTotalPowerDemand,
           currentPowerGeneration: presentation.currentPowerGeneration,
           isPowerOutage: presentation.isPowerOutage,
@@ -251,6 +256,7 @@ export function createSimulationHost(
             deviceId,
             presentation,
             shareCapSlotIds: cachedShareCapSlotIds,
+            runtimeCanProgress: internalState.runtimeStatus.mode === "running",
           });
         };
       })(),
@@ -392,6 +398,7 @@ function resolveDeviceRuntimeStatus(options: {
   deviceId: string;
   presentation: SimulationPresentationProjection;
   shareCapSlotIds: Set<string> | null;
+  runtimeCanProgress: boolean;
 }): SimulationDeviceRuntimeStatusReadModel | null {
   const currentTickNumber = options.presentation.tickNumber;
   if (options.topology === null || currentTickNumber === null) {
@@ -417,8 +424,15 @@ function resolveDeviceRuntimeStatus(options: {
         : {
             channelId: chId,
             recipeId: chRecipe.recipeId,
-            progressSeconds: convertSimulationTicksToSeconds(chRecipe.progressTicks),
-            desiredSeconds: convertSimulationTicksToSeconds(chRecipe.durationTicks),
+            progressSeconds: convertSimulationTicksToSeconds(
+              chRecipe.progressTicks,
+              options.topology.standardTickRate,
+            ),
+            desiredSeconds: convertSimulationTicksToSeconds(
+              chRecipe.durationTicks,
+              options.topology.standardTickRate,
+            ),
+            isProgressing: chRecipe.isProgressing && options.runtimeCanProgress,
             state: chRecipe.state,
           };
     }

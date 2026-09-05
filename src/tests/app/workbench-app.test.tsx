@@ -1317,6 +1317,8 @@ describe("WorkbenchApp", () => {
         }),
         getDocumentRuntimeStatus: () => ({
           tickNumber: 3,
+          standardTickRate: 20,
+          tickRate: 20,
           totalPowerDemand: null,
           currentPowerGeneration: null,
           isPowerOutage: false,

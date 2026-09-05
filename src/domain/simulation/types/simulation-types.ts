@@ -53,6 +53,8 @@ export interface SimulationDeviceRuntimeChannelRecipeStatus {
   readonly recipeId: string | null;
   readonly progressSeconds: number | null;
   readonly desiredSeconds: number | null;
+  /** 当前真实 tick 之后的运行区间内，该配方是否会继续推进。 */
+  readonly isProgressing: boolean;
   /** 配方运行时状态，用于判断产物堵塞等 */
   readonly state: "running" | "waiting-output" | null;
 }
@@ -191,6 +193,10 @@ export interface SimulationAdmissionCounterReset {
 export interface SimulationDocumentRuntimeReadModel {
   /** 当前 tick 编号，仿真未启动时为 null */
   readonly tickNumber: number | null;
+  /** 当前引擎每仿真秒包含的标准 tick 数。 */
+  readonly standardTickRate: number;
+  /** 当前真实运行 tick 频率；用于确定当前公开 tick 的展示区间。 */
+  readonly tickRate: number;
   /** 总电力需求（kW），拓扑未编译时为 null */
   readonly totalPowerDemand: number | null;
   /** 当前动态发电量（kW），拓扑未编译或无限电力模式下为 null */

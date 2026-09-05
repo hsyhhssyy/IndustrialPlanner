@@ -230,6 +230,8 @@ export class DenseFrameEmitter {
       frameSequence,
       fromTickNumber: options.tickNumber,
       tickNumber: options.tickNumber,
+      standardTickRate: this.topology.standardTickRate,
+      tickRate: this.topology.standardTickRate,
       status: options.status,
       totalPowerDemand: options.kernel.effectiveTotalPowerDemand,
       currentPowerGeneration: options.kernel.currentPowerGeneration,

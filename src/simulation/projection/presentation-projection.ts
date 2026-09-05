@@ -9,6 +9,8 @@ import type {
 
 export interface SimulationPresentationProjection {
   readonly tickNumber: number | null;
+  readonly standardTickRate: number | null;
+  readonly tickRate: number | null;
   readonly status: RuntimeTickSnapshot["status"] | null;
   readonly debugData: string | undefined;
   readonly totalPowerDemand: number | null;
@@ -29,6 +31,14 @@ export class LegacySnapshotPresentationProjection implements SimulationPresentat
 
   public get tickNumber(): number | null {
     return this.readSnapshot()?.tickNumber ?? null;
+  }
+
+  public get standardTickRate(): number | null {
+    return this.readSnapshot()?.standardTickRate ?? null;
+  }
+
+  public get tickRate(): number | null {
+    return this.readSnapshot()?.tickRate ?? null;
   }
 
   public get status(): RuntimeTickSnapshot["status"] | null {

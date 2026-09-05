@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import {
+  BLUEPRINT_SIMULATION_ENGINE_KINDS,
   createHeadlessWorkspace,
 } from "../blueprint-runner";
 import {
@@ -12,33 +13,43 @@ import {
 
 const BLUEPRINT_PATH = "public/blueprints/utimate-xiranite.json";
 const TIMELINE_ORIGIN_STANDARD_TICK = 1;
-const WARMUP_STANDARD_TICKS = 300;
-const WARMUP_TARGET_STANDARD_TICK = TIMELINE_ORIGIN_STANDARD_TICK + WARMUP_STANDARD_TICKS;
+const WARMUP_SECONDS = 15;
 const DRAG_SAMPLE_COUNT = 12;
 const DRAG_SAMPLE_INTERVAL_MS = 10;
 const TIMELINE_TICKS_PER_SAMPLE = 2;
 const MIN_RENDER_CHANGES = 5;
-const MIN_FORWARD_STANDARD_TICKS = 200;
+const MIN_FORWARD_SECONDS = 10;
 const PRESENTATION_COMMIT_WAIT_MS = 1_100;
 
-describe("天王坪7核息壤时间轴拖动", () => {
-  it("预热300 tick后在1秒内向前拖动超过10秒时至少呈现5个不同帧", { timeout: 120_000 }, async () => {
+describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
+  "天王坪7核息壤时间轴拖动 [%s]",
+  (engineKind) => {
+  it("预热15秒后在1秒内向前拖动超过10秒时至少呈现5个不同帧", { timeout: 120_000 }, async () => {
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
     const workspace = createHeadlessWorkspace(
       createWorldDocumentFromBlueprint(blueprint),
       createRegistryContract(),
     );
-    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    const host = createSimulationHost(workspace, {
+      engineKind,
+      workerMode: "runtime",
+    });
 
     try {
       await host.actions.start();
       host.actions.pause();
+      const standardTickRate = host.queries.getDocumentRuntimeStatus()?.standardTickRate;
+      if (standardTickRate === undefined) {
+        throw new Error("Simulation did not publish standardTickRate after start.");
+      }
+      const warmupTargetStandardTick = TIMELINE_ORIGIN_STANDARD_TICK
+        + WARMUP_SECONDS * standardTickRate;
       const warmupStatus = await host.internalActions.syncToTick(
-        WARMUP_TARGET_STANDARD_TICK,
-        WARMUP_TARGET_STANDARD_TICK,
+        warmupTargetStandardTick,
+        warmupTargetStandardTick,
       );
       expect(warmupStatus.status).toBe("ready");
-      expect(host.internalState.currentSnapshot?.tickNumber).toBe(WARMUP_TARGET_STANDARD_TICK);
+      expect(host.internalState.currentSnapshot?.tickNumber).toBe(warmupTargetStandardTick);
 
       await host.actions.enableTimeline();
       const initialTimelineCursor = host.internalState.timeline.cursorTickNumber;
@@ -79,12 +90,19 @@ describe("天王坪7核息壤时间轴拖动", () => {
       expect(appliedResults.filter(Boolean)).toHaveLength(DRAG_SAMPLE_COUNT);
       expect(presentedStandardTickNumbers.length).toBeGreaterThanOrEqual(MIN_RENDER_CHANGES);
       expect(new Set(presentedStandardTickNumbers).size).toBe(presentedStandardTickNumbers.length);
-      expect(presentedStandardTickNumbers.at(-1)! - WARMUP_TARGET_STANDARD_TICK)
-        .toBeGreaterThan(MIN_FORWARD_STANDARD_TICKS);
+      const presentedDurationSeconds = (
+        presentedStandardTickNumbers.at(-1)! - warmupTargetStandardTick
+      ) / standardTickRate;
+      expect(presentedDurationSeconds).toBeGreaterThan(MIN_FORWARD_SECONDS);
       expect(host.internalState.timeline.cursorTickNumber).toBe(finalTargetTimelineTick);
 
       const finalSnapshot = host.internalState.currentSnapshot;
-      expect(finalSnapshot?.tickNumber).toBe(1 + finalTargetTimelineTick * 10);
+      expect(finalSnapshot?.tickNumber).toBe(
+        TIMELINE_ORIGIN_STANDARD_TICK
+        + finalTargetTimelineTick
+          * host.internalState.timeline.tickDurationSeconds
+          * standardTickRate,
+      );
       expect(Object.keys(finalSnapshot?.devices ?? {})).not.toHaveLength(0);
       expect(Object.keys(finalSnapshot?.slots ?? {})).not.toHaveLength(0);
       expect(finalSnapshot?.transfers.length ?? 0).toBeGreaterThan(0);
@@ -104,7 +122,8 @@ describe("天王坪7核息壤时间轴拖动", () => {
       host.dispose();
     }
   });
-});
+  },
+);
 
 function delay(durationMs: number): Promise<void> {
   return new Promise((resolve) => {

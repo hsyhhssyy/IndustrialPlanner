@@ -1,12 +1,37 @@
 export const STANDARD_TICK_RATE_PER_SECOND = 20
+export const DENSE_STANDARD_TICK_RATE_PER_SECOND = 2
+export const RECIPE_PHASE_DURATION_SECONDS = 0.5
 export const DEFAULT_SIMULATION_SPEED = 1
 export const DYNAMIC_SIMULATION_TICK_RATES = [20, 10, 4, 2] as const
 
 export type DynamicSimulationTickRate = typeof DYNAMIC_SIMULATION_TICK_RATES[number]
 
 // 除 add time 使用 simulationSpeed 外，所有 tick <-> second 换算都必须走 standard tick rate。
-export function convertSimulationTicksToSeconds(tickCount: number): number {
-	return tickCount / STANDARD_TICK_RATE_PER_SECOND
+export function convertSimulationTicksToSeconds(
+	tickCount: number,
+	standardTickRate = STANDARD_TICK_RATE_PER_SECOND,
+): number {
+	return tickCount / standardTickRate
+}
+
+export function convertSimulationSecondsToTicksExact(
+	durationSeconds: number,
+	standardTickRate: number,
+): number | null {
+	if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+		return null
+	}
+	const durationTicks = durationSeconds * standardTickRate
+	return Number.isSafeInteger(durationTicks) && durationTicks > 0
+		? durationTicks
+		: null
+}
+
+export function resolveRecipePhaseTicks(standardTickRate: number): number | null {
+	return convertSimulationSecondsToTicksExact(
+		RECIPE_PHASE_DURATION_SECONDS,
+		standardTickRate,
+	)
 }
 
 export function resolveStandardStepTicks(

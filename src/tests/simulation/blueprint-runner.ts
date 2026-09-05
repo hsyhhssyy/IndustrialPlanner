@@ -12,6 +12,16 @@ import {
   createSimulationHost,
   type SimulationEngineKind,
 } from "@/simulation/simulation-host";
+// AI-REMOVED 2026-09-04:
+// Reason: duration 模式不再预先把总时长换成固定 tick 预算，而是累计真实 tick 区间。
+// Trigger: 用户要求未来强制动态 tickRate 时，预热结束不得依赖预设真实帧数或切换位置。
+// Evidence: RuntimeTickSnapshot.tickRate 描述当前真实 tick 到下一真实 tick 的频率。
+// Replacement: runBlueprintSimulation 的 elapsedSimulationSeconds 累计循环。
+// Risk: Low；maxTickNumber 精确坐标模式仍保留原行为。
+// Human Review: Required
+//
+// Original code:
+// import { convertSimulationSecondsToTicksExact } from "@/simulation/tick-rate";
 import type {
   CompiledSimulationTopology,
   RegionalResourceSupplySetting,
@@ -21,9 +31,16 @@ import type {
 
 type TransportClassSummary = "strict-belt" | "strict-pipe";
 
+export const BLUEPRINT_SIMULATION_ENGINE_KINDS = [
+  "legacy",
+  "dense-v2",
+] as const satisfies readonly SimulationEngineKind[];
+
 export interface RunBlueprintSimulationOptions {
   readonly blueprint: BlueprintDocument;
-  readonly maxTickNumber: number;
+  readonly maxTickNumber?: number;
+  /** 按引擎编译结果中的 standardTickRate 换算，避免绑定具体引擎 TPS。 */
+  readonly maxDurationSeconds?: number;
   readonly registry: RegistryContract;
   /** 启用轻量性能统计，输出逐 tick 阶段耗时报告 */
   readonly perfEnabled?: boolean;
@@ -45,6 +62,7 @@ export interface BlueprintSimulationReport {
   readonly topology: {
     readonly topologyId: string;
     readonly documentHash: string;
+    readonly standardTickRate: number;
     readonly totalPowerDemand: number;
     readonly diagnosticCount: number;
     readonly diagnostics: readonly CompiledSimulationTopology["diagnostics"][number][];
@@ -109,8 +127,22 @@ export interface BlueprintSimulationTransportThroughput {
 export async function runBlueprintSimulation(
   options: RunBlueprintSimulationOptions,
 ): Promise<BlueprintSimulationReport> {
-  if (!Number.isInteger(options.maxTickNumber) || options.maxTickNumber < 0) {
+  const hasMaxTickNumber = options.maxTickNumber !== undefined;
+  const hasMaxDurationSeconds = options.maxDurationSeconds !== undefined;
+  if (hasMaxTickNumber === hasMaxDurationSeconds) {
+    throw new Error("Expected exactly one of maxTickNumber or maxDurationSeconds.");
+  }
+  if (
+    options.maxTickNumber !== undefined
+    && (!Number.isInteger(options.maxTickNumber) || options.maxTickNumber < 0)
+  ) {
     throw new Error(`Expected maxTickNumber to be a non-negative integer, received: ${options.maxTickNumber}`);
+  }
+  if (
+    options.maxDurationSeconds !== undefined
+    && (!Number.isFinite(options.maxDurationSeconds) || options.maxDurationSeconds <= 0)
+  ) {
+    throw new Error(`Expected maxDurationSeconds to be positive, received: ${options.maxDurationSeconds}`);
   }
 
   const tStart = performance.now();
@@ -145,9 +177,10 @@ export async function runBlueprintSimulation(
 
     let tickSyncTotal = 0;
     let tickReportTotal = 0;
-    const maxTick = options.maxTickNumber;
-
-    for (let tickNumber = 0; tickNumber <= maxTick; tickNumber += 1) {
+    let tickNumber = 0;
+    let elapsedSimulationSeconds = 0;
+    let previousDurationSnapshot: RuntimeTickSnapshot | null = null;
+    while (true) {
       const tTickStart = performance.now();
       const tickStatus = await host.internalActions.syncToTick(tickNumber);
       const tTickEnd = performance.now();
@@ -161,6 +194,18 @@ export async function runBlueprintSimulation(
         throw new Error(`Simulation produced no snapshot for tick ${tickNumber}.`);
       }
 
+      if (options.maxDurationSeconds !== undefined && previousDurationSnapshot !== null) {
+        const intervalSeconds = (
+          snapshot.tickNumber - previousDurationSnapshot.tickNumber
+        ) / previousDurationSnapshot.standardTickRate;
+        if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+          throw new Error(
+            `Simulation produced invalid interval ${previousDurationSnapshot.tickNumber}..${snapshot.tickNumber}.`,
+          );
+        }
+        elapsedSimulationSeconds += intervalSeconds;
+      }
+
       const tReportStart = performance.now();
       ticks.push(createTickReport({
         host,
@@ -172,7 +217,31 @@ export async function runBlueprintSimulation(
       if (tickNumber > 0 && tickNumber % 600 === 0) {
         console.log(`   [perf] tick ${tickNumber}: sync累计=${tickSyncTotal.toFixed(0)}ms report累计=${tickReportTotal.toFixed(0)}ms`);
       }
+
+      if (options.maxTickNumber !== undefined) {
+        if (tickNumber >= options.maxTickNumber) {
+          break;
+        }
+        tickNumber += 1;
+        continue;
+      }
+
+      if (elapsedSimulationSeconds >= options.maxDurationSeconds!) {
+        break;
+      }
+      const standardStepTicks = snapshot.tickNumber === 0
+        ? 1
+        : snapshot.standardTickRate / snapshot.tickRate;
+      if (!Number.isSafeInteger(standardStepTicks) || standardStepTicks <= 0) {
+        throw new Error(
+          `Simulation tick ${snapshot.tickNumber} exposes incompatible standardTickRate=${snapshot.standardTickRate} and tickRate=${snapshot.tickRate}.`,
+        );
+      }
+      previousDurationSnapshot = snapshot;
+      tickNumber = snapshot.tickNumber + standardStepTicks;
     }
+
+    const maxTick = ticks.at(-1)?.tickNumber ?? 0;
 
     const tTotal = performance.now() - tStart;
     console.log(`   [perf] 总耗时: ${tTotal.toFixed(0)}ms | sync=${tickSyncTotal.toFixed(0)}ms(${(tickSyncTotal/tTotal*100).toFixed(1)}%) report=${tickReportTotal.toFixed(0)}ms(${(tickReportTotal/tTotal*100).toFixed(1)}%) 其他=${(tTotal-tickSyncTotal-tickReportTotal).toFixed(0)}ms(${((tTotal-tickSyncTotal-tickReportTotal)/tTotal*100).toFixed(1)}%)`);
@@ -190,19 +259,20 @@ export async function runBlueprintSimulation(
       topology: {
         topologyId: topology.topologyId,
         documentHash: topology.documentHash,
+        standardTickRate: topology.standardTickRate,
         totalPowerDemand: topology.totalPowerDemand,
         diagnosticCount: topology.diagnostics.length,
         diagnostics: [...topology.diagnostics],
       },
       execution: {
-        maxTickNumber: options.maxTickNumber,
+        maxTickNumber: maxTick,
         totalTicksCaptured: ticks.length,
       },
       ticks,
       summary: createSummary({
         topology,
         ticks,
-        maxTickNumber: options.maxTickNumber,
+        maxTickNumber: maxTick,
       }),
     };
   } finally {

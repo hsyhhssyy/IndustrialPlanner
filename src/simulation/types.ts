@@ -554,6 +554,10 @@ export interface RuntimeTickSnapshot {
   readonly topologyId: string;
   readonly documentHash: string;
   readonly tickNumber: number;
+  /** 当前引擎的标准 tick 频率。 */
+  readonly standardTickRate: number;
+  /** 从当前真实 tick 到下一真实 tick 之间采用的运行频率。 */
+  readonly tickRate: number;
   readonly status: "initial" | "running";
   /** 调试模式下为完整 Tick 与 Worker 可序列化内部状态的 JSON；非调试模式不传输该属性。 */
   /** AI-CORRECTION 2026-07-17：仅在“仿真Worker详细汇报”开启时构造并传输，普通调试模式不再生成。 */
@@ -676,6 +680,8 @@ export interface RuntimeDeviceRecipeSnapshot {
   readonly recipeType: SimulationRecipeType;
   readonly progressTicks: number;
   readonly durationTicks: number;
+  /** 当前真实 tick 之后的运行区间内是否会继续推进。 */
+  readonly isProgressing: boolean;
   readonly state: "running" | "waiting-output";
 }
 

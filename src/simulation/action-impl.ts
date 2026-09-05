@@ -638,8 +638,11 @@ implements SimulationAction, SimulationInternalAction {
     // simulationSpeed 有且仅有这一处可以参与运算：它只影响 add time 的推进速度。
     // AI-CORRECTION 2026-05-19: worker 也会接收 simulationSpeed，但只用于缓存余量的墙钟秒估算，不参与 runtime 物理时间推进。
     // 任何其他场合都不得使用该倍率做 tick/second 换算；换算只能依赖 standard tick rate。
+    const standardTickRate = this.stateReadWrite.currentSnapshot?.standardTickRate
+      ?? this.topology.getSnapshot()?.standardTickRate
+      ?? STANDARD_TICK_RATE_PER_SECOND;
     const tickDelta = deltaMs
-      * STANDARD_TICK_RATE_PER_SECOND
+      * standardTickRate
       * this.stateReadWrite.simulationSpeed
       / 1000;
 
@@ -658,6 +661,19 @@ implements SimulationAction, SimulationInternalAction {
           this.stateReadWrite.runtimeStatus.latestTickNumber ?? 0,
         );
       const maxFrameStepTicks = Math.max(1, Math.ceil(Math.max(0, tickDelta)));
+      // AI-REMOVED 2026-09-04:
+      // Reason: 真实 tick 区间只限制旧快照的 progress 展示外推，不限制墙钟播放目标。
+      // Trigger: 高倍速且当前 tickRate 较高时，逐真实 tick 限制会让 60 FPS 播放永久追不上 runtime。
+      // Evidence: playback-backpressure x16 用例的墙钟目标为 32；稀疏队列应直接选择不晚于目标的最新真实快照。
+      // Replacement: maxFrameStepTicks 继续按本帧墙钟增量限制公开游标；progress 由 resolvePresentedRecipeProgressSeconds 钳制单区间。
+      // Risk: Worker 背压时游标可领先当前快照，但所有离散展示仍只读取 currentSnapshot。
+      // Human Review: Required
+      //
+      // Original code:
+      // const currentSnapshot = this.stateReadWrite.currentSnapshot;
+      // const currentRealTickInterval = currentSnapshot === null
+      //   ? 1
+      //   : currentSnapshot.standardTickRate / currentSnapshot.tickRate;
       const migrationBoundaryTickNumber = this.topologyPresentationBoundary?.maxPlaybackTickNumber
         ?? Number.POSITIVE_INFINITY;
       this.stateReadWrite.currentPlaybackTickNumber = Math.max(
@@ -753,27 +769,49 @@ implements SimulationAction, SimulationInternalAction {
 
   /** 仅当目标区间完整存在时才原子消费，避免跨过缺失 Tick。 */
   /** AI-CORRECTION 2026-07-22: 现在消费截至首个缺口前的最长连续前缀，避免部分范围响应与低水位条件形成永久等待。 */
+  /** AI-CORRECTION 2026-09-04: ST2-RQ-024 后缓存键是稀疏标准 tick；现返回区间内不晚于播放游标的最新真实 tick。 */
   private takePlaybackSnapshotThrough(
     fromTickNumber: number,
     toTickNumber: number,
   ): RuntimeTickSnapshot | null {
-    let availableToTickNumber = fromTickNumber - 1;
-    for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
-      if (!this.playbackHotQueue.has(tickNumber)) {
-        break;
-      }
-      availableToTickNumber = tickNumber;
-    }
-
-    if (availableToTickNumber < fromTickNumber) {
+    const availableTickNumbers = [...this.playbackHotQueue.keys()]
+      .filter((tickNumber) => tickNumber >= fromTickNumber && tickNumber <= toTickNumber)
+      .sort((left, right) => left - right);
+    if (availableTickNumbers.length === 0) {
       return null;
     }
 
     let snapshot: RuntimeTickSnapshot | null = null;
-    for (let tickNumber = fromTickNumber; tickNumber <= availableToTickNumber; tickNumber += 1) {
+    for (const tickNumber of availableTickNumbers) {
       snapshot = this.playbackHotQueue.get(tickNumber) ?? null;
       this.playbackHotQueue.delete(tickNumber);
     }
+    // AI-REMOVED 2026-09-04:
+    // Reason: 连续整数前缀算法会把合法的稀疏真实 tick 误判为缓存缺口。
+    // Trigger: ST2-RQ-024 要求 Legacy 只缓存真实运行 tick。
+    // Evidence: dynamic tick rate 低于 standard tick rate 时，相邻真实快照的标准 tickNumber 不连续。
+    // Replacement: 上方 availableTickNumbers 排序与范围消费。
+    // Risk: Low；返回值仍是范围内最新快照。
+    // Human Review: Required
+    //
+    // Original code:
+    // let availableToTickNumber = fromTickNumber - 1;
+    // for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
+    //   if (!this.playbackHotQueue.has(tickNumber)) {
+    //     break;
+    //   }
+    //   availableToTickNumber = tickNumber;
+    // }
+    //
+    // if (availableToTickNumber < fromTickNumber) {
+    //   return null;
+    // }
+    //
+    // let snapshot: RuntimeTickSnapshot | null = null;
+    // for (let tickNumber = fromTickNumber; tickNumber <= availableToTickNumber; tickNumber += 1) {
+    //   snapshot = this.playbackHotQueue.get(tickNumber) ?? null;
+    //   this.playbackHotQueue.delete(tickNumber);
+    // }
     return snapshot;
   }
 
@@ -814,7 +852,13 @@ implements SimulationAction, SimulationInternalAction {
 
     const generation = this.playbackHotQueueGeneration;
     const fallbackPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
-    const fromTickNumber = currentSnapshot.tickNumber + this.playbackHotQueue.size + 1;
+    const queuedTickNumbers = [...this.playbackHotQueue.keys()];
+    const fromTickNumber = Math.max(
+      currentSnapshot.tickNumber,
+      queuedTickNumbers.length === 0
+        ? currentSnapshot.tickNumber
+        : Math.max(...queuedTickNumbers),
+    ) + 1;
     const requestCount = PLAYBACK_HOT_QUEUE_CAPACITY - this.playbackHotQueue.size;
     const toTickNumber = fromTickNumber + requestCount - 1;
     this.playbackTickRequestInFlight = true;
@@ -836,17 +880,18 @@ implements SimulationAction, SimulationInternalAction {
         this.stateReadWrite.runtimeStatus = response.status;
       });
 
-      let expectedTickNumber = fromTickNumber;
+      let previousTickNumber = fromTickNumber - 1;
       for (const snapshot of response.result.snapshots) {
         if (
-          snapshot.tickNumber !== expectedTickNumber
+          snapshot.tickNumber <= previousTickNumber
+          || snapshot.tickNumber > toTickNumber
           || snapshot.topologyId !== currentSnapshot.topologyId
           || snapshot.documentHash !== currentSnapshot.documentHash
         ) {
           break;
         }
         this.playbackHotQueue.set(snapshot.tickNumber, snapshot);
-        expectedTickNumber += 1;
+        previousTickNumber = snapshot.tickNumber;
       }
 
       if (response.result.snapshots.length === 0) {
@@ -1045,13 +1090,36 @@ implements SimulationAction, SimulationInternalAction {
       activeActivityIds,
       regionalResources,
     });
+    const compileError = compiledTopology.diagnostics.find(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (compileError !== undefined) {
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: compileError.message,
+        };
+      });
+      return {
+        status: "failed",
+        topologyId: compiledTopology.topologyId,
+        diagnostics: compiledTopology.diagnostics,
+        error: compileError.message,
+      };
+    }
     const previousDocument = this.compiledDocument;
     const shouldMarkTimelineDocumentChange =
       this.stateReadWrite.timeline.enabled
       && previousDocument !== null
       && previousTopology !== null;
-    const displayedTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
-    const nextTickNumber = displayedTickNumber + 1;
+    const displayedSnapshot = this.stateReadWrite.currentSnapshot;
+    const displayedTickNumber = displayedSnapshot?.tickNumber ?? 0;
+    const nextTickNumber = displayedTickNumber + (
+      displayedSnapshot === null
+        ? 1
+        : displayedSnapshot.standardTickRate / displayedSnapshot.tickRate
+    );
     const canMigrateAtNextTick = previousDocument !== null
       && previousTopology !== null
       && this.stateReadWrite.runningState === "start"
@@ -2590,6 +2658,24 @@ implements SimulationAction, SimulationInternalAction {
           regionalResources,
         }),
       }));
+      const compileFailure = topologies.flatMap((input) =>
+        input.topology.diagnostics.map((diagnostic) => ({ input, diagnostic })))
+        .find(({ diagnostic }) => diagnostic.severity === "error");
+      if (compileFailure !== undefined) {
+        runInAction(() => {
+          this.stateReadWrite.runtimeStatus = {
+            ...this.stateReadWrite.runtimeStatus,
+            mode: "error",
+            error: compileFailure.diagnostic.message,
+          };
+        });
+        logger.error("Regional simulation topology compilation failed.", {
+          baseId: compileFailure.input.baseId,
+          diagnostic: compileFailure.diagnostic,
+        });
+        this.recoverFromStartFailure();
+        return;
+      }
 
       const admission = buildRegionalWarehouseOutletTable({ registry, topologies });
       if (!admission.ok || admission.table === null) {

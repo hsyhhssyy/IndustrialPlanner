@@ -6,6 +6,7 @@ import {
   DenseFrameDeltaEncoder,
   DenseIndexSet,
   DenseMessageSequenceGate,
+  DENSE_SIMULATION_PROTOCOL_VERSION,
   DenseProjectionStore,
   DenseRuntimeState,
   collectDenseFrameTransferables,
@@ -319,25 +320,25 @@ describe("ST2-RQ-023 dense projection", () => {
   it("rejects stale sessions, topology versions, and protocol sequence gaps", () => {
     const gate = new DenseMessageSequenceGate(DENSE_TEST_SESSION);
     gate.accept({
-      protocolVersion: 1,
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
       ...DENSE_TEST_SESSION,
       sequence: 1,
     });
     expect(gate.expectedSequence).toBe(2);
     expect(() => gate.accept({
-      protocolVersion: 1,
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
       ...DENSE_TEST_SESSION,
       sequence: 3,
     })).toThrow("Dense protocol sequence gap: expected 2, received 3.");
     expect(gate.expectedSequence).toBe(2);
     expect(() => gate.accept({
-      protocolVersion: 1,
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
       sessionId: "stale-session",
       topologyVersion: 1,
       sequence: 2,
     })).toThrow("Dense protocol session mismatch");
     expect(() => gate.accept({
-      protocolVersion: 1,
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
       sessionId: DENSE_TEST_SESSION.sessionId,
       topologyVersion: 2,
       sequence: 2,

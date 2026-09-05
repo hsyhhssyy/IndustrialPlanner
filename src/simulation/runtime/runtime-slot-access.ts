@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { convertSimulationSecondsToTicksExact } from "../tick-rate";
 import {
   ENTITY_INPUT_ROUTING_STRATEGY,
   ENTITY_SIMULATION_BEHAVIOR_TYPE,
@@ -1257,9 +1258,9 @@ function getOrCreateRegistryRecipePlan(
   return getOrCreateRecipePlan(options, recipe.id, () => ({
     recipeId: recipe.id,
     recipeType: recipe.recipeType,
-    durationTicks: Math.max(
-      1,
-      Math.round(recipe.durationSeconds * options.topology.standardTickRate),
+    durationTicks: requireExactRecipeDurationTicks(
+      recipe,
+      options.topology.standardTickRate,
     ),
     inputs: recipe.inputs.map((input) => ({ ...input })),
     outputs: recipe.outputs.map((output) => ({ ...output })),
@@ -1268,6 +1269,22 @@ function getOrCreateRegistryRecipePlan(
     requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
     gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
   }));
+}
+
+function requireExactRecipeDurationTicks(
+  recipe: RecipeDefinition,
+  standardTickRate: number,
+): number {
+  const durationTicks = convertSimulationSecondsToTicksExact(
+    recipe.durationSeconds,
+    standardTickRate,
+  );
+  if (durationTicks === null) {
+    throw new Error(
+      `Recipe "${recipe.id}" duration ${recipe.durationSeconds}s is not exactly representable at ${standardTickRate} TPS.`,
+    );
+  }
+  return durationTicks;
 }
 
 function normalizeRecipeGasItemId(itemId: string | undefined): string | null {

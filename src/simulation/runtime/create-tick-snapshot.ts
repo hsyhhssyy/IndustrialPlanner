@@ -11,12 +11,15 @@ import {
   resolveStorageSlotId,
 } from "@/simulation/runtime/runtime-slot-access";
 import { BASE_BATTERY_CAPACITY_J } from "./runtime-state";
+import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
+import { isDeviceConsumptionAuthorizedForFrame } from "./consumption-channel";
 
 export function createTickSnapshot(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   isPowerOutage: boolean,
   currentPowerGeneration: number,
+  tickRate: number = topology.standardTickRate,
 ): RuntimeTickSnapshot {
   // 预计算 reservedBySlot：一次扫描所有设备/配方/预留，避免 createSlotSnapshots 逐槽重复扫描。
   const reservedBySlot = buildReservedBySlot(state);
@@ -25,6 +28,8 @@ export function createTickSnapshot(
     topologyId: topology.topologyId,
     documentHash: topology.documentHash,
     tickNumber: state.tickNumber,
+    standardTickRate: topology.standardTickRate,
+    tickRate,
     status: state.tickNumber === 0 ? "initial" : "running",
     totalPowerDemand: topology.totalPowerDemand,
     currentPowerGeneration,
@@ -32,7 +37,7 @@ export function createTickSnapshot(
     baseBatteryJoules: state.persistent.baseBatteryJoules,
     baseBatteryCapacity: BASE_BATTERY_CAPACITY_J,
     slots: createSlotSnapshots(topology, state, reservedBySlot),
-    devices: createDeviceSnapshots(topology, state),
+    devices: createDeviceSnapshots(topology, state, isPowerOutage),
     nodes: createNodeSnapshots(state),
     transfers: state.transient.transfers.map((transfer) => ({ ...transfer })),
     routingCursors: { ...state.persistent.routingCursors },
@@ -121,6 +126,7 @@ function createSlotSnapshots(
 function createDeviceSnapshots(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  isPowerOutage: boolean,
 ): RuntimeTickSnapshot["devices"] {
   const devices: RuntimeTickSnapshot["devices"] = {};
   for (const deviceId of topology.ordering.deviceOrder) {
@@ -143,6 +149,13 @@ function createDeviceSnapshots(
             recipeType: chRecipe.recipeType,
             progressTicks: chRecipe.progressTicks,
             durationTicks: chRecipe.durationTicks,
+            isProgressing: isLegacyRecipeProgressing({
+              topology,
+              state,
+              deviceId,
+              channelId: chId,
+              isPowerOutage,
+            }),
             state: chRecipe.state,
           };
     }
@@ -158,6 +171,14 @@ function createDeviceSnapshots(
             recipeType: firstRecipe.recipeType,
             progressTicks: firstRecipe.progressTicks,
             durationTicks: firstRecipe.durationTicks,
+            isProgressing: isLegacyRecipeProgressing({
+              topology,
+              state,
+              deviceId,
+              channelId: Object.entries(runtimeDevice.channelRecipes)
+                .find(([, recipe]) => recipe === firstRecipe)?.[0] ?? "",
+              isPowerOutage,
+            }),
             state: firstRecipe.state,
           },
       channelRecipes,
@@ -175,6 +196,38 @@ function createDeviceSnapshots(
     };
   }
   return devices;
+}
+
+function isLegacyRecipeProgressing(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly deviceId: string;
+  readonly channelId: string;
+  readonly isPowerOutage: boolean;
+}): boolean {
+  const device = options.topology.devices[options.deviceId];
+  const recipe = options.state.persistent.devices[options.deviceId]
+    ?.channelRecipes[options.channelId] ?? null;
+  const channel = device?.recipeChannels.find((candidate) => candidate.id === options.channelId);
+  if (device === undefined || channel === undefined || recipe?.state !== "running") {
+    return false;
+  }
+  if (channel.type === "consumption-channel") {
+    return true;
+  }
+  if (
+    device.powerStatus === "out-of-power-range"
+    || (device.requiresPower && options.isPowerOutage)
+    || !isDeviceConsumptionAuthorizedForFrame(device, options.state)
+  ) {
+    return false;
+  }
+  return isDeviceInRequiredGasDiffusion({
+    topology: options.topology,
+    state: options.state,
+    device,
+    requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+  });
 }
 
 // AI-REMOVED 2026-07-23:

@@ -25,6 +25,7 @@ import {
   type DenseFrameDelta,
 } from "./dense-frame-delta";
 import type { DenseTopologyDictionary } from "./dense-topology";
+import { resolveRecipePhaseTicks } from "../tick-rate";
 
 export interface DenseRegionalBaseInput {
   readonly baseId: string;
@@ -228,7 +229,10 @@ export class DenseRegionalSimulationSession {
     this.nextEpochNumberValue += 1;
     return {
       epochNumber,
-      gateTickNumber: 1 + epochNumber * 10,
+      gateTickNumber: resolveDenseRegionalGateTick(
+        this.bases[0]?.input.topology,
+        epochNumber,
+      ),
       warehouseCounts: proposal.warehouseCounts,
       playbackDeltas,
       warehouseStats: aggregateDenseRegionalWarehouseStats({
@@ -252,7 +256,7 @@ export class DenseRegionalSimulationSession {
   ): readonly RegionWarehouseDeposit[] {
     const topology = this.bases[0]?.input.topology;
     if (topology === undefined) return [];
-    const gateTickNumber = 1 + epochNumber * 10;
+    const gateTickNumber = resolveDenseRegionalGateTick(topology, epochNumber);
     const windowTicks = topology.standardTickRate * 10;
     const completedWindows = Math.floor(Math.max(0, gateTickNumber - 1) / windowTicks);
     const newWindowCount = completedWindows - this.completedResourceSupplyWindows;
@@ -268,6 +272,19 @@ export class DenseRegionalSimulationSession {
       return amount > 0 ? [{ itemId, amount }] : [];
     });
   }
+}
+
+function resolveDenseRegionalGateTick(
+  topology: CompiledSimulationTopology | undefined,
+  epochNumber: number,
+): number {
+  const phaseTicks = topology === undefined
+    ? null
+    : resolveRecipePhaseTicks(topology.standardTickRate);
+  if (phaseTicks === null) {
+    throw new Error("Dense regional topology cannot represent the recipe phase.");
+  }
+  return 1 + epochNumber * phaseTicks;
 }
 
 function createInitializedProjection(

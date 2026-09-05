@@ -24,12 +24,17 @@ import {
   type RegionalBaseTopologyInput,
 } from "@/simulation/regional";
 import { DenseLocalRegionalBasePort } from "@/simulation/dense";
-import type { SimulationEngineKind } from "@/simulation/simulation-host";
+import {
+  createSimulationHost,
+  type SimulationEngineKind,
+} from "@/simulation/simulation-host";
+import { convertSimulationSecondsToTicksExact } from "@/simulation/tick-rate";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import type {
   CompiledRegionalResourceSupply,
   RuntimeTickSnapshot,
 } from "@/simulation/types";
+import { createHeadlessWorkspace } from "./blueprint-runner";
 
 export interface RegionalBlueprintPlacement {
   readonly blueprint: BlueprintDocument;
@@ -43,10 +48,11 @@ export interface RegionalBlueprintScenario {
   readonly currentBaseId: string;
   /** 未声明或空数组的同区域基地会以空基地参与仿真。 */
   readonly placementsByBaseId?: Readonly<Record<string, readonly RegionalBlueprintPlacement[]>>;
-  readonly untilTick: number;
+  readonly untilSeconds: number;
   readonly timeoutMs: number;
   /** 只保留明确要求的采样点；最终 untilTick 会自动加入。 */
-  readonly captureTicks?: readonly number[];
+  /** AI-CORRECTION 2026-09-04: 场景现以秒声明采样点，最终 untilSeconds 会自动加入并由引擎 standardTickRate 换算。 */
+  readonly captureSeconds?: readonly number[];
 }
 
 export interface RunRegionalBlueprintSimulationOptions {
@@ -75,6 +81,7 @@ export interface RegionalBlueprintSimulationReport {
   readonly scenarioName: string;
   readonly currentBaseId: string;
   readonly baseIds: readonly string[];
+  readonly standardTickRate: number;
   readonly documents: readonly WorldDocument[];
   readonly captures: readonly RegionalBlueprintTickCapture[];
   readonly elapsedMs: number;
@@ -86,12 +93,22 @@ export async function runRegionalBlueprintSimulation(
   const startedAt = performance.now();
   const { scenario, registry } = options;
   const engineKind = options.engineKind ?? resolveRegionalSimulationEngineKind();
-  const captureTicks = normalizeCaptureTicks(scenario);
   const documents = createRegionalBlueprintDocuments(scenario, registry);
   const workspace = createRunnerWorkspace(registry);
   const compiledDocuments = documents.map((document) =>
     appendBaseBuiltinEntities(document, registry)
   );
+  const currentBaseDocument = documents.find(
+    (document) => document.baseId === scenario.currentBaseId,
+  );
+  if (currentBaseDocument === undefined) {
+    throw new Error(`Regional blueprint current base ${scenario.currentBaseId} has no document.`);
+  }
+  const standardTickRate = await resolveEngineStandardTickRate({
+    document: currentBaseDocument,
+    engineKind,
+    registry,
+  });
   const topologies: RegionalBaseTopologyInput[] = compiledDocuments.map(
     (document, regionBaseOrderIndex) => ({
       baseId: document.baseId,
@@ -102,9 +119,23 @@ export async function runRegionalBlueprintSimulation(
         simulationMode: "regional-multi-base",
         poweredEntityIds: resolvePoweredEntityIds(document, workspace),
         activeActivityIds: [],
+        standardTickRate,
       }),
     }),
   );
+  const captureTicks = normalizeCaptureSeconds(scenario).map((durationSeconds) => {
+    const tickNumber = convertSimulationSecondsToTicksExact(
+      durationSeconds,
+      standardTickRate,
+    );
+    if (tickNumber === null) {
+      throw new Error(
+        `Regional capture ${durationSeconds}s is not exactly representable at ${standardTickRate} TPS.`,
+      );
+    }
+    return tickNumber;
+  });
+  const untilTick = captureTicks.at(-1)!;
   const regionalResourceSupply = topologies.find(
     (input) => input.baseId === scenario.currentBaseId,
   )?.topology.regionalResourceSupply;
@@ -161,14 +192,14 @@ export async function runRegionalBlueprintSimulation(
     while (captureIndex < captureTicks.length) {
       if (performance.now() >= deadline) {
         throw new Error(
-          `Regional blueprint scenario ${scenario.name} did not reach tick ${scenario.untilTick} within ${scenario.timeoutMs}ms.`,
+          `Regional blueprint scenario ${scenario.name} did not reach ${scenario.untilSeconds}s (tick ${untilTick}) within ${scenario.timeoutMs}ms.`,
         );
       }
 
       const committed = await waitForRunnerDeadline(
         session.runEpoch(session.nextEpochNumber),
         deadline,
-        `Regional blueprint scenario ${scenario.name} did not reach tick ${scenario.untilTick} within ${scenario.timeoutMs}ms.`,
+        `Regional blueprint scenario ${scenario.name} did not reach ${scenario.untilSeconds}s (tick ${untilTick}) within ${scenario.timeoutMs}ms.`,
       );
       while (
         captureIndex < captureTicks.length
@@ -187,6 +218,7 @@ export async function runRegionalBlueprintSimulation(
       scenarioName: scenario.name,
       currentBaseId: scenario.currentBaseId,
       baseIds: topologies.map((input) => input.baseId),
+      standardTickRate,
       documents,
       captures,
       elapsedMs: performance.now() - startedAt,
@@ -474,15 +506,15 @@ function aggregateRegionalWarehouseStats(
   });
 }
 
-function normalizeCaptureTicks(scenario: RegionalBlueprintScenario): number[] {
-  const requested = [...(scenario.captureTicks ?? []), scenario.untilTick];
-  for (const tickNumber of requested) {
-    if (!Number.isSafeInteger(tickNumber) || tickNumber < 0) {
-      throw new Error(`Regional capture tick must be a non-negative safe integer; received ${tickNumber}.`);
+function normalizeCaptureSeconds(scenario: RegionalBlueprintScenario): number[] {
+  const requested = [...(scenario.captureSeconds ?? []), scenario.untilSeconds];
+  for (const durationSeconds of requested) {
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      throw new Error(`Regional capture duration must be positive; received ${durationSeconds}.`);
     }
-    if (tickNumber > scenario.untilTick) {
+    if (durationSeconds > scenario.untilSeconds) {
       throw new Error(
-        `Regional capture tick ${tickNumber} exceeds untilTick ${scenario.untilTick}.`,
+        `Regional capture duration ${durationSeconds}s exceeds untilSeconds ${scenario.untilSeconds}s.`,
       );
     }
   }
@@ -524,7 +556,7 @@ function validateScenario(
   if (!Number.isFinite(scenario.timeoutMs) || scenario.timeoutMs <= 0) {
     throw new Error(`Regional scenario timeout must be positive; received ${scenario.timeoutMs}.`);
   }
-  normalizeCaptureTicks(scenario);
+  normalizeCaptureSeconds(scenario);
 
   const regionDefinitions = registry.baseDefinitions.filter(
     (definition) => definition.tag === scenario.regionTag,
@@ -543,6 +575,34 @@ function validateScenario(
     if (!regionBaseIds.has(baseId)) {
       throw new Error(`Scenario placement base ${baseId} does not belong to region ${scenario.regionTag}.`);
     }
+  }
+}
+
+async function resolveEngineStandardTickRate(options: {
+  readonly document: WorldDocument;
+  readonly engineKind: SimulationEngineKind;
+  readonly registry: RegistryContract;
+}): Promise<number> {
+  const host = createSimulationHost(
+    createHeadlessWorkspace(options.document, options.registry),
+    { engineKind: options.engineKind, workerMode: "runtime" },
+  );
+  try {
+    const started = await host.internalActions.refreshFromCurrentDocument();
+    const standardTickRate = host.queries.getDocumentRuntimeStatus()?.standardTickRate;
+    if (
+      started.status !== "started"
+      || standardTickRate === undefined
+      || !Number.isFinite(standardTickRate)
+      || standardTickRate <= 0
+    ) {
+      throw new Error(
+        `Cannot resolve ${options.engineKind} standardTickRate: ${started.error ?? "runtime status unavailable"}.`,
+      );
+    }
+    return standardTickRate;
+  } finally {
+    host.dispose();
   }
 }
 

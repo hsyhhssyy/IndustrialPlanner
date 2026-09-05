@@ -76,7 +76,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
 
       try {
         await host.actions.start();
-        await host.actions.advancePlaybackByDeltaMs(250);
+        await host.actions.advancePlaybackByDeltaMs(500);
         await host.actions.patchRuntimeSlot({
           entityId: "stable-storage",
           storageGroupId: "storage_slot_1",
@@ -87,6 +87,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         });
         const beforePump = host.queries.getDeviceRuntimeStatus("pump");
         const beforeStorage = host.queries.getDeviceRuntimeStatus("stable-storage");
+        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
         expect(beforePump?.channelRecipes.default).toMatchObject({
           recipeId: "r_pump_water_basic",
           state: "running",
@@ -115,7 +116,9 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await refreshPromise;
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(5);
+        expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(
+          beforeTickNumber,
+        );
         expect(host.queries.getDeviceRuntimeStatus("pump")?.channelRecipes.default)
           .toMatchObject({
             recipeId: "r_pump_water_basic",
@@ -165,7 +168,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
 
       try {
         await host.actions.start();
-        await host.actions.advancePlaybackByDeltaMs(150);
+        await host.actions.advancePlaybackByDeltaMs(500);
         await host.actions.patchRuntimeSlot({
           entityId: "stable-storage",
           storageGroupId: "storage_slot_1",
@@ -183,6 +186,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
           ignoreStock: false,
         });
         host.actions.pause();
+        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
 
         const changedEntity = document.entities["changed-storage"]!;
         documentStore.setSnapshot({
@@ -201,7 +205,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await host.internalActions.refreshFromCurrentDocument();
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(3);
+        expect(host.internalState.currentSnapshot?.tickNumber).toBe(beforeTickNumber);
         expect(host.queries.getDeviceRuntimeStatus("stable-storage")?.slotItems)
           .toContainEqual(expect.objectContaining({
             itemType: "item_copper_ore",
@@ -245,8 +249,9 @@ describe("ST2-RQ-023 dense host regressions", () => {
 
       try {
         await host.actions.start();
-        await host.actions.advancePlaybackByDeltaMs(250);
+        await host.actions.advancePlaybackByDeltaMs(500);
         host.actions.pause();
+        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
         const beforeBelt = host.queries.getDeviceRuntimeStatus("belt");
         expect(beforeBelt?.channelRecipes.default).toMatchObject({
           recipeId: "belt_straight_1x1:dynamic-belt-transfer",
@@ -266,7 +271,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await host.internalActions.refreshFromCurrentDocument();
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(5);
+        expect(host.internalState.currentSnapshot?.tickNumber).toBe(beforeTickNumber);
         expect(host.queries.getDeviceRuntimeStatus("belt")?.channelRecipes.default)
           .toEqual(beforeBelt?.channelRecipes.default);
         expect(host.queries.getDeviceRuntimeStatus("belt")?.slotItems)
@@ -276,6 +281,33 @@ describe("ST2-RQ-023 dense host regressions", () => {
       }
       },
     );
+  });
+
+  it("publishes the Dense 2 TPS timing contract", async () => {
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      readLatestBaseDocuments: async (baseIds) =>
+        baseIds.map((baseId) => createWorldDocument({ baseId })),
+    });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      await host.actions.start();
+      expect(host.queries.getDocumentRuntimeStatus()).toMatchObject({
+        standardTickRate: 2,
+        tickRate: 2,
+      });
+      expect(host.internalState.currentSnapshot).toMatchObject({
+        standardTickRate: 2,
+        tickRate: 2,
+      });
+    } finally {
+      host.dispose();
+    }
   });
 
   it("starts regional multi-base mode through the dense SimulationHost", async () => {
@@ -303,7 +335,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         error: null,
       });
       await host.actions.advancePlaybackByDeltaMs(500);
-      expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(10);
+      expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(1);
     } finally {
       host.dispose();
     }

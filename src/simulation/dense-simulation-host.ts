@@ -49,7 +49,10 @@ import {
   createSimulationStateReadWrite,
   type SimulationStateReadWrite,
 } from "./state-impl";
-import { convertSimulationTicksToSeconds } from "./tick-rate";
+import {
+  DENSE_STANDARD_TICK_RATE_PER_SECOND,
+  convertSimulationTicksToSeconds,
+} from "./tick-rate";
 import {
   compileSimulationTopology,
   createSimulationDocumentHash,
@@ -68,7 +71,7 @@ import type {
 let nextDenseSessionId = 1;
 const DENSE_TIMELINE_TICK_DURATION_SECONDS = 0.5;
 const DENSE_TIMELINE_RULER_DURATION_SECONDS = 300;
-const DENSE_TIMELINE_STEP_STANDARD_TICKS = 10;
+const DENSE_TIMELINE_STEP_STANDARD_TICKS = 1;
 const DENSE_TIMELINE_ORIGIN_STANDARD_TICK = 1;
 const DENSE_TIMELINE_CAPACITY_TICKS = 600;
 const logger = createLogger("dense-simulation-runtime");
@@ -447,6 +450,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
         simulationMode: this.state.simulationMode,
         activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
+        standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
       });
       const topology = appendUnknownEntityAdmissionDiagnostics(
         compiledTopology,
@@ -756,6 +760,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
             simulationMode: SIMULATION_MODE.regionalMultiBase,
             activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
             regionalResources,
+            standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
           }),
           admission.excludedIssues,
         ),
@@ -1107,6 +1112,8 @@ function createDenseQueries(
           ? null
           : {
               tickNumber: projection.tickNumber,
+              standardTickRate: projection.standardTickRate,
+              tickRate: projection.tickRate,
               status: projection.status,
               totalPowerDemand: projection.totalPowerDemand,
               transferCount: projection.getTransfers().length,
@@ -1124,6 +1131,9 @@ function createDenseQueries(
       if (projection === null || topology === null) return null;
       return {
         tickNumber: projection.tickNumber,
+        standardTickRate: projection.standardTickRate
+          ?? DENSE_STANDARD_TICK_RATE_PER_SECOND,
+        tickRate: projection.tickRate ?? DENSE_STANDARD_TICK_RATE_PER_SECOND,
         totalPowerDemand: state.regionalTotalPowerDemand
           ?? controller.currentPowerConsumptionOverride
           ?? projection.totalPowerDemand,
@@ -1137,7 +1147,12 @@ function createDenseQueries(
         cachedTopology = topology;
         cachedShareCapSlotIds = topology === null ? null : resolveShareCapSlotIds(topology);
       }
-      return createDenseDeviceStatus(controller, deviceId, cachedShareCapSlotIds);
+      return createDenseDeviceStatus(
+        controller,
+        deviceId,
+        cachedShareCapSlotIds,
+        controller.simulationState.runtimeStatus.mode === "running",
+      );
     },
     getPipeFluidItemId: (deviceId) => resolveDensePipeFluidItemId(controller, deviceId),
     isPipeDeviceSlotOccupied: (deviceId) => isDensePipeDeviceSlotOccupied(
@@ -1181,6 +1196,7 @@ function createDenseDeviceStatus(
   controller: DenseSimulationController,
   sourceDeviceId: string,
   shareCapSlotIds: ReadonlySet<string> | null,
+  runtimeCanProgress: boolean,
 ): SimulationDeviceRuntimeStatusReadModel | null {
   const topology = controller.currentTopology;
   const projection = controller.currentProjection;
@@ -1201,8 +1217,15 @@ function createDenseDeviceStatus(
       : {
           channelId,
           recipeId: recipe.recipeId,
-          progressSeconds: convertSimulationTicksToSeconds(recipe.progressTicks),
-          desiredSeconds: convertSimulationTicksToSeconds(recipe.durationTicks),
+          progressSeconds: convertSimulationTicksToSeconds(
+            recipe.progressTicks,
+            topology.standardTickRate,
+          ),
+          desiredSeconds: convertSimulationTicksToSeconds(
+            recipe.durationTicks,
+            topology.standardTickRate,
+          ),
+          isProgressing: recipe.isProgressing && runtimeCanProgress,
           state: recipe.state,
         };
   }

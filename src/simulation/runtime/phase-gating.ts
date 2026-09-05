@@ -9,7 +9,9 @@ import type {
 } from "./runtime-state";
 import {
   DYNAMIC_SIMULATION_TICK_RATES,
+  convertSimulationSecondsToTicksExact,
   isDynamicTickRateCompatibleWithTransferUnits,
+  resolveRecipePhaseTicks,
 } from "../tick-rate";
 import {
   BELT_TRANSPORT_DURATION_SECONDS,
@@ -74,8 +76,17 @@ export function resolveTransportRecipeTiming(
   }
 
   const durationSeconds = isBelt ? BELT_TRANSPORT_DURATION_SECONDS : PIPE_TRANSPORT_DURATION_SECONDS;
+  const durationTicks = convertSimulationSecondsToTicksExact(
+    durationSeconds,
+    topology.standardTickRate,
+  );
+  if (durationTicks === null) {
+    throw new Error(
+      `Transport duration ${durationSeconds}s is not exactly representable at ${topology.standardTickRate} TPS.`,
+    );
+  }
   return {
-    durationTicks: Math.max(1, Math.round(durationSeconds * topology.standardTickRate)),
+    durationTicks,
     recipeIdSuffix: isBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer",
   };
 }
@@ -177,12 +188,13 @@ export function resolveDynamicTickRateSwitchIntervalTicks(
   topology: CompiledSimulationTopology,
 ): number {
   const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(registry, topology);
-  if (transferUnitTicks.length === 0) {
-    return topology.standardTickRate;
+  const recipePhaseTicks = resolveRecipePhaseTicks(topology.standardTickRate);
+  if (recipePhaseTicks === null) {
+    return 0;
   }
-
-  return transferUnitTicks.reduce((currentLcm, transferUnitTicks) =>
-    lcm(currentLcm, transferUnitTicks),
+  return transferUnitTicks.reduce(
+    (currentLcm, transferUnitTicks) => lcm(currentLcm, transferUnitTicks),
+    recipePhaseTicks,
   );
 }
 
@@ -192,7 +204,9 @@ export function canAdjustDynamicTickRateAtTick(options: {
   readonly standardTick: number;
 }): boolean {
   const switchIntervalTicks = resolveDynamicTickRateSwitchIntervalTicks(options.registry, options.topology);
-  return switchIntervalTicks > 0 && options.standardTick % switchIntervalTicks === 0;
+  return options.standardTick === 0
+    || (switchIntervalTicks > 0
+      && (options.standardTick - 1) % switchIntervalTicks === 0);
 }
 
 export function resolveLegalDynamicTickRates(
@@ -200,10 +214,14 @@ export function resolveLegalDynamicTickRates(
   topology: CompiledSimulationTopology,
 ): readonly number[] {
   const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(registry, topology);
+  const recipePhaseTicks = resolveRecipePhaseTicks(topology.standardTickRate);
+  if (recipePhaseTicks === null) {
+    return [];
+  }
   return DYNAMIC_SIMULATION_TICK_RATES.filter((dynamicTickRate) =>
     isDynamicTickRateCompatibleWithTransferUnits({
       dynamicTickRate,
-      transferUnitTicks,
+      transferUnitTicks: [...transferUnitTicks, recipePhaseTicks],
       standardTickRate: topology.standardTickRate,
     }),
   );
@@ -285,12 +303,24 @@ export function canRecipeFinishAtCurrentPhase(
   state: SimulationMutableRuntimeState,
   recipe: RuntimeDeviceRecipeState,
 ): boolean {
+  if (!canRecipeLifecycleTransitionAtCurrentPhase(topology, state)) {
+    return false;
+  }
   const device = resolveRecipeDevice(topology, recipe);
   if (device === null) {
     return true;
   }
 
   return canDeviceTransferAtCurrentPhase(registry, topology, state, device);
+}
+
+export function canRecipeLifecycleTransitionAtCurrentPhase(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): boolean {
+  const phaseTicks = resolveRecipePhaseTicks(topology.standardTickRate);
+  return phaseTicks !== null
+    && (state.tickNumber - 1) % phaseTicks === 0;
 }
 
 // AI-REMOVED 2026-07-23:

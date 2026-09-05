@@ -30,6 +30,8 @@ export interface DenseFrameDelta {
   readonly frameSequence: number;
   readonly fromTickNumber: number;
   readonly tickNumber: number;
+  readonly standardTickRate: number;
+  readonly tickRate: number;
   readonly status: typeof FRAME_STATUS_INITIAL | typeof FRAME_STATUS_RUNNING;
   readonly debugData?: string;
   readonly totalPowerDemand: number;
@@ -239,6 +241,8 @@ export class DenseFrameDeltaEncoder {
         ? snapshot.tickNumber
         : Math.min(snapshot.tickNumber, previous.tickNumber + 1),
       tickNumber: snapshot.tickNumber,
+      standardTickRate: snapshot.standardTickRate,
+      tickRate: snapshot.tickRate,
       status: snapshot.status === "initial" ? FRAME_STATUS_INITIAL : FRAME_STATUS_RUNNING,
       ...(snapshot.debugData === undefined ? {} : { debugData: snapshot.debugData }),
       totalPowerDemand: snapshot.totalPowerDemand,
@@ -319,6 +323,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private initialized = false;
   private currentFrameSequence = 0;
   private currentTickNumber = 0;
+  private currentStandardTickRate = 0;
+  private currentTickRate = 0;
   private currentStatus: RuntimeTickSnapshot["status"] = "initial";
   private currentDebugData: string | undefined;
   private currentTotalPowerDemand = 0;
@@ -353,6 +359,14 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
 
   public get frameSequence(): number {
     return this.currentFrameSequence;
+  }
+
+  public get standardTickRate(): number | null {
+    return this.initialized ? this.currentStandardTickRate : null;
+  }
+
+  public get tickRate(): number | null {
+    return this.initialized ? this.currentTickRate : null;
   }
 
   public get status(): RuntimeTickSnapshot["status"] | null {
@@ -412,6 +426,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
 
     this.currentFrameSequence = delta.frameSequence;
     this.currentTickNumber = delta.tickNumber;
+    this.currentStandardTickRate = delta.standardTickRate;
+    this.currentTickRate = delta.tickRate;
     this.currentStatus = delta.status === FRAME_STATUS_INITIAL ? "initial" : "running";
     this.currentDebugData = delta.debugData;
     this.currentTotalPowerDemand = delta.totalPowerDemand;
@@ -474,6 +490,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       topologyId: this.dictionary.topologyId,
       documentHash: this.dictionary.documentHash,
       tickNumber: this.currentTickNumber,
+      standardTickRate: this.currentStandardTickRate,
+      tickRate: this.currentTickRate,
       status: this.currentStatus,
       ...(this.currentDebugData === undefined ? {} : { debugData: this.currentDebugData }),
       totalPowerDemand: this.currentTotalPowerDemand,
@@ -704,6 +722,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     assertGasDelta(delta, this.dictionary);
     assertWarehouseDelta(delta, this.dictionary);
     assertFiniteNonNegative(delta.totalPowerDemand, "total power demand");
+    assertFinitePositive(delta.standardTickRate, "standard tick rate");
+    assertFinitePositive(delta.tickRate, "tick rate");
     assertFiniteNonNegative(delta.currentPowerGeneration, "current power generation");
     assertFiniteNonNegative(delta.baseBatteryJoules, "base battery joules");
     assertFiniteNonNegative(delta.baseBatteryCapacity, "base battery capacity");
@@ -1060,6 +1080,12 @@ function assertDictionaryIndex(index: number, capacity: number, kind: string): v
 function assertFiniteNonNegative(value: number, label: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new Error(`Dense frame ${label} must be finite and non-negative; received ${value}.`);
+  }
+}
+
+function assertFinitePositive(value: number, label: string): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`Dense frame ${label} must be finite and positive; received ${value}.`);
   }
 }
 

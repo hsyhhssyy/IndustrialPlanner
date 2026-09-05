@@ -168,6 +168,23 @@ export class RegionalSimulationSession {
         demandedOutletIds: [...result.demandedOutletIds],
       };
     });
+    const gateTickNumber = prepareResults[0]?.tickNumber;
+    if (
+      gateTickNumber === undefined
+      || !Number.isSafeInteger(gateTickNumber)
+      || gateTickNumber < 0
+    ) {
+      throw new Error(
+        `Regional epoch ${epochNumber} has no valid prepared gate tick.`,
+      );
+    }
+    for (const result of prepareResults) {
+      if (result.tickNumber !== gateTickNumber) {
+        throw new Error(
+          `Regional epoch ${epochNumber} prepare tick mismatch: expected ${gateTickNumber}, base ${result.baseId} reported ${result.tickNumber}.`,
+        );
+      }
+    }
 
     const arbitration = await (this.authorityPort?.arbitrateEpoch(epochNumber, demands)
       ?? Promise.resolve(arbitrateRegionalWarehouseEpoch({
@@ -185,10 +202,15 @@ export class RegionalSimulationSession {
         throw new Error(`Regional grant missing base ${port.baseId}.`);
       }
       const applied = await port.applyEpochGrant(epochNumber, grant.grantedOutletIds);
+      if (applied.tickNumber !== gateTickNumber) {
+        throw new Error(
+          `Regional epoch ${epochNumber} apply tick mismatch: expected ${gateTickNumber}, base ${port.baseId} reported ${applied.tickNumber}.`,
+        );
+      }
       return { baseId: port.baseId, applied };
     }));
 
-    const resourceDeposits = this.createRegionalResourceDeposits(epochNumber);
+    const resourceDeposits = this.createRegionalResourceDeposits(gateTickNumber);
     const resourceDepositBaseId = expectedBaseIds[0] ?? null;
     const acks: RegionWarehouseAckBatch[] = expectedBaseIds.map((baseId) => {
       const result = applyResults.find((candidate) => candidate.baseId === baseId);
@@ -227,6 +249,11 @@ export class RegionalSimulationSession {
 
     const finalizeResults = await Promise.all(this.ports.map(async (port) => {
       const finalized = await port.finalizeEpoch(epochNumber, proposal.warehouseCounts);
+      if (finalized.tickNumber !== gateTickNumber) {
+        throw new Error(
+          `Regional epoch ${epochNumber} finalize tick mismatch: expected ${gateTickNumber}, base ${port.baseId} reported ${finalized.tickNumber}.`,
+        );
+      }
       return { baseId: port.baseId, finalized };
     }));
     const playbackSnapshots = [...await this.currentBasePort.takePreparedSnapshots()];
@@ -237,7 +264,7 @@ export class RegionalSimulationSession {
 
     const committedEpoch: RegionalCommittedEpoch = {
       epochNumber,
-      gateTickNumber: 1 + epochNumber * 10,
+      gateTickNumber,
       warehouseVersion: proposal.nextWarehouseVersion,
       warehouseCounts: proposal.warehouseCounts,
       snapshotsByBaseId,
@@ -265,13 +292,12 @@ export class RegionalSimulationSession {
   }
 
   private createRegionalResourceDeposits(
-    epochNumber: number,
+    gateTickNumber: number,
   ): readonly RegionWarehouseDeposit[] {
     const topology = this.options.topologies[0]?.topology;
     if (topology === undefined) {
       return [];
     }
-    const gateTickNumber = 1 + epochNumber * 10;
     const windowTicks = topology.standardTickRate * 10;
     const completedWindows = Math.floor(Math.max(0, gateTickNumber - 1) / windowTicks);
     const newWindowCount = completedWindows - this.completedResourceSupplyWindows;

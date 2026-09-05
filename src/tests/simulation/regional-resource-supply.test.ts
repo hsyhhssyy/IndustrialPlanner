@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { DenseLocalRegionalBasePort } from "@/simulation/dense";
 import { aggregateRegionalWarehouseStats } from "@/simulation/regional";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
@@ -9,6 +10,7 @@ import {
   type RegionalBaseTopologyInput,
 } from "@/simulation/regional/session";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import type {
   RegionalResourceSupplySetting,
   RuntimeTickSnapshot,
@@ -156,6 +158,76 @@ describe("地区资源供给", () => {
         infinite: false,
       });
       expect(warehouseStats.items["item_liquid_water"]?.infinite).toBe(true);
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("Dense 按基地实际门禁 tick 提交进度与有限资源窗口", async () => {
+    const registry = createRegistryContract();
+    const documents = ["dense-regional-a", "dense-regional-b"].map((baseId) => {
+      const document = createWorldDocumentFromBlueprint(createBlueprint(baseId, []));
+      document.baseId = baseId;
+      return document;
+    });
+    const topologies: RegionalBaseTopologyInput[] = documents.map((document, index) => ({
+      baseId: document.baseId,
+      regionBaseOrderIndex: index,
+      topology: compileSimulationTopology({
+        document,
+        registry,
+        simulationMode: "regional-multi-base",
+        poweredEntityIds: new Set(),
+        activeActivityIds: [],
+        regionalResources: [{
+          itemId: "item_originium_ore",
+          mode: "rate",
+          perMinute: 60,
+        }],
+        standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+      }),
+    }));
+    const admission = buildRegionalWarehouseOutletTable({ registry, topologies });
+    expect(admission.ok).toBe(true);
+    const initialWarehouseCounts: Record<string, number> = {};
+    const session = new RegionalSimulationSession({
+      sessionId: "dense-regional-resource-supply",
+      registry,
+      topologies,
+      table: admission.table!,
+      currentBaseId: topologies[0]!.baseId,
+      expectedBaseIds: topologies.map((input) => input.baseId),
+      initialWarehouseCounts,
+      simulationSpeed: 1,
+      currentBaseDynamicTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+      backgroundDynamicTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+    }, topologies.map((input, index) => new DenseLocalRegionalBasePort({
+      registry,
+      baseId: input.baseId,
+      topology: input.topology,
+      table: admission.table!,
+      initialWarehouseCounts,
+      isCurrentBase: index === 0,
+      advanceMode: "coarse",
+    })), null);
+
+    try {
+      let committed = await session.runEpoch(0);
+      expect(committed.gateTickNumber).toBe(1);
+      for (let epoch = 1; epoch <= 2; epoch += 1) {
+        committed = await session.runEpoch(epoch);
+      }
+      expect(committed.gateTickNumber).toBe(3);
+      expect(committed.warehouseCounts["item_originium_ore"]).toBeUndefined();
+
+      for (let epoch = 3; epoch <= 20; epoch += 1) {
+        committed = await session.runEpoch(epoch);
+      }
+      expect(committed.gateTickNumber).toBe(21);
+      expect(committed.warehouseCounts["item_originium_ore"]).toBe(10);
+      for (const snapshot of Object.values(committed.snapshotsByBaseId)) {
+        expect(snapshot?.tickNumber).toBe(committed.gateTickNumber);
+      }
     } finally {
       session.dispose();
     }

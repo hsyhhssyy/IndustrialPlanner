@@ -17,6 +17,7 @@ import type {
   RuntimeDeviceSnapshot,
   RuntimeGasDiffusionSnapshot,
 } from "../types";
+import { resolveRecipePhaseTicks } from "../tick-rate";
 import type {
   RegionWarehouseDeposit,
   RegionalWarehouseOutletTable,
@@ -686,7 +687,10 @@ export class DenseSimulationKernel {
     if (this.regionalGateTransfers !== null) {
       throw new Error(`Dense regional gate is already paused at epoch ${this.regionalGateEpochNumber}.`);
     }
-    const gateTickNumber = resolveRegionalGateTick(epochNumber);
+    const gateTickNumber = resolveRegionalGateTick(
+      epochNumber,
+      this.topology.standardTickRate,
+    );
     if (gateTickNumber <= this.currentTickNumber) {
       throw new Error(`Dense regional epoch ${epochNumber} gate ${gateTickNumber} has already passed.`);
     }
@@ -1530,10 +1534,23 @@ export class DenseSimulationKernel {
       recipeType: recipe.recipeType,
       progressTicks: this.channelProgressTicks[channel.index]!,
       durationTicks: recipe.durationTicks,
+      isProgressing: this.isChannelProgressing(channel, recipe),
       state: this.channelStates[channel.index] === CHANNEL_RUNNING
         ? "running"
         : "waiting-output",
     };
+  }
+
+  private isChannelProgressing(
+    channel: DenseRecipeChannelProgram,
+    recipe: DenseRecipeProgram,
+  ): boolean {
+    return this.channelStates[channel.index] === CHANNEL_RUNNING
+      && (channel.consumptionChannel || this.hasDevicePower(channel.deviceIndex))
+      && (
+        recipe.requiredGasItemIndex === DENSE_INDEX_NONE
+        || this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex)
+      );
   }
 
   private isRecipeAlreadyRunningOnSiblingChannel(
@@ -2610,11 +2627,15 @@ function createKernelTickResult(
   };
 }
 
-function resolveRegionalGateTick(epochNumber: number): number {
+function resolveRegionalGateTick(epochNumber: number, standardTickRate: number): number {
   if (!Number.isSafeInteger(epochNumber) || epochNumber < 0) {
     throw new Error(`Dense regional epoch must be a non-negative safe integer: ${epochNumber}.`);
   }
-  return 1 + epochNumber * 10;
+  const phaseTicks = resolveRecipePhaseTicks(standardTickRate);
+  if (phaseTicks === null) {
+    throw new Error(`Dense standard tick rate ${standardTickRate} cannot represent a recipe phase.`);
+  }
+  return 1 + epochNumber * phaseTicks;
 }
 
 function resolveDeviceGridRect(

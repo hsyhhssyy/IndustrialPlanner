@@ -12,6 +12,7 @@ import {
   type DenseTopologyLayout,
 } from "./dense-topology";
 import type { CompiledSimulationTopology } from "../types";
+import { resolveRecipePhaseTicks } from "../tick-rate";
 import {
   DenseMessageSequenceGate,
   type DenseProtocolIdentity,
@@ -34,7 +35,16 @@ interface DenseWorkerSession {
   pendingRegionalGrant: DenseRegionalGrantResult | null;
 }
 
-const DENSE_CHECKPOINT_INTERVAL_TICKS = 20;
+// AI-REMOVED 2026-09-04:
+// Reason: Dense standard tick rate 改为 2 TPS 后，固定 20 tick 不再等于一秒。
+// Trigger: ST2-RQ-024 要求所有 tick/second 换算基于 topology.standardTickRate。
+// Evidence: checkpoint 判断现直接使用 session.topology.standardTickRate。
+// Replacement: DenseWorkerRuntime.advance 中的 topology rate 判断。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const DENSE_CHECKPOINT_INTERVAL_TICKS = 20;
 const DENSE_MAX_CHECKPOINTS = 900;
 
 export class DenseWorkerRuntime {
@@ -165,7 +175,7 @@ export class DenseWorkerRuntime {
     }
 
     const result = session.kernel.advanceToTick(request.targetTickNumber, (committed) => {
-      if (committed.tickNumber % DENSE_CHECKPOINT_INTERVAL_TICKS === 0) {
+      if (committed.tickNumber % session.topology.standardTickRate === 0) {
         this.retainCheckpoint(session, session.kernel.createCheckpoint());
       }
     });
@@ -233,7 +243,12 @@ export class DenseWorkerRuntime {
     request: Extract<DenseWorkerRequest, { readonly type: "finalize-regional-epoch" }>,
   ): Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }> {
     const applied = session.pendingRegionalGrant;
-    if (applied === null || applied.result.tickNumber !== 1 + request.epochNumber * 10) {
+    const phaseTicks = resolveRecipePhaseTicks(session.topology.standardTickRate);
+    if (
+      applied === null
+      || phaseTicks === null
+      || applied.result.tickNumber !== 1 + request.epochNumber * phaseTicks
+    ) {
       throw new Error(`Dense regional epoch ${request.epochNumber} has no applied grant.`);
     }
     session.kernel.finalizeRegionalEpoch(request.epochNumber, request.nextWarehouseCounts);

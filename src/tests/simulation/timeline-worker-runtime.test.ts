@@ -379,7 +379,11 @@ describe("TimelineWorkerRuntime", () => {
     }
 
     expect(timelineCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(2401);
-    expect(timelineCheckpoint.runtimeExport?.snapshot).toEqual(exactRuntimeExport?.snapshot);
+    expect(timelineCheckpoint.runtimeExport?.snapshot).toEqual({
+      ...exactRuntimeExport?.snapshot,
+      tickRate: timelineCheckpoint.runtimeExport?.snapshot.tickRate,
+    });
+    expect(timelineCheckpoint.runtimeExport?.snapshot.tickRate).toBe(2);
   });
 
   it("keeps consumption and gas state equal at every minute after continuous fill and a large forward retarget", () => {
@@ -446,7 +450,11 @@ describe("TimelineWorkerRuntime", () => {
       const exactExport = exactExportsByMinute.get(minute);
       expect(checkpoint.runtimeExport?.runtimeState.persistent)
         .toEqual(exactExport?.runtimeState.persistent);
-      expect(checkpoint.runtimeExport?.snapshot).toEqual(exactExport?.snapshot);
+      expect(checkpoint.runtimeExport?.snapshot).toEqual({
+        ...exactExport?.snapshot,
+        tickRate: checkpoint.runtimeExport?.snapshot.tickRate,
+      });
+      expect(checkpoint.runtimeExport?.snapshot.tickRate).toBe(2);
     }
 
     const largeSeekCheckpoint = timelineRuntime.handleRequest({

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
-import { runBlueprintSimulation } from "../blueprint-runner";
+import {
+  BLUEPRINT_SIMULATION_ENGINE_KINDS,
+  runBlueprintSimulation,
+} from "../blueprint-runner";
 import {
   createEntity,
   loadBlueprintWithExtras,
@@ -44,10 +47,11 @@ import {
 
 const TARGET_ITEM = "item_bottled_rec_hp_5";
 const STORAGER_ID = "legacy_d8591492_0104";
-const WARMUP_TICKS = 2400; // 2 分钟预热
-const WINDOW_SIZE = 1200; // 1 分钟窗口（20 tick/s × 60s）
-const OBSERVATION_TICKS = 2400; // 预热后观察 2 分钟
-const WINDOW_STEP = 100;   // 窗口滑动步长
+const WARMUP_SECONDS = 120; // 2 分钟预热
+const WINDOW_SECONDS = 60; // 1 分钟窗口（20 tick/s × 60s）
+const OBSERVATION_SECONDS = 120; // 预热后观察 2 分钟
+const WINDOW_STEP_SECONDS = 5;   // 窗口滑动步长
+// AI-CORRECTION 2026-09-04: 上述窗口统一改用秒，运行后按 topology.standardTickRate 换算，不再固定假设 20 TPS。
 const TARGET_PER_WINDOW = 6;
 
 // AI-REMOVED 2026-08-19:
@@ -105,7 +109,7 @@ const EXTRA_ENTITIES = [
   createEntity("power_aux", "power_diffuser_1", 8, 21),
 ];
 
-describe("暗管芽针针剂完整产线", () => {
+describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)("暗管芽针针剂完整产线 [%s]", (engineKind) => {
   it(
     "预热2分钟后，1分钟滑动窗口产出 >= 6个优质芽针针剂，持续2分钟",
     { timeout: 600_000 },
@@ -124,12 +128,18 @@ describe("暗管芽针针剂完整产线", () => {
       );
 
       // 3. 运行仿真
-      const maxTick = WARMUP_TICKS + OBSERVATION_TICKS;
       const report = await runBlueprintSimulation({
         blueprint,
-        maxTickNumber: maxTick,
+        engineKind,
+        maxDurationSeconds: WARMUP_SECONDS + OBSERVATION_SECONDS,
         registry: createRegistryContract(),
       });
+      const standardTickRate = report.topology.standardTickRate;
+      const warmupTicks = WARMUP_SECONDS * standardTickRate;
+      const windowSize = WINDOW_SECONDS * standardTickRate;
+      const observationTicks = OBSERVATION_SECONDS * standardTickRate;
+      const windowStep = WINDOW_STEP_SECONDS * standardTickRate;
+      const maxTick = report.execution.maxTickNumber;
 
       // 4. 累计最终产物交到目标存储箱的数量
       const delivered: number[] = new Array(maxTick + 1).fill(0);
@@ -147,12 +157,12 @@ describe("暗管芽针针剂完整产线", () => {
       }
 
       // 5. 滑动窗口验证
-      const slidingWindowStartMin = WARMUP_TICKS;
-      const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1;
+      const slidingWindowStartMin = warmupTicks;
+      const slidingWindowStartMax = maxTick - windowSize + 1;
       const results: { windowStart: number; produced: number }[] = [];
 
-      for (let windowStart = slidingWindowStartMin; windowStart <= slidingWindowStartMax; windowStart += WINDOW_STEP) {
-        const windowEnd = windowStart + WINDOW_SIZE - 1;
+      for (let windowStart = slidingWindowStartMin; windowStart <= slidingWindowStartMax; windowStart += windowStep) {
+        const windowEnd = windowStart + windowSize - 1;
         const beforeWindow = windowStart - 1;
         const produced = delivered[windowEnd]! - delivered[beforeWindow]!;
 
@@ -164,8 +174,8 @@ describe("暗管芽针针剂完整产线", () => {
         ).toBeGreaterThanOrEqual(TARGET_PER_WINDOW);
       }
 
-      const totalProduced = delivered[maxTick]! - delivered[WARMUP_TICKS - 1]!;
-      const expectedMinTotal = (OBSERVATION_TICKS / WINDOW_SIZE) * TARGET_PER_WINDOW;
+      const totalProduced = delivered[maxTick]! - delivered[warmupTicks - 1]!;
+      const expectedMinTotal = (observationTicks / windowSize) * TARGET_PER_WINDOW;
       expect(totalProduced).toBeGreaterThanOrEqual(expectedMinTotal);
 
       console.log(

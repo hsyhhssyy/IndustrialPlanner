@@ -2,7 +2,13 @@ import type {
   GridFloatPoint,
   GridPoint,
 } from "@/domain/shared/grid"
-import type { SimulationDeviceRuntimeChannelRecipeStatus, SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
+import type {
+  SimulationDeviceRuntimeChannelRecipeStatus,
+  SimulationDeviceRuntimeStatusReadModel,
+  SimulationDocumentRuntimeReadModel,
+  SimulationState,
+} from "@/domain/simulation/types/simulation-types"
+import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress"
 import {
   resolveDisplayRotationRadians,
   resolveViewportPointFromWorldPoint,
@@ -92,6 +98,12 @@ interface BeltCargoEntry {
   readonly isRunning: boolean;
 }
 
+interface BeltCargoProgressPresentation {
+  readonly documentStatus: SimulationDocumentRuntimeReadModel | null;
+  readonly simulationState: SimulationState | null;
+  readonly elapsedWallSeconds: number;
+}
+
 interface BeltCargoView {
   readonly root: Container;
   readonly cargoRoot: Container;
@@ -157,6 +169,11 @@ export function createBeltCargoDecoration(): DecorationLayer {
   // 共享 box 纹理 —— 只在 gridCellPixelSize 变化时重新烘焙
   let sharedBoxTexture: Texture | null = null
   let sharedBoxTextureSize = -1
+  let presentationTickNumber: number | null = null
+  let presentationStandardTickRate: number | null = null
+  let presentationTickRate: number | null = null
+  let presentationActive = false
+  let presentationTickObservedAtMs = 0
 
   const hideAll = (): void => {
     container.visible = false
@@ -238,6 +255,11 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       if (ctx.renderHost.workspace.simulation?.state.runningState === "stop") {
+        presentationTickNumber = null
+        presentationStandardTickRate = null
+        presentationTickRate = null
+        presentationActive = false
+        presentationTickObservedAtMs = ctx.nowMs
         hideAll()
         return
       }
@@ -286,12 +308,35 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       // --- 货物条目收集 ---
+      const simulation = ctx.renderHost.workspace.simulation
+      const documentStatus = typeof simulation?.queries.getDocumentRuntimeStatus === "function"
+        ? simulation.queries.getDocumentRuntimeStatus()
+        : null
+      const currentPresentationActive = simulation?.state.runningState === "start"
+        && simulation.state.timeline?.isSeeking !== true
+      if (
+        presentationTickNumber !== documentStatus?.tickNumber
+        || presentationStandardTickRate !== documentStatus?.standardTickRate
+        || presentationTickRate !== documentStatus?.tickRate
+        || presentationActive !== currentPresentationActive
+      ) {
+        presentationTickNumber = documentStatus?.tickNumber ?? null
+        presentationStandardTickRate = documentStatus?.standardTickRate ?? null
+        presentationTickRate = documentStatus?.tickRate ?? null
+        presentationActive = currentPresentationActive
+        presentationTickObservedAtMs = ctx.nowMs
+      }
+      const progressPresentation: BeltCargoProgressPresentation = {
+        documentStatus,
+        simulationState: simulation?.state ?? null,
+        elapsedWallSeconds: Math.max(0, (ctx.nowMs - presentationTickObservedAtMs) / 1000),
+      }
       const beltCargoEntries = (
         ctx.profiler
           ? ctx.profiler.measure("beltCargo.entries-collect", () =>
-              resolveBeltCargoEntries(ctx, definitionMap),
+              resolveBeltCargoEntries(ctx, definitionMap, progressPresentation),
             )
-          : resolveBeltCargoEntries(ctx, definitionMap)
+          : resolveBeltCargoEntries(ctx, definitionMap, progressPresentation)
       )
       ctx.profiler?.count("beltCargo.entries-collected", beltCargoEntries.length)
       if (beltCargoEntries.length === 0) {
@@ -440,6 +485,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
 function resolveBeltCargoEntries(
   ctx: DecorationSyncContext,
   definitionMap: ReadonlyMap<string, EntityDefinition>,
+  progressPresentation: BeltCargoProgressPresentation,
 ): BeltCargoEntry[] {
   const simulation = ctx.renderHost.workspace.simulation
   const editor = ctx.renderHost.workspace.editor
@@ -469,7 +515,7 @@ function resolveBeltCargoEntries(
     }
 
     const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(entity.id)
-    const cargoState = resolveRuntimeCargoState(runtimeStatus)
+    const cargoState = resolveRuntimeCargoState(runtimeStatus, progressPresentation)
     if (cargoState === null) {
       continue
     }
@@ -500,9 +546,10 @@ function resolveBeltCargoEntries(
 
 function resolveRuntimeCargoState(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+  progressPresentation: BeltCargoProgressPresentation,
 ): { readonly itemId: string; readonly progress: number; readonly isRunning: boolean } | null {
   const runningItemId = resolveRunningCargoItemId(runtimeStatus)
-  const runningProgress = resolveRuntimeProgress(runtimeStatus)
+  const runningProgress = resolveRuntimeProgress(runtimeStatus, progressPresentation)
   if (runningItemId !== null && runningProgress !== null) {
     return {
       itemId: runningItemId,
@@ -598,6 +645,7 @@ function resolveStationaryCargoState(
 
 function resolveRuntimeProgress(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+  progressPresentation: BeltCargoProgressPresentation,
 ): number | null {
   // AI-CORRECTION 2026-05-30: progressSeconds/desiredSeconds 已从 readmodel 删除，
   //   改为读取第一个 channel。
@@ -614,7 +662,14 @@ function resolveRuntimeProgress(
     return null
   }
 
-  const progress = firstChannelStatus.progressSeconds / firstChannelStatus.desiredSeconds
+  const presentedProgressSeconds = resolvePresentedRecipeProgressSeconds({
+    channelStatus: firstChannelStatus,
+    ...progressPresentation,
+  })
+  if (presentedProgressSeconds === null) {
+    return null
+  }
+  const progress = presentedProgressSeconds / firstChannelStatus.desiredSeconds
   if (!Number.isFinite(progress)) {
     return null
   }
