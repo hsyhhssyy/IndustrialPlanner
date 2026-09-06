@@ -83,11 +83,16 @@ export const BLUEPRINT_CANVAS_THEME_COLOR_PATCH = {
   "renderer-dedicated-logistic-focus-tint": "#8795a8",
 } satisfies AppThemeColorPatch;
 
+const GRASS_CANVAS_THEME_COLOR_PATCH = {
+  "renderer-port-chevron": "#ffffff",
+} satisfies AppThemeColorPatch;
+
 export function resolveEffectiveCanvasTheme(
   theme: AppTheme,
   isBlueprintStyleEnabled: boolean,
+  isGrassBackgroundEnabled: boolean = false,
 ): AppTheme {
-  if (!isBlueprintStyleEnabled) {
+  if (!isBlueprintStyleEnabled && !isGrassBackgroundEnabled) {
     return theme;
   }
 
@@ -95,7 +100,9 @@ export function resolveEffectiveCanvasTheme(
     ...theme,
     colors: {
       ...theme.colors,
-      ...BLUEPRINT_CANVAS_THEME_COLOR_PATCH,
+      ...(isGrassBackgroundEnabled ? GRASS_CANVAS_THEME_COLOR_PATCH : {}),
+      // 蓝图画布是浅色背景；异常状态下同时启用时，以蓝图配色为准。
+      ...(isBlueprintStyleEnabled ? BLUEPRINT_CANVAS_THEME_COLOR_PATCH : {}),
     },
   };
 }

@@ -3,8 +3,12 @@ import { reaction } from "mobx"
 import type { Renderer } from "pixi.js"
 
 import type { AppContract } from "@/domain/app/app-contract"
+import type { DeviceSpriteAnimationDefinition } from "@/domain/registry"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
+
+import { DeviceAnimationTextureCache, type DeviceAnimationTextures } from "./device-animation-textures"
 
 import {
   applyBitmapTextureConfig,
@@ -21,13 +25,21 @@ const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
 const TOP_VIEW_ASSET_ROOT = "3d-top-view"
+const fallbackTextures = new WeakSet<Texture>()
+
+/** 回退身份与图片尺寸无关，合法的 16×16 精灵也能正常显示。 */
+export function isFallbackTexture(texture: Texture): boolean {
+  return fallbackTextures.has(texture)
+}
 
 /**
  * TextureActions 是 src/renderer/texture 对外唯一出口。
  * 目录外代码不得 import texture 目录下其他任何东西。
+ * AI-CORRECTION 2026-09-05: 动画结果类型通过 texture/index.ts 公开；运行时加载仍统一由 TextureActions 提供。
  */
 interface TextureActions {
   getTexture(unifiedResourceKey: string): Promise<Texture>;
+  getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null>;
   destroy(): void;
 }
 
@@ -40,6 +52,8 @@ class TextureActionsImpl implements TextureActions {
   private readonly renderer: Renderer
   private readonly app: AppContract | null
   private readonly syncTextureConfigState: (textureConfig: RenderTextureConfig) => void
+  private readonly deviceAnimations: DeviceAnimationTextureCache
+  private destroyed = false
 
   public constructor(options: {
     renderer: Renderer;
@@ -56,6 +70,22 @@ class TextureActionsImpl implements TextureActions {
       resolution: initialResolution,
     })
     this.syncTextureConfigState(this.textureConfig)
+    this.deviceAnimations = new DeviceAnimationTextureCache({
+      loadTexture: (path) => Assets.load<Texture>(path),
+      configureTexture: (texture) => {
+        this.trackedBitmapTextures.add(texture)
+        applyBitmapTextureConfig(texture, this.textureConfig)
+      },
+      getMaxTextureSize: () => {
+        if ("gl" in this.renderer && this.renderer.gl) {
+          return Number(this.renderer.gl.getParameter(this.renderer.gl.MAX_TEXTURE_SIZE))
+        }
+        if ("gpu" in this.renderer && this.renderer.gpu) {
+          return this.renderer.gpu.device.limits.maxTextureDimension2D
+        }
+        return DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE
+      },
+    })
 
     this.disposeResolutionReaction = this.app === null
       ? null
@@ -82,9 +112,15 @@ class TextureActionsImpl implements TextureActions {
   }
 
   public destroy(): void {
+    this.destroyed = true
+    this.deviceAnimations.destroy()
     this.disposeResolutionReaction?.()
     this.texturePromisesByKey.clear()
     this.trackedBitmapTextures.clear()
+  }
+
+  public getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null> {
+    return this.deviceAnimations.get(spriteId, definition)
   }
 
   private syncResolution(resolution: number): void {
@@ -110,6 +146,9 @@ class TextureActionsImpl implements TextureActions {
     for (const path of paths) {
       try {
         const texture = await Assets.load<Texture>(path)
+        if (this.destroyed) {
+          return texture
+        }
         this.trackedBitmapTextures.add(texture)
         return applyBitmapTextureConfig(texture, this.textureConfig)
       } catch {
@@ -206,13 +245,16 @@ class TextureActionsImpl implements TextureActions {
       ctx.fillStyle = "#ff0000"
       ctx.fillRect(0, 0, 16, 16)
     }
-    return Texture.from(canvas)
+    const texture = Texture.from(canvas)
+    fallbackTextures.add(texture)
+    return texture
   }
 }
 
 /**
  * 工厂函数，是 src/renderer/texture 对目录外唯一的公开入口。
  * 返回的 TextureActions 只有 getTexture 与 destroy 两个方法。
+ * AI-CORRECTION 2026-09-05: 增加 getDeviceAnimation，按 spriteId 共享完整四阶段纹理与并集遮罩。
  * textureConfig 作为内部状态由 render host 持有，不额外 export。
  */
 export function createTextureActions(options: {

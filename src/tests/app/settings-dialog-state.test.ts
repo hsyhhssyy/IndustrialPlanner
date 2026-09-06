@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY,
+  WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/state/settings-dialog-state";
 
@@ -93,6 +94,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": true,
+        "game-play-device-animations": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
@@ -228,6 +230,182 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(controller.values["game-always-show-grid-lines"]).toBe(true);
     expect(controller.values["game-show-grass-background"]).toBe(false);
+  });
+
+  it("places device animation under the experimental gate and preserves it only across blueprint mode", () => {
+    const controller = new WorkbenchSettingsDialogController();
+    const gameGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "game");
+    const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
+
+    expect(gameGroup?.items.some((setting) => setting.id === "game-play-device-animations")).toBe(false);
+    expect(experimentalGroup?.items.some((setting) => setting.id === "game-play-device-animations")).toBe(true);
+    expect(controller.getValue("game-play-device-animations")).toBe(false);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
+
+    controller.updateSwitchValue("game-play-device-animations", true);
+    expect(controller.getValue("game-play-device-animations")).toBe(false);
+
+    controller.updateSwitchValue("other-experimental-features", true);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(true);
+    controller.updateSwitchValue("game-play-device-animations", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
+
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
+    expect(controller.getValue("game-play-device-animations")).toBe(true);
+
+    controller.updateSwitchValue("game-play-device-animations", false);
+    expect(controller.getValue("game-play-device-animations")).toBe(true);
+
+    const hydratedController = new WorkbenchSettingsDialogController();
+    expect(hydratedController.isSettingEditable("game-play-device-animations")).toBe(false);
+    expect(hydratedController.getValue("game-play-device-animations")).toBe(true);
+
+    hydratedController.updateSwitchValue("game-use-blueprint-style-device-images", false);
+    expect(hydratedController.isSettingEditable("game-play-device-animations")).toBe(true);
+    expect(hydratedController.getValue("game-play-device-animations")).toBe(true);
+
+    hydratedController.updateSwitchValue("other-experimental-features", false);
+    expect(hydratedController.isSettingEditable("game-play-device-animations")).toBe(false);
+    expect(hydratedController.getValue("game-play-device-animations")).toBe(false);
+
+    hydratedController.updateSwitchValue("other-experimental-features", true);
+    expect(hydratedController.isSettingEditable("game-play-device-animations")).toBe(true);
+    expect(hydratedController.getValue("game-play-device-animations")).toBe(false);
+  });
+
+  it("clears the externally bound animation runtime value when experimental features are disabled", () => {
+    let gameUseBlueprintStyleDeviceImages = false;
+    let gamePlayDeviceAnimations = true;
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "game-use-blueprint-style-device-images": {
+          readValue: () => gameUseBlueprintStyleDeviceImages,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              gameUseBlueprintStyleDeviceImages = value;
+            }
+          },
+        },
+        "game-play-device-animations": {
+          readValue: () => gamePlayDeviceAnimations,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              gamePlayDeviceAnimations = value;
+            }
+          },
+        },
+      },
+    });
+
+    expect(gamePlayDeviceAnimations).toBe(false);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
+
+    controller.updateSwitchValue("other-experimental-features", true);
+    controller.updateSwitchValue("game-play-device-animations", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
+    controller.updateSwitchValue("game-play-device-animations", false);
+
+    expect(gamePlayDeviceAnimations).toBe(true);
+    expect(controller.getValue("game-play-device-animations")).toBe(true);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
+    expect(controller.values["game-play-device-animations"]).toBeUndefined();
+
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", false);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(true);
+    expect(controller.getValue("game-play-device-animations")).toBe(true);
+
+    controller.updateSwitchValue("other-experimental-features", false);
+    expect(gamePlayDeviceAnimations).toBe(false);
+    expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
+  });
+
+  it("resets every experimental setting to its default when the master switch is disabled", () => {
+    let gamePlayDeviceAnimations = true;
+    let regionalMultiBase = true;
+    let virtualMousePointer = true;
+    let syncProvider = "webdav";
+    localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
+      selectedGroupId: "experimental",
+      values: {
+        "other-experimental-features": false,
+        "experimental-dense-simulation-engine": true,
+      },
+    }));
+
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "game-play-device-animations": {
+          readValue: () => gamePlayDeviceAnimations,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              gamePlayDeviceAnimations = value;
+            }
+          },
+        },
+        "experimental-regional-multi-base": {
+          readValue: () => regionalMultiBase,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              regionalMultiBase = value;
+            }
+          },
+        },
+        "experimental-virtual-mouse-pointer": {
+          readValue: () => virtualMousePointer,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              virtualMousePointer = value;
+            }
+          },
+        },
+        "sync-provider": {
+          readValue: () => syncProvider,
+          writeValue: (value) => {
+            if (typeof value === "string") {
+              syncProvider = value;
+            }
+          },
+        },
+      },
+    });
+    const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
+
+    expect(experimentalGroup).toBeDefined();
+    for (const setting of experimentalGroup?.items ?? []) {
+      expect(controller.getValue(setting.id)).toBe(setting.defaultValue);
+      expect(controller.isSettingEditable(setting.id)).toBe(false);
+    }
+    expect(
+      JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")
+        .values["experimental-dense-simulation-engine"],
+    ).toBe(false);
+
+    controller.updateSelectValue("sync-provider", "cloudflare");
+    expect(syncProvider).toBe("none");
+
+    controller.updateSwitchValue("other-experimental-features", true);
+    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
+    controller.updateSwitchValue("game-play-device-animations", true);
+    controller.updateSelectValue("sync-provider", "cloudflare");
+    controller.updateSwitchValue("experimental-regional-multi-base", true);
+    controller.updateSwitchValue("experimental-virtual-mouse-pointer", true);
+
+    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(true);
+    expect(gamePlayDeviceAnimations).toBe(true);
+    expect(syncProvider).toBe("cloudflare");
+    expect(regionalMultiBase).toBe(true);
+    expect(virtualMousePointer).toBe(true);
+
+    controller.updateSwitchValue("other-experimental-features", false);
+
+    for (const setting of experimentalGroup?.items ?? []) {
+      expect(controller.getValue(setting.id)).toBe(setting.defaultValue);
+      expect(controller.isSettingEditable(setting.id)).toBe(false);
+    }
+    expect(gamePlayDeviceAnimations).toBe(false);
+    expect(syncProvider).toBe("none");
+    expect(regionalMultiBase).toBe(false);
+    expect(virtualMousePointer).toBe(false);
   });
 
   it("allows the dense simulation engine preference only under the experimental master switch", () => {
@@ -386,6 +564,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": false,
+        "game-play-device-animations": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,

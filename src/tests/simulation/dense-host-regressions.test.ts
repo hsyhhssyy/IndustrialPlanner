@@ -283,6 +283,106 @@ describe("ST2-RQ-023 dense host regressions", () => {
     );
   });
 
+  describe("dense-v2 展示检查点传输记录", () => {
+    it("同 tick 重读和时间轴定位保留该帧的实际传输", async () => {
+      const host = createDenseTransferCheckpointHost("checkpoint-current-tick");
+
+      try {
+        await host.actions.start();
+        host.actions.pause();
+        expect((await host.internalActions.syncToTick(1)).status).toBe("ready");
+        const expectedSnapshot = host.internalState.currentSnapshot;
+        expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
+
+        expect((await host.internalActions.syncToTick(1)).status).toBe("ready");
+        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+
+        await host.actions.enableTimeline();
+        expect(await host.actions.seekTimelineToTick(0)).toBe(true);
+        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+      } finally {
+        host.dispose();
+      }
+    });
+
+    it("未来时间轴检查点与逐 tick 正常推进的目标帧一致", async () => {
+      const baselineHost = createDenseTransferCheckpointHost("checkpoint-future-tick");
+      const presentationHost = createDenseTransferCheckpointHost("checkpoint-future-tick");
+
+      try {
+        await baselineHost.actions.start();
+        baselineHost.actions.pause();
+        await baselineHost.internalActions.syncToTick(1);
+        const firstTransfers = baselineHost.internalState.currentSnapshot?.transfers;
+        await baselineHost.internalActions.syncToTick(2);
+        const expectedSnapshot = baselineHost.internalState.currentSnapshot;
+        expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
+        expect(expectedSnapshot?.transfers).not.toEqual(firstTransfers);
+
+        await presentationHost.actions.start();
+        presentationHost.actions.pause();
+        await presentationHost.internalActions.syncToTick(1);
+        await presentationHost.actions.enableTimeline();
+        expect(await presentationHost.actions.seekTimelineToTick(1)).toBe(true);
+        expect(presentationHost.internalState.currentSnapshot).toEqual(expectedSnapshot);
+      } finally {
+        baselineHost.dispose();
+        presentationHost.dispose();
+      }
+    });
+
+    it("精确命中已保存的历史检查点时恢复当时的传输", async () => {
+      const host = createDenseTransferCheckpointHost("checkpoint-retained-tick");
+
+      try {
+        await host.actions.start();
+        host.actions.pause();
+        await host.internalActions.syncToTick(2);
+        const expectedSnapshot = host.internalState.currentSnapshot;
+        expect(expectedSnapshot?.standardTickRate).toBe(2);
+        expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
+
+        await host.internalActions.syncToTick(4);
+        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        await host.actions.enableTimeline();
+        expect(await host.actions.seekTimelineToTick(1)).toBe(true);
+        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+      } finally {
+        host.dispose();
+      }
+    });
+
+    it("后续无传输的检查点不沿用上一帧记录", async () => {
+      const host = createDenseTransferCheckpointHost("checkpoint-empty-tick");
+
+      try {
+        await host.actions.start();
+        host.actions.pause();
+        await host.internalActions.syncToTick(2);
+        const transferSnapshot = host.internalState.currentSnapshot;
+        expect(transferSnapshot?.transfers.length).toBeGreaterThan(0);
+
+        await host.actions.enableTimeline();
+        expect(await host.actions.seekTimelineToTick(2)).toBe(true);
+        expect(host.internalState.currentSnapshot?.tickNumber).toBe(3);
+        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+
+        expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
+        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
+        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+
+        expect(await host.actions.seekTimelineToTick(1)).toBe(true);
+        expect(host.internalState.currentSnapshot).toEqual(transferSnapshot);
+        expect(await host.actions.seekTimelineToTick(2)).toBe(true);
+        expect(host.internalState.currentSnapshot?.tickNumber).toBe(3);
+        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+      } finally {
+        host.dispose();
+      }
+    });
+  });
+
   it("publishes the Dense 2 TPS timing contract", async () => {
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const workspace = createDenseTestWorkspace({
@@ -569,6 +669,28 @@ describe("ST2-RQ-023 dense host regressions", () => {
     }
   });
 });
+
+function createDenseTransferCheckpointHost(name: string): ReturnType<typeof createSimulationHost> {
+  // 两端普通设备不会直接建立运输边；复用 pipe-transport 的真实管道布局。
+  // Dense 的 0.5 秒管道周期对应 1 tick：tick 1 入管，tick 2 出管，tick 3 为空。
+  const document = createWorldDocumentFromBlueprint(createBlueprint(name, [
+    createEntity("source-storage", "liquid_storager_1", 0, 0, 180, {
+      "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+      "storageSlotGroups[0].slots[0].initialCount": 1,
+    }),
+    createEntity("pipe", "pipe_straight_1x1", 3, 1),
+    createEntity("sink-storage", "liquid_storager_1", 4, 0, 180),
+  ]));
+  const workspace = createDenseTestWorkspace({
+    currentDocument: document,
+    readLatestBaseDocuments: async (baseIds) =>
+      baseIds.map((baseId) => createWorldDocument({ baseId })),
+  });
+  return createSimulationHost(workspace, {
+    engineKind: "dense-v2",
+    workerMode: "runtime",
+  });
+}
 
 function createDenseTestWorkspace(options: {
   readonly currentDocument: ReturnType<typeof createWorldDocument>;

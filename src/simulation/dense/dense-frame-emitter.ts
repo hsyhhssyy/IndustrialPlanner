@@ -13,9 +13,10 @@ import type {
 //
 // Original code:
 // import { BASE_BATTERY_CAPACITY_J } from "../runtime";
-import type {
-  DenseKernelTickResult,
-  DenseSimulationKernel,
+import {
+  createEmptyDenseTransfers,
+  type DenseKernelTickResult,
+  type DenseSimulationKernel,
 } from "./dense-simulation-kernel";
 import {
   FRAME_STATUS_INITIAL,
@@ -89,7 +90,7 @@ export class DenseFrameEmitter {
         { length: this.layout.dictionary.deviceIds.length },
         (_, index) => index,
       ),
-      transfers: createEmptyTransfers(),
+      transfers: createEmptyDenseTransfers(),
       includeStaticPresentation: true,
       warehouseMode: WAREHOUSE_PATCHED,
       changedStorageIndexes: [],
@@ -162,7 +163,7 @@ export class DenseFrameEmitter {
         { length: this.layout.dictionary.deviceIds.length },
         (_, index) => index,
       ),
-      transfers: createEmptyTransfers(),
+      transfers: kernel.transfers,
       includeStaticPresentation: true,
       warehouseMode: WAREHOUSE_PATCHED,
       changedStorageIndexes: [],
@@ -260,11 +261,12 @@ export class DenseFrameEmitter {
       removedRoutingCursorKeys: [],
       changedComponentIndexes: options.componentIndexes,
       changedComponentItemIndexes: componentItemIndexes,
-      transferEdgeIndexes: options.transfers.edgeIndexes,
-      transferSourceSlotIndexes: options.transfers.sourceSlotIndexes,
-      transferTargetSlotIndexes: options.transfers.targetSlotIndexes,
-      transferItemIndexes: options.transfers.itemIndexes,
-      transferAmounts: options.transfers.amounts,
+      // Worker 会转移帧缓冲区；发帧副本必须与内核及历史检查点保留的传输数据隔离。
+      transferEdgeIndexes: options.transfers.edgeIndexes.slice(),
+      transferSourceSlotIndexes: options.transfers.sourceSlotIndexes.slice(),
+      transferTargetSlotIndexes: options.transfers.targetSlotIndexes.slice(),
+      transferItemIndexes: options.transfers.itemIndexes.slice(),
+      transferAmounts: options.transfers.amounts.slice(),
       diagnostics: [],
       ...this.createGasDiffusionDelta(options.kernel),
       warehouseMode: options.warehouseMode,
@@ -323,15 +325,24 @@ export class DenseFrameEmitter {
   }
 }
 
-function createEmptyTransfers(): DenseKernelTickResult["transfers"] {
-  return {
-    edgeIndexes: new Uint32Array(),
-    sourceSlotIndexes: new Uint32Array(),
-    targetSlotIndexes: new Uint32Array(),
-    itemIndexes: new Uint32Array(),
-    amounts: new Float64Array(),
-  };
-}
+// AI-REMOVED 2026-09-05:
+// Reason: 空传输批次由内核与帧生成器共用，迁移到内核模块统一创建。
+// Trigger: 时间轴展示检查点必须保留目标 tick 的传输记录，并在初始化或拓扑迁移时清空。
+// Evidence: emitCheckpoint 原来无条件调用本函数，导致 timeline-drag-render 的 transfers 非空断言失败。
+// Replacement: dense-simulation-kernel.ts 的 createEmptyDenseTransfers。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function createEmptyTransfers(): DenseKernelTickResult["transfers"] {
+//   return {
+//     edgeIndexes: new Uint32Array(),
+//     sourceSlotIndexes: new Uint32Array(),
+//     targetSlotIndexes: new Uint32Array(),
+//     itemIndexes: new Uint32Array(),
+//     amounts: new Float64Array(),
+//   };
+// }
 
 function compareNumbers(left: number, right: number): number {
   return left - right;

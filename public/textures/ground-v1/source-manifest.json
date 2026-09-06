@@ -1,0 +1,388 @@
+{
+  "sourceArchive": {
+    "name": "pixi-ground-v1.zip",
+    "sha256": "d3fdeddb09f69575e144990898f86ff30d7d95f0665bd16a28a6c7a3e0934d7b"
+  },
+  "sourceManifest": {
+    "schemaVersion": 1,
+    "name": "Pixi layered ground v1",
+    "encoding": "lossless WebP, straight alpha, baked display sRGB",
+    "pixelsPerWorldUnit": 64,
+    "blendMode": "normal",
+    "layerOrder": [
+      "base",
+      "patches",
+      "gravel",
+      "buildings"
+    ],
+    "colorPolicy": "Display as ordinary color sprites; do not apply AgX/exposure a second time.",
+    "assets": [
+      {
+        "id": "grass-base",
+        "file": "assets/grass-base.webp",
+        "kind": "base",
+        "width": 1024,
+        "height": 1024,
+        "worldWidth": 16,
+        "worldHeight": 16,
+        "anchor": [
+          0,
+          0
+        ],
+        "repeat": true,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 968860,
+        "sha256": "7b55ef0b835fd3605b1bfd34479b191bf8edeb8d15b4bf4039c2b365c533bd79"
+      },
+      {
+        "id": "gravel-01",
+        "file": "assets/gravel-01.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 130454,
+        "sha256": "9663efe11a1a26965dc071a40b53952edb44b23af5f5aee312ed7fe9c4b3f00e"
+      },
+      {
+        "id": "gravel-02",
+        "file": "assets/gravel-02.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 107354,
+        "sha256": "44f4c47c7020b758e92786dcb3b616ea4008fff9ecec103214db1114b202aa46"
+      },
+      {
+        "id": "gravel-03",
+        "file": "assets/gravel-03.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 124656,
+        "sha256": "69526a7c43c39fa811cb97bd45efea8a9f66a5df530be736bc5150df23a87afe"
+      },
+      {
+        "id": "gravel-04",
+        "file": "assets/gravel-04.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 121622,
+        "sha256": "22df731749b5250bfb0b98edb4cb338a769414d4f8d0dd07e0f02a8c90d0f869"
+      },
+      {
+        "id": "gravel-05",
+        "file": "assets/gravel-05.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 105848,
+        "sha256": "8ecbc8b2bf86a61edce67b31f8b80f85b4e95ae9282b7037f9aa37ef4729495a"
+      },
+      {
+        "id": "gravel-06",
+        "file": "assets/gravel-06.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 117344,
+        "sha256": "3d330c989faa195bcd03406c275c8f2e9a6bb772aad030c0c45691ef09d2f3c4"
+      },
+      {
+        "id": "gravel-07",
+        "file": "assets/gravel-07.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 122296,
+        "sha256": "aed9fa79551e40cdac9c9c822da8659c525703b80f98d55cd24731b2a86087aa"
+      },
+      {
+        "id": "gravel-08",
+        "file": "assets/gravel-08.webp",
+        "kind": "gravel",
+        "width": 512,
+        "height": 512,
+        "worldWidth": 8,
+        "worldHeight": 8,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 110400,
+        "sha256": "6b06a847c74e79d2ff99b9ff5bbe036fdb8657f218c308e01a2e71b86baf0af9"
+      },
+      {
+        "id": "grass-patch-01",
+        "file": "assets/grass-patch-01.webp",
+        "kind": "patch",
+        "width": 1024,
+        "height": 1024,
+        "worldWidth": 16,
+        "worldHeight": 16,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 318662,
+        "sha256": "7bca75645428a36b084071b9cccb7520b26490c43169c7eb432f7600d548e92f"
+      },
+      {
+        "id": "grass-patch-02",
+        "file": "assets/grass-patch-02.webp",
+        "kind": "patch",
+        "width": 1024,
+        "height": 1024,
+        "worldWidth": 16,
+        "worldHeight": 16,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 318498,
+        "sha256": "28a304700d057831d3e89da98333309f90329c74882f4c1ee29fbebb6d7c007f"
+      },
+      {
+        "id": "grass-patch-03",
+        "file": "assets/grass-patch-03.webp",
+        "kind": "patch",
+        "width": 1024,
+        "height": 1024,
+        "worldWidth": 16,
+        "worldHeight": 16,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 332676,
+        "sha256": "7efa72b1658012779f4c937a8777bdd4a84e521849964d11356f14c60fa57dcc"
+      },
+      {
+        "id": "grass-patch-04",
+        "file": "assets/grass-patch-04.webp",
+        "kind": "patch",
+        "width": 1024,
+        "height": 1024,
+        "worldWidth": 16,
+        "worldHeight": 16,
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "repeat": false,
+        "rotationDegrees": [
+          0,
+          90,
+          180,
+          270
+        ],
+        "mirrorsAllowed": false,
+        "bytes": 329086,
+        "sha256": "56a51b322aaa099f75c9b3da5ae542d9d5c9417707d865ecfff01742a545b112"
+      }
+    ]
+  },
+  "publishedAssets": [
+    {
+      "id": "grass-base",
+      "file": "grass-base.webp",
+      "sha256": "7b55ef0b835fd3605b1bfd34479b191bf8edeb8d15b4bf4039c2b365c533bd79"
+    },
+    {
+      "id": "gravel-01",
+      "file": "gravel-01.webp",
+      "sha256": "9663efe11a1a26965dc071a40b53952edb44b23af5f5aee312ed7fe9c4b3f00e"
+    },
+    {
+      "id": "gravel-02",
+      "file": "gravel-02.webp",
+      "sha256": "44f4c47c7020b758e92786dcb3b616ea4008fff9ecec103214db1114b202aa46"
+    },
+    {
+      "id": "gravel-03",
+      "file": "gravel-03.webp",
+      "sha256": "69526a7c43c39fa811cb97bd45efea8a9f66a5df530be736bc5150df23a87afe"
+    },
+    {
+      "id": "gravel-04",
+      "file": "gravel-04.webp",
+      "sha256": "22df731749b5250bfb0b98edb4cb338a769414d4f8d0dd07e0f02a8c90d0f869"
+    },
+    {
+      "id": "gravel-05",
+      "file": "gravel-05.webp",
+      "sha256": "8ecbc8b2bf86a61edce67b31f8b80f85b4e95ae9282b7037f9aa37ef4729495a"
+    },
+    {
+      "id": "gravel-06",
+      "file": "gravel-06.webp",
+      "sha256": "3d330c989faa195bcd03406c275c8f2e9a6bb772aad030c0c45691ef09d2f3c4"
+    },
+    {
+      "id": "gravel-07",
+      "file": "gravel-07.webp",
+      "sha256": "aed9fa79551e40cdac9c9c822da8659c525703b80f98d55cd24731b2a86087aa"
+    },
+    {
+      "id": "gravel-08",
+      "file": "gravel-08.webp",
+      "sha256": "6b06a847c74e79d2ff99b9ff5bbe036fdb8657f218c308e01a2e71b86baf0af9"
+    },
+    {
+      "id": "grass-patch-01",
+      "file": "grass-patch-01.webp",
+      "sha256": "7bca75645428a36b084071b9cccb7520b26490c43169c7eb432f7600d548e92f"
+    },
+    {
+      "id": "grass-patch-02",
+      "file": "grass-patch-02.webp",
+      "sha256": "28a304700d057831d3e89da98333309f90329c74882f4c1ee29fbebb6d7c007f"
+    },
+    {
+      "id": "grass-patch-03",
+      "file": "grass-patch-03.webp",
+      "sha256": "7efa72b1658012779f4c937a8777bdd4a84e521849964d11356f14c60fa57dcc"
+    },
+    {
+      "id": "grass-patch-04",
+      "file": "grass-patch-04.webp",
+      "sha256": "56a51b322aaa099f75c9b3da5ae542d9d5c9417707d865ecfff01742a545b112"
+    }
+  ]
+}

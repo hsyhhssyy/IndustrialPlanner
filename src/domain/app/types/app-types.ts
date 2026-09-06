@@ -15,6 +15,7 @@ export interface AppSettings {
   readonly hypergryphSelectionRightDockSync: boolean;
   readonly hypergryphInspectorOpenOnSecondClick: boolean;
   readonly gameUseBlueprintStyleDeviceImages: boolean;
+  readonly gamePlayDeviceAnimations: boolean;
   readonly gameShowDeviceNames: boolean;
   readonly gameShowDeviceIcons: boolean;
   readonly gameUseInspectorPanel: boolean;

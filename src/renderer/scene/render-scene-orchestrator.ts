@@ -426,6 +426,7 @@ export function createRenderSceneOrchestrator(
       () => resolveEffectiveCanvasTheme(
         workspaceApp.state.theme,
         workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages,
+        workspaceApp.state.settings.showGrassBackground,
       ),
     )
 
@@ -1024,8 +1025,10 @@ function createRenderSimulationSignature(
   tickNumber: number | null,
 ): string {
   const simulationState = renderHost.workspace.simulation?.state
+  // 动画开关是低频运行态展示输入；复用 syncRuntime 失效，避免重算静态布局或改变仿真拓扑。
+  const playDeviceAnimations = renderHost.workspace.app?.state.settings.gamePlayDeviceAnimations ?? false
   if (simulationState === undefined || typeof simulationState !== "object") {
-    return `${tickNumber ?? "none"}`
+    return `${tickNumber ?? "none"}|${playDeviceAnimations}`
   }
 
   return [
@@ -1034,6 +1037,7 @@ function createRenderSimulationSignature(
     simulationState.timeline?.cursorTickNumber ?? "none",
     simulationState.timeline?.readiness ?? "none",
     simulationState.timeline?.isSeeking ?? false,
+    playDeviceAnimations,
   ].join("|")
 }
 

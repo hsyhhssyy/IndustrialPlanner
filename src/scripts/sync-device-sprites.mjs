@@ -10,10 +10,12 @@
  * 3. 输出无损 WebP 精灵图到 public/3d-top-view/sprites。
  * 4. 基于原图 alpha 通道生成对应的遮罩图到 public/3d-top-view/sprite-masks。
  * AI-CORRECTION 2026-08-31: 13 个定制遮罩优先复制 resources/device-sprite-mask-overrides 中的 WebP，其余遮罩继续由 alpha 生成。
+ * AI-CORRECTION 2026-09-05: 已声明动画的设备从 open 首帧生成静态图；四阶段与并集遮罩经同一入口校验并发布。
  *
  * 用法：
  *   node src/scripts/sync-device-sprites.mjs [sourceDir] [spriteDir] [maskDir]
  *   node src/scripts/sync-device-sprites.mjs --blueprint
+ *   node src/scripts/sync-device-sprites.mjs --animations [sourceDir] [spriteDir] [maskDir] [animationDir]
  * AI-CORRECTION 2026-08-31: blueprint 模式可追加 [spriteDir] [maskDir]，用于隔离验证 WebP 生成结果。
  *
  * 参数：
@@ -27,6 +29,7 @@ import { access, copyFile, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { tsImport } from 'tsx/esm/api';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
@@ -34,6 +37,12 @@ const defaultSourceDirectory = path.join(projectRoot, 'resources', 'device-sprit
 const defaultSpriteDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprites');
 const defaultMaskDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
 const defaultMaskOverrideDirectory = path.join(projectRoot, 'resources', 'device-sprite-mask-overrides');
+const defaultAnimationSourceDirectory = path.join(projectRoot, 'resources', 'device-sprite-animation');
+const defaultAnimationDirectory = path.join(projectRoot, 'public', '3d-top-view', 'animations');
+const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', {
+  parentURL: import.meta.url,
+  tsconfig: path.join(projectRoot, 'tsconfig.app.json'),
+});
 
 // 资源目录使用中文设备名，运行时资源使用 registry spriteId。
 // 三元组：[中文名, spriteId, rotation?]
@@ -229,6 +238,117 @@ async function processBlueprintMasks(spriteDirectoryArgument, maskDirectoryArgum
   console.log('Blueprint masks generated.');
 }
 
+async function readRegistryAnimationDefinitions() {
+  const { createRegistryContract } = await tsImport('../registry/index.ts', {
+    parentURL: import.meta.url,
+    tsconfig: path.join(projectRoot, 'tsconfig.app.json'),
+  });
+  return createRegistryContract().entityDefinitions;
+}
+
+/** 直接消费 Registry 声明，生成链不维护独立的行列或帧时长清单。 */
+export async function publishDeviceSpriteAnimations({
+  definitions,
+  sourceDirectory = defaultAnimationSourceDirectory,
+  spriteDirectory = defaultSpriteDirectory,
+  maskDirectory = defaultMaskDirectory,
+  animationDirectory = defaultAnimationDirectory,
+  maskOverrideDirectory = defaultMaskOverrideDirectory,
+  maxTextureSize = animationProtocol.DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE,
+} = {}) {
+  const { DEVICE_SPRITE_ANIMATION_PHASES: phases, normalizeDeviceSpriteAnimationDefinition,
+    getDeviceSpriteAnimationSignature, resolveDeviceSpriteAnimationGrid,
+    validateDeviceSpriteAnimationId } = animationProtocol;
+  const bySpriteId = new Map();
+  for (const entity of definitions ?? await readRegistryAnimationDefinitions()) {
+    if (entity.spriteAnimation === undefined) continue;
+    validateDeviceSpriteAnimationId(entity.spriteId);
+    const definition = normalizeDeviceSpriteAnimationDefinition(entity.spriteAnimation);
+    const signature = getDeviceSpriteAnimationSignature(definition);
+    const previous = bySpriteId.get(entity.spriteId);
+    if (previous && previous.signature !== signature) {
+      throw new Error(`Conflicting animation definitions for ${entity.spriteId}`);
+    }
+    bySpriteId.set(entity.spriteId, { definition, signature });
+  }
+  if (await fileExists(sourceDirectory)) {
+    const entries = await readdir(sourceDirectory, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && !bySpriteId.has(entry.name)) {
+        throw new Error(`Animation source ${entry.name} has no Registry declaration`);
+      }
+    }
+  }
+  const results = [];
+  for (const [spriteId, { definition }] of bySpriteId) {
+    // 定制 mask 的语义必须在素材接入时人工核对，不能静默改成首帧或并集。
+    if (await fileExists(path.join(maskOverrideDirectory, `${spriteId}.webp`))) {
+      throw new Error(`Animation ${spriteId} has an existing mask override; resolve it before publishing`);
+    }
+    const decoded = {};
+    const dimensions = {};
+    for (const phase of phases) {
+      const filePath = path.join(sourceDirectory, spriteId, `${phase}.webp`);
+      const metadata = await sharp(filePath).metadata();
+      if (metadata.format !== 'webp' || !metadata.hasAlpha || (metadata.pages ?? 1) !== 1) {
+        throw new Error(`${spriteId}/${phase} must be a static WebP with Alpha`);
+      }
+      dimensions[phase] = { width: metadata.width, height: metadata.height };
+    }
+    const { frameWidth, frameHeight } = resolveDeviceSpriteAnimationGrid(definition, dimensions, maxTextureSize);
+    const unionAlpha = Buffer.alloc(frameWidth * frameHeight);
+    let firstFrame;
+    for (const phase of phases) {
+      const { data, info } = await sharp(path.join(sourceDirectory, spriteId, `${phase}.webp`))
+        .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      if (info.channels !== 4) throw new Error(`${spriteId}/${phase} must decode to RGBA`);
+      decoded[phase] = { data, info };
+      const clip = definition.clips[phase];
+      for (let frameIndex = 0; frameIndex < clip.frameCount; frameIndex += 1) {
+        const left = (frameIndex % clip.columns) * frameWidth;
+        const top = Math.floor(frameIndex / clip.columns) * frameHeight;
+        const current = phase === 'open' && frameIndex === 0
+          ? Buffer.alloc(frameWidth * frameHeight * 4) : null;
+        let hasTransparentPixel = false;
+        let hasVisiblePixel = false;
+        for (let y = 0; y < frameHeight; y += 1) {
+          for (let x = 0; x < frameWidth; x += 1) {
+            const pixel = y * frameWidth + x;
+            const offset = ((top + y) * info.width + left + x) * 4;
+            const alpha = data[offset + 3];
+            unionAlpha[pixel] = Math.max(unionAlpha[pixel], alpha);
+            hasTransparentPixel ||= alpha < 255;
+            hasVisiblePixel ||= alpha > 0;
+            if (current !== null) data.copy(current, pixel * 4, offset, offset + 4);
+          }
+        }
+        if (!hasTransparentPixel || !hasVisiblePixel) {
+          throw new Error(`${spriteId}/${phase} frame ${frameIndex} needs a transparent background and visible content`);
+        }
+        if (current !== null) firstFrame = current;
+      }
+    }
+    const unionRgba = Buffer.alloc(frameWidth * frameHeight * 4);
+    for (let pixel = 0; pixel < unionAlpha.length; pixel += 1) unionRgba[pixel * 4 + 3] = unionAlpha[pixel];
+    const raw = { width: frameWidth, height: frameHeight, channels: 4 };
+    const outputDirectory = path.join(animationDirectory, spriteId);
+    await Promise.all([spriteDirectory, maskDirectory, outputDirectory].map((directory) => mkdir(directory, { recursive: true })));
+    // 校验全部通过才写该设备的产物；静态 mask 与动画并集 mask 始终分开。
+    await sharp(firstFrame, { raw }).webp({ lossless: true, effort: 6 }).toFile(path.join(spriteDirectory, `${spriteId}.webp`));
+    await sharp(createMaskBuffer(firstFrame, frameWidth, frameHeight, 4), { raw })
+      .webp({ lossless: true, effort: 6 }).toFile(path.join(maskDirectory, `${spriteId}.webp`));
+    await sharp(createMaskBuffer(unionRgba, frameWidth, frameHeight, 4), { raw })
+      .webp({ lossless: true, effort: 6 }).toFile(path.join(outputDirectory, 'mask.webp'));
+    for (const phase of phases) {
+      const { data, info } = decoded[phase];
+      await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+        .webp({ lossless: true, effort: 6 }).toFile(path.join(outputDirectory, `${phase}.webp`));
+    }
+    results.push({ spriteId, frameWidth, frameHeight });
+  }
+  return results;
+}
+
 async function main() {
   const isBlueprintMode = process.argv.includes('--blueprint');
 
@@ -240,11 +360,23 @@ async function main() {
     return;
   }
 
+  if (process.argv.includes('--animations')) {
+    const [sourceDirectory, spriteDirectory, maskDirectory, animationDirectory] = process.argv.slice(2)
+      .filter((argument) => argument !== '--animations');
+    const results = await publishDeviceSpriteAnimations({ sourceDirectory, spriteDirectory, maskDirectory, animationDirectory });
+    console.log(`Published ${results.length} device animations.`);
+    return;
+  }
+
   const sourceDirectory = path.resolve(process.argv[2] ?? defaultSourceDirectory);
   const spriteDirectory = path.resolve(process.argv[3] ?? defaultSpriteDirectory);
   const maskDirectory = path.resolve(process.argv[4] ?? defaultMaskDirectory);
+  const definitions = await readRegistryAnimationDefinitions();
+  const animatedSpriteIds = new Set(definitions.filter((entity) => entity.spriteAnimation !== undefined)
+    .map((entity) => entity.spriteId));
 
   for (const [sourceName, spriteId, rotation = 0] of DEVICE_SPRITE_MAPPINGS) {
+    if (animatedSpriteIds.has(spriteId)) continue;
     const sourceFileName = path.extname(sourceName) === '' ? `${sourceName}.png` : sourceName;
     const sourceFilePath = path.join(sourceDirectory, sourceFileName);
     const spriteOutputFilePath = path.join(spriteDirectory, `${spriteId}.webp`);
@@ -260,10 +392,27 @@ async function main() {
 
     console.log(`${spriteId}: ${width}x${height}${rotation ? ` (rotated ${rotation}°)` : ''}`);
   }
+  await publishDeviceSpriteAnimations({ definitions, spriteDirectory, maskDirectory });
 }
 
-main().catch((error) => {
-  console.error('Failed to sync device sprites.');
-  console.error(error);
-  process.exitCode = 1;
-});
+// AI-REMOVED 2026-09-05:
+// Reason: 导入生成函数进行隔离测试时不得自动写入正式资源目录。
+// Trigger: REQ-025 无素材基础设施验收需要复用实际生成入口。
+// Evidence: 原模块在 import 时无条件执行 main()。
+// Replacement: 下方仅直接执行时运行的 CLI 入口。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// main().catch((error) => {
+//   console.error('Failed to sync device sprites.');
+//   console.error(error);
+//   process.exitCode = 1;
+// });
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error('Failed to sync device sprites.');
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

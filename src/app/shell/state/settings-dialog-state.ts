@@ -54,7 +54,9 @@ interface WorkbenchSettingBaseDefinition {
   readonly descriptionKey?: UiKey;
   readonly descriptionText?: string;
   readonly disabled?: boolean;
-  readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
+  /** 所有条件同时成立时才可编辑；单条件写法保留给既有设置。 */
+  readonly editableWhen?: WorkbenchSettingEditableWhenDefinition
+    | readonly WorkbenchSettingEditableWhenDefinition[];
   /** 非桌面端（移动端/平板）隐藏该设置项 */
   readonly mobileHidden?: boolean;
 }
@@ -170,6 +172,8 @@ const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
 const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
 const COLLAPSE_DEVICE_MODES_SETTING_ID = "game-collapse-device-modes";
 const SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID = "game-show-pipe-exact-fluid-position";
+const EXPERIMENTAL_FEATURES_SETTING_ID = "other-experimental-features";
+const DEVICE_ANIMATIONS_SETTING_ID = "game-play-device-animations";
 
 export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
@@ -231,6 +235,26 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-use-blueprint-style-device-imagesDescription",
         defaultValue: false,
       },
+      // AI-REMOVED 2026-09-06:
+      // Reason: 设备动画仍处于实验阶段，不应作为常规游戏设置出现。
+      // Trigger: 用户要求将“播放设备动画”移入实验性功能，并受实验总开关控制。
+      // Evidence: 实验性分组已有统一准入入口，Renderer 继续消费归一后的 AppSettings 字段。
+      // Replacement: WORKBENCH_SETTINGS_GROUPS 的 experimental 分组。
+      // Risk: Low；设置 ID 和持久化字段不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   id: "game-play-device-animations",
+      //   kind: "switch",
+      //   labelKey: "settingsField.game-play-device-animations",
+      //   descriptionKey: "settingsField.game-play-device-animationsDescription",
+      //   defaultValue: false,
+      //   editableWhen: {
+      //     settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
+      //     equals: false,
+      //   },
+      // },
       {
         id: SHOW_DEVICE_NAMES_SETTING_ID,
         kind: "switch",
@@ -614,6 +638,23 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         },
       },
       {
+        id: DEVICE_ANIMATIONS_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-play-device-animations",
+        descriptionKey: "settingsField.game-play-device-animationsDescription",
+        defaultValue: false,
+        editableWhen: [
+          {
+            settingId: EXPERIMENTAL_FEATURES_SETTING_ID,
+            equals: true,
+          },
+          {
+            settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
+            equals: false,
+          },
+        ],
+      },
+      {
         id: "sync-provider",
         kind: "select",
         labelKey: "settingsField.sync-provider" as UiKey,
@@ -699,6 +740,12 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
 ];
 
 const DEFAULT_SETTINGS_GROUP = WORKBENCH_SETTINGS_GROUPS[0]!;
+
+const EXPERIMENTAL_SETTING_DEFINITIONS: readonly WorkbenchSettingDefinition[] =
+  WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental")?.items ?? [];
+const EXPERIMENTAL_SETTING_IDS = new Set(
+  EXPERIMENTAL_SETTING_DEFINITIONS.map((setting) => setting.id),
+);
 
 const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
@@ -854,6 +901,9 @@ export class WorkbenchSettingsDialogController {
     this.externalBindingIds = new Set(this.externalBindings.keys());
     this.values = createDefaultValues(this.externalBindingIds);
     this.hydrate(readFromLocalStorage<unknown>(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY));
+    if (this.normalizeLocalValues()) {
+      this.persist();
+    }
 
     makeAutoObservable<
       WorkbenchSettingsDialogController,
@@ -905,11 +955,21 @@ export class WorkbenchSettingsDialogController {
       return false;
     }
 
+    if (EXPERIMENTAL_SETTING_IDS.has(settingId)
+      && this.getValue(EXPERIMENTAL_FEATURES_SETTING_ID) !== true) {
+      return false;
+    }
+
     if (!setting.editableWhen) {
       return true;
     }
 
-    return this.getValue(setting.editableWhen.settingId) === setting.editableWhen.equals;
+    const conditions = "settingId" in setting.editableWhen
+      ? [setting.editableWhen]
+      : setting.editableWhen;
+    return conditions.every((condition) =>
+      this.getValue(condition.settingId) === condition.equals
+    );
   }
 
   public selectGroup(groupId: SettingsGroupId): void {
@@ -1234,7 +1294,6 @@ export class WorkbenchSettingsDialogController {
     }
 
     this.values = nextValues;
-    this.normalizeLocalValues();
   }
 
   private writeExternalBinding(
@@ -1257,9 +1316,29 @@ export class WorkbenchSettingsDialogController {
   }
 
   private normalizeLocalValues(): boolean {
-    return normalizeLocalValues(this.values, (settingId) => this.getValue(settingId), (settingId, value) => {
+    let valuesChanged = normalizeLocalValues(this.values, (settingId) => this.getValue(settingId), (settingId, value) => {
       this.values[settingId] = value;
     });
+
+    if (this.getValue(EXPERIMENTAL_FEATURES_SETTING_ID) === true) {
+      return valuesChanged;
+    }
+
+    for (const setting of EXPERIMENTAL_SETTING_DEFINITIONS) {
+      if (this.getValue(setting.id) === setting.defaultValue) {
+        continue;
+      }
+
+      const externalBinding = this.externalBindings.get(setting.id);
+      if (externalBinding) {
+        this.writeExternalBinding(externalBinding, setting.defaultValue);
+      } else {
+        this.values[setting.id] = setting.defaultValue;
+      }
+      valuesChanged = true;
+    }
+
+    return valuesChanged;
   }
 
 }

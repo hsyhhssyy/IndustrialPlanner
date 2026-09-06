@@ -16,7 +16,7 @@ vi.mock("pixi.js", () => ({
   },
 }))
 
-import { createTextureActions } from "@/renderer/texture/texture-manager"
+import { createTextureActions, isFallbackTexture } from "@/renderer/texture/texture-manager"
 
 afterEach(() => {
   loadTexture.mockReset()
@@ -46,6 +46,7 @@ describe("TextureActions", () => {
     const secondTexture = await manager.getTexture(bodyKey)
 
     expect(firstTexture).toBe(bitmapTexture)
+    expect(isFallbackTexture(firstTexture)).toBe(false)
     expect(secondTexture).toBe(bitmapTexture)
     expect(loadTexture).toHaveBeenCalledTimes(1)
     expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprites/item_port_storager_1.webp")
@@ -63,6 +64,7 @@ describe("TextureActions", () => {
 
     const texture = await manager.getTexture("device-sprite-missing")
     expect(texture).toBeDefined()
+    expect(isFallbackTexture(texture)).toBe(true)
 
     manager.destroy()
   })

@@ -35,12 +35,17 @@ import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveLogisticsEquipmentSuppressionKind } from "@/shared/logistics-suppression"
 import {
   readSimplifiedDeviceIconPreference,
-  resolveDeviceBodyTextureKey,
+  resolveDeviceBodyPresentation,
   resolveDeviceLabelIconTextureKey,
-  resolveDeviceMaskTextureKey,
+  // AI-REMOVED 2026-09-05: REQ-025 本体和 mask 统一由 resolveDeviceBodyPresentation 选择。
+  // Evidence: syncDeviceTextures 同时决定静态纹理和动画资格。Replacement: resolveDeviceBodyPresentation。
+  // Risk: Low; Human Review: Required. Original code:
+  // resolveDeviceBodyTextureKey,
+  // resolveDeviceMaskTextureKey,
 } from "@/renderer/sprites/device-texture-key"
 import { applyBitmapTextureConfig, type RenderTextureConfig } from "@/renderer/texture/texture-config"
-import { createInsetItemIconTexture } from "@/renderer/texture"
+import { createInsetItemIconTexture, isFallbackTexture, type DeviceAnimationTextures } from "../texture"
+import { DeviceAnimationState } from "./device-animation-state"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -49,8 +54,15 @@ import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 
-const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
-const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
+// AI-REMOVED 2026-09-05:
+// Reason: 本体素材前缀收敛至统一展示解析入口。
+// Trigger: REQ-025 蓝图静态优先与可选动画。
+// Evidence: syncDeviceTextures 使用 resolveDeviceBodyPresentation。
+// Replacement: device-texture-key.ts。
+// Risk: Low; Human Review: Required.
+// Original code:
+// const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
+// const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
 // AI-REMOVED 2026-07-27:
 // Reason: renderer 不应重复维护 8 个物流设备 definition ID。
 // Trigger: 用户要求 registry 外只通过 Query 判断；物流设备明确不包括传送带节和管道节。
@@ -265,6 +277,27 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private textureLoadVersion = 0
   private deviceIconLoadVersion = 0
   private isDeviceIconReady = false
+  private staticBodyTexture: Texture | null = null
+  private staticMaskTexture: Texture | null = null
+  private animationTextures: DeviceAnimationTextures | null = null
+  private animationState: DeviceAnimationState | null = null
+  private animationRequested = false
+  private animationLoadVersion = 0
+  private animationDesiredWorking = false
+  private animationPaused = false
+  private animationSeeking = false
+  private animationCursor: number | null = null
+  private animationWasHidden = false
+  private animationStableResetPending = false
+  private discardNextAnimationDelta = true
+  // AI-REMOVED 2026-09-05:
+  // Reason: 已正式放置的非工作设备同样需要播放 close_idle，不能增加首次仿真门槛。
+  // Trigger: REQ-025 非工作态与草稿静态边界审阅。
+  // Evidence: entity/originalEntityId 与 collections 已完整排除草稿。
+  // Replacement: syncDeviceAnimationInputs 的正式实体判定。
+  // Risk: Low; Human Review: Required.
+  // Original code:
+  // private hasEnteredRuntime = false
 
   /** 扫描线 TilingSprite，完全由 GenericDeviceSprite 自己管理 */
   protected readonly scanlineTiling: TilingSprite;
@@ -498,6 +531,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     context: RenderSpriteSyncContext,
   ): void {
     this.currentSuppressedAccessoryFamily = this.resolveSuppressedAccessoryFamily(context)
+    this.syncDeviceTextures(context)
     if (this.currentSuppressedAccessoryFamily !== null) {
       this.hideSuppressedAccessoryBody()
       return
@@ -508,6 +542,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   public syncAnimation(context: RenderSpriteSyncContext): void {
+    if (this.animationState !== null && !this.animationPaused) {
+      if (this.discardNextAnimationDelta) {
+        this.discardNextAnimationDelta = false
+      } else {
+        this.animationState.advance(context.time.deltaMs)
+      }
+      this.applyAnimationFrame()
+    }
     const tilePixelSize = this.scanlineTexture?.width ?? 64
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS
 
@@ -903,18 +945,25 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private syncDeviceTextures(context?: RenderSpriteSyncContext): void {
     const forceBlueprintPreview = context !== undefined
       && this.shouldForceBlueprintPreviewTexture(context)
-    const bodyTextureKey = forceBlueprintPreview
-      ? `${BLUEPRINT_SPRITE_TEXTURE_PREFIX}${this.spriteId}`
-      : resolveDeviceBodyTextureKey(
-          this.spriteId,
-          this.renderHost.workspace.app,
-        )
-    const maskTextureKey = forceBlueprintPreview
-      ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
-      : resolveDeviceMaskTextureKey(
-          this.spriteId,
-          this.renderHost.workspace.app,
-        )
+    // AI-REMOVED 2026-09-05:
+    // Reason: 本体、mask 和动画资格必须使用同一蓝图优先规则。
+    // Trigger: REQ-025 播放设备动画开关。
+    // Evidence: 独立纹理键不能表达可选动画与 preview 静态限制。
+    // Replacement: 下方 resolveDeviceBodyPresentation。
+    // Risk: Low; Human Review: Required.
+    // Original code:
+    // const bodyTextureKey = forceBlueprintPreview
+    //   ? `${BLUEPRINT_SPRITE_TEXTURE_PREFIX}${this.spriteId}`
+    //   : resolveDeviceBodyTextureKey(this.spriteId, this.renderHost.workspace.app)
+    // const maskTextureKey = forceBlueprintPreview
+    //   ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
+    //   : resolveDeviceMaskTextureKey(this.spriteId, this.renderHost.workspace.app)
+    const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.workspace.app, {
+      forceBlueprint: forceBlueprintPreview,
+      allowAnimation: this.syncDeviceAnimationInputs(context),
+    })
+    const { bodyTextureKey, maskTextureKey } = presentation
+    this.syncDeviceAnimationResource(presentation.animation)
 
     if (
       this.currentBodyTextureKey === bodyTextureKey
@@ -929,6 +978,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const activeLoadVersion = this.textureLoadVersion
 
     this.isTextureReady = false
+    this.staticBodyTexture = null
+    this.staticMaskTexture = null
     this.body.visible = false
     this.deviceLabelRoot.visible = false
 
@@ -945,14 +996,15 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       // TextureManager 加载失败时返回 16×16 红色 fallback，Promise 不 reject。
       // 通过尺寸判断 body 纹理是否为 fallback，若是则走自定义 fallback 渲染。
-      if (bodyTexture.width === 16 && bodyTexture.height === 16) {
+      // AI-CORRECTION 2026-09-05: REQ-025 允许任意合法帧尺寸；改查资源系统的回退身份，避免误判真实 16×16 首帧。
+      if (isFallbackTexture(bodyTexture)) {
         this.loadFallbackTexture(activeLoadVersion)
         return
       }
 
-      this.body.texture = bodyTexture
-      this.previewMask.texture = previewMaskTexture
-      this.selectionMask.texture = previewMaskTexture
+      this.staticBodyTexture = bodyTexture
+      this.staticMaskTexture = previewMaskTexture
+      this.applyDevicePresentationTextures()
       this.isTextureReady = true
       this.invalidateVisualSync()
       this.body.visible = this.currentSuppressedAccessoryFamily === null
@@ -967,6 +1019,143 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       this.loadFallbackTexture(activeLoadVersion)
     })
+  }
+
+  /** 只在低频同步时读取仿真输入，逐帧播放不查询 Registry 或 Runtime。 */
+  private syncDeviceAnimationInputs(context?: RenderSpriteSyncContext): boolean {
+    if (this.definition.spriteAnimation === undefined || context === undefined) {
+      return false
+    }
+    const simulation = context.workspace.simulation
+    const seeking = simulation?.state.timeline?.isSeeking ?? false
+    const paused = simulation?.state.runningState === "pause" || seeking
+    const cursor = simulation?.state.timeline?.cursorTickNumber ?? null
+    const seekFinished = this.animationSeeking && !seeking
+    const cursorRewound = cursor !== null && this.animationCursor !== null && cursor < this.animationCursor
+    // 缓存命中的 seek 可能在两帧之间结束，暂停时的前向游标变化也代表新落点。
+    const pausedCursorChanged = paused && !seeking && cursor !== null
+      && this.animationCursor !== null && cursor !== this.animationCursor
+    if (paused !== this.animationPaused || seeking) {
+      this.discardNextAnimationDelta = true
+    }
+    const status = simulation?.state.runningState === "stop"
+      ? null
+      : simulation?.queries.getDeviceRuntimeStatus(this.entityId) ?? null
+    // AI-REMOVED 2026-09-05: 首次 Runtime 门槛已移除，正式非工作设备允许 close_idle。
+    // Trigger: REQ-025 边界审阅。Evidence: 下方真实实体判定。Replacement: None。
+    // Risk: Low; Human Review: Required. Original code:
+    // if (status !== null) {
+    //   this.hasEnteredRuntime = true
+    // }
+    // 普通暂停保留目标；seek 落点即使仍暂停，也需要读取新的工作状态。
+    if (!paused || seekFinished || cursorRewound || pausedCursorChanged || this.animationState === null) {
+      this.animationDesiredWorking = status !== null && Object.values(status.channelRecipes)
+        .some((channel) => channel?.isProgressing === true)
+    }
+    this.animationPaused = paused
+    this.animationSeeking = seeking
+    this.animationCursor = cursor
+    this.animationStableResetPending ||= seekFinished || cursorRewound || pausedCursorChanged
+      || (this.animationWasHidden && !paused)
+    this.animationWasHidden = false
+    if (this.animationState !== null) {
+      if (this.animationStableResetPending && !seeking) {
+        this.animationState.reset(this.animationDesiredWorking, true)
+        this.animationStableResetPending = false
+        this.discardNextAnimationDelta = true
+        this.applyAnimationFrame()
+      } else if (!paused) {
+        this.animationState.setDesiredWorking(this.animationDesiredWorking)
+      }
+    }
+    const editor = context.workspace.editor
+    const entity = editor?.queries.getEntityById(this.entityId)
+    const collections = editor?.state.collections
+    return entity != null && !("originalEntityId" in entity)
+      && !(collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false)
+      && !(collections?.[EntityCollectionType.ghost]?.contains(this.entityId) ?? false)
+      && this.currentSuppressedAccessoryFamily === null
+      // AI-REMOVED 2026-09-05: 正式非工作设备允许 close_idle；首次 Runtime 门槛不属于用户需求。
+      // Trigger: REQ-025 边界审阅。Evidence: 上方正式实体和草稿判定。Replacement: None。
+      // Risk: Low; Human Review: Required. Original code:
+      // && this.hasEnteredRuntime
+  }
+
+  private syncDeviceAnimationResource(animation: EntityDefinition["spriteAnimation"] | null): void {
+    if (animation == null) {
+      if (this.animationRequested) {
+        // atlas 可能先于独立静态文件完成；关闭时仍须立即显示 open 首帧。
+        this.staticBodyTexture ??= this.animationTextures?.clips.open[0] ?? null
+        this.animationLoadVersion += 1
+        this.animationRequested = false
+        this.animationTextures = null
+        this.animationState = null
+        this.animationStableResetPending = false
+        this.applyDevicePresentationTextures()
+      }
+      return
+    }
+    if (this.animationRequested) {
+      return
+    }
+    this.animationRequested = true
+    const version = ++this.animationLoadVersion
+    void this.renderHost.textureManager.getDeviceAnimation(this.spriteId, animation).then((textures) => {
+      if (this.disposed || version !== this.animationLoadVersion || textures === null) {
+        return
+      }
+      const app = this.renderHost.workspace.app
+      if (!app?.state.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
+        // 设置可能在两个同步帧之间反转；下次启用仍需重新领取已缓存结果。
+        this.animationRequested = false
+        return
+      }
+      this.animationTextures = textures
+      this.animationState = new DeviceAnimationState(animation, this.animationDesiredWorking, this.animationStableResetPending)
+      this.animationStableResetPending = false
+      this.discardNextAnimationDelta = true
+      this.applyDevicePresentationTextures()
+      this.isTextureReady = true
+      this.body.visible = this.currentSuppressedAccessoryFamily === null
+      this.invalidateVisualSync()
+    })
+  }
+
+  private applyAnimationFrame(): void {
+    if (this.animationState === null || this.animationTextures === null) {
+      return
+    }
+    const texture = this.animationTextures.clips[this.animationState.stage][this.animationState.frameIndex]
+    if (texture !== undefined && this.body.texture !== texture) {
+      this.body.texture = texture
+    }
+  }
+
+  private applyDevicePresentationTextures(): void {
+    if (this.animationState !== null && this.animationTextures !== null) {
+      this.applyAnimationFrame()
+      this.previewMask.texture = this.animationTextures.mask
+      this.selectionMask.texture = this.animationTextures.mask
+    } else {
+      if (this.staticBodyTexture !== null) {
+        this.body.texture = this.staticBodyTexture
+      }
+      if (this.staticMaskTexture !== null) {
+        this.previewMask.texture = this.staticMaskTexture
+        this.selectionMask.texture = this.staticMaskTexture
+      } else {
+        this.previewMask.texture = Texture.EMPTY
+        this.selectionMask.texture = Texture.EMPTY
+      }
+    }
+  }
+
+  public override setVisible(visible: boolean): void {
+    super.setVisible(visible)
+    if (!visible && this.animationRequested) {
+      this.animationWasHidden = true
+      this.discardNextAnimationDelta = true
+    }
   }
 
   /**
@@ -1033,9 +1222,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       mctx.fillRect(0, 0, canvasW, canvasH)
       const maskTexture = Texture.from(maskCanvas)
 
-      this.body.texture = bodyTexture
-      this.previewMask.texture = maskTexture
-      this.selectionMask.texture = maskTexture
+      this.staticBodyTexture = bodyTexture
+      this.staticMaskTexture = maskTexture
+      this.applyDevicePresentationTextures()
       this.isTextureReady = true
       this.invalidateVisualSync()
       this.body.visible = this.currentSuppressedAccessoryFamily === null
@@ -1968,6 +2157,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   protected onDestroy(): void {
     this.disposed = true
+    this.animationLoadVersion += 1
+    this.animationState = null
+    this.animationTextures = null
+    this.staticBodyTexture = null
+    this.staticMaskTexture = null
   }
 
   private applyLayout(layout: RenderSpriteLayout): void {

@@ -1,4 +1,5 @@
 import type { AppContract } from "@/domain/app/app-contract"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 
 const DEVICE_SPRITE_PREFIX = "device-sprite-"
 const DEVICE_MASK_PREFIX = "device-masks-"
@@ -36,4 +37,24 @@ export function resolveDeviceLabelIconTextureKey(
   return `${readSimplifiedDeviceIconPreference(app)
     ? BLUEPRINT_AVATAR_PREFIX
     : TOP_VIEW_AVATAR_PREFIX}${spriteId}`
+}
+
+/** 本体素材与动画资格由同一入口决定，蓝图图片始终优先。 */
+export function resolveDeviceBodyPresentation(
+  definition: EntityDefinition,
+  app: AppContract | null,
+  options: { forceBlueprint: boolean; allowAnimation: boolean },
+) {
+  const blueprint = options.forceBlueprint || readSimplifiedDeviceIconPreference(app)
+  return {
+    bodyTextureKey: blueprint
+      ? `${BLUEPRINT_SPRITE_PREFIX}${definition.spriteId}`
+      : `${DEVICE_SPRITE_PREFIX}${definition.spriteId}`,
+    maskTextureKey: blueprint
+      ? `${BLUEPRINT_MASK_PREFIX}${definition.spriteId}`
+      : `${DEVICE_MASK_PREFIX}${definition.spriteId}`,
+    animation: !blueprint && options.allowAnimation && app?.state.settings.gamePlayDeviceAnimations
+      ? definition.spriteAnimation ?? null
+      : null,
+  }
 }

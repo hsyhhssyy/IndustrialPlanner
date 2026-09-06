@@ -5,6 +5,7 @@ export {
   type GestureAdapterOptions,
 } from "./gesture-adapter";
 export type {
+  BeginUiButtonHoldFeedbackOptions,
   GestureDelta,
   GestureEndReason,
   GestureEvent,
@@ -14,10 +15,14 @@ export type {
   GesturePointerEventLike,
   GesturePosition,
   GestureUiButtonMouseTapEventLike,
+  GestureUiButtonPressEventLike,
   GestureUiButtonTouchTapEventLike,
   GestureWheelEventLike,
   KeyboardSnapshot,
   KeyboardSnapshotListener,
   LongPressState,
   LongPressStateListener,
+  UiButtonHoldState,
+  UiButtonHoldStateListener,
+  UiButtonPointerKind,
 } from "./types";

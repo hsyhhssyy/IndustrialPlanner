@@ -495,6 +495,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
         }),
       },
+      "game-play-device-animations": {
+        readValue: () => appHost.state.settings.gamePlayDeviceAnimations,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gamePlayDeviceAnimations === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gamePlayDeviceAnimations = value;
+        }),
+      },
       "game-use-inspector-panel": {
         readValue: () => appHost.state.settings.gameUseInspectorPanel,
         writeValue: action((value) => {

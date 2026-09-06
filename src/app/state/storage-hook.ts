@@ -194,6 +194,9 @@ function normalizePersistedAppSettings(
         ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
         : fallback.hypergryphInspectorOpenOnSecondClick,
     gameUseBlueprintStyleDeviceImages,
+    gamePlayDeviceAnimations: typeof persistedAppSettings.gamePlayDeviceAnimations === "boolean"
+      ? persistedAppSettings.gamePlayDeviceAnimations
+      : fallback.gamePlayDeviceAnimations,
     gameShowDeviceNames,
     gameShowDeviceIcons,
     gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"

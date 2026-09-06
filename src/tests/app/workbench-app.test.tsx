@@ -69,6 +69,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
+  gamePlayDeviceAnimations: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
   gameUseInspectorPanel: false,
@@ -1638,6 +1639,7 @@ describe("WorkbenchApp", () => {
 
   it("renders the bottom-left rotate view toolbar and emits rotate view button gestures", () => {
     const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
@@ -1681,6 +1683,14 @@ describe("WorkbenchApp", () => {
         clientY: 720,
         buttons: 1,
       });
+    });
+
+    expect(container.querySelector(
+      ".canvas-bottom-left-secondary-toolbar-hold-progress",
+    )).not.toBeNull();
+    expect(editorHost.state.viewport.displayRotation).toBe(0);
+
+    act(() => {
       dispatchPointerEvent(rotateViewButton, "pointerup", {
         pointerId: 42,
         pointerType: "touch",
@@ -1691,11 +1701,23 @@ describe("WorkbenchApp", () => {
       dispatchClickEvent(rotateViewButton, { detail: 0 });
     });
 
-    expect(gestures).toHaveLength(1);
-    expect(gestures[0]).toMatchObject({
-      type: "ui-button-touch-tap",
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
-    });
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-press-start",
+        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        pointerKind: "touch",
+      },
+      {
+        type: "ui-button-press-end",
+        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        pointerKind: "touch",
+        reason: "release",
+      },
+    ]);
+    expect(container.querySelector(
+      ".canvas-bottom-left-secondary-toolbar-hold-progress",
+    )).toBeNull();
+    expect(editorHost.state.viewport.displayRotation).toBe(90);
   });
 
   it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and emits selection action buttons for pointer activation", () => {

@@ -508,6 +508,8 @@ export type UiKey =
   | "settingsField.game-show-hotkeysDescription"
   | "settingsField.game-use-blueprint-style-device-images"
   | "settingsField.game-use-blueprint-style-device-imagesDescription"
+  | "settingsField.game-play-device-animations"
+  | "settingsField.game-play-device-animationsDescription"
   | "settingsField.game-use-inspector-panel"
   | "settingsField.game-use-inspector-panelDescription"
   | "settingsField.other-debug-mode"

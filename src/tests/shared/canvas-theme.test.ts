@@ -28,6 +28,24 @@ describe("resolveEffectiveCanvasTheme", () => {
       BLUEPRINT_CANVAS_THEME_COLOR_PATCH["renderer-flow-glow-tint"],
     );
   });
+
+  it("草地开启时将端口箭头切换为高对比颜色，不改变其他画布配色", () => {
+    const theme = resolveEffectiveCanvasTheme(AYU_LIGHT_THEME, false, true);
+
+    expect(theme.colors["renderer-port-chevron"]).toBe("#ffffff");
+    expect(theme.colors["renderer-grid-line"]).toBe(
+      AYU_LIGHT_THEME.colors["renderer-grid-line"],
+    );
+    expect(theme.colors["in-canvas-bg"]).toBe(AYU_LIGHT_THEME.colors["in-canvas-bg"]);
+  });
+
+  it("蓝图和草地标记异常并存时由蓝图浅色画布配色覆盖草地配色", () => {
+    const theme = resolveEffectiveCanvasTheme(AYU_DARK_THEME, true, true);
+
+    expect(theme.colors["renderer-port-chevron"]).toBe(
+      BLUEPRINT_CANVAS_THEME_COLOR_PATCH["renderer-port-chevron"],
+    );
+  });
 });
 
 describe("resolveInCanvasThemeCssVariables", () => {

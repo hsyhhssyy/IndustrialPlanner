@@ -730,6 +730,66 @@ describe("GestureAdapter", () => {
     ]);
   });
 
+  it("tracks semantic ui button press lifecycle and cancels active presses on blur", () => {
+    const { adapter } = createAdapterHarness();
+    const events: GestureEvent[] = [];
+    const holdStates = [adapter.getUiButtonHoldState()];
+    adapter.subscribe((event) => events.push(event));
+    adapter.subscribeUiButtonHoldState((state) => holdStates.push(state));
+
+    adapter.handleUiButtonPressStart({
+      uiButtonId: "utility-settings",
+      pointerId: 21,
+      pointerType: "pen",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    const gestureId = events[0]?.gestureId;
+    expect(gestureId).toBeDefined();
+    expect(events[0]).toMatchObject({
+      type: "ui-button-press-start",
+      uiButtonId: "utility-settings",
+      pointerId: 21,
+      pointerKind: "touch",
+      button: 0,
+    });
+    expect(adapter.isUiButtonPressActive(gestureId ?? "missing")).toBe(true);
+
+    adapter.beginUiButtonHoldFeedback({
+      uiButtonId: "utility-settings",
+      gestureId: gestureId ?? "missing",
+      durationMs: 2_000,
+    });
+    expect(adapter.getUiButtonHoldState()).toMatchObject({
+      visible: true,
+      uiButtonId: "utility-settings",
+      gestureId,
+      durationMs: 2_000,
+    });
+
+    adapter.handleBlur();
+
+    expect(events[1]).toMatchObject({
+      type: "ui-button-press-end",
+      gestureId,
+      uiButtonId: "utility-settings",
+      pointerId: 21,
+      pointerKind: "touch",
+      reason: "cancel",
+    });
+    expect(adapter.isUiButtonPressActive(gestureId ?? "missing")).toBe(false);
+    expect(adapter.getUiButtonHoldState()).toMatchObject({
+      visible: false,
+      uiButtonId: null,
+      gestureId: null,
+    });
+    expect(holdStates.at(-1)?.visible).toBe(false);
+  });
+
   it("emits active tool exit before enter and carries from/to tool keys", () => {
     const { adapter, appHost } = createAdapterHarness({ activeTool: "select" });
     const events: GestureEvent[] = [];

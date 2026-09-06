@@ -1,4 +1,5 @@
 import type {
+  BeginUiButtonHoldFeedbackOptions,
   GestureDelta,
   GestureEndReason,
   GestureEvent,
@@ -9,12 +10,16 @@ import type {
   GesturePointerEventLike,
   GesturePosition,
   GestureUiButtonMouseTapEventLike,
+  GestureUiButtonPressEventLike,
   GestureUiButtonTouchTapEventLike,
   GestureWheelEventLike,
   KeyboardSnapshot,
   KeyboardSnapshotListener,
   LongPressState,
   LongPressStateListener,
+  UiButtonHoldState,
+  UiButtonHoldStateListener,
+  UiButtonPointerKind,
 } from "./types";
 import { reaction, type IReactionDisposer } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -219,6 +224,15 @@ interface UnconsumedTapCandidate {
   readonly position: GesturePosition;
 }
 
+interface UiButtonPressSession {
+  readonly gestureId: string;
+  readonly uiButtonId: string;
+  readonly pointerId: number;
+  readonly pointerKind: UiButtonPointerKind;
+  readonly button: number;
+  readonly modifiers: GestureModifiers;
+}
+
 export class GestureAdapter {
   private readonly appHost: GestureAdapterAppHost;
   private readonly thresholds: GestureAdapterThresholds;
@@ -232,6 +246,7 @@ export class GestureAdapter {
   private readonly gestureListeners = new Set<GestureListener>();
   private readonly keyboardListeners = new Set<KeyboardSnapshotListener>();
   private readonly longPressListeners = new Set<LongPressStateListener>();
+  private readonly uiButtonHoldListeners = new Set<UiButtonHoldStateListener>();
   private readonly unsubscribeActiveToolReaction: IReactionDisposer;
   private readonly pressedKeys = new Set<string>();
   private mouseSession: MouseSession | null = null;
@@ -252,6 +267,7 @@ export class GestureAdapter {
   private wheelAccumulator = 0;
   private wheelDirection: 1 | -1 | 0 = 0;
   private lastUnconsumedTap: UnconsumedTapCandidate | null = null;
+  private readonly uiButtonPressSessions = new Map<number, UiButtonPressSession>();
   private keyboardSnapshot: KeyboardSnapshot = {
     pressedKeys: new Set<string>(),
     lastCode: null,
@@ -270,6 +286,13 @@ export class GestureAdapter {
     startedAt: null,
     durationMs: TOUCH_LONG_PRESS_MS,
     progress: 0,
+  };
+  private uiButtonHoldState: UiButtonHoldState = {
+    visible: false,
+    uiButtonId: null,
+    gestureId: null,
+    startedAt: null,
+    durationMs: 0,
   };
 
   public constructor(appHost: GestureAdapterAppHost, options: GestureAdapterOptions = {}) {
@@ -346,12 +369,24 @@ export class GestureAdapter {
     };
   }
 
+  public subscribeUiButtonHoldState(listener: UiButtonHoldStateListener): () => void {
+    this.uiButtonHoldListeners.add(listener);
+    listener(this.uiButtonHoldState);
+    return () => {
+      this.uiButtonHoldListeners.delete(listener);
+    };
+  }
+
   public getKeyboardSnapshot(): KeyboardSnapshot {
     return this.keyboardSnapshot;
   }
 
   public getLongPressState(): LongPressState {
     return this.longPressState;
+  }
+
+  public getUiButtonHoldState(): UiButtonHoldState {
+    return this.uiButtonHoldState;
   }
 
   public handlePointerDown(event: GesturePointerEventLike): void {
@@ -505,10 +540,84 @@ export class GestureAdapter {
     });
   }
 
+  public handleUiButtonPressStart(event: GestureUiButtonPressEventLike): void {
+    const pointerKind = getPointerKind(event.pointerType);
+    if (pointerKind === "unknown") {
+      return;
+    }
+
+    const existingSession = this.uiButtonPressSessions.get(event.pointerId);
+    if (existingSession !== undefined) {
+      this.dispatchUiButtonPressEnd(existingSession, "cancel", event.sourceEvent ?? event);
+    }
+
+    const session: UiButtonPressSession = {
+      gestureId: this.nextGestureId("ui-button-press"),
+      uiButtonId: event.uiButtonId,
+      pointerId: event.pointerId,
+      pointerKind,
+      button: event.button,
+      modifiers: getModifiers(event),
+    };
+    this.uiButtonPressSessions.set(event.pointerId, session);
+    this.dispatchGesture({
+      type: "ui-button-press-start",
+      gestureId: session.gestureId,
+      uiButtonId: session.uiButtonId,
+      pointerId: session.pointerId,
+      pointerKind: session.pointerKind,
+      button: session.button,
+      modifiers: session.modifiers,
+      sourceEvent: event.sourceEvent ?? event,
+    });
+  }
+
+  public handleUiButtonPressEnd(
+    event: GestureUiButtonPressEventLike,
+    reason: GestureEndReason,
+  ): void {
+    const session = this.uiButtonPressSessions.get(event.pointerId);
+    if (session === undefined || session.uiButtonId !== event.uiButtonId) {
+      return;
+    }
+
+    this.dispatchUiButtonPressEnd(session, reason, event.sourceEvent ?? event, getModifiers(event));
+  }
+
+  public isUiButtonPressActive(gestureId: string): boolean {
+    for (const session of this.uiButtonPressSessions.values()) {
+      if (session.gestureId === gestureId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public beginUiButtonHoldFeedback(options: BeginUiButtonHoldFeedbackOptions): void {
+    this.setUiButtonHoldState({
+      visible: true,
+      uiButtonId: options.uiButtonId,
+      gestureId: options.gestureId,
+      startedAt: this.now(),
+      durationMs: Math.max(0, options.durationMs),
+    });
+  }
+
+  public endUiButtonHoldFeedback(gestureId: string): void {
+    if (this.uiButtonHoldState.gestureId !== gestureId) {
+      return;
+    }
+
+    this.resetUiButtonHoldState();
+  }
+
   public handleBlur(): void {
     this.flushPendingMergedMove();
     this.cancelAllPointerSessions();
+    this.cancelAllUiButtonPressSessions();
     this.clearPressedKeys();
+    this.resetUiButtonHoldState();
   }
 
   public handleVisibilityChange(hidden: boolean): void {
@@ -522,10 +631,13 @@ export class GestureAdapter {
     this.flushPendingMergedMove();
     this.unsubscribeActiveToolReaction();
     this.cancelAllPointerSessions();
+    this.cancelAllUiButtonPressSessions();
     this.clearPressedKeys();
+    this.resetUiButtonHoldState();
     this.gestureListeners.clear();
     this.keyboardListeners.clear();
     this.longPressListeners.clear();
+    this.uiButtonHoldListeners.clear();
   }
 
   private startMouseSession(event: GesturePointerEventLike): void {
@@ -1077,6 +1189,35 @@ export class GestureAdapter {
     });
   }
 
+  private dispatchUiButtonPressEnd(
+    session: UiButtonPressSession,
+    reason: GestureEndReason,
+    sourceEvent: unknown,
+    modifiers: GestureModifiers = session.modifiers,
+  ): void {
+    if (this.uiButtonPressSessions.get(session.pointerId) === session) {
+      this.uiButtonPressSessions.delete(session.pointerId);
+    }
+
+    this.dispatchGesture({
+      type: "ui-button-press-end",
+      gestureId: session.gestureId,
+      uiButtonId: session.uiButtonId,
+      pointerId: session.pointerId,
+      pointerKind: session.pointerKind,
+      button: session.button,
+      reason,
+      modifiers,
+      sourceEvent,
+    });
+  }
+
+  private cancelAllUiButtonPressSessions(): void {
+    for (const session of Array.from(this.uiButtonPressSessions.values())) {
+      this.dispatchUiButtonPressEnd(session, "cancel", null);
+    }
+  }
+
   private clearPressedKeys(): void {
     if (this.pressedKeys.size === 0 && this.keyboardSnapshot.lastCode === null) {
       return;
@@ -1195,6 +1336,27 @@ export class GestureAdapter {
     for (const listener of this.longPressListeners) {
       listener(state);
     }
+  }
+
+  private setUiButtonHoldState(state: UiButtonHoldState): void {
+    this.uiButtonHoldState = state;
+    for (const listener of this.uiButtonHoldListeners) {
+      listener(state);
+    }
+  }
+
+  private resetUiButtonHoldState(): void {
+    if (!this.uiButtonHoldState.visible && this.uiButtonHoldState.gestureId === null) {
+      return;
+    }
+
+    this.setUiButtonHoldState({
+      visible: false,
+      uiButtonId: null,
+      gestureId: null,
+      startedAt: null,
+      durationMs: 0,
+    });
   }
 
   private hideLongPressState(): void {

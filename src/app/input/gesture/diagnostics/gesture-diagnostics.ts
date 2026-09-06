@@ -181,6 +181,10 @@ function getEventDetail(event: GestureEvent): string {
         event.key ? `key ${event.key}` : null,
         event.keyCode !== null ? `keyCode ${event.keyCode}` : null,
       ].filter(Boolean).join(", ");
+    case "ui-button-press-start":
+      return `id ${event.uiButtonId}, ${event.pointerKind}, button ${event.button}`;
+    case "ui-button-press-end":
+      return `id ${event.uiButtonId}, ${event.pointerKind}, button ${event.button}, ${event.reason}`;
     case "ui-button-touch-tap":
       return `id ${event.uiButtonId}`;
     case "ui-button-mouse-tap":

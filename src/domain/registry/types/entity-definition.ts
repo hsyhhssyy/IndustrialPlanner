@@ -4,6 +4,7 @@ import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 import type { EntitySimulationBehaviorDeclaration } from "./entity-simulation-behavior";
+import type { DeviceSpriteAnimationDefinition } from "./device-sprite-animation";
 // AI-REMOVED 2026-08-19:
 // Reason: EntityDefinition 不再持有按 SimulationMode 覆盖的 Registry 配置类型。
 // Trigger: 用户要求删除 simulationModeConfigs 及其基础设施。
@@ -60,6 +61,8 @@ export interface EntityDefinition {
   nameKey: string;
   /** 精灵图 ID，渲染器据此查找设备纹理 */
   spriteId: string;
+  /** 未声明时保持静态；四阶段素材按 spriteId 共享。 */
+  readonly spriteAnimation?: DeviceSpriteAnimationDefinition;
   /** 相对于 public 目录的 UI 设备图标路径；不从 id 或 spriteId 推导 */
   iconPath: string;
   /** 设备占地尺寸（宽度 × 高度，单位：格子），基于 rotation=0 */

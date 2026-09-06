@@ -525,6 +525,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
+    expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
@@ -782,6 +783,58 @@ describe("createAppHost", () => {
         }),
       ),
     );
+  });
+
+  it.each([undefined, null, "true", 1])(
+    "defaults missing or invalid persisted device animation preferences to false (%s)",
+    (gamePlayDeviceAnimations) => {
+      localStorage.setItem(
+        APP_SETTINGS_LOCAL_STORAGE_KEY,
+        JSON.stringify({ gamePlayDeviceAnimations }),
+      );
+
+      const appHost = createAppHost(createWorkspace());
+      expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(false);
+      appHost.dispose();
+    },
+  );
+
+  it.each([false, true])(
+    "hydrates device animation preferences without overwriting them in blueprint mode (%s)",
+    (gamePlayDeviceAnimations) => {
+      localStorage.setItem(
+        APP_SETTINGS_LOCAL_STORAGE_KEY,
+        JSON.stringify({
+          gameUseBlueprintStyleDeviceImages: true,
+          gamePlayDeviceAnimations,
+        }),
+      );
+
+      const appHost = createAppHost(createWorkspace());
+      expect(appHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
+      expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(gamePlayDeviceAnimations);
+      appHost.dispose();
+    },
+  );
+
+  it("locally persists the device animation preference across app host reloads", () => {
+    const appHost = createAppHost(createWorkspace());
+
+    runInAction(() => {
+      appHost.internalState.settings.gamePlayDeviceAnimations = true;
+      appHost.internalState.settings.gameUseBlueprintStyleDeviceImages = true;
+    });
+
+    expect(JSON.parse(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY) ?? "null")).toMatchObject({
+      gamePlayDeviceAnimations: true,
+      gameUseBlueprintStyleDeviceImages: true,
+    });
+    appHost.dispose();
+
+    const reloadedAppHost = createAppHost(createWorkspace());
+    expect(reloadedAppHost.state.settings.gamePlayDeviceAnimations).toBe(true);
+    expect(reloadedAppHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
+    reloadedAppHost.dispose();
   });
 
   it("hydrates and persists the current split localStorage keys", () => {
@@ -3910,8 +3963,23 @@ describe("createAppHost", () => {
     }));
 
     expect(keyboardConsumed).toBe(true);
+    expect(setViewportDisplayRotationSpy).not.toHaveBeenCalled();
+    expect(appHost.gestureAdapter.getUiButtonHoldState()).toMatchObject({
+      visible: true,
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      durationMs: 2_000,
+    });
+
+    const keyboardReleaseConsumed = appHost.gestureAdapter.handleKeyUp(keyEvent({
+      code: "KeyR",
+      key: "r",
+      ctrlKey: true,
+    }));
+
+    expect(keyboardReleaseConsumed).toBe(true);
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledWith(90);
     expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(appHost.gestureAdapter.getUiButtonHoldState().visible).toBe(false);
     setViewportDisplayRotationSpy.mockClear();
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
@@ -3948,6 +4016,121 @@ describe("createAppHost", () => {
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(180);
     expect(editorHost.state.viewport.displayRotation).toBe(180);
+  });
+
+  it("resets viewport rotation after holding the shortcut or rotate button for two seconds", () => {
+    vi.useFakeTimers();
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    editorHost.actions.setViewportDisplayRotation(270);
+    const setViewportDisplayRotationSpy = vi.spyOn(editorHost.actions, "setViewportDisplayRotation");
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyR",
+      key: "r",
+      ctrlKey: true,
+    }));
+
+    vi.advanceTimersByTime(1_999);
+    expect(setViewportDisplayRotationSpy).not.toHaveBeenCalled();
+    expect(appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "F13",
+      key: "F13",
+      keyCode: 124,
+      ctrlKey: true,
+    }))).toBe(false);
+    expect(appHost.gestureAdapter.handleKeyUp(keyEvent({
+      code: "F13",
+      key: "F13",
+      keyCode: 124,
+      ctrlKey: true,
+    }))).toBe(false);
+
+    vi.advanceTimersByTime(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(0);
+    expect(editorHost.state.viewport.displayRotation).toBe(0);
+    expect(appHost.gestureAdapter.getUiButtonHoldState().visible).toBe(false);
+    expect(appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "F13",
+      key: "F13",
+      keyCode: 124,
+      ctrlKey: true,
+    }))).toBe(false);
+    expect(appHost.gestureAdapter.handleKeyUp(keyEvent({
+      code: "F13",
+      key: "F13",
+      keyCode: 124,
+      ctrlKey: true,
+    }))).toBe(false);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyR",
+      key: "r",
+      ctrlKey: true,
+    }));
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    appHost.gestureAdapter.handleKeyUp(keyEvent({
+      code: "KeyR",
+      key: "r",
+      ctrlKey: true,
+    }));
+
+    editorHost.actions.setViewportDisplayRotation(180);
+    setViewportDisplayRotationSpy.mockClear();
+    appHost.gestureAdapter.handleUiButtonPressStart({
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      pointerId: 77,
+      pointerType: "mouse",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    vi.advanceTimersByTime(2_000);
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(0);
+    expect(editorHost.state.viewport.displayRotation).toBe(0);
+
+    appHost.gestureAdapter.handleUiButtonPressEnd({
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      pointerId: 77,
+      pointerType: "mouse",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    }, "release");
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+
+    appHost.gestureAdapter.handleUiButtonPressStart({
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      pointerId: 78,
+      pointerType: "touch",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handleUiButtonPressEnd({
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      pointerId: 78,
+      pointerType: "touch",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    }, "cancel");
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(appHost.gestureAdapter.getUiButtonHoldState().visible).toBe(false);
   });
 
   it("does not pan the editor viewport when a pinch ends with one touch still down", () => {

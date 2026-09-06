@@ -34,6 +34,16 @@ export interface LongPressState {
   readonly progress: number;
 }
 
+export interface UiButtonHoldState {
+  readonly visible: boolean;
+  readonly uiButtonId: string | null;
+  readonly gestureId: string | null;
+  readonly startedAt: number | null;
+  readonly durationMs: number;
+}
+
+export type UiButtonPointerKind = "mouse" | "touch";
+
 export type GestureEndReason = "release" | "cancel";
 export type GestureEventType =
   | "on-enter-active-tool"
@@ -60,6 +70,8 @@ export type GestureEventType =
   | "wheel down"
   | "key down"
   | "key up"
+  | "ui-button-press-start"
+  | "ui-button-press-end"
   | "ui-button-touch-tap"
   | "ui-button-mouse-tap";
 
@@ -257,6 +269,22 @@ export interface UiButtonMouseTapGestureEvent extends GestureEventBase {
   readonly button: number;
 }
 
+interface UiButtonPressGestureEventBase extends GestureEventBase {
+  readonly uiButtonId: string;
+  readonly pointerId: number;
+  readonly pointerKind: UiButtonPointerKind;
+  readonly button: number;
+}
+
+export interface UiButtonPressStartGestureEvent extends UiButtonPressGestureEventBase {
+  readonly type: "ui-button-press-start";
+}
+
+export interface UiButtonPressEndGestureEvent extends UiButtonPressGestureEventBase {
+  readonly type: "ui-button-press-end";
+  readonly reason: GestureEndReason;
+}
+
 export type GestureEvent =
   | EnterActiveToolGestureEvent
   | ExitActiveToolGestureEvent
@@ -279,6 +307,8 @@ export type GestureEvent =
   | WheelGestureEvent
   | KeyDownGestureEvent
   | KeyUpGestureEvent
+  | UiButtonPressStartGestureEvent
+  | UiButtonPressEndGestureEvent
   | UiButtonTouchTapGestureEvent
   | UiButtonMouseTapGestureEvent;
 
@@ -338,6 +368,19 @@ export interface GestureUiButtonMouseTapEventLike extends GestureUiButtonEventLi
   readonly button: number;
 }
 
+export interface GestureUiButtonPressEventLike extends GestureUiButtonEventLikeBase {
+  readonly pointerId: number;
+  readonly pointerType: string;
+  readonly button: number;
+}
+
+export interface BeginUiButtonHoldFeedbackOptions {
+  readonly uiButtonId: string;
+  readonly gestureId: string;
+  readonly durationMs: number;
+}
+
 export type GestureListener = (event: GestureEvent) => unknown;
 export type KeyboardSnapshotListener = (snapshot: KeyboardSnapshot) => void;
 export type LongPressStateListener = (state: LongPressState) => void;
+export type UiButtonHoldStateListener = (state: UiButtonHoldState) => void;

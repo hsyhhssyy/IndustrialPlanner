@@ -859,6 +859,7 @@
 }
 
 .canvas-bottom-left-secondary-toolbar-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -873,6 +874,7 @@
   color: var(--in-canvas-toolbar-button-text);
   backdrop-filter: blur(10px);
   touch-action: manipulation;
+  overflow: hidden;
 }
 
 .canvas-bottom-left-secondary-toolbar-button:not(:disabled):hover {
@@ -884,6 +886,37 @@
   width: 22px;
   height: 22px;
   fill: currentColor;
+}
+
+.canvas-bottom-left-secondary-toolbar-hold-progress {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  left: 3px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--in-canvas-touch-hold-track);
+  pointer-events: none;
+}
+
+.canvas-bottom-left-secondary-toolbar-hold-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--in-canvas-toolbar-active-border);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation-name: canvas-bottom-left-secondary-toolbar-hold-progress;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+}
+
+@keyframes canvas-bottom-left-secondary-toolbar-hold-progress {
+  to {
+    transform: scaleX(1);
+  }
 }
 
 // AI-REMOVED 2026-05-21:

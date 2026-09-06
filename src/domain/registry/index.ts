@@ -1,6 +1,10 @@
 export type { RegistryContract } from "./registry-contract";
 export type { RegistryQuery } from "./registry-query";
 export type {
+  DeviceSpriteAnimationClipDefinition,
+  DeviceSpriteAnimationDefinition,
+} from "./types/device-sprite-animation";
+export type {
 	BaseDefinition,
 	BaseOuterRingDefinition,
 } from "./types/base-definition";

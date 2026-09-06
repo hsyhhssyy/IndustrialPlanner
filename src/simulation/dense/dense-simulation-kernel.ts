@@ -83,6 +83,7 @@ export interface DenseWarehouseStatsBucket {
 
 export interface DenseKernelCheckpoint {
   readonly tickNumber: number;
+  readonly transfers: DenseKernelTransferBatch;
   readonly slotItemIndexes: Int32Array;
   readonly slotCounts: Float64Array;
   readonly slotReserved: Float64Array;
@@ -205,6 +206,7 @@ export class DenseSimulationKernel {
   private baseBatteryJoulesValue = BASE_BATTERY_CAPACITY_J;
   private nextRecipeRunId = 1;
   private currentTickNumber = 0;
+  private currentTickTransfers = createEmptyDenseTransfers();
 
   public constructor(
     public readonly topology: CompiledSimulationTopology,
@@ -295,6 +297,10 @@ export class DenseSimulationKernel {
 
   public get tickNumber(): number {
     return this.currentTickNumber;
+  }
+
+  public get transfers(): DenseKernelTransferBatch {
+    return this.currentTickTransfers;
   }
 
   public get gasDiffusions(): readonly RuntimeGasDiffusionSnapshot[] {
@@ -433,6 +439,7 @@ export class DenseSimulationKernel {
   public createCheckpoint(): DenseKernelCheckpoint {
     return {
       tickNumber: this.currentTickNumber,
+      transfers: cloneDenseTransfers(this.currentTickTransfers),
       slotItemIndexes: this.state.slotItemIndexes.slice(),
       slotCounts: this.state.slotCounts.slice(),
       slotReserved: this.state.slotReserved.slice(),
@@ -470,6 +477,7 @@ export class DenseSimulationKernel {
   public restoreCheckpoint(checkpoint: DenseKernelCheckpoint): void {
     this.assertCheckpointShape(checkpoint);
     this.currentTickNumber = checkpoint.tickNumber;
+    this.currentTickTransfers = cloneDenseTransfers(checkpoint.transfers);
     this.state.slotItemIndexes.set(checkpoint.slotItemIndexes);
     this.state.slotCounts.set(checkpoint.slotCounts);
     this.state.slotReserved.set(checkpoint.slotReserved);
@@ -526,6 +534,8 @@ export class DenseSimulationKernel {
     const resetDevices = new Set(resetDeviceIds);
     const preservedDeviceIds = new Set<string>();
     this.currentTickNumber = previous.currentTickNumber;
+    // 迁移后的拓扑索引可能变化，旧帧的传输事件不能带入新拓扑。
+    this.currentTickTransfers = createEmptyDenseTransfers();
     this.baseBatteryJoulesValue = previous.baseBatteryJoulesValue;
     this.nextRecipeRunId = previous.nextRecipeRunId;
 
@@ -696,6 +706,8 @@ export class DenseSimulationKernel {
     }
     this.advanceToTick(gateTickNumber - 1, onCommittedTick);
     this.currentTickNumber = gateTickNumber;
+    // 区域闸门尚未提交，不能把上一 tick 的传输标记为当前 tick 的展示数据。
+    this.currentTickTransfers = createEmptyDenseTransfers();
     const transfers = createTransferAccumulator();
     this.beginTick(transfers);
     this.regionalGateTransfers = transfers;
@@ -763,8 +775,10 @@ export class DenseSimulationKernel {
         amount,
       }));
     this.regionalDeposits.clear();
+    const result = createKernelTickResult(this.currentTickNumber, transfers);
+    this.currentTickTransfers = result.transfers;
     return {
-      result: createKernelTickResult(this.currentTickNumber, transfers),
+      result,
       deposits,
     };
   }
@@ -785,7 +799,9 @@ export class DenseSimulationKernel {
     const transfers = createTransferAccumulator();
     this.beginTick(transfers);
     this.finishTick();
-    return createKernelTickResult(this.currentTickNumber, transfers);
+    const result = createKernelTickResult(this.currentTickNumber, transfers);
+    this.currentTickTransfers = result.transfers;
+    return result;
   }
 
   private beginTick(transfers: DenseTransferAccumulator): void {
@@ -2608,6 +2624,26 @@ function createTransferAccumulator(): DenseTransferAccumulator {
     targetSlotIndexes: [],
     itemIndexes: [],
     amounts: [],
+  };
+}
+
+export function createEmptyDenseTransfers(): DenseKernelTransferBatch {
+  return {
+    edgeIndexes: new Uint32Array(),
+    sourceSlotIndexes: new Uint32Array(),
+    targetSlotIndexes: new Uint32Array(),
+    itemIndexes: new Uint32Array(),
+    amounts: new Float64Array(),
+  };
+}
+
+function cloneDenseTransfers(transfers: DenseKernelTransferBatch): DenseKernelTransferBatch {
+  return {
+    edgeIndexes: transfers.edgeIndexes.slice(),
+    sourceSlotIndexes: transfers.sourceSlotIndexes.slice(),
+    targetSlotIndexes: transfers.targetSlotIndexes.slice(),
+    itemIndexes: transfers.itemIndexes.slice(),
+    amounts: transfers.amounts.slice(),
   };
 }
 
