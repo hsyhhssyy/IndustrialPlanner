@@ -14,6 +14,7 @@ import {
 } from "./pwa-controller";
 
 const PRECACHE_CACHE_NAME_PREFIX = "industrial-planner-precache-";
+const ANIMATION_CACHE_NAME_PREFIX = "industrial-planner-animation-precache-";
 
 interface PwaGatewayProps {
   readonly appHost: AppHost;
@@ -72,9 +73,16 @@ export const PwaGateway = observer(function PwaGateway({
   const pwaProgress = pwaController.progress;
   const pwaStatus = pwaController.offlineStatus;
   const shouldShowProgress = pwaProgress !== null && (
-    pwaStatus === "installing"
-    || pwaStatus === "updating"
-    || pwaStatus === "registering"
+    (pwaProgress.task === "core" && (
+      pwaStatus === "installing"
+      || pwaStatus === "updating"
+      || pwaStatus === "registering"
+    ))
+    || (
+      pwaProgress.task === "animation"
+      && pwaController.deviceAnimationsRequested
+      && pwaController.deviceAnimationStatus === "downloading"
+    )
   );
 
   return (
@@ -119,7 +127,11 @@ export const PwaGateway = observer(function PwaGateway({
             <ProgressToast
               copy={copy}
               progress={pwaProgress}
-              title={pwaStatus === "updating" ? copy.updateProgress : copy.installProgress}
+              title={pwaProgress.task === "animation"
+                ? copy.animationProgress
+                : pwaStatus === "updating"
+                  ? copy.updateProgress
+                  : copy.installProgress}
               zIndex={zIndex}
             />
           )}
@@ -198,6 +210,30 @@ export const PwaGateway = observer(function PwaGateway({
           )}
         </OverlayStackLayer>
       ) : null}
+      {pwaController.deviceAnimationStatus === "error"
+        && pwaController.deviceAnimationErrorMessage !== null ? (
+          <OverlayStackLayer kind="system" layerId="pwa:animation-error" visible>
+            {({ zIndex }) => (
+              <section
+                className={cm(styles, "pwa-gateway-toast pwa-gateway-toast-error")}
+                role="alert"
+                style={{ zIndex }}
+              >
+                <div className={cm(styles, "pwa-gateway-toast-copy")}>
+                  <strong>{copy.animationErrorTitle}</strong>
+                  <span>{pwaController.deviceAnimationErrorMessage}</span>
+                </div>
+                <button
+                  className={cm(styles, "pwa-gateway-primary-button")}
+                  onClick={pwaController.retryDeviceAnimationDownload}
+                  type="button"
+                >
+                  {copy.retry}
+                </button>
+              </section>
+            )}
+          </OverlayStackLayer>
+        ) : null}
       {pwaController.fullscreenNotice !== null ? (
         <FullscreenNotice
           closeButtonRef={fullscreenNoticeCloseButtonRef}
@@ -345,6 +381,10 @@ function resolveProgressPercent(progress: PwaProgress): number {
 }
 
 function resolveUpdaterVersion(cacheName: string): string {
+  if (cacheName.startsWith(ANIMATION_CACHE_NAME_PREFIX)) {
+    return cacheName.slice(ANIMATION_CACHE_NAME_PREFIX.length);
+  }
+
   if (cacheName.startsWith(PRECACHE_CACHE_NAME_PREFIX)) {
     return cacheName.slice(PRECACHE_CACHE_NAME_PREFIX.length);
   }
@@ -353,6 +393,8 @@ function resolveUpdaterVersion(cacheName: string): string {
 }
 
 interface PwaGatewayCopy {
+  readonly animationErrorTitle: string;
+  readonly animationProgress: string;
   readonly applyUpdate: string;
   readonly desktopInstallBody: string;
   readonly desktopInstallTitle: string;
@@ -388,6 +430,8 @@ interface PwaGatewayCopy {
 
 const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewayCopy> = {
   "zh-CN": {
+    animationErrorTitle: "动画资源下载失败",
+    animationProgress: "正在下载动画资源",
     applyUpdate: "更新",
     desktopInstallBody: "可以把应用安装为独立窗口，之后从桌面或启动器直接打开。",
     desktopInstallTitle: "安装到桌面",
@@ -426,6 +470,8 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
     updaterVersion: (version) => `更新器版本: ${version}`,
   },
   "en-US": {
+    animationErrorTitle: "Animation download failed",
+    animationProgress: "Downloading animation resources",
     applyUpdate: "Update",
     desktopInstallBody: "Install the app as a standalone window and open it from your launcher.",
     desktopInstallTitle: "Install App",

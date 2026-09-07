@@ -222,7 +222,16 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const [simulationEngineLaunchPreference] = useState(
     () => providedSimulationEngineLaunchPreference ?? captureSimulationEngineLaunchPreference(),
   );
-  const [pwaController] = useState(() => new PwaController());
+  const [pwaController] = useState(() => new PwaController({
+    readEnabled: () => appHost.state.settings.gamePlayDeviceAnimations,
+    writeEnabled: action((value) => {
+      if (appHost.internalState.settings.gamePlayDeviceAnimations === value) {
+        return;
+      }
+
+      appHost.internalState.settings.gamePlayDeviceAnimations = value;
+    }),
+  }));
   const [migrationController] = useState(() => new V2MigrationController());
   const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController({
     externalBindings: {
@@ -496,17 +505,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         }),
       },
       "game-play-device-animations": {
-        readValue: () => appHost.state.settings.gamePlayDeviceAnimations,
+        readValue: () => pwaController.deviceAnimationsSettingValue,
         writeValue: action((value) => {
           if (typeof value !== "boolean") {
             return;
           }
 
-          if (appHost.internalState.settings.gamePlayDeviceAnimations === value) {
-            return;
-          }
-
-          appHost.internalState.settings.gamePlayDeviceAnimations = value;
+          pwaController.setDeviceAnimationsEnabled(value);
         }),
       },
       "game-use-inspector-panel": {

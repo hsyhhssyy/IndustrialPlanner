@@ -31,13 +31,36 @@ export interface PwaProgress {
   readonly completedBytes: number;
   readonly completedFiles: number;
   readonly currentUrl: string | null;
+  readonly task: PwaProgressTask;
   readonly totalBytes: number;
   readonly totalFiles: number;
 }
 
+export type PwaProgressTask = "animation" | "core";
+
+export type PwaDeviceAnimationStatus =
+  | "idle"
+  | "checking-update"
+  | "downloading"
+  | "complete"
+  | "preempted-by-update"
+  | "error";
+
+export interface PwaDeviceAnimationSettingBinding {
+  readonly readEnabled: () => boolean;
+  readonly writeEnabled: (value: boolean) => void;
+}
+
 interface PersistedPwaPreference {
   readonly desktopInstallPromptDismissed?: boolean;
+  readonly deviceAnimationsRequested?: boolean;
   readonly offlineMode?: PwaOfflinePreference;
+}
+
+interface NormalizedPwaPreference {
+  readonly desktopInstallPromptDismissed: boolean;
+  readonly deviceAnimationsRequested: boolean | null;
+  readonly offlineMode: PwaOfflinePreference;
 }
 
 interface BeforeInstallPromptChoice {
@@ -58,12 +81,14 @@ type PwaServiceWorkerMessage =
     readonly completedBytes: number;
     readonly completedFiles: number;
     readonly currentUrl: string;
+    readonly task: PwaProgressTask;
     readonly totalBytes: number;
     readonly totalFiles: number;
   }
   | {
     readonly type: "PWA_PRECACHE_DONE";
     readonly cacheName: string;
+    readonly task: PwaProgressTask;
     readonly totalBytes: number;
     readonly totalFiles: number;
   }
@@ -71,6 +96,15 @@ type PwaServiceWorkerMessage =
     readonly type: "PWA_PRECACHE_ERROR";
     readonly cacheName: string;
     readonly message: string;
+    readonly task: PwaProgressTask;
+  }
+  | {
+    readonly type: "PWA_ANIMATION_CACHE_CANCELLED";
+    readonly cacheName: string;
+  }
+  | {
+    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED";
+    readonly cacheName: string;
   }
   | {
     readonly type: "PWA_ACTIVATED";
@@ -78,6 +112,9 @@ type PwaServiceWorkerMessage =
   };
 
 export class PwaController {
+  public deviceAnimationErrorMessage: string | null = null;
+  public deviceAnimationStatus: PwaDeviceAnimationStatus = "idle";
+  public deviceAnimationsRequested = false;
   public desktopInstallPromptDismissed = false;
   public errorMessage: string | null = null;
   public fullscreenNotice: PwaFullscreenNotice | null = null;
@@ -88,6 +125,8 @@ export class PwaController {
   public standalone = false;
 
   private beforeInstallPromptEvent: BeforeInstallPromptEvent | null = null;
+  private deviceAnimationOperationId = 0;
+  private readonly deviceAnimationSettingBinding: PwaDeviceAnimationSettingBinding | null;
   private initialized = false;
   private pollIntervalId: number | null = null;
   private registration: ServiceWorkerRegistration | null = null;
@@ -95,18 +134,28 @@ export class PwaController {
   private reloadAfterControllerChange = false;
   private waitingWorker: ServiceWorker | null = null;
 
-  public constructor() {
+  public constructor(deviceAnimationSettingBinding: PwaDeviceAnimationSettingBinding | null = null) {
     const persistedPreference = normalizePersistedPwaPreference(
       readFromLocalStorage<unknown>(PWA_PREFERENCE_LOCAL_STORAGE_KEY),
     );
     this.desktopInstallPromptDismissed = persistedPreference.desktopInstallPromptDismissed;
+    this.deviceAnimationSettingBinding = deviceAnimationSettingBinding;
+    this.deviceAnimationsRequested = persistedPreference.deviceAnimationsRequested
+      ?? deviceAnimationSettingBinding?.readEnabled()
+      ?? false;
     this.offlinePreference = persistedPreference.offlineMode;
     this.offlineStatus = this.offlinePreference === "declined" ? "not-enabled" : "ready-to-enable";
     this.standalone = resolveStandaloneMode();
 
+    if (this.shouldGateDeviceAnimations) {
+      this.writeDeviceAnimationsEnabled(false);
+    }
+
     makeAutoObservable<
       PwaController,
       | "beforeInstallPromptEvent"
+      | "deviceAnimationOperationId"
+      | "deviceAnimationSettingBinding"
       | "initialized"
       | "pollIntervalId"
       | "registration"
@@ -117,6 +166,8 @@ export class PwaController {
       this,
       {
         beforeInstallPromptEvent: false,
+        deviceAnimationOperationId: false,
+        deviceAnimationSettingBinding: false,
         initialized: false,
         pollIntervalId: false,
         registration: false,
@@ -142,6 +193,21 @@ export class PwaController {
     return this.offlinePreference === "accepted";
   }
 
+  public get deviceAnimationsSettingValue(): boolean {
+    if (this.shouldGateDeviceAnimations) {
+      return this.deviceAnimationsRequested;
+    }
+
+    return this.deviceAnimationSettingBinding?.readEnabled()
+      ?? this.deviceAnimationsRequested;
+  }
+
+  private get shouldGateDeviceAnimations(): boolean {
+    return this.isOfflineModeAccepted
+      && isRootPublicAssetBaseUrl()
+      && isServiceWorkerSupported();
+  }
+
   public get shouldShowOfflinePrompt(): boolean {
     return this.offlinePreference === "unknown" && this.offlineStatus === "ready-to-enable";
   }
@@ -156,33 +222,46 @@ export class PwaController {
 
     if (!isRootPublicAssetBaseUrl()) {
       this.offlineStatus = "unsupported";
+      this.writeDeviceAnimationsEnabled(this.deviceAnimationsRequested);
       return;
     }
 
     if (isPwaDevelopmentServer()) {
       this.offlineStatus = "unsupported";
+      this.writeDeviceAnimationsEnabled(this.deviceAnimationsRequested);
       void cleanupDevelopmentPwaState();
       return;
     }
 
     if (!isServiceWorkerSupported()) {
       this.offlineStatus = "unsupported";
+      this.writeDeviceAnimationsEnabled(this.deviceAnimationsRequested);
       return;
     }
 
     window.addEventListener("beforeinstallprompt", this.handleBeforeInstallPrompt as EventListener);
     window.addEventListener("appinstalled", this.handleAppInstalled);
+    window.addEventListener("online", this.handleOnline);
+    window.addEventListener("storage", this.handlePreferenceStorage);
     navigator.serviceWorker.addEventListener("message", this.handleServiceWorkerMessage);
     navigator.serviceWorker.addEventListener("controllerchange", this.handleControllerChange);
 
     if (navigator.serviceWorker.controller !== null && this.offlinePreference !== "declined") {
+      const shouldCaptureOnlineSetting = this.offlinePreference !== "accepted";
       this.offlinePreference = "accepted";
+
+      if (shouldCaptureOnlineSetting) {
+        this.deviceAnimationsRequested = this.deviceAnimationSettingBinding?.readEnabled()
+          ?? this.deviceAnimationsRequested;
+      }
+
+      this.writeDeviceAnimationsEnabled(false);
       this.persistPreference();
       this.offlineStatus = "enabled";
     }
 
     if (this.offlinePreference === "accepted") {
-      void this.registerServiceWorker();
+      void this.initializeAcceptedOfflineMode();
     }
   }
 
@@ -194,6 +273,8 @@ export class PwaController {
     this.initialized = false;
     window.removeEventListener("beforeinstallprompt", this.handleBeforeInstallPrompt as EventListener);
     window.removeEventListener("appinstalled", this.handleAppInstalled);
+    window.removeEventListener("online", this.handleOnline);
+    window.removeEventListener("storage", this.handlePreferenceStorage);
 
     if (isServiceWorkerSupported()) {
       navigator.serviceWorker.removeEventListener("message", this.handleServiceWorkerMessage);
@@ -225,17 +306,36 @@ export class PwaController {
 
     runInAction(() => {
       this.errorMessage = null;
+      this.deviceAnimationsRequested = this.deviceAnimationSettingBinding?.readEnabled()
+        ?? this.deviceAnimationsRequested;
+      this.writeDeviceAnimationsEnabled(false);
       this.offlinePreference = "accepted";
       this.offlineStatus = "registering";
       this.persistPreference();
     });
 
     await this.registerServiceWorker();
+
+    if (this.deviceAnimationsRequested) {
+      await this.prepareDeviceAnimationDownload();
+    }
   }
 
-  public async checkForUpdate(showNoUpdateResult = true): Promise<void> {
-    if (!isServiceWorkerSupported() || this.offlinePreference !== "accepted") {
+  public setDeviceAnimationsEnabled(value: boolean): void {
+    this.applyDeviceAnimationsRequested(value, true);
+  }
+
+  public retryDeviceAnimationDownload(): void {
+    if (!this.isOfflineModeAccepted || !this.deviceAnimationsRequested) {
       return;
+    }
+
+    void this.prepareDeviceAnimationDownload();
+  }
+
+  public async checkForUpdate(showNoUpdateResult = true): Promise<boolean> {
+    if (!isServiceWorkerSupported() || this.offlinePreference !== "accepted") {
+      return false;
     }
 
     if (showNoUpdateResult) {
@@ -256,7 +356,7 @@ export class PwaController {
         });
       }
 
-      return;
+      return registeredServiceWorker !== null && !hasPendingServiceWorkerUpdate(registeredServiceWorker);
     }
 
     try {
@@ -267,11 +367,17 @@ export class PwaController {
           this.resolveCheckedRegistrationState(registration);
         });
       }
+
+      return !hasPendingServiceWorkerUpdate(registration);
     } catch (error) {
-      runInAction(() => {
-        this.errorMessage = error instanceof Error ? error.message : "Service worker update failed";
-        this.offlineStatus = "error";
-      });
+      if (showNoUpdateResult) {
+        runInAction(() => {
+          this.errorMessage = error instanceof Error ? error.message : "Service worker update failed";
+          this.offlineStatus = "error";
+        });
+      }
+
+      return false;
     }
   }
 
@@ -282,6 +388,7 @@ export class PwaController {
       return;
     }
 
+    this.preemptDeviceAnimationForUpdate();
     this.reloadAfterControllerChange = true;
     this.offlineStatus = "updating";
     waitingWorker.postMessage({ type: "PWA_SKIP_WAITING" });
@@ -333,6 +440,133 @@ export class PwaController {
     this.persistPreference();
   }
 
+  private async initializeAcceptedOfflineMode(): Promise<void> {
+    await this.registerServiceWorker();
+
+    if (this.deviceAnimationsRequested) {
+      await this.prepareDeviceAnimationDownload();
+    }
+  }
+
+  private applyDeviceAnimationsRequested(value: boolean, persist: boolean): void {
+    this.deviceAnimationOperationId += 1;
+    this.deviceAnimationsRequested = value;
+    this.deviceAnimationErrorMessage = null;
+
+    if (persist) {
+      this.persistPreference();
+    }
+
+    if (!this.shouldGateDeviceAnimations) {
+      this.deviceAnimationStatus = value ? "complete" : "idle";
+      this.progress = this.progress?.task === "animation" ? null : this.progress;
+      this.writeDeviceAnimationsEnabled(value);
+      return;
+    }
+
+    this.writeDeviceAnimationsEnabled(false);
+
+    if (!value) {
+      this.deviceAnimationStatus = "idle";
+      this.progress = this.progress?.task === "animation" ? null : this.progress;
+      this.postMessageToActiveServiceWorker({ type: "PWA_ANIMATION_CACHE_CANCEL" });
+      return;
+    }
+
+    void this.prepareDeviceAnimationDownload();
+  }
+
+  private async prepareDeviceAnimationDownload(): Promise<void> {
+    if (!this.shouldGateDeviceAnimations || !this.deviceAnimationsRequested) {
+      return;
+    }
+
+    const operationId = this.deviceAnimationOperationId + 1;
+    this.deviceAnimationOperationId = operationId;
+    this.deviceAnimationErrorMessage = null;
+    this.deviceAnimationStatus = "checking-update";
+    this.progress = this.progress?.task === "animation" ? null : this.progress;
+    this.writeDeviceAnimationsEnabled(false);
+
+    if (this.registration === null) {
+      await this.registerServiceWorker();
+    }
+
+    if (!this.isCurrentDeviceAnimationOperation(operationId)) {
+      return;
+    }
+
+    const currentVersionConfirmed = await this.checkForUpdate(false);
+
+    if (!this.isCurrentDeviceAnimationOperation(operationId)) {
+      return;
+    }
+
+    const registration = this.registration;
+    if (!currentVersionConfirmed
+      || registration === null
+      || hasPendingServiceWorkerUpdate(registration)
+      || this.offlineStatus === "error") {
+      this.deviceAnimationStatus = "preempted-by-update";
+      return;
+    }
+
+    const messageSent = this.postMessageToActiveServiceWorker({
+      type: "PWA_ANIMATION_CACHE_START",
+    });
+
+    this.deviceAnimationStatus = messageSent ? "downloading" : "idle";
+  }
+
+  private isCurrentDeviceAnimationOperation(operationId: number): boolean {
+    return this.deviceAnimationOperationId === operationId
+      && this.isOfflineModeAccepted
+      && this.shouldGateDeviceAnimations
+      && this.deviceAnimationsRequested;
+  }
+
+  private preemptDeviceAnimationForUpdate(): void {
+    if (!this.shouldGateDeviceAnimations) {
+      return;
+    }
+
+    this.deviceAnimationOperationId += 1;
+    this.writeDeviceAnimationsEnabled(false);
+    this.progress = this.progress?.task === "animation" ? null : this.progress;
+    this.deviceAnimationStatus = this.deviceAnimationsRequested
+      ? "preempted-by-update"
+      : "idle";
+    this.postMessageToActiveServiceWorker({ type: "PWA_ANIMATION_CACHE_CANCEL" });
+  }
+
+  private writeDeviceAnimationsEnabled(value: boolean): void {
+    if (this.deviceAnimationSettingBinding === null
+      || this.deviceAnimationSettingBinding.readEnabled() === value) {
+      return;
+    }
+
+    this.deviceAnimationSettingBinding.writeEnabled(value);
+  }
+
+  private postMessageToActiveServiceWorker(message: {
+    readonly type: "PWA_ANIMATION_CACHE_CANCEL" | "PWA_ANIMATION_CACHE_START";
+  }): boolean {
+    if (!isServiceWorkerRuntimeSupported()) {
+      return false;
+    }
+
+    const worker = navigator.serviceWorker.controller
+      ?? this.registration?.active
+      ?? null;
+
+    if (worker === null) {
+      return false;
+    }
+
+    worker.postMessage(message);
+    return true;
+  }
+
   private async registerServiceWorker(): Promise<void> {
     try {
       const registration = await navigator.serviceWorker.register("/sw.js", {
@@ -362,6 +596,7 @@ export class PwaController {
       const installingWorker = registration.installing;
 
       if (installingWorker !== null) {
+        this.preemptDeviceAnimationForUpdate();
         this.trackInstallingWorker(installingWorker);
       }
     };
@@ -372,6 +607,7 @@ export class PwaController {
     };
 
     if (registration.installing !== null) {
+      this.preemptDeviceAnimationForUpdate();
       this.trackInstallingWorker(registration.installing);
     }
   }
@@ -404,12 +640,14 @@ export class PwaController {
 
   private resolveRegistrationState(registration: ServiceWorkerRegistration): void {
     if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+      this.preemptDeviceAnimationForUpdate();
       this.waitingWorker = registration.waiting;
       this.offlineStatus = "update-available";
       return;
     }
 
     if (registration.installing !== null) {
+      this.preemptDeviceAnimationForUpdate();
       this.offlineStatus = navigator.serviceWorker.controller === null ? "installing" : "updating";
       return;
     }
@@ -425,12 +663,14 @@ export class PwaController {
 
   private resolveCheckedRegistrationState(registration: ServiceWorkerRegistration): void {
     if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+      this.preemptDeviceAnimationForUpdate();
       this.waitingWorker = registration.waiting;
       this.offlineStatus = "update-available";
       return;
     }
 
     if (registration.installing !== null) {
+      this.preemptDeviceAnimationForUpdate();
       this.offlineStatus = navigator.serviceWorker.controller === null ? "installing" : "updating";
       return;
     }
@@ -478,6 +718,18 @@ export class PwaController {
     this.persistPreference();
   }
 
+  private handleOnline(): void {
+    if (!this.deviceAnimationsRequested
+      || !this.shouldGateDeviceAnimations
+      || this.deviceAnimationStatus === "complete"
+      || this.deviceAnimationStatus === "downloading"
+      || hasBlockingPwaStatus(this.offlineStatus)) {
+      return;
+    }
+
+    void this.prepareDeviceAnimationDownload();
+  }
+
   private handleControllerChange(): void {
     if (this.reloadAfterControllerChange) {
       window.location.reload();
@@ -514,29 +766,69 @@ export class PwaController {
     }
 
     if (message.type === "PWA_PRECACHE_PROGRESS") {
-      this.progress = {
+      const nextProgress: PwaProgress = {
         cacheName: message.cacheName,
         completedBytes: message.completedBytes,
         completedFiles: message.completedFiles,
         currentUrl: message.currentUrl,
+        task: message.task,
         totalBytes: message.totalBytes,
         totalFiles: message.totalFiles,
       };
+
+      if (message.task === "animation") {
+        if (!this.deviceAnimationsRequested || !this.shouldGateDeviceAnimations) {
+          this.postMessageToActiveServiceWorker({ type: "PWA_ANIMATION_CACHE_CANCEL" });
+          return;
+        }
+
+        if (hasBlockingPwaStatus(this.offlineStatus)) {
+          this.preemptDeviceAnimationForUpdate();
+          return;
+        }
+
+        this.progress = nextProgress;
+        this.deviceAnimationStatus = "downloading";
+        this.writeDeviceAnimationsEnabled(false);
+        return;
+      }
+
+      this.progress = nextProgress;
+      this.preemptDeviceAnimationForUpdate();
       this.offlineStatus = navigator.serviceWorker.controller === null ? "installing" : "updating";
       return;
     }
 
     if (message.type === "PWA_PRECACHE_DONE") {
-      this.progress = {
+      const nextProgress: PwaProgress = {
         cacheName: message.cacheName,
         completedBytes: message.totalBytes,
         completedFiles: message.totalFiles,
         currentUrl: null,
+        task: message.task,
         totalBytes: message.totalBytes,
         totalFiles: message.totalFiles,
       };
 
+      if (message.task === "animation") {
+        this.progress = this.progress?.task === "animation" ? null : this.progress;
+
+        if (this.deviceAnimationsRequested
+          && this.shouldGateDeviceAnimations
+          && !hasBlockingPwaStatus(this.offlineStatus)) {
+          this.deviceAnimationStatus = "complete";
+          this.deviceAnimationErrorMessage = null;
+          this.writeDeviceAnimationsEnabled(true);
+        } else {
+          this.writeDeviceAnimationsEnabled(false);
+        }
+
+        return;
+      }
+
+      this.progress = nextProgress;
       if (navigator.serviceWorker.controller !== null) {
+        this.preemptDeviceAnimationForUpdate();
         this.offlineStatus = "update-available";
         this.waitingWorker = this.registration?.waiting ?? this.waitingWorker;
         return;
@@ -548,18 +840,70 @@ export class PwaController {
     }
 
     if (message.type === "PWA_PRECACHE_ERROR") {
+      if (message.task === "animation") {
+        this.progress = this.progress?.task === "animation" ? null : this.progress;
+        this.deviceAnimationErrorMessage = message.message;
+        this.deviceAnimationStatus = "error";
+        this.writeDeviceAnimationsEnabled(false);
+        return;
+      }
+
+      this.preemptDeviceAnimationForUpdate();
       this.errorMessage = message.message;
       this.offlineStatus = "error";
       return;
     }
 
+    if (message.type === "PWA_ANIMATION_CACHE_CANCELLED") {
+      if (!this.deviceAnimationsRequested) {
+        this.deviceAnimationStatus = "idle";
+      }
+
+      return;
+    }
+
+    if (message.type === "PWA_ANIMATION_CACHE_INVALIDATED") {
+      this.deviceAnimationStatus = "idle";
+      this.writeDeviceAnimationsEnabled(false);
+
+      if (this.deviceAnimationsRequested && this.shouldGateDeviceAnimations) {
+        void this.prepareDeviceAnimationDownload();
+      }
+
+      return;
+    }
+
     this.offlineStatus = "enabled";
-    this.progress = null;
+    this.progress = this.progress?.task === "core" ? null : this.progress;
+  }
+
+  private handlePreferenceStorage(event: StorageEvent): void {
+    if (event.key !== PWA_PREFERENCE_LOCAL_STORAGE_KEY || event.newValue === null) {
+      return;
+    }
+
+    let parsedValue: unknown;
+
+    try {
+      parsedValue = JSON.parse(event.newValue);
+    } catch {
+      return;
+    }
+
+    const preference = normalizePersistedPwaPreference(parsedValue);
+
+    if (preference.deviceAnimationsRequested === null
+      || preference.deviceAnimationsRequested === this.deviceAnimationsRequested) {
+      return;
+    }
+
+    this.applyDeviceAnimationsRequested(preference.deviceAnimationsRequested, false);
   }
 
   private persistPreference(): void {
     saveToLocalStorage<PersistedPwaPreference>(PWA_PREFERENCE_LOCAL_STORAGE_KEY, {
       desktopInstallPromptDismissed: this.desktopInstallPromptDismissed,
+      deviceAnimationsRequested: this.deviceAnimationsRequested,
       offlineMode: this.offlinePreference,
     });
   }
@@ -614,7 +958,10 @@ async function cleanupDevelopmentPwaState(): Promise<void> {
   const cacheNames = await caches.keys();
   await Promise.all(
     cacheNames
-      .filter((cacheName) => cacheName.startsWith("industrial-planner-precache-"))
+      .filter((cacheName) =>
+        cacheName.startsWith("industrial-planner-precache-")
+        || cacheName.startsWith("industrial-planner-animation-precache-")
+      )
       .map((cacheName) => caches.delete(cacheName)),
   );
 }
@@ -641,10 +988,11 @@ function isAppleMobileBrowser(): boolean {
   return /iPhone|iPod/i.test(navigator.userAgent);
 }
 
-function normalizePersistedPwaPreference(value: unknown): Required<PersistedPwaPreference> {
+function normalizePersistedPwaPreference(value: unknown): NormalizedPwaPreference {
   if (!isRecord(value)) {
     return {
       desktopInstallPromptDismissed: false,
+      deviceAnimationsRequested: null,
       offlineMode: "unknown",
     };
   }
@@ -655,6 +1003,9 @@ function normalizePersistedPwaPreference(value: unknown): Required<PersistedPwaP
 
   return {
     desktopInstallPromptDismissed: value.desktopInstallPromptDismissed === true,
+    deviceAnimationsRequested: typeof value.deviceAnimationsRequested === "boolean"
+      ? value.deviceAnimationsRequested
+      : null,
     offlineMode,
   };
 }
@@ -669,6 +1020,7 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
     && typeof value.completedBytes === "number"
     && typeof value.completedFiles === "number"
     && typeof value.currentUrl === "string"
+    && (value.task === "animation" || value.task === "core")
     && typeof value.totalBytes === "number"
     && typeof value.totalFiles === "number") {
     return value as PwaServiceWorkerMessage;
@@ -676,6 +1028,7 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
 
   if (value.type === "PWA_PRECACHE_DONE"
     && typeof value.cacheName === "string"
+    && (value.task === "animation" || value.task === "core")
     && typeof value.totalBytes === "number"
     && typeof value.totalFiles === "number") {
     return value as PwaServiceWorkerMessage;
@@ -683,7 +1036,8 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
 
   if (value.type === "PWA_PRECACHE_ERROR"
     && typeof value.cacheName === "string"
-    && typeof value.message === "string") {
+    && typeof value.message === "string"
+    && (value.task === "animation" || value.task === "core")) {
     return value as PwaServiceWorkerMessage;
   }
 
@@ -691,7 +1045,26 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
     return value as PwaServiceWorkerMessage;
   }
 
+  if ((value.type === "PWA_ANIMATION_CACHE_CANCELLED"
+    || value.type === "PWA_ANIMATION_CACHE_INVALIDATED")
+    && typeof value.cacheName === "string") {
+    return value as PwaServiceWorkerMessage;
+  }
+
   return null;
+}
+
+function hasPendingServiceWorkerUpdate(registration: ServiceWorkerRegistration): boolean {
+  return registration.installing !== null
+    || (registration.waiting !== null && navigator.serviceWorker.controller !== null);
+}
+
+function hasBlockingPwaStatus(status: PwaOfflineStatus): boolean {
+  return status === "registering"
+    || status === "installing"
+    || status === "update-available"
+    || status === "updating"
+    || status === "error";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

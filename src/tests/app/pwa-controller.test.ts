@@ -66,6 +66,211 @@ describe("PwaController", () => {
     expect(nextController.desktopInstallPromptDismissed).toBe(true);
   });
 
+  it("keeps online animation toggles immediate when offline mode is not enabled", () => {
+    let animationsEnabled = false;
+    const controller = new PwaController({
+      readEnabled: () => animationsEnabled,
+      writeEnabled: (value) => {
+        animationsEnabled = value;
+      },
+    });
+
+    controller.setDeviceAnimationsEnabled(true);
+
+    expect(controller.deviceAnimationsSettingValue).toBe(true);
+    expect(controller.deviceAnimationStatus).toBe("complete");
+    expect(animationsEnabled).toBe(true);
+  });
+
+  it("preserves PWA animation intent while gating actual playback until the package is complete", () => {
+    vi.stubEnv("BASE_URL", "/");
+    vi.stubEnv("DEV", false);
+    window.localStorage.setItem("industrial-planner-pwa-preference", JSON.stringify({
+      deviceAnimationsRequested: true,
+      offlineMode: "accepted",
+    }));
+    const worker = createServiceWorkerMock();
+    const registration = createServiceWorkerRegistrationMock({
+      active: worker,
+      installing: null,
+      waiting: null,
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: createServiceWorkerContainerMock({
+        controller: worker,
+        registration,
+      }),
+    });
+    let animationsEnabled = true;
+    const controller = new PwaController({
+      readEnabled: () => animationsEnabled,
+      writeEnabled: (value) => {
+        animationsEnabled = value;
+      },
+    });
+
+    expect(controller.deviceAnimationsSettingValue).toBe(true);
+    expect(animationsEnabled).toBe(false);
+
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_PRECACHE_PROGRESS",
+      cacheName: "industrial-planner-animation-precache-current",
+      completedBytes: 128,
+      completedFiles: 1,
+      currentUrl: "3d-top-view/animations/page-00.webp",
+      task: "animation",
+      totalBytes: 256,
+      totalFiles: 2,
+    });
+
+    expect(controller.deviceAnimationStatus).toBe("downloading");
+    expect(animationsEnabled).toBe(false);
+
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_PRECACHE_DONE",
+      cacheName: "industrial-planner-animation-precache-current",
+      task: "animation",
+      totalBytes: 256,
+      totalFiles: 2,
+    });
+
+    expect(controller.deviceAnimationStatus).toBe("complete");
+    expect(controller.deviceAnimationsSettingValue).toBe(true);
+    expect(animationsEnabled).toBe(true);
+  });
+
+  it("cancels the shared animation task without losing the persisted off state", () => {
+    vi.stubEnv("BASE_URL", "/");
+    vi.stubEnv("DEV", false);
+    window.localStorage.setItem("industrial-planner-pwa-preference", JSON.stringify({
+      deviceAnimationsRequested: true,
+      offlineMode: "accepted",
+    }));
+    const worker = createServiceWorkerMock();
+    const registration = createServiceWorkerRegistrationMock({
+      active: worker,
+      installing: null,
+      waiting: null,
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: createServiceWorkerContainerMock({
+        controller: worker,
+        registration,
+      }),
+    });
+    let animationsEnabled = true;
+    const controller = new PwaController({
+      readEnabled: () => animationsEnabled,
+      writeEnabled: (value) => {
+        animationsEnabled = value;
+      },
+    });
+
+    controller.setDeviceAnimationsEnabled(false);
+
+    expect(worker.postMessage).toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_CANCEL" });
+    expect(controller.deviceAnimationsSettingValue).toBe(false);
+    expect(controller.deviceAnimationStatus).toBe("idle");
+    expect(animationsEnabled).toBe(false);
+    expect(JSON.parse(window.localStorage.getItem("industrial-planner-pwa-preference") ?? "null"))
+      .toMatchObject({ deviceAnimationsRequested: false });
+  });
+
+  it("checks for a PWA update before starting the animation package", async () => {
+    vi.stubEnv("BASE_URL", "/");
+    vi.stubEnv("DEV", false);
+    window.localStorage.setItem("industrial-planner-pwa-preference", JSON.stringify({
+      deviceAnimationsRequested: false,
+      offlineMode: "accepted",
+    }));
+    const worker = createServiceWorkerMock();
+    const registration = createServiceWorkerRegistrationMock({
+      active: worker,
+      installing: null,
+      waiting: null,
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: createServiceWorkerContainerMock({
+        controller: worker,
+        registration,
+      }),
+    });
+    let animationsEnabled = false;
+    const controller = new PwaController({
+      readEnabled: () => animationsEnabled,
+      writeEnabled: (value) => {
+        animationsEnabled = value;
+      },
+    });
+
+    controller.setDeviceAnimationsEnabled(true);
+
+    await vi.waitFor(() => {
+      expect(registration.update).toHaveBeenCalledTimes(1);
+      expect(worker.postMessage).toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_START" });
+    });
+    expect(controller.deviceAnimationStatus).toBe("downloading");
+    expect(animationsEnabled).toBe(false);
+  });
+
+  it("preempts completed animation playback when a core update starts", () => {
+    vi.stubEnv("BASE_URL", "/");
+    vi.stubEnv("DEV", false);
+    window.localStorage.setItem("industrial-planner-pwa-preference", JSON.stringify({
+      deviceAnimationsRequested: true,
+      offlineMode: "accepted",
+    }));
+    const worker = createServiceWorkerMock();
+    const registration = createServiceWorkerRegistrationMock({
+      active: worker,
+      installing: null,
+      waiting: null,
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: createServiceWorkerContainerMock({
+        controller: worker,
+        registration,
+      }),
+    });
+    let animationsEnabled = true;
+    const controller = new PwaController({
+      readEnabled: () => animationsEnabled,
+      writeEnabled: (value) => {
+        animationsEnabled = value;
+      },
+    });
+
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_PRECACHE_DONE",
+      cacheName: "industrial-planner-animation-precache-current",
+      task: "animation",
+      totalBytes: 256,
+      totalFiles: 2,
+    });
+    expect(animationsEnabled).toBe(true);
+
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_PRECACHE_PROGRESS",
+      cacheName: "industrial-planner-precache-next",
+      completedBytes: 64,
+      completedFiles: 1,
+      currentUrl: "assets/index.js",
+      task: "core",
+      totalBytes: 512,
+      totalFiles: 8,
+    });
+
+    expect(controller.deviceAnimationStatus).toBe("preempted-by-update");
+    expect(controller.deviceAnimationsSettingValue).toBe(true);
+    expect(controller.progress?.task).toBe("core");
+    expect(animationsEnabled).toBe(false);
+    expect(worker.postMessage).toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_CANCEL" });
+  });
+
   it("detects standalone display mode during construction", () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -185,6 +390,21 @@ function createServiceWorkerRegistrationMock(state: {
 
   update.mockResolvedValue(registration);
   return registration;
+}
+
+function createServiceWorkerMock(): ServiceWorker {
+  return {
+    addEventListener: vi.fn(),
+    postMessage: vi.fn(),
+  } as unknown as ServiceWorker;
+}
+
+function deliverServiceWorkerMessage(controller: PwaController, data: unknown): void {
+  const controllerWithMessageHandler = controller as unknown as {
+    handleServiceWorkerMessage: (event: MessageEvent<unknown>) => void;
+  };
+
+  controllerWithMessageHandler.handleServiceWorkerMessage({ data } as MessageEvent<unknown>);
 }
 
 function createServiceWorkerContainerMock(state: {

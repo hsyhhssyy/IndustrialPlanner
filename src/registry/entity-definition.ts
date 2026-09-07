@@ -1208,7 +1208,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       closeIdleMode: "hold-last",
     },
     spriteOffset: {
-      topView: { x: -1, y: -1, width: 7, height: 7 },
+      topView: { x: -1, y: 0, width: 7, height: 5 },
     },
     uiGroup: "advancedManufacturing",
     displayOrder: 606,

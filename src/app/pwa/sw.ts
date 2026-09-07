@@ -4,7 +4,9 @@ import {
   calculateTotalBytes as calculatePrecacheTotalBytes,
   createRuntimePrecacheCacheUrl,
   hashPrecacheEntries as hashManifestPrecacheEntries,
+  isDeviceAnimationAssetUrl,
   normalizePrecacheEntries,
+  partitionPrecacheEntries,
   resolvePrecacheEntryByteSize,
   type PrecacheEntry as ManifestPrecacheEntry,
 } from "./precache-manifest";
@@ -36,7 +38,26 @@ type PrecacheInstallProgress = {
   completedFiles: number;
 };
 
+type PrecacheTaskKind = "animation" | "core";
+
+type AnimationDownloadTask = {
+  readonly abortController: AbortController;
+  readonly cacheName: string;
+  readonly id: number;
+  readonly promise: Promise<void>;
+};
+
+type AnimationCompleteMarker = {
+  readonly cacheName: string;
+  readonly manifestHash: string;
+  readonly totalBytes: number;
+  readonly totalFiles: number;
+  readonly version: 1;
+};
+
 type PwaClientMessage =
+  | { readonly type: "PWA_ANIMATION_CACHE_CANCEL" }
+  | { readonly type: "PWA_ANIMATION_CACHE_START" }
   | { readonly type: "PWA_SKIP_WAITING" };
 
 type PwaServiceWorkerMessage =
@@ -46,12 +67,14 @@ type PwaServiceWorkerMessage =
     readonly completedBytes: number;
     readonly completedFiles: number;
     readonly currentUrl: string;
+    readonly task: PrecacheTaskKind;
     readonly totalBytes: number;
     readonly totalFiles: number;
   }
   | {
     readonly type: "PWA_PRECACHE_DONE";
     readonly cacheName: string;
+    readonly task: PrecacheTaskKind;
     readonly totalBytes: number;
     readonly totalFiles: number;
   }
@@ -59,6 +82,15 @@ type PwaServiceWorkerMessage =
     readonly type: "PWA_PRECACHE_ERROR";
     readonly cacheName: string;
     readonly message: string;
+    readonly task: PrecacheTaskKind;
+  }
+  | {
+    readonly type: "PWA_ANIMATION_CACHE_CANCELLED";
+    readonly cacheName: string;
+  }
+  | {
+    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED";
+    readonly cacheName: string;
   }
   | {
     readonly type: "PWA_ACTIVATED";
@@ -71,11 +103,23 @@ declare let self: ServiceWorkerGlobalScope & {
 
 const PRECACHE_DOWNLOAD_CONCURRENCY = 6;
 const PRECACHE_METADATA_VERSION = 1;
+const ANIMATION_COMPLETE_MARKER_VERSION = 1;
 const RAW_PRECACHE_ENTRIES = self.__WB_MANIFEST;
 const PRECACHE_ENTRIES = normalizePrecacheEntries(RAW_PRECACHE_ENTRIES);
-const CACHE_NAME = `industrial-planner-precache-${hashPrecacheEntries(PRECACHE_ENTRIES)}`;
+const {
+  animationEntries: ANIMATION_ENTRIES,
+  coreEntries: CORE_ENTRIES,
+} = partitionPrecacheEntries(PRECACHE_ENTRIES, self.registration.scope);
+const CORE_MANIFEST_HASH = hashPrecacheEntries(CORE_ENTRIES);
+const ANIMATION_MANIFEST_HASH = hashPrecacheEntries(ANIMATION_ENTRIES);
+const CACHE_NAME = `industrial-planner-precache-${CORE_MANIFEST_HASH}`;
+const ANIMATION_CACHE_NAME = `industrial-planner-animation-precache-${ANIMATION_MANIFEST_HASH}`;
 const INDEX_CACHE_URL = createCacheUrl("index.html");
 const PRECACHE_METADATA_CACHE_URL = createCacheUrl("__industrial_planner_precache_metadata__.json");
+const ANIMATION_COMPLETE_MARKER_CACHE_URL = createCacheUrl("__industrial_planner_animation_complete__.json");
+
+let animationDownloadTask: AnimationDownloadTask | null = null;
+let nextAnimationDownloadTaskId = 1;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(installPrecache());
@@ -90,6 +134,16 @@ self.addEventListener("message", (event) => {
 
   if (message?.type === "PWA_SKIP_WAITING") {
     event.waitUntil(self.skipWaiting());
+    return;
+  }
+
+  if (message?.type === "PWA_ANIMATION_CACHE_START") {
+    event.waitUntil(startAnimationPrecache());
+    return;
+  }
+
+  if (message?.type === "PWA_ANIMATION_CACHE_CANCEL") {
+    cancelAnimationPrecache();
   }
 });
 
@@ -135,8 +189,8 @@ async function installPrecache(): Promise<void> {
   const cacheNamesBeforeInstall = await caches.keys();
   const cacheAlreadyExisted = cacheNamesBeforeInstall.includes(CACHE_NAME);
   const cache = await caches.open(CACHE_NAME);
-  const totalFiles = PRECACHE_ENTRIES.length;
-  const totalBytes = calculateTotalBytes(PRECACHE_ENTRIES);
+  const totalFiles = CORE_ENTRIES.length;
+  const totalBytes = calculateTotalBytes(CORE_ENTRIES);
   const cachedEntries: PrecacheEntry[] = [];
   const progress: PrecacheInstallProgress = {
     completedBytes: 0,
@@ -147,7 +201,7 @@ async function installPrecache(): Promise<void> {
     const reusableCaches = await openReusablePrecacheCaches(cacheNamesBeforeInstall);
     const entriesToDownload: PrecacheEntry[] = [];
 
-    for (const entry of PRECACHE_ENTRIES) {
+    for (const entry of CORE_ENTRIES) {
       const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
 
       if (reusedBytes === null) {
@@ -156,7 +210,7 @@ async function installPrecache(): Promise<void> {
       }
 
       cachedEntries.push(entry);
-      await reportPrecacheProgress(entry, reusedBytes, progress, totalBytes, totalFiles);
+      await reportPrecacheProgress("core", CACHE_NAME, entry, reusedBytes, progress, totalBytes, totalFiles);
     }
 
     await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
@@ -164,13 +218,22 @@ async function installPrecache(): Promise<void> {
         cachedEntries.push(entry);
       }
 
-      await reportPrecacheProgress(entry, downloadedBytes ?? 0, progress, totalBytes, totalFiles);
+      await reportPrecacheProgress(
+        "core",
+        CACHE_NAME,
+        entry,
+        downloadedBytes ?? 0,
+        progress,
+        totalBytes,
+        totalFiles,
+      );
     });
 
     await writePrecacheMetadata(cache, cachedEntries);
     await broadcastMessage({
       type: "PWA_PRECACHE_DONE",
       cacheName: CACHE_NAME,
+      task: "core",
       totalBytes,
       totalFiles,
     });
@@ -183,15 +246,219 @@ async function installPrecache(): Promise<void> {
       type: "PWA_PRECACHE_ERROR",
       cacheName: CACHE_NAME,
       message: error instanceof Error ? error.message : "Unknown precache error",
+      task: "core",
     });
     throw error;
   }
 }
 
-async function openReusablePrecacheCaches(cacheNames: readonly string[]): Promise<readonly ReusablePrecacheCache[]> {
+async function startAnimationPrecache(): Promise<void> {
+  const currentTask = animationDownloadTask;
+
+  if (currentTask !== null && currentTask.cacheName === ANIMATION_CACHE_NAME) {
+    return currentTask.promise;
+  }
+
+  if (currentTask !== null) {
+    currentTask.abortController.abort(new DOMException("Animation package changed", "AbortError"));
+    await currentTask.promise;
+  }
+
+  const abortController = new AbortController();
+  const taskId = nextAnimationDownloadTaskId;
+  nextAnimationDownloadTaskId += 1;
+  const promise = installAnimationPrecache(taskId, abortController.signal).finally(() => {
+    if (animationDownloadTask?.id === taskId) {
+      animationDownloadTask = null;
+    }
+  });
+
+  animationDownloadTask = {
+    abortController,
+    cacheName: ANIMATION_CACHE_NAME,
+    id: taskId,
+    promise,
+  };
+
+  return promise;
+}
+
+function cancelAnimationPrecache(): void {
+  animationDownloadTask?.abortController.abort(
+    new DOMException("Animation download cancelled", "AbortError"),
+  );
+}
+
+async function installAnimationPrecache(taskId: number, signal: AbortSignal): Promise<void> {
+  const cacheNamesBeforeDownload = await caches.keys();
+  const cache = await caches.open(ANIMATION_CACHE_NAME);
+  const totalFiles = ANIMATION_ENTRIES.length;
+  const totalBytes = calculateTotalBytes(ANIMATION_ENTRIES);
+  const cachedEntries: PrecacheEntry[] = [];
+  const progress: PrecacheInstallProgress = {
+    completedBytes: 0,
+    completedFiles: 0,
+  };
+
+  await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+  await broadcastAnimationProgress(progress, totalBytes, totalFiles, "");
+
+  try {
+    const reusableCaches = await openReusablePrecacheCaches(
+      cacheNamesBeforeDownload,
+      "industrial-planner-animation-precache-",
+    );
+    const entriesToDownload: PrecacheEntry[] = [];
+
+    for (const entry of ANIMATION_ENTRIES) {
+      throwIfAnimationTaskInactive(taskId, signal);
+      const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
+
+      if (reusedBytes === null) {
+        entriesToDownload.push(entry);
+        continue;
+      }
+
+      cachedEntries.push(entry);
+      await reportPrecacheProgress(
+        "animation",
+        ANIMATION_CACHE_NAME,
+        entry,
+        reusedBytes,
+        progress,
+        totalBytes,
+        totalFiles,
+      );
+    }
+
+    await writePrecacheMetadata(cache, cachedEntries);
+    await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
+      throwIfAnimationTaskInactive(taskId, signal);
+
+      if (downloadedBytes === null) {
+        throw new Error(`Required animation resource is unavailable: ${entry.url}`);
+      }
+
+      cachedEntries.push(entry);
+      await writePrecacheMetadata(cache, cachedEntries);
+      await reportPrecacheProgress(
+        "animation",
+        ANIMATION_CACHE_NAME,
+        entry,
+        downloadedBytes,
+        progress,
+        totalBytes,
+        totalFiles,
+      );
+    }, signal);
+    throwIfAnimationTaskInactive(taskId, signal);
+
+    await writePrecacheMetadata(cache, cachedEntries);
+
+    if (cachedEntries.length !== ANIMATION_ENTRIES.length) {
+      throw new Error(
+        `Animation package is incomplete: expected ${ANIMATION_ENTRIES.length}, got ${cachedEntries.length}`,
+      );
+    }
+
+    await writeAnimationCompleteMarker(cache, totalBytes, totalFiles);
+    await cleanupObsoleteAnimationCaches();
+    await broadcastMessage({
+      type: "PWA_PRECACHE_DONE",
+      cacheName: ANIMATION_CACHE_NAME,
+      task: "animation",
+      totalBytes,
+      totalFiles,
+    });
+  } catch (error) {
+    if (signal.aborted || !isCurrentAnimationTask(taskId)) {
+      await broadcastMessage({
+        type: "PWA_ANIMATION_CACHE_CANCELLED",
+        cacheName: ANIMATION_CACHE_NAME,
+      });
+      return;
+    }
+
+    await broadcastMessage({
+      type: "PWA_PRECACHE_ERROR",
+      cacheName: ANIMATION_CACHE_NAME,
+      message: error instanceof Error ? error.message : "Unknown animation precache error",
+      task: "animation",
+    });
+  }
+}
+
+function throwIfAnimationTaskInactive(taskId: number, signal: AbortSignal): void {
+  if (signal.aborted || !isCurrentAnimationTask(taskId)) {
+    throw signal.reason ?? new DOMException("Animation download is no longer active", "AbortError");
+  }
+}
+
+function isCurrentAnimationTask(taskId: number): boolean {
+  return animationDownloadTask?.id === taskId;
+}
+
+async function broadcastAnimationProgress(
+  progress: PrecacheInstallProgress,
+  totalBytes: number,
+  totalFiles: number,
+  currentUrl: string,
+): Promise<void> {
+  await broadcastMessage({
+    type: "PWA_PRECACHE_PROGRESS",
+    cacheName: ANIMATION_CACHE_NAME,
+    completedBytes: progress.completedBytes,
+    completedFiles: progress.completedFiles,
+    currentUrl,
+    task: "animation",
+    totalBytes,
+    totalFiles,
+  });
+}
+
+async function writeAnimationCompleteMarker(
+  cache: Cache,
+  totalBytes: number,
+  totalFiles: number,
+): Promise<void> {
+  const marker: AnimationCompleteMarker = {
+    cacheName: ANIMATION_CACHE_NAME,
+    manifestHash: ANIMATION_MANIFEST_HASH,
+    totalBytes,
+    totalFiles,
+    version: ANIMATION_COMPLETE_MARKER_VERSION,
+  };
+
+  await cache.put(
+    ANIMATION_COMPLETE_MARKER_CACHE_URL,
+    new Response(JSON.stringify(marker), {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+      },
+    }),
+  );
+}
+
+async function cleanupObsoleteAnimationCaches(): Promise<void> {
+  const cacheNames = await caches.keys();
+
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) =>
+        cacheName.startsWith("industrial-planner-animation-precache-")
+        && cacheName !== ANIMATION_CACHE_NAME
+      )
+      .map((cacheName) => caches.delete(cacheName)),
+  );
+}
+
+async function openReusablePrecacheCaches(
+  cacheNames: readonly string[],
+  cacheNamePrefix = "industrial-planner-precache-",
+): Promise<readonly ReusablePrecacheCache[]> {
   return Promise.all(
     cacheNames
-      .filter((cacheName) => cacheName.startsWith("industrial-planner-precache-"))
+      .filter((cacheName) => cacheName.startsWith(cacheNamePrefix))
       .map(async (cacheName) => {
         const cache = await caches.open(cacheName);
 
@@ -238,12 +505,23 @@ async function downloadPrecacheEntries(
   entries: readonly PrecacheEntry[],
   cache: Cache,
   onEntryComplete: (entry: PrecacheEntry, completedBytes: number | null) => Promise<void>,
+  parentSignal?: AbortSignal,
 ): Promise<void> {
   if (entries.length === 0) {
     return;
   }
 
   const abortController = new AbortController();
+  const handleParentAbort = () => {
+    abortController.abort(parentSignal?.reason);
+  };
+
+  if (parentSignal?.aborted === true) {
+    abortController.abort(parentSignal.reason);
+  } else {
+    parentSignal?.addEventListener("abort", handleParentAbort, { once: true });
+  }
+
   let nextEntryIndex = 0;
   let firstError: unknown = null;
   const workerCount = Math.min(PRECACHE_DOWNLOAD_CONCURRENCY, entries.length);
@@ -277,9 +555,14 @@ async function downloadPrecacheEntries(
   });
 
   await Promise.allSettled(workers);
+  parentSignal?.removeEventListener("abort", handleParentAbort);
 
   if (firstError !== null) {
     throw firstError;
+  }
+
+  if (abortController.signal.aborted) {
+    throw abortController.signal.reason ?? new DOMException("Download aborted", "AbortError");
   }
 }
 
@@ -303,12 +586,19 @@ async function downloadAndCachePrecacheEntry(
   }
 
   const responseBytes = await verifyPrecacheResponse(entry, response.clone());
+
+  if (signal.aborted) {
+    throw signal.reason ?? new DOMException("Download aborted", "AbortError");
+  }
+
   await cache.put(createCacheUrl(entry.url), response);
 
   return responseBytes;
 }
 
 async function reportPrecacheProgress(
+  task: PrecacheTaskKind,
+  cacheName: string,
   entry: PrecacheEntry,
   entryBytes: number,
   progress: PrecacheInstallProgress,
@@ -319,10 +609,11 @@ async function reportPrecacheProgress(
   progress.completedBytes += entryBytes;
   await broadcastMessage({
     type: "PWA_PRECACHE_PROGRESS",
-    cacheName: CACHE_NAME,
+    cacheName,
     completedBytes: progress.completedBytes,
     completedFiles: progress.completedFiles,
     currentUrl: entry.url,
+    task,
     totalBytes,
     totalFiles,
   });
@@ -488,8 +779,13 @@ async function activatePrecache(): Promise<void> {
 }
 
 async function resolvePrecachedResponse(request: Request): Promise<Response> {
-  const cache = await caches.open(CACHE_NAME);
   const requestUrl = new URL(request.url);
+
+  if (isDeviceAnimationAssetUrl(requestUrl, self.registration.scope)) {
+    return resolveAnimationPrecachedResponse(request);
+  }
+
+  const cache = await caches.open(CACHE_NAME);
   const isNavigation = request.mode === "navigate";
   const cacheUrl = isNavigation
     ? INDEX_CACHE_URL
@@ -528,6 +824,51 @@ async function resolvePrecachedResponse(request: Request): Promise<Response> {
   }
 
   return fetch(request);
+}
+
+async function resolveAnimationPrecachedResponse(request: Request): Promise<Response> {
+  const cache = await caches.open(ANIMATION_CACHE_NAME);
+
+  if (await isAnimationPrecacheComplete(cache)) {
+    const cacheUrl = createRuntimePrecacheCacheUrl(
+      new URL(request.url),
+      self.registration.scope,
+    );
+    const cachedResponse = await cache.match(cacheUrl);
+
+    if (cachedResponse !== undefined) {
+      return cachedResponse;
+    }
+
+    await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+    await broadcastMessage({
+      type: "PWA_ANIMATION_CACHE_INVALIDATED",
+      cacheName: ANIMATION_CACHE_NAME,
+    });
+  }
+
+  return fetch(request);
+}
+
+async function isAnimationPrecacheComplete(cache: Cache): Promise<boolean> {
+  const response = await cache.match(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+
+  if (response === undefined) {
+    return false;
+  }
+
+  try {
+    const value: unknown = await response.json();
+
+    return isRecord(value)
+      && value.version === ANIMATION_COMPLETE_MARKER_VERSION
+      && value.cacheName === ANIMATION_CACHE_NAME
+      && value.manifestHash === ANIMATION_MANIFEST_HASH
+      && value.totalFiles === ANIMATION_ENTRIES.length
+      && value.totalBytes === calculateTotalBytes(ANIMATION_ENTRIES);
+  } catch {
+    return false;
+  }
 }
 
 async function broadcastMessage(message: PwaServiceWorkerMessage): Promise<void> {

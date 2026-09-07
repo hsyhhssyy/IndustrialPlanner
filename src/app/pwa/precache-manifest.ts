@@ -7,6 +7,13 @@ export interface PrecacheEntry {
   readonly url: string;
 }
 
+export interface PartitionedPrecacheEntries {
+  readonly animationEntries: readonly PrecacheEntry[];
+  readonly coreEntries: readonly PrecacheEntry[];
+}
+
+const DEVICE_ANIMATION_ASSET_DIRECTORY = "3d-top-view/animations/";
+
 export function normalizePrecacheEntries(entries: readonly PrecacheEntry[]): readonly PrecacheEntry[] {
   const entryByUrl = new Map<string, PrecacheEntry>();
 
@@ -19,6 +26,36 @@ export function normalizePrecacheEntries(entries: readonly PrecacheEntry[]): rea
   }
 
   return [...entryByUrl.values()];
+}
+
+export function partitionPrecacheEntries(
+  entries: readonly PrecacheEntry[],
+  scope: string,
+): PartitionedPrecacheEntries {
+  const animationEntries: PrecacheEntry[] = [];
+  const coreEntries: PrecacheEntry[] = [];
+
+  for (const entry of entries) {
+    if (isDeviceAnimationAssetUrl(entry.url, scope)) {
+      animationEntries.push(entry);
+    } else {
+      coreEntries.push(entry);
+    }
+  }
+
+  return {
+    animationEntries,
+    coreEntries,
+  };
+}
+
+export function isDeviceAnimationAssetUrl(value: string | URL, scope: string): boolean {
+  const scopeUrl = new URL(scope);
+  const animationDirectoryUrl = new URL(DEVICE_ANIMATION_ASSET_DIRECTORY, scopeUrl);
+  const candidateUrl = value instanceof URL ? value : new URL(value, scopeUrl);
+
+  return candidateUrl.origin === scopeUrl.origin
+    && candidateUrl.pathname.startsWith(animationDirectoryUrl.pathname);
 }
 
 export function calculateTotalBytes(entries: readonly PrecacheEntry[]): number {

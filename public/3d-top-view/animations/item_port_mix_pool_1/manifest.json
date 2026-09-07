@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "frameWidth": 896,
-  "frameHeight": 896,
+  "frameHeight": 640,
   "maskFile": "mask.webp",
   "clips": {
     "open": {
@@ -10,141 +10,93 @@
       "pages": [
         {
           "file": "open-0.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-1.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-2.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-3.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-4.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-5.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-6.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-7.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-8.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-9.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-10.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-11.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-12.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-13.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open-14.webp",
-          "rows": 4,
+          "rows": 5,
           "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-15.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-16.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-17.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-18.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-19.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-20.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-21.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open-22.webp",
-          "rows": 1,
-          "columns": 3,
-          "frameCount": 3
+          "frameCount": 19
         }
       ]
     },
@@ -154,21 +106,15 @@
       "pages": [
         {
           "file": "open_idle-0.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "open_idle-1.webp",
-          "rows": 4,
+          "rows": 5,
           "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "open_idle-2.webp",
-          "rows": 3,
-          "columns": 4,
-          "frameCount": 9
+          "frameCount": 17
         }
       ]
     },
@@ -178,105 +124,75 @@
       "pages": [
         {
           "file": "close-0.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-1.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-2.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-3.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-4.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-5.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-6.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-7.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-8.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-9.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-10.webp",
-          "rows": 4,
+          "rows": 6,
           "columns": 4,
-          "frameCount": 16
+          "frameCount": 24
         },
         {
           "file": "close-11.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "close-12.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "close-13.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "close-14.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "close-15.webp",
-          "rows": 4,
-          "columns": 4,
-          "frameCount": 16
-        },
-        {
-          "file": "close-16.webp",
-          "rows": 3,
-          "columns": 4,
-          "frameCount": 11
+          "rows": 1,
+          "columns": 3,
+          "frameCount": 3
         }
       ]
     },
