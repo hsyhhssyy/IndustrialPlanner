@@ -31,6 +31,8 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
 
+import { publishPaginatedDeviceSpriteAnimations } from './device-sprite-animation-publisher.mjs';
+
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultSourceDirectory = path.join(projectRoot, 'resources', 'device-sprite-original');
@@ -247,6 +249,7 @@ async function readRegistryAnimationDefinitions() {
 }
 
 /** 直接消费 Registry 声明，生成链不维护独立的行列或帧时长清单。 */
+/** AI-CORRECTION 2026-09-06: Registry 只声明能力；源清单负责重切分，发布 manifest 负责分页布局与时序。 */
 export async function publishDeviceSpriteAnimations({
   definitions,
   sourceDirectory = defaultAnimationSourceDirectory,
@@ -256,97 +259,17 @@ export async function publishDeviceSpriteAnimations({
   maskOverrideDirectory = defaultMaskOverrideDirectory,
   maxTextureSize = animationProtocol.DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE,
 } = {}) {
-  const { DEVICE_SPRITE_ANIMATION_PHASES: phases, normalizeDeviceSpriteAnimationDefinition,
-    getDeviceSpriteAnimationSignature, resolveDeviceSpriteAnimationGrid,
-    validateDeviceSpriteAnimationId } = animationProtocol;
-  const bySpriteId = new Map();
-  for (const entity of definitions ?? await readRegistryAnimationDefinitions()) {
-    if (entity.spriteAnimation === undefined) continue;
-    validateDeviceSpriteAnimationId(entity.spriteId);
-    const definition = normalizeDeviceSpriteAnimationDefinition(entity.spriteAnimation);
-    const signature = getDeviceSpriteAnimationSignature(definition);
-    const previous = bySpriteId.get(entity.spriteId);
-    if (previous && previous.signature !== signature) {
-      throw new Error(`Conflicting animation definitions for ${entity.spriteId}`);
-    }
-    bySpriteId.set(entity.spriteId, { definition, signature });
-  }
-  if (await fileExists(sourceDirectory)) {
-    const entries = await readdir(sourceDirectory, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory() && !bySpriteId.has(entry.name)) {
-        throw new Error(`Animation source ${entry.name} has no Registry declaration`);
-      }
-    }
-  }
-  const results = [];
-  for (const [spriteId, { definition }] of bySpriteId) {
-    // 定制 mask 的语义必须在素材接入时人工核对，不能静默改成首帧或并集。
-    if (await fileExists(path.join(maskOverrideDirectory, `${spriteId}.webp`))) {
-      throw new Error(`Animation ${spriteId} has an existing mask override; resolve it before publishing`);
-    }
-    const decoded = {};
-    const dimensions = {};
-    for (const phase of phases) {
-      const filePath = path.join(sourceDirectory, spriteId, `${phase}.webp`);
-      const metadata = await sharp(filePath).metadata();
-      if (metadata.format !== 'webp' || !metadata.hasAlpha || (metadata.pages ?? 1) !== 1) {
-        throw new Error(`${spriteId}/${phase} must be a static WebP with Alpha`);
-      }
-      dimensions[phase] = { width: metadata.width, height: metadata.height };
-    }
-    const { frameWidth, frameHeight } = resolveDeviceSpriteAnimationGrid(definition, dimensions, maxTextureSize);
-    const unionAlpha = Buffer.alloc(frameWidth * frameHeight);
-    let firstFrame;
-    for (const phase of phases) {
-      const { data, info } = await sharp(path.join(sourceDirectory, spriteId, `${phase}.webp`))
-        .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      if (info.channels !== 4) throw new Error(`${spriteId}/${phase} must decode to RGBA`);
-      decoded[phase] = { data, info };
-      const clip = definition.clips[phase];
-      for (let frameIndex = 0; frameIndex < clip.frameCount; frameIndex += 1) {
-        const left = (frameIndex % clip.columns) * frameWidth;
-        const top = Math.floor(frameIndex / clip.columns) * frameHeight;
-        const current = phase === 'open' && frameIndex === 0
-          ? Buffer.alloc(frameWidth * frameHeight * 4) : null;
-        let hasTransparentPixel = false;
-        let hasVisiblePixel = false;
-        for (let y = 0; y < frameHeight; y += 1) {
-          for (let x = 0; x < frameWidth; x += 1) {
-            const pixel = y * frameWidth + x;
-            const offset = ((top + y) * info.width + left + x) * 4;
-            const alpha = data[offset + 3];
-            unionAlpha[pixel] = Math.max(unionAlpha[pixel], alpha);
-            hasTransparentPixel ||= alpha < 255;
-            hasVisiblePixel ||= alpha > 0;
-            if (current !== null) data.copy(current, pixel * 4, offset, offset + 4);
-          }
-        }
-        if (!hasTransparentPixel || !hasVisiblePixel) {
-          throw new Error(`${spriteId}/${phase} frame ${frameIndex} needs a transparent background and visible content`);
-        }
-        if (current !== null) firstFrame = current;
-      }
-    }
-    const unionRgba = Buffer.alloc(frameWidth * frameHeight * 4);
-    for (let pixel = 0; pixel < unionAlpha.length; pixel += 1) unionRgba[pixel * 4 + 3] = unionAlpha[pixel];
-    const raw = { width: frameWidth, height: frameHeight, channels: 4 };
-    const outputDirectory = path.join(animationDirectory, spriteId);
-    await Promise.all([spriteDirectory, maskDirectory, outputDirectory].map((directory) => mkdir(directory, { recursive: true })));
-    // 校验全部通过才写该设备的产物；静态 mask 与动画并集 mask 始终分开。
-    await sharp(firstFrame, { raw }).webp({ lossless: true, effort: 6 }).toFile(path.join(spriteDirectory, `${spriteId}.webp`));
-    await sharp(createMaskBuffer(firstFrame, frameWidth, frameHeight, 4), { raw })
-      .webp({ lossless: true, effort: 6 }).toFile(path.join(maskDirectory, `${spriteId}.webp`));
-    await sharp(createMaskBuffer(unionRgba, frameWidth, frameHeight, 4), { raw })
-      .webp({ lossless: true, effort: 6 }).toFile(path.join(outputDirectory, 'mask.webp'));
-    for (const phase of phases) {
-      const { data, info } = decoded[phase];
-      await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
-        .webp({ lossless: true, effort: 6 }).toFile(path.join(outputDirectory, `${phase}.webp`));
-    }
-    results.push({ spriteId, frameWidth, frameHeight });
-  }
-  return results;
+  return publishPaginatedDeviceSpriteAnimations({
+    definitions,
+    sourceDirectory,
+    spriteDirectory,
+    maskDirectory,
+    animationDirectory,
+    maskOverrideDirectory,
+    maxTextureSize,
+    animationProtocol,
+    readRegistryAnimationDefinitions,
+  });
 }
 
 async function main() {

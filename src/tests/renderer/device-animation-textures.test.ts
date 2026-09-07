@@ -4,16 +4,47 @@ import { describe, expect, it, vi } from "vitest";
 import type { DeviceSpriteAnimationDefinition } from "@/domain/registry";
 import { DeviceAnimationTextureCache } from "@/renderer/texture/device-animation-textures";
 import { isFallbackTexture } from "@/renderer/texture";
-import { normalizeDeviceSpriteAnimationDefinition, resolveDeviceSpriteAnimationGrid } from "@/shared/device-sprite-animation";
+import {
+  DEVICE_SPRITE_ANIMATION_PHASES,
+  normalizeDeviceSpriteAnimationDefinition,
+  resolveDeviceSpriteAnimationFrame,
+  resolveDeviceSpriteAnimationGrid,
+} from "@/shared/device-sprite-animation";
 
 const definition: DeviceSpriteAnimationDefinition = {
-  clips: {
-    open: { rows: 2, columns: 2 },
-    open_idle: { rows: 2, columns: 2 },
-    close: { rows: 2, columns: 2 },
-    close_idle: { rows: 2, columns: 2 },
-  },
   closeIdleMode: "loop",
+};
+
+const manifest = {
+  schemaVersion: 1,
+  frameWidth: 2,
+  frameHeight: 2,
+  maskFile: "mask.webp",
+  clips: {
+    open: {
+      frameCount: 3,
+      frameDurationMs: 100,
+      pages: [
+        { file: "open-0.webp", rows: 1, columns: 2, frameCount: 2 },
+        { file: "open-1.webp", rows: 1, columns: 2, frameCount: 1 },
+      ],
+    },
+    open_idle: {
+      frameCount: 2,
+      frameDurationMs: 100,
+      pages: [{ file: "open_idle-0.webp", rows: 1, columns: 2, frameCount: 2 }],
+    },
+    close: {
+      frameCount: 2,
+      frameDurationMs: 100,
+      pages: [{ file: "close-0.webp", rows: 1, columns: 2, frameCount: 2 }],
+    },
+    close_idle: {
+      frameCount: 1,
+      frameDurationMs: 100,
+      pages: [{ file: "close_idle-0.webp", rows: 1, columns: 1, frameCount: 1 }],
+    },
+  },
 };
 
 function createTexture(width: number, height: number): Texture {
@@ -22,25 +53,54 @@ function createTexture(width: number, height: number): Texture {
   }) });
 }
 
-function createCache(options: { failName?: string; width?: number; maxSize?: number } = {}) {
+function createCache(options: { failName?: string; maxSize?: number } = {}) {
   const sources: Texture[] = [];
   const requests: string[] = [];
+  const unloads: string[] = [];
   const configured: Texture[] = [];
   const cache = new DeviceAnimationTextureCache({
+    loadManifest: async (path) => {
+      requests.push(path);
+      return manifest;
+    },
     loadTexture: async (path) => {
       requests.push(path);
-      if (path.endsWith(`/${options.failName}.webp`)) throw new Error("missing asset");
-      const texture = path.endsWith("/mask.webp") ? createTexture(2, 2) : createTexture(options.width ?? 4, 4);
+      if (path.endsWith(`/${options.failName}`)) throw new Error("missing asset");
+      const file = path.split("/").at(-1);
+      const page = Object.values(manifest.clips).flatMap((clip) => clip.pages)
+        .find((candidate) => candidate.file === file);
+      const texture = file === "mask.webp"
+        ? createTexture(2, 2)
+        : createTexture(page!.columns * 2, page!.rows * 2);
       sources.push(texture);
       return texture;
+    },
+    unloadTexture: async (path, texture) => {
+      unloads.push(path);
+      if (!texture.destroyed) texture.destroy(true);
     },
     configureTexture: (texture) => { configured.push(texture); },
     getMaxTextureSize: () => options.maxSize ?? 4096,
   });
-  return { cache, sources, requests, configured, dispose: () => {
-    cache.destroy();
-    for (const source of sources) source.destroy(true);
-  } };
+  return {
+    cache,
+    sources,
+    requests,
+    unloads,
+    configured,
+    dispose: () => {
+      cache.destroy();
+      for (const source of sources) {
+        if (!source.destroyed) source.destroy(true);
+      }
+    },
+  };
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 describe("device animation textures", () => {
@@ -50,90 +110,255 @@ describe("device animation textures", () => {
     finally { texture.destroy(true); }
   });
 
-  it("shares one in-flight request, row-major subtextures and the union mask", async () => {
+  it("loads manifest and mask once, then shares retained pages across sessions", async () => {
     const context = createCache();
     try {
-      const first = context.cache.get("fixture", definition);
-      expect(context.cache.get("fixture", definition)).toBe(first);
-      const animation = await first;
-      expect(animation).not.toBeNull();
-      expect(context.requests).toHaveLength(5);
-      expect(context.configured).toHaveLength(5);
-      expect(animation!.clips.open.map((texture) => ({
-        x: texture.frame.x, y: texture.frame.y, width: texture.width, height: texture.height,
-      }))).toEqual([
-        { x: 0, y: 0, width: 2, height: 2 }, { x: 2, y: 0, width: 2, height: 2 },
-        { x: 0, y: 2, width: 2, height: 2 }, { x: 2, y: 2, width: 2, height: 2 },
+      const first = await context.cache.get("fixture", definition);
+      const second = await context.cache.get("fixture", definition);
+      expect(first).not.toBeNull();
+      expect(second).not.toBeNull();
+      expect(first).not.toBe(second);
+      expect(context.requests).toEqual([
+        "/3d-top-view/animations/fixture/manifest.json",
+        "/3d-top-view/animations/fixture/mask.webp",
       ]);
-      expect(animation!.clips.open.every((frame) => frame.source === context.sources[0]!.source)).toBe(true);
-      expect(animation!.mask).toBe(context.sources[4]);
-      context.cache.destroy();
-      expect(animation!.clips.open.every((frame) => frame.destroyed)).toBe(true);
-      expect(context.sources.every((texture) => !texture.destroyed && !texture.source.destroyed)).toBe(true);
+
+      const firstTexture = await first!.prepareFrame("open", 0);
+      const secondTexture = await second!.prepareFrame("open", 0);
+      await flushMicrotasks();
+      expect(firstTexture).not.toBeNull();
+      expect(secondTexture).toBe(firstTexture);
+      expect(context.requests.filter((path) => path.endsWith("open-0.webp"))).toHaveLength(1);
+      expect(context.requests.filter((path) => path.endsWith("open-1.webp"))).toHaveLength(1);
+      expect(context.cache.getStats()).toMatchObject({
+        activeSessions: 2,
+        residentMasks: 1,
+        residentPages: 2,
+        residentDecodedBytes: 80,
+      });
+
+      first!.commitFrame("open", 0);
+      second!.commitFrame("open", 0);
+      first!.destroy();
+      await flushMicrotasks();
+      expect(context.unloads.some((path) => path.endsWith("open-0.webp"))).toBe(false);
+      second!.destroy();
+      await flushMicrotasks();
+      expect(context.unloads.some((path) => path.endsWith("open-0.webp"))).toBe(true);
+      expect(context.unloads.some((path) => path.endsWith("open-1.webp"))).toBe(true);
     } finally { context.dispose(); }
   });
 
-  for (const failName of ["open", "close_idle", "mask"]) {
-    it(`falls back atomically and caches failure when ${failName} fails`, async () => {
-      const context = createCache({ failName });
-      const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
-      try {
-        expect(await context.cache.get("fixture", definition)).toBeNull();
-        expect(await context.cache.get("fixture", definition)).toBeNull();
-        expect(context.requests).toHaveLength(5);
-        expect(context.configured).toHaveLength(0);
-        expect(errors).toHaveBeenCalledTimes(1);
-      } finally { context.dispose(); errors.mockRestore(); }
-    });
-  }
+  it("maps effective frames across pages and never creates a trailing blank frame", async () => {
+    const context = createCache();
+    try {
+      const animation = await context.cache.get("fixture", definition);
+      expect(await animation!.prepareFrame("open", 2)).not.toBeNull();
+      const texture = animation!.commitFrame("open", 2);
+      expect(texture).toMatchObject({
+        frame: { x: 0, y: 0, width: 2, height: 2 },
+      });
+      expect(() => resolveDeviceSpriteAnimationFrame(animation!.definition, "open", 3)).toThrow("out of range");
+      animation!.destroy();
+    } finally { context.dispose(); }
+  });
 
   it("rejects contradictory metadata for one spriteId without reloading", async () => {
     const context = createCache();
     const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
-      expect(await context.cache.get("fixture", definition)).not.toBeNull();
-      expect(await context.cache.get("fixture", { ...definition, closeIdleMode: "hold-last" })).toBeNull();
-      expect(context.requests).toHaveLength(5);
-    } finally { context.dispose(); errors.mockRestore(); }
+      const animation = await context.cache.get("fixture", definition);
+      expect(animation).not.toBeNull();
+      expect(await context.cache.get("fixture", { closeIdleMode: "hold-last" })).toBeNull();
+      expect(context.requests).toEqual([
+        "/3d-top-view/animations/fixture/manifest.json",
+        "/3d-top-view/animations/fixture/mask.webp",
+      ]);
+      animation!.destroy();
+    } finally {
+      context.dispose();
+      errors.mockRestore();
+    }
   });
 
   it("does not publish or configure textures which finish after destruction", async () => {
-    const source = createTexture(4, 4);
+    const mask = createTexture(2, 2);
     let finish!: (texture: Texture) => void;
     const pending = new Promise<Texture>((resolve) => { finish = resolve; });
     let configured = 0;
+    let unloaded = 0;
     const cache = new DeviceAnimationTextureCache({
+      loadManifest: async () => manifest,
       loadTexture: () => pending,
+      unloadTexture: async (_path, texture) => {
+        unloaded += 1;
+        texture.destroy(true);
+      },
       configureTexture: () => { configured += 1; },
       getMaxTextureSize: () => 4096,
     });
     const result = cache.get("fixture", definition);
+    await flushMicrotasks();
     cache.destroy();
-    finish(source);
+    finish(mask);
     expect(await result).toBeNull();
     expect(await cache.get("fixture", definition)).toBeNull();
     expect(configured).toBe(0);
-    expect(source.destroyed).toBe(false);
-    source.destroy(true);
+    expect(unloaded).toBe(1);
   });
 
-  it("rejects an atlas exceeding the actual GPU limit before configuring textures", async () => {
-    const context = createCache({ maxSize: 2 });
+  it("atomically rejects an invalid manifest or a missing page", async () => {
+    const invalidManifestCache = new DeviceAnimationTextureCache({
+      loadManifest: async () => ({
+        ...manifest,
+        clips: {
+          ...manifest.clips,
+          open: { ...manifest.clips.open, frameCount: 4 },
+        },
+      }),
+      loadTexture: async () => createTexture(2, 2),
+      unloadTexture: async (_path, texture) => { texture.destroy(true); },
+      configureTexture: () => undefined,
+      getMaxTextureSize: () => 4096,
+    });
     const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
-      expect(await context.cache.get("fixture", definition)).toBeNull();
-      expect(context.configured).toHaveLength(0);
-    } finally { context.dispose(); errors.mockRestore(); }
+      expect(await invalidManifestCache.get("invalid", definition)).toBeNull();
+      const missingPageContext = createCache({ failName: "open-0.webp" });
+      try {
+        const animation = await missingPageContext.cache.get("missing", definition);
+        expect(animation).not.toBeNull();
+        expect(await animation!.prepareFrame("open", 0)).toBeNull();
+      } finally {
+        missingPageContext.dispose();
+      }
+    } finally {
+      invalidManifestCache.destroy();
+      errors.mockRestore();
+    }
   });
 
-  it("checks divisible and identical per-frame dimensions", () => {
-    const normalized = normalizeDeviceSpriteAnimationDefinition(definition);
-    const dimensions = { open: { width: 4, height: 4 }, open_idle: { width: 4, height: 4 },
-      close: { width: 4, height: 4 }, close_idle: { width: 4, height: 4 } };
-    expect(resolveDeviceSpriteAnimationGrid(normalized, dimensions)).toEqual({ frameWidth: 2, frameHeight: 2 });
-    expect(() => resolveDeviceSpriteAnimationGrid(normalized, { ...dimensions, close: { width: 3, height: 4 } }))
-      .toThrow("divide evenly");
-    expect(() => resolveDeviceSpriteAnimationGrid(normalized, { ...dimensions, close: { width: 8, height: 4 } }))
+  it("caches mask load failure without retrying the asset", async () => {
+    const context = createCache({ failName: "mask.webp" });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      expect(await context.cache.get("missing-mask", definition)).toBeNull();
+      expect(await context.cache.get("missing-mask", definition)).toBeNull();
+      expect(context.requests).toEqual([
+        "/3d-top-view/animations/missing-mask/manifest.json",
+        "/3d-top-view/animations/missing-mask/mask.webp",
+      ]);
+      expect(errors).toHaveBeenCalledTimes(1);
+    } finally {
+      context.dispose();
+      errors.mockRestore();
+    }
+  });
+
+  it("caches a non-initial page failure as an atomic animation failure", async () => {
+    const context = createCache({ failName: "close_idle-0.webp" });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const animation = await context.cache.get("missing-close-idle", definition);
+      expect(animation).not.toBeNull();
+      expect(await animation!.prepareFrame("close_idle", 0)).toBeNull();
+      expect(await context.cache.get("missing-close-idle", definition)).toBeNull();
+      expect(context.requests.filter((path) => path.endsWith("close_idle-0.webp"))).toHaveLength(1);
+      animation!.destroy();
+    } finally {
+      context.dispose();
+      errors.mockRestore();
+    }
+  });
+
+  it("rejects a page at or above the runtime texture limit", async () => {
+    const context = createCache({ maxSize: 4 });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const animation = await context.cache.get("fixture", definition);
+      expect(animation).not.toBeNull();
+      expect(await animation!.prepareFrame("open", 0)).toBeNull();
+      expect(context.configured).toHaveLength(1);
+    } finally {
+      context.dispose();
+      errors.mockRestore();
+    }
+  });
+
+  it("checks manifest page dimensions against the common frame size", () => {
+    const normalized = normalizeDeviceSpriteAnimationDefinition(definition, manifest);
+    const page = normalized.clips.open.pages[0]!;
+    expect(resolveDeviceSpriteAnimationGrid(normalized, page, { width: 4, height: 2 }))
+      .toEqual({ frameWidth: 2, frameHeight: 2 });
+    expect(() => resolveDeviceSpriteAnimationGrid(normalized, page, { width: 3, height: 2 }))
       .toThrow("differ");
+  });
+
+  it.each(DEVICE_SPRITE_ANIMATION_PHASES)("rejects %s with an invalid page grid", (phase) => {
+    const invalidManifest = {
+      ...manifest,
+      clips: {
+        ...manifest.clips,
+        [phase]: {
+          ...manifest.clips[phase],
+          pages: [{ ...manifest.clips[phase].pages[0], rows: 0 }],
+        },
+      },
+    };
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, invalidManifest)).toThrow();
+  });
+
+  it.each([
+    { rows: -1 },
+    { rows: 1.5 },
+    { rows: Number.NaN },
+    { rows: Number.MAX_SAFE_INTEGER + 1 },
+    { columns: 0 },
+    { columns: 1.5 },
+    { columns: Number.POSITIVE_INFINITY },
+    { rows: Number.MAX_SAFE_INTEGER, columns: 2 },
+    { frameCount: 0 },
+    { frameCount: -1 },
+    { frameCount: 3 },
+  ])("rejects an uncomputable page declaration $rows x $columns / $frameCount", (pagePatch) => {
+    const invalidManifest = {
+      ...manifest,
+      clips: {
+        ...manifest.clips,
+        open: {
+          ...manifest.clips.open,
+          pages: [{ ...manifest.clips.open.pages[0], ...pagePatch }, manifest.clips.open.pages[1]],
+        },
+      },
+    };
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, invalidManifest)).toThrow();
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_VALUE])(
+    "rejects an invalid frame duration %s",
+    (frameDurationMs) => {
+      const invalidManifest = {
+        ...manifest,
+        clips: {
+          ...manifest.clips,
+          open: { ...manifest.clips.open, frameDurationMs },
+        },
+      };
+      expect(() => normalizeDeviceSpriteAnimationDefinition(definition, invalidManifest)).toThrow();
+    },
+  );
+
+  it("rejects a missing phase and an unknown close idle strategy", () => {
+    const clipsWithoutClose = {
+      open: manifest.clips.open,
+      open_idle: manifest.clips.open_idle,
+      close_idle: manifest.clips.close_idle,
+    };
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
+      ...manifest,
+      clips: clipsWithoutClose,
+    })).toThrow();
+    expect(() => normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "ping-pong" }, manifest))
+      .toThrow();
   });
 });

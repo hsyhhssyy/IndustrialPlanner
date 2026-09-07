@@ -1,6 +1,4 @@
-import type { DeviceSpriteAnimationDefinition } from "@/domain/registry";
 import {
-  normalizeDeviceSpriteAnimationDefinition,
   type DeviceSpriteAnimationPhase,
   type NormalizedDeviceSpriteAnimationDefinition,
 } from "@/shared/device-sprite-animation";
@@ -14,11 +12,11 @@ export class DeviceAnimationState {
   private holdingCloseIdle = false;
 
   public constructor(
-    definition: DeviceSpriteAnimationDefinition,
+    definition: NormalizedDeviceSpriteAnimationDefinition,
     desiredWorking: boolean,
     stable = false,
   ) {
-    this.definition = normalizeDeviceSpriteAnimationDefinition(definition);
+    this.definition = definition;
     this.reset(desiredWorking, stable);
   }
 
@@ -49,11 +47,27 @@ export class DeviceAnimationState {
   }
 
   /** 调用者在暂停或 seek 中不推进时间；无效时钟差不能污染已冻结的进度。 */
-  public advance(deltaMs: number): void {
+  public advance(
+    deltaMs: number,
+    canDisplayFrame: ((phase: DeviceSpriteAnimationPhase, frameIndex: number) => boolean) | null = null,
+  ): void {
     if (!Number.isFinite(deltaMs) || deltaMs <= 0 || this.holdingCloseIdle) {
       return;
     }
 
+    const previousStage = this.currentStage;
+    const previousElapsedMs = this.stageElapsedMs;
+    const previousHoldingCloseIdle = this.holdingCloseIdle;
+    this.advanceUnchecked(deltaMs);
+
+    if (canDisplayFrame !== null && !canDisplayFrame(this.currentStage, this.frameIndex)) {
+      this.currentStage = previousStage;
+      this.stageElapsedMs = previousElapsedMs;
+      this.holdingCloseIdle = previousHoldingCloseIdle;
+    }
+  }
+
+  private advanceUnchecked(deltaMs: number): void {
     let remainingMs = deltaMs;
     while (remainingMs > 0) {
       const clip = this.definition.clips[this.currentStage];

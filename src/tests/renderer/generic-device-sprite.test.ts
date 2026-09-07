@@ -378,6 +378,135 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
   })
 
+  it("独立静态素材延迟时使用缺图 fallback，不借用 atlas 首帧", async () => {
+    const independentBodyTexture = createLoadedTextureMock("independent-static-body")
+    const independentMaskTexture = createLoadedTextureMock("independent-static-mask")
+    const fallbackBodyTexture = createLoadedTextureMock("missing-sprite-fallback-body")
+    const fallbackMaskTexture = createLoadedTextureMock("missing-sprite-fallback-mask")
+    const animationFrame = createLoadedTextureMock("animation-close-idle-frame")
+    const animationMask = createLoadedTextureMock("animation-mask")
+    let resolveIndependentBody!: (texture: ReturnType<typeof createLoadedTextureMock>) => void
+    let resolveIndependentMask!: (texture: ReturnType<typeof createLoadedTextureMock>) => void
+    const independentBodyLoad = new Promise<ReturnType<typeof createLoadedTextureMock>>((resolve) => {
+      resolveIndependentBody = resolve
+    })
+    const independentMaskLoad = new Promise<ReturnType<typeof createLoadedTextureMock>>((resolve) => {
+      resolveIndependentMask = resolve
+    })
+    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false })
+    renderHost.textureManager.getTexture.mockImplementation((key: string) => {
+      if (key === BODY_KEY) return independentBodyLoad
+      if (key === MASK_KEY) return independentMaskLoad
+      return Promise.reject(new Error(`Missing texture stub for key: ${key}`))
+    })
+    Object.assign(renderHost.textureManager, {
+      getDeviceAnimation: vi.fn(() => Promise.resolve({
+        definition: {
+          clips: Object.fromEntries(["open", "open_idle", "close", "close_idle"].map((phase) => [phase, {
+            frameCount: 1,
+            frameDurationMs: 100,
+            durationMs: 100,
+            pages: [{ file: `${phase}-0.webp`, rows: 1, columns: 1, frameCount: 1, firstFrameIndex: 0 }],
+            pageIndexByFrame: [0],
+          }])),
+          closeIdleMode: "hold-last",
+          frameWidth: 2,
+          frameHeight: 2,
+          maskFile: "mask.webp",
+        },
+        mask: animationMask,
+        frameWidth: 2,
+        frameHeight: 2,
+        hasFrame: vi.fn(() => true),
+        prepareFrame: vi.fn(async () => animationFrame),
+        commitFrame: vi.fn(() => animationFrame),
+        destroy: vi.fn(),
+      })),
+    })
+    Object.assign(renderHost.workspace.app.state.settings, {
+      gamePlayDeviceAnimations: true,
+    })
+    const definition: EntityDefinition = {
+      ...createEntityDefinitionStub(),
+      spriteAnimation: {
+        closeIdleMode: "hold-last",
+      },
+    }
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const sprite = new GenericDeviceSprite("animated-device", definition, renderHost as never)
+    const spriteInternals = sprite as unknown as {
+      staticBodyTexture: ReturnType<typeof createLoadedTextureMock> | null;
+      staticMaskTexture: ReturnType<typeof createLoadedTextureMock> | null;
+      isTextureReady: boolean;
+      body: RenderedSpriteSnapshot;
+      applyDevicePresentationTextures: () => void;
+      loadFallbackTexture: (activeLoadVersion: number, onlyWhileStaticMissing?: boolean) => Promise<boolean>;
+    }
+    const loadFallbackTexture = vi.fn(async () => {
+      if (spriteInternals.staticBodyTexture !== null) return true
+      spriteInternals.staticBodyTexture = fallbackBodyTexture
+      spriteInternals.staticMaskTexture = fallbackMaskTexture
+      spriteInternals.applyDevicePresentationTextures()
+      spriteInternals.isTextureReady = true
+      spriteInternals.body.visible = true
+      return true
+    })
+    spriteInternals.loadFallbackTexture = loadFallbackTexture
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
+    Object.assign(context.workspace, { app: createRenderContextAppStub(renderHost) })
+    const contextWorkspace = context.workspace as unknown as {
+      editor: { queries: Record<string, unknown> };
+      simulation: { state: unknown; queries: Record<string, unknown> };
+    }
+    Object.assign(contextWorkspace.editor.queries, {
+      getEntityById: () => ({ id: "animated-device" }),
+    })
+    contextWorkspace.simulation.state = { runningState: "run", timeline: null }
+    Object.assign(contextWorkspace.simulation.queries, {
+      getDeviceRuntimeStatus: () => null,
+    })
+    const layout = { x: 16, y: 24, width: 48, height: 32, rotation: 0 as const }
+
+    sprite.syncLayout(layout, context)
+    await flushMicrotasks(8)
+
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      texture: animationFrame,
+      visible: true,
+    })
+    expect(loadFallbackTexture).toHaveBeenCalledWith(expect.any(Number), true)
+
+    Object.assign(renderHost.workspace.app.state.settings, {
+      gamePlayDeviceAnimations: false,
+    })
+    sprite.syncRuntime(layout, context)
+
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      texture: fallbackBodyTexture,
+      visible: true,
+    })
+
+    resolveIndependentBody(independentBodyTexture)
+    resolveIndependentMask(independentMaskTexture)
+    await flushMicrotasks(8)
+
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      texture: independentBodyTexture,
+      visible: true,
+    })
+  })
+
   it("draws device icon above the name with top-view avatar and outlined white text", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")

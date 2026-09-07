@@ -8,7 +8,11 @@ import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
 
-import { DeviceAnimationTextureCache, type DeviceAnimationTextures } from "./device-animation-textures"
+import {
+  DeviceAnimationTextureCache,
+  type DeviceAnimationTextures,
+  type DeviceAnimationTextureStats,
+} from "./device-animation-textures"
 
 import {
   applyBitmapTextureConfig,
@@ -40,6 +44,7 @@ export function isFallbackTexture(texture: Texture): boolean {
 interface TextureActions {
   getTexture(unifiedResourceKey: string): Promise<Texture>;
   getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null>;
+  getDeviceAnimationStats(): DeviceAnimationTextureStats;
   destroy(): void;
 }
 
@@ -71,7 +76,18 @@ class TextureActionsImpl implements TextureActions {
     })
     this.syncTextureConfigState(this.textureConfig)
     this.deviceAnimations = new DeviceAnimationTextureCache({
+      loadManifest: async (path) => {
+        const response = await fetch(path, { credentials: "same-origin" })
+        if (!response.ok) {
+          throw new Error(`Animation manifest request failed with ${response.status}: ${path}`)
+        }
+        return response.json()
+      },
       loadTexture: (path) => Assets.load<Texture>(path),
+      unloadTexture: async (path, texture) => {
+        this.trackedBitmapTextures.delete(texture)
+        await Assets.unload(path)
+      },
       configureTexture: (texture) => {
         this.trackedBitmapTextures.add(texture)
         applyBitmapTextureConfig(texture, this.textureConfig)
@@ -121,6 +137,10 @@ class TextureActionsImpl implements TextureActions {
 
   public getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null> {
     return this.deviceAnimations.get(spriteId, definition)
+  }
+
+  public getDeviceAnimationStats(): DeviceAnimationTextureStats {
+    return this.deviceAnimations.getStats()
   }
 
   private syncResolution(resolution: number): void {
@@ -255,6 +275,7 @@ class TextureActionsImpl implements TextureActions {
  * 工厂函数，是 src/renderer/texture 对目录外唯一的公开入口。
  * 返回的 TextureActions 只有 getTexture 与 destroy 两个方法。
  * AI-CORRECTION 2026-09-05: 增加 getDeviceAnimation，按 spriteId 共享完整四阶段纹理与并集遮罩。
+ * AI-CORRECTION 2026-09-06: 增加动画分页驻留统计；getDeviceAnimation 改为按实例返回页级纹理会话。
  * textureConfig 作为内部状态由 render host 持有，不额外 export。
  */
 export function createTextureActions(options: {

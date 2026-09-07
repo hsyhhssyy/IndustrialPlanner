@@ -1,7 +1,16 @@
 export type { RegistryContract } from "./registry-contract";
 export type { RegistryQuery } from "./registry-query";
 export type {
-  DeviceSpriteAnimationClipDefinition,
+  // AI-REMOVED 2026-09-06:
+  // Reason: 片段网格类型已被分页素材 manifest 取代。
+  // Trigger: 反应池动画接入要求单阶段多页和显式有效帧数。
+  // Evidence: DeviceSpriteAnimationDefinition 不再暴露 clips 属性。
+  // Replacement: src/shared/device-sprite-animation.ts 的 manifest 类型。
+  // Risk: 当前没有生产调用者依赖该类型；测试夹具随协议迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // DeviceSpriteAnimationClipDefinition,
   DeviceSpriteAnimationDefinition,
 } from "./types/device-sprite-animation";
 export type {

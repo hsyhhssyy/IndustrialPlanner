@@ -283,6 +283,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private animationState: DeviceAnimationState | null = null
   private animationRequested = false
   private animationLoadVersion = 0
+  private animationFrameLoadVersion = 0
+  private animationFrameLoadKey: string | null = null
   private animationDesiredWorking = false
   private animationPaused = false
   private animationSeeking = false
@@ -546,7 +548,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       if (this.discardNextAnimationDelta) {
         this.discardNextAnimationDelta = false
       } else {
-        this.animationState.advance(context.time.deltaMs)
+        this.animationState.advance(
+          context.time.deltaMs,
+          (phase, frameIndex) => this.animationTextures?.hasFrame(phase, frameIndex) === true,
+        )
       }
       this.applyAnimationFrame()
     }
@@ -1084,14 +1089,47 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private syncDeviceAnimationResource(animation: EntityDefinition["spriteAnimation"] | null): void {
     if (animation == null) {
       if (this.animationRequested) {
-        // atlas 可能先于独立静态文件完成；关闭时仍须立即显示 open 首帧。
-        this.staticBodyTexture ??= this.animationTextures?.clips.open[0] ?? null
+        // AI-REMOVED 2026-09-06:
+        // Reason: 动画关闭或延迟加载时必须使用离线切出的独立静态素材，不得从动画 atlas 借用首帧。
+        // Trigger: 用户要求静态 fallback 与将来的动画素材延迟加载完全解耦。
+        // Evidence: 离线发布链已将 open 首帧独立写入 3d-top-view/sprites；此赋值会让运行时回退依赖 atlas。
+        // Replacement: 下方清空动画后只接受 staticBodyTexture；其未就绪时保持 Texture.EMPTY 并隐藏本体。
+        // Risk: 独立静态文件尚未加载完成时，设备本体会短暂隐藏。
+        // Human Review: Required
+        //
+        // Original code:
+        // // atlas 可能先于独立静态文件完成；关闭时仍须立即显示 open 首帧。
+        // this.staticBodyTexture ??= this.animationTextures?.clips.open[0] ?? null
+        // AI-CORRECTION 2026-09-06: 动画显示前现在会预先准备现有 missing-sprite fallback；
+        // 因此独立静态素材尚未就绪时应显示 fallback，上述“保持 Texture.EMPTY 并隐藏”不再是正常路径。
         this.animationLoadVersion += 1
+        this.animationFrameLoadVersion += 1
+        this.animationFrameLoadKey = null
         this.animationRequested = false
+        const previousAnimationTextures = this.animationTextures
         this.animationTextures = null
         this.animationState = null
         this.animationStableResetPending = false
+        this.isTextureReady = this.staticBodyTexture !== null
+        if (!this.isTextureReady) {
+          // AI-REMOVED 2026-09-06:
+          // Reason: 独立静态素材未就绪时应进入既有 missing-sprite fallback，不应强制隐藏设备。
+          // Trigger: 用户明确指定复用当前 fallback。
+          // Evidence: loadFallbackTexture 已负责按 footprint 生成本体和 mask，并在完成后恢复可见性。
+          // Replacement: loadFallbackTexture(this.textureLoadVersion, true)。
+          // Risk: fallback 资源本身也加载失败时，仍会进入既有的最终隐藏降级。
+          // Human Review: Required
+          //
+          // Original code:
+          // this.body.texture = Texture.EMPTY
+          // this.previewMask.texture = Texture.EMPTY
+          // this.selectionMask.texture = Texture.EMPTY
+          // this.body.visible = false
+          // this.deviceLabelRoot.visible = false
+          void this.loadFallbackTexture(this.textureLoadVersion, true)
+        }
         this.applyDevicePresentationTextures()
+        previousAnimationTextures?.destroy()
       }
       return
     }
@@ -1100,18 +1138,53 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
     this.animationRequested = true
     const version = ++this.animationLoadVersion
-    void this.renderHost.textureManager.getDeviceAnimation(this.spriteId, animation).then((textures) => {
+    void this.renderHost.textureManager.getDeviceAnimation(this.spriteId, animation).then(async (textures) => {
       if (this.disposed || version !== this.animationLoadVersion || textures === null) {
+        textures?.destroy()
         return
       }
       const app = this.renderHost.workspace.app
       if (!app?.state.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
         // 设置可能在两个同步帧之间反转；下次启用仍需重新领取已缓存结果。
         this.animationRequested = false
+        textures.destroy()
+        return
+      }
+      if (this.staticBodyTexture === null) {
+        const fallbackReady = await this.loadFallbackTexture(this.textureLoadVersion, true)
+        if (this.disposed || version !== this.animationLoadVersion) {
+          textures.destroy()
+          return
+        }
+        if (!app.state.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
+          this.animationRequested = false
+          textures.destroy()
+          return
+        }
+        if (!fallbackReady) {
+          this.animationRequested = false
+          textures.destroy()
+          return
+        }
+      }
+      const animationState = new DeviceAnimationState(
+        textures.definition,
+        this.animationDesiredWorking,
+        this.animationStableResetPending,
+      )
+      const initialTexture = await textures.prepareFrame(animationState.stage, animationState.frameIndex)
+      if (this.disposed || version !== this.animationLoadVersion) {
+        textures.destroy()
+        return
+      }
+      if (initialTexture === null) {
+        this.animationRequested = false
+        textures.destroy()
+        this.applyDevicePresentationTextures()
         return
       }
       this.animationTextures = textures
-      this.animationState = new DeviceAnimationState(animation, this.animationDesiredWorking, this.animationStableResetPending)
+      this.animationState = animationState
       this.animationStableResetPending = false
       this.discardNextAnimationDelta = true
       this.applyDevicePresentationTextures()
@@ -1125,10 +1198,54 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (this.animationState === null || this.animationTextures === null) {
       return
     }
-    const texture = this.animationTextures.clips[this.animationState.stage][this.animationState.frameIndex]
-    if (texture !== undefined && this.body.texture !== texture) {
+    const texture = this.animationTextures.commitFrame(
+      this.animationState.stage,
+      this.animationState.frameIndex,
+    )
+    if (texture === null) {
+      this.requestAnimationFrameTexture()
+      return
+    }
+    if (this.body.texture !== texture) {
       this.body.texture = texture
     }
+  }
+
+  private requestAnimationFrameTexture(): void {
+    if (this.animationState === null || this.animationTextures === null) {
+      return
+    }
+    const animationTextures = this.animationTextures
+    const stage = this.animationState.stage
+    const frameIndex = this.animationState.frameIndex
+    const key = `${stage}:${frameIndex}`
+    if (this.animationFrameLoadKey === key) {
+      return
+    }
+    this.animationFrameLoadKey = key
+    const version = ++this.animationFrameLoadVersion
+    void animationTextures.prepareFrame(stage, frameIndex).then((texture) => {
+      if (this.disposed || version !== this.animationFrameLoadVersion
+        || animationTextures !== this.animationTextures) {
+        return
+      }
+      this.animationFrameLoadKey = null
+      if (texture === null) {
+        this.animationLoadVersion += 1
+        this.animationRequested = false
+        this.animationTextures = null
+        this.animationState = null
+        animationTextures.destroy()
+        this.applyDevicePresentationTextures()
+        return
+      }
+      if (this.animationState?.stage === stage && this.animationState.frameIndex === frameIndex) {
+        const committedTexture = animationTextures.commitFrame(stage, frameIndex)
+        if (committedTexture !== null) {
+          this.body.texture = committedTexture
+        }
+      }
+    })
   }
 
   private applyDevicePresentationTextures(): void {
@@ -1163,7 +1280,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    * AI-CORRECTION 2026-08-31: 当前 fallback 发布素材为 lossless WebP，路径是 missing-sprite-texture.webp。
    * 按 footprint 比例裁剪原图（保持高度，左右均匀裁切），内收 padding 后外描边。
    */
-  private async loadFallbackTexture(activeLoadVersion: number): Promise<void> {
+  private async loadFallbackTexture(
+    activeLoadVersion: number,
+    onlyWhileStaticMissing = false,
+  ): Promise<boolean> {
     try {
       const img = new Image()
       img.src = FALLBACK_SPRITE_TEXTURE_PATH
@@ -1172,8 +1292,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         img.onerror = () => reject(new Error("Fallback image load failed"))
       })
 
-      if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
-        return
+      if (this.disposed || activeLoadVersion !== this.textureLoadVersion
+        || (onlyWhileStaticMissing && this.staticBodyTexture !== null)) {
+        return this.staticBodyTexture !== null
       }
 
       const footprint = this.definition.footprint
@@ -1232,10 +1353,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       if (this.currentLayout !== null) {
         this.applyLayout(this.currentLayout)
       }
+      return true
     } catch {
       // Fallback 也失败了，回退到隐藏设备
       if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
-        return
+        return false
       }
 
       this.body.visible = false
@@ -1244,6 +1366,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.portOverlayRoot.visible = false
       this.deviceLabelRoot.visible = false
       this.hidePortChevronSprites()
+      return false
     }
   }
 
@@ -2158,7 +2281,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected onDestroy(): void {
     this.disposed = true
     this.animationLoadVersion += 1
+    this.animationFrameLoadVersion += 1
     this.animationState = null
+    this.animationTextures?.destroy()
     this.animationTextures = null
     this.staticBodyTexture = null
     this.staticMaskTexture = null

@@ -8,12 +8,6 @@ import { createRegistryContract } from "@/registry";
 import { resolveDeviceBodyPresentation } from "@/renderer/sprites/device-texture-key";
 
 const animationDefinition: DeviceSpriteAnimationDefinition = {
-  clips: {
-    open: { rows: 1, columns: 2 },
-    open_idle: { rows: 2, columns: 3 },
-    close: { rows: 1, columns: 2 },
-    close_idle: { rows: 1, columns: 1 },
-  },
   closeIdleMode: "hold-last",
 };
 

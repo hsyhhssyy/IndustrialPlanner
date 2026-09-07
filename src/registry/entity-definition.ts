@@ -1204,6 +1204,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_mix_pool_1",
     iconPath: "device-icons/item_port_mix_pool_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: {
+      closeIdleMode: "hold-last",
+    },
+    spriteOffset: {
+      topView: { x: -1, y: -1, width: 7, height: 7 },
+    },
     uiGroup: "advancedManufacturing",
     displayOrder: 606,
     tags: [PRODUCER_TAG, "武陵"],

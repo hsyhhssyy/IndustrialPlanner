@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { access, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import sharp from "sharp";
@@ -12,10 +12,6 @@ import { DEVICE_SPRITE_ANIMATION_PHASES } from "@/shared/device-sprite-animation
 import { publishDeviceSpriteAnimations } from "../../scripts/sync-device-sprites.mjs";
 
 const definition: DeviceSpriteAnimationDefinition = {
-  clips: {
-    open: { rows: 1, columns: 2 }, open_idle: { rows: 1, columns: 2 },
-    close: { rows: 1, columns: 2 }, close_idle: { rows: 1, columns: 2 },
-  },
   closeIdleMode: "hold-last",
 };
 
@@ -45,6 +41,20 @@ async function withFixture(run: (options: {
       await sharp(pixels, { raw: { width: 4, height: 2, channels: 4 } }).webp({ lossless: true })
         .toFile(path.join(options.sourceDirectory, "fixture", `${DEVICE_SPRITE_ANIMATION_PHASES[index]}.webp`));
     }
+    await writeFile(path.join(options.sourceDirectory, "fixture/manifest.json"), JSON.stringify({
+      schemaVersion: 1,
+      frameWidth: 2,
+      frameHeight: 2,
+      fps: 10,
+      pageRows: 1,
+      pageColumns: 2,
+      sources: Object.fromEntries(DEVICE_SPRITE_ANIMATION_PHASES.map((phase) => [phase, {
+        file: `${phase}.webp`, rows: 1, columns: 2, frameCount: 2,
+      }])),
+      clips: Object.fromEntries(DEVICE_SPRITE_ANIMATION_PHASES.map((phase) => [phase, [{
+        source: phase, startFrame: 0, frameCount: 2,
+      }]])),
+    }), "utf8");
     await run(options);
   } finally {
     // Sharp 的 Promise 完成后仍会缓存文件句柄；NFS 必须先释放句柄，再删除夹具目录。
@@ -65,7 +75,9 @@ async function readPixels(file: string): Promise<number[]> {
 describe("device animation generation", () => {
   it("publishes the open first frame, separate static mask and four-phase union mask", async () => {
     await withFixture(async (options) => {
-      expect(await publishDeviceSpriteAnimations(options)).toEqual([{ spriteId: "fixture", frameWidth: 2, frameHeight: 2 }]);
+      expect(await publishDeviceSpriteAnimations(options)).toEqual([{
+        spriteId: "fixture", frameWidth: 2, frameHeight: 2, pageCount: 4,
+      }]);
       const first = await sharp(path.join(options.sourceDirectory, "fixture/open.webp"))
         .extract({ left: 0, top: 0, width: 2, height: 2 }).ensureAlpha().raw().toBuffer();
       expect(await readPixels(path.join(options.spriteDirectory, "fixture.webp"))).toEqual([...first]);
@@ -73,7 +85,16 @@ describe("device animation generation", () => {
         .toEqual([255, 255, 255, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
       expect(await readPixels(path.join(options.animationDirectory, "fixture/mask.webp"))).toEqual(Array(16).fill(255));
       expect((await readdir(path.join(options.animationDirectory, "fixture"))).sort())
-        .toEqual(["close.webp", "close_idle.webp", "mask.webp", "open.webp", "open_idle.webp"]);
+        .toEqual([
+          "close-0.webp", "close_idle-0.webp", "manifest.json", "mask.webp", "open-0.webp", "open_idle-0.webp",
+        ]);
+      expect(JSON.parse(await readFile(
+        path.join(options.animationDirectory, "fixture/manifest.json"), "utf8",
+      ))).toMatchObject({
+        frameWidth: 2,
+        frameHeight: 2,
+        clips: { open: { frameCount: 2, frameDurationMs: 100 } },
+      });
     });
   });
 
@@ -85,12 +106,59 @@ describe("device animation generation", () => {
     });
   });
 
+  it("composes one phase from multiple source sheets and preserves a transparent trailing cell", async () => {
+    await withFixture(async (options) => {
+      const manifestPath = path.join(options.sourceDirectory, "fixture/manifest.json");
+      const sourceManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+      sourceManifest.pageRows = 2;
+      sourceManifest.pageColumns = 2;
+      sourceManifest.clips.open = [
+        { source: "open", startFrame: 0, frameCount: 2 },
+        { source: "open_idle", startFrame: 0, frameCount: 1 },
+      ];
+      await writeFile(manifestPath, JSON.stringify(sourceManifest), "utf8");
+
+      await publishDeviceSpriteAnimations(options);
+
+      const publishedManifest = JSON.parse(await readFile(
+        path.join(options.animationDirectory, "fixture/manifest.json"),
+        "utf8",
+      ));
+      expect(publishedManifest.clips.open).toMatchObject({
+        frameCount: 3,
+        pages: [{ rows: 2, columns: 2, frameCount: 3 }],
+      });
+      const publishedPixels = await sharp(path.join(options.animationDirectory, "fixture/open-0.webp"))
+        .ensureAlpha().raw().toBuffer();
+      const trailingCellAlpha = [
+        publishedPixels[(2 * 4 + 2) * 4 + 3],
+        publishedPixels[(2 * 4 + 3) * 4 + 3],
+        publishedPixels[(3 * 4 + 2) * 4 + 3],
+        publishedPixels[(3 * 4 + 3) * 4 + 3],
+      ];
+      expect(trailingCellAlpha).toEqual([0, 0, 0, 0]);
+    });
+  });
+
+  it("rejects non-transparent cells after the declared source frame count", async () => {
+    await withFixture(async (options) => {
+      const manifestPath = path.join(options.sourceDirectory, "fixture/manifest.json");
+      const sourceManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+      sourceManifest.sources.open.frameCount = 1;
+      sourceManifest.clips.open = [{ source: "open", startFrame: 0, frameCount: 1 }];
+      await writeFile(manifestPath, JSON.stringify(sourceManifest), "utf8");
+
+      await expect(publishDeviceSpriteAnimations(options)).rejects.toThrow("trailing cell 1");
+      await expect(access(options.spriteDirectory)).rejects.toThrow();
+    });
+  });
+
   it("fails before publishing when atlas grids mismatch or exceed the configured limit", async () => {
     await withFixture(async (options) => {
-      await expect(publishDeviceSpriteAnimations({ ...options, maxTextureSize: 2 })).rejects.toThrow("GPU texture limit");
-      const invalid = { ...definition, clips: { ...definition.clips, close: { rows: 1, columns: 1 } } };
-      await expect(publishDeviceSpriteAnimations({ ...options,
-        definitions: [{ spriteId: "fixture", spriteAnimation: invalid }] })).rejects.toThrow("differ");
+      await expect(publishDeviceSpriteAnimations({ ...options, maxTextureSize: 4 })).rejects.toThrow("smaller");
+      await sharp({ create: { width: 2, height: 2, channels: 4, background: "white" } }).webp()
+        .toFile(path.join(options.sourceDirectory, "fixture/close.webp"));
+      await expect(publishDeviceSpriteAnimations(options)).rejects.toThrow("dimensions differ");
       await expect(access(options.spriteDirectory)).rejects.toThrow();
     });
   });

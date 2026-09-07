@@ -1,19 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import type { DeviceSpriteAnimationDefinition } from "@/domain/registry";
 import { DeviceAnimationState } from "@/renderer/sprites/device-animation-state";
+import type {
+  DeviceSpriteAnimationPhase,
+  NormalizedDeviceSpriteAnimationDefinition,
+} from "@/shared/device-sprite-animation";
+
+function createClip(phase: DeviceSpriteAnimationPhase, frameCount: number, frameDurationMs = 100) {
+  return {
+    frameCount,
+    frameDurationMs,
+    durationMs: frameCount * frameDurationMs,
+    pages: [{
+      file: `${phase}-0.webp`,
+      rows: 1,
+      columns: frameCount,
+      frameCount,
+      firstFrameIndex: 0,
+    }],
+    pageIndexByFrame: Array.from({ length: frameCount }, () => 0),
+  };
+}
 
 function createDefinition(
-  closeIdleMode: DeviceSpriteAnimationDefinition["closeIdleMode"] = "loop",
-): DeviceSpriteAnimationDefinition {
+  closeIdleMode: NormalizedDeviceSpriteAnimationDefinition["closeIdleMode"] = "loop",
+): NormalizedDeviceSpriteAnimationDefinition {
   return {
     clips: {
-      open: { rows: 1, columns: 2 },
-      open_idle: { rows: 1, columns: 3 },
-      close: { rows: 1, columns: 2 },
-      close_idle: { rows: 1, columns: 3 },
+      open: createClip("open", 2),
+      open_idle: createClip("open_idle", 3),
+      close: createClip("close", 2),
+      close_idle: createClip("close_idle", 3),
     },
     closeIdleMode,
+    frameWidth: 1,
+    frameHeight: 1,
+    maskFile: "mask.webp",
   };
 }
 
@@ -176,15 +198,18 @@ describe("DeviceAnimationState", () => {
     expectFrame(state, "close", 0);
   });
 
-  it("支持多行网格及每个阶段独立的有限小数帧时长", () => {
-    const definition: DeviceSpriteAnimationDefinition = {
+  it("支持每个阶段独立的帧数及有限小数帧时长", () => {
+    const definition: NormalizedDeviceSpriteAnimationDefinition = {
       clips: {
-        open: { rows: 2, columns: 3, frameDurationMs: 12.5 },
-        open_idle: { rows: 1, columns: 2, frameDurationMs: 25 },
-        close: { rows: 1, columns: 2, frameDurationMs: 50 },
-        close_idle: { rows: 2, columns: 2, frameDurationMs: 6.25 },
+        open: createClip("open", 6, 12.5),
+        open_idle: createClip("open_idle", 2, 25),
+        close: createClip("close", 2, 50),
+        close_idle: createClip("close_idle", 4, 6.25),
       },
       closeIdleMode: "hold-last",
+      frameWidth: 1,
+      frameHeight: 1,
+      maskFile: "mask.webp",
     };
     const state = new DeviceAnimationState(definition, true);
     state.setDesiredWorking(false);
@@ -203,10 +228,18 @@ describe("DeviceAnimationState", () => {
   });
 
   it("单帧片段仍各自保留完整一帧时长", () => {
-    const clip = { rows: 1, columns: 1, frameDurationMs: 10 };
+    const clips = {
+      open: createClip("open", 1, 10),
+      open_idle: createClip("open_idle", 1, 10),
+      close: createClip("close", 1, 10),
+      close_idle: createClip("close_idle", 1, 10),
+    };
     const state = new DeviceAnimationState({
-      clips: { open: clip, open_idle: clip, close: clip, close_idle: clip },
+      clips,
       closeIdleMode: "hold-last",
+      frameWidth: 1,
+      frameHeight: 1,
+      maskFile: "mask.webp",
     }, true);
     state.setDesiredWorking(false);
     state.advance(10);
@@ -329,48 +362,11 @@ describe("DeviceAnimationState", () => {
     expectFrame(second, "open_idle", 1);
   });
 
-  it.each(["open", "open_idle", "close", "close_idle"] as const)(
-    "拒绝 %s 阶段的非法网格声明",
-    (stage) => {
-      const definition = createDefinition();
-      expect(() => new DeviceAnimationState({
-        ...definition,
-        clips: { ...definition.clips, [stage]: { rows: 0, columns: 1 } },
-      }, true)).toThrow();
-    },
-  );
-
-  it.each([
-    { rows: -1, columns: 1 },
-    { rows: 1.5, columns: 1 },
-    { rows: 1, columns: 0 },
-    { rows: 1, columns: 1.5 },
-    { rows: Number.NaN, columns: 1 },
-    { rows: 1, columns: Number.POSITIVE_INFINITY },
-    { rows: Number.MAX_SAFE_INTEGER + 1, columns: 1 },
-    { rows: Number.MAX_SAFE_INTEGER, columns: 2 },
-    { rows: 1, columns: 1, frameDurationMs: 0 },
-    { rows: 1, columns: 1, frameDurationMs: -1 },
-    { rows: 1, columns: 1, frameDurationMs: Number.NaN },
-    { rows: 1, columns: 1, frameDurationMs: Number.POSITIVE_INFINITY },
-    { rows: 1, columns: 2, frameDurationMs: Number.MAX_VALUE },
-  ])("拒绝不可计算的网格或帧时长 $rows × $columns / $frameDurationMs", (clip) => {
-    const definition = createDefinition();
-    expect(() => new DeviceAnimationState({
-      ...definition,
-      clips: { ...definition.clips, open: clip },
-    }, true)).toThrow();
-  });
-
-  it("拒绝缺失阶段和未知关闭待机策略", () => {
-    const definition = createDefinition();
-    expect(() => new DeviceAnimationState({
-      ...definition,
-      clips: { ...definition.clips, close: undefined },
-    } as unknown as DeviceSpriteAnimationDefinition, true)).toThrow();
-    expect(() => new DeviceAnimationState({
-      ...definition,
-      closeIdleMode: "ping-pong",
-    } as unknown as DeviceSpriteAnimationDefinition, true)).toThrow();
+  it("目标分页尚未就绪时冻结进度，加载完成后继续", () => {
+    const state = new DeviceAnimationState(createDefinition(), true);
+    state.advance(100, () => false);
+    expectFrame(state, "open", 0);
+    state.advance(100, () => true);
+    expectFrame(state, "open", 1);
   });
 });
