@@ -26,15 +26,17 @@ import {
 import { DenseLocalRegionalBasePort } from "@/simulation/dense";
 import {
   createSimulationHost,
+  SUPPORTED_SIMULATION_ENGINE_KINDS,
   type SimulationEngineKind,
 } from "@/simulation/simulation-host";
-import { convertSimulationSecondsToTicksExact } from "@/simulation/tick-rate";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import type {
   CompiledRegionalResourceSupply,
+  RegionalResourceSupplySetting,
   RuntimeTickSnapshot,
 } from "@/simulation/types";
 import { createHeadlessWorkspace } from "./blueprint-runner";
+import { resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 
 export interface RegionalBlueprintPlacement {
   readonly blueprint: BlueprintDocument;
@@ -50,9 +52,22 @@ export interface RegionalBlueprintScenario {
   readonly placementsByBaseId?: Readonly<Record<string, readonly RegionalBlueprintPlacement[]>>;
   readonly untilSeconds: number;
   readonly timeoutMs: number;
-  /** 只保留明确要求的采样点；最终 untilTick 会自动加入。 */
-  /** AI-CORRECTION 2026-09-04: 场景现以秒声明采样点，最终 untilSeconds 会自动加入并由引擎 standardTickRate 换算。 */
-  readonly captureSeconds?: readonly number[];
+  /** 当前区域使用的资源供给策略；所有基地共享同一份区域配置。 */
+  readonly regionalResources?: readonly RegionalResourceSupplySetting[];
+  /** 以整数毫秒声明采样相位；最终 untilSeconds 对应的毫秒相位会自动加入。 */
+  readonly captureMilliseconds?: readonly number[];
+  // AI-REMOVED 2026-09-08:
+  // Reason: 秒制采样点允许 9.5 等小数，并且旧换算遗漏了“相位下第一 tick”的 +1 语义。
+  // Trigger: 用户要求固定 tick 类设置统一改用毫秒，并以 0ms/1000ms 下第一 tick 表达门禁。
+  // Evidence: 公共 resolveFirstTickNumberAtSimulationMilliseconds 已定义 tick 1 = 0ms。
+  // Replacement: captureMilliseconds。
+  // Risk: Low；所有现有调用点同步迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // /** 只保留明确要求的采样点；最终 untilTick 会自动加入。 */
+  // /** AI-CORRECTION 2026-09-04: 场景现以秒声明采样点，最终 untilSeconds 会自动加入并由引擎 standardTickRate 换算。 */
+  // readonly captureSeconds?: readonly number[];
 }
 
 export interface RunRegionalBlueprintSimulationOptions {
@@ -120,19 +135,17 @@ export async function runRegionalBlueprintSimulation(
         poweredEntityIds: resolvePoweredEntityIds(document, workspace),
         activeActivityIds: [],
         standardTickRate,
+        ...(scenario.regionalResources === undefined
+          ? {}
+          : { regionalResources: scenario.regionalResources }),
       }),
     }),
   );
-  const captureTicks = normalizeCaptureSeconds(scenario).map((durationSeconds) => {
-    const tickNumber = convertSimulationSecondsToTicksExact(
-      durationSeconds,
+  const captureTicks = normalizeCaptureMilliseconds(scenario).map((elapsedMilliseconds) => {
+    const tickNumber = resolveFirstTickNumberAtSimulationMilliseconds(
       standardTickRate,
+      elapsedMilliseconds,
     );
-    if (tickNumber === null) {
-      throw new Error(
-        `Regional capture ${durationSeconds}s is not exactly representable at ${standardTickRate} TPS.`,
-      );
-    }
     return tickNumber;
   });
   const untilTick = captureTicks.at(-1)!;
@@ -230,12 +243,15 @@ export async function runRegionalBlueprintSimulation(
 
 function resolveRegionalSimulationEngineKind(): SimulationEngineKind {
   const configured = process.env.SIMULATION_TEST_ENGINE;
-  if (configured === undefined || configured === "" || configured === "legacy") {
+  if (configured === undefined || configured === "") {
     return "legacy";
   }
-  if (configured === "dense-v2") return configured;
+  const engineKind = SUPPORTED_SIMULATION_ENGINE_KINDS.find(
+    (candidate) => candidate === configured,
+  );
+  if (engineKind !== undefined) return engineKind;
   throw new Error(
-    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected "legacy" or "dense-v2".`,
+    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected one of: ${SUPPORTED_SIMULATION_ENGINE_KINDS.join(", ")}.`,
   );
 }
 
@@ -506,15 +522,23 @@ function aggregateRegionalWarehouseStats(
   });
 }
 
-function normalizeCaptureSeconds(scenario: RegionalBlueprintScenario): number[] {
-  const requested = [...(scenario.captureSeconds ?? []), scenario.untilSeconds];
-  for (const durationSeconds of requested) {
-    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
-      throw new Error(`Regional capture duration must be positive; received ${durationSeconds}.`);
-    }
-    if (durationSeconds > scenario.untilSeconds) {
+function normalizeCaptureMilliseconds(scenario: RegionalBlueprintScenario): number[] {
+  const untilMilliseconds = scenario.untilSeconds * 1_000;
+  if (!Number.isSafeInteger(untilMilliseconds) || untilMilliseconds <= 0) {
+    throw new Error(
+      `Regional scenario duration must resolve to positive integer milliseconds; received ${scenario.untilSeconds}s.`,
+    );
+  }
+  const requested = [...(scenario.captureMilliseconds ?? []), untilMilliseconds];
+  for (const elapsedMilliseconds of requested) {
+    if (!Number.isSafeInteger(elapsedMilliseconds) || elapsedMilliseconds <= 0) {
       throw new Error(
-        `Regional capture duration ${durationSeconds}s exceeds untilSeconds ${scenario.untilSeconds}s.`,
+        `Regional capture phase must be positive integer milliseconds; received ${elapsedMilliseconds}.`,
+      );
+    }
+    if (elapsedMilliseconds > untilMilliseconds) {
+      throw new Error(
+        `Regional capture phase ${elapsedMilliseconds}ms exceeds scenario duration ${untilMilliseconds}ms.`,
       );
     }
   }
@@ -556,7 +580,7 @@ function validateScenario(
   if (!Number.isFinite(scenario.timeoutMs) || scenario.timeoutMs <= 0) {
     throw new Error(`Regional scenario timeout must be positive; received ${scenario.timeoutMs}.`);
   }
-  normalizeCaptureSeconds(scenario);
+  normalizeCaptureMilliseconds(scenario);
 
   const regionDefinitions = registry.baseDefinitions.filter(
     (definition) => definition.tag === scenario.regionTag,

@@ -7,8 +7,17 @@ import type {
 } from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+// AI-REMOVED 2026-09-08:
+// Reason: 编译前文档整理已抽到 Simulation 共享入口，本文件不再直接读取编辑器集合或基地定义。
+// Trigger: Legacy 与 Dense 对 invalidPlacement 的处理不一致。
+// Evidence: invalid-placement-compile 的 dense-v2 矩阵分支把越界传送带编入拓扑。
+// Replacement: src/simulation/simulation-document-preparation.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+// import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { createLogger } from "@/shared/logging/logger";
 import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
@@ -23,6 +32,10 @@ import {
   compileSimulationTopology,
   createSimulationDocumentHash,
 } from "./topology-compiler";
+import {
+  appendSimulationBaseBuiltinEntities,
+  prepareCurrentSimulationDocument,
+} from "./simulation-document-preparation";
 import { createSimulationTopologyMigration } from "./topology-migration";
 import {
   createInitialSimulationRuntimeStatus,
@@ -1037,7 +1050,7 @@ implements SimulationAction, SimulationInternalAction {
       };
     }
 
-    const document = resolveSimulationCompileDocument({
+    const document = prepareCurrentSimulationDocument({
       document: sourceDocument,
       workspace: this.workspace,
     });
@@ -2627,7 +2640,7 @@ implements SimulationAction, SimulationInternalAction {
       const latestDocuments = await editor.queries.readLatestBaseDocuments(
         regionDefinitions.map((definition) => definition.id),
       );
-      const currentCompiledDocument = resolveSimulationCompileDocument({
+      const currentCompiledDocument = prepareCurrentSimulationDocument({
         document: sourceDocument,
         workspace: this.workspace,
       });
@@ -2636,7 +2649,7 @@ implements SimulationAction, SimulationInternalAction {
           return currentCompiledDocument;
         }
         const latest = latestDocuments[index] ?? currentCompiledDocument;
-        return appendBaseBuiltinEntitiesToDocument({
+        return appendSimulationBaseBuiltinEntities({
           document: latest,
           workspace: this.workspace,
         });
@@ -3414,76 +3427,85 @@ function normalizeRegionalResourceSettings(
     .sort((left, right) => left.itemId.localeCompare(right.itemId));
 }
 
-function resolveSimulationCompileDocument(options: {
-  document: WorldDocument;
-  workspace: WorkspaceContract;
-}): WorldDocument {
-  const invalidPlacementCollection =
-    options.workspace.editor?.state?.collections?.[EntityCollectionType.invalidPlacement];
-  if (invalidPlacementCollection === undefined || invalidPlacementCollection.length === 0) {
-    return appendBaseBuiltinEntitiesToDocument({
-      document: options.document,
-      workspace: options.workspace,
-    });
-  }
-
-  const invalidEntityIds = new Set(
-    invalidPlacementCollection.filter((entityId) =>
-      options.document.entities[entityId] !== undefined,
-    ),
-  );
-  if (invalidEntityIds.size === 0) {
-    return appendBaseBuiltinEntitiesToDocument({
-      document: options.document,
-      workspace: options.workspace,
-    });
-  }
-
-  const nextEntities = { ...options.document.entities };
-  for (const entityId of invalidEntityIds) {
-    delete nextEntities[entityId];
-  }
-
-  return appendBaseBuiltinEntitiesToDocument({
-    workspace: options.workspace,
-    document: {
-      ...options.document,
-      entities: nextEntities,
-      entityOrder: options.document.entityOrder.filter((entityId) =>
-        !invalidEntityIds.has(entityId),
-      ),
-      slotLinks: options.document.slotLinks.filter((slotLink) =>
-        !invalidEntityIds.has(slotLink.source.entityId)
-        && !invalidEntityIds.has(slotLink.target.entityId),
-      ),
-    },
-  });
-}
-
-function appendBaseBuiltinEntitiesToDocument(options: {
-  document: WorldDocument;
-  workspace: WorkspaceContract;
-}): WorldDocument {
-  const builtinEntities = resolveBaseBuiltinEntities({
-    baseDefinitions: options.workspace.registry.baseDefinitions,
-    baseId: options.document.baseId,
-  });
-  if (builtinEntities.length === 0) {
-    return options.document;
-  }
-
-  const builtinEntityIds = new Set(builtinEntities.map((entity) => entity.id));
-  const nextEntities = { ...options.document.entities };
-  for (const entity of builtinEntities) {
-    nextEntities[entity.id] = entity;
-  }
-
-  return {
-    ...options.document,
-    entities: nextEntities,
-    entityOrder: [
-      ...builtinEntities.map((entity) => entity.id),
-      ...options.document.entityOrder.filter((entityId) => !builtinEntityIds.has(entityId)),
-    ],
-  };
-}
+// AI-REMOVED 2026-09-08:
+// Reason: Legacy 私有编译前文档整理与 Dense 路径产生语义分叉，现统一为 Simulation 共享入口。
+// Trigger: invalid-placement-compile 的 dense-v2 矩阵分支把越界传送带编入拓扑。
+// Evidence: Legacy 仅在下方私有函数中过滤 invalidPlacement；Dense 原路径只处理内置实体与未知定义。
+// Replacement: src/simulation/simulation-document-preparation.ts
+// Risk: Low；新实现逐项保留原过滤、slotLink 清理与内置实体合并语义。
+// Human Review: Required
+//
+// Original code:
+// function resolveSimulationCompileDocument(options: {
+//   document: WorldDocument;
+//   workspace: WorkspaceContract;
+// }): WorldDocument {
+//   const invalidPlacementCollection =
+//     options.workspace.editor?.state?.collections?.[EntityCollectionType.invalidPlacement];
+//   if (invalidPlacementCollection === undefined || invalidPlacementCollection.length === 0) {
+//     return appendBaseBuiltinEntitiesToDocument({
+//       document: options.document,
+//       workspace: options.workspace,
+//     });
+//   }
+//
+//   const invalidEntityIds = new Set(
+//     invalidPlacementCollection.filter((entityId) =>
+//       options.document.entities[entityId] !== undefined,
+//     ),
+//   );
+//   if (invalidEntityIds.size === 0) {
+//     return appendBaseBuiltinEntitiesToDocument({
+//       document: options.document,
+//       workspace: options.workspace,
+//     });
+//   }
+//
+//   const nextEntities = { ...options.document.entities };
+//   for (const entityId of invalidEntityIds) {
+//     delete nextEntities[entityId];
+//   }
+//
+//   return appendBaseBuiltinEntitiesToDocument({
+//     workspace: options.workspace,
+//     document: {
+//       ...options.document,
+//       entities: nextEntities,
+//       entityOrder: options.document.entityOrder.filter((entityId) =>
+//         !invalidEntityIds.has(entityId),
+//       ),
+//       slotLinks: options.document.slotLinks.filter((slotLink) =>
+//         !invalidEntityIds.has(slotLink.source.entityId)
+//         && !invalidEntityIds.has(slotLink.target.entityId),
+//       ),
+//     },
+//   });
+// }
+//
+// function appendBaseBuiltinEntitiesToDocument(options: {
+//   document: WorldDocument;
+//   workspace: WorkspaceContract;
+// }): WorldDocument {
+//   const builtinEntities = resolveBaseBuiltinEntities({
+//     baseDefinitions: options.workspace.registry.baseDefinitions,
+//     baseId: options.document.baseId,
+//   });
+//   if (builtinEntities.length === 0) {
+//     return options.document;
+//   }
+//
+//   const builtinEntityIds = new Set(builtinEntities.map((entity) => entity.id));
+//   const nextEntities = { ...options.document.entities };
+//   for (const entity of builtinEntities) {
+//     nextEntities[entity.id] = entity;
+//   }
+//
+//   return {
+//     ...options.document,
+//     entities: nextEntities,
+//     entityOrder: [
+//       ...builtinEntities.map((entity) => entity.id),
+//       ...options.document.entityOrder.filter((entityId) => !builtinEntityIds.has(entityId)),
+//     ],
+//   };
+// }

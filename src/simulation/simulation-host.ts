@@ -86,11 +86,22 @@ export interface CreateSimulationHostOptions {
   readonly getRegionalResourceSettings?: (regionTag: string) => readonly import("./types").RegionalResourceSupplySetting[];
 }
 
+const SIMULATION_ENGINE_REGISTRY = {
+  legacy: { useDenseHost: false },
+  "dense-v2": { useDenseHost: true },
+} as const satisfies Record<SimulationEngineKind, { readonly useDenseHost: boolean }>;
+
+/** 所有公开可选的仿真引擎；测试矩阵与运行时入口共用这一份注册表。 */
+export const SUPPORTED_SIMULATION_ENGINE_KINDS = Object.freeze(
+  Object.keys(SIMULATION_ENGINE_REGISTRY) as SimulationEngineKind[],
+);
+
 export function createSimulationHost(
   workspace: WorkspaceContract,
   options: CreateSimulationHostOptions = {},
 ): SimulationHost {
-  if (options.engineKind === "dense-v2") {
+  const engineKind = options.engineKind ?? "legacy";
+  if (SIMULATION_ENGINE_REGISTRY[engineKind].useDenseHost) {
     return createDenseSimulationHost(workspace, options);
   }
   const bridge = createSimulationWorkerBridge(options.workerMode ?? "auto", workspace.registry);

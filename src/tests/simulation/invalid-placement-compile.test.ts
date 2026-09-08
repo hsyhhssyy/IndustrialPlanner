@@ -1,4 +1,14 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+// AI-REMOVED 2026-09-08:
+// Reason: describe 已由统一仿真引擎矩阵入口封装，保留本地导入会触发 ESLint unused-vars。
+// Trigger: invalid-placement-compile 接入 describeSimulationEngineMatrix。
+// Evidence: ESLint 报告 describe is defined but never used。
+// Replacement: src/tests/simulation/simulation-engine-matrix.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEditorHost } from "@/editor/editor-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -16,6 +26,7 @@ import {
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { createWarehouseSlotLink } from "./blueprint-test-helpers";
+import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
 const TEST_BUILTIN_BASE_ID = "test_simulation_builtin_base";
 
@@ -81,7 +92,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("invalid placement simulation compile", () => {
+describeSimulationEngineMatrix("invalid placement simulation compile", (engineKind) => {
   it("treats invalid placement entities as absent when compiling topology", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -97,6 +108,7 @@ describe("invalid placement simulation compile", () => {
     ).toEqual(["outside-belt"]);
 
     const simulationHost = createSimulationHost(workspace, {
+      engineKind,
       workerMode: "runtime",
     });
 
@@ -154,6 +166,7 @@ describe("invalid placement simulation compile", () => {
     expect(editorHost.document.getSnapshot().entities[builtinEntityId]).toBeUndefined();
 
     const simulationHost = createSimulationHost(workspace, {
+      engineKind,
       workerMode: "runtime",
     });
 
@@ -188,6 +201,7 @@ describe("invalid placement simulation compile", () => {
       .toBe(false);
 
     const simulationHost = createSimulationHost(workspace, {
+      engineKind,
       workerMode: "runtime",
     });
 

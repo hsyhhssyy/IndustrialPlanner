@@ -2720,6 +2720,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_cmpt_mc_1",
     iconPath: "device-icons/item_port_cmpt_mc_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: {
+      closeIdleMode: "hold-last",
+    },
     uiGroup: "basicProduction",
     displayOrder: 504,
     tags: [PRODUCER_TAG],

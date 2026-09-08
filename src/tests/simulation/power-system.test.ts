@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import {
@@ -14,9 +13,6 @@ import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
-import type { CompiledSimulationTopology } from "@/simulation/types";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
@@ -26,48 +22,105 @@ import {
   createEntity,
   createWorldDocumentFromBlueprint,
   findSlot,
+  getFirstTickAtSimulationMilliseconds,
   getDevice,
   getTick,
+  resolveFirstTickNumberAtSimulationMilliseconds,
 } from "./blueprint-test-helpers";
-import { createSimulationTestRegistry } from "./simulation-test-registry";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-describe("REQ-084: simulation power system", () => {
+// AI-REMOVED 2026-09-08:
+// Reason: REQ-089 不再构造 Legacy Worker 私有 topology，也不再断言其缓存失效实现。
+// Trigger: 用户要求改为恢复供电立即生效的 Host 行为，并让整个 power-system 接入矩阵。
+// Evidence: powerConsumptionOverride 可通过真实文档稳定制造断电，powerMode 文档变更由 Host 转发给两种引擎。
+// Replacement: 下方 REQ-089 Host 行为矩阵。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
+// import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+// import type { CompiledSimulationTopology } from "@/simulation/types";
+// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+// import { createSimulationTestRegistry } from "./simulation-test-registry";
+
+// AI-REMOVED 2026-09-08:
+// Reason: 供电、断电与拓扑刷新是生产 SimulationHost 的公共行为。
+// Trigger: 用户确认 power-system 全部接入矩阵。
+// Evidence: 本 describe 的用例均通过 Blueprint runner、SimulationHost 或 Editor→Host 真实链路观察行为。
+// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
+// Risk: Dense 可能暴露供电恢复或拓扑迁移差异。
+// Human Review: Required
+//
+// Original code:
+// describe("REQ-084: simulation power system", () => {
+describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]", (engineKind) => {
   it("runs powered recipes and exposes total power demand through topology and snapshots", async () => {
-    const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("powered-grinder", 4),
       registry: createRegistryContract(),
-      maxTickNumber: completionTick,
+      engineKind,
+      maxDurationSeconds: 2.5,
     });
+    const runningTick = getFirstTickAtSimulationMilliseconds(report, 0);
+    const completionTick = getFirstTickAtSimulationMilliseconds(report, 2_000);
 
     expect(report.topology.totalPowerDemand).toBe(5);
     expect(getTick(report, 0).totalPowerDemand).toBe(5);
-    expect(getDevice(report, 1, "grinder").channelRecipes["default"]).toMatchObject({
+    expect(getDevice(report, runningTick.tickNumber, "grinder").channelRecipes["default"])
+      .toMatchObject({
       recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
       progressSeconds: 0,
       desiredSeconds: 2,
     });
-    expect(findSlot(report, completionTick, "grinder", "item_output_buffer", "output_slot_1"))
+    expect(findSlot(
+      report,
+      completionTick.tickNumber,
+      "grinder",
+      "item_output_buffer",
+      "output_slot_1",
+    ))
       .toMatchObject({
         itemType: "item_iron_powder",
         count: 1,
       });
+    // AI-REMOVED 2026-09-08:
+    // Reason: 配方完成时间绑定 Legacy tick 41。
+    // Trigger: power-system 接入求解器矩阵并统一使用毫秒语义。
+    // Evidence: 两种引擎共同契约是 0ms 启动、2000ms 完成配方。
+    // Replacement: runningTick 与 completionTick 毫秒定位。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
+    // maxTickNumber: completionTick,
+    // expect(getDevice(report, 1, "grinder").channelRecipes["default"]).toMatchObject(...);
+    // expect(findSlot(report, completionTick, "grinder", "item_output_buffer", "output_slot_1"));
   });
 
   it("keeps out-of-range devices from starting new recipes", async () => {
-    const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("unpowered-grinder", 40),
       registry: createRegistryContract(),
-      maxTickNumber: completionTick,
+      engineKind,
+      maxDurationSeconds: 2.5,
     });
+    const completionTick = getFirstTickAtSimulationMilliseconds(report, 2_000);
 
     expect(report.topology.totalPowerDemand).toBe(0);
-    expect(getTick(report, completionTick).totalPowerDemand).toBe(0);
+    expect(completionTick.totalPowerDemand).toBe(0);
     // AI-CORRECTION 2026-05-30: 无供电时 deviceSnapshot.channelRecipes 无 "default" key，
     //   channelRecipes["default"] 返回 undefined（旧代码 flat recipeId 返回 null）。
-    expect(getDevice(report, completionTick, "grinder").channelRecipes["default"]).toBeUndefined();
-    expect(findSlot(report, completionTick, "grinder", "item_input_buffer", "input_slot_1"))
+    expect(getDevice(report, completionTick.tickNumber, "grinder").channelRecipes["default"])
+      .toBeUndefined();
+    expect(findSlot(
+      report,
+      completionTick.tickNumber,
+      "grinder",
+      "item_input_buffer",
+      "input_slot_1",
+    ))
       .toMatchObject({
         itemType: "item_iron_nugget",
         count: 1,
@@ -82,14 +135,19 @@ describe("REQ-084: simulation power system", () => {
     ));
     const registry = createRegistryContract();
     const workspace = createHeadlessWorkspace(documentStore, registry);
-    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
 
     try {
       await expectStarted(host.internalActions.refreshFromCurrentDocument());
       expect(host.topology.getSnapshot()?.devices["device:grinder"]?.powerStatus)
         .toBe("out-of-power-range");
+      const standardTickRate = readHostStandardTickRate(host);
+      const oneSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        standardTickRate,
+        1_000,
+      );
 
-      await expectReady(host.internalActions.syncToTick(20));
+      await expectReady(host.internalActions.syncToTick(oneSecondTick));
       // 没电时研磨机不应有产出
       expect(readGrinderRecipeId(host)).toBeNull();
 
@@ -109,7 +167,11 @@ describe("REQ-084: simulation power system", () => {
         .toBe("in-power-range");
 
       // 4. 研磨机应恢复工作并产出（至少需要 2 秒即 40 ticks）
-      const completionTick = 3 * STANDARD_TICK_RATE_PER_SECOND + 5; // tick 65
+      // AI-CORRECTION 2026-09-08: 恢复供电后的完成窗口改为公共 3500ms 相位，不再使用 Legacy tick 65。
+      const completionTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        standardTickRate,
+        3_500,
+      );
       await expectReady(host.internalActions.syncToTick(completionTick));
       const tickStatus = host.queries.getDeviceRuntimeStatus("grinder");
       console.log("grinder status at completion tick:", JSON.stringify(tickStatus));
@@ -128,12 +190,26 @@ describe("REQ-084: simulation power system", () => {
     ));
     const workspace = createHeadlessWorkspace(documentStore, createRegistryContract());
     const host = createSimulationHost(workspace, {
+      engineKind,
       workerMode: "runtime",
     });
 
     try {
       await expectStarted(host.internalActions.refreshFromCurrentDocument());
-      await expectReady(host.internalActions.syncToTick(10));
+      const standardTickRate = readHostStandardTickRate(host);
+      const halfSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        standardTickRate,
+        500,
+      );
+      const oneAndHalfSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        standardTickRate,
+        1_500,
+      );
+      const threeAndHalfSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        standardTickRate,
+        3_500,
+      );
+      await expectReady(host.internalActions.syncToTick(halfSecondTick));
       const poweredProgressSeconds = readGrinderProgressSeconds(host);
 
       documentStore.setSnapshot(createWorldDocumentFromBlueprint(
@@ -144,7 +220,7 @@ describe("REQ-084: simulation power system", () => {
         .toBe("out-of-power-range");
       expect(host.topology.getSnapshot()?.totalPowerDemand).toBe(0);
 
-      await expectReady(host.internalActions.syncToTick(30));
+      await expectReady(host.internalActions.syncToTick(oneAndHalfSecondTick));
       expect(readGrinderProgressSeconds(host)).toBe(poweredProgressSeconds);
 
       documentStore.setSnapshot(createWorldDocumentFromBlueprint(
@@ -155,7 +231,7 @@ describe("REQ-084: simulation power system", () => {
         .toBe("in-power-range");
       expect(host.topology.getSnapshot()?.totalPowerDemand).toBe(5);
 
-      await expectReady(host.internalActions.syncToTick(70));
+      await expectReady(host.internalActions.syncToTick(threeAndHalfSecondTick));
       expect(readGrinderSlot(host, "item_output_buffer", "output_slot_1")).toMatchObject({
         itemType: "item_iron_powder",
         count: 1,
@@ -189,6 +265,7 @@ describe("REQ-084: simulation power system", () => {
 
     // 2. 创建仿真 host（workerMode: runtime 用于同步测试）
     const simulationHost = createSimulationHost(workspace, {
+      engineKind,
       workerMode: "runtime",
     });
 
@@ -230,6 +307,80 @@ describe("REQ-084: simulation power system", () => {
   });
 });
 
+describe.each(SIMULATION_ENGINE_MATRIX)(
+  "REQ-089: power restoration takes effect [%s]",
+  (engineKind) => {
+    it("恢复为无限供电后在下一可观测帧恢复配方进度", async () => {
+      const baseDocument = createWorldDocumentFromBlueprint(
+        createGrinderBlueprint("power-mode-recovery", 4, 20),
+      );
+      const documentStore = createSnapshotStore<WorldDocument>({
+        ...baseDocument,
+        documentSettings: {
+          ...baseDocument.documentSettings,
+          powerMode: "real",
+          powerConsumptionOverride: 40_000,
+        },
+      });
+      const host = createSimulationHost(
+        createHeadlessWorkspace(documentStore, createRegistryContract()),
+        { engineKind, workerMode: "runtime" },
+      );
+
+      try {
+        await host.actions.start();
+        host.actions.pause();
+        const standardTickRate = readHostStandardTickRate(host);
+        const halfSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+          standardTickRate,
+          500,
+        );
+        const threeSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+          standardTickRate,
+          3_000,
+        );
+        const threeAndHalfSecondTick = resolveFirstTickNumberAtSimulationMilliseconds(
+          standardTickRate,
+          3_500,
+        );
+
+        await expectReady(host.internalActions.syncToTick(halfSecondTick));
+        expect(readGrinderProgressSeconds(host)).toBeGreaterThan(0);
+
+        await expectReady(host.internalActions.syncToTick(threeSecondTick));
+        expect(host.internalState.currentSnapshot?.isPowerOutage).toBe(true);
+        const frozenProgressSeconds = readGrinderProgressSeconds(host);
+
+        const outageDocument = documentStore.getSnapshot();
+        documentStore.setSnapshot({
+          ...outageDocument,
+          documentSettings: {
+            ...outageDocument.documentSettings,
+            powerMode: "infinite",
+          },
+        });
+        await Promise.resolve();
+        await expectReady(host.internalActions.syncToTick(threeAndHalfSecondTick));
+
+        expect(host.internalState.currentSnapshot?.isPowerOutage).toBe(false);
+        expect(readGrinderProgressSeconds(host)).toBeGreaterThan(frozenProgressSeconds);
+      } finally {
+        host.dispose();
+      }
+    });
+  },
+);
+
+// AI-REMOVED 2026-09-08:
+// Reason: 旧用例断言 Legacy Worker 的 tick 缓存失效机制，并绕过了生产 SimulationHost。
+// Trigger: 用户要求只验证恢复供电立即生效，并将 power-system 全部纳入求解器矩阵。
+// Evidence: 新用例通过文档 powerMode 切换观察断电状态和配方进度，Legacy 与 Dense 共用同一 Host 契约。
+// Replacement: 上方 REQ-089: power restoration takes effect 矩阵。
+// Risk: 旧用例额外覆盖“切回真实电力后再次冻结”，新公共契约聚焦用户指定的恢复供电行为。
+// Human Review: Required
+//
+// Original code:
+/*
 describe("REQ-089: power generation mode caching bug", () => {
   it("setPowerMode clears cached ticks so new mode takes effect immediately", () => {
     // 拓扑：一个 grinder（requiresPower: true）在供电范围内，无发电设备。
@@ -391,6 +542,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       "切回真实电力后配方进度不再增长").toBe(infiniteSnap.devices["device:grinder"]?.recipe?.progressTicks ?? 0);
   });
 });
+*/
 
 function createEditorTestWorkspace(): WorkspaceContract {
   return {
@@ -425,14 +577,25 @@ function createTestDocument(entities: readonly WorldEntity[]): WorldDocument {
 function createGrinderBlueprint(
   name: string,
   powerX: number,
+  initialInputCount = 1,
 ): BlueprintDocument {
   return createBlueprint(name, [
     createEntity("grinder", "grinder_1", 0, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-      "storageSlotGroups[0].slots[0].initialCount": 1,
+      "storageSlotGroups[0].slots[0].initialCount": initialInputCount,
     }),
     createEntity("power", "power_diffuser_1", powerX, 0),
   ]);
+}
+
+function readHostStandardTickRate(
+  host: ReturnType<typeof createSimulationHost>,
+): number {
+  const standardTickRate = host.topology.getSnapshot()?.standardTickRate;
+  if (standardTickRate === undefined) {
+    throw new Error("Expected simulation topology standardTickRate.");
+  }
+  return standardTickRate;
 }
 
 function createGrinderOnlyBlueprint(name: string): BlueprintDocument {

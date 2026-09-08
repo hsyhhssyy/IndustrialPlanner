@@ -111,6 +111,7 @@ export interface DenseKernelCheckpoint {
   readonly warehouseProducedTotals: Float64Array;
   readonly warehouseConsumedTotals: Float64Array;
   readonly warehouseLastChangedTicks: Float64Array;
+  readonly regionalResourceRemainderSixths: Float64Array;
 }
 
 interface DenseRecipeReservation {
@@ -185,6 +186,7 @@ export class DenseSimulationKernel {
   private readonly warehouseProducedTotals: Float64Array;
   private readonly warehouseConsumedTotals: Float64Array;
   private readonly warehouseLastChangedTicks: Float64Array;
+  private readonly regionalResourceRemainderSixths: Float64Array;
   private readonly producerDeviceFlags: Uint8Array;
   private readonly warehouseStatsWindowCapacity: number;
   private readonly regionalOptions: DenseRegionalKernelOptions | null;
@@ -274,6 +276,9 @@ export class DenseSimulationKernel {
     this.warehouseProducedTotals = new Float64Array(layout.dictionary.itemIds.length);
     this.warehouseConsumedTotals = new Float64Array(layout.dictionary.itemIds.length);
     this.warehouseLastChangedTicks = new Float64Array(layout.dictionary.itemIds.length);
+    this.regionalResourceRemainderSixths = new Float64Array(
+      layout.dictionary.itemIds.length,
+    );
     this.producerDeviceFlags = Uint8Array.from(
       layout.dictionary.deviceIds,
       (deviceId) => registry.queries
@@ -471,6 +476,7 @@ export class DenseSimulationKernel {
       warehouseProducedTotals: this.warehouseProducedTotals.slice(),
       warehouseConsumedTotals: this.warehouseConsumedTotals.slice(),
       warehouseLastChangedTicks: this.warehouseLastChangedTicks.slice(),
+      regionalResourceRemainderSixths: this.regionalResourceRemainderSixths.slice(),
     };
   }
 
@@ -515,6 +521,9 @@ export class DenseSimulationKernel {
     this.warehouseProducedTotals.set(checkpoint.warehouseProducedTotals);
     this.warehouseConsumedTotals.set(checkpoint.warehouseConsumedTotals);
     this.warehouseLastChangedTicks.set(checkpoint.warehouseLastChangedTicks);
+    this.regionalResourceRemainderSixths.set(
+      checkpoint.regionalResourceRemainderSixths,
+    );
     this.currentTickProduced = new Map();
     this.currentTickConsumed = new Map();
     this.warehouseStatsDirtyItemIndexes.clear();
@@ -538,6 +547,23 @@ export class DenseSimulationKernel {
     this.currentTickTransfers = createEmptyDenseTransfers();
     this.baseBatteryJoulesValue = previous.baseBatteryJoulesValue;
     this.nextRecipeRunId = previous.nextRecipeRunId;
+    for (const [itemId, perMinute] of Object.entries(
+      this.topology.regionalResourceSupply?.finitePerMinuteByItemId ?? {},
+    )) {
+      if (
+        previous.topology.regionalResourceSupply?.finitePerMinuteByItemId[itemId]
+        !== perMinute
+      ) {
+        continue;
+      }
+      const itemIndex = this.lookup.itemIndexById.get(itemId);
+      const previousItemIndex = previous.lookup.itemIndexById.get(itemId);
+      if (itemIndex === undefined || previousItemIndex === undefined) {
+        continue;
+      }
+      this.regionalResourceRemainderSixths[itemIndex] =
+        previous.regionalResourceRemainderSixths[previousItemIndex] ?? 0;
+    }
 
     for (let deviceIndex = 0; deviceIndex < this.layout.dictionary.deviceIds.length; deviceIndex += 1) {
       const deviceId = this.layout.dictionary.deviceIds[deviceIndex]!;
@@ -807,6 +833,7 @@ export class DenseSimulationKernel {
   private beginTick(transfers: DenseTransferAccumulator): void {
     this.currentTickProduced.clear();
     this.currentTickConsumed.clear();
+    this.applySingleBaseRegionalResourceSupply();
     this.normalizeAdmissionWindows();
     this.refreshPowerState(true);
     this.activeGasDiffusions = this.collectActiveGasDiffusions();
@@ -824,6 +851,50 @@ export class DenseSimulationKernel {
     this.updateDeviceBlockStates();
     this.activeGasDiffusions = this.collectActiveGasDiffusions();
     this.commitWarehouseStatsTick();
+  }
+
+  /**
+   * 单基地模式在与区域仓库一致的 10 秒边界提交有限地区资源。
+   * 余量以六分之一物品为单位保存，避免浮点累计误差。
+   */
+  private applySingleBaseRegionalResourceSupply(): void {
+    if (this.topology.simulationMode !== "single-base") {
+      return;
+    }
+    const finiteRates = this.topology.regionalResourceSupply
+      ?.finitePerMinuteByItemId ?? {};
+    if (Object.keys(finiteRates).length === 0) {
+      return;
+    }
+
+    const windowTicks = this.topology.standardTickRate * 10;
+    if (
+      this.currentTickNumber <= 1
+      || (this.currentTickNumber - 1) % windowTicks !== 0
+    ) {
+      return;
+    }
+
+    for (const [itemId, perMinute] of Object.entries(finiteRates)) {
+      const itemIndex = this.lookup.itemIndexById.get(itemId);
+      if (itemIndex === undefined) {
+        continue;
+      }
+      const numerator = this.regionalResourceRemainderSixths[itemIndex]!
+        + perMinute;
+      const amount = Math.floor(numerator / 6);
+      this.regionalResourceRemainderSixths[itemIndex] = numerator % 6;
+      if (amount <= 0) {
+        continue;
+      }
+
+      const warehouseSlotIndex = this.warehouseSlotIndexesByItemIndex[itemIndex]!;
+      if (warehouseSlotIndex === DENSE_INDEX_NONE) {
+        continue;
+      }
+      this.state.produce(warehouseSlotIndex, itemIndex, amount);
+      this.recordWarehouseStat(this.currentTickProduced, itemIndex, amount);
+    }
   }
 
   private advanceRunningRecipes(): void {
@@ -2281,6 +2352,11 @@ export class DenseSimulationKernel {
         checkpoint.warehouseProducedTotals.length,
         this.warehouseProducedTotals.length,
         "warehouse produced totals",
+      ],
+      [
+        checkpoint.regionalResourceRemainderSixths.length,
+        this.regionalResourceRemainderSixths.length,
+        "regional resource remainders",
       ],
       [
         checkpoint.warehouseConsumedTotals.length,

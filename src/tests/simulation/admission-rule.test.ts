@@ -5,9 +5,22 @@ import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
+  getFirstTickAtSimulationMilliseconds,
+  getTick,
 } from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-describe("admission rule runtime counter", () => {
+// AI-REMOVED 2026-09-08:
+// Reason: 准入口门禁和计数窗口属于两种求解器应共同满足的业务契约。
+// Trigger: 用户确认以整数毫秒表达门禁相位，并要求对应测试接入矩阵。
+// Evidence: runBlueprintSimulation 已支持显式选择生产引擎，门禁 tick 可由报告 standardTickRate 精确换算。
+// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
+// Risk: Dense 当前可能暴露准入口时序或计数差异。
+// Human Review: Required
+//
+// Original code:
+// describe("admission rule runtime counter", () => {
+describe.each(SIMULATION_ENGINE_MATRIX)("admission rule runtime counter [%s]", (engineKind) => {
   it("limits admission by a persistent cross-tick counter", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createAdmissionBlueprint({
@@ -16,7 +29,18 @@ describe("admission rule runtime counter", () => {
         limit: 2,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 100,
+      engineKind,
+      maxDurationSeconds: 5,
+      // AI-REMOVED 2026-09-08:
+      // Reason: 运行窗口改按业务时间表达，避免绑定 Legacy 的 20 TPS。
+      // Trigger: admission-rule 接入求解器矩阵。
+      // Evidence: 100 Legacy tick 等于 5 秒。
+      // Replacement: maxDurationSeconds: 5。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // maxTickNumber: 100,
     });
 
     const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
@@ -27,7 +51,21 @@ describe("admission rule runtime counter", () => {
         )
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41]);
+    const expectedSourceToAdmissionTicks = [0, 2_000].map(
+      (milliseconds) => getFirstTickAtSimulationMilliseconds(report, milliseconds).tickNumber,
+    );
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber))
+      .toEqual(expectedSourceToAdmissionTicks);
+    // AI-REMOVED 2026-09-08:
+    // Reason: 期望值应表达为 0ms、2000ms 相位下的第一 tick，而非 Legacy tick 编号。
+    // Trigger: 用户要求门禁测试统一使用整数毫秒时间基准。
+    // Evidence: Legacy 下换算结果仍为 tick 1、41；Dense 会按自身 standardTickRate 换算。
+    // Replacement: expectedSourceToAdmissionTicks。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41]);
     const admissionOutputTicks = report.ticks.flatMap((tick) =>
       tick.transfers
         .filter((transfer) =>
@@ -36,7 +74,20 @@ describe("admission rule runtime counter", () => {
         )
         .map(() => tick.tickNumber),
     );
-    expect(admissionOutputTicks).toEqual([41, 81]);
+    const expectedAdmissionOutputTicks = [2_000, 4_000].map(
+      (milliseconds) => getFirstTickAtSimulationMilliseconds(report, milliseconds).tickNumber,
+    );
+    expect(admissionOutputTicks).toEqual(expectedAdmissionOutputTicks);
+    // AI-REMOVED 2026-09-08:
+    // Reason: 期望值应表达为 2000ms、4000ms 相位下的第一 tick，而非 Legacy tick 编号。
+    // Trigger: 用户要求门禁测试统一使用整数毫秒时间基准。
+    // Evidence: Legacy 下换算结果仍为 tick 41、81。
+    // Replacement: expectedAdmissionOutputTicks。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(admissionOutputTicks).toEqual([41, 81]);
     const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
     expect(admissionCounter).toBeDefined();
     expect(admissionCounter)
@@ -59,7 +110,18 @@ describe("admission rule runtime counter", () => {
         perMinuteLimit: 12,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 260,
+      engineKind,
+      maxDurationSeconds: 13,
+      // AI-REMOVED 2026-09-08:
+      // Reason: 运行窗口改按业务时间表达，避免绑定 Legacy 的 20 TPS。
+      // Trigger: admission-rule 接入求解器矩阵。
+      // Evidence: 260 Legacy tick 等于 13 秒。
+      // Replacement: maxDurationSeconds: 13。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // maxTickNumber: 260,
     });
 
     const admissionToBeltTransfers = report.ticks.flatMap((tick) =>
@@ -71,23 +133,42 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
-    expect(report.ticks[200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    const expectedAdmissionToBeltTicks = [2_000, 4_000, 12_000].map(
+      (milliseconds) => getFirstTickAtSimulationMilliseconds(report, milliseconds).tickNumber,
+    );
+    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber))
+      .toEqual(expectedAdmissionToBeltTicks);
+    const tenSecondFirstTick = getFirstTickAtSimulationMilliseconds(report, 10_000);
+    expect(getTick(report, tenSecondFirstTick.tickNumber - 1)
+      .devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
         count: 2,
         perMinuteLimit: 12,
         rateWindowCount: 2,
       });
-    expect(report.ticks[201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    expect(tenSecondFirstTick.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
         count: 2,
         perMinuteLimit: 12,
         rateWindowCount: 0,
       });
-    expect(report.ticks[201]?.devices.admission?.channelRecipes.default?.recipeId)
+    expect(tenSecondFirstTick.devices.admission?.channelRecipes.default?.recipeId)
       .toBe("log_admission:dynamic-belt-transfer");
+    // AI-REMOVED 2026-09-08:
+    // Reason: 门禁和窗口边界改用整数毫秒相位定位，不再依赖 Legacy 数组索引与 tick 编号。
+    // Trigger: 用户要求统一使用 1s/0.5s 的语义时间，底层以毫秒表达。
+    // Evidence: 10 秒相位的第一 tick 在 Legacy 为 201，在 Dense 由 standardTickRate 推导。
+    // Replacement: expectedAdmissionToBeltTicks 与 tenSecondFirstTick。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
+    // expect(report.ticks[200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    // expect(report.ticks[201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    // expect(report.ticks[201]?.devices.admission?.channelRecipes.default?.recipeId)
   });
 
   it("applies total and ten-second rate limits independently", async () => {
@@ -99,7 +180,18 @@ describe("admission rule runtime counter", () => {
         perMinuteLimit: 12,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 260,
+      engineKind,
+      maxDurationSeconds: 13,
+      // AI-REMOVED 2026-09-08:
+      // Reason: 运行窗口改按业务时间表达，避免绑定 Legacy 的 20 TPS。
+      // Trigger: admission-rule 接入求解器矩阵。
+      // Evidence: 260 Legacy tick 等于 13 秒。
+      // Replacement: maxDurationSeconds: 13。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // maxTickNumber: 260,
     });
 
     const admissionToBeltTransfers = report.ticks.flatMap((tick) =>
@@ -111,7 +203,21 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
+    const expectedAdmissionToBeltTicks = [2_000, 4_000, 12_000].map(
+      (milliseconds) => getFirstTickAtSimulationMilliseconds(report, milliseconds).tickNumber,
+    );
+    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber))
+      .toEqual(expectedAdmissionToBeltTicks);
+    // AI-REMOVED 2026-09-08:
+    // Reason: 期望值改为 2000ms、4000ms、12000ms 相位下的第一 tick。
+    // Trigger: 用户要求门禁测试统一使用整数毫秒时间基准。
+    // Evidence: Legacy 下换算结果仍为 tick 41、81、241。
+    // Replacement: expectedAdmissionToBeltTicks。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
     expect(report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: 3,
@@ -130,7 +236,18 @@ describe("admission rule runtime counter", () => {
         perMinuteLimit: 6,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 2400,
+      engineKind,
+      maxDurationSeconds: 120,
+      // AI-REMOVED 2026-09-08:
+      // Reason: 一分钟滑窗测试应按两分钟业务时长运行，不绑定 Legacy tick 数。
+      // Trigger: admission-rule 接入求解器矩阵。
+      // Evidence: 2400 Legacy tick 等于 120 秒。
+      // Replacement: maxDurationSeconds: 120。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // maxTickNumber: 2400,
     });
 
     const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
@@ -148,7 +265,18 @@ describe("admission rule runtime counter", () => {
         limit: 5,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 80,
+      engineKind,
+      maxDurationSeconds: 4,
+      // AI-REMOVED 2026-09-08:
+      // Reason: 非匹配物品测试的观察窗口改按业务时间表达，不绑定 Legacy tick 数。
+      // Trigger: admission-rule 接入求解器矩阵。
+      // Evidence: 80 Legacy tick 等于 4 秒。
+      // Replacement: maxDurationSeconds: 4。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // maxTickNumber: 80,
     });
 
     expect(report.ticks.some((tick) =>

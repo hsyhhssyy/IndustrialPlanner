@@ -1,4 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
+// AI-REMOVED 2026-09-08:
+// Reason: describe 已由统一仿真引擎矩阵入口封装，保留本地导入会触发 ESLint unused-vars。
+// Trigger: runtime-slot-patch 接入 describeSimulationEngineMatrix。
+// Evidence: ESLint 报告 describe is defined but never used。
+// Replacement: src/tests/simulation/simulation-engine-matrix.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { describe, expect, it } from "vitest";
 
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -14,8 +24,9 @@ import {
   createBlueprint,
   createEntity,
 } from "./blueprint-test-helpers";
+import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
-describe("runtime slot patch", () => {
+describeSimulationEngineMatrix("runtime slot patch", (engineKind) => {
   it("patches current simulation slot state without persisting to initial config", async () => {
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
       createBlueprint("runtime-slot-patch", [
@@ -23,7 +34,10 @@ describe("runtime slot patch", () => {
       ]),
     ));
     const workspace = createWorkspace(documentStore);
-    const simulationHost = createSimulationHost(workspace, { workerMode: "runtime" });
+    const simulationHost = createSimulationHost(workspace, {
+      engineKind,
+      workerMode: "runtime",
+    });
 
     try {
       await simulationHost.actions.start();

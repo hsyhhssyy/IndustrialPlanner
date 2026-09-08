@@ -11,7 +11,16 @@ import type {
   WarehouseStatsReadModel,
 } from "@/domain/simulation/types/simulation-types";
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
-import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+// AI-REMOVED 2026-09-08:
+// Reason: Dense 不再私自合并基地内置实体，改用 Simulation 共享编译前文档入口。
+// Trigger: Legacy 与 Dense 对 invalidPlacement 的处理不一致。
+// Evidence: invalid-placement-compile 的 dense-v2 矩阵分支把越界传送带编入拓扑。
+// Replacement: src/simulation/simulation-document-preparation.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { createLogger } from "@/shared/logging/logger";
 import {
@@ -58,6 +67,10 @@ import {
   createSimulationDocumentHash,
 } from "./topology-compiler";
 import { createSimulationTopologyMigration } from "./topology-migration";
+import {
+  appendSimulationBaseBuiltinEntities,
+  prepareCurrentSimulationDocument,
+} from "./simulation-document-preparation";
 import type {
   CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
@@ -253,13 +266,23 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   });
 
   public readonly stop: SimulationContract["actions"]["stop"] = action(() => {
-    this.state.runningState = "stop";
-    this.playbackRemainderTicks = 0;
-    this.playbackTargetTickNumber = this.projection?.tickNumber ?? 0;
-    if (this.projection !== null && this.regionalSession === null) {
-      this.sendCommands([{ type: "stop" }]);
-    }
-    this.disposeRegionalSession();
+    this.reset();
+    // AI-REMOVED 2026-09-08:
+    // Reason: stop 只停止推进但保留 projection、topology 与迁移源，导致再次 start 迁移上次运行时数据。
+    // Trigger: 用户报告新版求解器停止后未清理数据；公共 Host 生命周期矩阵已覆盖该行为。
+    // Evidence: runtime-slot-patch 在 dense-v2 下停止并重启后仍保留 patch 的 11 个铜矿。
+    // Replacement: DenseSimulationController.reset（本方法上方调用）统一释放 Worker 会话与 Host 投影状态。
+    // Risk: Low；stop 的公共契约本就要求下一次 start 从文档初始配置启动。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.state.runningState = "stop";
+    // this.playbackRemainderTicks = 0;
+    // this.playbackTargetTickNumber = this.projection?.tickNumber ?? 0;
+    // if (this.projection !== null && this.regionalSession === null) {
+    //   this.sendCommands([{ type: "stop" }]);
+    // }
+    // this.disposeRegionalSession();
   });
 
   public readonly setSimulationSpeed: SimulationInternalAction["setSimulationSpeed"] = action((value) => {
@@ -444,6 +467,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         workspace: this.workspace,
       });
       const document = admission.document;
+      const currentBase = this.workspace.registry.baseDefinitions.find(
+        (definition) => definition.id === document.baseId,
+      );
+      const regionalResources = currentBase === undefined
+        || this.options.getRegionalResourceSettings === undefined
+        ? undefined
+        : normalizeRegionalResources(
+            this.options.getRegionalResourceSettings(currentBase.tag),
+          );
       const compiledTopology = compileSimulationTopology({
         document,
         registry: this.workspace.registry,
@@ -451,6 +483,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         simulationMode: this.state.simulationMode,
         activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
         standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+        ...(regionalResources === undefined ? {} : { regionalResources }),
       });
       const topology = appendUnknownEntityAdmissionDiagnostics(
         compiledTopology,
@@ -740,6 +773,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
             ? sourceDocument
             : (latestDocuments[index] ?? sourceDocument),
           workspace: this.workspace,
+          useCurrentEditorPlacementState: definition.id === sourceDocument.baseId,
         })
       );
       const regionalResources = normalizeRegionalResources(
@@ -1434,35 +1468,48 @@ function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] 
   });
 }
 
-function appendBaseBuiltinEntities(options: {
-  readonly document: WorldDocument;
-  readonly workspace: WorkspaceContract;
-}): WorldDocument {
-  const builtinEntities = resolveBaseBuiltinEntities({
-    baseDefinitions: options.workspace.registry.baseDefinitions,
-    baseId: options.document.baseId,
-  });
-  if (builtinEntities.length === 0) return options.document;
-  const builtinIds = new Set(builtinEntities.map((entity) => entity.id));
-  return {
-    ...options.document,
-    entities: {
-      ...options.document.entities,
-      ...Object.fromEntries(builtinEntities.map((entity) => [entity.id, entity])),
-    },
-    entityOrder: [
-      ...builtinEntities.map((entity) => entity.id),
-      ...options.document.entityOrder.filter((entityId) => !builtinIds.has(entityId)),
-    ],
-  };
-}
+// AI-REMOVED 2026-09-08:
+// Reason: Dense 私有的基地内置实体合并会绕开 Legacy 的 invalidPlacement 过滤，现统一到共享入口。
+// Trigger: invalid-placement-compile 的 dense-v2 矩阵分支把越界传送带编入拓扑。
+// Evidence: prepareDenseSimulationDocument 原先只调用该函数后执行未知定义准入。
+// Replacement: src/simulation/simulation-document-preparation.ts
+// Risk: Low；共享入口保留相同的内置实体顺序与覆盖语义。
+// Human Review: Required
+//
+// Original code:
+// function appendBaseBuiltinEntities(options: {
+//   readonly document: WorldDocument;
+//   readonly workspace: WorkspaceContract;
+// }): WorldDocument {
+//   const builtinEntities = resolveBaseBuiltinEntities({
+//     baseDefinitions: options.workspace.registry.baseDefinitions,
+//     baseId: options.document.baseId,
+//   });
+//   if (builtinEntities.length === 0) return options.document;
+//   const builtinIds = new Set(builtinEntities.map((entity) => entity.id));
+//   return {
+//     ...options.document,
+//     entities: {
+//       ...options.document.entities,
+//       ...Object.fromEntries(builtinEntities.map((entity) => [entity.id, entity])),
+//     },
+//     entityOrder: [
+//       ...builtinEntities.map((entity) => entity.id),
+//       ...options.document.entityOrder.filter((entityId) => !builtinIds.has(entityId)),
+//     ],
+//   };
+// }
 
 function prepareDenseSimulationDocument(options: {
   readonly document: WorldDocument;
   readonly workspace: WorkspaceContract;
+  readonly useCurrentEditorPlacementState?: boolean;
 }): ReturnType<typeof admitWorldDocumentForSimulation> {
+  const document = options.useCurrentEditorPlacementState === false
+    ? appendSimulationBaseBuiltinEntities(options)
+    : prepareCurrentSimulationDocument(options);
   const admission = admitWorldDocumentForSimulation({
-    document: appendBaseBuiltinEntities(options),
+    document,
     entityDefinitions: options.workspace.registry.entityDefinitions,
   });
   if (admission.excludedIssues.length > 0) {

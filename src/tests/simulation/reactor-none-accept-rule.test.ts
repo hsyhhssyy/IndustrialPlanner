@@ -6,10 +6,23 @@ import {
   createBlueprint,
   createEntity,
   getDevice,
+  getLastTick,
 } from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-describe("reactor output port acceptRule: none blocks output", () => {
-  const TICK_COUNT = 1;
+describe.each(SIMULATION_ENGINE_MATRIX)(
+  "reactor output port acceptRule: none blocks output [%s]",
+  (engineKind) => {
+  // AI-REMOVED 2026-09-08:
+  // Reason: TICK_COUNT=1 在两个引擎中代表不同仿真时长。
+  // Trigger: reactor none accept rule 纳入全引擎矩阵。
+  // Evidence: 用例验证首个 0.5 秒观察窗口内不存在任何物流边。
+  // Replacement: maxDurationSeconds: 0.5 与 getLastTick。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const TICK_COUNT = 1;
 
   it("blocks all transfer when no output port config is set", async () => {
     const registry = createRegistryContract();
@@ -32,7 +45,8 @@ describe("reactor output port acceptRule: none blocks output", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: TICK_COUNT,
+      maxDurationSeconds: 0.5,
+      engineKind,
       registry,
     });
 
@@ -40,7 +54,8 @@ describe("reactor output port acceptRule: none blocks output", () => {
     expect(report.summary.totalTransferCount).toBe(0);
     expect(report.summary.transportComponentThroughput.length).toBe(0);
 
-    const reactorTick = getDevice(report, TICK_COUNT, "reactor");
+    const reactorTick = getDevice(report, getLastTick(report).tickNumber, "reactor");
     expect(reactorTick).toBeDefined();
   });
-});
+  },
+);

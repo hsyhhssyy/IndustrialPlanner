@@ -2,19 +2,40 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+// AI-REMOVED 2026-09-08:
+// Reason: 70 秒运行与最近一分钟窗口改用累计仿真秒数，不再绑定 Legacy 20 TPS。
+// Trigger: dark pipe throughput 纳入全引擎矩阵。
+// Evidence: 吞吐契约以 per-minute 定义。
+// Replacement: elapsedSimulationSeconds 与 FINAL_DURATION_SECONDS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
   getDevice,
+  getLastTick,
 } from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 const ITEM_ID = "item_liquid_xiranite";
 const ADMISSION_COUNTER_ID = "fluid_input:in_w";
-const FINAL_TICK = 70 * STANDARD_TICK_RATE_PER_SECOND;
+const FINAL_DURATION_SECONDS = 70;
+// AI-REMOVED 2026-09-08:
+// Reason: FINAL_TICK 绑定 Legacy tick 编号。
+// Trigger: dark pipe throughput 纳入全引擎矩阵。
+// Evidence: 测试只要求 70 秒后的最近一分钟吞吐。
+// Replacement: FINAL_DURATION_SECONDS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const FINAL_TICK = 70 * STANDARD_TICK_RATE_PER_SECOND;
 
-describe("dark pipe linked throughput", () => {
+describe.each(SIMULATION_ENGINE_MATRIX)("dark pipe linked throughput [%s]", (engineKind) => {
   it("keeps a linked single-port dark pipe at 120 fluid per minute in both directions", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint(
@@ -33,7 +54,8 @@ describe("dark pipe linked throughput", () => {
         ],
         [createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" })],
       ),
-      maxTickNumber: FINAL_TICK,
+      maxDurationSeconds: FINAL_DURATION_SECONDS,
+      engineKind,
       registry: createRegistryContract(),
     });
 
@@ -84,7 +106,8 @@ describe("dark pipe linked throughput", () => {
         ],
         [createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" })],
       ),
-      maxTickNumber: FINAL_TICK,
+      maxDurationSeconds: FINAL_DURATION_SECONDS,
+      engineKind,
       registry: createRegistryContract(),
     });
 
@@ -123,7 +146,7 @@ function readOneMinuteCount(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,
   deviceId: string,
 ): number | undefined {
-  return getDevice(report, FINAL_TICK, deviceId)
+  return getDevice(report, getLastTick(report).tickNumber, deviceId)
     .admissionCounters?.[ADMISSION_COUNTER_ID]?.oneMinuteCount;
 }
 
@@ -131,9 +154,9 @@ function countRecentOutputTransfers(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,
   outletEntityId: string,
 ): number {
-  const windowStartTick = FINAL_TICK - (60 * STANDARD_TICK_RATE_PER_SECOND);
+  const windowStartSeconds = getLastTick(report).elapsedSimulationSeconds - 60;
   return report.ticks.reduce((total, tick) => {
-    if (tick.tickNumber <= windowStartTick) {
+    if (tick.elapsedSimulationSeconds <= windowStartSeconds) {
       return total;
     }
     return total + tick.transfers.reduce((tickTotal, transfer) =>

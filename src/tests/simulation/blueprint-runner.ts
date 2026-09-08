@@ -10,6 +10,7 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 import {
   createSimulationHost,
+  SUPPORTED_SIMULATION_ENGINE_KINDS,
   type SimulationEngineKind,
 } from "@/simulation/simulation-host";
 // AI-REMOVED 2026-09-04:
@@ -31,10 +32,7 @@ import type {
 
 type TransportClassSummary = "strict-belt" | "strict-pipe";
 
-export const BLUEPRINT_SIMULATION_ENGINE_KINDS = [
-  "legacy",
-  "dense-v2",
-] as const satisfies readonly SimulationEngineKind[];
+export const BLUEPRINT_SIMULATION_ENGINE_KINDS = SUPPORTED_SIMULATION_ENGINE_KINDS;
 
 export interface RunBlueprintSimulationOptions {
   readonly blueprint: BlueprintDocument;
@@ -77,6 +75,8 @@ export interface BlueprintSimulationReport {
 
 export interface BlueprintSimulationTickReport {
   readonly tickNumber: number;
+  /** 从初始快照起累计的仿真时间，不依赖具体引擎的 tick rate。 */
+  readonly elapsedSimulationSeconds: number;
   readonly status: RuntimeTickSnapshot["status"];
   readonly totalPowerDemand: number;
   readonly transferCount: number;
@@ -179,7 +179,16 @@ export async function runBlueprintSimulation(
     let tickReportTotal = 0;
     let tickNumber = 0;
     let elapsedSimulationSeconds = 0;
-    let previousDurationSnapshot: RuntimeTickSnapshot | null = null;
+    // AI-REMOVED 2026-09-08:
+    // Reason: 逐区间累加浮点秒数会在整秒边界产生精度漂移。
+    // Trigger: 60 秒吞吐窗口在 Legacy 下错误包含边界 tick，结果多计一次传输。
+    // Evidence: tick 200 到 tick 1400 的理论窗口为 10..70 秒，累计值使 tick 200 小于理论 10 秒。
+    // Replacement: 每个快照直接以 tickNumber / standardTickRate 计算标准时间坐标。
+    // Risk: Low；standardTickRate 是本次编译拓扑固定的标准 tick 坐标基准。
+    // Human Review: Required
+    //
+    // Original code:
+    // let previousDurationSnapshot: RuntimeTickSnapshot | null = null;
     while (true) {
       const tTickStart = performance.now();
       const tickStatus = await host.internalActions.syncToTick(tickNumber);
@@ -194,23 +203,39 @@ export async function runBlueprintSimulation(
         throw new Error(`Simulation produced no snapshot for tick ${tickNumber}.`);
       }
 
-      if (options.maxDurationSeconds !== undefined && previousDurationSnapshot !== null) {
-        const intervalSeconds = (
-          snapshot.tickNumber - previousDurationSnapshot.tickNumber
-        ) / previousDurationSnapshot.standardTickRate;
-        if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-          throw new Error(
-            `Simulation produced invalid interval ${previousDurationSnapshot.tickNumber}..${snapshot.tickNumber}.`,
-          );
-        }
-        elapsedSimulationSeconds += intervalSeconds;
+      elapsedSimulationSeconds = snapshot.tickNumber / snapshot.standardTickRate;
+      if (!Number.isFinite(elapsedSimulationSeconds) || elapsedSimulationSeconds < 0) {
+        throw new Error(
+          `Simulation tick ${snapshot.tickNumber} exposes invalid standardTickRate=${snapshot.standardTickRate}.`,
+        );
       }
+      // AI-REMOVED 2026-09-08:
+      // Reason: 逐区间累加浮点秒数会放大舍入误差，不能作为时间窗口的精确边界。
+      // Trigger: Legacy 的暗管吞吐测试在 60 秒窗口中多计一个边界 tick。
+      // Evidence: 累计得到的窗口起点略小于 10 秒，导致理论上应排除的 tick 200 被纳入。
+      // Replacement: 上方以 snapshot.tickNumber / snapshot.standardTickRate 直接计算。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (previousDurationSnapshot !== null) {
+      //   const intervalSeconds = (
+      //     snapshot.tickNumber - previousDurationSnapshot.tickNumber
+      //   ) / previousDurationSnapshot.standardTickRate;
+      //   if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+      //     throw new Error(
+      //       `Simulation produced invalid interval ${previousDurationSnapshot.tickNumber}..${snapshot.tickNumber}.`,
+      //     );
+      //   }
+      //   elapsedSimulationSeconds += intervalSeconds;
+      // }
 
       const tReportStart = performance.now();
       ticks.push(createTickReport({
         host,
         snapshot,
         sourceEntityIds,
+        elapsedSimulationSeconds,
       }));
       tickReportTotal += performance.now() - tReportStart;
 
@@ -222,6 +247,16 @@ export async function runBlueprintSimulation(
         if (tickNumber >= options.maxTickNumber) {
           break;
         }
+        // AI-REMOVED 2026-09-08:
+        // Reason: 时间坐标不再依赖相邻快照。
+        // Trigger: 修复累计秒数的浮点边界漂移。
+        // Evidence: 当前快照的标准 tick 坐标已能独立确定 elapsedSimulationSeconds。
+        // Replacement: snapshot.tickNumber / snapshot.standardTickRate。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // previousDurationSnapshot = snapshot;
         tickNumber += 1;
         continue;
       }
@@ -237,7 +272,16 @@ export async function runBlueprintSimulation(
           `Simulation tick ${snapshot.tickNumber} exposes incompatible standardTickRate=${snapshot.standardTickRate} and tickRate=${snapshot.tickRate}.`,
         );
       }
-      previousDurationSnapshot = snapshot;
+      // AI-REMOVED 2026-09-08:
+      // Reason: 时间坐标不再依赖相邻快照。
+      // Trigger: 修复累计秒数的浮点边界漂移。
+      // Evidence: 当前快照的标准 tick 坐标已能独立确定 elapsedSimulationSeconds。
+      // Replacement: snapshot.tickNumber / snapshot.standardTickRate。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // previousDurationSnapshot = snapshot;
       tickNumber = snapshot.tickNumber + standardStepTicks;
     }
 
@@ -282,14 +326,17 @@ export async function runBlueprintSimulation(
 
 function resolveBlueprintSimulationEngineKind(): SimulationEngineKind {
   const configured = process.env.SIMULATION_TEST_ENGINE;
-  if (configured === undefined || configured === "" || configured === "legacy") {
+  if (configured === undefined || configured === "") {
     return "legacy";
   }
-  if (configured === "dense-v2") {
-    return configured;
+  const engineKind = SUPPORTED_SIMULATION_ENGINE_KINDS.find(
+    (candidate) => candidate === configured,
+  );
+  if (engineKind !== undefined) {
+    return engineKind;
   }
   throw new Error(
-    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected "legacy" or "dense-v2".`,
+    `Unsupported SIMULATION_TEST_ENGINE "${configured}"; expected one of: ${SUPPORTED_SIMULATION_ENGINE_KINDS.join(", ")}.`,
   );
 }
 
@@ -329,6 +376,7 @@ function createTickReport(options: {
   readonly host: ReturnType<typeof createSimulationHost>;
   readonly snapshot: RuntimeTickSnapshot;
   readonly sourceEntityIds: readonly string[];
+  readonly elapsedSimulationSeconds: number;
 }): BlueprintSimulationTickReport {
   const devices: Record<string, SimulationDeviceRuntimeStatusReadModel> = {};
 
@@ -365,6 +413,7 @@ function createTickReport(options: {
 
   return {
     tickNumber: options.snapshot.tickNumber,
+    elapsedSimulationSeconds: options.elapsedSimulationSeconds,
     status: options.snapshot.status,
     totalPowerDemand: options.snapshot.totalPowerDemand,
     transferCount: options.snapshot.transfers.length,

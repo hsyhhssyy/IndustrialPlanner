@@ -1,15 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-08:
+// Reason: 30 秒产线观察窗口不应换算为 Legacy 固定 tick 数。
+// Trigger: xiranite production chain 纳入全引擎矩阵。
+// Evidence: 用例标题和业务目标均直接声明 30 秒。
+// Replacement: maxDurationSeconds 与 getLastTick。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+import { createBlueprint, createEntity, getDevice, getLastTick } from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 // 重息壤产线验证：水泵 + 暗管(水/污水) → 混合池B(息壤+水→液化息壤)
 // → 混合池C(液化息壤+污水→废液) → 希壤炉(息壤+废液→重息壤)
 // 本测试通过 initialItemType 预种流体，跳过管道布线，聚焦配方链正确性。
 
-describe("重息壤产线配方链验证", () => {
-  const MAX_TICK = 30 * STANDARD_TICK_RATE_PER_SECOND; // 30 秒
+describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (engineKind) => {
+  const MAX_DURATION_SECONDS = 30;
+  // AI-CORRECTION 2026-09-08: 30 秒现直接作为仿真时长，不再换算为固定引擎 tick。
+  // AI-REMOVED 2026-09-08:
+  // Reason: MAX_TICK 绑定 Legacy 20 TPS，Dense 的同一时长具有不同 tick 编号。
+  // Trigger: xiranite production chain 纳入全引擎矩阵。
+  // Evidence: Blueprint runner 已累计 elapsedSimulationSeconds。
+  // Replacement: MAX_DURATION_SECONDS。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const MAX_TICK = 30 * STANDARD_TICK_RATE_PER_SECOND; // 30 秒
 
   it("步骤1: 混合池 — 息壤+水→液化息壤", { timeout: 300_000 }, async () => {
     const registry = createRegistryContract();
@@ -27,13 +48,14 @@ describe("重息壤产线配方链验证", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: MAX_TICK,
+      maxDurationSeconds: MAX_DURATION_SECONDS,
+      engineKind,
       registry,
     });
 
     // 30秒后验证：息壤+水→液化息壤 (immediate-consume, 2s/次)
     // immediate-consume 配方在 progress=0% 立即消耗原料，产物写入同一 buffer 的空槽
-    const slotItems = getDevice(report, MAX_TICK, "pool").slotItems;
+    const slotItems = getDevice(report, getLastTick(report).tickNumber, "pool").slotItems;
     console.log("[step1] 30s 槽位:", JSON.stringify(slotItems));
 
     const liquidXiraniteSlot = slotItems.find(s => s.itemType === "item_liquid_xiranite");
@@ -59,12 +81,13 @@ describe("重息壤产线配方链验证", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: MAX_TICK,
+      maxDurationSeconds: MAX_DURATION_SECONDS,
+      engineKind,
       registry,
     });
 
     // immediate-consume: 原料立即消耗，产物写入空槽
-    const slotItems = getDevice(report, MAX_TICK, "pool").slotItems;
+    const slotItems = getDevice(report, getLastTick(report).tickNumber, "pool").slotItems;
     console.log("[step2] 30s 槽位:", JSON.stringify(slotItems));
 
     const polySlot = slotItems.find(s => s.itemType === "item_liquid_xiranite_poly");
@@ -94,11 +117,12 @@ describe("重息壤产线配方链验证", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: MAX_TICK,
+      maxDurationSeconds: MAX_DURATION_SECONDS,
+      engineKind,
       registry,
     });
 
-    const slotItems = getDevice(report, MAX_TICK, "oven").slotItems;
+    const slotItems = getDevice(report, getLastTick(report).tickNumber, "oven").slotItems;
     console.log("[step3] 30s 槽位:", JSON.stringify(slotItems));
 
     const enrSlot = slotItems.find(s => s.itemType === "item_xiranite_enr_powder");

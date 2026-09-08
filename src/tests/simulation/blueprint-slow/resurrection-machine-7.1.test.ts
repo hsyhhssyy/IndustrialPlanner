@@ -9,6 +9,7 @@ import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { BLUEPRINT_SIMULATION_ENGINE_KINDS } from "../blueprint-runner";
 
 const BLUEPRINT_PATH = resolve(process.cwd(), "public/blueprints/resurrection-machine-7.1.json");
 
@@ -24,7 +25,19 @@ const SIMULATION_SPEED = 16;
 const POWER_OVERRIDE_KW = 900;
 
 // 由 vitest blueprint-slow project 承载，独立串行执行。
-describe("起死回生机7.1 - 覆盖电力900kW发电量验证", () => {
+// AI-REMOVED 2026-09-08:
+// Reason: 公共蓝图运行结果必须由所有受支持的仿真引擎共同验证。
+// Trigger: 用户要求把所有应加入矩阵的测试加入矩阵，即使当前失败。
+// Evidence: 本用例通过 SimulationHost 运行 public/blueprints/resurrection-machine-7.1.json，不依赖特定引擎内部结构。
+// Replacement: 下方 BLUEPRINT_SIMULATION_ENGINE_KINDS 参数化 describe。
+// Risk: Dense 在长时间推进或发电量结果上可能暴露尚未修复的差异，且慢测耗时约翻倍。
+// Human Review: Required
+//
+// Original code:
+// describe("起死回生机7.1 - 覆盖电力900kW发电量验证", () => {
+describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
+  "起死回生机7.1 - 覆盖电力900kW发电量验证 [%s]",
+  (engineKind) => {
   it(
     "预热2小时后，接下来2小时平均发电量在850~950kW之间",
     { timeout: 1_800_000 },
@@ -53,7 +66,10 @@ describe("起死回生机7.1 - 覆盖电力900kW发电量验证", () => {
         sync: null,
       };
 
-      const host = createSimulationHost(workspace, { workerMode: "runtime" });
+      const host = createSimulationHost(workspace, {
+        engineKind,
+        workerMode: "runtime",
+      });
 
       try {
         // 启动仿真（此时为 infinite 电力模式）
@@ -125,4 +141,5 @@ describe("起死回生机7.1 - 覆盖电力900kW发电量验证", () => {
       }
     },
   );
-});
+  },
+);

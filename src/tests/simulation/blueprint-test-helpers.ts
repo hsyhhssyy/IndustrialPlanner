@@ -77,6 +77,119 @@ export function getTick(
   return tick;
 }
 
+export function resolveFirstTickNumberAtSimulationMilliseconds(
+  standardTickRate: number,
+  elapsedMilliseconds: number,
+): number {
+  if (!Number.isSafeInteger(standardTickRate) || standardTickRate <= 0) {
+    throw new Error(
+      `Expected standardTickRate to be a positive safe integer, received: ${standardTickRate}.`,
+    );
+  }
+  if (!Number.isSafeInteger(elapsedMilliseconds) || elapsedMilliseconds < 0) {
+    throw new Error(
+      `Expected elapsedMilliseconds to be a non-negative safe integer, received: ${elapsedMilliseconds}.`,
+    );
+  }
+
+  const scaledTickOffset = elapsedMilliseconds * standardTickRate;
+  if (
+    !Number.isSafeInteger(scaledTickOffset)
+    || scaledTickOffset % 1_000 !== 0
+  ) {
+    throw new Error(
+      `Simulation time ${elapsedMilliseconds}ms is not exactly representable at ${standardTickRate} TPS.`,
+    );
+  }
+
+  return (scaledTickOffset / 1_000) + 1;
+}
+
+export function resolveSimulationMillisecondsAtFirstTick(
+  standardTickRate: number,
+  tickNumber: number,
+): number {
+  if (!Number.isSafeInteger(standardTickRate) || standardTickRate <= 0) {
+    throw new Error(
+      `Expected standardTickRate to be a positive safe integer, received: ${standardTickRate}.`,
+    );
+  }
+  if (!Number.isSafeInteger(tickNumber) || tickNumber < 1) {
+    throw new Error(`Expected tickNumber to be a positive safe integer, received: ${tickNumber}.`);
+  }
+
+  const scaledMilliseconds = (tickNumber - 1) * 1_000;
+  if (
+    !Number.isSafeInteger(scaledMilliseconds)
+    || scaledMilliseconds % standardTickRate !== 0
+  ) {
+    throw new Error(
+      `Simulation tick ${tickNumber} is not an exact first-tick millisecond phase at ${standardTickRate} TPS.`,
+    );
+  }
+
+  return scaledMilliseconds / standardTickRate;
+}
+
+/**
+ * 返回指定仿真毫秒相位下的第一个执行 tick。
+ * tick 1 是 0ms 相位，因此 Legacy 20 TPS 下 500ms/1000ms 分别对应 tick 11/21。
+ */
+export function getFirstTickAtSimulationMilliseconds(
+  report: BlueprintSimulationReport,
+  elapsedMilliseconds: number,
+): BlueprintSimulationTickReport {
+  return getTick(
+    report,
+    resolveFirstTickNumberAtSimulationMilliseconds(
+      report.topology.standardTickRate,
+      elapsedMilliseconds,
+    ),
+  );
+  // AI-REMOVED 2026-09-08:
+  // Reason: 整数毫秒到第一 tick 的换算需要同时供 Blueprint report 与直接 Host 测试复用。
+  // Trigger: 用户要求把 Legacy Worker 门禁测试改为公共 Host 行为矩阵。
+  // Evidence: Host 测试只有 topology.standardTickRate，没有 BlueprintSimulationReport。
+  // Replacement: resolveFirstTickNumberAtSimulationMilliseconds。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (!Number.isSafeInteger(elapsedMilliseconds) || elapsedMilliseconds < 0) {
+  //   throw new Error(
+  //     `Expected elapsedMilliseconds to be a non-negative safe integer, received: ${elapsedMilliseconds}.`,
+  //   );
+  // }
+  // const scaledTickOffset = elapsedMilliseconds * report.topology.standardTickRate;
+  // if (!Number.isSafeInteger(scaledTickOffset) || scaledTickOffset % 1_000 !== 0) {
+  //   throw new Error(
+  //     `Simulation time ${elapsedMilliseconds}ms is not exactly representable at ${report.topology.standardTickRate} TPS.`,
+  //   );
+  // }
+  // return getTick(report, (scaledTickOffset / 1_000) + 1);
+}
+
+export function getLastTick(
+  report: BlueprintSimulationReport,
+): BlueprintSimulationTickReport {
+  const tick = report.ticks.at(-1);
+  if (tick === undefined) {
+    throw new Error("Expected at least one captured simulation tick.");
+  }
+  return tick;
+}
+
+export function findFirstTick(
+  report: BlueprintSimulationReport,
+  predicate: (tick: BlueprintSimulationTickReport) => boolean,
+): BlueprintSimulationTickReport {
+  const tick = report.ticks.find(predicate);
+  if (tick === undefined) {
+    throw new Error("Expected a simulation tick matching the requested business state.");
+  }
+  return tick;
+}
+
 export function getDevice(
   report: BlueprintSimulationReport,
   tickNumber: number,

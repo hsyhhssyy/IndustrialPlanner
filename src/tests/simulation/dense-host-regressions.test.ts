@@ -10,22 +10,25 @@ import {
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import type { SimulationEngineKind } from "@/simulation/simulation-host";
 
 import {
   createBlueprint,
   createEntity,
   createWorldDocumentFromBlueprint,
 } from "./blueprint-test-helpers";
-
-const CONTRACT_ENGINE_KINDS = ["legacy", "dense-v2"] as const satisfies readonly SimulationEngineKind[];
+import {
+  describeSimulationEngineMatrix,
+  SIMULATION_ENGINE_MATRIX,
+} from "./simulation-engine-matrix";
 
 describe("ST2-RQ-023 dense host regressions", () => {
   it.each([
     { requestedEngineKind: undefined, expectedEngineKind: "legacy" },
-    { requestedEngineKind: "legacy", expectedEngineKind: "legacy" },
-    { requestedEngineKind: "dense-v2", expectedEngineKind: "dense-v2" },
-  ] as const)(
+    ...SIMULATION_ENGINE_MATRIX.map((engineKind) => ({
+      requestedEngineKind: engineKind,
+      expectedEngineKind: engineKind,
+    })),
+  ])(
     "reports $expectedEngineKind as the current engine for $requestedEngineKind selection",
     ({ requestedEngineKind, expectedEngineKind }) => {
       const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
@@ -50,7 +53,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     },
   );
 
-  describe.each(CONTRACT_ENGINE_KINDS)("%s topology refresh contract", (engineKind) => {
+  describeSimulationEngineMatrix("topology refresh contract", (engineKind) => {
     it("preserves existing inventory and recipe progress when adding an unrelated building", async () => {
       const document = createWorldDocumentFromBlueprint(createBlueprint(
         `topology-add-${engineKind}`,

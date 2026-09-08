@@ -1,13 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+// AI-REMOVED 2026-09-08:
+// Reason: 8 秒提纯观察窗口改为直接使用仿真秒数，不再绑定 Legacy 20 TPS。
+// Trigger: 提纯机输出过滤蓝图测试纳入全引擎矩阵。
+// Evidence: 断言只读取八秒后的业务状态和期间发生的传输。
+// Replacement: maxDurationSeconds 与 getLastTick。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
   findSlotWithItem,
+  getLastTick,
 } from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 type LiquidPurifierRecipeCase = {
   readonly name: string;
@@ -18,7 +29,17 @@ type LiquidPurifierRecipeCase = {
 };
 
 const LIQUID_PURIFIER_ENTITY_ID = "liquid_purifier_1";
-const FINAL_TICK = 8 * STANDARD_TICK_RATE_PER_SECOND;
+const FINAL_DURATION_SECONDS = 8;
+// AI-REMOVED 2026-09-08:
+// Reason: FINAL_TICK 绑定 Legacy tick 编号。
+// Trigger: 提纯机输出过滤蓝图测试纳入全引擎矩阵。
+// Evidence: 同一八秒观察窗口在 Dense 中对应不同 tick 编号。
+// Replacement: FINAL_DURATION_SECONDS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const FINAL_TICK = 8 * STANDARD_TICK_RATE_PER_SECOND;
 
 const RECIPE_CASES: readonly LiquidPurifierRecipeCase[] = [
   {
@@ -37,6 +58,10 @@ const RECIPE_CASES: readonly LiquidPurifierRecipeCase[] = [
   },
 ];
 
+const RECIPE_ENGINE_CASES = SIMULATION_ENGINE_MATRIX.flatMap((engineKind) =>
+  RECIPE_CASES.map((recipeCase) => ({ engineKind, recipeCase }))
+);
+
 describe("提纯机输出端口物品级过滤", () => {
   // TODO: demo 配方引入后 RECIPE_CASES 未同步更新，临时 skip，正式更新时恢复
   // AI-CORRECTION 2026-07-16: 按要求恢复执行，用于暴露 RECIPE_CASES 与 registry 的差异。
@@ -49,7 +74,9 @@ describe("提纯机输出端口物品级过滤", () => {
       .sort()).toEqual(RECIPE_CASES.map((recipeCase) => recipeCase.recipeId).sort());
   });
 
-  it.each(RECIPE_CASES)("$name 的两个输出端口只输出各自允许的液体", async (recipeCase) => {
+  it.each(RECIPE_ENGINE_CASES)(
+    "$engineKind: $recipeCase.name 的两个输出端口只输出各自允许的液体",
+    async ({ engineKind, recipeCase }) => {
     const registry = createRegistryContract();
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint(`liquid-purifier-output-filter-${recipeCase.inputItemId}`, [
@@ -68,23 +95,26 @@ describe("提纯机输出端口物品级过滤", () => {
           inputItemId: recipeCase.inputItemId,
         }),
       ]),
-      maxTickNumber: FINAL_TICK,
+      maxDurationSeconds: FINAL_DURATION_SECONDS,
+      engineKind,
       registry,
     });
+    const finalTick = getLastTick(report).tickNumber;
     const leftTransferredItems = collectTransferredItemsFromDevice(report, "left-only-purifier");
     const rightTransferredItems = collectTransferredItemsFromDevice(report, "right-only-purifier");
 
     expect(report.topology.diagnostics).toEqual([]);
     expect(leftTransferredItems).toContain(recipeCase.leftOutputItemId);
     expect(leftTransferredItems).not.toContain(recipeCase.rightOutputItemId);
-    expect(findSlotWithItem(report, FINAL_TICK, "left-only-purifier", recipeCase.rightOutputItemId))
+    expect(findSlotWithItem(report, finalTick, "left-only-purifier", recipeCase.rightOutputItemId))
       .toMatchObject({ count: 1 });
 
     expect(rightTransferredItems).toContain(recipeCase.rightOutputItemId);
     expect(rightTransferredItems).not.toContain(recipeCase.leftOutputItemId);
-    expect(findSlotWithItem(report, FINAL_TICK, "right-only-purifier", recipeCase.leftOutputItemId))
+    expect(findSlotWithItem(report, finalTick, "right-only-purifier", recipeCase.leftOutputItemId))
       .toMatchObject({ count: 1 });
-  });
+    },
+  );
 });
 
 function createSingleConnectedPortEntities(options: {

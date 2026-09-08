@@ -3,14 +3,20 @@ import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+import {
+  createBlueprint,
+  createEntity,
+  findFirstTick,
+  getDevice,
+} from "./blueprint-test-helpers";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 const CHRONO_RECIPE_ID =
   "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large";
 const LIQUID_XIRANITE_RECIPE_ID =
   "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large";
 
-describe("反应池 Recipe Channel 模式", () => {
+describe.each(SIMULATION_ENGINE_MATRIX)("反应池 Recipe Channel 模式 [%s]", (engineKind) => {
   it("keeps old entities and blueprints manual when the mode config is absent", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("legacy-reactor-manual-mode", [
@@ -20,11 +26,17 @@ describe("反应池 Recipe Channel 模式", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: 1,
+      maxDurationSeconds: 0.5,
+      engineKind,
       registry: createRegistryContract(),
     });
 
-    const runningRecipes = readRunningRecipeIds(getDevice(report, 1, "reactor").channelRecipes);
+    const runningTick = findFirstTick(report, (tick) =>
+      readRunningRecipeIds(tick.devices.reactor?.channelRecipes ?? {}).length > 0
+    );
+    const runningRecipes = readRunningRecipeIds(
+      getDevice(report, runningTick.tickNumber, "reactor").channelRecipes,
+    );
     expect(runningRecipes).toEqual([LIQUID_XIRANITE_RECIPE_ID]);
   });
 
@@ -44,11 +56,17 @@ describe("反应池 Recipe Channel 模式", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: 1,
+      maxDurationSeconds: 0.5,
+      engineKind,
       registry: createRegistryContract(),
     });
 
-    const runningRecipes = readRunningRecipeIds(getDevice(report, 1, "reactor").channelRecipes);
+    const runningTick = findFirstTick(report, (tick) =>
+      readRunningRecipeIds(tick.devices.reactor?.channelRecipes ?? {}).length > 0
+    );
+    const runningRecipes = readRunningRecipeIds(
+      getDevice(report, runningTick.tickNumber, "reactor").channelRecipes,
+    );
     expect(new Set(runningRecipes)).toEqual(new Set([
       CHRONO_RECIPE_ID,
       LIQUID_XIRANITE_RECIPE_ID,
@@ -65,11 +83,15 @@ describe("反应池 Recipe Channel 模式", () => {
         }),
         createEntity("power", "power_diffuser_1", 6, 0),
       ]),
-      maxTickNumber: 1,
+      maxDurationSeconds: 0.5,
+      engineKind,
       registry: createRegistryContract(),
     });
 
-    expect(readRunningRecipeIds(getDevice(report, 1, "reactor").channelRecipes))
+    const runningTick = findFirstTick(report, (tick) =>
+      readRunningRecipeIds(tick.devices.reactor?.channelRecipes ?? {}).length > 0
+    );
+    expect(readRunningRecipeIds(getDevice(report, runningTick.tickNumber, "reactor").channelRecipes))
       .toEqual([LIQUID_XIRANITE_RECIPE_ID]);
   });
 });

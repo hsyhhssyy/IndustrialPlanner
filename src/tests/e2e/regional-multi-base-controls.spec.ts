@@ -5,6 +5,12 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
 }) => {
   test.setTimeout(60_000);
   await page.addInitScript(() => {
+    localStorage.setItem("v3-user-settings-dialog", JSON.stringify({
+      selectedGroupId: "experimental",
+      values: {
+        "other-experimental-features": true,
+      },
+    }));
     localStorage.setItem("v3-experimental-regional-multi-base", "true");
   });
   await page.goto("/");

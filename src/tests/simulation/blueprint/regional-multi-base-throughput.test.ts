@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { BLUEPRINT_SIMULATION_ENGINE_KINDS } from "../blueprint-runner";
-import { loadBlueprintFromFile } from "../blueprint-test-helpers";
+import {
+  loadBlueprintFromFile,
+  resolveFirstTickNumberAtSimulationMilliseconds,
+} from "../blueprint-test-helpers";
 import { runRegionalBlueprintSimulation } from "../regional-blueprint-runner";
 
 const BLUEPRINT_PATH = "public/blueprints/v1.4-4-core-xiranite.json";
@@ -32,9 +35,10 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
         placementsByBaseId: Object.fromEntries(
           wulingBaseIds.map((baseId) => [baseId, [{ blueprint }]]),
         ),
-        captureSeconds: Array.from(
+        captureMilliseconds: Array.from(
           { length: OBSERVATION_MINUTES },
-          (_value, index) => (WARMUP_MINUTES + index + 1) * SECONDS_PER_MINUTE,
+          (_value, index) =>
+            (WARMUP_MINUTES + index + 1) * SECONDS_PER_MINUTE * 1_000,
         ),
         untilSeconds: (WARMUP_MINUTES + OBSERVATION_MINUTES) * SECONDS_PER_MINUTE,
         timeoutMs: 90_000,
@@ -42,9 +46,10 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
     });
 
     for (let minute = 1; minute <= OBSERVATION_MINUTES; minute += 1) {
-      const targetTickNumber = (WARMUP_MINUTES + minute)
-        * SECONDS_PER_MINUTE
-        * report.standardTickRate;
+      const targetTickNumber = resolveFirstTickNumberAtSimulationMilliseconds(
+        report.standardTickRate,
+        (WARMUP_MINUTES + minute) * SECONDS_PER_MINUTE * 1_000,
+      );
       const capture = report.captures.find(
         (candidate) => candidate.requestedTickNumber === targetTickNumber,
       );
