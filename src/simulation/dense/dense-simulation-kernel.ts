@@ -1250,7 +1250,21 @@ export class DenseSimulationKernel {
   private prepareRoutingBuckets(): void {
     this.routingBucketHeads.fill(DENSE_INDEX_NONE);
     this.routingEdgeNextIndexes.fill(DENSE_INDEX_NONE);
-    for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
+    // AI-REMOVED 2026-09-09:
+    // Reason: 正序遍历配合链表头插会反转 topology edgeOrder，使同一物理端口绑定的存储槽按 6→1 选择。
+    // Trigger: 协议存储箱三路同 tick 穿透必须只使用 storage_slot_1，Dense 实际从 storage_slot_6 开始。
+    // Evidence: 定向测试在 1000ms 门禁 tick 的 transfer 指向 device:storage/node:storage_slot_6.input-view；edgeOrder 原本按槽组 1→6 编译。
+    // Replacement: 下方逆序遍历后头插，保持 bucket 内 topology edgeOrder。
+    // Risk: Medium；统一修正所有共享物理端口多 Node 边的选择顺序。
+    // Human Review: Required
+    //
+    // Original code:
+    // for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
+    for (
+      let edgeIndex = this.layout.dictionary.edgeIds.length - 1;
+      edgeIndex >= 0;
+      edgeIndex -= 1
+    ) {
       const sourceRank = this.resolveEdgeRoutingRank(edgeIndex, true);
       const targetRank = this.resolveEdgeRoutingRank(edgeIndex, false);
       const bucketIndex = sourceRank * this.maxRoutingGroupPortCount + targetRank;

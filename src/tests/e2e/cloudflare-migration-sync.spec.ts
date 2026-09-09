@@ -28,6 +28,7 @@ interface BrowserSyncState {
   readonly phase: string;
   readonly saveState: string;
   readonly initialSyncStage: string;
+  readonly hasCompletedInitialFeatureSync: boolean;
   readonly pendingLocalChangeCount: number;
   readonly lastError: string | null;
   readonly pendingConflict: unknown;
@@ -69,6 +70,7 @@ test("Cloudflare 当前文档迁移：无冲突并将 schema 4 升级结果写�
   const spaceId = `e2e-cf-migration-world-${randomUUID()}`;
 
   try {
+    await enableExperimentalSyncFixture(page);
     await page.goto("/");
     await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
 
@@ -89,12 +91,14 @@ test("Cloudflare 当前文档迁移：无冲突并将 schema 4 升级结果写�
     });
 
     await page.reload();
+    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
     const syncState = await waitForSyncTerminalState(page);
 
     expect(syncState).toEqual({
       phase: "idle",
       saveState: "idle",
       initialSyncStage: "ready",
+      hasCompletedInitialFeatureSync: true,
       pendingLocalChangeCount: 0,
       lastError: null,
       pendingConflict: null,
@@ -139,6 +143,7 @@ test("Cloudflare 蓝图库蓝图迁移：无冲突并将 schema 4 升级结果�
   const spaceId = `e2e-cf-migration-blueprint-${randomUUID()}`;
 
   try {
+    await enableExperimentalSyncFixture(page);
     await page.goto("/");
     await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
 
@@ -159,12 +164,14 @@ test("Cloudflare 蓝图库蓝图迁移：无冲突并将 schema 4 升级结果�
     });
 
     await page.reload();
+    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
     const syncState = await waitForSyncTerminalState(page);
 
     expect(syncState).toEqual({
       phase: "idle",
       saveState: "idle",
       initialSyncStage: "ready",
+      hasCompletedInitialFeatureSync: true,
       pendingLocalChangeCount: 0,
       lastError: null,
       pendingConflict: null,
@@ -195,6 +202,17 @@ test("Cloudflare 蓝图库蓝图迁移：无冲突并将 schema 4 升级结果�
   }
 });
 
+async function enableExperimentalSyncFixture(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.setItem("v3-user-settings-dialog", JSON.stringify({
+      selectedGroupId: "experimental",
+      values: {
+        "other-experimental-features": true,
+      },
+    }));
+  });
+}
+
 async function prepareWorldDocumentMigrationFixture(
   page: Page,
   spaceId: string,
@@ -215,6 +233,7 @@ async function prepareWorldDocumentMigrationFixture(
     const browserStorageModuleUrl = "/src/shared/storage/browser-storage.ts";
     const cloudflareSettingsModuleUrl = "/src/shared/storage/cloudflare-sync-settings.ts";
     const hashModuleUrl = "/src/shared/storage/hash-utils.ts";
+    const syncProviderActivationModuleUrl = "/src/shared/storage/sync-provider-activation.ts";
     const syncHostModuleUrl = "/src/sync/sync-host.ts";
     const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
     const [
@@ -222,6 +241,7 @@ async function prepareWorldDocumentMigrationFixture(
       browserStorage,
       cloudflareSettings,
       hashUtils,
+      syncProviderActivation,
       syncHost,
       worldStorage,
     ] = await Promise.all([
@@ -229,6 +249,7 @@ async function prepareWorldDocumentMigrationFixture(
       import(/* @vite-ignore */ browserStorageModuleUrl),
       import(/* @vite-ignore */ cloudflareSettingsModuleUrl),
       import(/* @vite-ignore */ hashModuleUrl),
+      import(/* @vite-ignore */ syncProviderActivationModuleUrl),
       import(/* @vite-ignore */ syncHostModuleUrl),
       import(/* @vite-ignore */ worldStorageModuleUrl),
     ]);
@@ -274,7 +295,23 @@ async function prepareWorldDocumentMigrationFixture(
       spaceName: spaceId,
       remoteMode: "anonymous",
     });
-    localStorage.setItem("v3-sync-provider", "cloudflare");
+    const syncTargetKey = syncProviderActivation.createCloudflareAnonymousSyncTargetKey({
+      apiBaseUrl,
+      spaceId,
+    });
+    if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
+      throw new Error("Failed to activate the Cloudflare world-document migration fixture.");
+    }
+    // AI-REMOVED 2026-09-09:
+    // Reason: 旧 provider key 不会覆盖已经存在的现代 disabled 激活记录，无法真正启动同步。
+    // Trigger: Cloudflare schema migration E2E 的远端资产始终停留在 schema 4。
+    // Evidence: 真实浏览器中 activation.state 为 disabled、lastResults 为空、同步任务计数为 0。
+    // Replacement: 上方通过 activateSyncProvider 写入与当前 Cloudflare 目标匹配的激活记录。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // localStorage.setItem("v3-sync-provider", "cloudflare");
 
     return {
       assetId: legacyDocument.baseId,
@@ -314,18 +351,21 @@ async function prepareBlueprintMigrationFixture(
     const browserStorageModuleUrl = "/src/shared/storage/browser-storage.ts";
     const cloudflareSettingsModuleUrl = "/src/shared/storage/cloudflare-sync-settings.ts";
     const hashModuleUrl = "/src/shared/storage/hash-utils.ts";
+    const syncProviderActivationModuleUrl = "/src/shared/storage/sync-provider-activation.ts";
     const [
       backendAddress,
       blueprintStorage,
       browserStorage,
       cloudflareSettings,
       hashUtils,
+      syncProviderActivation,
     ] = await Promise.all([
       import(/* @vite-ignore */ backendAddressModuleUrl),
       import(/* @vite-ignore */ blueprintStorageModuleUrl),
       import(/* @vite-ignore */ browserStorageModuleUrl),
       import(/* @vite-ignore */ cloudflareSettingsModuleUrl),
       import(/* @vite-ignore */ hashModuleUrl),
+      import(/* @vite-ignore */ syncProviderActivationModuleUrl),
     ]);
     const timestamp = "2026-08-19T00:00:00.000Z";
     const legacyBlueprint = {
@@ -366,7 +406,23 @@ async function prepareBlueprintMigrationFixture(
       spaceName: spaceId,
       remoteMode: "anonymous",
     });
-    localStorage.setItem("v3-sync-provider", "cloudflare");
+    const syncTargetKey = syncProviderActivation.createCloudflareAnonymousSyncTargetKey({
+      apiBaseUrl,
+      spaceId,
+    });
+    if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
+      throw new Error("Failed to activate the Cloudflare blueprint migration fixture.");
+    }
+    // AI-REMOVED 2026-09-09:
+    // Reason: 旧 provider key 不会覆盖已经存在的现代 disabled 激活记录，无法真正启动同步。
+    // Trigger: Cloudflare schema migration E2E 的远端资产始终停留在 schema 4。
+    // Evidence: 真实浏览器中 activation.state 为 disabled、lastResults 为空、同步任务计数为 0。
+    // Replacement: 上方通过 activateSyncProvider 写入与当前 Cloudflare 目标匹配的激活记录。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // localStorage.setItem("v3-sync-provider", "cloudflare");
 
     return {
       assetId: blueprintId,
@@ -449,6 +505,7 @@ async function waitForSyncTerminalState(page: Page): Promise<BrowserSyncState> {
         status.phase === "idle"
         && status.saveState === "idle"
         && status.initialSyncStage === "ready"
+        && status.hasCompletedInitialFeatureSync
         && status.pendingLocalChangeCount === 0
       );
   }, undefined, { timeout: 150_000 });
@@ -463,6 +520,8 @@ async function waitForSyncTerminalState(page: Page): Promise<BrowserSyncState> {
       phase: sync.state.status.phase,
       saveState: sync.state.status.saveState,
       initialSyncStage: sync.state.status.initialSyncStage,
+      hasCompletedInitialFeatureSync:
+        sync.state.status.hasCompletedInitialFeatureSync,
       pendingLocalChangeCount: sync.state.status.pendingLocalChangeCount,
       lastError: sync.state.status.lastError,
       pendingConflict: sync.state.pendingConflict,

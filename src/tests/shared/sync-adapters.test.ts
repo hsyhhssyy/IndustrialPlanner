@@ -579,6 +579,100 @@ describe("sync-adapters", () => {
     expect(readAsset).not.toHaveBeenCalled();
   });
 
+  // AI-REMOVED 2026-09-09:
+  // Reason: 此测试覆盖基于错误根因引入的 hash 开关；真实浏览器证据表明同步根本没有激活。
+  // Trigger: Cloudflare migration E2E 夹具只写旧 provider key，现代激活状态保持 disabled。
+  // Evidence: lastResults 为空且任务计数为 0；改用 activateSyncProvider 才会进入既有同步流程。
+  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 的原迁移断言继续覆盖端到端行为。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // it("rehashes clean collection assets when local reads may migrate their schema", async () => {
+  //   const legacyValue = { schemaVersion: 4, name: "legacy" };
+  //   const migratedValue = { schemaVersion: 5, name: "legacy" };
+  //   const legacyHash = createStableJsonHash(legacyValue);
+  //   const recordedItems: SyncPlanItem[] = [];
+  //   const adapter = createFullWithRevisionAdapter({
+  //     id: "read-migrated-assets",
+  //     indexPath: "assets/read-migrated/index.json",
+  //     entryPath: (id) => `assets/read-migrated/${id}.json`,
+  //     listLocal: async () => [{
+  //       id: "asset-a",
+  //       value: migratedValue,
+  //       deletedAt: null,
+  //     }],
+  //     writeLocal: async () => undefined,
+  //     reuseLastSyncedHashForCleanEntries: false,
+  //   });
+  //   const computeContentHashes = vi.fn<SyncRemoteSession["computeContentHashes"]>(
+  //     async (requests) => requests.map((request) => createStableJsonHash(request.value)),
+  //   );
+  //   const readAsset = vi.fn<SyncRemoteSession["readAsset"]>(async () => ({
+  //     revision: 1,
+  //     value: legacyValue,
+  //     contentHash: legacyHash,
+  //     committedAt: null,
+  //   }));
+  //   const session: SyncRemoteSession = {
+  //     localState: {
+  //       getLastSyncedHash: async () => legacyHash,
+  //       setLastSyncedHash: async () => undefined,
+  //       getRemoteRevision: async () => null,
+  //       setRemoteRevision: async () => undefined,
+  //       getRemoteEtag: async () => null,
+  //       setRemoteEtag: async () => undefined,
+  //     },
+  //     computeContentHashes,
+  //     prefetchIndexes: async () => undefined,
+  //     readIndex: async () => ({
+  //       revision: 1,
+  //       entries: {
+  //         "asset-a": {
+  //           revision: 1,
+  //           contentHash: legacyHash,
+  //           deletedAt: null,
+  //           committedAt: null,
+  //         },
+  //       },
+  //       committedAt: null,
+  //     }),
+  //     readAsset,
+  //     checkCollections: async () => ({ changedCollections: [] }),
+  //     beginWriteBatch: () => ({
+  //       putAsset: () => undefined,
+  //       putTombstone: () => undefined,
+  //       commit: async () => ({ writes: [] }),
+  //       discard: async () => undefined,
+  //     }),
+  //     markApplied: async () => undefined,
+  //   };
+  //   const transaction: SyncEngineTransaction = {
+  //     writeBatch: session.beginWriteBatch(),
+  //     stageTouch: () => undefined,
+  //     stageDeletion: () => undefined,
+  //     recordItem: (item) => {
+  //       recordedItems.push(item);
+  //     },
+  //     recordUpload: () => undefined,
+  //     assertDownloadAllowed: async () => undefined,
+  //     getLocalChangeState: () => "clean",
+  //   };
+  //
+  //   await expect(adapter.sync(session, { transaction })).resolves.toMatchObject({
+  //     status: "uploaded",
+  //     changedAssetIds: ["asset-a"],
+  //   });
+  //
+  //   expect(computeContentHashes).toHaveBeenCalledWith([{
+  //     algorithm: adapter.collection.hashAlgorithm,
+  //     value: migratedValue,
+  //   }]);
+  //   expect(readAsset).toHaveBeenCalledTimes(1);
+  //   expect(recordedItems).toHaveLength(1);
+  //   expect(recordedItems[0]?.kind).toBe("upload");
+  // });
+
   it("does not advance lastSyncedHash when a collection batch fails", async () => {
     const setLastSyncedHash = vi.fn(async () => undefined);
     const collection = createFullWithRevisionAdapter({

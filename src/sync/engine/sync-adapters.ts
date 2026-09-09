@@ -220,6 +220,20 @@ export interface FullWithRevisionAdapterOptions<TValue> {
     scope?: SyncAdapterScope,
   ) => Promise<readonly FullWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: FullWithRevisionEntry<TValue>) => Promise<void>;
+  // AI-REMOVED 2026-09-09:
+  // Reason: 真实浏览器复现证明迁移回写失败源于同步 provider 未激活，此开关不解决当前故障且会引入额外 hash 成本。
+  // Trigger: Cloudflare schema migration E2E 夹具仍写旧 provider key，现代激活状态为 disabled。
+  // Evidence: 同步状态 lastResults 为空、任务计数为 0；使用正式 activateSyncProvider 后既有首次同步路径会计算当前投影。
+  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider 激活夹具目标。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * clean 条目的本地读取结果是否可直接沿用上次同步 hash。
+  //  * 读取时会执行 schema 迁移或其他规范化的资产必须设为 false。
+  //  */
+  // readonly reuseLastSyncedHashForCleanEntries?: boolean;
   readonly isRemoteVersionUnsupported?: (value: unknown) => boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
@@ -251,6 +265,20 @@ export interface PatchCollectionWithRevisionAdapterOptions<TValue> {
     scope?: SyncAdapterScope,
   ) => Promise<readonly PatchWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: PatchWithRevisionEntry<TValue>) => Promise<void>;
+  // AI-REMOVED 2026-09-09:
+  // Reason: 真实浏览器复现证明迁移回写失败源于同步 provider 未激活，此开关不解决当前故障且会引入额外 hash 成本。
+  // Trigger: Cloudflare schema migration E2E 夹具仍写旧 provider key，现代激活状态为 disabled。
+  // Evidence: 同步状态 lastResults 为空、任务计数为 0；使用正式 activateSyncProvider 后既有首次同步路径会计算当前投影。
+  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider 激活夹具目标。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * clean 条目的本地读取结果是否可直接沿用上次同步 hash。
+  //  * 读取时会执行 schema 迁移或其他规范化的资产必须设为 false。
+  //  */
+  // readonly reuseLastSyncedHashForCleanEntries?: boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly deltaThreshold?: number;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
@@ -1646,6 +1674,17 @@ async function syncFullWithRevision<TValue>(
     transaction,
     adapterId: options.id,
     localEntries,
+    // AI-REMOVED 2026-09-09:
+    // Reason: 撤回与真实故障无关的 hash 重算参数。
+    // Trigger: 浏览器证据确认同步未激活，而非 clean hash 复用导致迁移未写回。
+    // Evidence: 修正夹具激活后应由既有 unknown 状态路径计算当前投影。
+    // Replacement: None。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // reuseLastSyncedHashForCleanEntries:
+    //   options.reuseLastSyncedHashForCleanEntries ?? true,
   });
   const localContentHashesById = new Map(Array.from(
     localHashStatesById,
@@ -2210,6 +2249,17 @@ async function syncPatchCollectionWithRevision<TValue>(
     transaction,
     adapterId: options.id,
     localEntries,
+    // AI-REMOVED 2026-09-09:
+    // Reason: 撤回与真实故障无关的 hash 重算参数。
+    // Trigger: 浏览器证据确认同步未激活，而非 clean hash 复用导致迁移未写回。
+    // Evidence: 修正夹具激活后应由既有 unknown 状态路径计算当前投影。
+    // Replacement: None。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // reuseLastSyncedHashForCleanEntries:
+    //   options.reuseLastSyncedHashForCleanEntries ?? true,
   });
   const localContentHashesById = new Map(Array.from(
     localHashStatesById,
@@ -2811,6 +2861,16 @@ async function resolveLocalHashStates<TValue>(options: {
   readonly collection: SyncRemoteCollection;
   readonly transaction: SyncEngineTransaction;
   readonly adapterId: string;
+  // AI-REMOVED 2026-09-09:
+  // Reason: hash 重算开关基于已被浏览器复现推翻的根因判断。
+  // Trigger: E2E 夹具没有激活同步 provider。
+  // Evidence: provider activation 为 disabled 时同步任务从未执行。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly reuseLastSyncedHashForCleanEntries: boolean;
   readonly localEntries: readonly {
     readonly id: string;
     readonly value: TValue;
@@ -2825,6 +2885,19 @@ async function resolveLocalHashStates<TValue>(options: {
       options.adapterId,
       entry.id,
     ) ?? "unknown";
+    // AI-REMOVED 2026-09-09:
+    // Reason: 此条件变更针对错误根因，会让 clean 资产重复计算 hash。
+    // Trigger: 浏览器复现确认失败发生在同步启动之前。
+    // Evidence: lastResults 为空且所有同步任务计数为 0。
+    // Replacement: 恢复既有 clean touch hash 复用条件；E2E 夹具改用正式激活 API。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // // AI-CORRECTION 2026-09-09: clean 仅表示没有收到本地写入通知；若资产读取本身会
+    // // 执行 schema 迁移，当前同步投影仍可能不同于旧 touch hash，必须重新计算。
+    // const canReuseTouchHash = options.reuseLastSyncedHashForCleanEntries
+    //   && localChangeState === "clean"
     const canReuseTouchHash = localChangeState === "clean"
       && entry.deletedAt === null
       && lastSyncedHash !== null;

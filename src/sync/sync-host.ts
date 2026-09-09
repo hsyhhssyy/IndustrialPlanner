@@ -575,6 +575,17 @@ export async function createSyncHost(
       indexPath: "assets/blueprints/index.json",
       entryPath: (blueprintId) => `assets/blueprints/${blueprintId}.json`,
       listLocal: async () => await listBlueprintSyncEntries<BlueprintRecord>("blueprint"),
+      // AI-REMOVED 2026-09-09:
+      // Reason: 浏览器复现证明同步未启动，蓝图 hash 开关与故障无关。
+      // Trigger: Cloudflare migration E2E 夹具使用过时 provider key。
+      // Evidence: provider activation 为 disabled、lastResults 为空；正式激活后既有首次同步路径覆盖迁移写回。
+      // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // // 蓝图读取会把旧 schema 迁移为当前结构；即使存储未发出编辑通知，也必须重新哈希。
+      // reuseLastSyncedHashForCleanEntries: false,
       // AI-REMOVED 2026-08-12:
       // Reason: 蓝图远端落地改用显式 origin，不再依赖动态 depth。
       // Trigger: 远端覆盖本地不应产生上传意图。
@@ -1507,6 +1518,17 @@ function createWorldDocumentAdapter(
     // directoryPath: (documentKey) => `documents/${encodeURIComponent(documentKey)}`,
     indexPath: "documents/by-base/index.json",
     directoryPath: (baseId) => `documents/by-base/${encodeURIComponent(baseId)}`,
+    // AI-REMOVED 2026-09-09:
+    // Reason: 浏览器复现证明同步未启动，世界文档 hash 开关与故障无关。
+    // Trigger: Cloudflare migration E2E 夹具使用过时 provider key。
+    // Evidence: provider activation 为 disabled、lastResults 为空；正式激活后既有首次同步路径覆盖迁移写回。
+    // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // // 世界文档读取会把旧 schema 迁移为当前结构；不能用迁移前的 touch hash 代替当前投影。
+    // reuseLastSyncedHashForCleanEntries: false,
     listLocal: async (scope) => {
       // AI-REMOVED 2026-07-29:
       // Reason: 按 documentKey 列出会把同一基地的设备副本视为不同的远端资产。
