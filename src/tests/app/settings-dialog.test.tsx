@@ -145,7 +145,7 @@ describe("SettingsDialog", () => {
         return DOMRect.fromRect({ x: 0, y: 100, width: 360, height: 400 });
       }
 
-      if (this.id === "settings-dialog-group-display-system") {
+      if (this.id === "settings-dialog-group-system") {
         return DOMRect.fromRect({ x: 0, y: 100, width: 340, height: 120 });
       }
 
@@ -159,7 +159,8 @@ describe("SettingsDialog", () => {
       //
       // Original code:
       // if (this.id === "settings-dialog-group-shortcuts") {
-      if (this.id === "settings-dialog-group-game") {
+      // AI-CORRECTION 2026-09-09: 设置页已恢复 shortcuts 入口分组并移除 game 分组；滚动测试改用 auxiliary-display。
+      if (this.id === "settings-dialog-group-auxiliary-display") {
         return DOMRect.fromRect({ x: 0, y: 460, width: 340, height: 120 });
       }
 
@@ -182,17 +183,19 @@ describe("SettingsDialog", () => {
     });
 
     const contentElement = container.querySelector(".settings-dialog-content");
-    const gameButton = container.querySelector('[aria-controls="settings-dialog-group-game"]');
+    const auxiliaryDisplayButton = container.querySelector(
+      '[aria-controls="settings-dialog-group-auxiliary-display"]',
+    );
 
     expect(contentElement).not.toBeNull();
-    expect(gameButton).not.toBeNull();
+    expect(auxiliaryDisplayButton).not.toBeNull();
 
     if (!(contentElement instanceof HTMLDivElement)) {
       throw new Error("Expected settings dialog content element to be rendered.");
     }
 
-    if (!(gameButton instanceof HTMLButtonElement)) {
-      throw new Error("Expected game group button to be rendered.");
+    if (!(auxiliaryDisplayButton instanceof HTMLButtonElement)) {
+      throw new Error("Expected auxiliary display group button to be rendered.");
     }
 
     contentElement.scrollTop = 25;
@@ -200,7 +203,7 @@ describe("SettingsDialog", () => {
     scrollIntoViewMock.mockClear();
 
     act(() => {
-      gameButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      auxiliaryDisplayButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(scrollIntoViewMock).not.toHaveBeenCalled();
@@ -208,7 +211,7 @@ describe("SettingsDialog", () => {
     expect(scrollToMock).toHaveBeenCalledWith({ top: 375 });
   });
 
-  it("replaces the shortcuts group with a game-section entry that opens the dedicated dialog", () => {
+  it("opens the dedicated shortcut dialog from the shortcuts settings group", () => {
     const appHost = createAppHost(createWorkspace());
     const controller = new WorkbenchSettingsDialogController();
 
@@ -227,7 +230,7 @@ describe("SettingsDialog", () => {
       appHost.internalActions.openDialog("settings");
     });
 
-    expect(container.querySelector('[aria-controls="settings-dialog-group-shortcuts"]')).toBeNull();
+    expect(container.querySelector('[aria-controls="settings-dialog-group-shortcuts"]')).not.toBeNull();
 
     const openButton = [...container.querySelectorAll("button")].find((button) => (
       button.textContent === "打开快捷键设置"

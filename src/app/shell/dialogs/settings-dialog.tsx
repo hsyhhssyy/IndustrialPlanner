@@ -170,7 +170,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   useEffect(() => {
     if (!isOpen || experimentalEnabled) return;
     if (controller.selectedGroupId === "experimental") {
-      controller.selectGroup("display-system");
+      controller.selectGroup("system");
     }
   }, [isOpen, experimentalEnabled, controller]);
   const selectedSettingGuideSetting = settingGuideSettingId === null
@@ -1079,6 +1079,12 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <p>{t(group.descriptionKey)}</p>
                 </div>
                 <div className={cm(styles, "settings-dialog-settings-list")}>
+                  {group.id === "activity" ? (
+                    <ActivitySettingsCard
+                      effectiveActivityIds={effectiveActivityIds}
+                      onOpen={handleOpenActivityDialog}
+                    />
+                  ) : null}
                   {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
                     const isEditable = controller.isSettingEditable(setting.id);
                     // AI-REMOVED 2026-08-03:
@@ -1093,7 +1099,16 @@ export const SettingsDialog = observer(function SettingsDialog({
                     // const isKeybinding = setting.kind === "keybinding";
                     const isText = setting.kind === "text" || setting.kind === "password";
                     const isDebugGroup = group.id === "debug";
-                    const isGameGroup = group.id === "game";
+                    // AI-REMOVED 2026-09-09:
+                    // Reason: 原 game 分组已拆分，不再需要基于旧分组 ID 判断特殊布局。
+                    // Trigger: 用户要求设置按显示、交互模式、辅助显示、活动与快捷键重新分组。
+                    // Evidence: WORKBENCH_SETTINGS_GROUPS 已不存在 active game 分组。
+                    // Replacement: 活动卡片由上方 group.id === "activity" 直接渲染。
+                    // Risk: Low。
+                    // Human Review: Required
+                    //
+                    // Original code:
+                    // const isGameGroup = group.id === "game";
                     const settingLabel = resolveSettingLabel(setting, t);
                     const hasSettingGuide = CONFIG_GUIDE_SETTING_DOC_FILES.has(`${setting.id}.md`);
 
@@ -1104,6 +1119,15 @@ export const SettingsDialog = observer(function SettingsDialog({
 
                     const elements: React.ReactNode[] = [];
 
+                    /* AI-REMOVED 2026-09-09:
+                    Reason: 设置职责已拆成独立分组，不再需要依赖易碎数组索引插入分隔符和活动卡片。
+                    Trigger: 用户要求新增“显示”“交互模式”“活动”“快捷键”分组，并将原“游戏”更名重组为“辅助显示”。
+                    Evidence: 新 WORKBENCH_SETTINGS_GROUPS 已直接表达分组与顺序。
+                    Replacement: settings-dialog-settings-list 顶部按 activity 分组渲染 ActivitySettingsCard。
+                    Risk: Low。
+                    Human Review: Required
+
+                    Original code:
                     // 游戏分组分隔符：index 0-2 为第一组(使用蓝图样式+显示设备名称+显示设备图标)，index 3 为第二组(工具箱显示所有活动)
                     if (isGameGroup && (index === 3 || index === 4 || index === 6)) {
                       elements.push(<hr key={`sep-${group.id}-${index}`} className={cm(styles, "settings-dialog-separator")} />);
@@ -1119,6 +1143,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                         />,
                       );
                     }
+                    */
 
                     elements.push(
                       <article
@@ -1169,7 +1194,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                     return elements;
                   })}
                 </div>
-                {group.id === "operation" && (
+                {group.id === "convenience-operation" && (
                   /*
                    * AI-REMOVED 2026-06-15:
                    * Reason: 重置操作需要与普通设置项使用同一张卡片，避免按钮脱离设置列表。
@@ -1193,16 +1218,33 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <>
                     <SettingsActionCard
                       buttonLabel={t("settingsAction.resetOperation")}
-                      description={t("settingsAction.resetOperationConfirm")}
+                      description={t("settingsAction.resetOperationDescription")}
                       onClick={handleResetOperation}
                       title={t("settingsAction.resetOperation")}
                     />
+                    {/* AI-REMOVED 2026-09-09:
+                    Reason: 快捷键设置入口不再属于便捷操作。
+                    Trigger: 用户要求新增“快捷键”分组，并包含“打开快捷键设置”。
+                    Evidence: WORKBENCH_SETTINGS_GROUPS 已新增 shortcuts 分组。
+                    Replacement: 下方 group.id === "shortcuts" 的 SettingsActionCard。
+                    Risk: Low。
+                    Human Review: Required
+
+                    Original code:
                     <SettingsActionCard
                       buttonLabel={t("keyboardShortcutDialog.open")}
                       onClick={handleOpenKeyboardShortcutDialog}
                       title={t("keyboardShortcutDialog.title")}
                     />
+                    */}
                   </>
+                )}
+                {group.id === "shortcuts" && (
+                  <SettingsActionCard
+                    buttonLabel={t("keyboardShortcutDialog.open")}
+                    onClick={handleOpenKeyboardShortcutDialog}
+                    title={t("keyboardShortcutDialog.title")}
+                  />
                 )}
                 {group.id === "other" && (
                   <>
@@ -1240,9 +1282,19 @@ export const SettingsDialog = observer(function SettingsDialog({
                       onClick={handleResetAllSettings}
                       title={t("settingsAction.resetAllSettings")}
                     />
+                    {/* AI-REMOVED 2026-09-09:
+                    Reason: v2 数据迁移属于调试能力，不应继续显示在“其他”分组。
+                    Trigger: 用户要求将 v2 数据迁移移动到调试面板，并仅在调试模式开启时显示。
+                    Evidence: V2MigrationSettingsCard 原先无条件附加在 other 分组。
+                    Replacement: 下方 debug 分组的条件渲染。
+                    Risk: 迁移入口默认不可见，用户需先开启调试模式。
+                    Human Review: Required
+
+                    Original code:
                     {migrationController === undefined ? null : (
                       <V2MigrationSettingsCard controller={migrationController} />
                     )}
+                    */}
                     <PwaSettingsSection appHost={appHost} hideHeader pwaController={pwaController} />
                   </>
                 )}
@@ -1281,6 +1333,11 @@ export const SettingsDialog = observer(function SettingsDialog({
                     />
                   </>
                 )}
+                {group.id === "debug"
+                  && controller.getValue("other-debug-mode") === true
+                  && migrationController !== undefined ? (
+                    <V2MigrationSettingsCard controller={migrationController} />
+                  ) : null}
               </section>
             ))}
           </div>

@@ -13,6 +13,49 @@ describe("WorkbenchSettingsDialogController", () => {
     localStorage.clear();
   });
 
+  it("defines settings groups by user intent and keeps every setting in its requested group", () => {
+    expect(WORKBENCH_SETTINGS_GROUPS.map((group) => group.id)).toEqual([
+      "system",
+      "display",
+      "interaction-mode",
+      "auxiliary-display",
+      "convenience-operation",
+      "activity",
+      "shortcuts",
+      "other",
+      "experimental",
+      "debug",
+    ]);
+
+    expect(resolveGroupSettingIds("system")).toEqual([
+      "system-language",
+      "system-theme",
+    ]);
+    expect(resolveGroupSettingIds("display")).toEqual([
+      "game-use-blueprint-style-device-images",
+      "game-show-grass-background",
+      "game-show-device-names",
+      "game-show-device-icons",
+    ]);
+    expect(resolveGroupSettingIds("interaction-mode")).toEqual([
+      "game-use-inspector-panel",
+      "game-arknights-selection-right-dock-sync",
+      "game-arknights-inspector-open-on-second-click",
+      "game-collapse-device-modes",
+    ]);
+    expect(resolveGroupSettingIds("auxiliary-display")).toEqual([
+      "game-always-show-grid-lines",
+      "game-always-show-power-range",
+      "game-show-pipe-exact-fluid-position",
+    ]);
+    expect(resolveGroupSettingIds("activity")).toEqual([
+      "other-toolbox-show-all-activity-content",
+    ]);
+    expect(resolveGroupSettingIds("shortcuts")).toEqual([
+      "game-show-hotkeys",
+    ]);
+  });
+
   it("persists schema-driven values and hydrates them on the next controller", () => {
     const controller = new WorkbenchSettingsDialogController();
 
@@ -26,7 +69,8 @@ describe("WorkbenchSettingsDialogController", () => {
     //
     // Original code:
     // controller.selectGroup("shortcuts");
-    controller.selectGroup("game");
+    // AI-CORRECTION 2026-09-09: 设置页已恢复 shortcuts 入口分组并拆分原 game 分组；本持久化用例选择 display 分组。
+    controller.selectGroup("display");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
@@ -37,7 +81,7 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
 
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "game",
+      selectedGroupId: "display",
       values: {
         "system-language": "en-US",
         "system-theme": "ayu-dark",
@@ -111,7 +155,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     const hydratedController = new WorkbenchSettingsDialogController();
 
-    expect(hydratedController.selectedGroupId).toBe("game");
+    expect(hydratedController.selectedGroupId).toBe("display");
     expect(hydratedController.values["system-language"]).toBe("en-US");
     expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
@@ -234,10 +278,10 @@ describe("WorkbenchSettingsDialogController", () => {
 
   it("places device animation under the experimental gate and preserves it only across blueprint mode", () => {
     const controller = new WorkbenchSettingsDialogController();
-    const gameGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "game");
+    const displayGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "display");
     const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
 
-    expect(gameGroup?.items.some((setting) => setting.id === "game-play-device-animations")).toBe(false);
+    expect(displayGroup?.items.some((setting) => setting.id === "game-play-device-animations")).toBe(false);
     expect(experimentalGroup?.items.some((setting) => setting.id === "game-play-device-animations")).toBe(true);
     expect(controller.getValue("game-play-device-animations")).toBe(false);
     expect(controller.isSettingEditable("game-play-device-animations")).toBe(false);
@@ -499,7 +543,7 @@ describe("WorkbenchSettingsDialogController", () => {
       },
     });
 
-    controller.selectGroup("display-system");
+    controller.selectGroup("system");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("other-debug-mode", true);
@@ -509,7 +553,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.getValue("system-language")).toBe("en-US");
     expect(controller.getValue("system-theme")).toBe("ayu-dark");
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "display-system",
+      selectedGroupId: "system",
       values: {
         "game-arknights-immediate-move": true,
         "game-arknights-copy-while-moving": false,
@@ -580,3 +624,9 @@ describe("WorkbenchSettingsDialogController", () => {
     });
   });
 });
+
+function resolveGroupSettingIds(groupId: string): string[] {
+  return WORKBENCH_SETTINGS_GROUPS
+    .find((group) => group.id === groupId)
+    ?.items.map((setting) => setting.id) ?? [];
+}

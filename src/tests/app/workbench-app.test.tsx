@@ -2898,16 +2898,34 @@ describe("WorkbenchApp", () => {
     //   "其他功能与设置",
     //   "一系列用于调试的设置内容。",
     // ]);
-    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "其他", "调试"]);
+    // AI-CORRECTION 2026-09-09: 设置页现按用户意图拆为系统、显示、交互模式、辅助显示、便捷操作、活动和快捷键。
+    expect(groupTitles).toEqual([
+      "系统",
+      "显示",
+      "交互模式",
+      "辅助显示",
+      "便捷操作",
+      "活动",
+      "快捷键",
+      "其他",
+      "调试",
+    ]);
     expect(groupDescriptions).toEqual([
-      "语言、主题与显示设置。",
-      "显示风格调整",
-      "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
+      "语言、主题与全局界面偏好。",
+      "调整设备与画布的外观。",
+      "调整设备选择与属性面板的交互方式。",
+      "控制网格、供电范围与物流状态等辅助信息。",
+      "提供简化规划操作流程的便捷功能。",
+      "选择生效的活动数据与活动内容显示范围。",
+      "控制快捷键提示并打开快捷键设置。",
       "其他功能与设置",
       "一系列用于调试的设置内容。",
     ]);
     expect(dialog?.textContent).toContain("快捷键设置");
     expect(dialog?.textContent).toContain("打开快捷键设置");
+    expect(dialog?.textContent).toContain("重置为标准操作");
+    expect(dialog?.textContent).toContain("关闭大部分便捷操作，将其调整为终末地游戏内的操作模式。");
+    expect(dialog?.textContent).toContain("v2 数据迁移");
     expect(dialog?.textContent).toContain("自动创建分/汇流");
     expect(dialog?.textContent).toContain(
       "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
@@ -4405,6 +4423,8 @@ describe("WorkbenchApp", () => {
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
 
+    expect(container.textContent).not.toContain("v2 数据迁移");
+
     act(() => {
       if (debugModeToggle) {
         debugModeToggle.click();
@@ -4428,6 +4448,7 @@ describe("WorkbenchApp", () => {
     expect(showGestureTestWindowToggle).not.toBeNull();
     expect(simulationWorkerDetailedReportToggle).not.toBeNull();
     expect(backendApiAddressInput).not.toBeNull();
+    expect(container.textContent).toContain("v2 数据迁移");
     expect(showFpsToggle?.checked).toBe(false);
     expect(showGestureTestWindowToggle?.checked).toBe(false);
     expect(simulationWorkerDetailedReportToggle?.checked).toBe(false);
@@ -4891,7 +4912,18 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
     // 2026-06-14: system/display 合并，arknights-operation 改为 operation，
     // PWA 移入 other 分组内，快捷键分组 mobileHidden。
-    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "其他", "调试"]);
+    // AI-CORRECTION 2026-09-09: 新分组均在非桌面单栏中展示；仅“显示快捷键”设置项继续保持非桌面隐藏。
+    expect(groupTitles).toEqual([
+      "系统",
+      "显示",
+      "交互模式",
+      "辅助显示",
+      "便捷操作",
+      "活动",
+      "快捷键",
+      "其他",
+      "调试",
+    ]);
   });
 
   it("marks help and toolbox dialogs as compact shells on phones", () => {

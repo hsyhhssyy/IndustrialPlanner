@@ -38,7 +38,18 @@ Human Review: Required
 Original code:
 export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "experimental" | "debug";
 */
-export type SettingsGroupId = "display-system" | "game" | "operation" | "other" | "experimental" | "debug";
+// AI-CORRECTION 2026-09-09: “快捷键”重新作为入口分组出现，但具体快捷键仍由独立对话框维护；同时按用户意图拆分其余设置分组。
+export type SettingsGroupId =
+  | "system"
+  | "display"
+  | "interaction-mode"
+  | "auxiliary-display"
+  | "convenience-operation"
+  | "activity"
+  | "shortcuts"
+  | "other"
+  | "experimental"
+  | "debug";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -177,9 +188,9 @@ const DEVICE_ANIMATIONS_SETTING_ID = "game-play-device-animations";
 
 export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
-    id: "display-system",
-    labelKey: "settingsGroup.displaySystem",
-    descriptionKey: "settingsGroup.displaySystemDescription",
+    id: "system",
+    labelKey: "settingsGroup.system",
+    descriptionKey: "settingsGroup.systemDescription",
     items: [
       {
         id: "system-language",
@@ -205,6 +216,15 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
+  /* AI-REMOVED 2026-09-09:
+  Reason: 原“游戏”分组混合了显示、交互、活动、快捷键和辅助显示职责，无法表达调整后的信息架构。
+  Trigger: 用户要求将原“游戏”拆分为“显示”“交互模式”“活动”“快捷键”，并将剩余内容归入“辅助显示”。
+  Evidence: WORKBENCH_SETTINGS_GROUPS 中原 game.items 同时包含以上五类设置，SettingsDialog 还依赖数组索引插入活动卡片与分隔符。
+  Replacement: 下方 display、interaction-mode、auxiliary-display、activity、shortcuts 分组。
+  Risk: 旧 localStorage 中 selectedGroupId="game" 会回退到默认“系统”分组；设置值 ID 与行为保持不变。
+  Human Review: Required
+
+  Original code:
   {
     id: "game",
     labelKey: "settingsGroup.game",
@@ -358,10 +378,164 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
+  */
   {
-    id: "operation",
-    labelKey: "settingsGroup.operation",
-    descriptionKey: "settingsGroup.operationDescription",
+    id: "display",
+    labelKey: "settingsGroup.display",
+    descriptionKey: "settingsGroup.displayDescription",
+    items: [
+      {
+        id: "game-use-blueprint-style-device-images",
+        kind: "switch",
+        labelKey: "settingsField.game-use-blueprint-style-device-images",
+        descriptionKey: "settingsField.game-use-blueprint-style-device-imagesDescription",
+        defaultValue: false,
+      },
+      {
+        id: "game-show-grass-background",
+        kind: "switch",
+        labelKey: "settingsField.game-show-grass-background",
+        descriptionKey: "settingsField.game-show-grass-backgroundDescription",
+        defaultValue: false,
+        editableWhen: {
+          settingId: "game-use-blueprint-style-device-images",
+          equals: false,
+        },
+      },
+      {
+        id: SHOW_DEVICE_NAMES_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-show-device-names",
+        descriptionKey: "settingsField.game-show-device-namesDescription",
+        defaultValue: true,
+      },
+      {
+        id: SHOW_DEVICE_ICONS_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-show-device-icons",
+        descriptionKey: "settingsField.game-show-device-iconsDescription",
+        defaultValue: false,
+        editableWhen: {
+          settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
+          equals: false,
+        },
+      },
+    ],
+  },
+  {
+    id: "interaction-mode",
+    labelKey: "settingsGroup.interactionMode",
+    descriptionKey: "settingsGroup.interactionModeDescription",
+    items: [
+      {
+        id: "game-use-inspector-panel",
+        kind: "switch",
+        labelKey: "settingsField.game-use-inspector-panel",
+        descriptionKey: "settingsField.game-use-inspector-panelDescription",
+        defaultValue: false,
+      },
+      {
+        id: "game-arknights-selection-right-dock-sync",
+        kind: "switch",
+        labelKey: "settingsField.game-arknights-selection-right-dock-sync",
+        descriptionKey: "settingsField.game-arknights-selection-right-dock-syncDescription",
+        defaultValue: true,
+        editableWhen: {
+          settingId: "game-use-inspector-panel",
+          equals: true,
+        },
+      },
+      {
+        id: "game-arknights-inspector-open-on-second-click",
+        kind: "switch",
+        labelKey: "settingsField.game-arknights-inspector-open-on-second-click",
+        descriptionKey: "settingsField.game-arknights-inspector-open-on-second-clickDescription",
+        defaultValue: false,
+      },
+      {
+        id: COLLAPSE_DEVICE_MODES_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-collapse-device-modes",
+        descriptionKey: "settingsField.game-collapse-device-modesDescription",
+        defaultValue: true,
+      },
+    ],
+  },
+  {
+    id: "auxiliary-display",
+    labelKey: "settingsGroup.auxiliaryDisplay",
+    descriptionKey: "settingsGroup.auxiliaryDisplayDescription",
+    items: [
+      {
+        id: "game-always-show-grid-lines",
+        kind: "switch",
+        labelKey: "settingsField.game-always-show-grid-lines",
+        descriptionKey: "settingsField.game-always-show-grid-linesDescription",
+        defaultValue: true,
+        editableWhen: {
+          settingId: "game-use-blueprint-style-device-images",
+          equals: false,
+        },
+      },
+      {
+        id: "game-always-show-power-range",
+        kind: "switch",
+        labelKey: "settingsField.game-always-show-power-range",
+        descriptionKey: "settingsField.game-always-show-power-rangeDescription",
+        defaultValue: false,
+      },
+      {
+        id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-show-pipe-exact-fluid-position",
+        descriptionKey: "settingsField.game-show-pipe-exact-fluid-positionDescription",
+        defaultValue: false,
+      },
+    ],
+  },
+  /* AI-REMOVED 2026-09-09:
+  Reason: 首次拆分时将“活动”“快捷键”置于“便捷操作”之前，不符合用户给出的目标顺序。
+  Trigger: 对照最终分组顺序时发现“原操作更名”应先于随后新增的活动与快捷键分组。
+  Evidence: 用户需求顺序为系统、显示、交互模式、辅助显示、便捷操作、活动、快捷键。
+  Replacement: 下方 convenience-operation 之后的 activity 与 shortcuts 分组。
+  Risk: Low。
+  Human Review: Required
+
+  Original code:
+  {
+    id: "activity",
+    labelKey: "settingsGroup.activity",
+    descriptionKey: "settingsGroup.activityDescription",
+    items: [
+      {
+        id: "other-toolbox-show-all-activity-content",
+        kind: "switch",
+        labelKey: "settingsField.other-toolbox-show-all-activity-content",
+        descriptionKey: "settingsField.other-toolbox-show-all-activity-contentDescription",
+        defaultValue: true,
+      },
+    ],
+  },
+  {
+    id: "shortcuts",
+    labelKey: "settingsGroup.shortcuts",
+    descriptionKey: "settingsGroup.shortcutsDescription",
+    items: [
+      {
+        id: "game-show-hotkeys",
+        kind: "switch",
+        labelKey: "settingsField.game-show-hotkeys",
+        descriptionKey: "settingsField.game-show-hotkeysDescription",
+        defaultValue: true,
+        mobileHidden: true,
+      },
+    ],
+  },
+  */
+  {
+    id: "convenience-operation",
+    labelKey: "settingsGroup.convenienceOperation",
+    descriptionKey: "settingsGroup.convenienceOperationDescription",
     items: [
       {
         id: "game-quick-place",
@@ -407,6 +581,36 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
+  {
+    id: "activity",
+    labelKey: "settingsGroup.activity",
+    descriptionKey: "settingsGroup.activityDescription",
+    items: [
+      {
+        id: "other-toolbox-show-all-activity-content",
+        kind: "switch",
+        labelKey: "settingsField.other-toolbox-show-all-activity-content",
+        descriptionKey: "settingsField.other-toolbox-show-all-activity-contentDescription",
+        defaultValue: true,
+      },
+    ],
+  },
+  {
+    id: "shortcuts",
+    labelKey: "settingsGroup.shortcuts",
+    descriptionKey: "settingsGroup.shortcutsDescription",
+    items: [
+      {
+        id: "game-show-hotkeys",
+        kind: "switch",
+        labelKey: "settingsField.game-show-hotkeys",
+        descriptionKey: "settingsField.game-show-hotkeysDescription",
+        defaultValue: true,
+        mobileHidden: true,
+      },
+    ],
+  },
+  // AI-CORRECTION 2026-09-09: “快捷键”作为快捷键提示与独立设置入口分组恢复；下方历史 keybinding 内嵌实现仍保持归档。
   /* AI-REMOVED 2026-08-03:
   Reason: 通用设置页面不再存在“快捷键”分组。
   Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
