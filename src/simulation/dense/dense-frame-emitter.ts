@@ -202,7 +202,7 @@ export class DenseFrameEmitter {
       slotItemIndexes[offset] = options.state.slotItemIndexes[storageIndex]!;
       slotNumbers[offset * 2] = options.state.slotCounts[storageIndex]!;
       slotNumbers[offset * 2 + 1] = options.state.slotReserved[storageIndex]!;
-      slotFlags[offset] = options.state.slotFlags[viewIndex]!;
+      slotFlags[offset] = options.state.resolveEffectiveIgnoreStock(viewIndex) ? 1 : 0;
     }
 
     const componentItemIndexes = new Int32Array(options.componentIndexes.length);

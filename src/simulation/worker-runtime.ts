@@ -309,6 +309,12 @@ export class SimulationWorkerRuntime {
           this.perfEnabled = request.perfEnabled ?? false;
           this.debugDataEnabled = request.debugDataEnabled ?? false;
           this.setSimulationSpeedValue(request.simulationSpeed);
+          if (request.powerMode !== undefined) {
+            this.setPowerMode(request.powerMode);
+          }
+          if ("powerConsumptionOverride" in request) {
+            this.setPowerConsumptionOverride(request.powerConsumptionOverride);
+          }
           return {
             type: "topology-loaded",
             requestId: request.requestId,

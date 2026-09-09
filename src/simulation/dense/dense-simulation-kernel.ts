@@ -1070,7 +1070,7 @@ export class DenseSimulationKernel {
         if (itemIndex === DENSE_INDEX_NONE || !this.recipeRuleMatches(input, itemIndex)) {
           continue;
         }
-        const ignoreStock = this.state.slotFlags[slotIndex] !== 0;
+        const ignoreStock = this.state.resolveEffectiveIgnoreStock(slotIndex);
         const available = ignoreStock
           ? Number.POSITIVE_INFINITY
           : this.state.slotCounts[storageIndex]!
@@ -1194,7 +1194,9 @@ export class DenseSimulationKernel {
             const sourceStorageIndex = this.layout.slotStorageIndexes[
               selection.sourceSlotIndex
             ]!;
-            const ignoreStock = this.state.slotFlags[selection.sourceSlotIndex] !== 0;
+            const ignoreStock = this.state.resolveEffectiveIgnoreStock(
+              selection.sourceSlotIndex,
+            );
             this.state.consume(
               selection.sourceSlotIndex,
               selection.itemIndex,
@@ -1363,7 +1365,7 @@ export class DenseSimulationKernel {
       const sourceSlotIndex = this.layout.nodeSlotIndexes[sourceOffset]!;
       const sourceStorageIndex = this.layout.slotStorageIndexes[sourceSlotIndex]!;
       const itemIndex = this.state.slotItemIndexes[sourceStorageIndex]!;
-      const ignoreStock = this.state.slotFlags[sourceSlotIndex] !== 0;
+      const ignoreStock = this.state.resolveEffectiveIgnoreStock(sourceSlotIndex);
       if (
         itemIndex === DENSE_INDEX_NONE
         || (!ignoreStock
@@ -2094,7 +2096,7 @@ export class DenseSimulationKernel {
           slotRef.slotId,
         );
         for (const slotIndex of slotIndexes) {
-          if (this.state.slotFlags[slotIndex] !== 0) continue;
+          if (this.state.resolveEffectiveIgnoreStock(slotIndex)) continue;
           const storageIndex = this.layout.slotStorageIndexes[slotIndex]!;
           if (clearedStorageIndexes.has(storageIndex)) continue;
           clearedStorageIndexes.add(storageIndex);
@@ -2545,7 +2547,7 @@ export class DenseSimulationKernel {
     const storageIndex = this.layout.slotStorageIndexes[slotIndex]!;
     return {
       count: this.state.slotCounts[storageIndex]!,
-      infinite: this.state.slotFlags[slotIndex] !== 0,
+      infinite: this.state.resolveEffectiveIgnoreStock(slotIndex),
     };
   }
 
@@ -2574,7 +2576,7 @@ export class DenseSimulationKernel {
           || count <= 0
           || warehouseSlotIndex === DENSE_INDEX_NONE
           || this.layout.slotStorageIndexes[warehouseSlotIndex] === storageIndex
-          || this.state.slotFlags[slotIndex] !== 0
+          || this.state.resolveEffectiveIgnoreStock(slotIndex)
         ) {
           continue;
         }

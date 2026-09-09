@@ -141,7 +141,7 @@ function logTopologyRuntimeTransition(
 }
 
 export interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
+  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean, powerMode?: "real" | "infinite", powerConsumptionOverride?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
@@ -1166,6 +1166,14 @@ implements SimulationAction, SimulationInternalAction {
         );
     const perfEnabled = this.getPerfEnabled?.() ?? false;
     const debugDataEnabled = this.getDebugDataEnabled?.() ?? false;
+    const powerMode = document.documentSettings.powerMode ?? "infinite";
+    const configuredPowerConsumptionOverride =
+      document.documentSettings.powerConsumptionOverride;
+    const powerConsumptionOverride = typeof configuredPowerConsumptionOverride === "number"
+        && Number.isFinite(configuredPowerConsumptionOverride)
+        && configuredPowerConsumptionOverride >= 0
+      ? configuredPowerConsumptionOverride
+      : undefined;
     let response: Awaited<ReturnType<SimulationWorkerBridge["loadTopology"]>>;
     this.lastWorkerDebugEnabled = perfEnabled;
     this.lastWorkerDebugDataEnabled = debugDataEnabled;
@@ -1176,6 +1184,8 @@ implements SimulationAction, SimulationInternalAction {
         perfEnabled,
         this.stateReadWrite.simulationSpeed,
         debugDataEnabled,
+        powerMode,
+        powerConsumptionOverride,
       );
     } catch (error) {
       if (this.lastWorkerDebugEnabled === perfEnabled) {

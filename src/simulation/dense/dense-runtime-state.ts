@@ -12,6 +12,7 @@ export class DenseRuntimeState {
   public readonly slotItemIndexes: Int32Array;
   public readonly slotCounts: Float64Array;
   public readonly slotReserved: Float64Array;
+  /** 槽位自身 flag；读取有效 ignoreStock 必须使用 resolveEffectiveIgnoreStock。 */
   public readonly slotFlags: Uint8Array;
   public readonly componentItemIndexes: Int32Array;
   public readonly deviceFlags: Uint8Array;
@@ -54,8 +55,28 @@ export class DenseRuntimeState {
       itemIndex: this.slotItemIndexes[storageSlotIndex]!,
       count: this.slotCounts[storageSlotIndex]!,
       reserved: this.slotReserved[storageSlotIndex]!,
-      ignoreStock: (this.slotFlags[slotIndex]! & SLOT_FLAG_IGNORE_STOCK) !== 0,
+      ignoreStock: this.resolveEffectiveIgnoreStock(slotIndex),
     };
+  }
+
+  /**
+   * ignoreStock 是槽位视图属性；share-all 只代理存储，不会把属性合并到共享根槽。
+   * 与 Legacy 一致，从当前视图沿有向代理链向 target 查找，链上任意槽位为无限即生效。
+   */
+  public resolveEffectiveIgnoreStock(slotIndex: number): boolean {
+    this.assertSlotIndex(slotIndex);
+    let currentSlotIndex = slotIndex;
+    for (let visitedCount = 0; visitedCount < this.slotFlags.length; visitedCount += 1) {
+      if ((this.slotFlags[currentSlotIndex]! & SLOT_FLAG_IGNORE_STOCK) !== 0) {
+        return true;
+      }
+      const nextSlotIndex = this.topology.slotCanonicalIndexes[currentSlotIndex]!;
+      if (nextSlotIndex === currentSlotIndex) {
+        return false;
+      }
+      currentSlotIndex = nextSlotIndex;
+    }
+    return false;
   }
 
   public writeSlot(
@@ -229,7 +250,7 @@ export class DenseRuntimeState {
     }
 
     const sourceItemIndex = this.slotItemIndexes[sourceStorageIndex]!;
-    const sourceIgnoreStock = (this.slotFlags[sourceSlotIndex]! & SLOT_FLAG_IGNORE_STOCK) !== 0;
+    const sourceIgnoreStock = this.resolveEffectiveIgnoreStock(sourceSlotIndex);
     if (
       sourceItemIndex !== itemIndex
       || (!sourceIgnoreStock

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -10,6 +10,7 @@ import {
 } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
+import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
@@ -246,13 +247,22 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
   // invalidPlacement → resolveSimulationCompileDocument 过滤 → 仿真拓扑缺失供电桩。
   // 修复方案：clearPlacementState 移到 commit 之前，确保 subscribe 回调链不会看到过期的 drafts。
   it("does not filter newly placed power pole from simulation topology due to stale placement drafts", async () => {
+    localStorage.removeItem(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY);
     const workspace = createEditorTestWorkspace();
     const editorHost = createEditorHost(workspace);
 
     // 让 hookDocumentStorage 的异步初始化先执行完毕，避免后续覆盖测试文档。
     // hookDocumentStorage 中 resolveInitialDocument 在 lastDocumentId 为 null 时同步返回
     // createWorldDocument()，因此单次 microtask 即可完成。
+    // AI-CORRECTION 2026-09-08: 引擎矩阵分支必须隔离持久化入口，并以 documentKey 变化确认初始化完成；
+    // 单次 microtask 只负责启动异步链，不能作为 Editor ready 契约。
+    const bootstrapDocumentKey = editorHost.internalDocument.getSnapshot().documentKey;
     await Promise.resolve();
+    await vi.waitFor(() => {
+      expect(editorHost.internalDocument.getSnapshot().documentKey).not.toBe(
+        bootstrapDocumentKey,
+      );
+    }, { interval: 5 });
 
     // 1. 设置只有研磨机（需要供电）的文档
     const grinder = createTestEntity("grinder", "grinder_1", 0, 0, {
@@ -292,7 +302,21 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       // 6. 等待 fire-and-forget 的 refreshFromCurrentDocument 完成。
       //    注意：不可在此显式调用 refreshFromCurrentDocument，否则会修正 Bug 导致的错误拓扑。
       //    用 setTimeout 确保所有 microtask（包括 runtime worker 的 loadTopology）已完成。
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // AI-REMOVED 2026-09-08:
+      // Reason: 固定等待 50ms 不能表达拓扑刷新完成，在并发测试负载下存在竞态。
+      // Trigger: power-system 引擎矩阵中 Dense 分支读取到被迟到初始化覆盖的拓扑。
+      // Evidence: Dense 分支单独执行通过，跟随 Legacy 执行失败；documentHash 是实际刷新边界。
+      // Replacement: 下方 vi.waitFor 等待 documentHash 变化。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // await new Promise((resolve) => setTimeout(resolve, 50));
+      await vi.waitFor(() => {
+        expect(simulationHost.topology.getSnapshot()?.documentHash).not.toBe(
+          topologyBefore?.documentHash,
+        );
+      }, { interval: 5 });
 
       // 7. 验证：供电桩必须在拓扑中（未被 invalidPlacement 过滤）
       const topology = simulationHost.topology.getSnapshot();
@@ -303,6 +327,8 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       expect(topology?.totalPowerDemand).toBeGreaterThan(0);
     } finally {
       simulationHost.dispose();
+      editorHost.dispose();
+      localStorage.removeItem(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY);
     }
   });
 });

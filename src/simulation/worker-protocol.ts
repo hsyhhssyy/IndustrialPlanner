@@ -33,6 +33,10 @@ export type SimulationWorkerRequest =
       /** 完整 debugData 快照的构造与传输。 */
       readonly debugDataEnabled?: boolean;
       readonly simulationSpeed?: number;
+      /** 拓扑加载时原子应用的初始电力模式；旧调用未传时保留 Worker 当前模式。 */
+      readonly powerMode?: "real" | "infinite";
+      /** 属性存在时覆盖 Worker 当前耗电设置；值为 undefined 表示清除覆盖。 */
+      readonly powerConsumptionOverride?: number;
     }
   | {
       readonly type: "get-tick-snapshot";

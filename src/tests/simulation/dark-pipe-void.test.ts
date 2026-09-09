@@ -4,6 +4,7 @@ import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
+import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 import {
   createBlueprint,
   createEntity,
@@ -107,40 +108,44 @@ describe("dark pipe warehouse ingress", () => {
     expect(listWarehouseIngressTransfers(report)).toEqual([]);
   });
 
-  it("outputs liquid through a linked outlet when the inlet is chained to warehouse stock", async () => {
-    const finalTick = (3 * STANDARD_TICK_RATE_PER_SECOND) + 5;
-    const report = await runBlueprintSimulation({
-      blueprint: createBlueprint(
-        "linked-dark-pipe-inlet-warehouse-source",
-        [
-          createEntity("inlet", "udpipe_loader_1", -6, 0, 180, {
-            "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
-            "storageSlotGroups[0].slots[0].ignoreStock": true,
-          }),
-          createEntity("outlet", "udpipe_unloader_1", 0, 0, 180),
-          createEntity("pipe", "pipe_straight_1x1", 3, 1),
-          createEntity("sink", "udpipe_loader_1", 4, 0, 180),
-        ],
-        [
-          createWarehouseSlotLink("inlet", "item_liquid_sewage", "loader_buffer", "slot_1"),
-          createDarkPipeSlotLink({
-            inletEntityId: "inlet",
-            outletEntityId: "outlet",
-          }),
-        ],
-      ),
-      maxTickNumber: finalTick,
-      registry: createRegistryContract(),
-    });
+  it.each(SIMULATION_ENGINE_MATRIX)(
+    "outputs liquid through a linked outlet when the inlet is chained to warehouse stock [%s]",
+    async (engineKind) => {
+      const finalTick = (3 * STANDARD_TICK_RATE_PER_SECOND) + 5;
+      const report = await runBlueprintSimulation({
+        blueprint: createBlueprint(
+          "linked-dark-pipe-inlet-warehouse-source",
+          [
+            createEntity("inlet", "udpipe_loader_1", -6, 0, 180, {
+              "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+            }),
+            createEntity("outlet", "udpipe_unloader_1", 0, 0, 180),
+            createEntity("pipe", "pipe_straight_1x1", 3, 1),
+            createEntity("sink", "udpipe_loader_1", 4, 0, 180),
+          ],
+          [
+            createWarehouseSlotLink("inlet", "item_liquid_sewage", "loader_buffer", "slot_1"),
+            createDarkPipeSlotLink({
+              inletEntityId: "inlet",
+              outletEntityId: "outlet",
+            }),
+          ],
+        ),
+        maxTickNumber: finalTick,
+        engineKind,
+        registry: createRegistryContract(),
+      });
 
-    expect(findSlot(report, finalTick, "sink", "loader_buffer", "slot_1")).toMatchObject({
-      itemType: null,
-      count: 0,
-    });
-    expect(listWarehouseIngressTransfers(report).some((transfer) =>
-      transfer.itemType === "item_liquid_sewage",
-    )).toBe(true);
-  });
+      expect(findSlot(report, finalTick, "sink", "loader_buffer", "slot_1")).toMatchObject({
+        itemType: null,
+        count: 0,
+      });
+      expect(listWarehouseIngressTransfers(report).some((transfer) =>
+        transfer.itemType === "item_liquid_sewage",
+      )).toBe(true);
+    },
+  );
 });
 
 function listWarehouseIngressTransfers(

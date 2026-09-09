@@ -948,7 +948,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
   }
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean, powerMode?: "real" | "infinite", powerConsumptionOverride?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -960,6 +960,8 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       perfEnabled,
       debugDataEnabled,
       simulationSpeed,
+      powerMode,
+      powerConsumptionOverride,
     }, "topology-loaded");
   }
 
@@ -1159,7 +1161,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
     this.runtime = new SimulationWorkerRuntime(registry);
   }
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean, powerMode?: "real" | "infinite", powerConsumptionOverride?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -1171,6 +1173,8 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       perfEnabled,
       debugDataEnabled,
       simulationSpeed,
+      powerMode,
+      powerConsumptionOverride,
     });
     if (response.type !== "topology-loaded") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
