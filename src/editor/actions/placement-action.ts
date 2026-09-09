@@ -20,6 +20,8 @@ import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import { snapPlacementToOuterRingEdge } from "../placement-snapping";
 import { cloneEntityConfig } from "../entity-config-clone";
+import { translateRegionRects } from "@/shared/geometry/region-rects";
+import { cloneRegionAnnotation } from "@/shared/region-annotations";
 
 type EditorPlacementActions = Pick<
   EditorAction,
@@ -45,6 +47,7 @@ export function createEditorPlacementActions({
       deviceDefinitionId: string,
       centerGridPoint: GridPoint,
     ) => {
+      state.regionAnnotations.moveFeedback = null;
       const definition = workspace.registry.entityDefinitions.find(
         (def) => def.id === deviceDefinitionId,
       );
@@ -89,6 +92,7 @@ export function createEditorPlacementActions({
       // placementDefaults 必须在 state.drafts 赋值之前应用到 draft，
       // 确保 MobX 追踪到的 draft 已携带完整 config 与 slotLinks。
       state.internalTransientState.placementDraftSlotLinks = null;
+      state.regionAnnotations.placementPreview = [];
       if (definition.placementDefaults) {
         const expanded = expandPlacementDefaults(
           definition.placementDefaults,
@@ -124,6 +128,7 @@ export function createEditorPlacementActions({
       blueprint: BlueprintDocument,
       centerGridPoint: GridPoint,
     ) => {
+      state.regionAnnotations.moveFeedback = null;
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);
       // draft ID 仅需与已有 draft 去重；最终 ID 在 commit 时基于文档状态重新分配。
@@ -170,6 +175,10 @@ export function createEditorPlacementActions({
       preview.replace(nextPreviewDrafts.map((draft) => draft.id));
       state.internalTransientState.placementDraftEntityIdMap = entityIdMap;
       state.internalTransientState.placementOriginEntityIds = Object.keys(blueprint.entities);
+      state.regionAnnotations.placementPreview = blueprint.regions.map((region) => ({
+        ...cloneRegionAnnotation(region),
+        rects: translateRegionRects(region.rects, placementVector),
+      }));
       state.internalTransientState.placementDraftSlotLinks = blueprint.slotLinks.flatMap((slotLink) => {
         const sourceEntityId = resolveSlotLinkEntityIdForPlacement(slotLink.source.entityId, entityIdMap);
         const targetEntityId = resolveSlotLinkEntityIdForPlacement(slotLink.target.entityId, entityIdMap);
@@ -388,6 +397,11 @@ export function createEditorPlacementActions({
         ),
         count: committedPreviewDrafts.length,
       };
+      const reservedRegionIds = new Set(currentDocument.regions.map((region) => region.id));
+      const committedRegions = state.regionAnnotations.placementPreview.map((region) => ({
+        ...cloneRegionAnnotation(region),
+        id: createPlacementRegionId(reservedRegionIds),
+      }));
       clearPlacementState(state);
 
       const committedDocument = documentWriter.commit({
@@ -397,6 +411,7 @@ export function createEditorPlacementActions({
           entities: nextEntities,
           entityOrder: nextEntityOrder,
           slotLinks: nextSlotLinks,
+          regions: [...documentSnapshot.regions, ...committedRegions],
         }),
       });
 
@@ -474,6 +489,16 @@ function clearPlacementState(state: EditorActionsContext["state"]): void {
   state.internalTransientState.placementDraftEntityIdMap = null;
   state.internalTransientState.placementOriginEntityIds = null;
   state.internalTransientState.placementHistoryAction = null;
+  state.regionAnnotations.placementPreview = [];
+}
+
+function createPlacementRegionId(reservedIds: Set<string>): string {
+  let id = createUuid();
+  while (reservedIds.has(id)) {
+    id = createUuid();
+  }
+  reservedIds.add(id);
+  return id;
 }
 
 function replacePreviewDrafts(options: {

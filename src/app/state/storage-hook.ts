@@ -231,6 +231,9 @@ function normalizePersistedAppSettings(
       : typeof persistedAppSettings.showGrassBackground === "boolean"
         ? persistedAppSettings.showGrassBackground
         : fallback.showGrassBackground,
+    showRegionAnnotations: typeof persistedAppSettings.showRegionAnnotations === "boolean"
+      ? persistedAppSettings.showRegionAnnotations
+      : fallback.showRegionAnnotations,
     debugShowFps: typeof persistedAppSettings.debugShowFps === "boolean"
       ? persistedAppSettings.debugShowFps
       : fallback.debugShowFps,

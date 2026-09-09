@@ -81,6 +81,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   selectedActivityIds: [],
   toolboxShowAllActivityContent: true,
   showGrassBackground: false,
+  showRegionAnnotations: true,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
   debugSimulationWorkerDetailedReport: false,

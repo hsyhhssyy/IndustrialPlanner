@@ -34,6 +34,12 @@ const PRIMARY_TOOLBAR_ITEMS = [
     panel: "placement" as LeftToolbarPanel,
   },
   {
+    id: "primary-region",
+    icon: "region" as const,
+    labelKey: "workbench.leftRail.region",
+    panel: "region" as LeftToolbarPanel,
+  },
+  {
     id: "primary-blueprint",
     icon: "blueprint" as const,
     labelKey: "workbench.leftRail.blueprint",
@@ -107,6 +113,9 @@ export const LeftToolbar = observer(function LeftToolbar({
   const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
   const debugLogDialogVisible = appHost.internalState.workbench.dialogState["debug-log"]?.visible ?? false;
   const primaryToolbarItems = PRIMARY_TOOLBAR_ITEMS.filter((item) => {
+    if (item.panel === "region" && !appHost.state.settings.showRegionAnnotations) {
+      return false;
+    }
     return item.debugOnly !== true || appHost.state.settings.debugMode;
   });
   const utilityToolbarItems = UTILITY_TOOLBAR_ITEMS.filter((item) => {

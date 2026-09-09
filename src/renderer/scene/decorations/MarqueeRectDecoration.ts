@@ -1,4 +1,4 @@
-import { BlurFilter, Graphics } from "pixi.js";
+import { BlurFilter, Graphics, Text } from "pixi.js";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { AppTheme } from "@/domain/app/types/theme";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
@@ -119,6 +119,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
   const glowStroke = new Graphics({ roundPixels: true });
   const glowMask = new Graphics({ roundPixels: true });
   const glowFilter = new BlurFilter({ quality: 4 });
+  let sizeLabel: Text | null = null;
 
   glowStroke.filters = [glowFilter];
   glowStroke.mask = glowMask;
@@ -137,6 +138,9 @@ export function createMarqueeRectDecoration(): DecorationLayer {
       glowMask.clear();
 
       if (marqueeGridRect === null) {
+        if (sizeLabel !== null) {
+          sizeLabel.visible = false;
+        }
         return;
       }
 
@@ -152,6 +156,9 @@ export function createMarqueeRectDecoration(): DecorationLayer {
       });
 
       if (layout === null) {
+        if (sizeLabel !== null) {
+          sizeLabel.visible = false;
+        }
         return;
       }
 
@@ -185,6 +192,36 @@ export function createMarqueeRectDecoration(): DecorationLayer {
           width: strokeStyle.width,
           color: strokeStyle.color,
         });
+
+      if (sizeLabel === null) {
+        sizeLabel = new Text({
+          text: "",
+          style: {
+            fill: 0xffffff,
+            fontFamily: "system-ui, sans-serif",
+            fontSize: 12,
+            fontWeight: "700",
+            stroke: { color: 0x101419, width: 3, alpha: 0.8 },
+          },
+        });
+        graphics.addChild(sizeLabel);
+      }
+      sizeLabel.visible = true;
+      const cellUnit = ctx.renderHost.workspace.app?.state?.settings?.locale === "en-US"
+        ? "cells"
+        : "格";
+      sizeLabel.text = `${marqueeGridRect.width} × ${marqueeGridRect.height} ${cellUnit}`;
+      sizeLabel.anchor.set(1, 0);
+      sizeLabel.x = clamp(
+        layout.x + layout.width,
+        sizeLabel.width + 8,
+        Math.max(sizeLabel.width + 8, ctx.viewportBounds.width - 8),
+      );
+      sizeLabel.y = clamp(
+        layout.y + layout.height + 4,
+        8,
+        Math.max(8, ctx.viewportBounds.height - sizeLabel.height - 8),
+      );
     },
 
     destroy(): void {
@@ -194,4 +231,8 @@ export function createMarqueeRectDecoration(): DecorationLayer {
       graphics.destroy({ children: true });
     },
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

@@ -238,7 +238,9 @@ describe("editor document history", () => {
     const restored = await readEditorHistoryState(documentKey);
     const record = restored?.records[0];
 
-    expect(restored?.schemaVersion).toBe(2);
+    expect(restored?.schemaVersion).toBe(3);
+    expect(record?.schemaVersion).toBe(2);
+    expect(record?.delta.regions).toBeNull();
     expect(record?.action.definitionIds).toEqual([
       "mix_pool_2",
       "grinder_1",

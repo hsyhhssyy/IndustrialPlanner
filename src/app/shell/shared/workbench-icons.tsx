@@ -81,6 +81,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 type WorkbenchIconKind =
   | "placement"
+  | "region"
   | "delete"
   | "delete-sweep"
   | "blueprint"
@@ -151,6 +152,7 @@ interface WorkbenchIconProps {
 
 const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGElement>>> = {
   placement: LucideGrid2x2,
+  region: LucideSquare,
   delete: LucideTrash2,
   "delete-sweep": MaterialSymbolsDeleteSweep,
   blueprint: LucideDraftingCompass,

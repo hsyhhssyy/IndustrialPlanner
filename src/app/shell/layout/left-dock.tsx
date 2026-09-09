@@ -4,6 +4,7 @@ import { BasePanel } from "@/app/shell/panels/base-panel";
 import { BlueprintPanel } from "@/app/shell/panels/blueprint-panel";
 import { HistoryPanel } from "@/app/shell/panels/history-panel";
 import { PlacementPanel } from "@/app/shell/panels/placement-panel";
+import { RegionPanel } from "@/app/shell/panels/region-panel";
 import { SimulationPanel } from "@/app/shell/panels/simulation-panel";
 import type { AppHost } from "@/app/host/app-host";
 import {
@@ -31,6 +32,7 @@ const DEFAULT_ACTIVE_PANEL: LeftDockPanelId = "placement";
 
 const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   placement: "workbench.panel.placement.title",
+  region: "workbench.panel.region.title",
   blueprint: "workbench.panel.blueprint.title",
   history: "workbench.panel.history.title",
   base: "workbench.panel.base.title",
@@ -39,6 +41,7 @@ const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
 
 const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost }>> = {
   placement: PlacementPanel,
+  region: RegionPanel,
   blueprint: BlueprintPanel,
   history: HistoryPanel,
   base: BasePanel,
@@ -57,7 +60,7 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
 // delete: "workbench.panel.delete.title",
 // delete: DeletePanel,
 // const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history", "base", "simulation"];
-const PANEL_ORDER: LeftDockPanelId[] = ["placement", "blueprint", "history", "base", "simulation"];
+const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "history", "base", "simulation"];
 
 const LeftDockView = observer(function LeftDockView({
   appHost,

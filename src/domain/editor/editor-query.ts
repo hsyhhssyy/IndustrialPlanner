@@ -52,5 +52,9 @@ export interface EditorQuery {
  * 读取指定基地的最新持久化世界文档。当前内存文档不在此查询范围内；
  * 调用方负责用当前内存文档覆盖当前基地。
  */
-readLatestBaseDocuments(baseIds: readonly string[]): Promise<readonly WorldDocument[]>;
+	readLatestBaseDocuments(baseIds: readonly string[]): Promise<readonly WorldDocument[]>;
+	findRegionEntityIds(
+		regionId: string,
+		relation: "contained" | "boundary",
+	): readonly string[];
 }

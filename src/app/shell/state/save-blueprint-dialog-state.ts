@@ -4,7 +4,7 @@ import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 
-export type SaveBlueprintDialogSource = "selection" | "import" | "edit";
+export type SaveBlueprintDialogSource = "selection" | "region" | "import" | "edit";
 
 export class WorkbenchSaveBlueprintDialogController {
   dialogState: DialogStateReadWrite;
@@ -27,6 +27,13 @@ export class WorkbenchSaveBlueprintDialogController {
 
   public openImported(document: BlueprintDocument, parentFolderId: string | null = null) {
     this.source = "import";
+    this.document = document;
+    this.parentFolderId = parentFolderId;
+    this.dialogState.visible = true;
+  }
+
+  public openRegion(document: BlueprintDocument, parentFolderId: string | null = null) {
+    this.source = "region";
     this.document = document;
     this.parentFolderId = parentFolderId;
     this.dialogState.visible = true;

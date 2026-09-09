@@ -1,5 +1,5 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
-import { action } from "mobx";
+import { action, runInAction } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
@@ -14,6 +14,7 @@ import {
   syncPlacementValidationState,
 } from "../placement-validation";
 import type { EditorActionsContext } from "./types";
+import { createRegionMoveFeedback } from "../region-relations";
 
 type EditorMoveActions = Pick<
   EditorAction,
@@ -28,9 +29,22 @@ export function createEditorMoveActions({
 }: EditorActionsContext): EditorMoveActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
     state.collections[collectionType];
+  const entityDefinitionMap = new Map(
+    workspace.registry.entityDefinitions.map((definition) => [definition.id, definition]),
+  );
+  let feedbackClearTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearFeedbackTimer = (): void => {
+    if (feedbackClearTimer !== null) {
+      clearTimeout(feedbackClearTimer);
+      feedbackClearTimer = null;
+    }
+  };
 
   return {
     createMoveOperationDraft: action(() => {
+      clearFeedbackTimer();
+      state.regionAnnotations.moveFeedback = null;
       const currentDocument = document.getSnapshot();
       const selection = resolveCollection(EntityCollectionType.selection);
       const preview = resolveCollection(EntityCollectionType.preview);
@@ -178,10 +192,31 @@ export function createEditorMoveActions({
               ),
           }),
         });
-
       }
 
+      const committedFeedback = createRegionMoveFeedback({
+        phase: "committed",
+        document: currentDocument,
+        movedEntities: movablePreviewDrafts.map((draft) => ({
+          ...draft,
+          id: draft.originalEntityId,
+        })),
+        entityDefinitionMap,
+      });
+
       clearMoveOperationState(state);
+      state.regionAnnotations.moveFeedback = committedFeedback;
+      clearFeedbackTimer();
+      if (committedFeedback !== null) {
+        feedbackClearTimer = setTimeout(() => {
+          runInAction(() => {
+            if (state.regionAnnotations.moveFeedback === committedFeedback) {
+              state.regionAnnotations.moveFeedback = null;
+            }
+          });
+          feedbackClearTimer = null;
+        }, 3_000);
+      }
       syncPlacementValidationState({
         document: document.getSnapshot(),
         state,
@@ -195,6 +230,8 @@ export function createEditorMoveActions({
       return true;
     }),
     cancelMoveOperationDraft: action(() => {
+      clearFeedbackTimer();
+      state.regionAnnotations.moveFeedback = null;
       clearMoveOperationState(state);
       syncPlacementValidationState({
         document: document.getSnapshot(),

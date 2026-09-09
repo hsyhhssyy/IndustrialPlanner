@@ -9,11 +9,13 @@ import type {
   CacheLinkEndpointDefinition,
   LinkType,
 } from "../shared/slot-link";
+import type { RegionAnnotation } from "./region-annotation";
 
 export type { SlotLinkDefinition, CacheLinkEndpointDefinition, LinkType };
 
 // AI-CORRECTION 2026-08-19: schema 5 将资源泵的仓库代理配置迁移为真实手选配方或对应作弊设备。
-export const WORLD_DOCUMENT_SCHEMA_VERSION = 5;
+// AI-CORRECTION 2026-09-09: schema 6 新增持久区域标记，缺失字段的旧文档迁移为空数组。
+export const WORLD_DOCUMENT_SCHEMA_VERSION = 6;
 
 export interface WorldEntity {
   id: string;
@@ -56,6 +58,7 @@ export interface WorldDocument {
   entities: Record<string, WorldEntity>;
   entityOrder: string[];
   slotLinks: SlotLinkDefinition[];
+  regions: readonly RegionAnnotation[];
   documentSettings: WorldDocumentSettings;
 }
 
@@ -78,6 +81,7 @@ export const createWorldDocument = (options: {
     entities: {},
     entityOrder: [],
     slotLinks: [],
+    regions: [],
     documentSettings: {
       viewport: {
         center: {

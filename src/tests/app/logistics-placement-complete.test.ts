@@ -621,6 +621,7 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
     "logistics-draft:belt:158:3",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-06-19T08:48:20.300Z",
   updatedAt: "2026-06-19T08:48:20.300Z",
 };
@@ -737,6 +738,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
     "logistics-draft:belt:447:2",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-06-19T13:28:08.212Z",
   updatedAt: "2026-06-19T13:28:08.212Z",
 };
@@ -799,6 +801,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
     "logistics-draft:belt:582:3",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-06-19T13:36:00.575Z",
   updatedAt: "2026-06-19T13:36:00.575Z",
 };
@@ -861,6 +864,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = {
     "logistics-draft:pipe:584:3",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-07-22T13:26:26.853Z",
   updatedAt: "2026-07-22T13:26:26.853Z",
 };
@@ -932,6 +936,7 @@ const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = {
     "logistics-draft:pipe:6:1",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-07-23T02:56:24.419Z",
   updatedAt: "2026-07-23T02:56:24.419Z",
 };
@@ -980,6 +985,7 @@ const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = {
   },
   entityOrder: ["liquid-furnance", "pipe-50-3", "pipe-51-3", "pipe-52-3"],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-07-23T10:00:00.000Z",
   updatedAt: "2026-07-23T10:00:00.000Z",
 };
@@ -1264,6 +1270,7 @@ const USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP: BlueprintDocument = {
     "storager_1:2",
   ],
   slotLinks: [],
+  regions: [],
   createdAt: "2026-08-01T06:19:44.518Z",
   updatedAt: "2026-08-01T06:19:44.518Z",
 };

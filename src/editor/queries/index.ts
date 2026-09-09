@@ -3,6 +3,7 @@ import type { EditorQuery } from "@/domain/editor/editor-query";
 import { createEditorDocumentQueries } from "./document-queries";
 import { createEditorEntityQueries } from "./entity-queries";
 import { createEditorLogisticsQueries } from "./logistics-queries";
+import { createEditorRegionQueries } from "./region-queries";
 import type { EditorQueriesContext } from "./types";
 import { createEditorViewportQueries } from "./viewport-queries";
 
@@ -13,6 +14,7 @@ export function createEditorQueries(
     ...createEditorDocumentQueries(context),
     ...createEditorEntityQueries(context),
     ...createEditorLogisticsQueries(context),
+    ...createEditorRegionQueries(context),
     ...createEditorViewportQueries(context),
   };
 }

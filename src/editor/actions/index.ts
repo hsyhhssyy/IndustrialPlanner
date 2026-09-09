@@ -10,6 +10,7 @@ import { createEditorHoverActions } from "./hover-action";
 import { createEditorLogisticsActions } from "./logistics-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
+import { createEditorRegionActions } from "./region-actions";
 import { createEditorSelectionActions } from "./selection-actions";
 import { createEditorTransportActions } from "./transport-action";
 import type { EditorActionsContext } from "./types";
@@ -29,6 +30,7 @@ export function createEditorActions(
     ...createEditorLogisticsActions(context),
     ...createEditorMoveActions(context),
     ...createEditorPlacementActions(context),
+    ...createEditorRegionActions(context),
     ...createEditorViewportActions(context),
     ...createEditorSelectionActions(context),
     ...createEditorTransportActions(context),

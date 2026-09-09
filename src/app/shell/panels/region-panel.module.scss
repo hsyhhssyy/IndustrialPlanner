@@ -1,0 +1,182 @@
+.panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topActions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+.topActions input,
+.editor input,
+.editor textarea {
+  min-width: 0;
+  width: 100%;
+}
+
+.regionList {
+  display: grid;
+  gap: 4px;
+  max-height: min(36vh, 360px);
+  overflow: auto;
+}
+
+.regionItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: stretch;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.regionItem.selected {
+  border-color: var(--highlight-ring);
+  background: var(--surface-4);
+}
+
+.regionSelect {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.regionCopy {
+  display: grid;
+  min-width: 0;
+}
+
+.regionCopy strong,
+.regionCopy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regionCopy small,
+.shapeSummary,
+.empty {
+  color: var(--text-2);
+  font-size: 0.76rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
+  border-radius: 3px;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.section,
+.details,
+.editor {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+}
+
+.section h3,
+.details p {
+  margin: 0;
+}
+
+.detailTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.details dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.details dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.details dt,
+.details dd {
+  margin: 0;
+}
+
+.details dt {
+  color: var(--text-2);
+}
+
+.detailActions,
+.editorActions,
+.operationButtons,
+.linkList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editor label {
+  display: grid;
+  gap: 4px;
+}
+
+.editor textarea {
+  min-height: 56px;
+  resize: vertical;
+}
+
+.colorField {
+  grid-template-columns: minmax(0, 1fr) 52px;
+  align-items: center;
+}
+
+.colorField input {
+  height: 30px;
+  padding: 2px;
+}
+
+.active {
+  border-color: var(--highlight-ring);
+  background: var(--surface-4);
+}
+
+.danger {
+  color: var(--danger, #ef4444);
+}
+
+.feedbackList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 18px;
+}
+
+@supports not (color: color-mix(in srgb, black, white)) {
+  .swatch {
+    border-color: currentColor;
+  }
+}

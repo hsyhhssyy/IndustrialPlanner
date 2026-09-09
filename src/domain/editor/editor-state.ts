@@ -7,6 +7,7 @@ import type {
 	EntityCollections,
 	HoverTarget,
 } from "./types/editor-types";
+import type { RegionAnnotationEditorState } from "./types/region-annotation-types";
 
 /// Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
 /// 比如 collection 会标记哪些 entity 当前被选中或处于 preview
@@ -16,6 +17,7 @@ export interface EditorState {
   readonly viewport: EditorViewportState;
   readonly marqueeGridRect: GridRect | null;
   readonly history: EditorHistoryState;
+  readonly regionAnnotations: RegionAnnotationEditorState;
 
   readonly collections: EntityCollections;
 

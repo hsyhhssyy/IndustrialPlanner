@@ -586,6 +586,26 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.showGrassBackground = value;
         }),
       },
+      "game-show-region-annotations": {
+        readValue: () => appHost.state.settings.showRegionAnnotations,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean"
+            || appHost.internalState.settings.showRegionAnnotations === value) {
+            return;
+          }
+
+          appHost.internalState.settings.showRegionAnnotations = value;
+          if (!value) {
+            appHost.workspace.editor?.actions.resetRegionInteraction();
+            if (appHost.internalState.activeTool === "region-edit") {
+              appHost.internalActions.setActiveTool("select");
+            }
+            if (appHost.internalState.runtime.activePanel === "region") {
+              appHost.internalActions.setActivePanel("placement");
+            }
+          }
+        }),
+      },
       "debug-show-fps": {
         readValue: () => appHost.state.settings.debugShowFps,
         writeValue: action((value) => {

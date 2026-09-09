@@ -69,6 +69,7 @@ function createTestDocument(options: {
     entities: options.entities,
     entityOrder: options.entityOrder ?? Object.keys(options.entities),
     slotLinks: options.slotLinks ?? [],
+    regions: [],
     documentSettings: {
       powerMode: "real" as const,
       viewport: {

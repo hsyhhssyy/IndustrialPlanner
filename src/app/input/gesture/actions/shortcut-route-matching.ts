@@ -24,6 +24,7 @@ export const ALL_SHORTCUT_ACTIVE_TOOLS: readonly ActiveTool[] = [
   "single-placement",
   "logistics-placement",
   "dark-pipe-link",
+  "region-edit",
 ];
 
 export function shortcutScopeMatches(

@@ -105,6 +105,14 @@ function resetDocumentRuntimeState(state: EditorStateReadWrite): void {
   state.internalTransientState.placementDraftEntityIdMap = null;
   state.internalTransientState.placementHistoryAction = null;
   state.internalTransientState.placementValidationByEntityId = {};
+  state.regionAnnotations.selectedId = null;
+  state.regionAnnotations.hoveredId = null;
+  state.regionAnnotations.hiddenIds.replace([]);
+  state.regionAnnotations.draft = null;
+  state.regionAnnotations.draftOperation = "add";
+  state.regionAnnotations.draftMarqueeGridRect = null;
+  state.regionAnnotations.placementPreview = [];
+  state.regionAnnotations.moveFeedback = null;
 
   for (const collectionType of Object.values(EntityCollectionType)) {
     state.collections[collectionType].replace([]);

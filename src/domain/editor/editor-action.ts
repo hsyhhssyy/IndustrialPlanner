@@ -15,7 +15,9 @@ import type {
 	MoveLogisticsDraftEndOptions,
 } from "../shared/logistics";
 import type { BlueprintDocument } from "../document/blueprint-document";
+import type { RegionAnnotation } from "../document/region-annotation";
 import type { WorldDocument, WorldDocumentSettings } from "../document/world-document";
+import type { RegionRectOperation } from "./types/region-annotation-types";
 
 export interface EditorAction {
 	setViewportClientRect(clientRect: ClientPixelRect): void;
@@ -103,6 +105,20 @@ export interface EditorAction {
 	createBlueprintPlacementDraft?(blueprint: BlueprintDocument, centerGridPoint: GridPoint): void;
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;
+
+	beginRegionDraft(regionId?: string): void;
+	updateRegionDraft(patch: Partial<Pick<RegionAnnotation, "name" | "description" | "color">>): void;
+	setRegionDraftOperation(operation: RegionRectOperation): void;
+	setRegionDraftMarquee(rect: GridRect | null): void;
+	applyRegionDraftMarquee(): void;
+	commitRegionDraft(): boolean;
+	cancelRegionDraft(): void;
+	deleteRegion(regionId: string): void;
+	selectRegion(regionId: string | null): void;
+	setRegionHovered(regionId: string | null): void;
+	setRegionVisible(regionId: string, visible: boolean): void;
+	focusOnRegion(regionId: string): void;
+	resetRegionInteraction(): void;
 
 	createLogisticsDraftStart(
 		options: CreateLogisticsDraftStartOptions,

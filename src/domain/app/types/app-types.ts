@@ -25,6 +25,7 @@ export interface AppSettings {
   readonly gameAlwaysShowGridLines: boolean;
   readonly gameAlwaysShowPowerRange: boolean;
   readonly showGrassBackground: boolean;
+  readonly showRegionAnnotations: boolean;
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
   readonly debugMode: boolean;
@@ -53,7 +54,8 @@ export type ActiveTool =
   | "blueprint-placement"
   | "single-placement"
   | "logistics-placement"
-  | "dark-pipe-link";
+  | "dark-pipe-link"
+  | "region-edit";
 
 export interface DarkPipeLinkToolState {
   readonly sourceEntityId: string;

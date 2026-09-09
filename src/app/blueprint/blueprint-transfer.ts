@@ -34,6 +34,7 @@ export function createImportedBlueprintDocument(blueprint: BlueprintDocument): B
     entities: cloneBlueprintEntities(portableBlueprint.entities),
     entityOrder: portableBlueprint.entityOrder,
     slotLinks: portableBlueprint.slotLinks.map(cloneSlotLinkDefinition),
+    regions: portableBlueprint.regions.map(cloneRegionAnnotation),
   });
 }
 
@@ -78,6 +79,7 @@ function toPortableBlueprintDocument(blueprint: BlueprintDocument): BlueprintDoc
     entities: cloneBlueprintEntities(blueprint.entities),
     entityOrder: [...blueprint.entityOrder],
     slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
+    regions: blueprint.regions.map(cloneRegionAnnotation),
     createdAt: blueprint.createdAt,
     updatedAt: blueprint.updatedAt,
   };
@@ -117,6 +119,13 @@ function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefiniti
     target: {
       ...slotLink.target,
     },
+  };
+}
+
+function cloneRegionAnnotation(region: BlueprintDocument["regions"][number]) {
+  return {
+    ...region,
+    rects: region.rects.map((rect) => ({ ...rect })),
   };
 }
 

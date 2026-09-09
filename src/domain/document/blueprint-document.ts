@@ -4,9 +4,11 @@ import type {
 	SlotLinkDefinition,
 	WorldEntity,
 } from "./world-document";
+import type { RegionAnnotation } from "./region-annotation";
 
 // AI-CORRECTION 2026-08-19: schema 5 将资源泵的仓库代理配置迁移为真实手选配方或对应作弊设备。
-export const BLUEPRINT_SCHEMA_VERSION = 5;
+// AI-CORRECTION 2026-09-09: schema 6 新增可选来源的区域标记，普通蓝图仍保存空数组。
+export const BLUEPRINT_SCHEMA_VERSION = 6;
 
 export interface BlueprintDocument {
 	schemaVersion: number;
@@ -19,6 +21,7 @@ export interface BlueprintDocument {
 	entities: Record<string, WorldEntity>;
 	entityOrder: string[];
 	slotLinks: SlotLinkDefinition[];
+	regions: readonly RegionAnnotation[];
 	createdAt: string;
 	updatedAt: string;
 }
@@ -33,6 +36,7 @@ export interface CreateBlueprintDocumentInput {
 	entities: Record<string, WorldEntity>;
 	entityOrder: string[];
 	slotLinks: SlotLinkDefinition[];
+	regions?: readonly RegionAnnotation[];
 	createdAt?: string;
 	updatedAt?: string;
 }
@@ -53,6 +57,10 @@ export function createBlueprintDocument(
 		entities: input.entities,
 		entityOrder: [...input.entityOrder],
 		slotLinks: [...input.slotLinks],
+		regions: (input.regions ?? []).map((region) => ({
+			...region,
+			rects: region.rects.map((rect) => ({ ...rect })),
+		})),
 		createdAt: timestamp,
 		updatedAt: input.updatedAt ?? timestamp,
 	};

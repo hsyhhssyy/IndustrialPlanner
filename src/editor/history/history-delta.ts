@@ -1,4 +1,7 @@
 import type {
+  RegionAnnotation,
+} from "@/domain/document";
+import type {
   SlotLinkDefinition,
   WorldDocument,
   WorldEntity,
@@ -25,6 +28,12 @@ export function createWorldDocumentDelta(
       before: before.slotLinks.map(cloneSlotLinkDefinition),
       after: after.slotLinks.map(cloneSlotLinkDefinition),
     };
+  const regions = areJsonEqual(before.regions, after.regions)
+    ? null
+    : {
+      before: before.regions.map(cloneRegionAnnotation),
+      after: after.regions.map(cloneRegionAnnotation),
+    };
   const documentSettings = createDocumentSettingsDelta(
     before.documentSettings,
     after.documentSettings,
@@ -36,6 +45,7 @@ export function createWorldDocumentDelta(
     && Object.keys(entityDelta.updated).length === 0
     && entityOrder === null
     && slotLinks === null
+    && regions === null
     && Object.keys(documentSettings).length === 0
   ) {
     return null;
@@ -45,6 +55,7 @@ export function createWorldDocumentDelta(
     entities: entityDelta,
     entityOrder,
     slotLinks,
+    regions,
     documentSettings,
   };
 }
@@ -84,6 +95,7 @@ export function applyWorldDocumentDelta(
 
   const entityOrderChange = delta.entityOrder;
   const slotLinksChange = delta.slotLinks;
+  const regionsChange = delta.regions;
   const nextDocumentSettings = {
     ...document.documentSettings,
   };
@@ -109,6 +121,10 @@ export function applyWorldDocumentDelta(
       ? document.slotLinks
       : (direction === "forward" ? slotLinksChange.after : slotLinksChange.before)
         .map(cloneSlotLinkDefinition),
+    regions: regionsChange === null
+      ? document.regions
+      : (direction === "forward" ? regionsChange.after : regionsChange.before)
+        .map(cloneRegionAnnotation),
     documentSettings: nextDocumentSettings,
   };
 }
@@ -222,6 +238,13 @@ function cloneSlotLinkDefinition(
     target: {
       ...slotLink.target,
     },
+  };
+}
+
+function cloneRegionAnnotation(region: RegionAnnotation): RegionAnnotation {
+  return {
+    ...region,
+    rects: region.rects.map((rect) => ({ ...rect })),
   };
 }
 

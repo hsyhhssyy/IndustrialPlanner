@@ -35,6 +35,7 @@ describe("WorkbenchSettingsDialogController", () => {
       "game-use-blueprint-style-device-images",
       "game-show-grass-background",
       "game-show-device-names",
+      "game-show-region-annotations",
       "game-show-device-icons",
     ]);
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
@@ -129,6 +130,7 @@ describe("WorkbenchSettingsDialogController", () => {
         // "shortcut-undo": "Ctrl+Z",
         // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
+        "game-show-region-annotations": true,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
         "game-show-pipe-exact-fluid-position": false,
@@ -192,6 +194,7 @@ describe("WorkbenchSettingsDialogController", () => {
     // expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
+    expect(hydratedController.values["game-show-region-annotations"]).toBe(true);
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-collapse-device-modes"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
@@ -599,6 +602,7 @@ describe("WorkbenchSettingsDialogController", () => {
         // "shortcut-undo": "Ctrl+Z",
         // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
+        "game-show-region-annotations": true,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,
         "game-show-pipe-exact-fluid-position": false,

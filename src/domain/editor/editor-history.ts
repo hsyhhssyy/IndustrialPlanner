@@ -2,6 +2,7 @@ import type {
   SlotLinkDefinition,
   WorldEntity,
 } from "../document/world-document";
+import type { RegionAnnotation } from "../document/region-annotation";
 
 export type EditorHistoryActionType =
   | "entity.place"
@@ -14,6 +15,9 @@ export type EditorHistoryActionType =
   | "entity.config.delete-keys"
   | "logistics.place"
   | "document.settings.patch"
+  | "region.create"
+  | "region.edit"
+  | "region.delete"
   | "document.restore"
   | "document.unknown";
 
@@ -43,11 +47,12 @@ export interface EditorHistoryDocumentDelta {
   readonly entities: EditorHistoryEntityDelta;
   readonly entityOrder: EditorHistoryValueChange<readonly string[]> | null;
   readonly slotLinks: EditorHistoryValueChange<readonly SlotLinkDefinition[]> | null;
+  readonly regions: EditorHistoryValueChange<readonly RegionAnnotation[]> | null;
   readonly documentSettings: Readonly<Record<string, EditorHistoryValueChange<unknown>>>;
 }
 
 export interface EditorHistoryRecord {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly id: string;
   readonly documentKey: string;
   readonly sequence: number;

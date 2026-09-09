@@ -94,6 +94,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   selectedActivityIds: string[];
   toolboxShowAllActivityContent: boolean;
   showGrassBackground: boolean;
+  showRegionAnnotations: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
   debugSimulationWorkerDetailedReport: boolean;
@@ -554,6 +555,7 @@ const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
 
 export type ActivePanel =
   | "placement"
+  | "region"
   // AI-REMOVED 2026-05-10:
   // Reason: 左侧删除模式与删除面板已废弃，activePanel 不再接受 delete。
   // Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
@@ -794,6 +796,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     selectedActivityIds: [],
     toolboxShowAllActivityContent: true,
     showGrassBackground: false,
+    showRegionAnnotations: true,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
     debugSimulationWorkerDetailedReport: false,

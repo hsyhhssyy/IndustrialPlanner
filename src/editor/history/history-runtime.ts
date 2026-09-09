@@ -75,7 +75,7 @@ export class EditorHistoryRuntime {
       record.sequence <= this.state.cursorSequence,
     );
     const record: EditorHistoryRecord = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: createUuid(),
       documentKey: options.documentKey,
       sequence: nextSequence,
@@ -168,7 +168,8 @@ export class EditorHistoryRuntime {
 
     const snapshot = {
       // AI-CORRECTION 2026-08-20: 持久化包装升级为 schema 2；record 自身仍使用领域定义的 schema 1。
-      schemaVersion: 2 as const,
+      // AI-CORRECTION 2026-09-09: 持久化包装升级为 schema 3；record schema 2 增加区域差量。
+      schemaVersion: 3 as const,
       documentKey,
       cursorSequence: this.state.cursorSequence,
       records: this.state.records.map((record) => record),

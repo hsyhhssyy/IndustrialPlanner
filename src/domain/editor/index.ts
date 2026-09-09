@@ -22,6 +22,12 @@ export type {
 	MoveCollectionToOptions,
 	MarqueeCollectionType,
 } from "./types/editor-types";
+export type {
+	RegionAnnotationEditorState,
+	RegionMoveChange,
+	RegionMoveFeedback,
+	RegionRectOperation,
+} from "./types/region-annotation-types";
 export {
 	EntityCollectionType,
 } from "./types/editor-types";

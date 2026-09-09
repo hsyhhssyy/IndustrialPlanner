@@ -2715,6 +2715,7 @@ function createTestDocument(entities: readonly WorldEntity[]): WorldDocument {
     entities: Object.fromEntries(entities.map((e) => [e.id, e])) as Record<string, WorldEntity>,
     entityOrder: entities.map((e) => e.id),
     slotLinks: [],
+    regions: [],
     documentSettings: {
       viewport: { center: { x: 0, y: 0 }, gridSize: 1, displayRotation: 0 },
       powerMode: "infinite",

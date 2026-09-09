@@ -61,6 +61,7 @@ export function createEditorHost(
       return editorState.marqueeGridRect;
     },
     history: editorState.history,
+    regionAnnotations: editorState.regionAnnotations,
     collections: editorState.collections,
     get hoverTarget() {
       return editorState.hoverTarget;

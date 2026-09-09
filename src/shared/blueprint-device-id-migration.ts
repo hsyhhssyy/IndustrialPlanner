@@ -3,11 +3,14 @@ import type {
   SlotLinkDefinition,
   WorldEntity,
 } from "@/domain/document/world-document";
+import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import { rotateLocalPortCell } from "@/shared/geometry/port";
+import { normalizeRegionAnnotations } from "@/shared/region-annotations";
 
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 5;
+// AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 6;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
@@ -96,11 +99,15 @@ export interface BlueprintDocumentMigrationState<TEntity extends WorldEntity> {
   readonly entities: Record<string, TEntity>;
   readonly entityOrder: readonly string[];
   readonly slotLinks: readonly SlotLinkDefinition[];
+  readonly regions?: unknown;
 }
 
-export interface BlueprintDocumentMigrationResult<TEntity extends WorldEntity>
-  extends BlueprintDocumentMigrationState<TEntity> {
+export interface BlueprintDocumentMigrationResult<TEntity extends WorldEntity> {
   readonly schemaVersion: number;
+  readonly entities: Record<string, TEntity>;
+  readonly entityOrder: readonly string[];
+  readonly slotLinks: readonly SlotLinkDefinition[];
+  readonly regions: readonly RegionAnnotation[];
 }
 
 export interface BlueprintDeviceReferenceMigrationResult {
@@ -229,6 +236,11 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       "remove-dark-pipe-recipe-channel-config",
     ],
   },
+  {
+    fromVersion: 5,
+    toVersion: 6,
+    deviceRules: [],
+  },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
 const MIGRATION_SPEC_BY_SOURCE_VERSION = createMigrationSpecBySourceVersion(
@@ -272,6 +284,7 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
     entities,
     entityOrder: Object.keys(entities),
     slotLinks: [],
+    regions: [],
   }, sourceSchemaVersion, targetSchemaVersion);
 
   return migration === null
@@ -303,8 +316,20 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     return null;
   }
 
+  const normalizedRegions = normalizeRegionAnnotations(
+    sourceSchemaVersion >= 6 ? state.regions : state.regions ?? [],
+  );
+  if (normalizedRegions === null) {
+    return null;
+  }
+
   let schemaVersion = sourceSchemaVersion;
-  let nextState = state;
+  let nextState: BlueprintDocumentMigrationState<TEntity> = {
+    entities: state.entities,
+    entityOrder: state.entityOrder,
+    slotLinks: state.slotLinks,
+    regions: normalizedRegions,
+  };
 
   while (schemaVersion < targetSchemaVersion) {
     const spec = MIGRATION_SPEC_BY_SOURCE_VERSION.get(schemaVersion);
@@ -358,8 +383,11 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
   }
 
   return {
-    ...nextState,
     schemaVersion,
+    entities: nextState.entities,
+    entityOrder: nextState.entityOrder,
+    slotLinks: nextState.slotLinks,
+    regions: normalizedRegions,
   };
 }
 

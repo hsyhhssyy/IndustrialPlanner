@@ -48,6 +48,7 @@ export function createEditorHistoryActions({
         mode: "replay",
       });
       history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
+      state.regionAnnotations.moveFeedback = null;
 
       return true;
     }),
@@ -71,6 +72,7 @@ export function createEditorHistoryActions({
         mode: "replay",
       });
       history.setCursorSequence(currentDocument.documentKey, record.sequence);
+      state.regionAnnotations.moveFeedback = null;
 
       return true;
     }),
@@ -117,6 +119,7 @@ export function createEditorHistoryActions({
         mode: "replay",
       });
       history.setCursorSequence(currentDocument.documentKey, targetSequence);
+      state.regionAnnotations.moveFeedback = null;
 
       return true;
     }),

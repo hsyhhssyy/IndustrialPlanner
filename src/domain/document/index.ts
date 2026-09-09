@@ -13,6 +13,7 @@ export type {
 	CacheLinkEndpointDefinition,
 	LinkType,
 } from "./world-document";
+export type { RegionAnnotation } from "./region-annotation";
 export {
 	DEFAULT_WORLD_BASE_ID,
 	WORLD_DOCUMENT_SCHEMA_VERSION,

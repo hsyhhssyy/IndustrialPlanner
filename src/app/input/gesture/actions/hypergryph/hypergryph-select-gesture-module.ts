@@ -26,12 +26,14 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       binding: { kind: "fixed", value: "Esc" },
       scope: {
         inputLayers: ["canvas"],
+        // AI-CORRECTION 2026-09-09: 区域编辑加入同一 Escape 固定取消路由，当前可取消工具不再只有原注释所述五种。
         activeTools: [
           "move",
           "marquee",
           "blueprint-placement",
           "single-placement",
           "logistics-placement",
+          "region-edit",
         ],
       },
       triggerPolicy: { kind: "exact" },

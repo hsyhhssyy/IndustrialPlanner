@@ -23,6 +23,9 @@ import {
   createHypergryphMarqueeGestureModule,
 } from "./hypergryph/hypergryph-marquee-gesture-module";
 import {
+  createHypergryphRegionGestureModule,
+} from "./hypergryph/hypergryph-region-gesture-module";
+import {
   createHypergryphMoveGestureModule,
 } from "./hypergryph/hypergryph-move-gesture-module";
 import {
@@ -62,6 +65,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),
+      options.router.registerModule(createHypergryphRegionGestureModule()),
       options.router.registerModule(createHypergryphMarqueeGestureModule()),
       options.router.registerModule(createHypergryphDarkPipeLinkGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),

@@ -83,6 +83,7 @@ describe("keyboard shortcut real-route matrix", () => {
       "logistics-placement",
       "marquee",
       "move",
+      "region-edit",
       "select",
       "single-placement",
     ]);

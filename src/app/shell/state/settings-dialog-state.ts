@@ -283,6 +283,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: true,
       },
       {
+        id: "game-show-region-annotations",
+        kind: "switch",
+        labelKey: "settingsField.game-show-region-annotations",
+        descriptionKey: "settingsField.game-show-region-annotationsDescription",
+        defaultValue: true,
+      },
+      {
         id: SHOW_DEVICE_ICONS_SETTING_ID,
         kind: "switch",
         labelKey: "settingsField.game-show-device-icons",
@@ -407,6 +414,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "switch",
         labelKey: "settingsField.game-show-device-names",
         descriptionKey: "settingsField.game-show-device-namesDescription",
+        defaultValue: true,
+      },
+      {
+        id: "game-show-region-annotations",
+        kind: "switch",
+        labelKey: "settingsField.game-show-region-annotations",
+        descriptionKey: "settingsField.game-show-region-annotationsDescription",
         defaultValue: true,
       },
       {

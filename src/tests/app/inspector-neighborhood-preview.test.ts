@@ -71,6 +71,7 @@ function createWorldDocument(entities: WorldEntity[]): WorldDocument {
     entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])),
     entityOrder: entities.map((entity) => entity.id),
     slotLinks: [],
+    regions: [],
     documentSettings: {
       powerMode: "real" as const,
       viewport: {

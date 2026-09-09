@@ -706,6 +706,7 @@ function normalizeBlueprintDocument(
     entities: value.entities as BlueprintDocument["entities"],
     entityOrder: value.entityOrder,
     slotLinks: value.slotLinks as BlueprintDocument["slotLinks"],
+    regions: value.regions,
   }, value.schemaVersion);
 
   if (migration === null) {
@@ -723,6 +724,7 @@ function normalizeBlueprintDocument(
     entities: migration.entities,
     entityOrder: [...migration.entityOrder],
     slotLinks: [...migration.slotLinks],
+    regions: migration.regions,
     createdAt,
     updatedAt,
   };

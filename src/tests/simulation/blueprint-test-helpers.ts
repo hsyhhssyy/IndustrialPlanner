@@ -336,6 +336,10 @@ export function createWorldDocumentFromBlueprint(
 		entities: cloneBlueprintEntities(blueprint.entities),
 		entityOrder: [...blueprint.entityOrder],
 		slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
+		regions: blueprint.regions.map((region) => ({
+			...region,
+			rects: region.rects.map((rect) => ({ ...rect })),
+		})),
 		documentSettings: {
 			viewport: {
 				center: {

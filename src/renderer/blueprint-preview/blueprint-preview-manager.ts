@@ -16,8 +16,12 @@ import {
   resolveSpriteGridRect,
   type GridBounds,
 } from "@/shared/geometry/grid"
+import {
+  createRegionOutlineSegments,
+  normalizeRegionRects,
+} from "@/shared/geometry/region-rects"
 
-import { Application, Container, Graphics, Sprite, Texture, TilingSprite } from "pixi.js"
+import { Application, Container, Graphics, Sprite, Text, Texture, TilingSprite } from "pixi.js"
 
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import {
@@ -49,6 +53,8 @@ interface PreviewState {
   readonly canvas: HTMLCanvasElement
   readonly entityDefinitionMap: Map<string, EntityDefinition>
   readonly gridGraphics: Graphics
+  readonly regionGraphics: Graphics
+  readonly regionLabels: Container
   readonly spriteMap: Map<string, Sprite>
   readonly textureManager: ReturnType<typeof createTextureActions>
   readonly viewportContainer: Container
@@ -111,6 +117,8 @@ export function createBlueprintPreviewManager(options: {
 
       const viewportContainer = new Container()
       const gridGraphics = new Graphics({ roundPixels: true })
+      const regionGraphics = new Graphics({ roundPixels: true })
+      const regionLabels = new Container()
       const textureManager = createTextureActions({
         renderer: app.renderer,
         app: null,
@@ -122,6 +130,8 @@ export function createBlueprintPreviewManager(options: {
         canvas: app.canvas,
         entityDefinitionMap,
         gridGraphics,
+        regionGraphics,
+        regionLabels,
         spriteMap: new Map(),
         textureManager,
         viewportContainer,
@@ -143,6 +153,8 @@ export function createBlueprintPreviewManager(options: {
       previewStates.set(handle, state)
 
       syncBlueprintPreviewSprites(state)
+      syncBlueprintPreviewRegions(state)
+      app.ticker.add(() => syncBlueprintPreviewRegionVisibility(state))
       mountBlueprintPreviewHighlight(state)
       applyBlueprintPreviewViewport(state)
 
@@ -291,6 +303,10 @@ function syncBlueprintPreviewSprites(state: PreviewState): void {
       footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
     }]
   })
+  areas.push(...state.blueprint.regions.flatMap((region) => region.rects.map((rect) => ({
+    position: { x: rect.x, y: rect.y },
+    footprint: { width: rect.width, height: rect.height },
+  }))))
 
   if (state.viewportBounds !== null) {
     state.bounds = state.viewportBounds
@@ -325,6 +341,77 @@ function syncBlueprintPreviewSprites(state: PreviewState): void {
     sprite.destroy()
     state.spriteMap.delete(entityId)
   }
+
+  if (state.blueprint.regions.length > 0) {
+    state.viewportContainer.addChild(state.regionLabels)
+  }
+}
+
+function syncBlueprintPreviewRegions(state: PreviewState): void {
+  state.regionGraphics.clear()
+  if (state.blueprint.regions.length === 0) {
+    syncBlueprintPreviewRegionVisibility(state)
+    return
+  }
+  state.viewportContainer.addChildAt(state.regionGraphics, 1)
+  for (const child of state.regionLabels.removeChildren()) {
+    child.destroy({ children: true })
+  }
+
+  const visible = state.workspace.app?.state?.settings?.showRegionAnnotations === true
+  state.regionGraphics.visible = visible
+  state.regionLabels.visible = visible
+  if (state.bounds === null) {
+    return
+  }
+
+  const boundsCenter = getGridBoundsCenterCells(state.bounds)
+  for (const region of state.blueprint.regions) {
+    const color = Number.parseInt(region.color.slice(1), 16)
+    for (const rect of region.rects) {
+      state.regionGraphics
+        .rect(
+          rect.x - boundsCenter.x,
+          rect.y - boundsCenter.y,
+          rect.width,
+          rect.height,
+        )
+        .fill({ color, alpha: 0.16 })
+    }
+    for (const segment of createRegionOutlineSegments(region.rects)) {
+      state.regionGraphics
+        .moveTo(segment.x1 - boundsCenter.x, segment.y1 - boundsCenter.y)
+        .lineTo(segment.x2 - boundsCenter.x, segment.y2 - boundsCenter.y)
+    }
+    state.regionGraphics.stroke({ color, alpha: 0.9, width: 0.08 })
+
+    const labelRect = normalizeRegionRects(region.rects)
+      .sort((left, right) => right.width * right.height - left.width * left.height)[0]
+    if (labelRect === undefined) {
+      continue
+    }
+    const label = new Text({
+      text: region.name,
+      style: {
+        align: "center",
+        fill: color,
+        fontFamily: "system-ui, sans-serif",
+        fontSize: 0.46,
+        fontWeight: "700",
+        stroke: { color: 0x101419, width: 0.1, alpha: 0.8 },
+      },
+    })
+    label.anchor.set(0.5)
+    label.x = labelRect.x + labelRect.width / 2 - boundsCenter.x
+    label.y = labelRect.y + labelRect.height / 2 - boundsCenter.y
+    state.regionLabels.addChild(label)
+  }
+}
+
+function syncBlueprintPreviewRegionVisibility(state: PreviewState): void {
+  const visible = state.workspace.app?.state?.settings?.showRegionAnnotations === true
+  state.regionGraphics.visible = visible
+  state.regionLabels.visible = visible
 }
 
 function createBlueprintPreviewSprite(

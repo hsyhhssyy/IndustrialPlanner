@@ -324,6 +324,7 @@ function normalizeWorldDocument(
     entities: value.entities,
     entityOrder: value.entityOrder,
     slotLinks: value.slotLinks,
+    regions: value.regions,
   }, value.schemaVersion);
 
   if (migration === null) {
@@ -341,6 +342,7 @@ function normalizeWorldDocument(
     entities: migration.entities,
     entityOrder: validEntityOrder,
     slotLinks: [...migration.slotLinks],
+    regions: migration.regions,
   };
 }
 
@@ -357,6 +359,7 @@ function isWorldDocumentLike(
     isRecord(value.entities) &&
     Array.isArray(value.entityOrder) &&
     Array.isArray(value.slotLinks) &&
+    (value.schemaVersion < 6 || Array.isArray(value.regions)) &&
     isWorldDocumentSettingsLike(value.documentSettings)
   );
 }

@@ -27,6 +27,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     entities: value.entities as BlueprintDocument["entities"],
     entityOrder: value.entityOrder,
     slotLinks: value.slotLinks as BlueprintDocument["slotLinks"],
+    regions: value.regions,
   }, value.schemaVersion);
 
   if (migration === null) {
@@ -50,6 +51,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     entities: migration.entities,
     entityOrder: validEntityOrder,
     slotLinks: [...migration.slotLinks],
+    regions: migration.regions,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };

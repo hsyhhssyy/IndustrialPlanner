@@ -21,6 +21,12 @@ import type {
   EditorHistoryRecord,
   EditorHistoryState,
 } from "@/domain/editor/editor-history";
+import type { RegionAnnotation } from "@/domain/document/region-annotation";
+import type {
+  RegionAnnotationEditorState,
+  RegionMoveFeedback,
+  RegionRectOperation,
+} from "@/domain/editor/types/region-annotation-types";
 
 import type { DraftEntity } from "./draft-entity";
 import {
@@ -120,6 +126,7 @@ export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
   marqueeGridRect: GridRect | null;
   history: EditorHistoryStateReadWrite;
+  regionAnnotations: RegionAnnotationEditorStateReadWrite;
   hoverTarget: HoverTarget | null;
   // AI-CORRECTION 2026-08-13: drafts 由构造函数中的 observable.shallow 注解管理，
   // MobX 只追踪数组引用替换，不深度代理 draft 内部对象，避免与文档快照共享的嵌套对象被原位 observable 化。
@@ -133,6 +140,38 @@ export interface EditorStateReadWrite extends EditorState {
   // 私有State, 不属于Contract, 但是自己用
   internalPersistState: EditorInternalPersistStateReadWrite;
   internalTransientState: EditorInternalTransientStateReadWrite;
+}
+
+export interface RegionAnnotationEditorStateReadWrite extends RegionAnnotationEditorState {
+  selectedId: string | null;
+  hoveredId: string | null;
+  hiddenIds: IObservableArray<string>;
+  draft: RegionAnnotation | null;
+  draftOperation: RegionRectOperation;
+  draftMarqueeGridRect: GridRect | null;
+  placementPreview: readonly RegionAnnotation[];
+  moveFeedback: RegionMoveFeedback | null;
+}
+
+class RegionAnnotationEditorStateReadWriteImpl
+  implements RegionAnnotationEditorStateReadWrite {
+  selectedId: string | null = null;
+  hoveredId: string | null = null;
+  hiddenIds = observable.array<string>([], { deep: false });
+  draft: RegionAnnotation | null = null;
+  draftOperation: RegionRectOperation = "add";
+  draftMarqueeGridRect: GridRect | null = null;
+  placementPreview: readonly RegionAnnotation[] = [];
+  moveFeedback: RegionMoveFeedback | null = null;
+
+  public constructor() {
+    makeAutoObservable(this, {
+      draft: observable.ref,
+      draftMarqueeGridRect: observable.ref,
+      placementPreview: observable.ref,
+      moveFeedback: observable.ref,
+    }, { autoBind: true });
+  }
 }
 
 export interface EditorHistoryStateReadWrite extends EditorHistoryState {
@@ -197,6 +236,8 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
+  regionAnnotations: RegionAnnotationEditorStateReadWrite =
+    new RegionAnnotationEditorStateReadWriteImpl();
   suppressBelts = false;
   suppressPipes = false;
   hoverTarget: HoverTarget | null = null;

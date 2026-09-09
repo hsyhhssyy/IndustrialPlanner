@@ -62,4 +62,23 @@ describe("world document remote value", () => {
       },
     });
   });
+
+  it("preserves region facts through remote projection and local identity restoration", () => {
+    const localDocument = createDummyWorldDocument();
+    const regions = [{
+      id: "region-1",
+      name: "仓储区",
+      description: "",
+      color: "#10B981",
+      rects: [{ x: 2, y: 3, width: 4, height: 5 }],
+    }];
+    const projected = createWorldDocumentRemoteValue({
+      ...localDocument,
+      regions,
+    });
+    const restored = preserveLocalWorldDocumentIdentity(projected, localDocument);
+
+    expect(projected.regions).toEqual(regions);
+    expect(restored.regions).toEqual(regions);
+  });
 });

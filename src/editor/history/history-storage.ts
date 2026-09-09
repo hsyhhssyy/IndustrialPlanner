@@ -11,7 +11,8 @@ import {
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const EDITOR_HISTORY_STORE_NAME = "editorhistory";
 // AI-CORRECTION 2026-08-20: schema 2 标记历史快照已执行一次设备方向迁移，避免每次读取重复旋转。
-const EDITOR_HISTORY_STORAGE_SCHEMA_VERSION = 2;
+// AI-CORRECTION 2026-09-09: schema 3 标记 record 已升级为 schema 2 并显式携带区域差量。
+const EDITOR_HISTORY_STORAGE_SCHEMA_VERSION = 3;
 
 export interface PersistedEditorHistoryState {
   readonly schemaVersion: typeof EDITOR_HISTORY_STORAGE_SCHEMA_VERSION;
@@ -31,7 +32,7 @@ export async function readEditorHistoryState(
   if (
     normalizedState !== null
     && isRecord(persistedState)
-    && persistedState.schemaVersion === 1
+    && (persistedState.schemaVersion === 1 || persistedState.schemaVersion === 2)
   ) {
     await writeEditorHistoryState(normalizedState);
   }
@@ -62,7 +63,7 @@ function normalizePersistedEditorHistoryState(
 ): PersistedEditorHistoryState | null {
   if (
     !isRecord(value)
-    || (value.schemaVersion !== 1 && value.schemaVersion !== EDITOR_HISTORY_STORAGE_SCHEMA_VERSION)
+    || (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== EDITOR_HISTORY_STORAGE_SCHEMA_VERSION)
     || value.documentKey !== expectedDocumentKey
     || typeof value.cursorSequence !== "number"
     || !Array.isArray(value.records)
@@ -76,26 +77,29 @@ function normalizePersistedEditorHistoryState(
     cursorSequence: Math.max(0, Math.floor(value.cursorSequence)),
     records: value.records
       .filter(isEditorHistoryRecordLike)
-      .map((record) => value.schemaVersion === 1
-        ? migrateEditorHistoryRecordDeviceIds(record)
-        : record),
+      .map((record) => normalizeEditorHistoryRecord(
+        value.schemaVersion === 1
+          ? migrateEditorHistoryRecordDeviceIds(record)
+          : record,
+      )),
   };
 }
 
-function migrateEditorHistoryRecordDeviceIds(record: EditorHistoryRecord): EditorHistoryRecord {
+function migrateEditorHistoryRecordDeviceIds(record: Record<string, unknown>): Record<string, unknown> {
+  const typedRecord = record as unknown as EditorHistoryRecord;
   return {
-    ...record,
+    ...typedRecord,
     action: {
-      ...record.action,
-      definitionIds: record.action.definitionIds?.map(migrateHistoryDefinitionId),
+      ...typedRecord.action,
+      definitionIds: typedRecord.action.definitionIds?.map(migrateHistoryDefinitionId),
     },
     delta: {
-      ...record.delta,
+      ...typedRecord.delta,
       entities: {
-        added: migrateHistoryEntityRecord(record.delta.entities.added),
-        removed: migrateHistoryEntityRecord(record.delta.entities.removed),
+        added: migrateHistoryEntityRecord(typedRecord.delta.entities.added),
+        removed: migrateHistoryEntityRecord(typedRecord.delta.entities.removed),
         updated: Object.fromEntries(
-          Object.entries(record.delta.entities.updated).map(([entityId, change]) => [
+          Object.entries(typedRecord.delta.entities.updated).map(([entityId, change]) => [
             entityId,
             {
               before: migrateHistoryEntity(change.before),
@@ -104,6 +108,22 @@ function migrateEditorHistoryRecordDeviceIds(record: EditorHistoryRecord): Edito
           ]),
         ),
       },
+    },
+  };
+}
+
+function normalizeEditorHistoryRecord(record: Record<string, unknown>): EditorHistoryRecord {
+  const typedRecord = record as unknown as EditorHistoryRecord;
+  const deltaRecord = typedRecord.delta as unknown as Record<string, unknown>;
+
+  return {
+    ...typedRecord,
+    schemaVersion: 2,
+    delta: {
+      ...typedRecord.delta,
+      regions: record.schemaVersion === 2 && "regions" in deltaRecord
+        ? typedRecord.delta.regions
+        : null,
     },
   };
 }
@@ -131,10 +151,10 @@ function migrateHistoryDefinitionId(definitionId: string): string {
   }, 1, 4)?.entities.entity?.definitionId ?? definitionId;
 }
 
-function isEditorHistoryRecordLike(value: unknown): value is EditorHistoryRecord {
+function isEditorHistoryRecordLike(value: unknown): value is Record<string, unknown> {
   return (
     isRecord(value)
-    && value.schemaVersion === 1
+    && (value.schemaVersion === 1 || value.schemaVersion === 2)
     && typeof value.id === "string"
     && typeof value.documentKey === "string"
     && typeof value.sequence === "number"

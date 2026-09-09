@@ -3,9 +3,11 @@ import {
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
+import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { getGridBoundsCenterCells } from "@/shared/geometry/grid";
+import { resolveRegionGridBounds } from "@/shared/geometry/region-rects";
 import {
   saveBlueprintDocument,
   type BlueprintRecord,
@@ -14,6 +16,64 @@ import {
 
 export function canSaveSelectionAsBlueprint(workspace: WorkspaceContract): boolean {
   return (workspace.editor?.state.collections.selection.length ?? 0) > 0;
+}
+
+export function canSaveRegionAsBlueprint(
+  workspace: WorkspaceContract,
+  regionId: string,
+): boolean {
+  return (workspace.editor?.queries.findRegionEntityIds(regionId, "contained").length ?? 0) > 0;
+}
+
+export function createRegionBlueprintDocument(options: {
+  workspace: WorkspaceContract;
+  regionId: string;
+}): BlueprintDocument | null {
+  const editor = options.workspace.editor;
+  if (editor === null) {
+    return null;
+  }
+
+  const currentDocument = editor.document.getSnapshot();
+  const region = currentDocument.regions.find((candidate) => candidate.id === options.regionId);
+  const bounds = region === undefined ? null : resolveRegionGridBounds(region.rects);
+  const containedIds = editor.queries.findRegionEntityIds(options.regionId, "contained");
+  if (region === undefined || bounds === null || containedIds.length === 0) {
+    return null;
+  }
+
+  const containedIdSet = new Set(containedIds);
+  const entities: Record<string, WorldEntity> = {};
+  const entityOrder = currentDocument.entityOrder.filter((entityId) => {
+    const entity = currentDocument.entities[entityId];
+    if (!containedIdSet.has(entityId) || entity === undefined || entities[entityId] !== undefined) {
+      return false;
+    }
+    entities[entityId] = cloneWorldEntity(entity);
+    return true;
+  });
+  if (entityOrder.length === 0) {
+    return null;
+  }
+
+  return createBlueprintDocument({
+    name: region.name,
+    description: region.description,
+    baseId: currentDocument.baseId,
+    initialGridPoint: {
+      x: Math.round(bounds.x + bounds.width / 2),
+      y: Math.round(bounds.y + bounds.height / 2),
+    },
+    entities,
+    entityOrder,
+    slotLinks: currentDocument.slotLinks
+      .filter((slotLink) => (
+        isValidSlotLinkEndpointForBlueprint(slotLink.source.entityId, containedIdSet)
+        && isValidSlotLinkEndpointForBlueprint(slotLink.target.entityId, containedIdSet)
+      ))
+      .map(cloneSlotLinkDefinition),
+    regions: [cloneRegionAnnotation(region)],
+  });
 }
 
 export function createSelectionBlueprintDocument(options: {
@@ -221,6 +281,13 @@ function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefiniti
     target: {
       ...slotLink.target,
     },
+  };
+}
+
+function cloneRegionAnnotation(region: RegionAnnotation): RegionAnnotation {
+  return {
+    ...region,
+    rects: region.rects.map((rect) => ({ ...rect })),
   };
 }
 

@@ -11,6 +11,7 @@ import {
 } from "@/shared/geometry/grid";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 import { resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
+import { transformRegionRectsBetweenBounds } from "@/shared/geometry/region-rects";
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
@@ -38,6 +39,7 @@ import {
   resolveAutoRotateAlignPortsBehavior,
 } from "../auto-rotate-align-ports";
 import type { EditorActionsContext } from "./types";
+import { createRegionMoveFeedback } from "../region-relations";
 
 type EditorCollectionActions = Pick<
   EditorAction,
@@ -116,6 +118,72 @@ export function createEditorSelectionActions({
       definition,
     ]),
   );
+
+  const syncPlacementPreviewForDraftTransformation = (options: {
+    readonly collection: readonly string[];
+    readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
+    readonly beforeDrafts: readonly DraftEntity[];
+    readonly afterDrafts: readonly DraftEntity[];
+  }): void => {
+    if (state.regionAnnotations.placementPreview.length === 0) {
+      return;
+    }
+
+    const sourceGeometry = resolveEntityCollectionGeometry({
+      collection: options.collection,
+      document: options.currentDocument,
+      drafts: options.beforeDrafts,
+      entityDefinitionMap,
+    });
+    const targetGeometry = resolveEntityCollectionGeometry({
+      collection: options.collection,
+      document: options.currentDocument,
+      drafts: options.afterDrafts,
+      entityDefinitionMap,
+    });
+    const sourceFirst = sourceGeometry?.entries[0]?.entity;
+    const targetFirst = sourceFirst === undefined
+      ? undefined
+      : targetGeometry?.entries.find((entry) => entry.entity.id === sourceFirst.id)?.entity;
+    if (sourceGeometry === null || targetGeometry === null || sourceFirst === undefined || targetFirst === undefined) {
+      return;
+    }
+
+    const rotation = normalizeRotationAngle(targetFirst.rotation - sourceFirst.rotation);
+    if (rotation === null) {
+      return;
+    }
+
+    state.regionAnnotations.placementPreview = state.regionAnnotations.placementPreview.map((region) => ({
+      ...region,
+      rects: transformRegionRectsBetweenBounds({
+        rects: region.rects,
+        sourceBounds: sourceGeometry.boundingBox,
+        targetBounds: targetGeometry.boundingBox,
+        rotation,
+      }),
+    }));
+  };
+
+  const syncRegionMovePreview = (currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>): void => {
+    const ghostIds = new Set(resolveCollection(EntityCollectionType.ghost));
+    if (ghostIds.size === 0) {
+      return;
+    }
+
+    const previewDrafts = resolveCollection(EntityCollectionType.preview).flatMap((draftId) => {
+      const draft = state.drafts.find((candidate) => candidate.id === draftId);
+      return draft !== undefined && ghostIds.has(draft.originalEntityId)
+        ? [{ ...draft, id: draft.originalEntityId }]
+        : [];
+    });
+    state.regionAnnotations.moveFeedback = createRegionMoveFeedback({
+      phase: "preview",
+      document: currentDocument,
+      movedEntities: previewDrafts,
+      entityDefinitionMap,
+    });
+  };
 
   const moveCollectionByGridVector = (
     collectionType: EntityCollectionType,
@@ -247,7 +315,14 @@ export function createEditorSelectionActions({
     */
 
     if (didUpdateDrafts) {
+      syncPlacementPreviewForDraftTransformation({
+        collection,
+        currentDocument,
+        beforeDrafts: state.drafts,
+        afterDrafts: nextDrafts,
+      });
       state.drafts = nextDrafts;
+      syncRegionMovePreview(currentDocument);
     }
 
     syncPlacementValidationState({
@@ -464,7 +539,14 @@ export function createEditorSelectionActions({
     });
 
     if (didUpdateDrafts) {
+      syncPlacementPreviewForDraftTransformation({
+        collection,
+        currentDocument: options.currentDocument,
+        beforeDrafts: state.drafts,
+        afterDrafts: nextDrafts,
+      });
       state.drafts = nextDrafts;
+      syncRegionMovePreview(options.currentDocument);
     }
 
     syncPlacementValidationState({
@@ -560,7 +642,7 @@ export function createEditorSelectionActions({
         },
       });
     } else {
-      state.drafts = state.drafts.map((draft) =>
+      const nextDrafts = state.drafts.map((draft) =>
         draft.id === entity.id
           ? {
             ...draft,
@@ -569,6 +651,14 @@ export function createEditorSelectionActions({
           }
           : draft,
       );
+      syncPlacementPreviewForDraftTransformation({
+        collection,
+        currentDocument: options.currentDocument,
+        beforeDrafts: state.drafts,
+        afterDrafts: nextDrafts,
+      });
+      state.drafts = nextDrafts;
+      syncRegionMovePreview(options.currentDocument);
     }
 
     syncPlacementValidationState({

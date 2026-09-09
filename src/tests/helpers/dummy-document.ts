@@ -116,6 +116,7 @@ export function createDummyWorldDocument(): WorldDocument {
       "dummy-entity-8",
     ],
     slotLinks: [],
+    regions: [],
     documentSettings: {
       viewport: {
         center: {

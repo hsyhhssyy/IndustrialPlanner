@@ -68,6 +68,10 @@ import { createBlueprintPlacementCanvasDecoration } from "./decorations/Blueprin
 import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
 import { createLogisticsPlacementIdleCursorDecoration } from "./decorations/LogisticsPlacementIdleCursorDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
+import {
+  createRegionAnnotationBackgroundDecoration,
+  createRegionAnnotationOverlayDecoration,
+} from "./decorations/RegionAnnotationDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
 import { createInvalidPlacementDecoration } from "./decorations/InvalidPlacementDecoration"
@@ -240,6 +244,8 @@ export function createRenderSceneOrchestrator(
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
+  const regionBackgroundDecoration = createRegionAnnotationBackgroundDecoration()
+  const regionOverlayDecoration = createRegionAnnotationOverlayDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const blueprintPlacementCanvasDecoration = createBlueprintPlacementCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
@@ -544,6 +550,10 @@ export function createRenderSceneOrchestrator(
       previewRectDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.regionBackground", () => {
+      regionBackgroundDecoration.sync(ctx)
+    })
+
     const entities = measureRenderStage(
       frameProfiler,
       "editor.listEntities",
@@ -595,6 +605,10 @@ export function createRenderSceneOrchestrator(
 
     measureRenderStage(frameProfiler, "decoration.marqueeRect", () => {
       marqueeDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.regionOverlay", () => {
+      regionOverlayDecoration.sync(ctx)
     })
 
     measureRenderStage(frameProfiler, "decoration.marqueeCanvas", () => {
@@ -709,6 +723,7 @@ export function createRenderSceneOrchestrator(
     marqueeOverlayLayer,
   )
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
+  layers.background.addChild(regionBackgroundDecoration.container)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
   layers.background.addChild(powerRangeDecoration.container)
@@ -721,6 +736,7 @@ export function createRenderSceneOrchestrator(
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
+  marqueeOverlayLayer.addChild(regionOverlayDecoration.container)
   marqueeOverlayLayer.addChild(blueprintPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
@@ -759,6 +775,8 @@ export function createRenderSceneOrchestrator(
       previewRectDecoration.destroy()
       invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()
+      regionBackgroundDecoration.destroy()
+      regionOverlayDecoration.destroy()
       marqueeCanvasDecoration.destroy()
       blueprintPlacementCanvasDecoration.destroy()
       logisticsPlacementCanvasDecoration.destroy()
