@@ -30,6 +30,32 @@ describe("物流素材离线发布", () => {
       const dynamicDirectory = path.join(directory, "animations/logistics-contract2");
       const dynamic = JSON.parse(await readFile(path.join(dynamicDirectory, "manifest.json"), "utf8")) as LogisticsDynamicManifest;
       const collectionRoot = path.resolve("resources/logistics-materials/contract2");
+      // gold-glow 改变了光斑公式；发布产物必须采用源规范，不能继续携带旧 Shader。
+      const specification = JSON.parse(await readFile(path.join(collectionRoot, "dynamic/material-computation.json"), "utf8")) as {
+        referenceShader: { vertex: string; fragment: string };
+      };
+      expect(dynamic.vertex).toBe(specification.referenceShader.vertex);
+      expect(dynamic.fragment).toBe(specification.referenceShader.fragment);
+      // 外侧柔光超出动态 mapping 的覆盖范围，静态图集必须完整保留，且不额外发布调色分层。
+      for (const [shape, packageId] of [["straight", "mid"], ["left", "left"], ["right", "right"]]) {
+        const staticPath = path.join(collectionRoot, `static/grid_belt_01_${packageId}/top/static`);
+        const source = await sharp(path.join(staticPath, `conveyor-${shape}-static.webp`)).ensureAlpha().raw().toBuffer();
+        const mapping = await sharp(path.join(collectionRoot, `dynamic/grid_belt_01_${packageId}/top/dynamic/conveyor-${shape}-mapping.webp`))
+          .ensureAlpha().raw().toBuffer();
+        const beltFrame = manifest.frames[`belt/${shape}`]!;
+        const published = await sharp(path.join(directory, "logistics/static", manifest.pages[beltFrame.page]!.file))
+          .extract({ left: beltFrame.rect[0], top: beltFrame.rect[1], width: 128, height: 128 }).ensureAlpha().raw().toBuffer();
+        let outsideGlowPixels = 0;
+        for (let offset = 0; offset < source.length; offset += 4) {
+          expect(published[offset + 3]).toBe(source[offset + 3]);
+          if (source[offset + 3]) expect(published.subarray(offset, offset + 3)).toEqual(source.subarray(offset, offset + 3));
+          if (source[offset + 3]! > 0 && mapping[offset + 3] === 0) outsideGlowPixels++;
+        }
+        expect(outsideGlowPixels).toBeGreaterThan(0);
+        for (const layer of ["surface", "edge-glow", "edge-core", "arrow-static"]) {
+          expect(dynamic.resources[`static/conveyor.${shape}.${layer}`]).toBeUndefined();
+        }
+      }
       for (const mode of ["static", "dynamic"]) {
         const collection = JSON.parse(await readFile(path.join(collectionRoot, mode, "collection.json"), "utf8")) as { packages: { manifest: string }[] };
         for (const entry of collection.packages) {

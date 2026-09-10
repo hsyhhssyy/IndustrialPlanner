@@ -2,10 +2,82 @@
   "schemaVersion": 1,
   "materialContractVersion": 2,
   "gameVersion": "v1.5",
-  "taskId": "20260910-124310-logistics-phase-review",
+  "taskId": "20260910-141000-logistics-gold-glow",
   "building": "grid_belt_01_left",
   "pixelsPerCell": 128,
   "resources": {
+    "static/conveyor.left.surface": {
+      "file": "conveyor-left-surface.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.left.surface",
+      "namespace": "static",
+      "sha256": "31104f16f7d295b996d2a7fa38920e9d83bd0d28a0940c218f81339b2725ba35"
+    },
+    "static/conveyor.left.edge-glow": {
+      "file": "conveyor-left-edge-glow.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.left.edge-glow",
+      "namespace": "static",
+      "sha256": "164d38bb0acc71fa3a9ff106d22afe3903b15f50b5122bf4577c5d235c35a6e2"
+    },
+    "static/conveyor.left.edge-core": {
+      "file": "conveyor-left-edge-core.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.left.edge-core",
+      "namespace": "static",
+      "sha256": "3e88acbfe0cf7c5b63ffe4a63dfaca267dd8da66ce89dc065609c5135c286e84"
+    },
+    "static/conveyor.left.arrow-static": {
+      "file": "conveyor-left-arrow-static.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.left.arrow-static",
+      "namespace": "static",
+      "sha256": "5fb8e9620395f743ee650fcd51e3cd1f57f2aac4c23d0a73b8ef1c76ac612cef"
+    },
     "static/conveyor.left.base": {
       "file": "conveyor-left-base.webp",
       "width": 128,
@@ -22,7 +94,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.left.base",
       "namespace": "static",
-      "sha256": "038f580765a4acaf6dd757a3c52569ae0f678a8e580270cf0ad11c99d9425250"
+      "sha256": "fd6575307c568c94deb06cde07d0a0f8fa1702c017114e243ece5070893b2ffa"
     },
     "static/conveyor.left.static": {
       "file": "conveyor-left-static.webp",
@@ -40,7 +112,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.left.static",
       "namespace": "static",
-      "sha256": "23793bc17e7aadd40d1d94e2ec79ee8eb016e552a8dd80677074f8a1646c2a30"
+      "sha256": "93819cd3055adbf592d11c2aab66d4347ee670e8ec2a849cc1314c7ebc9c3d43"
     }
   },
   "shapes": {
@@ -72,6 +144,8 @@
       "phaseSpan": 1,
       "staticArrowPhase": -0.0029871862169272845,
       "staticArrowCenterAlong": 0.5,
+      "appearanceRevision": "gold-glow-20260910",
+      "composition": "Use static alone, or base + arrow/dynamic overlay. Optional surface + edge-glow + edge-core replaces base; never double-stack base and its components.",
       "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
       "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
       "sourceId": "grid_belt_01_left"
@@ -81,6 +155,10 @@
   "resourceNamespace": "static",
   "materialSpecification": "material-computation.json",
   "migrationFromContract1": {
+    "conveyor.left.surface": "static/conveyor.left.surface",
+    "conveyor.left.edge-glow": "static/conveyor.left.edge-glow",
+    "conveyor.left.edge-core": "static/conveyor.left.edge-core",
+    "conveyor.left.arrow-static": "static/conveyor.left.arrow-static",
     "conveyor.left.base": "static/conveyor.left.base",
     "conveyor.left.static": "static/conveyor.left.static"
   }

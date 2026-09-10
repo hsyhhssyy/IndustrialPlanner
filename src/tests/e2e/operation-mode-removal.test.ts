@@ -12,13 +12,13 @@ test.describe.configure({ mode: "serial" });
 for (const profile of SCREEN_PROFILES) {
   test(`历史关闭设置不再禁用当前操作 [${profile.deviceClass}]`, async ({ browser }, testInfo) => {
     test.setTimeout(90_000);
+    const context = await browser.newContext({
+      viewport: { width: profile.width, height: profile.height },
+      deviceScaleFactor: profile.dpr,
+      hasTouch: profile.deviceClass !== "desktop",
+      isMobile: profile.deviceClass !== "desktop",
+    });
     try {
-      const context = await browser.newContext({
-        viewport: { width: profile.width, height: profile.height },
-        deviceScaleFactor: profile.dpr,
-        hasTouch: profile.deviceClass !== "desktop",
-        isMobile: profile.deviceClass !== "desktop",
-      });
       await context.addInitScript((desktop) => {
         // 桌面配置具有触控能力，但保留鼠标细指针；避免被识别成平板。
         if (desktop) {
@@ -87,11 +87,33 @@ for (const profile of SCREEN_PROFILES) {
       await moveRow.scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath("operation-guide.png") });
       await testInfo.attach("after.yaml", { body: await page.locator("body").ariaSnapshot(), contentType: "text/yaml" });
-      await context.close();
+
+      // AI-REMOVED 2026-09-10:
+      // Reason: context 关闭必须进入 finally，覆盖断言失败、异常与超时路径。
+      // Trigger: 完整 E2E 检查暴露了测试资源生命周期未覆盖失败路径的问题。
+      // Evidence: 成功路径尾部的关闭动作无法满足项目 Playwright 异常路径清理规范。
+      // Replacement: 本测试 finally 中的 await context.close()
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // await context.close();
     } finally {
       // 包括断言失败与超时路径，关闭本用例全部页面、上下文和浏览器进程。
-      await browser.close();
-      expect(browser.isConnected()).toBe(false);
+      // AI-CORRECTION 2026-09-10: browser 是 Playwright worker 级 fixture；本用例只关闭自行创建的 context，browser 由 runner 统一关闭。
+      await context.close();
+
+      // AI-REMOVED 2026-09-10:
+      // Reason: 测试不得关闭 Playwright runner 管理的 worker 级 browser fixture。
+      // Trigger: mobile 用例关闭共享 browser 后，tablet 在 browser.newContext() 处失败，desktop 未执行。
+      // Evidence: Playwright browser fixture 为 worker 作用域，同一 worker 内的串行用例共享该 fixture。
+      // Replacement: 本 finally 关闭测试自行创建的 context；browser 由 Playwright runner teardown 关闭。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // await browser.close();
+      // expect(browser.isConnected()).toBe(false);
     }
   });
 }

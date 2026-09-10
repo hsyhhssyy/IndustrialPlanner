@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "materialContractVersion": 2,
   "gameVersion": "v1.5",
-  "taskId": "20260910-124310-logistics-phase-review",
+  "taskId": "20260910-141000-logistics-gold-glow",
   "building": "grid_belt_01_mid",
   "requiresBaseContract": 2,
   "resources": {
@@ -96,6 +96,8 @@
       "phaseSpan": 1,
       "staticArrowPhase": -0.0029871862169272845,
       "staticArrowCenterAlong": 0.5,
+      "appearanceRevision": "gold-glow-20260910",
+      "composition": "Use static alone, or base + arrow/dynamic overlay. Optional surface + edge-glow + edge-core replaces base; never double-stack base and its components.",
       "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
       "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
       "sourceId": "grid_belt_01_mid"

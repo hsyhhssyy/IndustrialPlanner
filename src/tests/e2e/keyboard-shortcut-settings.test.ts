@@ -119,7 +119,21 @@ test("shortcut settings groups actions and resolves conflicts from real route sc
       await expect(rotateViewport).toHaveAttribute("aria-label", /· R$/);
 
       await page.reload();
-      await openShortcutSettings(page);
+
+      // AI-REMOVED 2026-09-10:
+      // Reason: 通用打开流程会在持久化设置对话框恢复期间误判其尚未打开，并点击被 backdrop 遮挡的工具栏按钮。
+      // Trigger: 完整 E2E 检查中该点击持续被 backdrop 拦截，直至 120 秒测试超时。
+      // Evidence: Playwright trace 显示重载后设置对话框已恢复，工具栏按钮 aria-pressed=true，点击重试均被 backdrop 截获。
+      // Replacement: 下方显式等待恢复后的设置对话框，再从对话框内部打开快捷键设置。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // await openShortcutSettings(page);
+      const restoredSettingsDialog = page.getByRole("dialog", { name: "设置", exact: true });
+      await expect(restoredSettingsDialog).toBeVisible();
+      await restoredSettingsDialog.getByRole("button", { name: "打开快捷键设置", exact: true }).click();
+      await expect(page.locator(".keyboard-shortcut-settings-dialog")).toBeVisible();
       await expect(primarySlot(page, "shortcut-rotate")).toHaveAttribute("aria-label", /· R$/);
       await expect(primarySlot(page, "shortcut-rotate-viewport")).toHaveAttribute("aria-label", /· R$/);
 

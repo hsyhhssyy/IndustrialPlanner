@@ -2,10 +2,82 @@
   "schemaVersion": 1,
   "materialContractVersion": 2,
   "gameVersion": "v1.5",
-  "taskId": "20260910-124310-logistics-phase-review",
+  "taskId": "20260910-141000-logistics-gold-glow",
   "building": "grid_belt_01_mid",
   "pixelsPerCell": 128,
   "resources": {
+    "static/conveyor.straight.surface": {
+      "file": "conveyor-straight-surface.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.straight.surface",
+      "namespace": "static",
+      "sha256": "98c7adb19bd5b2425ca5e1c36efda11aeaabc35362d3af6e0b07f7edd04627c0"
+    },
+    "static/conveyor.straight.edge-glow": {
+      "file": "conveyor-straight-edge-glow.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.straight.edge-glow",
+      "namespace": "static",
+      "sha256": "6aa53601ba86fa9a9548e0c7c9be1839e28535a22f70d511c63844f8547f59c2"
+    },
+    "static/conveyor.straight.edge-core": {
+      "file": "conveyor-straight-edge-core.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.straight.edge-core",
+      "namespace": "static",
+      "sha256": "8ed85a0f68f42c31e01dbabf839e9c36ce8e91bd54686ac9be0010133dd33889"
+    },
+    "static/conveyor.straight.arrow-static": {
+      "file": "conveyor-straight-arrow-static.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.straight.arrow-static",
+      "namespace": "static",
+      "sha256": "214bbaeb5a7f263d42f514c80c4e01e19b4f129cfd2140f149a568826dd4226c"
+    },
     "static/conveyor.straight.base": {
       "file": "conveyor-straight-base.webp",
       "width": 128,
@@ -22,7 +94,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.straight.base",
       "namespace": "static",
-      "sha256": "30f71aef28523bd3e9dcf9b1c5e1a786dffa0582d50557252bef2004bc78273b"
+      "sha256": "1c318d208d94f5b57aaa11e6801a38efb6d9b961fac26c2d73a00977789e477a"
     },
     "static/conveyor.straight.static": {
       "file": "conveyor-straight-static.webp",
@@ -40,7 +112,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.straight.static",
       "namespace": "static",
-      "sha256": "8b4b9a3be125252e71f785abbd2fa4d925bec7a2c07b16a0795e31bef9c2a9f8"
+      "sha256": "1cd40fedfdfbfdb692690d682475739ce12c0240deb184927f325a876092b1fa"
     }
   },
   "shapes": {
@@ -72,6 +144,8 @@
       "phaseSpan": 1,
       "staticArrowPhase": -0.0029871862169272845,
       "staticArrowCenterAlong": 0.5,
+      "appearanceRevision": "gold-glow-20260910",
+      "composition": "Use static alone, or base + arrow/dynamic overlay. Optional surface + edge-glow + edge-core replaces base; never double-stack base and its components.",
       "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
       "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
       "sourceId": "grid_belt_01_mid"
@@ -81,6 +155,10 @@
   "resourceNamespace": "static",
   "materialSpecification": "material-computation.json",
   "migrationFromContract1": {
+    "conveyor.straight.surface": "static/conveyor.straight.surface",
+    "conveyor.straight.edge-glow": "static/conveyor.straight.edge-glow",
+    "conveyor.straight.edge-core": "static/conveyor.straight.edge-core",
+    "conveyor.straight.arrow-static": "static/conveyor.straight.arrow-static",
     "conveyor.straight.base": "static/conveyor.straight.base",
     "conveyor.straight.static": "static/conveyor.straight.static"
   }

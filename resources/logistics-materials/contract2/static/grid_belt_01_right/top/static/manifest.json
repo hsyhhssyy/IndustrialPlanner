@@ -2,10 +2,82 @@
   "schemaVersion": 1,
   "materialContractVersion": 2,
   "gameVersion": "v1.5",
-  "taskId": "20260910-124310-logistics-phase-review",
+  "taskId": "20260910-141000-logistics-gold-glow",
   "building": "grid_belt_01_right",
   "pixelsPerCell": 128,
   "resources": {
+    "static/conveyor.right.surface": {
+      "file": "conveyor-right-surface.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.surface",
+      "namespace": "static",
+      "sha256": "22d44a4ac7aa97f8d8642a0ff038be0750ef67c39bc89a5a45ec5667d57e7341"
+    },
+    "static/conveyor.right.edge-glow": {
+      "file": "conveyor-right-edge-glow.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.edge-glow",
+      "namespace": "static",
+      "sha256": "f7637f092f462b105da899b0df9b0576daf2f3812720002999e04b5abec0113f"
+    },
+    "static/conveyor.right.edge-core": {
+      "file": "conveyor-right-edge-core.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.edge-core",
+      "namespace": "static",
+      "sha256": "4daf1ee27b85802f7539b2dfb4b343a03e02dc02c323ec76e983befaf51b38bf"
+    },
+    "static/conveyor.right.arrow-static": {
+      "file": "conveyor-right-arrow-static.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.arrow-static",
+      "namespace": "static",
+      "sha256": "0dc8e0195efe12d01acde00ea193322c77ce2052373f96794e5d1004837fc851"
+    },
     "static/conveyor.right.base": {
       "file": "conveyor-right-base.webp",
       "width": 128,
@@ -22,7 +94,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.right.base",
       "namespace": "static",
-      "sha256": "462f8a6601a4931f645ddd6dba143d6b5536a5e708839e87d41a12e83accbef0"
+      "sha256": "067ad67e7d23d9f33e00a6dc9b6cb9d719a05ac0ea7af9536047bded394febda"
     },
     "static/conveyor.right.static": {
       "file": "conveyor-right-static.webp",
@@ -40,7 +112,7 @@
       "wrap": "clamp",
       "semantic": "conveyor.right.static",
       "namespace": "static",
-      "sha256": "b287113864f84e3926134532507d7b5dadeb6885220adec1a40befd05391e0fa"
+      "sha256": "5f66f8408d60f9edc7fa059472a13303640e81dc95b536d7798630260417bc51"
     }
   },
   "shapes": {
@@ -72,6 +144,8 @@
       "phaseSpan": 1,
       "staticArrowPhase": -0.0029871862169272845,
       "staticArrowCenterAlong": 0.5,
+      "appearanceRevision": "gold-glow-20260910",
+      "composition": "Use static alone, or base + arrow/dynamic overlay. Optional surface + edge-glow + edge-core replaces base; never double-stack base and its components.",
       "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
       "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
       "sourceId": "grid_belt_01_right"
@@ -81,6 +155,10 @@
   "resourceNamespace": "static",
   "materialSpecification": "material-computation.json",
   "migrationFromContract1": {
+    "conveyor.right.surface": "static/conveyor.right.surface",
+    "conveyor.right.edge-glow": "static/conveyor.right.edge-glow",
+    "conveyor.right.edge-core": "static/conveyor.right.edge-core",
+    "conveyor.right.arrow-static": "static/conveyor.right.arrow-static",
     "conveyor.right.base": "static/conveyor.right.base",
     "conveyor.right.static": "static/conveyor.right.static"
   }
