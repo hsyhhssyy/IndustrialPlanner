@@ -262,6 +262,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       // Trigger: 用户需求 — 取消该设置的图像化入口。
       // Evidence: 设置项 game-arknights-operation-mode 已从 settings-dialog-state.ts 移除。
       // Replacement: None（字段 hypergryphOperationMode 仍保留于 state，但不再通过设置面板读写）。
+      // AI-CORRECTION 2026-09-10: 字段现已从运行时状态与公开接口移除。
       // Risk: Low
       // Human Review: Not Required
       //

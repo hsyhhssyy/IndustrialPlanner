@@ -323,8 +323,26 @@ const UI: Record<string, string> = {
     "settingsField.game-arknights-immediate-moveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
     "settingsField.game-arknights-inspector-open-on-second-click": "再次点击打开设备属性",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开属性面板。",
-    "settingsField.game-arknights-operation-mode": "鹰角网络操作模式",
-    "settingsField.game-arknights-operation-modeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: None（设置入口已移除）
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // "settingsField.game-arknights-operation-mode": "鹰角网络操作模式",
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: None（设置入口已移除）
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // "settingsField.game-arknights-operation-modeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
     "settingsField.game-arknights-selection-right-dock-sync": "右侧面板与选择联动",
     "settingsField.game-arknights-selection-right-dock-syncDescription": "开启\"使用右侧面板显示设备属性\"后有效，在选择设备时如果面板未展开则自动展开面板。",
     "settingsField.game-quick-place": "快速放置",

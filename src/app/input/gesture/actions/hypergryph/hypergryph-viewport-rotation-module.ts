@@ -9,7 +9,16 @@ import type {
   GestureMappingModule,
   KeyboardGestureEvent,
 } from "../types";
-import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+// AI-REMOVED 2026-09-10:
+// Reason: 操作模式总开关已废弃，不再保留关闭分支
+// Trigger: 用户要求彻底移除 hypergryphOperationMode。
+// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+// Replacement: gesture-action-router.ts 的默认启用语义
+// Risk: 历史 false 设置统一使用当前操作行为。
+// Human Review: Required
+//
+// Original code:
+// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-secondary-toolbar-button-rotate-view";
 const ROTATE_VIEW_HOLD_DURATION_MS = 2_000;
@@ -185,7 +194,16 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
 
   return {
     id: "hypergryph-viewport-rotation",
-    when: isHypergryphGestureEnabled,
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: gesture-action-router.ts 的默认启用语义
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "rotate-viewport.non-operation",
       actionId: SHORTCUT_KEY.ROTATE_VIEWPORT,

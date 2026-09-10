@@ -53,7 +53,16 @@ const MARQUEE_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   // Original code:
   // hotkey: "X",
   hotkeyKeyId: SHORTCUT_KEY.MARQUEE,
-  visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: getVisiblePlacementOperationButtons 默认显示批量选择
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
   activeWhen: (appHost) => appHost.state.activeTool === "marquee",
 };
 

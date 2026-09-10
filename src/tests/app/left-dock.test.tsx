@@ -651,7 +651,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 
-  it("hides the batch select button when hypergryph operation mode is off", () => {
+  it("always shows the batch select button", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -659,9 +659,18 @@ describe("Left dock panel switching", () => {
       appHost.internalState.settings.gameShowHotkeys = true;
     });
 
-    runInAction(() => {
-      appHost.internalState.settings.hypergryphOperationMode = false;
-    });
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 测试直接使用唯一操作行为
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // runInAction(() => {
+    //   appHost.internalState.settings.hypergryphOperationMode = false;
+    // });
 
     act(() => {
       root.render(
@@ -675,7 +684,7 @@ describe("Left dock panel switching", () => {
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
     expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
-    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).toBeNull();
+    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).not.toBeNull();
   });
 
   it("marks the active single-placement device button", () => {

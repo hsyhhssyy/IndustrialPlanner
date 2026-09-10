@@ -59,7 +59,16 @@ function createWorkspace(): WorkspaceContract {
 const DEFAULT_APP_SETTINGS_STORAGE = {
   locale: "zh-CN",
   themeId: "ayu-light",
-  hypergryphOperationMode: true,
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 测试状态不再需要模式字段
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
   hypergryphCopyWhileMoving: false,
   hypergryphImmediateMarquee: false,
@@ -4327,7 +4336,16 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         locale: "zh-CN",
         themeId: "ayu-light",
-        hypergryphOperationMode: true,
+        // AI-REMOVED 2026-09-10:
+        // Reason: 操作模式总开关已废弃，不再保留关闭分支
+        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+        // Replacement: 测试状态不再需要模式字段
+        // Risk: 历史 false 设置统一使用当前操作行为。
+        // Human Review: Required
+        //
+        // Original code:
+        // hypergryphOperationMode: true,
         hypergryphImmediateMove: false,
         hypergryphImmediateMarquee: false,
       }),
@@ -4358,6 +4376,7 @@ describe("WorkbenchApp", () => {
       'input[name="game-arknights-immediate-marquee"]',
     ) as HTMLInputElement | null;
 
+    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(immediateMoveToggle).not.toBeNull();
     expect(copyWhileMovingToggle).not.toBeNull();
     expect(copyWhileMovingToggle?.checked).toBe(false);

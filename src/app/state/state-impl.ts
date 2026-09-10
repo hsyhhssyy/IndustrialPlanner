@@ -72,7 +72,16 @@ export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
   themeId: AppThemeId;
   // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
-  hypergryphOperationMode: boolean;
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: None（状态不再包含总开关）
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphCopyWhileMoving: boolean;
   hypergryphImmediateMarquee: boolean;
@@ -774,7 +783,16 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     locale: DEFAULT_APP_LOCALE,
     themeId: DEFAULT_APP_THEME_ID,
     // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
-    hypergryphOperationMode: true,
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: None（状态不再包含总开关）
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphCopyWhileMoving: false,
     hypergryphImmediateMarquee: false,

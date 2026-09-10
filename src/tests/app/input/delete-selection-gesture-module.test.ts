@@ -155,13 +155,31 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(removeTransportComponent).not.toHaveBeenCalled();
   });
 
-  it("only responds while select or marquee mode, selection exists, and hypergryph mode is active", () => {
+  it("only responds while select or marquee mode and selection exists", () => {
     const module = createHypergryphDeleteSelectionGestureModule();
-    const disabledContext = createContext({ hypergryphOperationMode: false }).context;
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 本测试保留的工具与选择条件
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // const disabledContext = createContext({ hypergryphOperationMode: false }).context;
     const moveContext = createContext({ activeTool: "move" }).context;
     const emptySelectionContext = createContext({ selectedEntityIds: [] }).context;
 
-    expect(module.when?.(disabledContext)).toBe(false);
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 本测试保留的工具与选择条件
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(module.when?.(disabledContext)).toBe(false);
     expect(handleKeyboardShortcutThroughRouter({
       module,
       context: moveContext,
@@ -179,7 +197,16 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
 
 function createContext(options: {
   activeTool?: ActiveTool;
-  hypergryphOperationMode?: boolean;
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 测试状态不再需要模式字段
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode?: boolean;
   selectedEntityIds?: readonly string[];
 } = {}): {
   context: GestureActionContext<AppHost>;
@@ -225,7 +252,16 @@ function createContext(options: {
       appHost: {
         state: {
           settings: {
-            hypergryphOperationMode: options.hypergryphOperationMode ?? true,
+            // AI-REMOVED 2026-09-10:
+            // Reason: 操作模式总开关已废弃，不再保留关闭分支
+            // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+            // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+            // Replacement: 测试状态不再需要模式字段
+            // Risk: 历史 false 设置统一使用当前操作行为。
+            // Human Review: Required
+            //
+            // Original code:
+            // hypergryphOperationMode: options.hypergryphOperationMode ?? true,
           },
         },
         internalState: {

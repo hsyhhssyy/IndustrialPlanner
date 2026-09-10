@@ -114,7 +114,7 @@ describe("createHypergryphSelectGestureModule", () => {
       hideCanvasFloatingToolbar,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, ["entity-1"]);
+    } = createContext("select", ["entity-1"]);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -150,7 +150,7 @@ describe("createHypergryphSelectGestureModule", () => {
       openDialog,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, ["entity-1"], false, true, false, true);
+    } = createContext("select", ["entity-1"], false, true, false, true);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -185,7 +185,7 @@ describe("createHypergryphSelectGestureModule", () => {
       openDialog,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, ["entity-1"], false, true, true, true);
+    } = createContext("select", ["entity-1"], false, true, true, true);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -216,7 +216,7 @@ describe("createHypergryphSelectGestureModule", () => {
       context,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, [], true);
+    } = createContext("select", [], true);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -245,7 +245,7 @@ describe("createHypergryphSelectGestureModule", () => {
       clearCollection,
       hideCanvasFloatingToolbar,
       toggleRightDock,
-    } = createContext("select", true, ["entity-1"], true);
+    } = createContext("select", ["entity-1"], true);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -274,7 +274,7 @@ describe("createHypergryphSelectGestureModule", () => {
       context,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, [], false, false);
+    } = createContext("select", [], false, false);
     const module = createHypergryphSelectGestureModule();
 
     const selectResult = module.handle(
@@ -305,7 +305,7 @@ describe("createHypergryphSelectGestureModule", () => {
       openDialog,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, [], false, true, true, true);
+    } = createContext("select", [], false, true, true, true);
     const module = createHypergryphSelectGestureModule();
 
     const selectResult = module.handle(
@@ -339,7 +339,7 @@ describe("createHypergryphSelectGestureModule", () => {
       context,
       setRightDockActiveTab,
       toggleRightDock,
-    } = createContext("select", true, [], false, true, false);
+    } = createContext("select", [], false, true, false);
     const module = createHypergryphSelectGestureModule();
 
     const selectResult = module.handle(
@@ -367,7 +367,7 @@ describe("createHypergryphSelectGestureModule", () => {
       context,
       clearCollection,
       toggleRightDock,
-    } = createContext("select", true, ["entity-1"], true, false);
+    } = createContext("select", ["entity-1"], true, false);
     const module = createHypergryphSelectGestureModule();
 
     const clearResult = module.handle(
@@ -397,7 +397,7 @@ describe("createHypergryphSelectGestureModule", () => {
       clearCollection,
       showCanvasFloatingToolbarForCollection,
       hideCanvasFloatingToolbar,
-    } = createContext("select", true, ["entity-1", "entity-2"]);
+    } = createContext("select", ["entity-1", "entity-2"]);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -562,12 +562,30 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
-  it("only responds while select mode and hypergryph mode are active", () => {
+  it("only selects entities while select mode is active", () => {
     const module = createHypergryphSelectGestureModule();
-    const disabledContext = createContext("select", false).context;
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 本测试保留的工具与选择条件
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // const disabledContext = createContext("select", false).context;
     const moveContext = createContext("move").context;
 
-    expect(module.when?.(disabledContext)).toBe(false);
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 本测试保留的工具与选择条件
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(module.when?.(disabledContext)).toBe(false);
     expect(
       module.handle(
         {
@@ -750,7 +768,7 @@ describe("createHypergryphSelectGestureModule", () => {
   });
 
   it("hides the select toolbar when leaving select mode", () => {
-    const { context, hideCanvasFloatingToolbar } = createContext("select", true, ["entity-1"]);
+    const { context, hideCanvasFloatingToolbar } = createContext("select", ["entity-1"]);
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -772,7 +790,16 @@ describe("createHypergryphSelectGestureModule", () => {
 
 function createContext(
   activeTool: ActiveTool = "select",
-  hypergryphOperationMode = true,
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 测试状态不再需要模式字段
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode = true,
   selectedEntityIds: readonly string[] = [],
   rightDockOpen = false,
   selectionRightDockSync = true,
@@ -845,7 +872,16 @@ function createContext(
       appHost: {
         state: {
           settings: {
-            hypergryphOperationMode,
+            // AI-REMOVED 2026-09-10:
+            // Reason: 操作模式总开关已废弃，不再保留关闭分支
+            // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+            // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+            // Replacement: 测试状态不再需要模式字段
+            // Risk: 历史 false 设置统一使用当前操作行为。
+            // Human Review: Required
+            //
+            // Original code:
+            // hypergryphOperationMode,
             hypergryphSelectionRightDockSync: selectionRightDockSync,
             hypergryphInspectorOpenOnSecondClick: inspectorOpenOnSecondClick,
             gameUseInspectorPanel: useInspectorPanel,
@@ -924,7 +960,16 @@ function createOverlapSelectContext(): {
   const appHost = {
     state: {
       settings: {
-        hypergryphOperationMode: true,
+        // AI-REMOVED 2026-09-10:
+        // Reason: 操作模式总开关已废弃，不再保留关闭分支
+        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+        // Replacement: 测试状态不再需要模式字段
+        // Risk: 历史 false 设置统一使用当前操作行为。
+        // Human Review: Required
+        //
+        // Original code:
+        // hypergryphOperationMode: true,
         hypergryphSelectionRightDockSync: true,
         hypergryphInspectorOpenOnSecondClick: false,
         gameUseInspectorPanel: true,
@@ -1012,7 +1057,16 @@ function emptyModifiers() {
 function createToolbarFallbackContext(options: {
   activeTool: ActiveTool;
   selectedEntities: readonly WorldEntity[];
-  hypergryphOperationMode?: boolean;
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 测试状态不再需要模式字段
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode?: boolean;
 }): {
   appHost: AppHost;
   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
@@ -1025,7 +1079,16 @@ function createToolbarFallbackContext(options: {
   const appHost = {
     state: {
       settings: {
-        hypergryphOperationMode: options.hypergryphOperationMode ?? true,
+        // AI-REMOVED 2026-09-10:
+        // Reason: 操作模式总开关已废弃，不再保留关闭分支
+        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+        // Replacement: 测试状态不再需要模式字段
+        // Risk: 历史 false 设置统一使用当前操作行为。
+        // Human Review: Required
+        //
+        // Original code:
+        // hypergryphOperationMode: options.hypergryphOperationMode ?? true,
       },
     },
     internalState: new TestInternalState(options.activeTool),

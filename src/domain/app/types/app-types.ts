@@ -6,7 +6,16 @@ export type AppLocale = "zh-CN" | "en-US";
 export interface AppSettings {
   readonly locale: AppLocale;
   readonly themeId: AppThemeId;
-  readonly hypergryphOperationMode: boolean;
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: None（状态不再包含总开关）
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly hypergryphOperationMode: boolean;
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphCopyWhileMoving: boolean;
   readonly hypergryphImmediateMarquee: boolean;

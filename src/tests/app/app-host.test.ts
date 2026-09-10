@@ -517,7 +517,7 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
+    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -532,7 +532,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.rightDockActiveTab).toBe(DEFAULT_RIGHT_DOCK_TAB_ID);
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
-    expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
+    expect(appHost.internalState.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
@@ -546,7 +546,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
-    expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
+    expect(workspace.app?.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -594,7 +594,7 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
+    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -607,7 +607,7 @@ describe("createAppHost", () => {
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
-    expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
+    expect(appHost.internalState.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
@@ -619,7 +619,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
-    expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
+    expect(workspace.app?.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
@@ -837,12 +837,13 @@ describe("createAppHost", () => {
     reloadedAppHost.dispose();
   });
 
-  it("hydrates and persists the current split localStorage keys", () => {
+  it.each([false, true, undefined, "invalid"])("hydrates and persists settings while ignoring legacy operation mode %s", (legacyOperationMode) => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,
       JSON.stringify({
         locale: "en-US",
         themeId: "ayu-light",
+        hypergryphOperationMode: legacyOperationMode,
       }),
     );
     localStorage.setItem(
@@ -881,7 +882,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
+    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.collapseDeviceModes).toBe(true);
@@ -893,6 +894,7 @@ describe("createAppHost", () => {
       JSON.stringify({
         locale: "en-US",
         themeId: "ayu-light",
+        hypergryphOperationMode: legacyOperationMode,
       }),
     );
 
@@ -926,8 +928,20 @@ describe("createAppHost", () => {
       JSON.stringify({
         locale: "en-US",
         themeId: "ayu-light",
+        hypergryphOperationMode: legacyOperationMode,
       }),
     );
+    runInAction(() => {
+      appHost.internalState.settings.themeId = "ayu-dark";
+    });
+    const savedSettings = JSON.parse(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY) ?? "null");
+    expect(savedSettings).not.toHaveProperty("hypergryphOperationMode");
+    expect(savedSettings).toMatchObject({
+      locale: "en-US",
+      themeId: "ayu-dark",
+      hypergryphImmediateMove: true,
+      hypergryphImmediateMarquee: false,
+    });
     appHost.dispose();
     runInAction(() => {
       appHost.internalState.workbench.leftDockOpen = true;
@@ -951,12 +965,7 @@ describe("createAppHost", () => {
         }),
       })),
     );
-    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        locale: "en-US",
-        themeId: "ayu-light",
-      }),
-    );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(JSON.stringify(savedSettings));
   });
 
   it("preserves an explicitly cleared encyclopedia mobile filter selection from storage", () => {
@@ -1235,26 +1244,35 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedInGridSize);
   });
 
-  it("disables hypergryph gesture handlers when hypergryph operation mode is off", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
-    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
-    const initialGridSize = editorHost.state.viewport.gridSize;
-
-    runInAction(() => {
-      appHost.internalState.settings.hypergryphOperationMode = false;
-    });
-
-    appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
-
-    expect(zoomSpy).not.toHaveBeenCalled();
-    expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
-    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toMatchObject({
-      type: "wheel up",
-      gestureId: "wheel-1",
-    });
-  });
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 现有正常操作测试及旧设置加载回归
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // it("disables hypergryph gesture handlers when hypergryph operation mode is off", () => {
+  //   const workspace = createWorkspace();
+  //   const editorHost = createEditorHost(workspace);
+  //   const appHost = createAppHost(workspace);
+  //   const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+  //   const initialGridSize = editorHost.state.viewport.gridSize;
+  //
+  //   runInAction(() => {
+  //     appHost.internalState.settings.hypergryphOperationMode = false;
+  //   });
+  //
+  //   appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
+  //
+  //   expect(zoomSpy).not.toHaveBeenCalled();
+  //   expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
+  //   expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toMatchObject({
+  //     type: "wheel up",
+  //     gestureId: "wheel-1",
+  //   });
+  // });
 
   it("switches the private active tool from hypergryph gesture modules", () => {
     const workspace = createWorkspace();
@@ -1322,32 +1340,41 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("select");
 
-    runInAction(() => {
-      appHost.internalState.settings.hypergryphOperationMode = false;
-    });
-
-    appHost.gestureAdapter.handleKeyDown({
-      code: "KeyX",
-      key: "x",
-      keyCode: 88,
-      altKey: false,
-      ctrlKey: false,
-      metaKey: false,
-      shiftKey: false,
-    });
-
-    expect(appHost.internalState.activeTool).toBe("select");
-
-    appHost.gestureAdapter.handleUiButtonMouseTap({
-      uiButtonId: "placement-tool-marquee",
-      button: 0,
-      altKey: false,
-      ctrlKey: false,
-      metaKey: false,
-      shiftKey: false,
-    });
-
-    expect(appHost.internalState.activeTool).toBe("select");
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 本用例前半段正常工具切换验证
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // runInAction(() => {
+    //   appHost.internalState.settings.hypergryphOperationMode = false;
+    // });
+    //
+    // appHost.gestureAdapter.handleKeyDown({
+    //   code: "KeyX",
+    //   key: "x",
+    //   keyCode: 88,
+    //   altKey: false,
+    //   ctrlKey: false,
+    //   metaKey: false,
+    //   shiftKey: false,
+    // });
+    //
+    // expect(appHost.internalState.activeTool).toBe("select");
+    //
+    // appHost.gestureAdapter.handleUiButtonMouseTap({
+    //   uiButtonId: "placement-tool-marquee",
+    //   button: 0,
+    //   altKey: false,
+    //   ctrlKey: false,
+    //   metaKey: false,
+    //   shiftKey: false,
+    // });
+    //
+    // expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("attaches pointerEntity from editor queries to pointer tap and dragstart events", () => {
@@ -2293,31 +2320,40 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
-  it("keeps temporary blueprint shortcuts disabled outside Hypergryph mode", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
-
-    runInAction(() => {
-      appHost.internalState.settings.hypergryphOperationMode = false;
-    });
-    editorHost.actions.addToCollection({
-      collectionType: EntityCollectionType.selection,
-      entityId: "dummy-entity-2",
-    });
-
-    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
-      code: "KeyC",
-      key: "c",
-      keyCode: 67,
-      ctrlKey: true,
-    }));
-
-    expect(consumed).toBe(false);
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(editorHost.state.collections.preview).toEqual([]);
-  });
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 现有正常操作测试及旧设置加载回归
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // it("keeps temporary blueprint shortcuts disabled outside Hypergryph mode", () => {
+  //   const workspace = createWorkspace();
+  //   const editorHost = createEditorHost(workspace);
+  //   editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+  //   const appHost = createAppHost(workspace);
+  //
+  //   runInAction(() => {
+  //     appHost.internalState.settings.hypergryphOperationMode = false;
+  //   });
+  //   editorHost.actions.addToCollection({
+  //     collectionType: EntityCollectionType.selection,
+  //     entityId: "dummy-entity-2",
+  //   });
+  //
+  //   const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+  //     code: "KeyC",
+  //     key: "c",
+  //     keyCode: 67,
+  //     ctrlKey: true,
+  //   }));
+  //
+  //   expect(consumed).toBe(false);
+  //   expect(appHost.internalState.activeTool).toBe("select");
+  //   expect(editorHost.state.collections.preview).toEqual([]);
+  // });
 
   it("re-arms blueprint-placement with a new temporary blueprint while already placing", () => {
     const workspace = createWorkspace();

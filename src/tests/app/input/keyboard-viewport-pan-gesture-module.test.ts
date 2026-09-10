@@ -100,7 +100,16 @@ const PAN_SECONDARY_SHORTCUT_CODE: Record<string, string> = {
 };
 
 function createContext(options: {
-  hypergryphOperationMode?: boolean;
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 测试状态不再需要模式字段
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hypergryphOperationMode?: boolean;
   gridCellPixelSize?: number;
 } = {}): {
   context: GestureActionContext<AppHost>;
@@ -108,7 +117,16 @@ function createContext(options: {
   isShortcutFor: ReturnType<typeof vi.fn>;
 } {
   const {
-    hypergryphOperationMode = true,
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: 测试状态不再需要模式字段
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // hypergryphOperationMode = true,
     gridCellPixelSize = 32,
   } = options;
   const moveViewportByClientPixelVector = vi.fn();
@@ -158,7 +176,16 @@ function createContext(options: {
       appHost: {
         state: {
           settings: {
-            hypergryphOperationMode,
+            // AI-REMOVED 2026-09-10:
+            // Reason: 操作模式总开关已废弃，不再保留关闭分支
+            // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+            // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+            // Replacement: 测试状态不再需要模式字段
+            // Risk: 历史 false 设置统一使用当前操作行为。
+            // Human Review: Required
+            //
+            // Original code:
+            // hypergryphOperationMode,
           },
         },
         internalActions: {
@@ -469,10 +496,19 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
     expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
   });
 
-  it("only enables the module while hypergryph operation mode is on", () => {
-    const module = createHypergryphKeyboardViewportPanModule();
-
-    expect(module.when?.(createContext().context)).toBe(true);
-    expect(module.when?.(createContext({ hypergryphOperationMode: false }).context)).toBe(false);
-  });
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 现有正常操作测试及旧设置加载回归
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // it("only enables the module while hypergryph operation mode is on", () => {
+  //   const module = createHypergryphKeyboardViewportPanModule();
+  //
+  //   expect(module.when?.(createContext().context)).toBe(true);
+  //   expect(module.when?.(createContext({ hypergryphOperationMode: false }).context)).toBe(false);
+  // });
 });

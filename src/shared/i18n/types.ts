@@ -494,8 +494,26 @@ export type UiKey =
   | "settingsField.game-arknights-immediate-moveDescription"
   | "settingsField.game-arknights-inspector-open-on-second-click"
   | "settingsField.game-arknights-inspector-open-on-second-clickDescription"
-  | "settingsField.game-arknights-operation-mode"
-  | "settingsField.game-arknights-operation-modeDescription"
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: None（设置入口已移除）
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // | "settingsField.game-arknights-operation-mode"
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: None（设置入口已移除）
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // | "settingsField.game-arknights-operation-modeDescription"
   | "settingsField.game-arknights-selection-right-dock-sync"
   | "settingsField.game-arknights-selection-right-dock-syncDescription"
   | "settingsField.game-quick-place"

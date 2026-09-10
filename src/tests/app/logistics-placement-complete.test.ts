@@ -50,7 +50,16 @@ describe("物流布设模式完全测试集", () => {
     });
 
     runInAction(() => {
-      appHost.internalState.settings.hypergryphOperationMode = true;
+      // AI-REMOVED 2026-09-10:
+      // Reason: 操作模式总开关已废弃，不再保留关闭分支
+      // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+      // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+      // Replacement: 测试状态不再需要模式字段
+      // Risk: 历史 false 设置统一使用当前操作行为。
+      // Human Review: Required
+      //
+      // Original code:
+      // appHost.internalState.settings.hypergryphOperationMode = true;
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
     });

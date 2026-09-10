@@ -27,7 +27,17 @@ interface GuideGroup {
 
 interface SettingsSnapshot {
   /** 鹰角操作模式总开关 */
-  hg: boolean;
+  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: SettingsSnapshot 中保留的独立行为设置
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // hg: boolean;
   /** 立即拖动（左键拖拽选中设备直接移动） */
   immediateMove: boolean;
   /** 立即框选（左键拖拽空白区域直接框选） */
@@ -43,20 +53,22 @@ function buildGuideData(resolveShortcut: ShortcutResolver, ss: SettingsSnapshot)
   // ── 根据设置推导 PC 端操作说明 ──
 
   // 平移画布：鹰角模式下若"立即框选"未开，左键拖空白也会平移
-  const panPC: string = ss.hg && !ss.immediateMarquee
+  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
+  const panPC: string = !ss.immediateMarquee
     ? "左键拖拽空白区域 / 鼠标中键拖拽"
     : "鼠标中键拖拽";
 
   // 框选：鹰角模式下若"立即框选"未开，需要先进入批量选择模式
-  const marqueePC: string = ss.hg && !ss.immediateMarquee
+  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
+  const marqueePC: string = !ss.immediateMarquee
     ? "进入批量选择模式后按住左键拖拽"
     : "按住左键拖拽出矩形框";
-  const marqueeTouch: string = ss.hg && !ss.immediateMarquee
+  const marqueeTouch: string = !ss.immediateMarquee
     ? "进入批量选择模式后长按拖拽"
     : "长按后拖拽出矩形框";
 
   // 移动已选中设备
-  const movePC: string = ss.hg && !ss.immediateMove
+  const movePC: string = !ss.immediateMove
     ? "长按已选中设备后拖拽"
     : "左键拖拽已选中设备";
 
@@ -150,11 +162,20 @@ interface OperationGuideContentProps {
 export function OperationGuideContent({ deviceClass, getShortcut, settings }: OperationGuideContentProps) {
   const settingsSnapshot = useMemo<SettingsSnapshot>(
     () => ({
-      hg: settings.hypergryphOperationMode,
+      // AI-REMOVED 2026-09-10:
+      // Reason: 操作模式总开关已废弃，不再保留关闭分支
+      // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+      // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+      // Replacement: settingsSnapshot 中保留的独立行为设置
+      // Risk: 历史 false 设置统一使用当前操作行为。
+      // Human Review: Required
+      //
+      // Original code:
+      // hg: settings.hypergryphOperationMode,
       immediateMove: settings.hypergryphImmediateMove,
       immediateMarquee: settings.hypergryphImmediateMarquee,
     }),
-    [settings.hypergryphOperationMode, settings.hypergryphImmediateMove, settings.hypergryphImmediateMarquee],
+    [settings.hypergryphImmediateMove, settings.hypergryphImmediateMarquee],
   );
 
   const groups = useMemo(

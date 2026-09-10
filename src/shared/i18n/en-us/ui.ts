@@ -330,8 +330,26 @@ const UI: Record<string, string> = {
     "settingsField.game-arknights-immediate-moveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
     "settingsField.game-arknights-inspector-open-on-second-click": "Open Inspector On Second Click",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "When enabled, the first click only selects the device. Click the selected device again to open the properties panel.",
-    "settingsField.game-arknights-operation-mode": "Arknights Operation Mode",
-    "settingsField.game-arknights-operation-modeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: None（设置入口已移除）
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // "settingsField.game-arknights-operation-mode": "Arknights Operation Mode",
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: None（设置入口已移除）
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // "settingsField.game-arknights-operation-modeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
     "settingsField.game-arknights-selection-right-dock-sync": "Sync Right Dock With Selection",
     "settingsField.game-arknights-selection-right-dock-syncDescription": "Effective when \"Use Right Panel For Device Properties\" is enabled. Automatically expand the right panel on selection when it is not already open.",
     "settingsField.game-quick-place": "Quick Place",

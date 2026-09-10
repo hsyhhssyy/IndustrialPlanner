@@ -17,7 +17,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
       context,
       alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
-    } = createContext(true, "select");
+    } = createContext("select");
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -50,7 +50,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
       context,
       alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
-    } = createContext(true, "marquee");
+    } = createContext("marquee");
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -202,7 +202,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
     const {
       context,
       moveViewportByClientPixelVector,
-    } = createContext(true, "single-placement");
+    } = createContext("single-placement");
     const module = createHypergryphMouseViewportPanModule();
 
     const result = module.handle(
@@ -262,15 +262,24 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(context.appHost.internalState.runtime.placementAnchor).toEqual({ x: 3, y: 0 });
   });
 
-  it("only enables the module while hypergryph operation mode is on", () => {
-    const module = createHypergryphMouseViewportPanModule();
-
-    expect(module.when?.(createContext(true).context)).toBe(true);
-    expect(module.when?.(createContext(false).context)).toBe(false);
-  });
+  // AI-REMOVED 2026-09-10:
+  // Reason: 操作模式总开关已废弃，不再保留关闭分支
+  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+  // Replacement: 现有正常操作测试及旧设置加载回归
+  // Risk: 历史 false 设置统一使用当前操作行为。
+  // Human Review: Required
+  //
+  // Original code:
+  // it("only enables the module while hypergryph operation mode is on", () => {
+  //   const module = createHypergryphMouseViewportPanModule();
+  //
+  //   expect(module.when?.(createContext(true).context)).toBe(true);
+  //   expect(module.when?.(createContext(false).context)).toBe(false);
+  // });
 });
 
-function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "single-placement" = "select"): {
+function createContext(activeTool: "select" | "marquee" | "single-placement" = "select"): {
   context: GestureActionContext<AppHost>;
   alignCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
@@ -299,7 +308,16 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
       appHost: {
         state: {
           settings: {
-            hypergryphOperationMode,
+            // AI-REMOVED 2026-09-10:
+            // Reason: 操作模式总开关已废弃，不再保留关闭分支
+            // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+            // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+            // Replacement: 测试状态不再需要模式字段
+            // Risk: 历史 false 设置统一使用当前操作行为。
+            // Human Review: Required
+            //
+            // Original code:
+            // hypergryphOperationMode,
           },
         },
         internalState: {
@@ -373,7 +391,16 @@ function createMobilePlacementContext(): {
       appHost: {
         state: {
           settings: {
-            hypergryphOperationMode: true,
+            // AI-REMOVED 2026-09-10:
+            // Reason: 操作模式总开关已废弃，不再保留关闭分支
+            // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+            // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+            // Replacement: 测试状态不再需要模式字段
+            // Risk: 历史 false 设置统一使用当前操作行为。
+            // Human Review: Required
+            //
+            // Original code:
+            // hypergryphOperationMode: true,
           },
           screenProfile: {
             deviceClass: "mobile",

@@ -161,9 +161,18 @@ function normalizePersistedAppSettings(
     themeId: persistedAppSettings.themeId === "ayu-light" || persistedAppSettings.themeId === "ayu-dark"
       ? persistedAppSettings.themeId
       : fallback.themeId,
-    hypergryphOperationMode: typeof persistedAppSettings.hypergryphOperationMode === "boolean"
-      ? persistedAppSettings.hypergryphOperationMode
-      : fallback.hypergryphOperationMode,
+    // AI-REMOVED 2026-09-10:
+    // Reason: 操作模式总开关已废弃，不再保留关闭分支
+    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+    // Replacement: normalizePersistedAppSettings 的剩余字段白名单
+    // Risk: 历史 false 设置统一使用当前操作行为。
+    // Human Review: Required
+    //
+    // Original code:
+    // hypergryphOperationMode: typeof persistedAppSettings.hypergryphOperationMode === "boolean"
+    //   ? persistedAppSettings.hypergryphOperationMode
+    //   : fallback.hypergryphOperationMode,
     hypergryphImmediateMove: typeof persistedAppSettings.hypergryphImmediateMove === "boolean"
       ? persistedAppSettings.hypergryphImmediateMove
       : fallback.hypergryphImmediateMove,
