@@ -1,8 +1,4 @@
-import type {
-  CompiledRegionalResourceSupply,
-  RuntimeTickSnapshot,
-  WarehouseStats,
-} from "../types";
+import type { CompiledRegionalResourceSupply, RuntimeTickSnapshot, WarehouseStats } from "../contracts";
 
 export function aggregateRegionalWarehouseStats(options: {
   readonly baseSnapshots: readonly RuntimeTickSnapshot[];

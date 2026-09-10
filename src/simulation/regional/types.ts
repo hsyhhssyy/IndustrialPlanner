@@ -1,4 +1,4 @@
-import type { CompiledSimulationTopology } from "../types";
+import type { CompiledSimulationTopology } from "../contracts";
 
 /**
  * 区域仓库出口的唯一身份。六元组编码为 outletId：

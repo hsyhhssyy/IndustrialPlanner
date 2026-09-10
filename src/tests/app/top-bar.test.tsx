@@ -12,7 +12,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
-import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
+import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 
 function createWorkspace(): WorkspaceContract {
   return {

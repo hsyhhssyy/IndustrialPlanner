@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it } from "vitest";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -6,10 +7,10 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import type { CompiledSimulationTopology } from "@/simulation/types";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
+import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import {
   createBlueprint,
   createEntity,
@@ -388,7 +389,7 @@ function hasHostTransfer(
   sourceDeviceId: string,
   targetDeviceId: string,
 ): boolean {
-  return host.internalState.currentSnapshot?.transfers.some((transfer) =>
+  return readSimulationSnapshot(host)?.transfers.some((transfer) =>
     transfer.sourceSlotId.includes(sourceDeviceId)
     && transfer.targetSlotId.includes(targetDeviceId)
   ) ?? false;

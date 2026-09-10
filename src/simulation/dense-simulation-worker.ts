@@ -1,12 +1,9 @@
 import { createRegistryContract } from "@/registry";
 import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
 
-import {
-  DenseWorkerRuntime,
-  collectDenseFrameTransferables,
-  type DenseWorkerRequest,
-  type DenseWorkerResponse,
-} from "./dense";
+import { DenseWorkerRuntime } from "./dense/dense-worker-runtime";
+import { collectDenseFrameTransferables } from "./dense/dense-frame-delta";
+import { type DenseWorkerRequest, type DenseWorkerResponse } from "./dense/dense-worker-protocol";
 
 const runtime = new DenseWorkerRuntime(createRegistryContract());
 const workerScope = globalThis as unknown as {

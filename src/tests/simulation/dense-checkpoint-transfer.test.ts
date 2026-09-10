@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { DENSE_SIMULATION_PROTOCOL_VERSION } from "@/simulation/dense/dense-topology";
 import {
-  DENSE_SIMULATION_PROTOCOL_VERSION,
   DenseProjectionStore,
-  DenseWorkerRuntime,
   collectDenseFrameTransferables,
   type DenseFrameDelta,
-  type DenseWorkerResponse,
-} from "@/simulation/dense";
-import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+} from "@/simulation/dense/dense-frame-delta";
+import { DenseWorkerRuntime } from "@/simulation/dense/dense-worker-runtime";
+import { type DenseWorkerResponse } from "@/simulation/dense/dense-worker-protocol";
+import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 import {
   createBlueprint,

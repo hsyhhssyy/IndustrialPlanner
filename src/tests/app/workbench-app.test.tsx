@@ -41,7 +41,7 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { listBlueprintDirectory } from "@/shared/storage";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
-import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
+import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
@@ -81,7 +81,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   selectedActivityIds: [],
   toolboxShowAllActivityContent: true,
   showGrassBackground: false,
-  showRegionAnnotations: true,
+  showRegionAnnotations: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
   debugSimulationWorkerDetailedReport: false,

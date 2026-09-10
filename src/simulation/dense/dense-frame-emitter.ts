@@ -1,8 +1,4 @@
-import type {
-  CompiledSimulationTopology,
-  RuntimeDeviceSnapshot,
-  RuntimeNodeSnapshot,
-} from "../types";
+import type { CompiledSimulationTopology, RuntimeDeviceSnapshot, RuntimeNodeSnapshot } from "../contracts";
 // AI-REMOVED 2026-09-03:
 // Reason: Dense 帧必须读取 dense kernel 自己的电力真相，不能引用 legacy Runtime 常量并伪造满电状态。
 // Trigger: ST2-RQ-023 电力 Contract 差分接入。

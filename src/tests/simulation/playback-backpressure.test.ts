@@ -2,15 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
-import {
-  SimulationActionImpl,
-  type SimulationWorkerBridge,
-} from "@/simulation/action-impl";
-import { createSimulationStateReadWrite } from "@/simulation/state-impl";
-import type {
-  CompiledSimulationTopology,
-  RuntimeTickSnapshot,
-} from "@/simulation/types";
+import { SimulationActionImpl } from "@/simulation/legacy/controller";
+import { type SimulationWorkerBridge } from "@/simulation/legacy/bridge-contract";
+import { createLegacySimulationState } from "@/simulation/legacy/state";
+import type { CompiledSimulationTopology, RuntimeTickSnapshot } from "@/simulation/contracts/types";
 
 describe("simulation playback backpressure", () => {
   it("consumes a partial range prefix when x16 playback crosses beyond hot queue capacity", async () => {
@@ -21,15 +16,16 @@ describe("simulation playback backpressure", () => {
       .mockReturnValueOnce(secondRangeResponse.promise);
     const acknowledgePresentedTick = vi.fn(async (tickNumber: number, generation: number) =>
       createAcknowledgedResponse(tickNumber, generation));
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.runningState = "start";
     state.simulationSpeed = 16;
     state.currentPlaybackTickNumber = 0;
-    state.currentSnapshot = createTickSnapshot(0);
+    presentation.currentSnapshot = createTickSnapshot(0);
 
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: {
         getTickSnapshotRange,
@@ -61,7 +57,7 @@ describe("simulation playback backpressure", () => {
     //   await action.advancePlaybackByDeltaMs(0);
     // }
 
-    expect(state.currentSnapshot?.tickNumber).toBe(17);
+    expect(presentation.currentSnapshot?.tickNumber).toBe(17);
     await Promise.resolve();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(acknowledgePresentedTick).toHaveBeenCalledWith(17, 0);
@@ -87,7 +83,7 @@ describe("simulation playback backpressure", () => {
     //   await action.advancePlaybackByDeltaMs(0);
     // }
 
-    expect(state.currentSnapshot?.tickNumber).toBe(32);
+    expect(presentation.currentSnapshot?.tickNumber).toBe(32);
     expect(acknowledgePresentedTick).toHaveBeenCalledWith(32, 0);
   });
 
@@ -96,14 +92,15 @@ describe("simulation playback backpressure", () => {
     const getTickSnapshotRange = vi.fn().mockReturnValue(rangeResponse.promise);
     const acknowledgePresentedTick = vi.fn(async (tickNumber: number, generation: number) =>
       createAcknowledgedResponse(tickNumber, generation));
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.runningState = "start";
     state.currentPlaybackTickNumber = 0;
-    state.currentSnapshot = createTickSnapshot(0);
+    presentation.currentSnapshot = createTickSnapshot(0);
 
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: {
         getTickSnapshotRange,
@@ -135,21 +132,22 @@ describe("simulation playback backpressure", () => {
 
     await action.advancePlaybackByDeltaMs(50);
     expect(state.currentPlaybackTickNumber).toBe(1);
-    expect(state.currentSnapshot?.tickNumber).toBe(1);
+    expect(presentation.currentSnapshot?.tickNumber).toBe(1);
     expect(acknowledgePresentedTick).toHaveBeenCalledWith(1, 0);
   });
 
   it("counts wall time while waiting so measured TPS falls to zero", async () => {
     const response = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshotRange"]>>>();
     const getTickSnapshotRange = vi.fn().mockReturnValue(response.promise);
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.runningState = "start";
     state.currentPlaybackTickNumber = 0;
-    state.currentSnapshot = createTickSnapshot(0);
+    presentation.currentSnapshot = createTickSnapshot(0);
 
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: { getTickSnapshotRange } as unknown as SimulationWorkerBridge,
     });
@@ -174,14 +172,15 @@ describe("simulation playback backpressure", () => {
     const getTickSnapshotRange = vi.fn()
       .mockReturnValueOnce(staleRangeResponse.promise)
       .mockResolvedValueOnce(createNotReadyRangeResponse(6, 25, 1));
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.runningState = "start";
     state.currentPlaybackTickNumber = 0;
-    state.currentSnapshot = createTickSnapshot(0);
+    presentation.currentSnapshot = createTickSnapshot(0);
 
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: {
         getTickSnapshot: vi.fn(async (tickNumber: number) => createTickResponse(tickNumber)),
@@ -198,7 +197,7 @@ describe("simulation playback backpressure", () => {
     await Promise.resolve();
 
     await action.advancePlaybackByDeltaMs(50);
-    expect(state.currentSnapshot?.tickNumber).toBe(5);
+    expect(presentation.currentSnapshot?.tickNumber).toBe(5);
     expect(getTickSnapshotRange).toHaveBeenLastCalledWith(6, 25, 1, 1);
   });
 });

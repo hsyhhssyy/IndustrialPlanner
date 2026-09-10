@@ -20,13 +20,9 @@ import type {
   CompiledSimulationRecipeChannel,
   CompiledSimulationTopology,
   SimulationRecipeType,
-} from "../types";
-import { convertSimulationSecondsToTicksExact } from "../tick-rate";
-import {
-  DENSE_INDEX_NONE,
-  createDenseTopologyLookup,
-  type DenseTopologyLayout,
-} from "./dense-topology";
+} from "../contracts";
+import { convertSimulationSecondsToTicksExact } from "../contracts";
+import { DENSE_INDEX_NONE, createDenseTopologyLookup, type DenseTopologyLayout } from "./dense-topology";
 
 export const DENSE_RECIPE_ITEM_EXACT = 0;
 export const DENSE_RECIPE_ITEM_ANY = 1;

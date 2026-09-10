@@ -5,8 +5,8 @@ import type { SimulationState } from "@/domain/simulation/types/simulation-types
 import { createRegistryContract } from "@/registry";
 import { createRegistryQuery } from "@/registry/registry-query";
 import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 describe("ST2-RQ-024 real tick recipe progress", () => {
   it.each([

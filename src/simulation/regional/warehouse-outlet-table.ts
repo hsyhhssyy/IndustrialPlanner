@@ -8,7 +8,7 @@ import type {
   CompiledSimulationNode,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
-} from "../types";
+} from "../contracts";
 import type {
   RegionalSimulationTopologyInput,
   RegionalWarehouseOutlet,

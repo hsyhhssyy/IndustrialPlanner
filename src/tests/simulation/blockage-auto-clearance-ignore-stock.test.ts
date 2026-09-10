@@ -5,12 +5,12 @@ import type {
   CompiledSimulationNode,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
-} from "@/simulation/types";
+} from "@/simulation/contracts/types";
 import type {
   RuntimeDeviceRecipeState,
   SimulationMutableRuntimeState,
-} from "@/simulation/runtime/runtime-state";
-import { applyBlockageAutoClearance } from "@/simulation/runtime/blockage-auto-clearance";
+} from "@/simulation/legacy/runtime-state";
+import { applyBlockageAutoClearance } from "@/simulation/legacy/blockage-auto-clearance";
 
 /**
  * 回归测试：扩容反应池自动清堵不应清除 ignoreStock=true 的槽位

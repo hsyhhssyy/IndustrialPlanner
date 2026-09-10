@@ -1,18 +1,23 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import {
   DenseFrameDeltaEncoder,
-  DenseIndexSet,
-  DenseMessageSequenceGate,
-  DENSE_SIMULATION_PROTOCOL_VERSION,
   DenseProjectionStore,
-  DenseRuntimeState,
   collectDenseFrameTransferables,
+} from "@/simulation/dense/dense-frame-delta";
+import { DenseIndexSet } from "@/simulation/dense/dense-index-set";
+import {
+  DenseMessageSequenceGate,
   collectDenseTopologyTransferables,
+} from "@/simulation/dense/dense-worker-protocol";
+import {
+  DENSE_SIMULATION_PROTOCOL_VERSION,
   compileDenseTopologyLayout,
-} from "@/simulation/dense";
+} from "@/simulation/dense/dense-topology";
+import { DenseRuntimeState } from "@/simulation/dense/dense-runtime-state";
 
 import {
   createBlueprint,
@@ -26,7 +31,7 @@ import {
   runBlueprintSimulation,
 } from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 
 const DENSE_TEST_SESSION = {
   sessionId: "dense-projection-test",
@@ -149,7 +154,7 @@ describe("ST2-RQ-023 dense projection", () => {
       const projection = new DenseProjectionStore(layout.dictionary, DENSE_TEST_SESSION);
 
       expect((await host.internalActions.syncToTick(0)).status).toBe("ready");
-      const tickZero = host.internalState.currentSnapshot;
+      const tickZero = readSimulationSnapshot(host);
       expect(tickZero).not.toBeNull();
       if (tickZero === null) return;
 
@@ -202,7 +207,7 @@ describe("ST2-RQ-023 dense projection", () => {
       );
 
       expect((await host.internalActions.syncToTick(1)).status).toBe("ready");
-      const tickOne = host.internalState.currentSnapshot;
+      const tickOne = readSimulationSnapshot(host);
       expect(tickOne).not.toBeNull();
       if (tickOne === null) return;
 
@@ -231,7 +236,7 @@ describe("ST2-RQ-023 dense projection", () => {
       await host.internalActions.refreshFromCurrentDocument();
       await host.internalActions.syncToTick(0);
       const topology = host.topology.getSnapshot();
-      const snapshot = host.internalState.currentSnapshot;
+      const snapshot = readSimulationSnapshot(host);
       expect(topology).not.toBeNull();
       expect(snapshot).not.toBeNull();
       if (topology === null || snapshot === null) return;
@@ -261,7 +266,7 @@ describe("ST2-RQ-023 dense projection", () => {
       await host.internalActions.refreshFromCurrentDocument();
       await host.internalActions.syncToTick(0);
       const topology = host.topology.getSnapshot();
-      const snapshot = host.internalState.currentSnapshot;
+      const snapshot = readSimulationSnapshot(host);
       expect(topology).not.toBeNull();
       expect(snapshot).not.toBeNull();
       if (topology === null || snapshot === null) return;

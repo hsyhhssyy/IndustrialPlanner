@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
   LocalRegionalBasePort,
   RegionalSimulationSession,
   type RegionalBaseTopologyInput,
-} from "@/simulation/regional/session";
+} from "@/simulation/legacy/regional-session";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import {
   createBlueprint,

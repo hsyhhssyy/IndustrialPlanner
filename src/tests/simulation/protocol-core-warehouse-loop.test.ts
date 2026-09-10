@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import type { RuntimeTransferSnapshot } from "@/simulation/types";
+import type { RuntimeTransferSnapshot } from "@/simulation/contracts/types";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,

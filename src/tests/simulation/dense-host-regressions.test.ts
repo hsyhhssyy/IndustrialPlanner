@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
 import { createWorldDocument } from "@/domain/document/world-document";
@@ -90,7 +91,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         });
         const beforePump = host.queries.getDeviceRuntimeStatus("pump");
         const beforeStorage = host.queries.getDeviceRuntimeStatus("stable-storage");
-        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
+        const beforeTickNumber = readSimulationSnapshot(host)?.tickNumber ?? 0;
         expect(beforePump?.channelRecipes.default).toMatchObject({
           recipeId: "r_pump_water_basic",
           state: "running",
@@ -119,7 +120,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await refreshPromise;
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(
+        expect(readSimulationSnapshot(host)?.tickNumber).toBeGreaterThanOrEqual(
           beforeTickNumber,
         );
         expect(host.queries.getDeviceRuntimeStatus("pump")?.channelRecipes.default)
@@ -189,7 +190,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
           ignoreStock: false,
         });
         host.actions.pause();
-        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
+        const beforeTickNumber = readSimulationSnapshot(host)?.tickNumber ?? 0;
 
         const changedEntity = document.entities["changed-storage"]!;
         documentStore.setSnapshot({
@@ -208,7 +209,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await host.internalActions.refreshFromCurrentDocument();
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(beforeTickNumber);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(beforeTickNumber);
         expect(host.queries.getDeviceRuntimeStatus("stable-storage")?.slotItems)
           .toContainEqual(expect.objectContaining({
             itemType: "item_copper_ore",
@@ -254,7 +255,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await host.actions.start();
         await host.actions.advancePlaybackByDeltaMs(500);
         host.actions.pause();
-        const beforeTickNumber = host.internalState.currentSnapshot?.tickNumber ?? 0;
+        const beforeTickNumber = readSimulationSnapshot(host)?.tickNumber ?? 0;
         const beforeBelt = host.queries.getDeviceRuntimeStatus("belt");
         expect(beforeBelt?.channelRecipes.default).toMatchObject({
           recipeId: "belt_straight_1x1:dynamic-belt-transfer",
@@ -274,7 +275,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         const refresh = await host.internalActions.refreshFromCurrentDocument();
 
         expect(refresh.status).toBe("started");
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(beforeTickNumber);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(beforeTickNumber);
         expect(host.queries.getDeviceRuntimeStatus("belt")?.channelRecipes.default)
           .toEqual(beforeBelt?.channelRecipes.default);
         expect(host.queries.getDeviceRuntimeStatus("belt")?.slotItems)
@@ -294,15 +295,15 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await host.actions.start();
         host.actions.pause();
         expect((await host.internalActions.syncToTick(1)).status).toBe("ready");
-        const expectedSnapshot = host.internalState.currentSnapshot;
+        const expectedSnapshot = readSimulationSnapshot(host);
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
 
         expect((await host.internalActions.syncToTick(1)).status).toBe("ready");
-        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+        expect(readSimulationSnapshot(host)).toEqual(expectedSnapshot);
 
         await host.actions.enableTimeline();
         expect(await host.actions.seekTimelineToTick(0)).toBe(true);
-        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+        expect(readSimulationSnapshot(host)).toEqual(expectedSnapshot);
       } finally {
         host.dispose();
       }
@@ -316,9 +317,9 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await baselineHost.actions.start();
         baselineHost.actions.pause();
         await baselineHost.internalActions.syncToTick(1);
-        const firstTransfers = baselineHost.internalState.currentSnapshot?.transfers;
+        const firstTransfers = readSimulationSnapshot(baselineHost)?.transfers;
         await baselineHost.internalActions.syncToTick(2);
-        const expectedSnapshot = baselineHost.internalState.currentSnapshot;
+        const expectedSnapshot = readSimulationSnapshot(baselineHost);
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
         expect(expectedSnapshot?.transfers).not.toEqual(firstTransfers);
 
@@ -327,7 +328,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await presentationHost.internalActions.syncToTick(1);
         await presentationHost.actions.enableTimeline();
         expect(await presentationHost.actions.seekTimelineToTick(1)).toBe(true);
-        expect(presentationHost.internalState.currentSnapshot).toEqual(expectedSnapshot);
+        expect(readSimulationSnapshot(presentationHost)).toEqual(expectedSnapshot);
       } finally {
         baselineHost.dispose();
         presentationHost.dispose();
@@ -341,15 +342,15 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await host.actions.start();
         host.actions.pause();
         await host.internalActions.syncToTick(2);
-        const expectedSnapshot = host.internalState.currentSnapshot;
+        const expectedSnapshot = readSimulationSnapshot(host);
         expect(expectedSnapshot?.standardTickRate).toBe(2);
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
 
         await host.internalActions.syncToTick(4);
-        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
         await host.actions.enableTimeline();
         expect(await host.actions.seekTimelineToTick(1)).toBe(true);
-        expect(host.internalState.currentSnapshot).toEqual(expectedSnapshot);
+        expect(readSimulationSnapshot(host)).toEqual(expectedSnapshot);
       } finally {
         host.dispose();
       }
@@ -362,24 +363,24 @@ describe("ST2-RQ-023 dense host regressions", () => {
         await host.actions.start();
         host.actions.pause();
         await host.internalActions.syncToTick(2);
-        const transferSnapshot = host.internalState.currentSnapshot;
+        const transferSnapshot = readSimulationSnapshot(host);
         expect(transferSnapshot?.transfers.length).toBeGreaterThan(0);
 
         await host.actions.enableTimeline();
         expect(await host.actions.seekTimelineToTick(2)).toBe(true);
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(3);
-        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(3);
+        expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
         expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
-        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
         expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
-        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
         expect(await host.actions.seekTimelineToTick(1)).toBe(true);
-        expect(host.internalState.currentSnapshot).toEqual(transferSnapshot);
+        expect(readSimulationSnapshot(host)).toEqual(transferSnapshot);
         expect(await host.actions.seekTimelineToTick(2)).toBe(true);
-        expect(host.internalState.currentSnapshot?.tickNumber).toBe(3);
-        expect(host.internalState.currentSnapshot?.transfers).toEqual([]);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(3);
+        expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
       } finally {
         host.dispose();
       }
@@ -404,7 +405,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         standardTickRate: 2,
         tickRate: 2,
       });
-      expect(host.internalState.currentSnapshot).toMatchObject({
+      expect(readSimulationSnapshot(host)).toMatchObject({
         standardTickRate: 2,
         tickRate: 2,
       });
@@ -438,7 +439,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         error: null,
       });
       await host.actions.advancePlaybackByDeltaMs(500);
-      expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(1);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBeGreaterThanOrEqual(1);
     } finally {
       host.dispose();
     }
@@ -664,7 +665,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(host.internalState.currentSnapshot?.tickNumber).toBe(5);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(5);
       expect(host.internalState.runtimeStatus.topologyId).toBe(topologyId);
       expect(host.internalState.runtimeStatus.error).toBeNull();
     } finally {

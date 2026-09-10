@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 import {

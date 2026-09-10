@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { performance } from "node:perf_hooks";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
@@ -28,7 +29,7 @@ import type {
   RegionalResourceSupplySetting,
   RuntimeTickSnapshot,
   RuntimeTransferSnapshot,
-} from "@/simulation/types";
+} from "@/simulation/contracts/types";
 
 type TransportClassSummary = "strict-belt" | "strict-pipe";
 
@@ -198,7 +199,7 @@ export async function runBlueprintSimulation(
         throw new Error(formatUnavailableTickMessage(tickNumber, tickStatus));
       }
 
-      const snapshot = host.internalState.currentSnapshot;
+      const snapshot = readSimulationSnapshot(host);
       if (snapshot === null || snapshot.tickNumber !== tickNumber) {
         throw new Error(`Simulation produced no snapshot for tick ${tickNumber}.`);
       }

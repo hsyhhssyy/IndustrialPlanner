@@ -1,9 +1,6 @@
 import { describe } from "vitest";
 
-import {
-  SUPPORTED_SIMULATION_ENGINE_KINDS,
-  type SimulationEngineKind,
-} from "@/simulation/simulation-host";
+import { SUPPORTED_SIMULATION_ENGINE_KINDS, type SimulationEngineKind } from "@/simulation/simulation-host";
 
 export const SIMULATION_ENGINE_MATRIX = SUPPORTED_SIMULATION_ENGINE_KINDS;
 

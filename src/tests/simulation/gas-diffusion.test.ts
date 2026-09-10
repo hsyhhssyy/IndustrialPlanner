@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,

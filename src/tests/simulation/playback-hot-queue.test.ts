@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { createWorldDocument } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 
 describe("simulation playback hot queue protocol", () => {
   it("returns a contiguous ready prefix without pruning until presentation is acknowledged", () => {

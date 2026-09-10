@@ -1,11 +1,11 @@
 import { createRegistryContract } from "@/registry";
-import { SimulationWorkerRuntime } from "./worker-runtime";
+import { SimulationWorkerRuntime } from "./legacy/worker-runtime";
 import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
 import type {
   SimulationWorkerErrorNotification,
   SimulationWorkerRequest,
   SimulationWorkerResponse,
-} from "./worker-protocol";
+} from "./legacy/worker-protocol";
 
 const registry = createRegistryContract();
 const runtime = new SimulationWorkerRuntime(registry);

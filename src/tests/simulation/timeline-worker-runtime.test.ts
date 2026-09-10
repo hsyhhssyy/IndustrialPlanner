@@ -3,14 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createTimelinePresentationSnapshot,
   TimelineWorkerRuntime,
-} from "@/simulation/timeline-worker-runtime";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+} from "@/simulation/legacy/timeline-worker-runtime";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import type {
-  CompiledSimulationTopology,
-  SimulationRuntimeExport,
-} from "@/simulation/types";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
+import type { SimulationRuntimeExport } from "@/simulation/legacy/runtime-export";
 import {
   createBlueprint,
   createEntity,

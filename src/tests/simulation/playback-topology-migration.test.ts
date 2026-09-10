@@ -8,18 +8,13 @@ import {
 } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
-import {
-  SimulationActionImpl,
-  type SimulationWorkerBridge,
-} from "@/simulation/action-impl";
-import { createTickSnapshot } from "@/simulation/runtime/create-tick-snapshot";
-import { createSimulationMutableRuntimeState } from "@/simulation/runtime/runtime-state";
-import { createSimulationStateReadWrite } from "@/simulation/state-impl";
-import type {
-  CompiledSimulationTopology,
-  SimulationRuntimeStatus,
-} from "@/simulation/types";
-import type { SimulationWorkerResponse } from "@/simulation/worker-protocol";
+import { SimulationActionImpl } from "@/simulation/legacy/controller";
+import { type SimulationWorkerBridge } from "@/simulation/legacy/bridge-contract";
+import { createTickSnapshot } from "@/simulation/legacy/create-tick-snapshot";
+import { createSimulationMutableRuntimeState } from "@/simulation/legacy/runtime-state";
+import { createLegacySimulationState } from "@/simulation/legacy/state";
+import type { CompiledSimulationTopology, SimulationRuntimeStatus } from "@/simulation/contracts/types";
+import type { SimulationWorkerResponse } from "@/simulation/legacy/worker-protocol";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 describe("simulation playback during topology migration", () => {
@@ -59,10 +54,11 @@ describe("simulation playback during topology migration", () => {
       render: null,
       simulation: null,
     } as unknown as WorkspaceContract;
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     const action = new SimulationActionImpl({
       workspace,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: {
         loadTopology,
@@ -114,7 +110,7 @@ describe("simulation playback during topology migration", () => {
     await refresh;
 
     expect(state.currentPlaybackTickNumber).toBe(13);
-    expect(state.currentSnapshot?.tickNumber).toBe(13);
+    expect(presentation.currentSnapshot?.tickNumber).toBe(13);
     expect(getTickSnapshot.mock.calls.map(([tickNumber]) => tickNumber)).toEqual([
       0,
       12,

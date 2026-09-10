@@ -35,9 +35,18 @@ describe("WorkbenchSettingsDialogController", () => {
       "game-use-blueprint-style-device-images",
       "game-show-grass-background",
       "game-show-device-names",
-      "game-show-region-annotations",
+      // AI-REMOVED 2026-09-09:
+      // Reason: 区域标注移至实验性分组。
+      // Trigger: 用户要求恢复实验性功能。
+      // Evidence: WORKBENCH_SETTINGS_GROUPS 分组变更。
+      // Replacement: 下方实验性分组断言。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "game-show-region-annotations",
       "game-show-device-icons",
     ]);
+    expect(resolveGroupSettingIds("experimental")).toContain("game-show-region-annotations");
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
       "game-use-inspector-panel",
       "game-arknights-selection-right-dock-sync",
@@ -130,7 +139,7 @@ describe("WorkbenchSettingsDialogController", () => {
         // "shortcut-undo": "Ctrl+Z",
         // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
-        "game-show-region-annotations": true,
+        "game-show-region-annotations": false,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
         "game-show-pipe-exact-fluid-position": false,
@@ -194,7 +203,7 @@ describe("WorkbenchSettingsDialogController", () => {
     // expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
-    expect(hydratedController.values["game-show-region-annotations"]).toBe(true);
+    expect(hydratedController.values["game-show-region-annotations"]).toBe(false);
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-collapse-device-modes"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
@@ -277,6 +286,36 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(controller.values["game-always-show-grid-lines"]).toBe(true);
     expect(controller.values["game-show-grass-background"]).toBe(false);
+  });
+
+  it("gates region annotations and clears persisted and external values when experiments are disabled", () => {
+    let visible = true;
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "game-show-region-annotations": {
+          readValue: () => visible,
+          writeValue: (value) => { visible = value === true; },
+        },
+      },
+    });
+    expect(visible).toBe(false);
+    expect(controller.isSettingEditable("game-show-region-annotations")).toBe(false);
+    controller.updateSwitchValue("game-show-region-annotations", true);
+    expect(visible).toBe(false);
+    controller.updateSwitchValue("other-experimental-features", true);
+    controller.updateSwitchValue("game-show-region-annotations", true);
+    expect(visible).toBe(true);
+    controller.updateSwitchValue("other-experimental-features", false);
+    expect(visible).toBe(false);
+
+    localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
+      values: {
+        "other-experimental-features": false,
+        "game-show-region-annotations": true,
+      },
+    }));
+    const hydratedController = new WorkbenchSettingsDialogController();
+    expect(hydratedController.getValue("game-show-region-annotations")).toBe(false);
   });
 
   it("places device animation under the experimental gate and preserves it only across blueprint mode", () => {
@@ -602,7 +641,7 @@ describe("WorkbenchSettingsDialogController", () => {
         // "shortcut-undo": "Ctrl+Z",
         // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
-        "game-show-region-annotations": true,
+        "game-show-region-annotations": false,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,
         "game-show-pipe-exact-fluid-position": false,

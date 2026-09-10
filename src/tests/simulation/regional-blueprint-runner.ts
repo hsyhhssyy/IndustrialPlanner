@@ -18,23 +18,25 @@ import { resolvePlacementValidations } from "@/editor/placement-validation";
 import { createEditorStateReadWrite } from "@/editor/state-impl";
 import {
   aggregateRegionalWarehouseStats as aggregateRegionalWarehouseStatsCore,
-  buildRegionalWarehouseOutletTable,
+} from "@/simulation/regional/warehouse-stats";
+import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
+import {
   LocalRegionalBasePort,
   RegionalSimulationSession,
   type RegionalBaseTopologyInput,
-} from "@/simulation/regional";
-import { DenseLocalRegionalBasePort } from "@/simulation/dense";
+} from "@/simulation/legacy/regional-session";
+import { DenseLocalRegionalBasePort } from "./dense-regional-base-port";
 import {
   createSimulationHost,
   SUPPORTED_SIMULATION_ENGINE_KINDS,
   type SimulationEngineKind,
 } from "@/simulation/simulation-host";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import type {
   CompiledRegionalResourceSupply,
   RegionalResourceSupplySetting,
   RuntimeTickSnapshot,
-} from "@/simulation/types";
+} from "@/simulation/contracts/types";
 import { createHeadlessWorkspace } from "./blueprint-runner";
 import { resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 

@@ -6,7 +6,7 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 describe("port priority groups", () => {
   it("compiles direct port adjacency and device-order indexes for runtime solving", () => {

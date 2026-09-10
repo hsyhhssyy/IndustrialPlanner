@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -49,7 +50,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
         warmupTargetStandardTick,
       );
       expect(warmupStatus.status).toBe("ready");
-      expect(host.internalState.currentSnapshot?.tickNumber).toBe(warmupTargetStandardTick);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(warmupTargetStandardTick);
 
       await host.actions.enableTimeline();
       const initialTimelineCursor = host.internalState.timeline.cursorTickNumber;
@@ -96,7 +97,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
       expect(presentedDurationSeconds).toBeGreaterThan(MIN_FORWARD_SECONDS);
       expect(host.internalState.timeline.cursorTickNumber).toBe(finalTargetTimelineTick);
 
-      const finalSnapshot = host.internalState.currentSnapshot;
+      const finalSnapshot = readSimulationSnapshot(host);
       expect(finalSnapshot?.tickNumber).toBe(
         TIMELINE_ORIGIN_STANDARD_TICK
         + finalTargetTimelineTick
@@ -113,7 +114,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
       // 拖动停止后的延迟提交会把时间轴检查点导回正式 Worker；导入后仍须保留同一展示帧，
       // 否则 transfers 会再次被仅含持久状态的 runtimeState 清空。
       await delay(PRESENTATION_COMMIT_WAIT_MS);
-      const committedSnapshot = host.internalState.currentSnapshot;
+      const committedSnapshot = readSimulationSnapshot(host);
       expect(committedSnapshot?.tickNumber).toBe(finalSnapshot?.tickNumber);
       expect(Object.keys(committedSnapshot?.nodes ?? {})).not.toHaveLength(0);
       expect(committedSnapshot?.transfers).toEqual(finalSnapshot?.transfers);

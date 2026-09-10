@@ -7,9 +7,9 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import { createSimulationTopologyMigration } from "@/simulation/topology-migration";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import { createSimulationTopologyMigration } from "@/simulation/topology/migration";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createRegistryContract } from "@/registry";
 import {
   createBlueprint,

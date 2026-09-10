@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
   arbitrateRegionalWarehouseEpoch,
@@ -12,8 +12,8 @@ import type {
   RegionWarehouseAckBatch,
   RegionWarehouseAuthorityState,
   RegionWarehouseDemandBatch,
-} from "@/simulation/regional";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+} from "@/simulation/regional/types";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import {
   createBlueprint,

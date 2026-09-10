@@ -4,7 +4,7 @@ import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers"
 import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import { createWorkspaceState } from "@/domain/document/workspace-state"
 import { createRegistryContract } from "@/registry"
-import { createSimulationHost } from "@/simulation/simulation-host"
+import { createSimulationHost } from "@/simulation/simulation-host";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store"
 
 import {

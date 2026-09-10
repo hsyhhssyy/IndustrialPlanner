@@ -1,97 +1,107 @@
-import { makeAutoObservable } from "mobx";
-
-import type {
-  SimulationState,
-  SimulationRuntimeStatistics,
-  SimulationTimelineMark,
-  SimulationTimelineState,
-} from "@/domain/simulation/types/simulation-types";
-import { SIMULATION_MODE, type SimulationMode } from "@/domain/shared/simulation-mode";
-
-import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
-import type {
-  RuntimeTickSnapshot,
-  SimulationRuntimeStatus,
-} from "./types";
-
-export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus {
-  return {
-    mode: "idle",
-    topologyId: null,
-    documentHash: null,
-    retainedFromTick: null,
-    latestTickNumber: null,
-    bufferSize: 0,
-    maxBufferSize: 180,
-    dynamicTickRate: null,
-    error: null,
-  };
-}
-
-export interface SimulationStateReadWrite extends SimulationState {
-  runningState: SimulationState["runningState"];
-  simulationMode: SimulationMode;
-  simulationSpeed: number;
-  statistics: SimulationRuntimeStatistics;
-  timeline: SimulationTimelineStateReadWrite;
-  hasStarted: boolean;
-  runtimeStatus: SimulationRuntimeStatus;
-  currentSnapshot: RuntimeTickSnapshot | null;
-  currentPlaybackTickNumber: number;
-  /** 区域模式下的全基地总耗电；单基地模式为 null。 */
-  regionalTotalPowerDemand: number | null;
-}
-
-export interface SimulationTimelineStateReadWrite extends SimulationTimelineState {
-  enabled: boolean;
-  readiness: SimulationTimelineState["readiness"];
-  tickDurationSeconds: number;
-  rulerDurationSeconds: number;
-  windowStartTickNumber: number;
-  cursorTickNumber: number;
-  availableFromTickNumber: number;
-  availableToTickNumber: number;
-  marks: SimulationTimelineMark[];
-  isSeeking: boolean;
-}
-
-export function createInitialSimulationTimelineState(): SimulationTimelineStateReadWrite {
-  return {
-    enabled: false,
-    readiness: "idle",
-    tickDurationSeconds: 0.5,
-    rulerDurationSeconds: 300,
-    windowStartTickNumber: 0,
-    cursorTickNumber: 0,
-    availableFromTickNumber: 0,
-    availableToTickNumber: 0,
-    marks: [],
-    isSeeking: false,
-  };
-}
-
-class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
-  public runningState: SimulationState["runningState"] = "stop";
-  public simulationMode: SimulationMode = SIMULATION_MODE.singleBase;
-  public simulationSpeed = DEFAULT_SIMULATION_SPEED;
-  public statistics: SimulationRuntimeStatistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
-  public timeline: SimulationTimelineStateReadWrite = createInitialSimulationTimelineState();
-  public hasStarted = false;
-  public runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
-  public currentSnapshot: RuntimeTickSnapshot | null = null;
-  public currentPlaybackTickNumber = 0;
-  public regionalTotalPowerDemand: number | null = null;
-
-  public get bufferSize(): number {
-    return this.runtimeStatus.bufferSize;
-  }
-
-  public constructor() {
-    // currentSnapshot 排除 MobX 跟踪：它是整体替换的不可变快照，体积大，深度 observable 纯浪费 CPU
-    makeAutoObservable(this, { currentSnapshot: false }, { autoBind: true });
-  }
-}
-
-export function createSimulationStateReadWrite(): SimulationStateReadWrite {
-  return new SimulationStateReadWriteImpl();
-}
+// AI-REMOVED 2026-09-09:
+// Reason: 按仿真引擎与状态所有权重组，原实现迁入明确的职责模块。
+// Trigger: 用户授权抽离 dense / legacy 公共接口并重组 legacy。
+// Evidence: 原入口混合引擎选择、查询、Worker bridge 与 legacy 控制状态。
+// Replacement: src/simulation/contracts/state.ts
+// Risk: 异步生命周期与查询语义由双引擎回归验证。
+// Human Review: Required
+//
+// Original code:
+// import { makeAutoObservable } from "mobx";
+//
+// import type {
+//   SimulationState,
+//   SimulationRuntimeStatistics,
+//   SimulationTimelineMark,
+//   SimulationTimelineState,
+// } from "@/domain/simulation/types/simulation-types";
+// import { SIMULATION_MODE, type SimulationMode } from "@/domain/shared/simulation-mode";
+//
+// import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
+// import type {
+//   RuntimeTickSnapshot,
+//   SimulationRuntimeStatus,
+// } from "./types";
+//
+// export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus {
+//   return {
+//     mode: "idle",
+//     topologyId: null,
+//     documentHash: null,
+//     retainedFromTick: null,
+//     latestTickNumber: null,
+//     bufferSize: 0,
+//     maxBufferSize: 180,
+//     dynamicTickRate: null,
+//     error: null,
+//   };
+// }
+//
+// export interface SimulationStateReadWrite extends SimulationState {
+//   runningState: SimulationState["runningState"];
+//   simulationMode: SimulationMode;
+//   simulationSpeed: number;
+//   statistics: SimulationRuntimeStatistics;
+//   timeline: SimulationTimelineStateReadWrite;
+//   hasStarted: boolean;
+//   runtimeStatus: SimulationRuntimeStatus;
+//   currentSnapshot: RuntimeTickSnapshot | null;
+//   currentPlaybackTickNumber: number;
+//   /** 区域模式下的全基地总耗电；单基地模式为 null。 */
+//   regionalTotalPowerDemand: number | null;
+// }
+//
+// export interface SimulationTimelineStateReadWrite extends SimulationTimelineState {
+//   enabled: boolean;
+//   readiness: SimulationTimelineState["readiness"];
+//   tickDurationSeconds: number;
+//   rulerDurationSeconds: number;
+//   windowStartTickNumber: number;
+//   cursorTickNumber: number;
+//   availableFromTickNumber: number;
+//   availableToTickNumber: number;
+//   marks: SimulationTimelineMark[];
+//   isSeeking: boolean;
+// }
+//
+// export function createInitialSimulationTimelineState(): SimulationTimelineStateReadWrite {
+//   return {
+//     enabled: false,
+//     readiness: "idle",
+//     tickDurationSeconds: 0.5,
+//     rulerDurationSeconds: 300,
+//     windowStartTickNumber: 0,
+//     cursorTickNumber: 0,
+//     availableFromTickNumber: 0,
+//     availableToTickNumber: 0,
+//     marks: [],
+//     isSeeking: false,
+//   };
+// }
+//
+// class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
+//   public runningState: SimulationState["runningState"] = "stop";
+//   public simulationMode: SimulationMode = SIMULATION_MODE.singleBase;
+//   public simulationSpeed = DEFAULT_SIMULATION_SPEED;
+//   public statistics: SimulationRuntimeStatistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
+//   public timeline: SimulationTimelineStateReadWrite = createInitialSimulationTimelineState();
+//   public hasStarted = false;
+//   public runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
+//   public currentSnapshot: RuntimeTickSnapshot | null = null;
+//   public currentPlaybackTickNumber = 0;
+//   public regionalTotalPowerDemand: number | null = null;
+//
+//   public get bufferSize(): number {
+//     return this.runtimeStatus.bufferSize;
+//   }
+//
+//   public constructor() {
+//     // currentSnapshot 排除 MobX 跟踪：它是整体替换的不可变快照，体积大，深度 observable 纯浪费 CPU
+//     makeAutoObservable(this, { currentSnapshot: false }, { autoBind: true });
+//   }
+// }
+//
+// export function createSimulationStateReadWrite(): SimulationStateReadWrite {
+//   return new SimulationStateReadWriteImpl();
+// }
+//

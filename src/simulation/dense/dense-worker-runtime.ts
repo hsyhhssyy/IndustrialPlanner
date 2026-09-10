@@ -7,12 +7,9 @@ import {
   type DenseKernelCheckpoint,
   type DenseRegionalGrantResult,
 } from "./dense-simulation-kernel";
-import {
-  compileDenseTopologyLayout,
-  type DenseTopologyLayout,
-} from "./dense-topology";
-import type { CompiledSimulationTopology } from "../types";
-import { resolveRecipePhaseTicks } from "../tick-rate";
+import { compileDenseTopologyLayout, type DenseTopologyLayout } from "./dense-topology";
+import type { CompiledSimulationTopology } from "../contracts";
+import { resolveRecipePhaseTicks } from "../contracts";
 import {
   DenseMessageSequenceGate,
   type DenseProtocolIdentity,

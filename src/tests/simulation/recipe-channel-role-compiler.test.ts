@@ -5,7 +5,7 @@ import { createWorldDocument } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 function createTestEntityDefinition(options: {
   id: string;

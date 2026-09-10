@@ -15,7 +15,7 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
-import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
+import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 
 import { SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
 

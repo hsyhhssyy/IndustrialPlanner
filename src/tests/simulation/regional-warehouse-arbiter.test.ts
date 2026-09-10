@@ -7,7 +7,7 @@ import {
   createEntity,
   createWarehouseSlotLink,
 } from "./blueprint-test-helpers";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
   arbitrateRegionalWarehouseEpoch,

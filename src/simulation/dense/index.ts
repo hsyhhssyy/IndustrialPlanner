@@ -16,10 +16,20 @@ export {
   type DenseKernelTransferBatch,
 } from "./dense-simulation-kernel";
 export { DenseFrameEmitter } from "./dense-frame-emitter";
-export {
-  DenseLocalRegionalBasePort,
-  type DenseLocalRegionalBasePortOptions,
-} from "./dense-regional-base-port";
+// AI-REMOVED 2026-09-09:
+// Reason: 按仿真引擎与状态所有权重组，原实现迁入明确的职责模块。
+// Trigger: 用户授权抽离 dense / legacy 公共接口并重组 legacy。
+// Evidence: 两个 Host 共用契约与投影，旧入口混合查询、Worker bridge 和 legacy 控制状态。
+// Replacement: src/tests/simulation/dense-regional-base-port.ts
+// Risk: 异步生命周期和查询语义需由双引擎回归验证。
+// Human Review: Required
+//
+// Original code:
+// export {
+//   DenseLocalRegionalBasePort,
+//   type DenseLocalRegionalBasePortOptions,
+// } from "./dense-regional-base-port";
+
 export {
   DenseRegionalSimulationSession,
   type DenseRegionalBaseInput,
@@ -52,3 +62,5 @@ export {
   type DenseWorkerRequest,
   type DenseWorkerResponse,
 } from "./dense-worker-protocol";
+
+export { createDenseSimulationHost } from "./host";

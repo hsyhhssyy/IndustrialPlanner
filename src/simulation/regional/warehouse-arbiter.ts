@@ -1,4 +1,4 @@
-import { hashStable } from "../deterministic";
+import { hashStable } from "../topology";
 import type {
   RegionWarehouseAckBatch,
   RegionWarehouseArbitrationResult,

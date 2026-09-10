@@ -1,10 +1,7 @@
 import { createRegistryContract } from "@/registry";
-import { TimelineWorkerRuntime } from "./timeline-worker-runtime";
+import { TimelineWorkerRuntime } from "./legacy/timeline-worker-runtime";
 import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
-import type {
-  TimelineWorkerRequest,
-  TimelineWorkerResponse,
-} from "./timeline-worker-protocol";
+import type { TimelineWorkerRequest, TimelineWorkerResponse } from "./legacy/timeline-worker-protocol";
 
 const registry = createRegistryContract();
 const runtime = new TimelineWorkerRuntime(registry);

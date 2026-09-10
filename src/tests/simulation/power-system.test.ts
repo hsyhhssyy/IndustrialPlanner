@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
@@ -374,7 +375,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(0);
 
         await expectReady(host.internalActions.syncToTick(threeSecondTick));
-        expect(host.internalState.currentSnapshot?.isPowerOutage).toBe(true);
+        expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(true);
         const frozenProgressSeconds = readGrinderProgressSeconds(host);
 
         const outageDocument = documentStore.getSnapshot();
@@ -388,7 +389,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
         await Promise.resolve();
         await expectReady(host.internalActions.syncToTick(threeAndHalfSecondTick));
 
-        expect(host.internalState.currentSnapshot?.isPowerOutage).toBe(false);
+        expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(false);
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(frozenProgressSeconds);
       } finally {
         host.dispose();

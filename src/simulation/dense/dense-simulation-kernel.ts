@@ -16,12 +16,9 @@ import type {
   RuntimeDeviceRecipeSnapshot,
   RuntimeDeviceSnapshot,
   RuntimeGasDiffusionSnapshot,
-} from "../types";
-import { resolveRecipePhaseTicks } from "../tick-rate";
-import type {
-  RegionWarehouseDeposit,
-  RegionalWarehouseOutletTable,
-} from "../regional/types";
+} from "../contracts";
+import { resolveRecipePhaseTicks } from "../contracts";
+import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import { DenseIndexSet } from "./dense-index-set";
 import { DenseRuntimeState } from "./dense-runtime-state";
 import {

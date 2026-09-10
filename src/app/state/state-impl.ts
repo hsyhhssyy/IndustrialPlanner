@@ -796,7 +796,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     selectedActivityIds: [],
     toolboxShowAllActivityContent: true,
     showGrassBackground: false,
-    showRegionAnnotations: true,
+    showRegionAnnotations: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
     debugSimulationWorkerDetailedReport: false,

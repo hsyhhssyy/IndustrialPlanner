@@ -1,31 +1,22 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
-import {
-  arbitrateRegionalWarehouseEpoch,
-  commitRegionalWarehouseEpoch,
-} from "../regional/warehouse-arbiter";
+import { arbitrateRegionalWarehouseEpoch, commitRegionalWarehouseEpoch } from "../regional";
 import type {
   RegionWarehouseAckBatch,
   RegionWarehouseAuthorityState,
   RegionWarehouseDemandBatch,
   RegionWarehouseDeposit,
   RegionalWarehouseOutletTable,
-} from "../regional/types";
+} from "../regional";
 import type {
   CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
   WarehouseStats,
-} from "../types";
-import {
-  createDenseEngineBridge,
-  type DenseEngineBridge,
-} from "./dense-engine-bridge";
-import {
-  DenseProjectionStore,
-  type DenseFrameDelta,
-} from "./dense-frame-delta";
+} from "../contracts";
+import { createDenseEngineBridge, type DenseEngineBridge } from "./dense-engine-bridge";
+import { DenseProjectionStore, type DenseFrameDelta } from "./dense-frame-delta";
 import type { DenseTopologyDictionary } from "./dense-topology";
-import { resolveRecipePhaseTicks } from "../tick-rate";
+import { resolveRecipePhaseTicks } from "../contracts";
 
 export interface DenseRegionalBaseInput {
   readonly baseId: string;

@@ -416,13 +416,22 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-show-device-namesDescription",
         defaultValue: true,
       },
-      {
-        id: "game-show-region-annotations",
-        kind: "switch",
-        labelKey: "settingsField.game-show-region-annotations",
-        descriptionKey: "settingsField.game-show-region-annotationsDescription",
-        defaultValue: true,
-      },
+      // AI-REMOVED 2026-09-09:
+      // Reason: 区域标注恢复为实验性功能。
+      // Trigger: 用户要求现有开关受实验性功能总开关控制。
+      // Evidence: 实验性分组统一处理准入和默认值重置。
+      // Replacement: WORKBENCH_SETTINGS_GROUPS.experimental 中同 ID 设置。
+      // Risk: 已有标注会隐藏，数据仍保留。
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   id: "game-show-region-annotations",
+      //   kind: "switch",
+      //   labelKey: "settingsField.game-show-region-annotations",
+      //   descriptionKey: "settingsField.game-show-region-annotationsDescription",
+      //   defaultValue: true,
+      // },
       {
         id: SHOW_DEVICE_ICONS_SETTING_ID,
         kind: "switch",
@@ -844,6 +853,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     labelKey: "settingsGroup.experimental" as UiKey,
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
+      {
+        id: "game-show-region-annotations",
+        kind: "switch",
+        labelKey: "settingsField.game-show-region-annotations",
+        descriptionKey: "settingsField.game-show-region-annotationsDescription",
+        defaultValue: false,
+      },
       {
         id: "experimental-dense-simulation-engine",
         kind: "switch",

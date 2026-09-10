@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -90,7 +91,7 @@ describe("区域多基地 SimulationAction 启动", () => {
       host.actions.pause();
       host.actions.setRegionalMultiBaseEnabled(false);
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
-      expect(host.internalState.currentSnapshot?.tickNumber).toBeGreaterThanOrEqual(0);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBeGreaterThanOrEqual(0);
       expect(host.internalState.runtimeStatus.latestTickNumber).toBeGreaterThanOrEqual(1);
       expect(host.internalState.runtimeStatus.latestTickNumber).toBeLessThanOrEqual(11);
       expect(host.internalState.runtimeStatus.bufferSize).toBeLessThanOrEqual(20);

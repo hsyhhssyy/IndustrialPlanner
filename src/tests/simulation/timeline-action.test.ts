@@ -6,20 +6,14 @@ import {
 } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
-import {
-  SimulationActionImpl,
-  type SimulationWorkerBridge,
-  type TimelineWorkerBridge,
-} from "@/simulation/action-impl";
-import { createTickSnapshot } from "@/simulation/runtime/create-tick-snapshot";
-import { createSimulationMutableRuntimeState } from "@/simulation/runtime/runtime-state";
-import { createSimulationStateReadWrite } from "@/simulation/state-impl";
-import { createSimulationDocumentHash } from "@/simulation/topology-compiler";
-import type {
-  CompiledSimulationTopology,
-  SimulationRuntimeExport,
-  SimulationRuntimeStatus,
-} from "@/simulation/types";
+import { SimulationActionImpl } from "@/simulation/legacy/controller";
+import { type SimulationWorkerBridge, type TimelineWorkerBridge } from "@/simulation/legacy/bridge-contract";
+import { createTickSnapshot } from "@/simulation/legacy/create-tick-snapshot";
+import { createSimulationMutableRuntimeState } from "@/simulation/legacy/runtime-state";
+import { createLegacySimulationState } from "@/simulation/legacy/state";
+import { createSimulationDocumentHash } from "@/simulation/topology/compiler";
+import type { CompiledSimulationTopology, SimulationRuntimeStatus } from "@/simulation/contracts/types";
+import type { SimulationRuntimeExport } from "@/simulation/legacy/runtime-export";
 
 describe("simulation timeline actions", () => {
   afterEach(() => {
@@ -27,10 +21,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("starts timeline prediction from the previous half-second boundary", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(37).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(37).snapshot;
     state.currentPlaybackTickNumber = 37.8;
 
     const bridge = createSimulationBridge();
@@ -38,6 +32,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -56,10 +51,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("checks minute safety sync on the tick-1 checkpoint phase without adding a marker", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(1).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(1).snapshot;
     state.currentPlaybackTickNumber = 1;
 
     const bridge = createSimulationBridge();
@@ -67,6 +62,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -92,10 +88,10 @@ describe("simulation timeline actions", () => {
   it("keeps timeline seeks blocked until the first prediction catches the playback cursor", async () => {
     vi.useFakeTimers();
 
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(100).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(100).snapshot;
     state.currentPlaybackTickNumber = 100;
 
     const firstLoad = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["loadTimeline"]>>>();
@@ -111,6 +107,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: createSimulationBridge(),
       createTimelineBridge: () => timelineBridge,
@@ -150,10 +147,10 @@ describe("simulation timeline actions", () => {
   it("retries timeline prediction startup when the first runtime export is unavailable", async () => {
     vi.useFakeTimers();
 
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
 
     let exportCalls = 0;
     const bridge = createSimulationBridge({
@@ -181,6 +178,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -197,10 +195,10 @@ describe("simulation timeline actions", () => {
   it("keeps at most one timeline status refresh in flight", async () => {
     vi.useFakeTimers();
 
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
 
     const firstStatus = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelineStatus"]>>>();
     const timelineBridge = createTimelineBridge({
@@ -215,6 +213,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge: createSimulationBridge(),
       createTimelineBridge: () => timelineBridge,
@@ -235,10 +234,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("falls back to the latest exportable aligned checkpoint", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = null;
+    presentation.currentSnapshot = null;
     state.currentPlaybackTickNumber = 608;
 
     const bridge = createSimulationBridge({
@@ -265,6 +264,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -284,10 +284,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("preserves the visible timeline prefix when restarting an existing timeline", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(120).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(120).snapshot;
     state.currentPlaybackTickNumber = 120;
 
     const bridge = createSimulationBridge();
@@ -295,6 +295,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -322,10 +323,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("retargets timeline prediction when playback scrolls beyond the default half-window anchor", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -333,6 +334,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -351,10 +353,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("keeps a forward seek between half and edge positions as the playback anchor", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -362,6 +364,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -386,10 +389,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("clears the custom playback anchor when seeking backward", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -397,6 +400,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -418,10 +422,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("anchors a seek beyond the right edge drag threshold at the edge position", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -429,6 +433,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -453,10 +458,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("keeps at most three visible windows of timeline history while playback retargets", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -464,6 +469,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -482,10 +488,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("scrolls the timeline window left when seeking inside the left edge history band", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -493,6 +499,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -517,10 +524,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("allows the cursor to move below the left edge anchor at the retained history limit", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge();
@@ -528,6 +535,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -547,10 +555,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("reloads timeline prediction when playback rolls back outside the retained history range", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
     state.currentPlaybackTickNumber = 0;
 
     const bridge = createSimulationBridge({
@@ -594,6 +602,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -612,10 +621,10 @@ describe("simulation timeline actions", () => {
   });
 
   it("jumps forward to the first retained aligned checkpoint when the previous boundary was cleared", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "start";
-    state.currentSnapshot = createRuntimeExport(449).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(449).snapshot;
     state.currentPlaybackTickNumber = 450;
 
     const bridge = createSimulationBridge({
@@ -648,6 +657,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -668,10 +678,10 @@ describe("simulation timeline actions", () => {
 
   it("applies the in-flight presentation frame and coalesces pending seeks to the latest tick", async () => {
     const firstFrameRange = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelinePresentationFrameRange"]>>>();
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "pause";
-    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    presentation.currentSnapshot = createRuntimeExport(0).snapshot;
 
     const bridge = createSimulationBridge();
     const timelineBridge = createTimelineBridge({
@@ -680,6 +690,7 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
@@ -735,10 +746,10 @@ describe("simulation timeline actions", () => {
       1,
       createSimulationDocumentHash(documentBefore),
     );
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     state.hasStarted = true;
     state.runningState = "pause";
-    state.currentSnapshot = runtimeExportBefore.snapshot;
+    presentation.currentSnapshot = runtimeExportBefore.snapshot;
 
     const bridge = createSimulationBridge({
       exportRuntimeState: vi.fn(async (tickNumber?: number) => ({
@@ -771,34 +782,35 @@ describe("simulation timeline actions", () => {
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       createTimelineBridge: () => timelineBridge,
     });
     const internals = action as unknown as {
-      compiledDocument: WorldDocument | null;
-      compiledActivitySignature: string | null;
+      compiledSource: { document: WorldDocument | null; activitySignature: string | null };
     };
-    internals.compiledDocument = documentBefore;
-    internals.compiledActivitySignature = "[]";
+    internals.compiledSource.document = documentBefore;
+    internals.compiledSource.activitySignature = "[]";
 
     await action.enableTimeline();
-    internals.compiledDocument = documentAfter;
-    internals.compiledActivitySignature = "[\"after\"]";
+    internals.compiledSource.document = documentAfter;
+    internals.compiledSource.activitySignature = "[\"after\"]";
 
     await expect(action.seekTimelineToTick(0)).resolves.toBe(true);
 
-    expect(internals.compiledDocument?.documentKey).toBe(documentBefore.documentKey);
-    expect(internals.compiledActivitySignature).toBe("[]");
+    expect(internals.compiledSource.document?.documentKey).toBe(documentBefore.documentKey);
+    expect(internals.compiledSource.activitySignature).toBe("[]");
     action.disableTimeline();
   });
 
   it("syncs perf and detailed debug-data modes independently and keeps tick requests free of debug flags", async () => {
-    const state = createSimulationStateReadWrite();
+    const { state, presentation } = createLegacySimulationState();
     const bridge = createSimulationBridge();
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
       state,
+      presentation,
       topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
       bridge,
       getPerfEnabled: () => false,

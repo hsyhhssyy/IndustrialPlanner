@@ -3,19 +3,10 @@ import type {
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
 
-import type {
-  CompiledSimulationTopology,
-  SimulationTopologyMigration,
-} from "../types";
-import type {
-  RegionWarehouseDeposit,
-  RegionalWarehouseOutletTable,
-} from "../regional/types";
+import type { CompiledSimulationTopology, SimulationTopologyMigration } from "../contracts";
+import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import type { DenseFrameDelta } from "./dense-frame-delta";
-import {
-  DENSE_SIMULATION_PROTOCOL_VERSION,
-  type DenseTopologyLayout,
-} from "./dense-topology";
+import { DENSE_SIMULATION_PROTOCOL_VERSION, type DenseTopologyLayout } from "./dense-topology";
 
 export interface DenseProtocolIdentity {
   readonly protocolVersion: typeof DENSE_SIMULATION_PROTOCOL_VERSION;

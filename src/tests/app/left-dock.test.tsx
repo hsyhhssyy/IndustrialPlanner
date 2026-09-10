@@ -246,7 +246,7 @@ describe("Left dock panel switching", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders five primary tabs including regions when debug mode is off and defaults to the placement panel", () => {
+  it("renders four primary tabs with regions hidden by default when debug mode is off and defaults to the placement panel", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -268,10 +268,10 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    expect(primaryButtons).toHaveLength(5);
+    expect(primaryButtons).toHaveLength(4);
     expect(utilityButtons).toHaveLength(4);
     expect(container.textContent).toContain("放置模式");
-    expect(container.textContent).toContain("区域");
+    expect(toolbarGroups[0]?.textContent).not.toContain("区域");
     expect(visiblePanel).not.toBeNull();
 
     if (!visiblePanel) {

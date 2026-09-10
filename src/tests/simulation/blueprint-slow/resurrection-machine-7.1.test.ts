@@ -1,3 +1,4 @@
+import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -7,7 +8,7 @@ import { createWorldDocumentFromBlueprint } from "../blueprint-test-helpers";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { BLUEPRINT_SIMULATION_ENGINE_KINDS } from "../blueprint-runner";
 
@@ -118,7 +119,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
             throw new Error(`观测失败: tick ${tick} 状态 ${status.status}`);
           }
 
-          const snapshot = host.internalState.currentSnapshot;
+          const snapshot = readSimulationSnapshot(host);
           if (snapshot === null) {
             throw new Error(`观测失败: tick ${tick} 快照为空`);
           }

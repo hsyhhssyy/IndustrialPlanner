@@ -2,29 +2,24 @@ import { describe, expect, it } from "vitest";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
-import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
-import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
+import { advanceDevices } from "@/simulation/legacy/stage-1-advance-devices";
+import { settleRecipes } from "@/simulation/legacy/stage-5-settle-recipes";
 import {
   createRecipeStatsState,
   createSimulationMutableRuntimeState,
   cloneSimulationMutableRuntimeState,
   rollRecipeStatsWindow,
   type RuntimeDeviceRecipeState,
-} from "@/simulation/runtime/runtime-state";
+} from "@/simulation/legacy/runtime-state";
 import {
   adjustReservedAmounts,
   getReservedAmount,
   resolveDeviceRecipePlans,
-} from "@/simulation/runtime/runtime-slot-access";
-import { canDeviceTransferAtCurrentPhase } from "@/simulation/runtime/phase-gating";
-import {
-  isDynamicTickRateCompatibleWithTransferUnits,
-} from "@/simulation/tick-rate";
-import type {
-  CompiledSimulationRecipePlan,
-  CompiledSimulationTopology,
-} from "@/simulation/types";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+} from "@/simulation/legacy/runtime-slot-access";
+import { canDeviceTransferAtCurrentPhase } from "@/simulation/legacy/phase-gating";
+import { isDynamicTickRateCompatibleWithTransferUnits } from "@/simulation/contracts/tick-rate";
+import type { CompiledSimulationRecipePlan, CompiledSimulationTopology } from "@/simulation/contracts/types";
+import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createSimulationTestRegistry } from "./simulation-test-registry";
 
 const registry = createSimulationTestRegistry({

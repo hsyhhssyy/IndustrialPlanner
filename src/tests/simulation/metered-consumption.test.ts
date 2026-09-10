@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-import {
-  createSimulationMutableRuntimeState,
-} from "@/simulation/runtime/runtime-state";
-import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
-import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import type { CompiledSimulationTopology } from "@/simulation/types";
+import { createSimulationMutableRuntimeState } from "@/simulation/legacy/runtime-state";
+import { advanceDevices } from "@/simulation/legacy/stage-1-advance-devices";
+import { settleRecipes } from "@/simulation/legacy/stage-5-settle-recipes";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import {
   createBlueprint,
   createEntity,

@@ -6,11 +6,8 @@ import {
 import { ActiveTimeWatchdog } from "@/shared/worker/active-time-watchdog";
 import { createLogger } from "@/shared/logging/logger";
 
-import type {
-  CompiledSimulationTopology,
-  SimulationTopologyMigration,
-} from "../types";
-import type { RegionalWarehouseOutletTable } from "../regional/types";
+import type { CompiledSimulationTopology, SimulationTopologyMigration } from "../contracts";
+import type { RegionalWarehouseOutletTable } from "../regional";
 import { collectDenseFrameTransferables } from "./dense-frame-delta";
 import { DENSE_SIMULATION_PROTOCOL_VERSION } from "./dense-topology";
 import { DenseWorkerRuntime } from "./dense-worker-runtime";

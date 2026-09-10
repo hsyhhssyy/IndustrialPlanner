@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import type { RegionalResourceSupplySetting } from "@/simulation/types";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
+import type { RegionalResourceSupplySetting } from "@/simulation/contracts/types";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,

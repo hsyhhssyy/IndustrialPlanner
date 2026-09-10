@@ -10,7 +10,7 @@ import { createRegistryContract } from "@/registry";
 import {
   ACTIVITY_LIMITED_FORMULA_1_ID,
 } from "@/shared/registry/activity-availability";
-import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 const ACTIVITY_ITEM_ID = "item_activity_xiranite_cmpt";
 const ACTIVITY_RECIPE_ID = "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic";

@@ -9,7 +9,7 @@ import type {
   CompiledSimulationPort,
   CompiledSimulationTopology,
   SimulationPortDirection,
-} from "../types";
+} from "../contracts";
 
 export const DENSE_SIMULATION_PROTOCOL_VERSION = 2 as const;
 export const DENSE_INDEX_NONE = -1;

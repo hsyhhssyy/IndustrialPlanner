@@ -4,8 +4,8 @@ import type {
   RuntimeNodeSnapshot,
   RuntimeTickSnapshot,
   WarehouseItemStats,
-} from "../types";
-import type { SimulationPresentationProjection } from "../projection/presentation-projection";
+} from "../contracts";
+import type { SimulationPresentationProjection } from "../projection";
 import {
   DENSE_INDEX_NONE,
   DENSE_SIMULATION_PROTOCOL_VERSION,
