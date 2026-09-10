@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "maskFile": "mask.webp",
+  "clips": {
+    "open": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        200,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40
+      ],
+      "frameCount": 15,
+      "pages": [
+        {
+          "file": "open-0.webp",
+          "rows": 1,
+          "columns": 15,
+          "frameCount": 15
+        }
+      ]
+    },
+    "open_idle": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30
+      ],
+      "frameCount": 21,
+      "pages": [
+        {
+          "file": "open_idle-0.webp",
+          "rows": 2,
+          "columns": 15,
+          "frameCount": 21
+        }
+      ]
+    },
+    "close": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        70,
+        70,
+        30,
+        30,
+        40,
+        60,
+        40,
+        60
+      ],
+      "frameCount": 48,
+      "pages": [
+        {
+          "file": "close-0.webp",
+          "rows": 4,
+          "columns": 15,
+          "frameCount": 48
+        }
+      ]
+    },
+    "close_idle": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        70
+      ],
+      "frameCount": 1,
+      "pages": [
+        {
+          "file": "close_idle-0.webp",
+          "rows": 1,
+          "columns": 1,
+          "frameCount": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "revision": "pipe-text-uv-v1",
+  "taskId": "20260910-221500-logistics-text-fix",
+  "building": "log_pipe_02_mid",
+  "gameVersion": "v1.5",
+  "requiresMaterialContract": 2,
+  "patchType": "Incremental frontend adapter and material specification; not a standalone texture pack",
+  "applyRoot": "log_pipe_02_mid/top/",
+  "files": [
+    {
+      "file": "dynamic.js",
+      "previousSha256": "a6830097b8770aa55b5387edf22f0b86f4053c7ddce3808f4e546080744f6b93",
+      "sha256": "43222ed2d48db5e734512040645b520f2e6b9e1c39eeee05a166590eb7c6ac83",
+      "bytes": 6072
+    },
+    {
+      "file": "static/material-computation.json",
+      "previousSha256": "d24076c556a1b6da2dd0a858261f8b01b1aa7c920cf0a657e213db47530aa873",
+      "sha256": "0693739b40e28a296b88a95b4bba9d36305539c69f3cb3e8431fcae89af799c0",
+      "bytes": 16779
+    },
+    {
+      "file": "dynamic/material-computation.json",
+      "previousSha256": "120fbd2d6de68c862bd5e8a6b45c1d75ec1ff61a6d6d4ed92e20d19511e26b09",
+      "sha256": "0ac1a7f50f843aa856c73dcd7b0557ce65f1108a6f4be2383059fe2809508fe9",
+      "bytes": 16780
+    }
+  ],
+  "instructions": [
+    "将三个修改文件按相对路径覆盖到已有 log_pipe_02_mid/top/；patch.json 是本次替换说明。",
+    "使用自写 Shader 时，按 material-computation.json 的 referenceShader.fragment 修改文字采样；仅替换 JSON 不会自动修好自写 Shader。",
+    "文字改用 patternU=fract(.5+across*(2*waterDirection-1))，只采 pattern.r；移除文字的 folded U 和左右 G/R 选择。",
+    "只修改文字；保留 src() 的 V 原点转换、双 V 的 folded U、相位、弯头、流体与所有图片。",
+    "清除或更新 dynamic.js 的浏览器缓存；不要在前端额外翻转整条管线。"
+  ],
+  "rootCause": "Folded transverse UV plus G/R side selection spliced differently oriented source label halves in the 2D top view.",
+  "fidelity": "Continuous R-channel top-seam unwrap is a 2D readability adaptation; source textures are unchanged, not a newly recovered original 3D shader formula.",
+  "webpChanged": 0,
+  "staticPresetTextGate": "Always closed at s=5+sourceV for these material parameters; no static rebake needed",
+  "unchangedWebpSha256": {
+    "dynamic/pipe-chevron.webp": "a14fe2967ed2de4b0e324b932301f2d9421fa1916ecf3d2b93899a2be7d2a074",
+    "dynamic/pipe-fluid-motion.webp": "4818428eeda970288028ef520876591695da1cb5b42ea59afe3478d37935b453",
+    "dynamic/pipe-left-fluid-mapping.webp": "51f0d39fdd5c2eb0e5bc55d97bffe9dd3fb5842d4950d40d443354930871d71b",
+    "dynamic/pipe-left-mapping.webp": "c84adb81a79b0016e22f80ed89ea8f362892dd5eed247087855d84e1e55bf694",
+    "dynamic/pipe-pattern.webp": "b5c69446d767ca5c50e1df8975753921593f531419f1d0e0b57957a9d0a273df",
+    "dynamic/pipe-right-fluid-mapping.webp": "46be5a54bfc2aa6441cd00da8ba970c5591040fe8b7478976de56b40d145919f",
+    "dynamic/pipe-right-mapping.webp": "b56b5223ad5fc96b03c98f2bb3bfcedc8bc0a572ba0f2a0bbc8682fbc07d2577",
+    "dynamic/pipe-straight-fluid-mapping.webp": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e",
+    "dynamic/pipe-straight-mapping.webp": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e",
+    "static/pipe-chevron.webp": "65d07447a3ee6fbc4cb2d4b08501ece5665f87fbd0fe215848866e35704ce8d3",
+    "static/pipe-left-assembly.webp": "2b71bf16f4d1b428c5f4253bbbf6bb0966bf65729eafe5485355d1cdf1db5d09",
+    "static/pipe-left-fluid-body.webp": "f75281336a46bfd71970ba1bc4787b10a549f3367415fa4ebd50f842b84644da",
+    "static/pipe-left-fluid-specular.webp": "f072183288bdb66b0e49d6ba34ff9b2e3391d477e8c1dba421dee8c7c1ba9707",
+    "static/pipe-left-shell.webp": "98a6d496784591473175f6255d02269264e3596b0ba7f625db9e3637b7c25dab",
+    "static/pipe-left-static-marked.webp": "ab93ac23484ea8b95ea381165db638838b0cf7c1c2e728ced767c3fcb9a31fec",
+    "static/pipe-left-static-marker.webp": "272b5e31daab04fa7c740f10283c716fb5bdc46bf3bc6c13edb1142681f4dbcc",
+    "static/pipe-left-support-back.webp": "84018586b7f63a0350f11d80164d762d66c7a56cc8b7854010c95fcf0cd6f47d",
+    "static/pipe-left-support-front.webp": "e4dca47059acec58758ca0e28cd33201906797a1b61230ddef88c0586efd7ab5",
+    "static/pipe-left-support-middle.webp": "49eefcf225c35ed4d6585d620986d4926b325dbbca17ec7aaaad7d2e834a0956",
+    "static/pipe-pattern.webp": "9896a6308c47d9d03fb0ba2628395cec4990655c32ff44eea6f5f82e8f396925",
+    "static/pipe-right-assembly.webp": "d68c0ece29fe9447d1260766abc94604b905d47ccaf6da32d1d05d0f5d1e1cc7",
+    "static/pipe-right-fluid-body.webp": "97c493784bc504396eb4fb6e452e31a142cadebd2f61982cb7cbdce7a75611b7",
+    "static/pipe-right-fluid-specular.webp": "2e17e25fd1e4944a70c0aebf30b9bb1182ef9edae94963977198f164e0a4b15f",
+    "static/pipe-right-shell.webp": "abd5cd7bee0688a716d612dff241e67f2e4969e5da7b894d27471c8027ba30b2",
+    "static/pipe-right-static-marked.webp": "1847588389bb08eefbac307fe29ebda3a5ba8e887b4eb16b41f23f0be83f78ff",
+    "static/pipe-right-static-marker.webp": "171322ddf1eb6e67378a1cc1c5322cecd2c426dfcb1ccf31308003358143011a",
+    "static/pipe-right-support-back.webp": "c2d2f2256eb9479778cc6efd4c4a93766017e789e92da7cb84ff2c9736e91e9c",
+    "static/pipe-right-support-front.webp": "0f2572aa216898e1f3c2f80fe63c2c7d167e2ba4995198f99f55cb11bf04642a",
+    "static/pipe-right-support-middle.webp": "12f9b12c725dface22d64f12241f15c129c3fd39a802d30d765f2f929ca69c25",
+    "static/pipe-straight-fluid-body.webp": "a0e6570286ce85912ca55279f34027c2f7bb88567de4cb8b2484fb69f1654bf6",
+    "static/pipe-straight-fluid-specular.webp": "972ebbdb3f763a8993ff7cc854cfd5214e9ba3759fa010772e6ddc9624188f17",
+    "static/pipe-straight-shell.webp": "6ed9ed7096fb91f22aaddd8b8ce2b4648fd5b0efd4bf2a6788f28c5b261d8ca1",
+    "static/pipe-straight-static-marked.webp": "7ddaa2d44f60a433d256bcacf9b8cfe993171841e063f2e61a0fa5b7a5e1bf67",
+    "static/pipe-straight-static-marker.webp": "9bf855e834064a43fefb955e13dfca8fc387374c46ec02f1f54de5bc37f84147",
+    "static/pipe-straight-support-back.webp": "5ef83af8adc3907f657714be89e8a2d62b69778d14ca574a3720bf47413eca6e",
+    "static/pipe-straight-support-front.webp": "75b03d5bfd03772cff1caf51cd44b5b947c08ab9413e037a2c7a29a3e9f604db",
+    "static/pipe-straight-support-middle.webp": "da707b04b7c45abdd4140e1b7a59c9012c983344bc89ddfe40dace1fa0db1ad4",
+    "static/support-corner.webp": "c2fc5cc4bc6773ea0c0a0b73f3b187a7e07e63f5704ab197ae7d18533665390b",
+    "static/support-straight.webp": "86bf8256324311b69f11c7e5cae9409c4e411c1002bbbdb25f74afaefbb95984"
+  }
+}

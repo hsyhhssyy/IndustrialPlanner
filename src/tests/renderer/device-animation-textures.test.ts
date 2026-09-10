@@ -348,6 +348,16 @@ describe("device animation textures", () => {
     },
   );
 
+  it.each([
+    [], [30, 40], [30, 0, 40], [30, -1, 40], [30, Number.NaN, 40],
+    [30, Number.POSITIVE_INFINITY, 40], [Number.MAX_SAFE_INTEGER, 30, 40],
+  ])("rejects invalid per-frame durations %j", (...frameDurationsMs) => {
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
+      ...manifest,
+      clips: { ...manifest.clips, open: { ...manifest.clips.open, frameDurationsMs } },
+    })).toThrow();
+  });
+
   it("rejects a missing phase and an unknown close idle strategy", () => {
     const clipsWithoutClose = {
       open: manifest.clips.open,

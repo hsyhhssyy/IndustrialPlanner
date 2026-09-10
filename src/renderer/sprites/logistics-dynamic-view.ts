@@ -38,7 +38,7 @@ export class LogisticsDynamicView {
   }
 
   public sync(state: LogisticsMaterialEntityState, frame: LogisticsMaterialFrameState): void {
-    const time = state.kind === "belt" ? frame.beltSeconds : frame.pipeSeconds;
+    const time = state.kind === "belt" ? frame.beltSeconds : state.pipeFlow?.seconds ?? 0;
     if (this.previousState === state && this.previousTime === time) return;
     this.previousState = state;
     this.previousTime = time;
@@ -49,7 +49,7 @@ export class LogisticsDynamicView {
     for (const group of this.uniforms) {
       group.uniforms.uStart = state.start;
       group.uniforms.uFilled = filled ? 1 : 0;
-      group.uniforms.uTime = state.kind === "belt" ? frame.beltSeconds : frame.pipeSeconds;
+      group.uniforms.uTime = time;
       group.update();
     }
   }

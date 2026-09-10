@@ -139,10 +139,14 @@ type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBeh
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
+/** AI-CORRECTION 2026-09-10: 展示字段 spriteAnimation / spriteOffset 同样可选，与完整设备复用素材契约。 */
+/** AI-CORRECTION 2026-09-10: 本次仅放开实际需要的 spriteAnimation；空壳设备尚无 spriteOffset 接入需求。 */
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
-> & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand" | "powerRange" | "displayOrder">>;
+> & Partial<Pick<EntityDefinitionInput,
+  "requiresPower" | "powerDemand" | "powerRange" | "displayOrder" | "spriteAnimation"
+>>;
 
 const RECIPE_MACHINE_IDS = new Set(
   RECIPE_DEFINITIONS.map((recipe) => recipe.machineId),
@@ -991,6 +995,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_storager_1",
     iconPath: "device-icons/item_port_storager_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteOffset: { topView: { x: 0, y: -1, width: 3, height: 4 } },
     uiGroup: "warehouse",
     displayOrder: 401,
     tags: [],
@@ -1083,6 +1088,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus",
     iconPath: "device-icons/item_port_log_hongs_bus.webp",
     footprint: { width: 4, height: 8 },
+    spriteOffset: { topView: { x: -1, y: -1, width: 6, height: 10 } },
     uiGroup: "warehouse",
     displayOrder: 405,
     tags: ["武陵", "bus"],
@@ -1108,6 +1114,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus_source",
     iconPath: "device-icons/item_port_log_hongs_bus_source.webp",
     footprint: { width: 4, height: 4 },
+    spriteOffset: { topView: { x: -1, y: -1, width: 5, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 406,
     tags: ["武陵", "bus"],
@@ -2386,6 +2393,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_udpipe_loader_1",
     iconPath: "device-icons/item_port_udpipe_loader_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 407,
     // AI-REMOVED 2026-06-06:
@@ -2514,6 +2522,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_udpipe_unloader_1",
     iconPath: "device-icons/item_port_udpipe_unloader_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 408,
     // AI-REMOVED 2026-06-06:
@@ -2625,6 +2634,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_furnance_1",
     iconPath: "device-icons/item_port_furnance_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 501,
     tags: [
@@ -2660,6 +2670,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_liquid_furnance_1",
     iconPath: "device-icons/item_port_liquid_furnance_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 502,
     tags: [PRODUCER_TAG, "武陵", "alter:furnance_1", "alter-variant:liquid"],
@@ -2753,6 +2764,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_shaper_1",
     iconPath: "device-icons/item_port_shaper_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 505,
     tags: [
@@ -2788,6 +2800,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "shaper_1_gas",
     iconPath: "device-icons/shaper_1_gas.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 506,
     tags: [
@@ -2859,6 +2872,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_seedcol_1",
     iconPath: "device-icons/item_port_seedcol_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 507,
     tags: [PRODUCER_TAG],
@@ -2889,6 +2903,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_planter_1",
     iconPath: "device-icons/item_port_planter_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 508,
     tags: [
@@ -2924,6 +2939,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_hydro_planter_1",
     iconPath: "device-icons/item_port_hydro_planter_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 509,
     tags: [PRODUCER_TAG, "武陵", "alter:planter_1", "alter-variant:liquid"],
@@ -3066,6 +3082,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_power_sta_1",
     iconPath: "device-icons/item_port_power_sta_1.webp",
     footprint: { width: 2, height: 2 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "resourcePower",
     displayOrder: 303,
     tags: [PRODUCER_TAG],
@@ -3268,6 +3285,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "liquid_purifier_1_gas",
     iconPath: "device-icons/liquid_purifier_1_gas.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 610,
     tags: [
@@ -3342,6 +3360,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_xiranite_oven_1",
     iconPath: "device-icons/item_port_xiranite_oven_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 608,
     tags: [PRODUCER_TAG, "武陵"],
@@ -3392,6 +3411,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_dismantler_1",
     iconPath: "device-icons/item_port_dismantler_1.webp",
     footprint: { width: 6, height: 4 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 611,
     tags: [PRODUCER_TAG, "武陵"],
@@ -3475,6 +3495,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "transmuter_2_gastrans",
     iconPath: "device-icons/transmuter_2_gastrans.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
+    spriteOffset: { topView: { x: -1, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
     tags: [
@@ -3594,6 +3616,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "transmuter_2_solidtrans",
     iconPath: "device-icons/transmuter_2_solidtrans.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
+    spriteOffset: { topView: { x: -1, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
@@ -3701,6 +3725,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_gas_reactor_1",
     iconPath: "device-icons/item_port_gas_reactor_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 614,
     tags: [PRODUCER_TAG, "武陵"],
@@ -3774,6 +3799,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "transmuter_1_gastrans",
     iconPath: "device-icons/transmuter_1_gastrans.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 615,
     tags: [
@@ -3893,6 +3919,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "transmuter_1_liquidtrans",
     iconPath: "device-icons/transmuter_1_liquidtrans.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 616,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
@@ -4015,6 +4042,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_sp_hub_1",
     iconPath: "device-icons/item_port_sp_hub_1.webp",
     footprint: { width: 9, height: 9 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
+    spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
     uiGroup: "hidden",
     tags: [WAREHOUSE_SINK_TAG],
     placementBehaviors: [
@@ -4233,9 +4262,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_water_pump_1",
     iconPath: "device-icons/item_port_water_pump_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "loop" },
     spriteOffset: {
       // AI-CORRECTION 2026-08-20: 顶视图随解包默认朝向旋转 180°，扩展区域由西侧改到东侧。
-      topView: { x: 0, y: 0, width: 5, height: 3 },
+      // AI-CORRECTION 2026-09-10: v1.5 素材按 spatial.json 占地矩形定位，替代旧素材扩展区域。
+      topView: { x: 0, y: 0, width: 3, height: 3 },
     },
     uiGroup: "resourcePower",
     displayOrder: 301,
@@ -4327,6 +4358,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_udpipe_loader_2",
     iconPath: "device-icons/item_port_udpipe_loader_2.webp",
     footprint: { width: 3, height: 5 },
+    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 409,
     tags: ["武陵", "OuterRingAllowed"],
@@ -4433,6 +4465,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_udpipe_unloader_2",
     iconPath: "device-icons/item_port_udpipe_unloader_2.webp",
     footprint: { width: 3, height: 5 },
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 410,
     tags: ["武陵", "OuterRingAllowed"],
@@ -4680,6 +4713,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_liquid_storager_1",
     iconPath: "device-icons/item_port_liquid_storager_1.webp",
     footprint: { width: 3, height: 3 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "warehouse",
     displayOrder: 404,
     tags: ["武陵", "OuterRingAllowed"],
@@ -4786,6 +4820,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_power_diffuser_1",
     iconPath: "device-icons/item_port_power_diffuser_1.webp",
     footprint: { width: 2, height: 2 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "resourcePower",
     displayOrder: 302,
     powerRange: 12,

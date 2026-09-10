@@ -1,0 +1,572 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 640,
+  "frameHeight": 640,
+  "fps": 30,
+  "pageRows": 6,
+  "pageColumns": 6,
+  "sources": {
+    "close_000": {
+      "file": "close_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        70
+      ]
+    },
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        70
+      ]
+    },
+    "open_000": {
+      "file": "open_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        70
+      ]
+    },
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 6,
+      "columns": 6,
+      "frameCount": 36,
+      "frameDurationsMs": [
+        230,
+        540,
+        600,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        100,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30
+      ]
+    },
+    "open_idle_001": {
+      "file": "open_idle_001.webp",
+      "rows": 6,
+      "columns": 6,
+      "frameCount": 36,
+      "frameDurationsMs": [
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30
+      ]
+    },
+    "open_idle_002": {
+      "file": "open_idle_002.webp",
+      "rows": 2,
+      "columns": 6,
+      "frameCount": 9,
+      "frameDurationsMs": [
+        40,
+        30,
+        30,
+        40,
+        30,
+        30,
+        40,
+        30,
+        30
+      ]
+    }
+  },
+  "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "open": [
+      {
+        "source": "open_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 1,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 2,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 3,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 4,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 5,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 6,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 7,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 8,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 9,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 10,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 11,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 12,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 13,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 14,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 15,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 16,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 17,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 18,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 19,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 20,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 21,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 22,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 23,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 24,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 25,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 26,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 27,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 28,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 29,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 30,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 31,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 32,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 33,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 34,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 35,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 0,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 1,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 2,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 3,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 4,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 5,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 6,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 7,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 8,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 9,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 10,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 11,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 12,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 13,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 14,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 15,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 16,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 17,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 18,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 19,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 20,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 21,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 22,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 23,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 24,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 25,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 26,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 27,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 28,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 29,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 30,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 31,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 32,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 33,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 34,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 35,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 0,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 1,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 2,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 3,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 4,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 5,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 6,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 7,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 8,
+        "frameCount": 1
+      }
+    ]
+  }
+}

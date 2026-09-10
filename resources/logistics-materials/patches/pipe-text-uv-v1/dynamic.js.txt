@@ -1,0 +1,68 @@
+// Optional extension: imported only after the user enables animation.
+export const vertex=`precision highp float;
+in vec2 aPosition;in vec2 aUV;out vec2 vUV;
+uniform mat3 uProjectionMatrix;uniform mat3 uWorldTransformMatrix;uniform mat3 uTransformMatrix;
+void main(){vUV=aUV;vec3 p=uProjectionMatrix*uWorldTransformMatrix*uTransformMatrix*vec3(aPosition,1.);gl_Position=vec4(p.xy,0.,1.);}`;
+export const fragment=`precision highp float;
+in vec2 vUV;out vec4 finalColor;
+uniform sampler2D uMap;uniform sampler2D uGlyph;uniform sampler2D uFlow;uniform sampler2D uPattern;uniform sampler2D uFluidMap;
+uniform float uTime;uniform float uStart;uniform float uKind;uniform float uCorner;uniform float uFilled;uniform float uDirection;uniform float uLayer;
+uniform float uAtlasHalfTexel;
+uniform vec4 uParams;uniform vec4 uPipe;uniform vec4 uWidths;uniform vec4 uColor;
+vec4 src(sampler2D tex,vec2 uv){return texture(tex,vec2(fract(uv.x),1.-fract(uv.y)));}
+float remap(float q,float density,float width){return (fract(q*density)*width-.5)/(width-1.);}
+void main(){vec4 map=texture(uMap,vUV);if(map.a<.5){finalColor=vec4(0.);return;}
+ float across=map.r;float along=(map.g*255.*256.+map.b*255.)/65535.;float s=uStart+along;
+ vec3 rgb=vec3(0.);float alpha=0.;
+ if(uKind<.5){
+  float phase=fract(s-uTime*uParams.x);float atlasU=clamp(across/8.,uAtlasHalfTexel,1./8.-uAtlasHalfTexel);float arrow=clamp((src(uGlyph,vec2(atlasU,phase*uParams.w)).r-.55)*3.,0.,1.);
+  float flow=src(uFlow,vec2(across,fract((s-uTime*uParams.y+uParams.z)*uWidths.w))).r;
+  float light=clamp(pow(max(flow,0.),1.15)*.78,0.,1.);float arrowAlpha=arrow*.9;
+  alpha=arrowAlpha+light*(1.-arrowAlpha);
+  rgb=(vec3(1.,.78,.30)*arrowAlpha+vec3(1.,.59,.12)*light*(1.-arrowAlpha))/max(alpha,.000001);
+ }else{
+  float q=s*(2.*uDirection-1.)-uPipe.z;float u=min(abs(across-.5),1.);float av=remap(q+uPipe.w*uTime,uPipe.y,uWidths.y);
+  float glyph=(av>0.&&av<1.)?src(uGlyph,vec2(u,av)).r:0.;
+  // Unwrap the top seam continuously. Folding U and mixing R/G splices
+  // oppositely oriented halves of the label. Keep the chevron UV above.
+  float patternU=fract(.5+across*(2.*uDirection-1.));
+  float pv=remap(q,uPipe.x,uWidths.x);vec4 pattern=src(uPattern,vec2(patternU,clamp(pv,0.,1.)));
+  float pat=(uCorner<.5&&pv>0.&&pv<1.)?pattern.r:0.;
+  float marks=clamp(max(glyph,pat)*.9,0.,1.);
+  vec4 fm=texture(uFluidMap,vUV);float shimmer=0.;
+  if(uFilled>.5&&fm.a>.5){float fv=(fm.g*255.*256.+fm.b*255.)/65535.;vec2 normal=src(uFlow,vec2(fm.r*2.,uStart+fv-uTime*uWidths.z)).rg*2.-1.;shimmer=pow(abs(normal.x*.7+normal.y*.3),2.)*.20;}
+  if(uLayer<.5){alpha=marks;rgb=vec3(.72,.91,1.);}
+  else{alpha=shimmer;rgb=vec3(.75,.88,1.);}
+ }
+ alpha*=map.a;finalColor=vec4(rgb*alpha,alpha)*uColor;
+}`;
+
+export async function loadDynamic(PIXI,collection,signal){
+ const items=new Map(),textures=new Map(),params=new Map(),bitmaps=[];
+ const signature=item=>JSON.stringify(['sha256','width','height','colorSpace','alpha','filter','wrap'].map(key=>item[key]));
+ const destroy=()=>{for(const t of textures.values())t.destroy(true);textures.clear();for(const b of bitmaps)b.close();bitmaps.length=0;};
+ try{
+  for(const delivery of collection.deliveries){const url=new URL(delivery.extension,location.href);const m=await fetch(url,{signal}).then(r=>r.json());params.set(delivery.id,m.parameters);
+   if(m.materialContractVersion!==2)throw new Error('Expected material contract 2');
+   for(const[key,item]of Object.entries(m.resources)){if(items.has(key)&&signature(items.get(key))!==signature(item))throw new Error('Conflicting resource '+key);if(!items.has(key))items.set(key,{...item,url:new URL(item.file,url).href});}}
+  for(const[key,item]of items){const response=await fetch(item.url,{signal});if(!response.ok)throw new Error(response.status+' '+item.url);
+   const bitmap=await createImageBitmap(await response.blob(),{premultiplyAlpha:'none',colorSpaceConversion:'none'});bitmaps.push(bitmap);
+   if(signal.aborted)throw new DOMException('Aborted','AbortError');
+   const source=new PIXI.ImageSource({resource:bitmap,alphaMode:'no-premultiply-alpha',autoGenerateMipmaps:false,
+     scaleMode:item.filter==='nearest'?'nearest':'linear',addressMode:item.wrap==='repeat'?'repeat':'clamp-to-edge'});
+   textures.set(key,new PIXI.Texture({source}));
+  }
+ }catch(e){destroy();throw e;}
+ const sampler=key=>{const t=textures.get('dynamic/'+key);if(!t)throw new Error('Missing dynamic texture '+key);return t.source;};
+ return {textureCount:textures.size,destroy,mesh(kind,seg,container,time,filled,layer='marks'){
+  const key=kind+'.'+seg.shape;const id=collection.entries[key].id;const p=params.get(id)||{};
+  const geometry=new PIXI.MeshGeometry({positions:new Float32Array([-32,-32,32,-32,32,32,-32,32]),uvs:new Float32Array([0,0,1,0,1,1,0,1]),indices:new Uint32Array([0,1,2,0,2,3])});
+  const shader=PIXI.Shader.from({gl:{vertex,fragment},resources:{
+   uMap:sampler(key+'.mapping'),uGlyph:sampler(kind==='pipe'?'pipe.chevron':'conveyor.arrow'),
+   uFlow:sampler(kind==='pipe'?'pipe.fluid-motion':'conveyor.highlight'),
+   uPattern:sampler(kind==='pipe'?'pipe.pattern':'conveyor.arrow'),uFluidMap:sampler(key+(kind==='pipe'?'.fluid-mapping':'.mapping')),
+   effect:{uAtlasHalfTexel:{value:.5/sampler(kind==='pipe'?'pipe.chevron':'conveyor.arrow').width,type:'f32'},uTime:{value:time,type:'f32'},uStart:{value:seg.start+5,type:'f32'},uKind:{value:kind==='pipe'?1:0,type:'f32'},uCorner:{value:seg.shape==='straight'?0:1,type:'f32'},uFilled:{value:filled?1:0,type:'f32'},uDirection:{value:p.waterDirection??0,type:'f32'},uLayer:{value:layer==='fluid'?1:0,type:'f32'},uParams:{value:new Float32Array([p.arrowSpeed??1,p.flowSpeed??1.25,p.timeOffset??0,p.arrowSpace??1]),type:'vec4<f32>'},uPipe:{value:new Float32Array([p.staticDensity??.11,p.flowDensity??.18,p.flowOffset??0,p.flowSpeed??1.23]),type:'vec4<f32>'},uWidths:{value:new Float32Array([p.staticWidth??.922,p.flowWidth??.88,p.waterWaveSpeed??.8,p.flowSpace??.27]),type:'vec4<f32>'}}
+  }});
+  const mesh=new PIXI.Mesh({geometry,shader});container.addChild(mesh);return mesh;
+ }};
+}

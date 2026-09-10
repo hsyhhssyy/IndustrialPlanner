@@ -10,9 +10,49 @@ import {
   createBlueprint,
   createEntity,
   createWorldDocumentFromBlueprint,
+  findSlot,
+  getDevice,
 } from "./blueprint-test-helpers";
+import { runBlueprintSimulation } from "./blueprint-runner";
+import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
 const registry = createRegistryContract();
+
+describeSimulationEngineMatrix("consumption channel device gate", (engineKind) => {
+  it("does not start a normal recipe while the consumption buffer is empty", async () => {
+    const finalTick = 2;
+    const report = await runBlueprintSimulation({
+      blueprint: createBlueprint(`empty-consumption-${engineKind}`, [
+        createEntity("transmuter", "transmuter_2_gastrans", 0, 0, 0, {
+          channelRecipes: { default: "liquid_transmuter_2_gas_gas_copper_1" },
+          "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+          "storageSlotGroups[0].slots[0].initialCount": 2,
+        }),
+        createEntity("power", "power_diffuser_1", 5, 0),
+      ]),
+      registry,
+      maxTickNumber: finalTick,
+      engineKind,
+    });
+
+    expect(getDevice(report, finalTick, "transmuter").channelRecipes.default ?? null)
+      .toBeNull();
+    expect(findSlot(
+      report,
+      finalTick,
+      "transmuter",
+      "consume_buffer",
+      "consume_slot",
+    )).toMatchObject({ itemType: null, count: 0, reserved: 0 });
+    expect(findSlot(
+      report,
+      finalTick,
+      "transmuter",
+      "item_input_buffer",
+      "input_item_slot_1",
+    )).toMatchObject({ itemType: "item_copper_nugget", count: 2, reserved: 0 });
+  });
+});
 
 describe("consumption channel device mechanism", () => {
   it("compiles every consumption input to one real capacity-five slot and five leading channels", () => {

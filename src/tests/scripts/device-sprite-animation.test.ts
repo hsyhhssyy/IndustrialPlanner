@@ -73,6 +73,24 @@ async function readPixels(file: string): Promise<number[]> {
 }
 
 describe("device animation generation", () => {
+  it("发布时保留源帧时长和循环边界拆分时长，不复制长停留帧", async () => {
+    await withFixture(async (options) => {
+      const sourceFile = path.join(options.sourceDirectory, "fixture/manifest.json");
+      const source = JSON.parse(await readFile(sourceFile, "utf8"));
+      source.sources.open.frameDurationsMs = [30, 1340];
+      source.clips.open = [
+        { source: "open", startFrame: 1, frameCount: 1, frameDurationsMs: [670] },
+        { source: "open", startFrame: 0, frameCount: 1 },
+      ];
+      await writeFile(sourceFile, JSON.stringify(source));
+      await publishDeviceSpriteAnimations(options);
+      const output = JSON.parse(await readFile(path.join(options.animationDirectory, "fixture/manifest.json"), "utf8"));
+      expect(output.clips.open.frameCount).toBe(2);
+      expect(output.clips.open.frameDurationsMs).toEqual([670, 30]);
+      expect(output.clips.open.pages).toHaveLength(1);
+    });
+  });
+
   it("publishes the open first frame, separate static mask and four-phase union mask", async () => {
     await withFixture(async (options) => {
       expect(await publishDeviceSpriteAnimations(options)).toEqual([{

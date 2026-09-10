@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 768,
+  "frameHeight": 640,
+  "fps": 30,
+  "pageRows": 6,
+  "pageColumns": 5,
+  "sources": {
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        70
+      ]
+    },
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 1,
+      "columns": 2,
+      "frameCount": 2,
+      "frameDurationsMs": [
+        30,
+        40
+      ]
+    }
+  },
+  "clips": {
+    "open": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 1,
+        "frameCount": 1
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 1,
+        "frameCount": 1
+      }
+    ],
+    "close": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ]
+  }
+}

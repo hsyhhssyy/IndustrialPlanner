@@ -25,7 +25,7 @@
  * - --blueprint: 为 public/blueprint-view/sprites 下的蓝图精灵生成 mask
  */
 
-import { access, copyFile, mkdir, readdir } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -128,7 +128,7 @@ async function fileExists(filePath) {
   }
 }
 
-async function publishDeviceSprite(
+export async function publishDeviceSprite(
   sourceFilePath,
   spriteOutputFilePath,
   maskOutputFilePath,
@@ -300,7 +300,22 @@ async function main() {
   const animatedSpriteIds = new Set(definitions.filter((entity) => entity.spriteAnimation !== undefined)
     .map((entity) => entity.spriteId));
 
-  for (const [sourceName, spriteId, rotation = 0] of DEVICE_SPRITE_MAPPINGS) {
+  const importedCollection = JSON.parse(await readFile(
+    path.join(projectRoot, 'resources/building-top-view-v15.json'), 'utf8',
+  ));
+  const importedStaticMappings = importedCollection.entries.filter((entry) => !entry.animated)
+    .map((entry) => [`v15/${entry.spriteId}.webp`, entry.spriteId, 0]);
+  const importedStaticIds = new Set(importedStaticMappings.map((entry) => entry[1]));
+  const mappings = [...importedStaticMappings,
+    ...DEVICE_SPRITE_MAPPINGS.filter((entry) => !importedStaticIds.has(entry[1]))];
+  // AI-REMOVED 2026-09-10:
+  // Reason: 新版静态素材必须参与同一同步入口，避免后续同步恢复旧图。
+  // Trigger: v1.5 建筑素材接入。Evidence: collection 中记录了独立静态源。
+  // Replacement: mappings 合并新版和未替换的旧映射。
+  // Risk: Low; Human Review: Required
+  // Original code:
+  // for (const [sourceName, spriteId, rotation = 0] of DEVICE_SPRITE_MAPPINGS) {
+  for (const [sourceName, spriteId, rotation = 0] of mappings) {
     if (animatedSpriteIds.has(spriteId)) continue;
     const sourceFileName = path.extname(sourceName) === '' ? `${sourceName}.png` : sourceName;
     const sourceFilePath = path.join(sourceDirectory, sourceFileName);

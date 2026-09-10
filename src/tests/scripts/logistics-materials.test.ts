@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -9,6 +10,37 @@ import type { LogisticsDynamicManifest, LogisticsStaticManifest } from "@/shared
 import { publishLogisticsMaterials } from "../../scripts/publish-logistics-materials.mjs";
 
 describe("物流素材离线发布", () => {
+  it("文字 UV 增量规范进入集合级入口，原始图片与其他资源参数保持一致", async () => {
+    const collectionRoot = path.resolve("resources/logistics-materials/contract2");
+    const patchRoot = path.resolve("resources/logistics-materials/patches/pipe-text-uv-v1");
+    const patch = JSON.parse(await readFile(path.join(patchRoot, "patch.json"), "utf8")) as {
+      files: { file: string; sha256: string; bytes: number }[];
+      unchangedWebpSha256: Record<string, string>;
+    };
+    for (const entry of patch.files) {
+      // 美工浏览器示例按原文归档，不作为项目可执行 JavaScript。
+      const archiveFile = entry.file === "dynamic.js" ? "dynamic.js.txt" : entry.file;
+      const bytes = await readFile(path.join(patchRoot, archiveFile));
+      expect(bytes.length).toBe(entry.bytes);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(entry.sha256);
+    }
+    for (const mode of ["static", "dynamic"]) {
+      const bytes = await readFile(path.join(patchRoot, mode, "material-computation.json"));
+      expect(await readFile(path.join(collectionRoot, mode, "log_pipe_02_mid/top", mode, "material-computation.json"))).toEqual(bytes);
+      const source = JSON.parse(bytes.toString("utf8")) as Record<string, unknown>;
+      const combined = JSON.parse(await readFile(path.join(collectionRoot, mode, "material-computation.json"), "utf8")) as Record<string, unknown>;
+      // 发布器读取集合级规范；只替换包内 JSON 会使实际 Shader 保持旧版本。
+      for (const key of ["sampling", "formulas", "referenceShader", "fidelity"]) expect(combined[key]).toEqual(source[key]);
+      const collection = JSON.parse(await readFile(path.join(collectionRoot, mode, "collection.json"), "utf8")) as { packages: { id: string }[] };
+      expect(Object.keys(combined.parametersByResourceId as object).sort()).toEqual(collection.packages.map((entry) => entry.id).sort());
+    }
+    for (const [file, sha256] of Object.entries(patch.unchangedWebpSha256)) {
+      const mode = file.split("/")[0]!;
+      const bytes = await readFile(path.join(collectionRoot, mode, "log_pipe_02_mid/top", file));
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(sha256);
+    }
+  });
+
   it("覆盖全部颜色和形状，支架三个分层统一旋转90度，数据纹理字节无损", async () => {
     const parent = path.resolve(".temp/.trash");
     await mkdir(parent, { recursive: true });

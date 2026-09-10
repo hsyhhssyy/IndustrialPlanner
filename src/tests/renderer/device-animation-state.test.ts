@@ -5,11 +5,13 @@ import type {
   DeviceSpriteAnimationPhase,
   NormalizedDeviceSpriteAnimationDefinition,
 } from "@/shared/device-sprite-animation";
+import { normalizeDeviceSpriteAnimationDefinition } from "@/shared/device-sprite-animation";
 
 function createClip(phase: DeviceSpriteAnimationPhase, frameCount: number, frameDurationMs = 100) {
   return {
     frameCount,
     frameDurationMs,
+    frameEndTimesMs: Array.from({ length: frameCount }, (_, index) => (index + 1) * frameDurationMs),
     durationMs: frameCount * frameDurationMs,
     pages: [{
       file: `${phase}-0.webp`,
@@ -48,6 +50,37 @@ function expectFrame(
 }
 
 describe("DeviceAnimationState", () => {
+  it("按逐帧时长定位，跨页边界与末帧停留保持准确", () => {
+    const clips = Object.fromEntries(["open", "open_idle", "close", "close_idle"].map((phase) => [phase, {
+      frameCount: 3,
+      frameDurationsMs: [30, 1340, 40],
+      pages: [
+        { file: `${phase}-0.webp`, rows: 1, columns: 2, frameCount: 2 },
+        { file: `${phase}-1.webp`, rows: 1, columns: 1, frameCount: 1 },
+      ],
+    }]));
+    const definition = normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "hold-last" }, {
+      schemaVersion: 1, frameWidth: 1, frameHeight: 1, maskFile: "mask.webp", clips,
+    });
+    const state = new DeviceAnimationState(definition, true);
+    state.advance(29);
+    expectFrame(state, "open", 0);
+    state.advance(1);
+    expectFrame(state, "open", 1);
+    state.advance(1339);
+    expectFrame(state, "open", 1);
+    state.advance(1);
+    expectFrame(state, "open", 2);
+    state.advance(39);
+    expectFrame(state, "open", 2);
+    state.advance(1);
+    expectFrame(state, "open_idle", 0);
+    state.advance(1410 * 1000 + 30);
+    expectFrame(state, "open_idle", 1);
+    state.reset(false, true);
+    expectFrame(state, "close_idle", 2);
+  });
+
   it("按初始工作目标从开启或关闭待机的第零帧开始", () => {
     expectFrame(new DeviceAnimationState(createDefinition(), true), "open", 0);
     expectFrame(new DeviceAnimationState(createDefinition(), false), "close_idle", 0);

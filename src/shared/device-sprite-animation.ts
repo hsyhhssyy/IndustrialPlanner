@@ -28,6 +28,8 @@ export interface NormalizedDeviceSpriteAnimationClipDefinition {
   // readonly columns: number;
   readonly frameCount: number;
   readonly frameDurationMs: number;
+  /** 每帧结束时刻；支持美术合并重复帧后保留的非等长停留时间。 */
+  readonly frameEndTimesMs: readonly number[];
   readonly durationMs: number;
   readonly pages: readonly DeviceSpriteAnimationManifestPage[];
   /** 逐帧直接定位分页，避免 30 FPS × 多设备时反复线性扫描页表。 */
@@ -91,6 +93,20 @@ export function normalizeDeviceSpriteAnimationDefinition(
       || frameDurationMs <= 0 || frameDurationMs * frameCount > Number.MAX_SAFE_INTEGER) {
       throw new Error(`${phase}.frameDurationMs must produce a finite positive safe duration`);
     }
+    const durations = clip.frameDurationsMs;
+    if (durations !== undefined && (!Array.isArray(durations) || durations.length !== frameCount)) {
+      throw new Error(`${phase}.frameDurationsMs must contain one duration per frame`);
+    }
+    let durationMs = 0;
+    const frameEndTimesMs = Object.freeze(Array.from({ length: frameCount }, (_, index) => {
+      const duration: unknown = durations === undefined ? frameDurationMs : durations[index];
+      if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0
+        || durationMs + duration > Number.MAX_SAFE_INTEGER || durationMs + duration <= durationMs) {
+        throw new Error(`${phase}.frameDurationsMs must contain finite positive safe durations`);
+      }
+      durationMs = durations === undefined ? (index + 1) * frameDurationMs : durationMs + duration;
+      return durationMs;
+    }));
     const clipPages = clip.pages;
     if (!Array.isArray(clipPages) || clipPages.length === 0) {
       throw new Error(`${phase}.pages must be a non-empty array`);
@@ -129,7 +145,8 @@ export function normalizeDeviceSpriteAnimationDefinition(
     clips[phase] = Object.freeze({
       frameCount,
       frameDurationMs,
-      durationMs: frameDurationMs * frameCount,
+      frameEndTimesMs,
+      durationMs,
       pages: Object.freeze(pages),
       pageIndexByFrame,
     });

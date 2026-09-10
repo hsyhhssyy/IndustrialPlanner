@@ -1,0 +1,5515 @@
+{
+  "schemaVersion": 1,
+  "sourceArchive": "endfield-building-animation-assets-v1.5-all.zip",
+  "entries": [
+    {
+      "entityId": "dismantler_1",
+      "spriteId": "item_port_dismantler_1",
+      "package": "dismantler_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "sourcePath": "dismantler_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 6,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 768,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 6,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 384.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              768,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              64,
+              192,
+              832,
+              704
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "dismantler_1",
+          "tableBuildingId": "dismantler_1",
+          "displayName": "拆解机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "liquid__0+gasliquid__0",
+          "canvasCells": [
+            6,
+            4
+          ],
+          "footprintCells": [
+            6,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            768,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 8,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {
+            "open_idle": {
+              "sourceFrameStart": 35,
+              "sourceFrameEndInclusive": 215,
+              "vatRowStart": 37,
+              "vatRowEndInclusive": 217,
+              "count": 181,
+              "playback": "loop",
+              "seamValidation": {
+                "seamRms": 0.0658496395,
+                "adjacentMedianRms": 0.1316637322,
+                "ratio": 0.5001349906,
+                "threshold": 2.5,
+                "passed": true
+              },
+              "note": "Full open_idle clip is preserved; this periodic subrange is the validated repeatable steady-state range."
+            }
+          },
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "1c5ccc111177b68f4490485010bbd8529d6ba923eaa2137453aa4d015c78770a"
+    },
+    {
+      "entityId": "furnance_1",
+      "spriteId": "item_port_furnance_1",
+      "package": "furnance_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "furnance_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "furnance_1",
+          "requestedAlias": "furnance_1",
+          "tableBuildingId": "furnance_1",
+          "displayName": "精炼炉",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 4,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "normal__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "53dd8fbceb4c92ce4105cc3a256018550c3460bffeb87f5d52c0e120d4ec0b77"
+    },
+    {
+      "entityId": "liquid_furnance_1",
+      "spriteId": "item_port_liquid_furnance_1",
+      "package": "furnance_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "furnance_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "furnance_1",
+          "requestedAlias": "furnance_1",
+          "tableBuildingId": "furnance_1",
+          "displayName": "精炼炉",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 4,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "normal__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "53dd8fbceb4c92ce4105cc3a256018550c3460bffeb87f5d52c0e120d4ec0b77"
+    },
+    {
+      "entityId": "gas_pump_1",
+      "spriteId": "gas_pump_1",
+      "package": "gas_pump_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "gas_pump_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "gas_pump_1",
+          "requestedAlias": "gas_pump_1",
+          "tableBuildingId": "gas_pump_1",
+          "displayName": "气体收集泵",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gas__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gas__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "gas_pump_1.webp",
+      "packageSha256": "7866d4bd852fa3ec9aa47d640bd5eee0b0b402da62f32fa4a76e3510d0f31672"
+    },
+    {
+      "entityId": "gas_reactor_1",
+      "spriteId": "item_port_gas_reactor_1",
+      "package": "gas_reactor_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "gas_reactor_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "gas_reactor_1",
+          "tableBuildingId": "gas_reactor_1",
+          "displayName": "气体反应炉",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gas__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gas__0",
+          "baseSelection": "nonLogisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "dbb0214905624e0456542683a83b6228a0054a3861c007dbe30fd23a90fa73a6"
+    },
+    {
+      "entityId": "gas_storager_1",
+      "spriteId": "gas_storager_1",
+      "package": "gas_storager_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "gas_storager_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "gas_storager_1",
+          "requestedAlias": "gas_storager_1",
+          "tableBuildingId": "gas_storager_1",
+          "displayName": "储气罐",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gas__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gas__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "gas_storager_1.webp",
+      "packageSha256": "dc8d5ec05a7d8d57d52890a1973354e45688872c17a8b409590d0037e02ae5b2"
+    },
+    {
+      "entityId": "grinder_1",
+      "spriteId": "item_port_grinder_1",
+      "package": "grinder_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "grinder_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.grinder_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 384,
+            "bottom": 384
+          },
+          "marginsCells": {
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -1.464999794960022,
+            "xMax": 1.464999794960022,
+            "zMin": -1.464999794960022,
+            "zMax": 1.464999794960022
+          },
+          "unionGeometryBoundsCells": {
+            "left": 0.03500020503997803,
+            "top": 0.03500020503997803,
+            "right": 2.964999794960022,
+            "bottom": 2.964999794960022
+          },
+          "unionAlphaBoundsPixels": [
+            3,
+            3,
+            381,
+            381
+          ],
+          "unionAlphaBoundsCells": {
+            "left": 0.0234375,
+            "top": 0.0234375,
+            "right": 2.9765625,
+            "bottom": 2.9765625
+          },
+          "boundsPolicy": "union of open_idle machine, logistic pedestal, LUT strips, and six port arrows",
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "performedAfterCrop": true,
+            "resized": false
+          },
+          "sourceRender": {
+            "canvasCells": {
+              "width": 5,
+              "height": 5
+            },
+            "framePixels": {
+              "width": 640,
+              "height": 640
+            },
+            "cropRectPixels": [
+              128,
+              128,
+              512,
+              512
+            ],
+            "resized": false
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "grinder_1",
+          "version": "v1.5",
+          "view": "top",
+          "variant": "pixi-canvas-y-down-webp4096",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintOffsetCells": {
+            "left": 0,
+            "top": 0
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "fps": 30,
+          "animations": [
+            "open_idle"
+          ],
+          "animationCount": 1,
+          "sourceFrameCount": 30,
+          "retainedFrameCount": 1,
+          "webpPageCount": 1,
+          "gifCount": 2,
+          "maximumWebpPagePixels": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "quality": 85,
+            "alpha": "lossless",
+            "alphaQuality": 100
+          },
+          "individualPngFrames": {
+            "includedInDirectoryDelivery": true,
+            "includedInZip": false
+          },
+          "rendererTemplate": "normal__0",
+          "baseSelection": "logisticBaseUnit",
+          "baseUnit": "pedestal+1_001_03x03_01",
+          "vatLayout": "rigid-track-quaternion-translation",
+          "portIndicators": {
+            "pedestalLutGroup": "group_grinder_normal",
+            "pedestalLutIndex": 10,
+            "arrowPrototype": "port_arrow_01",
+            "arrowCount": 6
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_grinder_1.webp",
+      "packageSha256": "4799685cfa24f2515179b03e4a2401f74caf7341c1d27fc7fbc1eab689e108ad"
+    },
+    {
+      "entityId": "liquid_purifier_1_gas",
+      "spriteId": "liquid_purifier_1_gas",
+      "package": "liquid_purifier_1_top-gas_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "liquid_purifier_1/top-gas",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "liquid_purifier_1",
+          "tableBuildingId": "liquid_purifier_1",
+          "displayName": "提纯机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gas__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 12,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gas__0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "6d435eb0c13f734b374f166d88d97d1f47de0fc8202394c482338cca07fa2a0e"
+    },
+    {
+      "entityId": "liquid_storager_1",
+      "spriteId": "item_port_liquid_storager_1",
+      "package": "liquid_storager_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "liquid_storager_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "liquid_storager_1",
+          "requestedAlias": "liquid_storager_1",
+          "tableBuildingId": "liquid_storager_1",
+          "displayName": "储液罐",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "liquid__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "f9715587e99cc1dd53db4a5e49ff73aa8bb57db007b0e9b4e686befc480e7987"
+    },
+    {
+      "entityId": "loader_1",
+      "spriteId": "item_port_loader_1",
+      "package": "loader_1_top_pixi_canvas_3x2_128px_webp4096.zip",
+      "sourcePath": "loader_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 2
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 2
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 256
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 1,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.0
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 128.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              384,
+              256
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              448,
+              576,
+              832,
+              832
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "loader_1",
+          "tableBuildingId": "loader_1",
+          "displayName": "仓库存货口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            3,
+            2
+          ],
+          "footprintCells": [
+            3,
+            1
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            256
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "loader_1_normal_0",
+          "baseSelection": "none",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": null,
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_loader_1.webp",
+      "packageSha256": "117712ff2355bd40c773faa2c133b1c313a3a3aec5546a4e15fed39ba63d1b62"
+    },
+    {
+      "entityId": "log_hongs_bus_source",
+      "spriteId": "item_port_log_hongs_bus_source",
+      "package": "log_hongs_bus_source_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "log_hongs_bus_source/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 5,
+        "height": 5
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              256,
+              256,
+              896,
+              896
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_hongs_bus_source",
+          "tableBuildingId": "log_hongs_bus_source",
+          "displayName": "存取线源桩",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "log_hongs_bus_source_normal_0",
+          "baseSelection": "none",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": null,
+          "materialLimitations": [
+            "Glass is previewed as fully transparent; shader-specific refraction is not reconstructed."
+          ],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_log_hongs_bus_source.webp",
+      "packageSha256": "fe5d30b7a4dbf2bba535b6f86c7ce254f41a729d408490323e37bdbe54c6435b"
+    },
+    {
+      "entityId": "log_hongs_bus",
+      "spriteId": "item_port_log_hongs_bus",
+      "package": "log_hongs_bus_top_pixi_canvas_6x10_128px_webp4096.zip",
+      "sourcePath": "log_hongs_bus/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 6,
+        "height": 10
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 6,
+            "height": 10
+          },
+          "framePixels": {
+            "width": 768,
+            "height": 1280
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 4,
+            "height": 8,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3.0,
+            "y": 5.0
+          },
+          "pivotPixels": {
+            "x": 384.0,
+            "y": 640.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              768,
+              1280
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              256,
+              0,
+              1024,
+              1280
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_hongs_bus",
+          "tableBuildingId": "log_hongs_bus",
+          "displayName": "存取线基段",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            6,
+            10
+          ],
+          "footprintCells": [
+            4,
+            8
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            768,
+            1280
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "log_hongs_bus_normal_0",
+          "baseSelection": "none",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": null,
+          "materialLimitations": [
+            "Shared material contains liquid and glass flags; glass uses approximate opacity 0.3."
+          ],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_log_hongs_bus.webp",
+      "packageSha256": "5ad4fd0c7a225100fb7a89ac063b059dc9737869ec7065f058c91fc5cafe8b15"
+    },
+    {
+      "entityId": "planter_1",
+      "spriteId": "item_port_planter_1",
+      "package": "planter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "planter_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -2.5,
+              2.5
+            ],
+            "z": [
+              -2.5,
+              2.5
+            ]
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.planter_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 640,
+            "bottom": 640
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320,
+            "y": 320
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "unionVisualBoundsPixels": [
+            1,
+            3,
+            639,
+            637
+          ],
+          "unionVisualBoundsCells": {
+            "left": 0.0078125,
+            "top": 0.0234375,
+            "right": 4.9921875,
+            "bottom": 4.9765625
+          },
+          "geometryPreflight": {
+            "machineAllLogicalRowsBlender": {
+              "min": [
+                -2.3627825,
+                -2.1116347,
+                0.05580759
+              ],
+              "max": [
+                2.0062417627230866,
+                1.6791127972291031,
+                4.562988035364589
+              ]
+            },
+            "pedestalBlender": {
+              "min": [
+                -2.4841037,
+                -2.4650006,
+                0.0015791005
+              ],
+              "max": [
+                2.484105,
+                2.4649997,
+                0.5815435
+              ]
+            },
+            "portArrowQuadsBlender": {
+              "min": [
+                -2.13342895,
+                -2.375,
+                0.105
+              ],
+              "max": [
+                2.1367686999999997,
+                2.375,
+                0.105
+              ]
+            },
+            "combinedBlender": {
+              "min": [
+                -2.4841037,
+                -2.4650006,
+                0.0015791005
+              ],
+              "max": [
+                2.484105,
+                2.4649997,
+                4.562988035364589
+              ]
+            },
+            "footprintSourceXZ": {
+              "x": [
+                -2.5,
+                2.5
+              ],
+              "z": [
+                -2.5,
+                2.5
+              ]
+            },
+            "canvasCandidateCells": [
+              5,
+              5
+            ],
+            "overscanSourceCanvasCells": [
+              7,
+              7
+            ],
+            "pixelsPerCell": 128
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false
+          },
+          "crop": {
+            "sourceCanvasPixels": [
+              896,
+              896
+            ],
+            "rectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "resultPixels": [
+              640,
+              640
+            ],
+            "resized": false
+          },
+          "boundsPolicy": "union of all requested VAT clips, selected pedestal, and ten runtime solid-port arrows"
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "planter_1",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "building-top-view-animation-pack",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "footprintCells": {
+            "width": 5,
+            "height": 5
+          },
+          "footprintOffsetCells": {
+            "left": 0,
+            "top": 0
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "fps": 30,
+          "animationCount": 4,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "sheetPageLimit": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "format": "WebP",
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true,
+            "encoder": "cwebp"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "sourcePack": "output/v1.5/buildings/packs/planter_1_top_v15_r2",
+          "baseSelection": "logisticBaseUnit",
+          "rendererTemplate": "normal__0",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "vatRowMapping": "reverse-single-stack, passed",
+          "portIndicators": {
+            "expectedSolidPorts": 10,
+            "inputPorts": 5,
+            "outputPorts": 5,
+            "lutGroup": "group_planter_normal",
+            "lutIndex": 2,
+            "lutCount": 122,
+            "arrows": 10,
+            "completeness": "passed"
+          },
+          "sourceCamera": {
+            "canvasCells": {
+              "width": 7,
+              "height": 7
+            },
+            "framePixels": [
+              896,
+              896
+            ],
+            "orthoScale": 7.0,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "resized": false
+          }
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "e964c22c1b870e3c990276dd80ce57e8aa8382b2b88dc3f9932756d1d3eb8bc7"
+    },
+    {
+      "entityId": "hydro_planter_1",
+      "spriteId": "item_port_hydro_planter_1",
+      "package": "planter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "planter_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -2.5,
+              2.5
+            ],
+            "z": [
+              -2.5,
+              2.5
+            ]
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.planter_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 640,
+            "bottom": 640
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320,
+            "y": 320
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "unionVisualBoundsPixels": [
+            1,
+            3,
+            639,
+            637
+          ],
+          "unionVisualBoundsCells": {
+            "left": 0.0078125,
+            "top": 0.0234375,
+            "right": 4.9921875,
+            "bottom": 4.9765625
+          },
+          "geometryPreflight": {
+            "machineAllLogicalRowsBlender": {
+              "min": [
+                -2.3627825,
+                -2.1116347,
+                0.05580759
+              ],
+              "max": [
+                2.0062417627230866,
+                1.6791127972291031,
+                4.562988035364589
+              ]
+            },
+            "pedestalBlender": {
+              "min": [
+                -2.4841037,
+                -2.4650006,
+                0.0015791005
+              ],
+              "max": [
+                2.484105,
+                2.4649997,
+                0.5815435
+              ]
+            },
+            "portArrowQuadsBlender": {
+              "min": [
+                -2.13342895,
+                -2.375,
+                0.105
+              ],
+              "max": [
+                2.1367686999999997,
+                2.375,
+                0.105
+              ]
+            },
+            "combinedBlender": {
+              "min": [
+                -2.4841037,
+                -2.4650006,
+                0.0015791005
+              ],
+              "max": [
+                2.484105,
+                2.4649997,
+                4.562988035364589
+              ]
+            },
+            "footprintSourceXZ": {
+              "x": [
+                -2.5,
+                2.5
+              ],
+              "z": [
+                -2.5,
+                2.5
+              ]
+            },
+            "canvasCandidateCells": [
+              5,
+              5
+            ],
+            "overscanSourceCanvasCells": [
+              7,
+              7
+            ],
+            "pixelsPerCell": 128
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false
+          },
+          "crop": {
+            "sourceCanvasPixels": [
+              896,
+              896
+            ],
+            "rectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "resultPixels": [
+              640,
+              640
+            ],
+            "resized": false
+          },
+          "boundsPolicy": "union of all requested VAT clips, selected pedestal, and ten runtime solid-port arrows"
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "planter_1",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "building-top-view-animation-pack",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "footprintCells": {
+            "width": 5,
+            "height": 5
+          },
+          "footprintOffsetCells": {
+            "left": 0,
+            "top": 0
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "fps": 30,
+          "animationCount": 4,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "sheetPageLimit": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "format": "WebP",
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true,
+            "encoder": "cwebp"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "sourcePack": "output/v1.5/buildings/packs/planter_1_top_v15_r2",
+          "baseSelection": "logisticBaseUnit",
+          "rendererTemplate": "normal__0",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "vatRowMapping": "reverse-single-stack, passed",
+          "portIndicators": {
+            "expectedSolidPorts": 10,
+            "inputPorts": 5,
+            "outputPorts": 5,
+            "lutGroup": "group_planter_normal",
+            "lutIndex": 2,
+            "lutCount": 122,
+            "arrows": 10,
+            "completeness": "passed"
+          },
+          "sourceCamera": {
+            "canvasCells": {
+              "width": 7,
+              "height": 7
+            },
+            "framePixels": [
+              896,
+              896
+            ],
+            "orthoScale": 7.0,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "resized": false
+          }
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "e964c22c1b870e3c990276dd80ce57e8aa8382b2b88dc3f9932756d1d3eb8bc7"
+    },
+    {
+      "entityId": "power_diffuser_1",
+      "spriteId": "item_port_power_diffuser_1",
+      "package": "power_diffuser_1_top_pixi_canvas_2x2_128px_webp4096.zip",
+      "sourcePath": "power_diffuser_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 2,
+        "height": 2
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 2,
+            "height": 2
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.0,
+              1.0
+            ],
+            "z": [
+              -1.0,
+              1.0
+            ]
+          },
+          "framePixels": {
+            "width": 256,
+            "height": 256
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 2,
+            "height": 2,
+            "source": "FactoryBuildingTable.power_diffuser_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "pivotPixels": {
+            "x": 128,
+            "y": 128
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.9296875,
+            "xMax": 0.921875,
+            "zMin": -0.921875,
+            "zMax": 0.921875
+          },
+          "unionGeometryBoundsSource": {
+            "xMin": -1.1318912506103516,
+            "xMax": 0.9176396131515503,
+            "zMin": -0.9174991250038147,
+            "zMax": 1.1361498832702637,
+            "source": "union of all mapped VAT rows plus selected pedestal"
+          },
+          "marginsCells": {
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          },
+          "footprintOffsetCells": {
+            "x": 0,
+            "y": 0
+          },
+          "stableFraming": true,
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              256,
+              256
+            ],
+            "resultFramePixels": [
+              256,
+              256
+            ],
+            "resized": false
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "power_diffuser_1",
+          "tableBuildingId": "power_diffuser_1",
+          "displayName": "供电桩",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal__0",
+          "canvasCells": [
+            2,
+            2
+          ],
+          "footprintCells": [
+            2,
+            2
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            256,
+            256
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 4,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "normal__0",
+          "machineRenderId": "power_diffuser_1",
+          "baseSelection": "logisticBaseUnit",
+          "baseValue": "pedestal+1_001_02x02_04",
+          "solidPortCount": 0,
+          "canvasCoordinateSystem": "PixiJS top-left, x +sourceX, y +sourceZ",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "6edb9f55330b678fe4cfa54d2df3ed973248348b6a54d0d494cdd211c497c758"
+    },
+    {
+      "entityId": "power_sta_1",
+      "spriteId": "item_port_power_sta_1",
+      "package": "power_station_1_top_pixi_canvas_2x2_128px_webp4096.zip",
+      "sourcePath": "power_station_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 2,
+        "height": 2
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 2,
+            "height": 2
+          },
+          "framePixels": {
+            "width": 256,
+            "height": 256
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 2,
+            "height": 2,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "pivotPixels": {
+            "x": 128.0,
+            "y": 128.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              256,
+              256
+            ],
+            "resultFramePixels": [
+              256,
+              256
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              256,
+              256
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "power_station_1",
+          "requestedAlias": "power_sta_1",
+          "tableBuildingId": "power_station_1",
+          "displayName": "热能池",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal__0",
+          "canvasCells": [
+            2,
+            2
+          ],
+          "footprintCells": [
+            2,
+            2
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            256,
+            256
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 4,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "normal__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "3a55aef59ce214fc490ec4b05cf6935ef2966840f193f77441c8e1bf7d32233a"
+    },
+    {
+      "entityId": "water_pump_1",
+      "spriteId": "item_port_water_pump_1",
+      "package": "pump_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "pump_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "pump_1",
+          "requestedAlias": "water_pump_1",
+          "tableBuildingId": "pump_1",
+          "displayName": "水泵",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "liquid__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 4,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "loop",
+      "packageSha256": "9b99008f5d32a012c0809d31edba7f60acceaf409c2f90dbb43b11ee0ecc2220"
+    },
+    {
+      "entityId": "seedcol_1",
+      "spriteId": "item_port_seedcol_1",
+      "package": "seedcollector_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "seedcollector_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -2.5,
+              2.5
+            ],
+            "z": [
+              -2.5,
+              2.5
+            ]
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.seedcollector_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "width": 640,
+            "height": 640
+          },
+          "crop": {
+            "sourceCanvasPixels": [
+              896,
+              896
+            ],
+            "rect": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "resultPixels": [
+              640,
+              640
+            ],
+            "resize": null
+          },
+          "visibleGeometrySourceBounds": {
+            "combinedBlender": {
+              "min": [
+                -2.4841037,
+                -2.4650006,
+                0.0015791005
+              ],
+              "max": [
+                2.484105,
+                2.4649997,
+                3.5626116
+              ]
+            }
+          },
+          "verticalTransform": {
+            "sourceRenderAxisY": "-sourceZ",
+            "deliveredAxisY": "+sourceZ",
+            "operation": "flip top-bottom once after crop"
+          },
+          "notes": [
+            "Canvas is a conservative 5x5 footprint with one-cell source overscan on every side.",
+            "No resampling or image resize was used."
+          ]
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "seedcollector_1",
+          "version": "v1.5",
+          "assetKind": "building-top-view-animation-pack",
+          "canvasVariant": "5x5-grid-canvas-128px-cell",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "animationCount": 4,
+          "animations": [
+            "open",
+            "open_idle",
+            "close",
+            "close_idle"
+          ],
+          "sheetPageLimit": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exact": true,
+            "encoder": "cwebp"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "sourcePack": "seedcollector_1_top_v15_r2",
+          "archive": null
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "25930c70c13c14c432e09e7e77520ff3756c97f20d09bb389f190c886ba8a6aa"
+    },
+    {
+      "entityId": "shaper_1",
+      "spriteId": "item_port_shaper_1",
+      "package": "shaper_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "shaper_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.shaper_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 384,
+            "bottom": 384
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "unionVisualBoundsSource": {
+            "min": [
+              -1.4649998,
+              -1.4649998,
+              0.0015964828
+            ],
+            "max": [
+              1.4649998,
+              1.4649998,
+              3.16923
+            ]
+          },
+          "crop": {
+            "sourceCanvasPixels": [
+              640,
+              640
+            ],
+            "rect": [
+              128,
+              128,
+              512,
+              512
+            ],
+            "resultPixels": [
+              384,
+              384
+            ],
+            "resize": false
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              640,
+              640
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false
+          },
+          "boundsPolicy": "union of close_idle and open_idle machine, selected pedestal, and six runtime port arrows"
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "shaper_1",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "building-top-view-animation-pack",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintOffsetCells": {
+            "left": 0,
+            "top": 0
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "sheetPageLimit": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true,
+            "encoder": "cwebp 1.6.0"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "baseSelection": "logisticBaseUnit",
+          "rendererTemplate": "normal__0",
+          "sourcePack": "output/v1.5/buildings/packs/shaper_1_top_v15_r2/A_shaper+1_001_01_variant_dynamic_lod0",
+          "portIndicators": {
+            "expectedSolidPorts": 6,
+            "detectedStrips": 6,
+            "detectedChevrons": 6,
+            "pipePortsExcluded": 1
+          },
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1"
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "3a28e81db496c1a623f749bc1b4099d8a2737b2b689c71cb0e2460c9e75088f7"
+    },
+    {
+      "entityId": "shaper_1_gas",
+      "spriteId": "shaper_1_gas",
+      "package": "shaper_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "shaper_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1.0,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.shaper_1.range"
+          },
+          "footprintRectPixels": {
+            "left": 0,
+            "top": 0,
+            "right": 384,
+            "bottom": 384
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "unionVisualBoundsSource": {
+            "min": [
+              -1.4649998,
+              -1.4649998,
+              0.0015964828
+            ],
+            "max": [
+              1.4649998,
+              1.4649998,
+              3.16923
+            ]
+          },
+          "crop": {
+            "sourceCanvasPixels": [
+              640,
+              640
+            ],
+            "rect": [
+              128,
+              128,
+              512,
+              512
+            ],
+            "resultPixels": [
+              384,
+              384
+            ],
+            "resize": false
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              640,
+              640
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false
+          },
+          "boundsPolicy": "union of close_idle and open_idle machine, selected pedestal, and six runtime port arrows"
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "shaper_1",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "building-top-view-animation-pack",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintCells": {
+            "width": 3,
+            "height": 3
+          },
+          "footprintOffsetCells": {
+            "left": 0,
+            "top": 0
+          },
+          "pixelsPerCell": 128,
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "sheetPageLimit": {
+            "width": 4096,
+            "height": 4096
+          },
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true,
+            "encoder": "cwebp 1.6.0"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "baseSelection": "logisticBaseUnit",
+          "rendererTemplate": "normal__0",
+          "sourcePack": "output/v1.5/buildings/packs/shaper_1_top_v15_r2/A_shaper+1_001_01_variant_dynamic_lod0",
+          "portIndicators": {
+            "expectedSolidPorts": 6,
+            "detectedStrips": 6,
+            "detectedChevrons": 6,
+            "pipePortsExcluded": 1
+          },
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1"
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "3a28e81db496c1a623f749bc1b4099d8a2737b2b689c71cb0e2460c9e75088f7"
+    },
+    {
+      "entityId": "sp_hub_1",
+      "spriteId": "item_port_sp_hub_1",
+      "package": "sp_hub_1_top_pixi_canvas_11x9_128px_webp4096.zip",
+      "sourcePath": "sp_hub_1/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 11,
+        "height": 9
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 11,
+            "height": 9
+          },
+          "framePixels": {
+            "width": 1408,
+            "height": 1152
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 9,
+            "height": 9
+          },
+          "pivotCells": {
+            "x": 5.5,
+            "y": 4.5
+          },
+          "pivotPixels": {
+            "x": 704.0,
+            "y": 576.0
+          },
+          "unionAlphaBoundsPixels": [
+            119,
+            1,
+            1289,
+            1151
+          ],
+          "sourceFramePixels": [
+            1664,
+            1664
+          ],
+          "sourceCropPixels": [
+            128,
+            256,
+            1536,
+            1408
+          ],
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "sp_hub_1",
+          "tableBuildingId": "sp_hub_1",
+          "displayName": "协议核心",
+          "version": "v1.5",
+          "view": "top",
+          "rendererTemplateKey": "normal__0",
+          "rendererTemplateCount": 1,
+          "machineLevel": 0,
+          "machineRenderId": "sp_hub_1",
+          "baseSelection": "logisticBaseUnit",
+          "baseId": "pedestal_hub+1_001_01",
+          "baseIncluded": true,
+          "portPresentation": "protocol-core",
+          "canvasCells": [
+            11,
+            9
+          ],
+          "footprintCells": [
+            9,
+            9
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            1408,
+            1152
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "sourceFrameCount": 1085,
+          "retainedFrameCount": 1085,
+          "canvasVariant": "pixi-canvas-y-down",
+          "taskId": "20260910-protocol-cores",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "ead1d53a740195ef3e4eceb90088585e6b7516fc13d16f9026f3f55bbf4a2d9e"
+    },
+    {
+      "entityId": "storager_1",
+      "spriteId": "item_port_storager_1",
+      "package": "storager_1_top_pixi_canvas_3x4_128px_webp4096.zip",
+      "sourcePath": "storager_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": -1,
+        "width": 3,
+        "height": 4
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 1,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              384,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              448,
+              320,
+              832,
+              832
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "storager_1",
+          "tableBuildingId": "storager_1",
+          "displayName": "协议储存箱",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            3,
+            4
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "storager_1_normal_0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 6,
+            "solidPorts": [
+              {
+                "kind": "input",
+                "configPosition": [
+                  0,
+                  0,
+                  2
+                ],
+                "sourcePosition": [
+                  -1,
+                  2.2
+                ],
+                "sourceYawDegrees": 180.0
+              },
+              {
+                "kind": "input",
+                "configPosition": [
+                  1,
+                  0,
+                  2
+                ],
+                "sourcePosition": [
+                  0,
+                  2.2
+                ],
+                "sourceYawDegrees": 180.0
+              },
+              {
+                "kind": "input",
+                "configPosition": [
+                  2,
+                  0,
+                  2
+                ],
+                "sourcePosition": [
+                  1,
+                  2.2
+                ],
+                "sourceYawDegrees": 180.0
+              },
+              {
+                "kind": "output",
+                "configPosition": [
+                  0,
+                  0,
+                  0
+                ],
+                "sourcePosition": [
+                  -1,
+                  -0.2
+                ],
+                "sourceYawDegrees": 180.0
+              },
+              {
+                "kind": "output",
+                "configPosition": [
+                  1,
+                  0,
+                  0
+                ],
+                "sourcePosition": [
+                  0,
+                  -0.2
+                ],
+                "sourceYawDegrees": 180.0
+              },
+              {
+                "kind": "output",
+                "configPosition": [
+                  2,
+                  0,
+                  0
+                ],
+                "sourcePosition": [
+                  1,
+                  -0.2
+                ],
+                "sourceYawDegrees": 180.0
+              }
+            ],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 6,
+              "arrowPack": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\port_arrow_01_top_v15\\A_P_map_arrowhead_dynamic_lod0",
+              "renderPass": "scene",
+              "depthTest": "passed",
+              "castsShadow": false,
+              "affectsLocalAO": false
+            }
+          },
+          "vatRowMapping": {
+            "mode": "reverse-single-stack",
+            "formula": "physicalRow = textureHeight - 1 - logicalRow",
+            "status": "passed",
+            "candidates": [
+              "direct",
+              "reverse-single-stack"
+            ],
+            "directCandidate": {
+              "passed": true,
+              "evidence": "single-stack boundary comparison; rows are visually equivalent"
+            },
+            "reverseCandidate": {
+              "passed": true,
+              "evidence": "selected default for ordinary single-stack VAT"
+            }
+          },
+          "baseUnit": {
+            "path": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\base_top_v15_r2_pedestal_1_001_03x03_01\\A_pedestal+1_001_03x03_01_dynamic_lod0"
+          },
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "passed",
+            "expectedSolidPortCount": 6,
+            "detectedLutStrips": 6,
+            "arrowIsolation": "passed",
+            "occlusion": "same-scene depth-tested"
+          },
+          "lutIndex": 0,
+          "lutCount": 122,
+          "lutGroup": "storager_1",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_storager_1.webp",
+      "packageSha256": "a3de41043d87712d7bafa1d550cc00210addefa7be86c1ea538d00fbd0fdc604"
+    },
+    {
+      "entityId": "transmuter_1_gastrans",
+      "spriteId": "transmuter_1_gastrans",
+      "package": "transmuter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "transmuter_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "transmuter_1",
+          "tableBuildingId": "transmuter_1",
+          "displayName": "液气转化机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gastrans__0+liquidtrans__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 2,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gastrans__0",
+          "baseSelection": "nonLogisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "82c743d9c6aae6b7bfc1671a7ca781442c74bf095f43cf2ed32c38be2f7db38a"
+    },
+    {
+      "entityId": "transmuter_1_liquidtrans",
+      "spriteId": "transmuter_1_liquidtrans",
+      "package": "transmuter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "transmuter_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "transmuter_1",
+          "tableBuildingId": "transmuter_1",
+          "displayName": "液气转化机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gastrans__0+liquidtrans__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 2,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gastrans__0",
+          "baseSelection": "nonLogisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "82c743d9c6aae6b7bfc1671a7ca781442c74bf095f43cf2ed32c38be2f7db38a"
+    },
+    {
+      "entityId": "transmuter_2_solidtrans",
+      "spriteId": "transmuter_2_solidtrans",
+      "package": "transmuter_2_top-solidtrans_pixi_canvas_6x5_128px_webp4096.zip",
+      "sourcePath": "transmuter_2/top-solidtrans",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 6,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 6,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 768,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3.0,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 384.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              768,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "transmuter_2",
+          "tableBuildingId": "transmuter_2",
+          "displayName": "固气转化机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "solidtrans__0",
+          "canvasCells": [
+            6,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            768,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 2,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "solidtrans__0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "64c4b2f5e2dede31bbee4c00b12bfc570085f300d5ca71f066255f7051a4d2d7"
+    },
+    {
+      "entityId": "transmuter_2_gastrans",
+      "spriteId": "transmuter_2_gastrans",
+      "package": "transmuter_2_top_pixi_canvas_6x5_128px_webp4096.zip",
+      "sourcePath": "transmuter_2/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 6,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 6,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 768,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3.0,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 384.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              768,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "transmuter_2",
+          "tableBuildingId": "transmuter_2",
+          "displayName": "固气转化机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "gastrans__0",
+          "canvasCells": [
+            6,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            768,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 2,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "gastrans__0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "9f98002629300fbd41cf934ffb3b0d4f8179f5b5310cf1e028c34ad2e13a0e64"
+    },
+    {
+      "entityId": "udpipe_loader_1",
+      "spriteId": "item_port_udpipe_loader_1",
+      "package": "udpipe_loader_1_top_pixi_canvas_4x3_128px_webp4096.zip",
+      "sourcePath": "udpipe_loader_1/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 4,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 4,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              512,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              320,
+              448,
+              832,
+              832
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "udpipe_loader_1",
+          "tableBuildingId": "udpipe_loader_1",
+          "displayName": "暗管入口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            4,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "udpipe_loader_1_liquid_0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": {
+            "path": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\base_top_v15_r2_pedestal_1_001_03x03_04a\\A_pedestal+1_001_03x03_04a_dynamic_lod0"
+          },
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_udpipe_loader_1.webp",
+      "packageSha256": "f0cf2d951f04bc4ef973124d7ee4b9a983d7c46015c9bf33aa13a55bc744f6dd"
+    },
+    {
+      "entityId": "udpipe_loader_2",
+      "spriteId": "item_port_udpipe_loader_2",
+      "package": "udpipe_loader_2_top_pixi_canvas_4x5_128px_webp4096.zip",
+      "sourcePath": "udpipe_loader_2/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 4,
+        "height": 5
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 4,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 3,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              512,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              320,
+              320,
+              832,
+              960
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "udpipe_loader_2",
+          "tableBuildingId": "udpipe_loader_2",
+          "displayName": "多口暗管入口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            4,
+            5
+          ],
+          "footprintCells": [
+            3,
+            5
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "udpipe_loader_2_liquid_0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": {
+            "path": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\pedestal_1_03x05_01_complete\\A_pedestal+1_001_03x05_01_dynamic_lod0"
+          },
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_udpipe_loader_2.webp",
+      "packageSha256": "347aa6d0108a200c7e65a328563a940cb2392120d2950532b03623eca715e7b8"
+    },
+    {
+      "entityId": "udpipe_unloader_1",
+      "spriteId": "item_port_udpipe_unloader_1",
+      "package": "udpipe_unloader_1_top_pixi_canvas_4x3_128px_webp4096.zip",
+      "sourcePath": "udpipe_unloader_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 4,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              512,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              448,
+              448,
+              960,
+              832
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "udpipe_unloader_1",
+          "tableBuildingId": "udpipe_unloader_1",
+          "displayName": "暗管出口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            4,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "udpipe_unloader_1_liquid_0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": {
+            "path": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\base_top_v15_r2_pedestal_1_001_03x03_04a\\A_pedestal+1_001_03x03_04a_dynamic_lod0"
+          },
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_udpipe_unloader_1.webp",
+      "packageSha256": "726ba9e9e481366ed944a5b770768cf33622ce306d0af870b7e03225b8df7bc0"
+    },
+    {
+      "entityId": "udpipe_unloader_2",
+      "spriteId": "item_port_udpipe_unloader_2",
+      "package": "udpipe_unloader_2_top_pixi_canvas_4x5_128px_webp4096.zip",
+      "sourcePath": "udpipe_unloader_2/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 5
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 4,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              512,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              448,
+              320,
+              960,
+              960
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "udpipe_unloader_2",
+          "tableBuildingId": "udpipe_unloader_2",
+          "displayName": "多口暗管出口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            4,
+            5
+          ],
+          "footprintCells": [
+            3,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "udpipe_unloader_2_liquid_0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": {
+            "path": "E:\\Tools\\终末地解包\\output\\v1.5\\buildings\\packs\\pedestal_1_03x05_01_complete\\A_pedestal+1_001_03x05_01_dynamic_lod0"
+          },
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_udpipe_unloader_2.webp",
+      "packageSha256": "409ef06694b50252df827c9fd5c8db1bfcd67e0b2b9c71c58d717bbede463660"
+    },
+    {
+      "entityId": "unloader_1",
+      "spriteId": "item_port_unloader_1",
+      "package": "unloader_1_top_pixi_canvas_3x2_128px_webp4096.zip",
+      "sourcePath": "unloader_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": -1,
+        "width": 3,
+        "height": 2
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 2
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 256
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 1,
+            "width": 3,
+            "height": 1,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.0
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 128.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1280,
+              1280
+            ],
+            "resultFramePixels": [
+              384,
+              256
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              448,
+              448,
+              832,
+              704
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "unloader_1",
+          "tableBuildingId": "unloader_1",
+          "displayName": "仓库取货口",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "normal",
+          "canvasCells": [
+            3,
+            2
+          ],
+          "footprintCells": [
+            3,
+            1
+          ],
+          "footprintOffsetCells": [
+            0,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            256
+          ],
+          "fps": 30,
+          "animations": [
+            "bind_pose"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "unloader_1_normal_0",
+          "baseSelection": "none",
+          "periodicSubranges": {},
+          "portIndicators": {
+            "expectedSolidPortCount": 0,
+            "solidPorts": [],
+            "runtimeArrow": {
+              "expectedSolidPortCount": 0,
+              "renderPass": "none",
+              "reason": "no normal solid ports"
+            }
+          },
+          "vatRowMapping": {
+            "mode": "static",
+            "status": "not-applicable"
+          },
+          "baseUnit": null,
+          "materialLimitations": [],
+          "portPreflight": {
+            "status": "not-applicable",
+            "expectedSolidPortCount": 0
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archive": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "item_port_unloader_1.webp",
+      "packageSha256": "9b28e8c8c78ef3c8c07c651a7f7985baffb9c474bfc404e1343266f5bc8e657d"
+    },
+    {
+      "entityId": "vaporizer_1",
+      "spriteId": "vaporizer_1",
+      "package": "vaporizer_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "sourcePath": "vaporizer_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "Place the sprite canvas at the logical footprint top-left.",
+            "spriteCanvasLeft": "gridX",
+            "spriteCanvasTop": "gridY"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              384,
+              384
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              0,
+              384,
+              384
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "vaporizer_1",
+          "requestedAlias": "vaporizer_1",
+          "tableBuildingId": "vaporizer_1",
+          "displayName": "气体散布机",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "liquid__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+          "glassValidation": {
+            "mode": "transparent",
+            "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+          },
+          "taskId": "20260910-163029-building-e52e2a8c",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "staticSource": "vaporizer_1.webp",
+      "packageSha256": "f52408abd20f007e4bfcfda7cda4ec6b863a6669f635041c1bc150a5596a5e25"
+    },
+    {
+      "entityId": "xiranite_oven_1",
+      "spriteId": "item_port_xiranite_oven_1",
+      "package": "xiranite_oven_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "sourcePath": "xiranite_oven_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "xiranite_oven_1",
+          "tableBuildingId": "xiranite_oven_1",
+          "displayName": "天有洪炉",
+          "version": "v1.5",
+          "view": "top",
+          "mode": "liquid__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 23,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / alpha quality 100",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "logisticBaseUnit",
+          "periodicSubranges": {},
+          "taskId": "20260909-building-path-contract",
+          "maintenanceTaskId": "20260909-building-path-contract",
+          "archive": null,
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        }
+      },
+      "closeIdleMode": "hold-last",
+      "packageSha256": "139d8a3d2cd17993bb8828b28f2f85943c647af774235445416ce5760a929d23"
+    }
+  ],
+  "validationStatus": "pending-orientation-review",
+  "orientationConflicts": [
+    "dismantler_1",
+    "furnance_1",
+    "liquid_furnance_1",
+    "grinder_1",
+    "liquid_purifier_1_gas",
+    "planter_1",
+    "hydro_planter_1",
+    "seedcol_1",
+    "transmuter_2_gastrans",
+    "transmuter_2_solidtrans",
+    "xiranite_oven_1"
+  ]
+}

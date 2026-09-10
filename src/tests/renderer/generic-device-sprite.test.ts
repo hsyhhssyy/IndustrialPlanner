@@ -406,6 +406,7 @@ describe("GenericDeviceSprite", () => {
           clips: Object.fromEntries(["open", "open_idle", "close", "close_idle"].map((phase) => [phase, {
             frameCount: 1,
             frameDurationMs: 100,
+            frameEndTimesMs: [100],
             durationMs: 100,
             pages: [{ file: `${phase}-0.webp`, rows: 1, columns: 1, frameCount: 1, firstFrameIndex: 0 }],
             pageIndexByFrame: [0],
@@ -1210,7 +1211,7 @@ describe("GenericDeviceSprite", () => {
       previewIds: [],
     }))
 
-    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/empty/straight/11")
+    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/empty/straight/10")
     expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(PIPE_MASK_KEY)
 
     await flushMicrotasks(8)
@@ -3221,7 +3222,9 @@ function createRenderContextStub(options: {
   }
 
   return {
-    logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0, pipeSeconds: 0 },
+    // AI-REMOVED 2026-09-10: 全场 pipeSeconds 被实体所属组 pipeFlow 替代；触发为空组停动需求，风险 Low，Human Review: Required。
+    // Original code: logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0, pipeSeconds: 0 },
+    logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0 },
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: workspace as never,
     logisticsPortOccupancy: null,

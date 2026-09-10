@@ -895,13 +895,27 @@ export class DenseSimulationKernel {
   }
 
   private advanceRunningRecipes(): void {
+    let authorizationDeviceIndex = DENSE_INDEX_NONE;
+    let consumptionAuthorizedForFrame = true;
     for (const channel of this.recipePrograms.channels) {
+      if (channel.deviceIndex !== authorizationDeviceIndex) {
+        authorizationDeviceIndex = channel.deviceIndex;
+        consumptionAuthorizedForFrame = this.isDeviceConsumptionAuthorized(
+          channel.deviceIndex,
+        );
+      }
       if (this.channelStates[channel.index] !== CHANNEL_RUNNING) {
         continue;
       }
       const recipe = this.getRunningProgram(channel);
       if (
-        (!channel.consumptionChannel && !this.hasDevicePower(channel.deviceIndex))
+        (
+          !channel.consumptionChannel
+          && (
+            !this.hasDevicePower(channel.deviceIndex)
+            || !consumptionAuthorizedForFrame
+          )
+        )
         || (recipe.requiredGasItemIndex !== DENSE_INDEX_NONE
           && !this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex))
       ) {
@@ -935,7 +949,13 @@ export class DenseSimulationKernel {
       if (
         this.channelStates[channel.index] !== CHANNEL_IDLE
         || !this.isDeviceTransferPhase(channel.deviceIndex)
-        || (!channel.consumptionChannel && !this.hasDevicePower(channel.deviceIndex))
+        || (
+          !channel.consumptionChannel
+          && (
+            !this.hasDevicePower(channel.deviceIndex)
+            || !this.isDeviceConsumptionAuthorized(channel.deviceIndex)
+          )
+        )
       ) {
         continue;
       }
@@ -1646,7 +1666,13 @@ export class DenseSimulationKernel {
     recipe: DenseRecipeProgram,
   ): boolean {
     return this.channelStates[channel.index] === CHANNEL_RUNNING
-      && (channel.consumptionChannel || this.hasDevicePower(channel.deviceIndex))
+      && (
+        channel.consumptionChannel
+        || (
+          this.hasDevicePower(channel.deviceIndex)
+          && this.isDeviceConsumptionAuthorized(channel.deviceIndex)
+        )
+      )
       && (
         recipe.requiredGasItemIndex === DENSE_INDEX_NONE
         || this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex)
@@ -1689,6 +1715,24 @@ export class DenseSimulationKernel {
         && this.effectivePowerGeneration < this.effectiveTotalPowerDemand
         && device.requiresPower
       );
+  }
+
+  private isDeviceConsumptionAuthorized(deviceIndex: number): boolean {
+    let hasConsumptionChannel = false;
+    const start = this.recipePrograms.deviceChannelOffsets[deviceIndex]!;
+    const end = this.recipePrograms.deviceChannelOffsets[deviceIndex + 1]!;
+    for (let offset = start; offset < end; offset += 1) {
+      const channelIndex = this.recipePrograms.deviceChannelIndexes[offset]!;
+      const channel = this.recipePrograms.channels[channelIndex]!;
+      if (!channel.consumptionChannel) {
+        continue;
+      }
+      hasConsumptionChannel = true;
+      if (this.channelStates[channelIndex] === CHANNEL_RUNNING) {
+        return true;
+      }
+    }
+    return !hasConsumptionChannel;
   }
 
   private canPatchSlotHoldItem(slotIndex: number, itemIndex: number): boolean {

@@ -26,7 +26,22 @@ export class DeviceAnimationState {
 
   public get frameIndex(): number {
     const clip = this.definition.clips[this.currentStage];
-    return Math.min(clip.frameCount - 1, Math.floor(this.stageElapsedMs / clip.frameDurationMs));
+    // AI-REMOVED 2026-09-10:
+    // Reason: 固定帧时长无法保留去重素材的逐帧停留时间。
+    // Trigger: v1.5 建筑素材接入。
+    // Evidence: 素材包含 30ms 至 1340ms 等不同帧时长。
+    // Replacement: 下方累计结束时刻的二分查找。
+    // Risk: Low；固定时长素材走同一时间表。Human Review: Required
+    // Original code:
+    // return Math.min(clip.frameCount - 1, Math.floor(this.stageElapsedMs / clip.frameDurationMs));
+    let left = 0;
+    let right = clip.frameCount - 1;
+    while (left < right) {
+      const middle = (left + right) >>> 1;
+      if (this.stageElapsedMs < clip.frameEndTimesMs[middle]!) right = middle;
+      else left = middle + 1;
+    }
+    return left;
   }
 
   public setDesiredWorking(desiredWorking: boolean): void {

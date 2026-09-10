@@ -157,7 +157,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.materialAnimationEnabled = context.logisticsMaterials?.animationEnabled === true
     if (this.materialSpec) {
       this.materialState = context.logisticsMaterials?.entities.get(this.entityId) ?? {
-        ...this.materialSpec, start: 0, support: true, marker: true, color: "empty",
+        ...this.materialSpec, start: 0, support: true, marker: false, color: "empty",
       }
     }
     this.syncDynamicMaterial(context)
@@ -533,6 +533,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
   private syncDynamicMaterial(context: RenderSpriteSyncContext): void {
     const allowed = this.isMaterialPresentation() && context.logisticsMaterials?.animationEnabled === true
+      && this.materialState?.preview !== true
       && context.logisticsMaterials.entities.has(this.entityId) && !this.isLogisticsSuppressed(context)
       && this.renderHost.textureManager.supportsLogisticsAnimation()
     if (!allowed) {

@@ -89,12 +89,19 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
     if (frameCount > rows * columns) {
       throw new Error(`sources.${name}.frameCount exceeds its grid capacity`);
     }
+    const frameDurationsMs = sourceDefinition.frameDurationsMs;
+    if (frameDurationsMs !== undefined && (!Array.isArray(frameDurationsMs)
+      || frameDurationsMs.length !== frameCount
+      || frameDurationsMs.some((duration) => !Number.isFinite(duration) || duration <= 0))) {
+      throw new Error(`sources.${name}.frameDurationsMs must contain one positive duration per frame`);
+    }
     sources.set(name, Object.freeze({
       name,
       file: requireWebpFile(sourceDefinition.file, `sources.${name}.file`),
       rows,
       columns,
       frameCount,
+      frameDurationsMs,
     }));
   }
   const clipDefinitions = requireRecord(source.clips, 'source manifest.clips');
@@ -118,7 +125,13 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
       if (startFrame < 0 || startFrame + frameCount > sourceDefinition.frameCount) {
         throw new Error(`clips.${phase}[${rangeIndex}] exceeds its source frame range`);
       }
-      return Object.freeze({ source: sourceName, startFrame, frameCount });
+      const frameDurationsMs = range.frameDurationsMs;
+      if (frameDurationsMs !== undefined && (!Array.isArray(frameDurationsMs)
+        || frameDurationsMs.length !== frameCount
+        || frameDurationsMs.some((duration) => !Number.isFinite(duration) || duration <= 0))) {
+        throw new Error(`clips.${phase}[${rangeIndex}].frameDurationsMs must match its range`);
+      }
+      return Object.freeze({ source: sourceName, startFrame, frameCount, frameDurationsMs });
     }));
   }
   return Object.freeze({
@@ -386,6 +399,15 @@ async function publishOneAnimation({
       maskFile: 'mask.webp',
       clips: Object.fromEntries(phases.map((phase) => [phase, {
         frameDurationMs: sourceManifest.frameDurationMs,
+        ...(sourceManifest.clips[phase].some((range) => range.frameDurationsMs
+          || sourceManifest.sources.get(range.source).frameDurationsMs)
+          ? { frameDurationsMs: sourceManifest.clips[phase].flatMap((range) => (
+            Array.from({ length: range.frameCount }, (_, offset) => (
+              range.frameDurationsMs?.[offset]
+                ?? sourceManifest.sources.get(range.source).frameDurationsMs?.[range.startFrame + offset]
+                ?? sourceManifest.frameDurationMs
+            ))
+          )) } : {}),
         frameCount: pagesByPhase[phase].reduce((total, page) => total + page.frameCount, 0),
         pages: pagesByPhase[phase].map((page) => ({
           file: page.file,
