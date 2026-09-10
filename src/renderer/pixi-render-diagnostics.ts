@@ -414,10 +414,10 @@ function hideProfileTargets(
     case "full":
       return
     case "without-pipe-flow":
-      targets = [layers.pipeFlow]
+      targets = collectLogisticsMaterialFlowTargets(layers.pipeFlow)
       break
     case "without-belt-flow":
-      targets = [layers.beltFlow]
+      targets = collectLogisticsMaterialFlowTargets(layers.beltFlow)
       break
     case "without-belt-insertion":
       targets = [layers.beltInsertion]
@@ -686,4 +686,15 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
     ? value as Record<string, unknown>
     : null
+}
+
+/** 材质 Mesh 位于实体内部，诊断时只隐藏流动层，保留底图和管壳。 */
+function collectLogisticsMaterialFlowTargets(root: Container): VisibilityTarget[] {
+  const result: VisibilityTarget[] = []
+  const visit = (node: Container): void => {
+    if (node.label === "logistics-material-flow") result.push(node)
+    for (const child of node.children ?? []) visit(child)
+  }
+  visit(root)
+  return result
 }

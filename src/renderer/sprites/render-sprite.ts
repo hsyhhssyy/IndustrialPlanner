@@ -1,4 +1,5 @@
 import { Container } from "pixi.js";
+import type { LogisticsMaterialFrameState } from "@/shared/logistics-material";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GasInteractionVisualState } from "@/renderer/gas-interaction-visual-state";
@@ -48,6 +49,8 @@ export interface RenderSpriteSyncVersions {
 }
 
 export interface RenderSpriteSyncContext {
+  /** 场景统一维护的物流材质状态；静态图只在快照或拓扑变化时切换。 */
+  logisticsMaterials?: LogisticsMaterialFrameState;
   theme: AppTheme;
   workspace: WorkspaceContract;
   time: RenderSpriteTimeContext;

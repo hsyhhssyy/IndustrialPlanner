@@ -1,3 +1,4 @@
+import type { LogisticsMaterialEntityState } from "@/shared/logistics-material"
 import {
   Container,
   Graphics,
@@ -20,10 +21,15 @@ import {
 
 const BELT_STRAIGHT_TEXTURE_KEY = "device-sprite-belt_straight_1x1"
 
+type InsertionDynamicSession = ReturnType<DecorationSyncContext["renderHost"]["textureManager"]["acquireLogisticsDynamic"]>
+
 interface BeltInsertionSpriteView {
   readonly root: Container;
   readonly mask: Graphics;
   readonly sprite: Sprite;
+  materialState: LogisticsMaterialEntityState | null;
+  dynamic: Awaited<ReturnType<NonNullable<DecorationSyncContext["createLogisticsMaterialView"]>>> | null;
+  loading: boolean;
 }
 
 export function createBeltPortInsertionDecoration(): DecorationLayer {
@@ -31,6 +37,12 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
   const spriteViews: BeltInsertionSpriteView[] = []
   let destroyed = false
   let texture: Texture | null = null
+  let materialTexture = false
+  let textureVersion = 0
+  let dynamicFailed = false
+  let generation = 0
+  let session: InsertionDynamicSession | null = null
+  let assets: Awaited<InsertionDynamicSession["ready"]> | null = null
   let textureLoadStarted = false
   let forceSync = true
   let lastDocumentVersion = -1
@@ -44,8 +56,13 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
     }
 
     textureLoadStarted = true
-    void ctx.renderHost.textureManager.getTexture(BELT_STRAIGHT_TEXTURE_KEY).then((loadedTexture) => {
-      if (destroyed) {
+    const loadingVersion = ++textureVersion
+    materialTexture = ctx.logisticsMaterials !== undefined
+      && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+    const loading = materialTexture ? ctx.renderHost.textureManager.getLogisticsStatic("belt/straight-base")
+      : ctx.renderHost.textureManager.getTexture(BELT_STRAIGHT_TEXTURE_KEY)
+    void loading.then((loadedTexture) => {
+      if (destroyed || loadingVersion !== textureVersion) {
         return
       }
 
@@ -74,13 +91,78 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       root,
       mask,
       sprite,
+      materialState: null,
+      dynamic: null,
+      loading: false,
     }
     spriteViews.push(view)
     return view
   }
 
+  const releaseDynamic = (): void => {
+    generation += 1
+    for (const view of spriteViews) {
+      view.dynamic?.destroy()
+      view.dynamic = null
+      view.loading = false
+      view.sprite.visible = true
+    }
+    session?.release()
+    session = null
+    assets = null
+  }
+
+  const syncDynamic = (ctx: DecorationSyncContext): void => {
+    const frame = ctx.logisticsMaterials
+    if (!frame?.animationEnabled) dynamicFailed = false
+    const allowed = materialTexture && frame?.animationEnabled === true && container.visible
+      && spriteViews.some((view) => view.root.visible)
+      && ctx.renderHost.textureManager.supportsLogisticsAnimation()
+    if (!allowed || !ctx.createLogisticsMaterialView || !frame) {
+      if (session) releaseDynamic()
+      return
+    }
+    if (dynamicFailed) return
+    if (!session) {
+      const currentGeneration = generation
+      session = ctx.renderHost.textureManager.acquireLogisticsDynamic()
+      void session.ready.then((loaded) => {
+        if (destroyed || generation !== currentGeneration) return
+        assets = loaded
+      }).catch((error: unknown) => {
+        if (destroyed || generation !== currentGeneration) return
+        console.error("[LogisticsMaterial] Port extension animation unavailable", error)
+        releaseDynamic()
+        dynamicFailed = true
+      })
+    }
+    for (const view of spriteViews) {
+      if (!view.root.visible || !view.materialState) continue
+      if (!view.dynamic && !view.loading && assets) {
+        view.loading = true
+        const currentGeneration = generation
+        void ctx.createLogisticsMaterialView(assets, view.materialState, () => !destroyed && currentGeneration === generation).then((dynamic) => {
+          if (!dynamic) return
+          if (destroyed || currentGeneration !== generation) { dynamic.destroy(); return }
+          view.dynamic = dynamic
+          view.root.addChild(dynamic.root)
+        }).catch((error: unknown) => console.error("[LogisticsMaterial] Port material unavailable", error))
+      }
+      if (!view.dynamic) continue
+      const root = view.dynamic.root
+      root.x = view.sprite.x
+      root.y = view.sprite.y
+      root.scale.set(ctx.viewportState.gridCellPixelSize / 128)
+      root.rotation = -Math.PI / 2
+      root.tint = view.sprite.tint
+      view.dynamic.sync(view.materialState, frame)
+      view.sprite.visible = false
+    }
+  }
+
   const hideAll = (): void => {
     container.visible = false
+    if (session) releaseDynamic()
 
     for (const view of spriteViews) {
       view.root.visible = false
@@ -95,6 +177,14 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         return
       }
 
+      const useMaterialTexture = ctx.logisticsMaterials !== undefined
+        && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+      if (textureLoadStarted && useMaterialTexture !== materialTexture) {
+        textureLoadStarted = false
+        texture = null
+        forceSync = true
+      }
+      syncDynamic(ctx)
       const versions = ctx.versions
       if (
         versions !== undefined
@@ -177,7 +267,12 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         view.sprite.y = 0
         view.sprite.width = gridCellSize
         view.sprite.height = gridCellSize
-        view.sprite.rotation = 0
+        view.sprite.rotation = materialTexture ? -Math.PI / 2 : 0
+        const baseState = ctx.logisticsMaterials?.entities.get(entry.beltEntityId)
+        view.materialState = baseState ? {
+          ...baseState, shape: "straight", rotation: 270,
+          start: baseState.start + (entry.kind === "belt-output-to-device" ? 1 : 0) + entry.spriteCenterXCells - .5,
+        } : null
         view.sprite.tint = resolveBeltPortExtensionTint(ctx, entry.beltEntityId)
       })
 
@@ -191,6 +286,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
 
     destroy(): void {
       destroyed = true
+      releaseDynamic()
 
       for (const view of spriteViews) {
         view.root.destroy({ children: true })
@@ -212,5 +308,6 @@ function resolveBeltPortExtensionTint(
     spriteId: "belt_straight_1x1",
     theme: ctx.theme,
     workspace: ctx.renderHost.workspace,
+    materialColors: ctx.logisticsMaterials !== undefined && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true,
   })
 }

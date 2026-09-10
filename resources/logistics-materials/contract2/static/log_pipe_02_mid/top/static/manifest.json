@@ -1,0 +1,734 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-124310-logistics-phase-review",
+  "building": "log_pipe_02_mid",
+  "pixelsPerCell": 128,
+  "resources": {
+    "static/pipe.straight.shell": {
+      "file": "pipe-straight-shell.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.shell",
+      "namespace": "static",
+      "sha256": "6ed9ed7096fb91f22aaddd8b8ce2b4648fd5b0efd4bf2a6788f28c5b261d8ca1"
+    },
+    "static/pipe.straight.fluid-body": {
+      "file": "pipe-straight-fluid-body.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.fluid-body",
+      "namespace": "static",
+      "sha256": "a0e6570286ce85912ca55279f34027c2f7bb88567de4cb8b2484fb69f1654bf6"
+    },
+    "static/pipe.straight.fluid-specular": {
+      "file": "pipe-straight-fluid-specular.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.fluid-specular",
+      "namespace": "static",
+      "sha256": "972ebbdb3f763a8993ff7cc854cfd5214e9ba3759fa010772e6ddc9624188f17"
+    },
+    "static/pipe.straight.static-marked": {
+      "file": "pipe-straight-static-marked.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.static-marked",
+      "namespace": "static",
+      "sha256": "7ddaa2d44f60a433d256bcacf9b8cfe993171841e063f2e61a0fa5b7a5e1bf67"
+    },
+    "static/pipe.straight.static-marker": {
+      "file": "pipe-straight-static-marker.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.static-marker",
+      "namespace": "static",
+      "sha256": "9bf855e834064a43fefb955e13dfca8fc387374c46ec02f1f54de5bc37f84147"
+    },
+    "static/pipe.left.shell": {
+      "file": "pipe-left-shell.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.shell",
+      "namespace": "static",
+      "sha256": "98a6d496784591473175f6255d02269264e3596b0ba7f625db9e3637b7c25dab"
+    },
+    "static/pipe.left.fluid-body": {
+      "file": "pipe-left-fluid-body.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.fluid-body",
+      "namespace": "static",
+      "sha256": "f75281336a46bfd71970ba1bc4787b10a549f3367415fa4ebd50f842b84644da"
+    },
+    "static/pipe.left.fluid-specular": {
+      "file": "pipe-left-fluid-specular.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.fluid-specular",
+      "namespace": "static",
+      "sha256": "f072183288bdb66b0e49d6ba34ff9b2e3391d477e8c1dba421dee8c7c1ba9707"
+    },
+    "static/pipe.left.static-marked": {
+      "file": "pipe-left-static-marked.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.static-marked",
+      "namespace": "static",
+      "sha256": "ab93ac23484ea8b95ea381165db638838b0cf7c1c2e728ced767c3fcb9a31fec"
+    },
+    "static/pipe.left.static-marker": {
+      "file": "pipe-left-static-marker.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.static-marker",
+      "namespace": "static",
+      "sha256": "272b5e31daab04fa7c740f10283c716fb5bdc46bf3bc6c13edb1142681f4dbcc"
+    },
+    "static/pipe.right.shell": {
+      "file": "pipe-right-shell.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.shell",
+      "namespace": "static",
+      "sha256": "abd5cd7bee0688a716d612dff241e67f2e4969e5da7b894d27471c8027ba30b2"
+    },
+    "static/pipe.right.fluid-body": {
+      "file": "pipe-right-fluid-body.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.fluid-body",
+      "namespace": "static",
+      "sha256": "97c493784bc504396eb4fb6e452e31a142cadebd2f61982cb7cbdce7a75611b7"
+    },
+    "static/pipe.right.fluid-specular": {
+      "file": "pipe-right-fluid-specular.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.fluid-specular",
+      "namespace": "static",
+      "sha256": "2e17e25fd1e4944a70c0aebf30b9bb1182ef9edae94963977198f164e0a4b15f"
+    },
+    "static/pipe.right.static-marked": {
+      "file": "pipe-right-static-marked.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.static-marked",
+      "namespace": "static",
+      "sha256": "1847588389bb08eefbac307fe29ebda3a5ba8e887b4eb16b41f23f0be83f78ff"
+    },
+    "static/pipe.right.static-marker": {
+      "file": "pipe-right-static-marker.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.static-marker",
+      "namespace": "static",
+      "sha256": "171322ddf1eb6e67378a1cc1c5322cecd2c426dfcb1ccf31308003358143011a"
+    },
+    "static/pipe.pattern": {
+      "file": "pipe-pattern.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.pattern",
+      "namespace": "static",
+      "sha256": "9896a6308c47d9d03fb0ba2628395cec4990655c32ff44eea6f5f82e8f396925"
+    },
+    "static/pipe.chevron": {
+      "file": "pipe-chevron.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.chevron",
+      "namespace": "static",
+      "sha256": "65d07447a3ee6fbc4cb2d4b08501ece5665f87fbd0fe215848866e35704ce8d3"
+    },
+    "static/support.straight": {
+      "file": "support-straight.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "support.straight",
+      "namespace": "static",
+      "sha256": "86bf8256324311b69f11c7e5cae9409c4e411c1002bbbdb25f74afaefbb95984"
+    },
+    "static/pipe.straight.support-front": {
+      "file": "pipe-straight-support-front.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.support-front",
+      "namespace": "static",
+      "sha256": "75b03d5bfd03772cff1caf51cd44b5b947c08ab9413e037a2c7a29a3e9f604db"
+    },
+    "static/pipe.straight.support-middle": {
+      "file": "pipe-straight-support-middle.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.support-middle",
+      "namespace": "static",
+      "sha256": "da707b04b7c45abdd4140e1b7a59c9012c983344bc89ddfe40dace1fa0db1ad4"
+    },
+    "static/pipe.straight.support-back": {
+      "file": "pipe-straight-support-back.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.straight.support-back",
+      "namespace": "static",
+      "sha256": "5ef83af8adc3907f657714be89e8a2d62b69778d14ca574a3720bf47413eca6e"
+    },
+    "static/support.corner": {
+      "file": "support-corner.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "support.corner",
+      "namespace": "static",
+      "sha256": "c2fc5cc4bc6773ea0c0a0b73f3b187a7e07e63f5704ab197ae7d18533665390b"
+    },
+    "static/pipe.left.support-front": {
+      "file": "pipe-left-support-front.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.support-front",
+      "namespace": "static",
+      "sha256": "e4dca47059acec58758ca0e28cd33201906797a1b61230ddef88c0586efd7ab5"
+    },
+    "static/pipe.left.support-middle": {
+      "file": "pipe-left-support-middle.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.support-middle",
+      "namespace": "static",
+      "sha256": "49eefcf225c35ed4d6585d620986d4926b325dbbca17ec7aaaad7d2e834a0956"
+    },
+    "static/pipe.left.support-back": {
+      "file": "pipe-left-support-back.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.support-back",
+      "namespace": "static",
+      "sha256": "84018586b7f63a0350f11d80164d762d66c7a56cc8b7854010c95fcf0cd6f47d"
+    },
+    "static/pipe.left.assembly": {
+      "file": "pipe-left-assembly.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.left.assembly",
+      "namespace": "static",
+      "sha256": "2b71bf16f4d1b428c5f4253bbbf6bb0966bf65729eafe5485355d1cdf1db5d09"
+    },
+    "static/pipe.right.support-front": {
+      "file": "pipe-right-support-front.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.support-front",
+      "namespace": "static",
+      "sha256": "0f2572aa216898e1f3c2f80fe63c2c7d167e2ba4995198f99f55cb11bf04642a"
+    },
+    "static/pipe.right.support-middle": {
+      "file": "pipe-right-support-middle.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.support-middle",
+      "namespace": "static",
+      "sha256": "12f9b12c725dface22d64f12241f15c129c3fd39a802d30d765f2f929ca69c25"
+    },
+    "static/pipe.right.support-back": {
+      "file": "pipe-right-support-back.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.support-back",
+      "namespace": "static",
+      "sha256": "c2d2f2256eb9479778cc6efd4c4a93766017e789e92da7cb84ff2c9736e91e9c"
+    },
+    "static/pipe.right.assembly": {
+      "file": "pipe-right-assembly.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "pipe.right.assembly",
+      "namespace": "static",
+      "sha256": "d68c0ece29fe9447d1260766abc94604b905d47ccaf6da32d1d05d0f5d1e1cc7"
+    }
+  },
+  "shapes": {
+    "straight": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0.5,
+        1
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": true,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.straight",
+        "sourceId": "pipesupport_1_03",
+        "count": 1,
+        "required": false,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 0,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 148,
+        "middlePixels": 8,
+        "backPixels": 1876
+      }
+    },
+    "left": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 90,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 119,
+        "middlePixels": 4,
+        "backPixels": 1650
+      }
+    },
+    "right": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        1,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 0,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 118,
+        "middlePixels": 3,
+        "backPixels": 1652
+      }
+    }
+  },
+  "dependencies": [],
+  "resourceNamespace": "static",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "pipe.straight.shell": "static/pipe.straight.shell",
+    "pipe.straight.fluid-body": "static/pipe.straight.fluid-body",
+    "pipe.straight.fluid-specular": "static/pipe.straight.fluid-specular",
+    "pipe.straight.static-marked": "static/pipe.straight.static-marked",
+    "pipe.straight.static-marker": "static/pipe.straight.static-marker",
+    "pipe.left.shell": "static/pipe.left.shell",
+    "pipe.left.fluid-body": "static/pipe.left.fluid-body",
+    "pipe.left.fluid-specular": "static/pipe.left.fluid-specular",
+    "pipe.left.static-marked": "static/pipe.left.static-marked",
+    "pipe.left.static-marker": "static/pipe.left.static-marker",
+    "pipe.right.shell": "static/pipe.right.shell",
+    "pipe.right.fluid-body": "static/pipe.right.fluid-body",
+    "pipe.right.fluid-specular": "static/pipe.right.fluid-specular",
+    "pipe.right.static-marked": "static/pipe.right.static-marked",
+    "pipe.right.static-marker": "static/pipe.right.static-marker",
+    "pipe.pattern": "static/pipe.pattern",
+    "pipe.chevron": "static/pipe.chevron",
+    "support.straight": "static/support.straight",
+    "pipe.straight.support-front": "static/pipe.straight.support-front",
+    "pipe.straight.support-middle": "static/pipe.straight.support-middle",
+    "pipe.straight.support-back": "static/pipe.straight.support-back",
+    "support.corner": "static/support.corner",
+    "pipe.left.support-front": "static/pipe.left.support-front",
+    "pipe.left.support-middle": "static/pipe.left.support-middle",
+    "pipe.left.support-back": "static/pipe.left.support-back",
+    "pipe.left.assembly": "static/pipe.left.assembly",
+    "pipe.right.support-front": "static/pipe.right.support-front",
+    "pipe.right.support-middle": "static/pipe.right.support-middle",
+    "pipe.right.support-back": "static/pipe.right.support-back",
+    "pipe.right.assembly": "static/pipe.right.assembly"
+  }
+}

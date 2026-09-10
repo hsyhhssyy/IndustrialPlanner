@@ -1,0 +1,1282 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "pixelsPerCell": 128,
+  "pages": {
+    "belt": {
+      "file": "belt.webp",
+      "width": 528,
+      "height": 132
+    },
+    "pipe-0e6a47": {
+      "file": "pipe-0e6a47.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-111111": {
+      "file": "pipe-111111.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-1f7a3a": {
+      "file": "pipe-1f7a3a.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-3366cc": {
+      "file": "pipe-3366cc.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-35c8b6": {
+      "file": "pipe-35c8b6.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-4a2f1f": {
+      "file": "pipe-4a2f1f.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-62bf4b": {
+      "file": "pipe-62bf4b.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-6b0f1a": {
+      "file": "pipe-6b0f1a.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-808080": {
+      "file": "pipe-808080.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-82d6ff": {
+      "file": "pipe-82d6ff.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-8b2a2a": {
+      "file": "pipe-8b2a2a.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-9be870": {
+      "file": "pipe-9be870.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-d97a1f": {
+      "file": "pipe-d97a1f.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-empty": {
+      "file": "pipe-empty.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-f0b840": {
+      "file": "pipe-f0b840.webp",
+      "width": 528,
+      "height": 264
+    },
+    "pipe-ffffff": {
+      "file": "pipe-ffffff.webp",
+      "width": 528,
+      "height": 264
+    }
+  },
+  "frames": {
+    "belt/straight": {
+      "page": "belt",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "belt/left": {
+      "page": "belt",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "belt/right": {
+      "page": "belt",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "belt/straight-base": {
+      "page": "belt",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/straight/00": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/straight/01": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/straight/10": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/straight/11": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/left/10": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/left/11": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/right/10": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/0e6a47/right/11": {
+      "page": "pipe-0e6a47",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/straight/00": {
+      "page": "pipe-111111",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/straight/01": {
+      "page": "pipe-111111",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/straight/10": {
+      "page": "pipe-111111",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/straight/11": {
+      "page": "pipe-111111",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/left/10": {
+      "page": "pipe-111111",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/left/11": {
+      "page": "pipe-111111",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/right/10": {
+      "page": "pipe-111111",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/111111/right/11": {
+      "page": "pipe-111111",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/straight/00": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/straight/01": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/straight/10": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/straight/11": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/left/10": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/left/11": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/right/10": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/1f7a3a/right/11": {
+      "page": "pipe-1f7a3a",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/straight/00": {
+      "page": "pipe-3366cc",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/straight/01": {
+      "page": "pipe-3366cc",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/straight/10": {
+      "page": "pipe-3366cc",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/straight/11": {
+      "page": "pipe-3366cc",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/left/10": {
+      "page": "pipe-3366cc",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/left/11": {
+      "page": "pipe-3366cc",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/right/10": {
+      "page": "pipe-3366cc",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/3366cc/right/11": {
+      "page": "pipe-3366cc",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/straight/00": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/straight/01": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/straight/10": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/straight/11": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/left/10": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/left/11": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/right/10": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/35c8b6/right/11": {
+      "page": "pipe-35c8b6",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/straight/00": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/straight/01": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/straight/10": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/straight/11": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/left/10": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/left/11": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/right/10": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/4a2f1f/right/11": {
+      "page": "pipe-4a2f1f",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/straight/00": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/straight/01": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/straight/10": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/straight/11": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/left/10": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/left/11": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/right/10": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/62bf4b/right/11": {
+      "page": "pipe-62bf4b",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/straight/00": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/straight/01": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/straight/10": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/straight/11": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/left/10": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/left/11": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/right/10": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/6b0f1a/right/11": {
+      "page": "pipe-6b0f1a",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/straight/00": {
+      "page": "pipe-808080",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/straight/01": {
+      "page": "pipe-808080",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/straight/10": {
+      "page": "pipe-808080",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/straight/11": {
+      "page": "pipe-808080",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/left/10": {
+      "page": "pipe-808080",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/left/11": {
+      "page": "pipe-808080",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/right/10": {
+      "page": "pipe-808080",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/808080/right/11": {
+      "page": "pipe-808080",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/straight/00": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/straight/01": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/straight/10": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/straight/11": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/left/10": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/left/11": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/right/10": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/82d6ff/right/11": {
+      "page": "pipe-82d6ff",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/straight/00": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/straight/01": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/straight/10": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/straight/11": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/left/10": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/left/11": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/right/10": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/8b2a2a/right/11": {
+      "page": "pipe-8b2a2a",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/straight/00": {
+      "page": "pipe-9be870",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/straight/01": {
+      "page": "pipe-9be870",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/straight/10": {
+      "page": "pipe-9be870",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/straight/11": {
+      "page": "pipe-9be870",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/left/10": {
+      "page": "pipe-9be870",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/left/11": {
+      "page": "pipe-9be870",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/right/10": {
+      "page": "pipe-9be870",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/9be870/right/11": {
+      "page": "pipe-9be870",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/straight/00": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/straight/01": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/straight/10": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/straight/11": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/left/10": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/left/11": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/right/10": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/d97a1f/right/11": {
+      "page": "pipe-d97a1f",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/straight/00": {
+      "page": "pipe-empty",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/straight/01": {
+      "page": "pipe-empty",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/straight/10": {
+      "page": "pipe-empty",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/straight/11": {
+      "page": "pipe-empty",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/left/10": {
+      "page": "pipe-empty",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/left/11": {
+      "page": "pipe-empty",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/right/10": {
+      "page": "pipe-empty",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/empty/right/11": {
+      "page": "pipe-empty",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/straight/00": {
+      "page": "pipe-f0b840",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/straight/01": {
+      "page": "pipe-f0b840",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/straight/10": {
+      "page": "pipe-f0b840",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/straight/11": {
+      "page": "pipe-f0b840",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/left/10": {
+      "page": "pipe-f0b840",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/left/11": {
+      "page": "pipe-f0b840",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/right/10": {
+      "page": "pipe-f0b840",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/f0b840/right/11": {
+      "page": "pipe-f0b840",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/straight/00": {
+      "page": "pipe-ffffff",
+      "rect": [
+        2,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/straight/01": {
+      "page": "pipe-ffffff",
+      "rect": [
+        134,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/straight/10": {
+      "page": "pipe-ffffff",
+      "rect": [
+        266,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/straight/11": {
+      "page": "pipe-ffffff",
+      "rect": [
+        398,
+        2,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/left/10": {
+      "page": "pipe-ffffff",
+      "rect": [
+        2,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/left/11": {
+      "page": "pipe-ffffff",
+      "rect": [
+        134,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/right/10": {
+      "page": "pipe-ffffff",
+      "rect": [
+        266,
+        134,
+        128,
+        128
+      ]
+    },
+    "pipe/ffffff/right/11": {
+      "page": "pipe-ffffff",
+      "rect": [
+        398,
+        134,
+        128,
+        128
+      ]
+    }
+  }
+}

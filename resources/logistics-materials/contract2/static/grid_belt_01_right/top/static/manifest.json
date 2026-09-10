@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-124310-logistics-phase-review",
+  "building": "grid_belt_01_right",
+  "pixelsPerCell": 128,
+  "resources": {
+    "static/conveyor.right.base": {
+      "file": "conveyor-right-base.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.base",
+      "namespace": "static",
+      "sha256": "462f8a6601a4931f645ddd6dba143d6b5536a5e708839e87d41a12e83accbef0"
+    },
+    "static/conveyor.right.static": {
+      "file": "conveyor-right-static.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "conveyor.right.static",
+      "namespace": "static",
+      "sha256": "b287113864f84e3926134532507d7b5dadeb6885220adec1a40befd05391e0fa"
+    }
+  },
+  "shapes": {
+    "right": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        1,
+        0.5
+      ],
+      "entryDirection": [
+        0,
+        1
+      ],
+      "exitDirection": [
+        1,
+        0
+      ],
+      "phaseSpan": 1,
+      "staticArrowPhase": -0.0029871862169272845,
+      "staticArrowCenterAlong": 0.5,
+      "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
+      "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
+      "sourceId": "grid_belt_01_right"
+    }
+  },
+  "dependencies": [],
+  "resourceNamespace": "static",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "conveyor.right.base": "static/conveyor.right.base",
+    "conveyor.right.static": "static/conveyor.right.static"
+  }
+}

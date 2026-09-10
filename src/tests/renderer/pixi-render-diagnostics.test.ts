@@ -38,7 +38,7 @@ describe("createPixiRenderDiagnostics", () => {
     const rebuildGraphics = vi.fn()
     const executeStencilMask = vi.fn()
     const executeAlphaMask = vi.fn()
-    const pipeFlow = createVisibilityTarget()
+    const pipeFlow = { ...createVisibilityTarget(), label: "logistics-material-flow" }
     const samples = new Map<string, number>()
     const app = {
       renderer: {

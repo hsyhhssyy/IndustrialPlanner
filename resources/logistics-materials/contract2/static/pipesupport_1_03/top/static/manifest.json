@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-124310-logistics-phase-review",
+  "building": "pipesupport_1_03",
+  "pixelsPerCell": 128,
+  "resources": {
+    "static/support.straight": {
+      "file": "support-straight.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "srgb",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "clamp",
+      "semantic": "support.straight",
+      "namespace": "static",
+      "sha256": "86bf8256324311b69f11c7e5cae9409c4e411c1002bbbdb25f74afaefbb95984"
+    }
+  },
+  "shapes": {
+    "straight": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "sourceId": "pipesupport_1_03",
+      "sourceMesh": "A_pipesupport+1_001_03_variant_dynamic_lod0"
+    }
+  },
+  "dependencies": [],
+  "resourceNamespace": "static",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "support.straight": "static/support.straight"
+  }
+}

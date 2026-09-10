@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-124310-logistics-phase-review",
+  "building": "log_pipe_02_mid",
+  "requiresBaseContract": 2,
+  "resources": {
+    "dynamic/pipe.pattern": {
+      "file": "pipe-pattern.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fac_pipe_pattern_001",
+      "semantic": "pipe.pattern",
+      "namespace": "dynamic",
+      "sha256": "b5c69446d767ca5c50e1df8975753921593f531419f1d0e0b57957a9d0a273df"
+    },
+    "dynamic/pipe.chevron": {
+      "file": "pipe-chevron.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fac_pipe_arrow_001",
+      "semantic": "pipe.chevron",
+      "namespace": "dynamic",
+      "sha256": "a14fe2967ed2de4b0e324b932301f2d9421fa1916ecf3d2b93899a2be7d2a074"
+    },
+    "dynamic/pipe.fluid-motion": {
+      "file": "pipe-fluid-motion.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_pipe_water_normal_3",
+      "semantic": "pipe.fluid-motion",
+      "namespace": "dynamic",
+      "sha256": "4818428eeda970288028ef520876591695da1cb5b42ea59afe3478d37935b453"
+    },
+    "dynamic/pipe.straight.mapping": {
+      "file": "pipe-straight-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-straight-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.straight.mapping",
+      "namespace": "dynamic",
+      "sha256": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e"
+    },
+    "dynamic/pipe.straight.fluid-mapping": {
+      "file": "pipe-straight-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-straight-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.straight.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e"
+    },
+    "dynamic/pipe.left.mapping": {
+      "file": "pipe-left-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-left-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.left.mapping",
+      "namespace": "dynamic",
+      "sha256": "c84adb81a79b0016e22f80ed89ea8f362892dd5eed247087855d84e1e55bf694"
+    },
+    "dynamic/pipe.left.fluid-mapping": {
+      "file": "pipe-left-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-left-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.left.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "51f0d39fdd5c2eb0e5bc55d97bffe9dd3fb5842d4950d40d443354930871d71b"
+    },
+    "dynamic/pipe.right.mapping": {
+      "file": "pipe-right-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-right-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.right.mapping",
+      "namespace": "dynamic",
+      "sha256": "b56b5223ad5fc96b03c98f2bb3bfcedc8bc0a572ba0f2a0bbc8682fbc07d2577"
+    },
+    "dynamic/pipe.right.fluid-mapping": {
+      "file": "pipe-right-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-right-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.right.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "46be5a54bfc2aa6441cd00da8ba970c5591040fe8b7478976de56b40d145919f"
+    }
+  },
+  "shapes": {
+    "straight": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0.5,
+        1
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": true,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.straight",
+        "sourceId": "pipesupport_1_03",
+        "count": 1,
+        "required": false,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 0,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 148,
+        "middlePixels": 8,
+        "backPixels": 1876
+      }
+    },
+    "left": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 90,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 119,
+        "middlePixels": 4,
+        "backPixels": 1650
+      }
+    },
+    "right": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        1,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 0,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 118,
+        "middlePixels": 3,
+        "backPixels": 1652
+      }
+    }
+  },
+  "parameters": {
+    "staticDensity": 0.11,
+    "flowDensity": 0.18,
+    "flowOffset": 1.97,
+    "flowSpeed": 1.23,
+    "staticWidth": 0.922,
+    "flowWidth": 0.88,
+    "waterDirection": 0,
+    "waterWaveSpeed": 0.8,
+    "waterSkinSpeed": 0.7,
+    "evidence": "v1.5 recovered pipe pattern formula; wave shading uses original normal texture with approximate lighting",
+    "fluidStatus": "Approximate tintable full-pipe material; fill front, splash, SceneColor refraction not implemented"
+  },
+  "resourceNamespace": "dynamic",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "pipe.pattern": "dynamic/pipe.pattern",
+    "pipe.chevron": "dynamic/pipe.chevron",
+    "pipe.fluid-motion": "dynamic/pipe.fluid-motion",
+    "pipe.straight.mapping": "dynamic/pipe.straight.mapping",
+    "pipe.straight.fluid-mapping": "dynamic/pipe.straight.fluid-mapping",
+    "pipe.left.mapping": "dynamic/pipe.left.mapping",
+    "pipe.left.fluid-mapping": "dynamic/pipe.left.fluid-mapping",
+    "pipe.right.mapping": "dynamic/pipe.right.mapping",
+    "pipe.right.fluid-mapping": "dynamic/pipe.right.fluid-mapping"
+  }
+}

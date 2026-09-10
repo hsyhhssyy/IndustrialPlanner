@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-130700-logistics-download-fix",
+  "mode": "dynamic",
+  "requiresBaseContract": 2,
+  "materialSpecification": "material-computation.json",
+  "resourceKeyRule": "Full keys include static/ or dynamic/. Never merge by semantic alone. See per-manifest migrationFromContract1.",
+  "packages": [
+    {
+      "id": "grid_belt_01_mid",
+      "manifest": "grid_belt_01_mid/top/dynamic/manifest.json"
+    },
+    {
+      "id": "grid_belt_01_left",
+      "manifest": "grid_belt_01_left/top/dynamic/manifest.json"
+    },
+    {
+      "id": "grid_belt_01_right",
+      "manifest": "grid_belt_01_right/top/dynamic/manifest.json"
+    },
+    {
+      "id": "log_pipe_02_mid",
+      "manifest": "log_pipe_02_mid/top/dynamic/manifest.json"
+    },
+    {
+      "id": "pipesupport_1_03",
+      "manifest": "pipesupport_1_03/top/dynamic/manifest.json"
+    },
+    {
+      "id": "pipesupport_1_04",
+      "manifest": "pipesupport_1_04/top/dynamic/manifest.json"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "shape": "straight",
+  "projection": "source +X/+Z at 128 pixels/cell",
+  "positionsXZ": [
+    [
+      -0.39999995,
+      0.5
+    ],
+    [
+      0.39999995,
+      0.5
+    ],
+    [
+      -0.39999995,
+      -0.5
+    ],
+    [
+      0.39999995,
+      -0.5
+    ]
+  ],
+  "heightY": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "uv0": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      1,
+      0
+    ]
+  ],
+  "normals": [
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "triangles": [
+    [
+      0,
+      1,
+      2
+    ],
+    [
+      2,
+      1,
+      3
+    ]
+  ],
+  "sourceMesh": "A_P_grid_belt_01_mid_dynamic_lod0",
+  "reconstruction": "Original corner source Z reflected for top-inlet convention; normalized polar phase is a 2D approximation"
+}

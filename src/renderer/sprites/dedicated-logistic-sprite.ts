@@ -20,6 +20,9 @@ import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+import { logisticsStaticFrameKey, resolveLogisticsMaterialSpec, type LogisticsMaterialEntityState } from "@/shared/logistics-material"
+import type { LogisticsDynamicSession } from "../texture"
+import type { LogisticsDynamicView } from "./logistics-dynamic-view"
 
 import { BaseRenderSprite } from "./base-render-sprite"
 import type {
@@ -84,6 +87,13 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   private isTextureReady = false
   private currentBodyTextureKey: string | null = null
   private textureLoadVersion = 0
+  private readonly materialSpec: ReturnType<typeof resolveLogisticsMaterialSpec>
+  private materialState: LogisticsMaterialEntityState | null = null
+  private dynamicSession: LogisticsDynamicSession | null = null
+  private dynamicView: LogisticsDynamicView | null = null
+  private dynamicRequested = false
+  private dynamicGeneration = 0
+  private materialAnimationEnabled = false
 
   public constructor(
     entityId: string,
@@ -92,6 +102,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   ) {
     super(entityId)
     this.spriteId = definition.spriteId
+    this.materialSpec = resolveLogisticsMaterialSpec(this.spriteId)
+    this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, color: "empty" } : null
 
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
@@ -142,6 +154,13 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   ): void {
     this.currentLayout = layout
     this.currentSyncContext = context
+    this.materialAnimationEnabled = context.logisticsMaterials?.animationEnabled === true
+    if (this.materialSpec) {
+      this.materialState = context.logisticsMaterials?.entities.get(this.entityId) ?? {
+        ...this.materialSpec, start: 0, support: true, marker: true, color: "empty",
+      }
+    }
+    this.syncDynamicMaterial(context)
 
     if (this.isLogisticsSuppressed(context)) {
       this.body.visible = false
@@ -158,22 +177,41 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       return
     }
 
-    this.body.visible = true
+    this.body.visible = this.dynamicView === null
     this.applyLayout(layout)
     this.body.tint = resolveDedicatedLogisticTintColor({
       entityId: this.entityId,
       spriteId: this.spriteId,
       theme: context.theme,
       workspace: context.workspace,
+      materialColors: this.isMaterialPresentation(),
     })
-    this.body.alpha = resolveDedicatedLogisticBodyAlpha({
+    this.body.alpha = this.isMaterialPresentation() ? 1 : resolveDedicatedLogisticBodyAlpha({
       entityId: this.entityId,
       spriteId: this.spriteId,
       workspace: context.workspace,
     })
+    this.syncDynamicLayout(layout, context)
+  }
+
+  public syncRuntime(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
+    if (context.logisticsMaterials?.entities.get(this.entityId) === this.materialState
+      && (context.logisticsMaterials?.animationEnabled === true) === this.materialAnimationEnabled) return
+    this.syncSpriteLayout(layout, context)
+  }
+
+  public setVisible(visible: boolean): void {
+    super.setVisible(visible)
+    if (!visible && this.dynamicRequested) {
+      this.releaseDynamicMaterial()
+      this.invalidateVisualSync()
+    }
   }
 
   public syncAnimation(context: RenderSpriteSyncContext): void {
+    if (this.dynamicView && this.materialState && context.logisticsMaterials) {
+      this.dynamicView.sync(this.materialState, context.logisticsMaterials)
+    }
     if (!this.scanlineTiling.visible) {
       return
     }
@@ -230,6 +268,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
   protected onDestroy(): void {
     this.disposed = true
+    this.releaseDynamicMaterial()
   }
 
   protected isDeviceTextureReady(): boolean {
@@ -301,7 +340,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       return
     }
 
-    const centeredLayout = this.resolveCenteredSpriteLayout(layout)
+    const centeredLayout = this.resolveCenteredSpriteLayout(layout, this.isMaterialPresentation())
     applyCenteredSpriteLayout(this.selectionGlow, {
       x: centeredLayout.x,
       y: centeredLayout.y,
@@ -354,10 +393,10 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 
   private applyLayout(layout: RenderSpriteLayout): void {
-    applyCenteredSpriteLayout(this.body, this.resolveCenteredSpriteLayout(layout))
+    applyCenteredSpriteLayout(this.body, this.resolveCenteredSpriteLayout(layout, this.isMaterialPresentation()))
   }
 
-  private resolveCenteredSpriteLayout(layout: RenderSpriteLayout): {
+  private resolveCenteredSpriteLayout(layout: RenderSpriteLayout, material = false): {
     readonly x: number;
     readonly y: number;
     readonly width: number;
@@ -370,7 +409,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       y: layout.y + layout.height / 2,
       width: isQuarterTurn ? layout.height : layout.width,
       height: isQuarterTurn ? layout.width : layout.height,
-      rotation: layout.rotation * DEGREE_TO_RADIAN,
+      rotation: (layout.rotation + (material ? this.materialSpec?.rotation ?? 0 : 0)) * DEGREE_TO_RADIAN,
     }
   }
 
@@ -409,7 +448,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 
   private syncDeviceTexture(): void {
-    const bodyTextureKey = resolveDeviceBodyTextureKey(
+    if (this.isMaterialPresentation() && this.materialState === null) return
+    const materialKey = this.isMaterialPresentation() && this.materialState ? logisticsStaticFrameKey(this.materialState) : null
+    const bodyTextureKey = materialKey !== null ? `logistics-static:${materialKey}` : resolveDeviceBodyTextureKey(
       this.spriteId,
       this.renderHost.workspace.app,
     )
@@ -421,10 +462,16 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.currentBodyTextureKey = bodyTextureKey
     this.textureLoadVersion += 1
     const activeLoadVersion = this.textureLoadVersion
-    this.isTextureReady = false
-    this.body.visible = false
+    this.isTextureReady = this.body.texture !== Texture.EMPTY
+    this.body.visible = this.isTextureReady && this.dynamicView === null
 
-    void this.renderHost.textureManager.getTexture(bodyTextureKey)
+    const loading = materialKey !== null
+      ? this.renderHost.textureManager.getLogisticsStatic(materialKey).catch((error: unknown) => {
+        console.error("[LogisticsMaterial] Static texture unavailable", materialKey, error)
+        return this.renderHost.textureManager.getTexture("texture-missing-sprite-texture")
+      })
+      : this.renderHost.textureManager.getTexture(bodyTextureKey)
+    void loading
       .then((bodyTexture) => {
         if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
           return
@@ -447,19 +494,21 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
             return
           }
 
-          this.body.visible = true
+          this.body.visible = this.dynamicView === null
           this.applyLayout(this.currentLayout)
           this.body.tint = resolveDedicatedLogisticTintColor({
             entityId: this.entityId,
             spriteId: this.spriteId,
             theme: this.currentSyncContext.theme,
             workspace: this.currentSyncContext.workspace,
+            materialColors: this.isMaterialPresentation(),
           })
-          this.body.alpha = resolveDedicatedLogisticBodyAlpha({
+          this.body.alpha = this.isMaterialPresentation() ? 1 : resolveDedicatedLogisticBodyAlpha({
             entityId: this.entityId,
             spriteId: this.spriteId,
             workspace: this.currentSyncContext.workspace,
           })
+          this.syncDynamicLayout(this.currentLayout, this.currentSyncContext)
           this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
           return
         }
@@ -476,6 +525,60 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
           this.selectionGlow.visible = false
         }
       })
+  }
+
+  private isMaterialPresentation(): boolean {
+    return this.materialSpec !== null && this.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+  }
+
+  private syncDynamicMaterial(context: RenderSpriteSyncContext): void {
+    const allowed = this.isMaterialPresentation() && context.logisticsMaterials?.animationEnabled === true
+      && context.logisticsMaterials.entities.has(this.entityId) && !this.isLogisticsSuppressed(context)
+      && this.renderHost.textureManager.supportsLogisticsAnimation()
+    if (!allowed) {
+      this.releaseDynamicMaterial()
+      return
+    }
+    if (this.dynamicRequested || this.materialState === null) return
+    this.dynamicRequested = true
+    const generation = ++this.dynamicGeneration
+    const session = this.renderHost.textureManager.acquireLogisticsDynamic()
+    this.dynamicSession = session
+    void session.ready.then(async (assets) => {
+      const { LogisticsDynamicView } = await import("./logistics-dynamic-view")
+      if (this.disposed || generation !== this.dynamicGeneration || this.materialState === null) return
+      this.dynamicView = new LogisticsDynamicView(assets, this.materialState)
+      this.dynamicView.root.visible = false
+      this.getRootOfLayer("entity").addChild(this.dynamicView.root)
+      this.invalidateVisualSync()
+    }).catch((error: unknown) => {
+      if (this.disposed || generation !== this.dynamicGeneration) return
+      console.error("[LogisticsMaterial] Animation unavailable; using static material", error)
+      session.release()
+      this.dynamicSession = null
+    })
+  }
+
+  private syncDynamicLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
+    if (!this.dynamicView || !this.materialState || !context.logisticsMaterials) return
+    const centered = this.resolveCenteredSpriteLayout(layout, true)
+    const root = this.dynamicView.root
+    root.position.set(centered.x, centered.y)
+    root.scale.set(centered.width / 128, centered.height / 128)
+    root.rotation = centered.rotation
+    root.tint = this.body.tint
+    root.visible = this.isTextureReady && !this.isLogisticsSuppressed(context)
+    this.dynamicView.sync(this.materialState, context.logisticsMaterials)
+  }
+
+  private releaseDynamicMaterial(): void {
+    if (!this.dynamicRequested && this.dynamicSession === null) return
+    this.dynamicGeneration += 1
+    this.dynamicView?.destroy()
+    this.dynamicView = null
+    this.dynamicSession?.release()
+    this.dynamicSession = null
+    this.dynamicRequested = false
   }
 }
 
@@ -609,10 +712,11 @@ export function resolveDedicatedLogisticTintColor(options: {
   spriteId: string;
   theme: AppTheme;
   workspace: WorkspaceContract;
+  materialColors?: boolean;
 }): number {
   const { entityId, spriteId, theme, workspace } = options
   const collections = workspace.editor?.state?.collections
-  const ordinaryColor = spriteId.startsWith("pipe_")
+  const ordinaryColor = options.materialColors ? 0xffffff : spriteId.startsWith("pipe_")
     ? resolveAppThemeColorNumber(
       theme,
       theme.renderer.pipeBodyTintColorKey,

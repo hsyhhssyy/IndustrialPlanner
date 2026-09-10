@@ -31,6 +31,8 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
 
+import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
+
 import { publishPaginatedDeviceSpriteAnimations } from './device-sprite-animation-publisher.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -316,6 +318,7 @@ async function main() {
     console.log(`${spriteId}: ${width}x${height}${rotation ? ` (rotated ${rotation}°)` : ''}`);
   }
   await publishDeviceSpriteAnimations({ definitions, spriteDirectory, maskDirectory });
+  await publishLogisticsMaterials({ spriteDirectory, maskDirectory, outputDirectory: path.resolve(spriteDirectory, '../logistics') });
 }
 
 // AI-REMOVED 2026-09-05:

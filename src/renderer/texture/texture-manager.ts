@@ -7,6 +7,7 @@ import type { DeviceSpriteAnimationDefinition } from "@/domain/registry"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
+import { LogisticsMaterialTextureCache, type LogisticsDynamicSession } from "./logistics-material-textures"
 
 import {
   DeviceAnimationTextureCache,
@@ -45,6 +46,10 @@ interface TextureActions {
   getTexture(unifiedResourceKey: string): Promise<Texture>;
   getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null>;
   getDeviceAnimationStats(): DeviceAnimationTextureStats;
+  getLogisticsStatic(key: string): Promise<Texture>;
+  acquireLogisticsDynamic(): LogisticsDynamicSession;
+  supportsLogisticsAnimation(): boolean;
+  getLogisticsMaterialStats(): ReturnType<LogisticsMaterialTextureCache["getStats"]>;
   destroy(): void;
 }
 
@@ -58,6 +63,7 @@ class TextureActionsImpl implements TextureActions {
   private readonly app: AppContract | null
   private readonly syncTextureConfigState: (textureConfig: RenderTextureConfig) => void
   private readonly deviceAnimations: DeviceAnimationTextureCache
+  private readonly logisticsMaterials = new LogisticsMaterialTextureCache()
   private destroyed = false
 
   public constructor(options: {
@@ -130,6 +136,7 @@ class TextureActionsImpl implements TextureActions {
   public destroy(): void {
     this.destroyed = true
     this.deviceAnimations.destroy()
+    this.logisticsMaterials.destroy()
     this.disposeResolutionReaction?.()
     this.texturePromisesByKey.clear()
     this.trackedBitmapTextures.clear()
@@ -141,6 +148,22 @@ class TextureActionsImpl implements TextureActions {
 
   public getDeviceAnimationStats(): DeviceAnimationTextureStats {
     return this.deviceAnimations.getStats()
+  }
+
+  public getLogisticsStatic(key: string): Promise<Texture> {
+    return this.logisticsMaterials.getStatic(key)
+  }
+
+  public acquireLogisticsDynamic(): LogisticsDynamicSession {
+    return this.logisticsMaterials.acquireDynamic()
+  }
+
+  public supportsLogisticsAnimation(): boolean {
+    return "context" in this.renderer && this.renderer.context.webGLVersion === 2
+  }
+
+  public getLogisticsMaterialStats(): ReturnType<LogisticsMaterialTextureCache["getStats"]> {
+    return this.logisticsMaterials.getStats()
   }
 
   private syncResolution(resolution: number): void {
@@ -276,6 +299,7 @@ class TextureActionsImpl implements TextureActions {
  * 返回的 TextureActions 只有 getTexture 与 destroy 两个方法。
  * AI-CORRECTION 2026-09-05: 增加 getDeviceAnimation，按 spriteId 共享完整四阶段纹理与并集遮罩。
  * AI-CORRECTION 2026-09-06: 增加动画分页驻留统计；getDeviceAnimation 改为按实例返回页级纹理会话。
+ * AI-CORRECTION 2026-09-10: 增加物流静态图集、可释放的动态材质会话及驻留统计。
  * textureConfig 作为内部状态由 render host 持有，不额外 export。
  */
 export function createTextureActions(options: {

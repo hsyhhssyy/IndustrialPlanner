@@ -491,6 +491,8 @@ describe("createRenderSceneOrchestrator", () => {
           baseDefinitions: [],
           recipeDefinitions: [],
           queries: {
+            isBelt: (definitionId: string) => definitionId === "belt_straight_1x1",
+            isPipe: () => false,
             isDedicatedLogisticsDevice: vi.fn(() => false),
             resolveDedicatedLogisticsKind: vi.fn(() => null),
             isBeltFamily: vi.fn(() => false),
@@ -644,6 +646,8 @@ describe("createRenderSceneOrchestrator", () => {
           baseDefinitions: [],
           recipeDefinitions: [],
           queries: {
+            isBelt: (definitionId: string) => definitionId === "belt_straight_1x1",
+            isPipe: () => false,
             isDedicatedLogisticsDevice: vi.fn(() => false),
             resolveDedicatedLogisticsKind: vi.fn(() => null),
             isBeltFamily: vi.fn(() => false),
@@ -778,6 +782,8 @@ describe("createRenderSceneOrchestrator", () => {
           baseDefinitions: [],
           recipeDefinitions: [],
           queries: {
+            isBelt: (definitionId: string) => definitionId === "belt_straight_1x1",
+            isPipe: () => false,
             isDedicatedLogisticsDevice: vi.fn((definitionId: string) =>
               definitionId === "belt_straight_1x1",
             ),

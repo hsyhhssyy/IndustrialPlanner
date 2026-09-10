@@ -1,3 +1,5 @@
+import type { Container } from "pixi.js";
+import type { LogisticsMaterialEntityState, LogisticsMaterialFrameState } from "@/shared/logistics-material";
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/domain/shared/grid";
 import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
@@ -31,6 +33,16 @@ export interface DecorationSyncContext {
   renderHost: RenderHost;
   theme: AppTheme;
   nowMs: number;
+  logisticsMaterials?: LogisticsMaterialFrameState;
+  createLogisticsMaterialView?: (
+    assets: Awaited<ReturnType<RenderHost["textureManager"]["acquireLogisticsDynamic"]>["ready"]>,
+    state: LogisticsMaterialEntityState,
+    isCurrent: () => boolean,
+  ) => Promise<{
+    root: Container;
+    sync(state: LogisticsMaterialEntityState, frame: LogisticsMaterialFrameState): void;
+    destroy(): void;
+  } | null>;
   powerInteractionVisualState?: PowerInteractionVisualState;
   profiler?: DecorationProfiler;
   /** renderer 内部维护的分层失效版本。 */

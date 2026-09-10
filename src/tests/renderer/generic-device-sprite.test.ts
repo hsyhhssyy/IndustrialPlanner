@@ -1,3 +1,4 @@
+import type { LogisticsMaterialEntityState } from "@/shared/logistics-material"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
@@ -1142,7 +1143,7 @@ describe("GenericDeviceSprite", () => {
       previewIds: [],
     }))
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(beltBodyKey)
+    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("belt/straight")
     expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(beltMaskKey)
 
     await flushMicrotasks(8)
@@ -1168,11 +1169,8 @@ describe("GenericDeviceSprite", () => {
       y: 36,
       width: 32,
       height: 32,
-      rotation: 0,
-      tint: resolveAppThemeColorNumber(
-        AYU_LIGHT_THEME,
-        AYU_LIGHT_THEME.renderer.beltTileStrokeColorKey,
-      ),
+      rotation: Math.PI * 1.5,
+      tint: 0xffffff,
     })
   })
 
@@ -1212,7 +1210,7 @@ describe("GenericDeviceSprite", () => {
       previewIds: [],
     }))
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(PIPE_BODY_KEY)
+    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/empty/straight/11")
     expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(PIPE_MASK_KEY)
 
     await flushMicrotasks(8)
@@ -1225,15 +1223,12 @@ describe("GenericDeviceSprite", () => {
       y: 36,
       width: 32,
       height: 32,
-      rotation: 0,
-      tint: resolveAppThemeColorNumber(
-        AYU_LIGHT_THEME,
-        AYU_LIGHT_THEME.renderer.pipeBodyTintColorKey,
-      ),
+      rotation: Math.PI * 1.5,
+      tint: 0xffffff,
     })
   })
 
-  it("draws a tinted liquid bead for filled straight pipes", async () => {
+  it("uses a single precomposed sprite for filled straight pipes", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
@@ -1265,6 +1260,7 @@ describe("GenericDeviceSprite", () => {
       height: 40,
       rotation: 0,
     }, createRenderContextStub({
+      materialEntities: new Map([["pipe-entity-2", { kind: "pipe", shape: "straight", color: "82d6ff", rotation: 270, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId,
@@ -1280,20 +1276,22 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(8)
 
-    expect(getPipeFluidItemId).toHaveBeenCalledWith("pipe-entity-2")
+    expect(getPipeFluidItemId).not.toHaveBeenCalled()
+    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/82d6ff/straight/11")
     // 贴图方案：bead 填满整个格子，Alpha 通道约束内腔形状
-    expect(resolvePipeBeadSprite(entityLayer)).toMatchObject({
+    // AI-CORRECTION 2026-09-10: 三维管道改用完整合成图，不再单独绘制 bead。
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
       visible: true,
       x: 30,
       y: 40,
       width: 40,
       height: 40,
-      rotation: 0,
-      tint: 0x82d6ff,
+      rotation: Math.PI * 1.5,
+      tint: 0xffffff,
     })
   })
 
-  it("uses a compact square liquid bead for turn pipes", async () => {
+  it("uses a precomposed colored corner without an extra fluid sprite", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
@@ -1324,6 +1322,7 @@ describe("GenericDeviceSprite", () => {
       height: 40,
       rotation: 90,
     }, createRenderContextStub({
+      materialEntities: new Map([["pipe-turn-entity-1", { kind: "pipe", shape: "left", color: "d97a1f", rotation: 90, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId: () => "item_liquid_acid",
@@ -1340,14 +1339,15 @@ describe("GenericDeviceSprite", () => {
     await flushMicrotasks(8)
 
     // 贴图方案：bead 填满整个格子，弯管贴图自带 L 形内腔 Alpha
-    expect(resolvePipeBeadSprite(entityLayer)).toMatchObject({
+    // AI-CORRECTION 2026-09-10: 转角同样由完整合成图绘制。
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
       visible: true,
       x: 30,
       y: 40,
       width: 40,
       height: 40,
-      rotation: Math.PI / 2,
-      tint: 0xd97a1f,
+      rotation: Math.PI,
+      tint: 0xffffff,
     })
   })
 
@@ -1850,11 +1850,8 @@ describe("GenericDeviceSprite", () => {
     }))
 
     expect(resolveEntitySprite(entityLayer)).toMatchObject({
-      alpha: 0.62,
-      tint: resolveAppThemeColorNumber(
-        AYU_LIGHT_THEME,
-        AYU_LIGHT_THEME.renderer.pipeBodyTintColorKey,
-      ),
+      alpha: 1,
+      tint: 0xffffff,
     })
     expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({
       visible: false,
@@ -1879,7 +1876,7 @@ describe("GenericDeviceSprite", () => {
       y: 36,
       width: 34.56,
       height: 34.56,
-      rotation: 0,
+      rotation: Math.PI * 1.5,
       tint: 0xd8f7ff,
       alpha: 0.42,
     })
@@ -1955,10 +1952,7 @@ describe("GenericDeviceSprite", () => {
       reverseMarqueeIds: ["belt-entity-reverse-marquee"],
     }))
 
-    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
-      AYU_LIGHT_THEME,
-      AYU_LIGHT_THEME.renderer.beltTileStrokeColorKey,
-    ))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(0xffffff)
   })
 
   it("uses the renderer focus tint for preview and logistics head under the dark theme", async () => {
@@ -3157,6 +3151,7 @@ function createPipeAdmissionEntityDefinitionStub(): EntityDefinition {
 }
 
 function createRenderContextStub(options: {
+  materialEntities?: ReadonlyMap<string, LogisticsMaterialEntityState>;
   selectionIds: readonly string[];
   previewIds: readonly string[];
   marqueeIds?: readonly string[];
@@ -3226,6 +3221,7 @@ function createRenderContextStub(options: {
   }
 
   return {
+    logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0, pipeSeconds: 0 },
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: workspace as never,
     logisticsPortOccupancy: null,
@@ -3262,13 +3258,21 @@ function resolveEntitySprite(entityLayer: ReturnType<typeof createLayerStub>) {
   return entityRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
 }
 
-function resolvePipeBeadSprite(entityLayer: ReturnType<typeof createLayerStub>) {
-  const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
-    children?: unknown[];
-  } | undefined
-
-  return entityRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
-}
+// AI-REMOVED 2026-09-10:
+// Reason: 三维管道已取消独立 bead，测试直接验证完整合成图。
+// Trigger: 用户要求最低静态渲染开销。
+// Evidence: PipeSprite 由场景材质状态选择完整 Sprite。
+// Replacement: resolveEntitySprite
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function resolvePipeBeadSprite(entityLayer: ReturnType<typeof createLayerStub>) {
+//   const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+//     children?: unknown[];
+//   } | undefined
+//
+//   return entityRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+// }
 
 function resolveDeviceLabelRoot(entityLayer: ReturnType<typeof createLayerStub>) {
   const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
@@ -3403,6 +3407,13 @@ function createRenderHostStub(
       },
     },
     textureManager: {
+      getLogisticsStatic: vi.fn((key: string) => {
+        const [kind, colorOrShape, pipeShape] = key.split("/")
+        const shape = kind === "belt" ? colorOrShape : pipeShape
+        const suffix = shape === "straight" ? "straight" : shape === "left" ? "turn_cw" : "turn_ccw"
+        return Promise.resolve(textureByKey[`device-sprite-${kind}_${suffix}_1x1`])
+      }),
+      supportsLogisticsAnimation: () => false,
       getTexture,
     },
   }

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260910-124310-logistics-phase-review",
+  "building": "grid_belt_01_right",
+  "requiresBaseContract": 2,
+  "resources": {
+    "dynamic/conveyor.right.mapping": {
+      "file": "conveyor-right-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "conveyor-right-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "conveyor.right.mapping",
+      "namespace": "dynamic",
+      "sha256": "113beea8dfa186a86784b0ea630b5497c47b8c558088e27415e0d7fecb650d20"
+    },
+    "dynamic/conveyor.arrow": {
+      "file": "conveyor-arrow.webp",
+      "width": 2048,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        2048,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fac_com_conveyorarrow_atlas",
+      "semantic": "conveyor.arrow",
+      "namespace": "dynamic",
+      "sha256": "c6386dd0a24644e8842d315c42892f5f1bf1d904154dde6e9c7781ebde0c8679"
+    },
+    "dynamic/conveyor.highlight": {
+      "file": "conveyor-highlight.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_flow_06_clockwise",
+      "semantic": "conveyor.highlight",
+      "namespace": "dynamic",
+      "sha256": "29c529057d6770a5beeecea0b45e3cd22a3721eb9d8a02ad51f09f5e86c07d58"
+    }
+  },
+  "shapes": {
+    "right": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        1,
+        0.5
+      ],
+      "entryDirection": [
+        0,
+        1
+      ],
+      "exitDirection": [
+        1,
+        0
+      ],
+      "phaseSpan": 1,
+      "staticArrowPhase": -0.0029871862169272845,
+      "staticArrowCenterAlong": 0.5,
+      "staticArrowPhaseSource": "Shared animation phase: thresholded original atlas cell-0 intensity centroid at along=.5; no per-shape offset",
+      "phaseStatus": "One unit per grid piece; normalized polar corner preview, not recovered live conveyor mapping",
+      "sourceId": "grid_belt_01_right"
+    }
+  },
+  "parameters": {
+    "arrowSpeed": 1,
+    "timeOffset": 1,
+    "flowSpeed": 1.25,
+    "arrowSpace": 1,
+    "flowSpace": 0.27,
+    "source": "ECS initialization/material values; not live runtime capture",
+    "clock": "Shared route elapsed time; both independent effects continue across segment boundaries"
+  },
+  "resourceNamespace": "dynamic",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "conveyor.right.mapping": "dynamic/conveyor.right.mapping",
+    "conveyor.arrow": "dynamic/conveyor.arrow",
+    "conveyor.highlight": "dynamic/conveyor.highlight"
+  }
+}

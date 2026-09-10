@@ -78,8 +78,26 @@ import { createInvalidPlacementDecoration } from "./decorations/InvalidPlacement
 import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInsertionDecoration"
-import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
-import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+// import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+// import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
 import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
@@ -88,6 +106,9 @@ import { createHoverCornersDecoration } from "./decorations/HoverCornersDecorati
 import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
 import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecoration"
 import { createConfiguredItemIconDecoration } from "./decorations/ConfiguredItemIconDecoration"
+
+import { LogisticsMaterialSceneState } from "./logistics-material-state"
+import type { LogisticsMaterialFrameState } from "@/shared/logistics-material"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -254,14 +275,48 @@ export function createRenderSceneOrchestrator(
   const portOverlayDecoration = createPortOverlayDecoration()
   const pipePortGhostDecoration = createPipePortGhostDecoration()
   const configuredItemIconDecoration = createConfiguredItemIconDecoration()
-  const beltFlowDecoration = createBeltFlowDecoration()
-  const pipeFlowDecoration = createPipeFlowDecoration()
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//   const beltFlowDecoration = createBeltFlowDecoration()
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
   const darkPipeLinkSelectionDecoration = createDarkPipeLinkSelectionDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
   const beltCargoDecoration = createBeltCargoDecoration()
-  const beltFlowLayer = new Container()
-  const pipeFlowLayer = new Container()
+  // AI-REMOVED 2026-09-10:
+  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
+  // Trigger: contract2 内部层序与静态低开销要求。
+  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
+  // Replacement: beltSubEntity / pipeSubEntity
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // const beltFlowLayer = new Container()
+  // AI-REMOVED 2026-09-10:
+  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
+  // Trigger: contract2 内部层序与静态低开销要求。
+  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
+  // Replacement: beltSubEntity / pipeSubEntity
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // const pipeFlowLayer = new Container()
   const darkPipeLinkLineLayer = new Container()
   const beltInsertionLayer = new Container()
   const beltCargoOverlayLayer = new Container()
@@ -271,6 +326,7 @@ export function createRenderSceneOrchestrator(
   const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
     renderHost.workspace.registry.recipeDefinitions,
   )
+  const logisticsMaterialState = new LogisticsMaterialSceneState()
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
   const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
@@ -289,8 +345,8 @@ export function createRenderSceneOrchestrator(
     app,
     layers: {
       stage: app.stage,
-      pipeFlow: pipeFlowLayer,
-      beltFlow: beltFlowLayer,
+      pipeFlow: pipeSubEntity,
+      beltFlow: beltSubEntity,
       beltInsertion: beltInsertionLayer,
       beltCargo: beltCargoOverlayLayer,
       entities: [
@@ -525,6 +581,10 @@ export function createRenderSceneOrchestrator(
       renderHost,
       theme: effectiveCanvasTheme,
       nowMs: frameTime.nowMs,
+      createLogisticsMaterialView: async (assets, state, isCurrent) => {
+        const { LogisticsDynamicView } = await import("../sprites")
+        return isCurrent() ? new LogisticsDynamicView(assets, state) : null
+      },
       powerInteractionVisualState,
       profiler: frameProfiler ?? undefined,
       versions: frameVersions,
@@ -571,6 +631,16 @@ export function createRenderSceneOrchestrator(
       }
       ctx.versions = frameVersions
     }
+    const logisticsMaterials = logisticsMaterialState.sync({
+      workspace: renderHost.workspace,
+      entities,
+      definitions: entityDefinitionMap,
+      documentVersion: frameVersions.document,
+      simulationVersion: frameVersions.simulation,
+      presentationVersion: frameVersions.presentation,
+      deltaMs: frameTime.deltaMs,
+    })
+    ctx.logisticsMaterials = logisticsMaterials
     recordRenderFrameCounters(frameProfiler, renderHost, entities.length, entitySprites.size)
 
     const entitySpriteStats = measureRenderStage(frameProfiler, "entitySprites.sync", () =>
@@ -591,6 +661,7 @@ export function createRenderSceneOrchestrator(
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
         logisticsPortOccupancy: null,
+        logisticsMaterials,
         gasInteractionVisualState,
         powerInteractionVisualState,
         versions: frameVersions,
@@ -643,13 +714,31 @@ export function createRenderSceneOrchestrator(
       configuredItemIconDecoration.sync(ctx, entities)
     })
 
-    measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
-      beltFlowDecoration.sync(ctx)
-    })
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: LogisticsMaterialSceneState.sync
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
+//       beltFlowDecoration.sync(ctx)
+//     })
 
-    measureRenderStage(frameProfiler, "decoration.pipeFlow", () => {
-      pipeFlowDecoration.sync(ctx)
-    })
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: LogisticsMaterialSceneState.sync
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//     measureRenderStage(frameProfiler, "decoration.pipeFlow", () => {
+//       pipeFlowDecoration.sync(ctx)
+//     })
 
     measureRenderStage(frameProfiler, "decoration.darkPipeLinkLine", () => {
       darkPipeLinkLineDecoration.sync(ctx)
@@ -700,14 +789,30 @@ export function createRenderSceneOrchestrator(
 
   // 物流传送带层级（从底到顶）
   layers.logisticsBelt.addChild(beltSubEntity)
-  layers.logisticsBelt.addChild(beltFlowLayer)
+  // AI-REMOVED 2026-09-10:
+  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
+  // Trigger: contract2 内部层序与静态低开销要求。
+  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
+  // Replacement: beltSubEntity / pipeSubEntity
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // layers.logisticsBelt.addChild(beltFlowLayer)
   layers.logisticsBelt.addChild(beltInsertionLayer)
   layers.logisticsBelt.addChild(beltCargoOverlayLayer)
 
   // 物流管道层级（从底到顶）
   layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
   layers.logisticsPipe.addChild(pipeSubEntity)
-  layers.logisticsPipe.addChild(pipeFlowLayer)
+  // AI-REMOVED 2026-09-10:
+  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
+  // Trigger: contract2 内部层序与静态低开销要求。
+  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
+  // Replacement: beltSubEntity / pipeSubEntity
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // layers.logisticsPipe.addChild(pipeFlowLayer)
   layers.logisticsPipe.addChild(darkPipeLinkLineLayer)
 
   app.stage.addChild(
@@ -730,8 +835,26 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(gasDiffusionRangeDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
-  beltFlowLayer.addChild(beltFlowDecoration.container)
-  pipeFlowLayer.addChild(pipeFlowDecoration.container)
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//   beltFlowLayer.addChild(beltFlowDecoration.container)
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//   pipeFlowLayer.addChild(pipeFlowDecoration.container)
   darkPipeLinkLineLayer.addChild(darkPipeLinkLineDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
@@ -785,8 +908,26 @@ export function createRenderSceneOrchestrator(
       portOverlayDecoration.destroy()
       pipePortGhostDecoration.destroy()
       configuredItemIconDecoration.destroy()
-      beltFlowDecoration.destroy()
-      pipeFlowDecoration.destroy()
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//       beltFlowDecoration.destroy()
+// AI-REMOVED 2026-09-10:
+// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
+// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
+// Evidence: 新素材的支架、液体、壳体必须交错绘制。
+// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
+// Risk: 原材质相关视觉断言需要同步验证。
+// Human Review: Required
+//
+// Original code:
+//       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()
       darkPipeLinkSelectionDecoration.destroy()
       beltPortInsertionDecoration.destroy()
@@ -1045,8 +1186,9 @@ function createRenderSimulationSignature(
   const simulationState = renderHost.workspace.simulation?.state
   // 动画开关是低频运行态展示输入；复用 syncRuntime 失效，避免重算静态布局或改变仿真拓扑。
   const playDeviceAnimations = renderHost.workspace.app?.state.settings.gamePlayDeviceAnimations ?? false
+  const exactPipeFluidPosition = renderHost.workspace.app?.state.settings.gameShowPipeExactFluidPosition ?? false
   if (simulationState === undefined || typeof simulationState !== "object") {
-    return `${tickNumber ?? "none"}|${playDeviceAnimations}`
+    return `${tickNumber ?? "none"}|${playDeviceAnimations}|${exactPipeFluidPosition}`
   }
 
   return [
@@ -1056,6 +1198,7 @@ function createRenderSimulationSignature(
     simulationState.timeline?.readiness ?? "none",
     simulationState.timeline?.isSeeking ?? false,
     playDeviceAnimations,
+    exactPipeFluidPosition,
   ].join("|")
 }
 
@@ -1248,6 +1391,7 @@ function syncWorldEntitySprites(options: {
     height: number;
   };
   theme: AppTheme;
+  logisticsMaterials: LogisticsMaterialFrameState;
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
   gasInteractionVisualState: GasInteractionVisualState;
   powerInteractionVisualState: PowerInteractionVisualState;
@@ -1277,6 +1421,7 @@ function syncWorldEntitySprites(options: {
     gasInteractionVisualState: options.gasInteractionVisualState,
     powerInteractionVisualState: options.powerInteractionVisualState,
     logisticsPortOccupancy: options.logisticsPortOccupancy,
+    logisticsMaterials: options.logisticsMaterials,
     portOverlayManagedGlobally: true,
     versions: options.versions,
   }

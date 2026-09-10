@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "mode": "dynamic",
+  "scope": "Normative reference for this exported 2D approximation, NOT the original complete game shader.",
+  "resourceIdentity": {
+    "format": "mode/semantic",
+    "examples": [
+      "static/pipe.pattern",
+      "dynamic/pipe.pattern"
+    ],
+    "merge": "Use the full resources key, never semantic alone. Duplicate full keys may be deduplicated only when sha256, dimensions, colorSpace, alpha, filter and wrap all agree. Keep different game/contract versions in separate registries.",
+    "migration": "Contract 1 bare key K becomes static/K or dynamic/K according to its originating manifest. Resource file paths stay relative to their own manifest, not the aggregate root."
+  },
+  "coordinates": {
+    "canvas": "128x128 pixels per 1x1 cell; pivot=(64,64); image origin top-left; +x right, +y down.",
+    "endpoints": "Canonical entry=(.5,0), exits straight=(.5,1), left=(0,.5), right=(1,.5). Rotate images and maps together about pivot.",
+    "map": "Read nearest decoded RGBA bytes. across=R/255; along=(256*G+B)/65535; coverage=A/255. Do not premultiply, apply sRGB decoding or use bilinear/mipmap filtering on maps.",
+    "geometry": "The accompanying JSON preserves source UV0/geometry for provenance; conveyor source UV0 is NOT the normalized polar mapping. Use the mapping WebP as authoritative for this 2D implementation.",
+    "conveyorMap": "Pixel center x=(column+.5)/128, y=(row+.5)/128. straight: across=(x-.1)/.8, along=y. left: dx=x, dy=y; right: dx=1-x,dy=y. corners: along=atan2(dy,dx)/(pi/2); radial=(sqrt(dx*dx+dy*dy)-.1)/.8; across=radial for left, 1-radial for right. Clamp to [0,1], use original mesh coverage.",
+    "pipeMap": "Barycentrically interpolated original UV0 of the nearest top surface, after recovered tube bend. Glass and liquid use their own mapping. Decode as above.",
+    "path": "s=routeOrigin+segmentStart+along. Each piece spans 1 path unit, including corners. segmentStart increments by 1; routeOrigin=5 in the demo is a configurable preview phase, not a game constant. Shared clocks and origin; never reset s per tile."
+  },
+  "sampling": {
+    "fract": "fract(x)=x-floor(x), including negative x.",
+    "source": "src(texture,u,v) = bilinearRepeat(decodedBytes/255, fract(u), 1-fract(v)). Input uses game bottom-left UV; decoded images use top-left rows. No color conversion, premultiplication or mipmaps for dynamic data.",
+    "texelCenters": "For W,H: px=fract(u)*W-.5; py=fract(1-v)*H-.5. Bilinear weights from fractional px,py, integer texels modulo W,H.",
+    "atlas": "Conveyor atlas: eight equal horizontal cells. Select cell 0 only: u=clamp(across/8, .5/W, 1/8-.5/W); v uses full height. For current 2048x256 source, rectangle [0,0,256,256], centers u in [.000244140625,.124755859375]. Never sample other cells or use source alpha as arrow opacity.",
+    "channelTable": {
+      "dynamic/conveyor.arrow": "R=gray arrow and halo intensity; G/B/A unused by reference. Threshold removes halo. Cell 0 only.",
+      "dynamic/conveyor.highlight": "R=flow intensity; G/B/A unused. Full texture with fixed u=.5.",
+      "dynamic/pipe.pattern": "R and G are independent text masks. For canonical straight, x<.5 selects G, otherwise R. B/A unused. Text disabled on both elbows.",
+      "dynamic/pipe.chevron": "R=double-V intensity in this 2D approximation. Original RGB retained; G/B/A not used by this reference.",
+      "dynamic/pipe.fluid-motion": "RG sampled as nx=2R-1, ny=2G-1 for approximate shimmer only. B/A retained but unused. This is not a complete reconstruction of game normal decoding/lighting.",
+      "static/pipe.pattern": "RGB fixed pale tint; A is original source R. It is a ready color sprite, NOT the RG data map. Whole-image standalone swatch; placed pipe markers are prewarped static-marker assets.",
+      "static/pipe.chevron": "RGB fixed pale tint; A is original source R. Use placed static-marker assets for canonical pipe shapes.",
+      "static/pipe.{shape}.fluid-body": "Neutral RGB shading; A=interior coverage/opacity. Multiply RGB by liquid tint, preserve A.",
+      "static/pipe.{shape}.fluid-specular": "Independent white specular RGB with coverage A. Do not multiply by liquid tint.",
+      "dynamic/*mapping": "R=8-bit across, GB=big-endian 16-bit along, A=coverage. Hidden RGB must survive alpha=0."
+    }
+  },
+  "parameters": {
+    "staticDensity": 0.11,
+    "flowDensity": 0.18,
+    "flowOffset": 1.97,
+    "flowSpeed": 1.23,
+    "staticWidth": 0.922,
+    "flowWidth": 0.88,
+    "waterDirection": 0,
+    "waterWaveSpeed": 0.8,
+    "waterSkinSpeed": 0.7,
+    "evidence": "v1.5 recovered pipe pattern formula; wave shading uses original normal texture with approximate lighting",
+    "fluidStatus": "Approximate tintable full-pipe material; fill front, splash, SceneColor refraction not implemented"
+  },
+  "uniforms": {
+    "uTime": "Shared accumulated belt seconds or water seconds; freeze water clock when empty; pause preserves both. No animation-off clock/ticker work.",
+    "uStart": "routeOrigin+segmentStart",
+    "uKind": "0 conveyor; 1 pipe",
+    "uCorner": "0 straight; 1 elbow",
+    "uFilled": "0 empty; 1 full liquid (no partial fill front)",
+    "uDirection": "waterDirection, default 0; only 0/1 supported",
+    "uLayer": "pipe: 0 marks ABOVE shell; 1 liquid shimmer BELOW specular, middle support and shell",
+    "uAtlasHalfTexel": ".5 / arrow atlas width in decoded pixels; used to clamp the selected cell horizontally",
+    "uParams": "[arrowSpeed, flowSpeed, timeOffset, arrowSpace]",
+    "uPipe": "[staticDensity, flowDensity, flowOffset, flowSpeed]",
+    "uWidths": "[staticWidth, flowWidth, waterWaveSpeed, flowSpace]",
+    "uColor": "Premultiplied object tint/opacity from Pixi; [1,1,1,1] by default. The liquid color is a separate Sprite RGB tint, not this uniform.",
+    "unused": "waterSkinSpeed is preserved source provenance and has no effect in this 2D reference.",
+    "supported": "Finite values; arrowSpeed>=0, arrowSpace>0, flowSpace>0, densities>0; 0<pipe widths<1. Negative belt speed and width≈1 original branches are outside this reference."
+  },
+  "formulas": {
+    "conveyor": [
+      "phase=fract(s-t*arrowSpeed); A=clamp((src(arrow,atlasU,phase*arrowSpace).r-.55)*3,0,1).",
+      "F=src(highlight,.5,fract((s-t*flowSpeed+timeOffset)*flowSpace)).r; H=F*F*.34.",
+      "overlayAlpha=max(.9*A,H)*coverage; overlayRGB=mix([.43,.25,.065],[1,.70,.25],A). Draw over static/conveyor.{shape}.base.",
+      "Static preset: A=clamp((src(arrow,atlasU,fract(along-staticArrowPhase)).r-.55)*3,0,1)*coverage. arrowRGB=[1,.70,.25], alpha=.9*A; normal over base. All shapes use one common phase: staticArrowPhase=.5-sourceGlyphCenterV. Compute sourceGlyphCenterV as the intensity-weighted mean bottom-left V in original atlas cell 0, weights=clamp((R-.55)*3,0,1). Current v1.5 phase=-.0029871862169272845. Thus each glyph is at along=.5, NOT necessarily pixel (64,64) in corners. Do not offset individual corners to point toward the final exit. This selects the arrow from a shared animation phase; the static base/highlight remain a simplified baked preset, not a full captured frame.",
+      "Base: side=min(across,1-across). Background RGB=[.43,.25,.065], alpha=.075*coverage. Edge RGB=[1,.65,.18], alpha=coverage*max(side<.026 ? 1 : 0, .25*max(1-18*side,0)^3); edge over background."
+    ],
+    "pipe": [
+      "q=s*(2*waterDirection-1)-flowOffset; u=min(abs(across-.5),1).",
+      "remap(q,d,w)=(fract(q*d)*w-.5)/(w-1). av=remap(q+flowSpeed*t,flowDensity,flowWidth). C=(0<av<1) ? src(chevron,u,av).r : 0.",
+      "pv=remap(q,staticDensity,staticWidth). P=0 for corners or pv outside (0,1); otherwise src(pattern,u,pv).g if canonical x<.5 else .r.",
+      "M=clamp(.9*max(C,P),0,1). Marks RGB=[.72,.91,1], alpha=M*glassCoverage.",
+      "Read fluid mapping U,V separately. If full and fluid coverage>.5: N=2*src(fluid-motion,2*U,routeOrigin+segmentStart+V-t*waterWaveSpeed).rg-1; H=abs(.7*N.x+.3*N.y)^2*.20; otherwise H=0. Shimmer RGB=[.75,.88,1], alpha=H*glassCoverage. Separate draw before shell, never combine above-shell marks and below-shell shimmer in one pass.",
+      "Static marked preset: chevron uses q=-(sourceV-.5)-.5/flowDensity, no clock; text uses s=5+sourceV, zero water time and the same R/G selection. Prebaked images are authoritative. Static layout places static-marker every 6 segments at index%6==3; configurable product choice, not recovered dynamic periodicity.",
+      "Full-texture periods at direction 0: text 1/staticDensity (~9.09), double-V 1/flowDensity (~5.56) path units, not an integer spacing of distinct pipe meshes."
+    ],
+    "tint": "Read decoded static RGB as display-referred sRGB numbers. SpriteRGB=RGB*(hexTintRGB/255); alpha unchanged. Specular, shell, supports and marks retain their own colors.",
+    "over": "Use normal premultiplied source-over, NOT additive: CoutPremul=Cs*As + CdPremul*(1-As); Aout=As+Ad*(1-As). GLSL emits vec4(RGB*alpha,alpha). WebPs store straight alpha; static Sprite upload premultiplies once, data upload never does.",
+    "colorPipeline": "Reference computes color constants, tint and blending in encoded display/sRGB numeric space with no sRGB framebuffer linearization, matching this Pixi WebGL demo. It is not physically linear lighting. Data samplers return decoded bytes/255 untouched. Other engines must choose the same conversions to match.",
+    "bake": "Static color images are precomputed; use delivered pixels. Q85 RGB compression and antialiasing mean mathematical bake reconstruction is not bit-identical. Data WebP and alpha are lossless. Pipe color layers use 3x supersampling and premultiplied area reduction."
+  },
+  "drawOrder": {
+    "conveyor": [
+      "static/conveyor.{shape}.base",
+      "dynamic conveyor overlay"
+    ],
+    "pipe": [
+      "support-back",
+      "fluid-body tinted (full only)",
+      "dynamic fluid shimmer (full only)",
+      "fluid-specular (full only)",
+      "support-middle",
+      "shell",
+      "dynamic marks OR static-marker",
+      "support-front"
+    ],
+    "staticConveyor": [
+      "static/conveyor.{shape}.static"
+    ],
+    "supports": "Every elbow: 1 required. Straight spacing is configurable. Skip nonexistent empty split layers; standalone support.straight/corner are full pieces, do not overlay them in addition to split layers."
+  },
+  "loading": {
+    "static": "Load only static manifest resources, ordinary Sprites. No import of dynamic.js, no dynamic maps/textures, no ticker. Specification JSON is documentation, not an eager resource dependency.",
+    "dynamic": "Add compatible contract-2 dynamic resources on demand; keep static bases. On disable cancel pending loads, switch to static assets, stop RAF and release unused dynamic GPU textures/bitmaps.",
+    "reference": "The vertex/fragment strings below are the exact code exported by dynamic.js in the full example. Bind sampler roles as described; GLSL is for PixiJS 8.17.0 / WebGL2, not automatic WebGPU support."
+  },
+  "shaderBindings": {
+    "conveyor": {
+      "uMap": "dynamic/conveyor.{shape}.mapping",
+      "uGlyph": "dynamic/conveyor.arrow",
+      "uFlow": "dynamic/conveyor.highlight",
+      "uPattern": "dynamic/conveyor.arrow (unused)",
+      "uFluidMap": "dynamic/conveyor.{shape}.mapping (unused)"
+    },
+    "pipe": {
+      "uMap": "dynamic/pipe.{shape}.mapping",
+      "uGlyph": "dynamic/pipe.chevron",
+      "uFlow": "dynamic/pipe.fluid-motion",
+      "uPattern": "dynamic/pipe.pattern",
+      "uFluidMap": "dynamic/pipe.{shape}.fluid-mapping"
+    }
+  },
+  "referenceShader": {
+    "backend": "PixiJS 8.17.0 WebGL2; Pixi injects GLSL version and matrix/color bindings. Quad uses top-left UV origin.",
+    "vertex": "precision highp float;\nin vec2 aPosition;in vec2 aUV;out vec2 vUV;\nuniform mat3 uProjectionMatrix;uniform mat3 uWorldTransformMatrix;uniform mat3 uTransformMatrix;\nvoid main(){vUV=aUV;vec3 p=uProjectionMatrix*uWorldTransformMatrix*uTransformMatrix*vec3(aPosition,1.);gl_Position=vec4(p.xy,0.,1.);}",
+    "fragment": "precision highp float;\nin vec2 vUV;out vec4 finalColor;\nuniform sampler2D uMap;uniform sampler2D uGlyph;uniform sampler2D uFlow;uniform sampler2D uPattern;uniform sampler2D uFluidMap;\nuniform float uTime;uniform float uStart;uniform float uKind;uniform float uCorner;uniform float uFilled;uniform float uDirection;uniform float uLayer;\nuniform float uAtlasHalfTexel;\nuniform vec4 uParams;uniform vec4 uPipe;uniform vec4 uWidths;uniform vec4 uColor;\nvec4 src(sampler2D tex,vec2 uv){return texture(tex,vec2(fract(uv.x),1.-fract(uv.y)));}\nfloat remap(float q,float density,float width){return (fract(q*density)*width-.5)/(width-1.);}\nvoid main(){vec4 map=texture(uMap,vUV);if(map.a<.5){finalColor=vec4(0.);return;}\n float across=map.r;float along=(map.g*255.*256.+map.b*255.)/65535.;float s=uStart+along;\n vec3 rgb=vec3(0.);float alpha=0.;\n if(uKind<.5){\n  float phase=fract(s-uTime*uParams.x);float atlasU=clamp(across/8.,uAtlasHalfTexel,1./8.-uAtlasHalfTexel);float arrow=clamp((src(uGlyph,vec2(atlasU,phase*uParams.w)).r-.55)*3.,0.,1.);\n  float flow=src(uFlow,vec2(.5,fract((s-uTime*uParams.y+uParams.z)*uWidths.w))).r;flow=flow*flow*.34;\n  alpha=max(arrow*.9,flow);rgb=mix(vec3(.43,.25,.065),vec3(1.,.70,.25),arrow);\n }else{\n  float q=s*(2.*uDirection-1.)-uPipe.z;float u=min(abs(across-.5),1.);float av=remap(q+uPipe.w*uTime,uPipe.y,uWidths.y);\n  float glyph=(av>0.&&av<1.)?src(uGlyph,vec2(u,av)).r:0.;\n  float pv=remap(q,uPipe.x,uWidths.x);vec4 pattern=src(uPattern,vec2(u,clamp(pv,0.,1.)));\n  float pat=(uCorner<.5&&pv>0.&&pv<1.)?(vUV.x<.5?pattern.g:pattern.r):0.;\n  float marks=clamp(max(glyph,pat)*.9,0.,1.);\n  vec4 fm=texture(uFluidMap,vUV);float shimmer=0.;\n  if(uFilled>.5&&fm.a>.5){float fv=(fm.g*255.*256.+fm.b*255.)/65535.;vec2 normal=src(uFlow,vec2(fm.r*2.,uStart+fv-uTime*uWidths.z)).rg*2.-1.;shimmer=pow(abs(normal.x*.7+normal.y*.3),2.)*.20;}\n  if(uLayer<.5){alpha=marks;rgb=vec3(.72,.91,1.);}\n  else{alpha=shimmer;rgb=vec3(.75,.88,1.);}\n }\n alpha*=map.a;finalColor=vec4(rgb*alpha,alpha)*uColor;\n}"
+  },
+  "fidelity": {
+    "recovered": [
+      "Source meshes/textures/material parameter provenance",
+      "Pipe horizontal bend and original UV",
+      "Belt time/space expressions and pipe phase/density/channel selection"
+    ],
+    "approximate": [
+      "Conveyor polar corner phase, colors/alpha and fixed marker placement",
+      "Pipe glass opacity/color and fluid lighting/shimmer",
+      "Support center-height fit and layered fluid depth clamp"
+    ],
+    "unsupported": [
+      "Moving partial-fill front",
+      "Splash",
+      "SceneColor refraction",
+      "Original runtime placement/height/spacing and instance state"
+    ],
+    "completeness": "These are fidelity/scope gaps, not missing ZIP files. Contract completeness does not mean complete reproduction of the original game renderer."
+  }
+}
