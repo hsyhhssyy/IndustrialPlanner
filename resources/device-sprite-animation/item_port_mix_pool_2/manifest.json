@@ -1,0 +1,1200 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 1024,
+  "frameHeight": 896,
+  "fps": 30,
+  "pageRows": 4,
+  "pageColumns": 3,
+  "sources": {
+    "close_000": {
+      "file": "close_000.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "close_001": {
+      "file": "close_001.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "close_002": {
+      "file": "close_002.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "close_003": {
+      "file": "close_003.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "close_004": {
+      "file": "close_004.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "close_005": {
+      "file": "close_005.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "close_006": {
+      "file": "close_006.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "close_007": {
+      "file": "close_007.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "close_008": {
+      "file": "close_008.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "close_009": {
+      "file": "close_009.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "close_010": {
+      "file": "close_010.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "close_011": {
+      "file": "close_011.webp",
+      "rows": 3,
+      "columns": 4,
+      "frameCount": 10,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        66
+      ]
+    },
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 2,
+      "frameCount": 2,
+      "frameDurationsMs": [
+        33,
+        34
+      ]
+    },
+    "open_000": {
+      "file": "open_000.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_001": {
+      "file": "open_001.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_002": {
+      "file": "open_002.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_003": {
+      "file": "open_003.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_004": {
+      "file": "open_004.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_005": {
+      "file": "open_005.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_006": {
+      "file": "open_006.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_007": {
+      "file": "open_007.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_008": {
+      "file": "open_008.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_009": {
+      "file": "open_009.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_010": {
+      "file": "open_010.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_011": {
+      "file": "open_011.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_012": {
+      "file": "open_012.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_013": {
+      "file": "open_013.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_014": {
+      "file": "open_014.webp",
+      "rows": 3,
+      "columns": 4,
+      "frameCount": 11,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_001": {
+      "file": "open_idle_001.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_idle_002": {
+      "file": "open_idle_002.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_idle_003": {
+      "file": "open_idle_003.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_004": {
+      "file": "open_idle_004.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_idle_005": {
+      "file": "open_idle_005.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_idle_006": {
+      "file": "open_idle_006.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_007": {
+      "file": "open_idle_007.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_idle_008": {
+      "file": "open_idle_008.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_idle_009": {
+      "file": "open_idle_009.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_010": {
+      "file": "open_idle_010.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_idle_011": {
+      "file": "open_idle_011.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ]
+    },
+    "open_idle_012": {
+      "file": "open_idle_012.webp",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
+      ]
+    },
+    "open_idle_013": {
+      "file": "open_idle_013.webp",
+      "rows": 1,
+      "columns": 3,
+      "frameCount": 3,
+      "frameDurationsMs": [
+        34,
+        33,
+        33
+      ]
+    }
+  },
+  "clips": {
+    "open": [
+      {
+        "source": "open_000",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_001",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_002",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_003",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_004",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_005",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_006",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_007",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_008",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_009",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_010",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_011",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_012",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_013",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_014",
+        "startFrame": 0,
+        "frameCount": 11
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_004",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_005",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_006",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_007",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_008",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_009",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_010",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_011",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_012",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "open_idle_013",
+        "startFrame": 0,
+        "frameCount": 3
+      }
+    ],
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_001",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_002",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_003",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_004",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_005",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_006",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_007",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_008",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_009",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_010",
+        "startFrame": 0,
+        "frameCount": 16
+      },
+      {
+        "source": "close_011",
+        "startFrame": 0,
+        "frameCount": 10
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ]
+  }
+}

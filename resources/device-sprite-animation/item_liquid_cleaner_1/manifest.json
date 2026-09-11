@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 384,
+  "frameHeight": 384,
+  "fps": 30,
+  "pageRows": 10,
+  "pageColumns": 10,
+  "sources": {
+    "close_000": {
+      "file": "close_000.webp",
+      "rows": 2,
+      "columns": 10,
+      "frameCount": 16,
+      "frameDurationsMs": [
+        33,
+        67,
+        33,
+        34,
+        33,
+        1133,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        67
+      ]
+    },
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 2,
+      "frameCount": 2,
+      "frameDurationsMs": [
+        33,
+        34
+      ]
+    },
+    "open_000": {
+      "file": "open_000.webp",
+      "rows": 5,
+      "columns": 10,
+      "frameCount": 47,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        133,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ]
+    },
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 1,
+      "columns": 2,
+      "frameCount": 2,
+      "frameDurationsMs": [
+        33,
+        67
+      ]
+    }
+  },
+  "clips": {
+    "open": [
+      {
+        "source": "open_000",
+        "startFrame": 0,
+        "frameCount": 47
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 16
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ]
+  }
+}

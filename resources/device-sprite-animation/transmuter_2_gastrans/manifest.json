@@ -12,18 +12,17 @@
       "columns": 2,
       "frameCount": 2,
       "frameDurationsMs": [
-        30,
-        40
+        33,
+        34
       ]
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
       "rows": 1,
-      "columns": 2,
-      "frameCount": 2,
+      "columns": 1,
+      "frameCount": 1,
       "frameDurationsMs": [
-        30,
-        40
+        67
       ]
     }
   },
@@ -33,37 +32,33 @@
         "source": "open_idle_000",
         "startFrame": 0,
         "frameCount": 1
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 1,
-        "frameCount": 1
       }
     ],
     "open_idle": [
       {
         "source": "open_idle_000",
-        "startFrame": 1,
-        "frameCount": 1
+        "startFrame": 0,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          67
+        ]
       }
     ],
     "close": [
       {
         "source": "close_idle_000",
         "startFrame": 0,
-        "frameCount": 1
-      },
-      {
-        "source": "close_idle_000",
-        "startFrame": 1,
-        "frameCount": 1
+        "frameCount": 2
       }
     ],
     "close_idle": [
       {
         "source": "close_idle_000",
         "startFrame": 1,
-        "frameCount": 1
+        "frameCount": 1,
+        "frameDurationsMs": [
+          34
+        ]
       }
     ]
   }

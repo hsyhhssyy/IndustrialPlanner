@@ -9,11 +9,10 @@
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 2,
-      "frameCount": 2,
+      "columns": 1,
+      "frameCount": 1,
       "frameDurationsMs": [
-        30,
-        40
+        67
       ]
     },
     "open_idle_000": {
@@ -22,46 +21,46 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        360,
-        40,
-        30,
-        30,
-        40
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        200,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ]
     },
     "open_idle_001": {
@@ -70,46 +69,46 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        200,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ]
     },
     "open_idle_002": {
@@ -118,46 +117,46 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        1340,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        60,
-        40,
-        60,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30
+        33,
+        34,
+        33,
+        33,
+        100,
+        67,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        100,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ]
     },
     "open_idle_003": {
@@ -166,46 +165,46 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        60,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        333,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        1333,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
       ]
     },
     "open_idle_004": {
@@ -214,111 +213,93 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
-        30,
-        30,
-        140,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        200,
-        40
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        133,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ]
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
       "rows": 8,
       "columns": 5,
-      "frameCount": 40,
+      "frameCount": 39,
       "frameDurationsMs": [
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        200,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40
-      ]
-    },
-    "open_idle_006": {
-      "file": "open_idle_006.webp",
-      "rows": 2,
-      "columns": 5,
-      "frameCount": 9,
-      "frameDurationsMs": [
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        70
+        33,
+        367,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ]
     }
   },
@@ -329,7 +310,7 @@
         "startFrame": 0,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -337,7 +318,7 @@
         "startFrame": 1,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -345,7 +326,7 @@
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -353,7 +334,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -361,7 +342,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -369,7 +350,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -377,7 +358,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -385,7 +366,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -393,7 +374,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -401,7 +382,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -409,7 +390,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -417,7 +398,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -425,7 +406,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -433,7 +414,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -441,7 +422,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -449,7 +430,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -457,7 +438,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -465,7 +446,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -473,7 +454,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -481,7 +462,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -489,7 +470,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -497,7 +478,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -505,7 +486,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -513,7 +494,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -521,7 +502,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -529,7 +510,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -537,7 +518,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -545,7 +526,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -553,7 +534,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -561,57 +542,57 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
+          200
         ]
       }
     ],
     "open_idle": [
       {
         "source": "open_idle_000",
+        "startFrame": 30,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 31,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 32,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          34
+        ]
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 33,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_000",
+        "startFrame": 34,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_000",
         "startFrame": 35,
         "frameCount": 1,
         "frameDurationsMs": [
-          360.0
+          34
         ]
       },
       {
@@ -619,7 +600,7 @@
         "startFrame": 36,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -627,7 +608,7 @@
         "startFrame": 37,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -635,7 +616,7 @@
         "startFrame": 38,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -643,7 +624,7 @@
         "startFrame": 39,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -651,7 +632,7 @@
         "startFrame": 0,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -659,7 +640,7 @@
         "startFrame": 1,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -667,7 +648,7 @@
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -675,7 +656,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -683,7 +664,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -691,7 +672,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -699,7 +680,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -707,7 +688,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -715,7 +696,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -723,7 +704,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          200
         ]
       },
       {
@@ -731,7 +712,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -739,7 +720,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -747,7 +728,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -755,7 +736,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -763,7 +744,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -771,7 +752,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -779,7 +760,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -787,7 +768,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -795,7 +776,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -803,7 +784,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -811,7 +792,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -819,7 +800,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -827,7 +808,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -835,7 +816,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -843,7 +824,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -851,7 +832,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -859,7 +840,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -867,7 +848,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -875,7 +856,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -883,7 +864,7 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -891,7 +872,7 @@
         "startFrame": 30,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -899,7 +880,7 @@
         "startFrame": 31,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -907,7 +888,7 @@
         "startFrame": 32,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -915,7 +896,7 @@
         "startFrame": 33,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -923,7 +904,7 @@
         "startFrame": 34,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -931,7 +912,7 @@
         "startFrame": 35,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -939,7 +920,7 @@
         "startFrame": 36,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -947,7 +928,7 @@
         "startFrame": 37,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -955,7 +936,7 @@
         "startFrame": 38,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -963,7 +944,7 @@
         "startFrame": 39,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -971,7 +952,7 @@
         "startFrame": 0,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -979,7 +960,7 @@
         "startFrame": 1,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -987,7 +968,7 @@
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -995,7 +976,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1003,7 +984,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          100
         ]
       },
       {
@@ -1011,7 +992,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          67
         ]
       },
       {
@@ -1019,7 +1000,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1027,7 +1008,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1035,7 +1016,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1043,7 +1024,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1051,7 +1032,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1059,7 +1040,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1067,7 +1048,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1075,7 +1056,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          1340.0
+          34
         ]
       },
       {
@@ -1083,7 +1064,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1091,7 +1072,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1099,7 +1080,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1107,7 +1088,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1115,7 +1096,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1123,7 +1104,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1131,7 +1112,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1139,7 +1120,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1147,7 +1128,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1155,7 +1136,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1163,7 +1144,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1171,7 +1152,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1179,7 +1160,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          60.0
+          33
         ]
       },
       {
@@ -1187,7 +1168,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1195,7 +1176,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          60.0
+          34
         ]
       },
       {
@@ -1203,7 +1184,7 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1211,7 +1192,7 @@
         "startFrame": 30,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          100
         ]
       },
       {
@@ -1219,7 +1200,7 @@
         "startFrame": 31,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1227,7 +1208,7 @@
         "startFrame": 32,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1235,7 +1216,7 @@
         "startFrame": 33,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1243,7 +1224,7 @@
         "startFrame": 34,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1251,7 +1232,7 @@
         "startFrame": 35,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1259,7 +1240,7 @@
         "startFrame": 36,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1267,7 +1248,7 @@
         "startFrame": 37,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1275,7 +1256,7 @@
         "startFrame": 38,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1283,7 +1264,7 @@
         "startFrame": 39,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1291,7 +1272,7 @@
         "startFrame": 0,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1299,7 +1280,7 @@
         "startFrame": 1,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1307,7 +1288,7 @@
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1315,7 +1296,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1323,7 +1304,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1331,7 +1312,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1339,7 +1320,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1347,7 +1328,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1355,7 +1336,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1363,7 +1344,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1371,7 +1352,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1379,7 +1360,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1387,7 +1368,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1395,7 +1376,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1403,7 +1384,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          333
         ]
       },
       {
@@ -1411,7 +1392,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1419,7 +1400,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1427,7 +1408,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          60.0
+          33
         ]
       },
       {
@@ -1435,7 +1416,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1443,7 +1424,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1451,7 +1432,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1459,7 +1440,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1467,7 +1448,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1475,7 +1456,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1483,7 +1464,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1491,7 +1472,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1499,7 +1480,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          1333
         ]
       },
       {
@@ -1507,7 +1488,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1515,7 +1496,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1523,7 +1504,7 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1531,7 +1512,7 @@
         "startFrame": 30,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1539,7 +1520,7 @@
         "startFrame": 31,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1547,97 +1528,89 @@
         "startFrame": 32,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          70.0
+          33
         ]
       }
     ],
     "close": [
       {
+        "source": "open_idle_003",
+        "startFrame": 33,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 34,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          34
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 35,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 36,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 37,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          34
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 38,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 39,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
+        "source": "open_idle_004",
+        "startFrame": 0,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          34
+        ]
+      },
+      {
+        "source": "open_idle_004",
+        "startFrame": 1,
+        "frameCount": 1,
+        "frameDurationsMs": [
+          33
+        ]
+      },
+      {
         "source": "open_idle_004",
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          70.0
+          33
         ]
       },
       {
@@ -1645,7 +1618,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1653,7 +1626,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1661,7 +1634,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1669,7 +1642,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1677,7 +1650,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1685,7 +1658,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1693,7 +1666,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1701,7 +1674,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1709,7 +1682,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1717,7 +1690,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1725,7 +1698,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1733,7 +1706,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1741,7 +1714,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1749,7 +1722,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          133
         ]
       },
       {
@@ -1757,7 +1730,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1765,7 +1738,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1773,7 +1746,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1781,7 +1754,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1789,7 +1762,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1797,7 +1770,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1805,7 +1778,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1813,7 +1786,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1821,7 +1794,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1829,7 +1802,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1837,7 +1810,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1845,7 +1818,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1853,7 +1826,7 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1861,7 +1834,7 @@
         "startFrame": 30,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1869,7 +1842,7 @@
         "startFrame": 31,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1877,7 +1850,7 @@
         "startFrame": 32,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1885,7 +1858,7 @@
         "startFrame": 33,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1893,7 +1866,7 @@
         "startFrame": 34,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1901,7 +1874,7 @@
         "startFrame": 35,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1909,7 +1882,7 @@
         "startFrame": 36,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1917,7 +1890,7 @@
         "startFrame": 37,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1925,7 +1898,7 @@
         "startFrame": 38,
         "frameCount": 1,
         "frameDurationsMs": [
-          200.0
+          33
         ]
       },
       {
@@ -1933,7 +1906,7 @@
         "startFrame": 39,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          34
         ]
       },
       {
@@ -1941,7 +1914,7 @@
         "startFrame": 0,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1949,7 +1922,7 @@
         "startFrame": 1,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          367
         ]
       },
       {
@@ -1957,7 +1930,7 @@
         "startFrame": 2,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1965,7 +1938,7 @@
         "startFrame": 3,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1973,7 +1946,7 @@
         "startFrame": 4,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -1981,7 +1954,7 @@
         "startFrame": 5,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -1989,7 +1962,7 @@
         "startFrame": 6,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -1997,7 +1970,7 @@
         "startFrame": 7,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2005,7 +1978,7 @@
         "startFrame": 8,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2013,7 +1986,7 @@
         "startFrame": 9,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2021,7 +1994,7 @@
         "startFrame": 10,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2029,7 +2002,7 @@
         "startFrame": 11,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2037,7 +2010,7 @@
         "startFrame": 12,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2045,7 +2018,7 @@
         "startFrame": 13,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2053,7 +2026,7 @@
         "startFrame": 14,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2061,7 +2034,7 @@
         "startFrame": 15,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2069,7 +2042,7 @@
         "startFrame": 16,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2077,7 +2050,7 @@
         "startFrame": 17,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2085,7 +2058,7 @@
         "startFrame": 18,
         "frameCount": 1,
         "frameDurationsMs": [
-          200.0
+          33
         ]
       },
       {
@@ -2093,7 +2066,7 @@
         "startFrame": 19,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2101,7 +2074,7 @@
         "startFrame": 20,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2109,7 +2082,7 @@
         "startFrame": 21,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2117,7 +2090,7 @@
         "startFrame": 22,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2125,7 +2098,7 @@
         "startFrame": 23,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2133,7 +2106,7 @@
         "startFrame": 24,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2141,7 +2114,7 @@
         "startFrame": 25,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2149,7 +2122,7 @@
         "startFrame": 26,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2157,7 +2130,7 @@
         "startFrame": 27,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2165,7 +2138,7 @@
         "startFrame": 28,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2173,7 +2146,7 @@
         "startFrame": 29,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2181,7 +2154,7 @@
         "startFrame": 30,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2189,7 +2162,7 @@
         "startFrame": 31,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2197,7 +2170,7 @@
         "startFrame": 32,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2205,7 +2178,7 @@
         "startFrame": 33,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2213,7 +2186,7 @@
         "startFrame": 34,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2221,7 +2194,7 @@
         "startFrame": 35,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          33
         ]
       },
       {
@@ -2229,7 +2202,7 @@
         "startFrame": 36,
         "frameCount": 1,
         "frameDurationsMs": [
-          40.0
+          33
         ]
       },
       {
@@ -2237,7 +2210,7 @@
         "startFrame": 37,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
+          34
         ]
       },
       {
@@ -2245,87 +2218,7 @@
         "startFrame": 38,
         "frameCount": 1,
         "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          40.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          30.0
-        ]
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          70.0
+          33
         ]
       }
     ],
@@ -2333,11 +2226,6 @@
       {
         "source": "close_idle_000",
         "startFrame": 0,
-        "frameCount": 1
-      },
-      {
-        "source": "close_idle_000",
-        "startFrame": 1,
         "frameCount": 1
       }
     ]

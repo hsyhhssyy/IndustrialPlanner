@@ -7,23 +7,22 @@
     "open": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
-        30,
-        40
+        67
       ],
-      "frameCount": 2,
+      "frameCount": 1,
       "pages": [
         {
           "file": "open-0.webp",
           "rows": 1,
-          "columns": 2,
-          "frameCount": 2
+          "columns": 1,
+          "frameCount": 1
         }
       ]
     },
     "open_idle": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
-        40
+        67
       ],
       "frameCount": 1,
       "pages": [
@@ -38,8 +37,8 @@
     "close": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
-        30,
-        40
+        33,
+        34
       ],
       "frameCount": 2,
       "pages": [
@@ -54,7 +53,7 @@
     "close_idle": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
-        40
+        34
       ],
       "frameCount": 1,
       "pages": [

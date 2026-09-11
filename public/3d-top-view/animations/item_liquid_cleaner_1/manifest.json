@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 384,
+  "frameHeight": 384,
+  "maskFile": "mask.webp",
+  "clips": {
+    "open": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        133,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ],
+      "frameCount": 47,
+      "pages": [
+        {
+          "file": "open-0.webp",
+          "rows": 5,
+          "columns": 10,
+          "frameCount": 47
+        }
+      ]
+    },
+    "open_idle": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        67
+      ],
+      "frameCount": 2,
+      "pages": [
+        {
+          "file": "open_idle-0.webp",
+          "rows": 1,
+          "columns": 2,
+          "frameCount": 2
+        }
+      ]
+    },
+    "close": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        67,
+        33,
+        34,
+        33,
+        1133,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        67
+      ],
+      "frameCount": 16,
+      "pages": [
+        {
+          "file": "close-0.webp",
+          "rows": 2,
+          "columns": 10,
+          "frameCount": 16
+        }
+      ]
+    },
+    "close_idle": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        34
+      ],
+      "frameCount": 2,
+      "pages": [
+        {
+          "file": "close_idle-0.webp",
+          "rows": 1,
+          "columns": 2,
+          "frameCount": 2
+        }
+      ]
+    }
+  }
+}
