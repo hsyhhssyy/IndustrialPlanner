@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 6,
+    "height": 10
+  },
+  "framePixels": {
+    "width": 768,
+    "height": 1280
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 1,
+    "top": 1,
+    "width": 4,
+    "height": 8,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 3.0,
+    "y": 5.0
+  },
+  "pivotPixels": {
+    "x": 384.0,
+    "y": 640.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      768,
+      1280
+    ],
+    "resultFramePixels": [
+      768,
+      1280
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      0,
+      0,
+      768,
+      1280
+    ]
+  },
+  "solidPorts": [],
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 1,
+    "height": 1
+  },
+  "framePixels": {
+    "width": 128,
+    "height": 128
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "pivotPixels": {
+    "x": 64,
+    "y": 64
+  },
+  "pivotCells": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 1,
+    "height": 1
+  },
+  "coordinateSystem": "Layered logistics canonical top-entry local coordinates; +X right, +Z down"
+}

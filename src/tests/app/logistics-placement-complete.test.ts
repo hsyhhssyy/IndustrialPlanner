@@ -18,6 +18,7 @@ import {
 } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { rotateGridRotation } from "@/shared/geometry/grid";
 
 /**
  * 物流布设模式完全测试集
@@ -1042,9 +1043,23 @@ function resetCanvasFromUserBlueprint(
   });
   editorHost.internalDocument.setSnapshot(emptyDocument);
 
+  const entities = structuredClone(blueprint.entities);
+  // AI-CORRECTION 2026-09-11: these user-provided schema-3 fixtures encode
+  // the pre-AKEData-1.5.3 registry orientation. Translate only affected
+  // device entities so their recorded world connections remain unchanged;
+  // belt and pipe fixtures remain byte-for-byte equivalent.
+  const correctedOrientationIds = new Set([
+    "cmpt_mc_1",
+    "liquid_furnance_1",
+  ]);
+  for (const entity of Object.values(entities)) {
+    if (correctedOrientationIds.has(entity.definitionId)) {
+      entity.rotation = rotateGridRotation(entity.rotation, 180);
+    }
+  }
   const blueprintDocument: WorldDocument = {
     ...emptyDocument,
-    entities: structuredClone(blueprint.entities),
+    entities,
     entityOrder: [...blueprint.entityOrder],
     slotLinks: structuredClone(blueprint.slotLinks),
     documentSettings: {

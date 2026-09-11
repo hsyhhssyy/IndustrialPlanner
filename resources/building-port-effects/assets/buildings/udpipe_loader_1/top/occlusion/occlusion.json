@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "building": "udpipe_loader_1",
+  "view": "top",
+  "spatial": "../spatial.json",
+  "fields": [
+    {
+      "name": "bind_pose",
+      "file": "height_bind_pose.webp",
+      "sourcePose": "bind_pose",
+      "poseMetadata": {},
+      "sourceIdentity": {
+        "model": "A_udpipeloader+1_001_01_variant_dynamic_lod0",
+        "source": "current-vfs-mesh-data",
+        "baseModel": "A_pedestal+1_001_03x03_04a_dynamic_lod0_2"
+      },
+      "alphaTestAudit": {
+        "status": "current-vfs-meshdata",
+        "policy": "opaque mesh-data triangles; transparent FX are not part of source model geometry"
+      },
+      "geometryProjection": "frontmost opaque evaluated triangle; max sourceY per pixel",
+      "encoding": {
+        "format": "lossless-webp",
+        "channels": "RGBA",
+        "R": "uint16 height high byte",
+        "G": "uint16 height low byte",
+        "B": 0,
+        "A": "255 valid projected surface, 0 empty",
+        "sampling": "nearest",
+        "colorSpace": "linear-data"
+      },
+      "heightMin": -1.3662426,
+      "heightMax": 3.5943804,
+      "heightUnits": "source-world-units",
+      "coordinateSpace": "evaluated source-space scene Y; base included",
+      "worldToPixel": {
+        "x": "pixelX = pivotPixels.x + (sourceX - cameraCenterSource.x) * pixelsPerCell.x",
+        "y": "pixelY = pivotPixels.y + (sourceZ - cameraCenterSource.z) * pixelsPerCell.y",
+        "sample": "pixel-center; source top view +X right, +Z down",
+        "pivotPixels": {
+          "x": 256.0,
+          "y": 192.0
+        },
+        "cameraCenterSource": {
+          "x": 0.0,
+          "z": 0.0
+        },
+        "pixelsPerCell": {
+          "x": 128.0,
+          "y": 128.0
+        }
+      },
+      "validCoverage": {
+        "pixels": 85842,
+        "fraction": 0.436614990234375,
+        "boundsPixels": [
+          71,
+          7,
+          449,
+          377
+        ]
+      },
+      "triangleCount": 2034,
+      "clippedTriangles": 0,
+      "fullyOutsideTriangles": 0,
+      "excludedObjects": []
+    }
+  ],
+  "staticPose": "bind_pose",
+  "stateMapping": {
+    "default": "bind_pose"
+  },
+  "epsilon": {
+    "units": "source-world-units",
+    "value": 0.001,
+    "rule": "effectWorldY + epsilon < sceneWorldY rejects effect pixel"
+  }
+}

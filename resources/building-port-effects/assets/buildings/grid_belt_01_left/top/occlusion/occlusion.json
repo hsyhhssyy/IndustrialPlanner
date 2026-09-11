@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "building": "grid_belt_01_left",
+  "view": "top",
+  "spatial": "../spatial.json",
+  "fields": [
+    {
+      "name": "left",
+      "file": "height_left.webp",
+      "sourcePose": "left",
+      "poseMetadata": {
+        "static": true
+      },
+      "sourceIdentity": {
+        "model": "A_P_grid_belt_01_left_dynamic_lod0",
+        "cab": "CAB-7c70d37bb4a298647d318fa596f9c3de",
+        "pathId": 3716734759292577746
+      },
+      "alphaTestAudit": {
+        "status": "opaque-logistics-surface",
+        "policy": "Only conveyor surface or solid support geometry; transparent pipe glass/fluid excluded"
+      },
+      "geometryProjection": "frontmost opaque evaluated triangle; max sourceY per pixel",
+      "encoding": {
+        "format": "lossless-webp",
+        "channels": "RGBA",
+        "R": "uint16 height high byte",
+        "G": "uint16 height low byte",
+        "B": 0,
+        "A": "255 valid projected surface, 0 empty",
+        "sampling": "nearest",
+        "colorSpace": "linear-data"
+      },
+      "heightMin": -0.5,
+      "heightMax": 0.5,
+      "heightUnits": "source-world-units",
+      "coordinateSpace": "evaluated source-space scene Y; base included",
+      "worldToPixel": {
+        "x": "pixelX = pivotPixels.x + (sourceX - cameraCenterSource.x) * pixelsPerCell.x",
+        "y": "pixelY = pivotPixels.y + (sourceZ - cameraCenterSource.z) * pixelsPerCell.y",
+        "sample": "pixel-center; source top view +X right, +Z down",
+        "pivotPixels": {
+          "x": 64.0,
+          "y": 64.0
+        },
+        "cameraCenterSource": {
+          "x": 0.0,
+          "z": 0.0
+        },
+        "pixelsPerCell": {
+          "x": 128.0,
+          "y": 128.0
+        }
+      },
+      "validCoverage": {
+        "pixels": 10276,
+        "fraction": 0.627197265625,
+        "boundsPixels": [
+          0,
+          0,
+          115,
+          115
+        ]
+      },
+      "triangleCount": 33,
+      "clippedTriangles": 0,
+      "fullyOutsideTriangles": 0,
+      "excludedObjects": [],
+      "sourceAssembly": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "yawDegrees": 0,
+        "canonicalSourceZReflection": true
+      }
+    }
+  ],
+  "staticPose": "left",
+  "stateMapping": {
+    "default": "left"
+  },
+  "epsilon": {
+    "units": "source-world-units",
+    "value": 0.001,
+    "rule": "effectWorldY + epsilon < sceneWorldY rejects effect pixel"
+  }
+}

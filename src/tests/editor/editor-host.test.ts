@@ -70,7 +70,9 @@ function createOuterRingPumpBlueprint() {
     initialGridPoint: { x: 0, y: 20 },
     entities: {
       pump: createTestEntity("pump", "water_pump_1", -10, 20, 180),
-      storage: createTestEntity("storage", "storager_1", 0, 20),
+      // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 world-facing
+      // storage port in this historical placement fixture.
+      storage: createTestEntity("storage", "storager_1", 0, 20, 180),
     },
     entityOrder: ["pump", "storage"],
     slotLinks: [{
@@ -1384,7 +1386,7 @@ describe("createEditorHost", () => {
         x: -10,
         y: 39,
       },
-      rotation: 180,
+      rotation: 0,
       config: {},
     });
     expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toBeNull();
@@ -1665,12 +1667,12 @@ describe("createEditorHost", () => {
     });
 
     expect(editorHost.queries.getEntityById(pumpDraftId ?? "")).toMatchObject({
-      position: { x: -10, y: 20 },
+      position: { x: -8, y: 20 },
       rotation: 180,
     });
     expect(editorHost.queries.getEntityById(storageDraftId ?? "")).toMatchObject({
-      position: { x: 0, y: 20 },
-      rotation: 0,
+      position: { x: 2, y: 20 },
+      rotation: 180,
     });
   });
 

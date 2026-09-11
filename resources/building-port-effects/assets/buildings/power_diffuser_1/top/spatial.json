@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "worldUnitsPerCell": 1.0,
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+  "canvasCells": {
+    "width": 2,
+    "height": 2
+  },
+  "canvasSourceBounds": {
+    "x": [
+      -1.0,
+      1.0
+    ],
+    "z": [
+      -1.0,
+      1.0
+    ]
+  },
+  "framePixels": {
+    "width": 256,
+    "height": 256
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 2,
+    "height": 2,
+    "source": "FactoryBuildingTable.power_diffuser_1.range"
+  },
+  "footprintRectPixels": {
+    "left": 0,
+    "top": 0,
+    "right": 256,
+    "bottom": 256
+  },
+  "pivotCells": {
+    "x": 1.0,
+    "y": 1.0
+  },
+  "pivotPixels": {
+    "x": 128,
+    "y": 128
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "unionVisualBoundsSource": {
+    "xMin": -0.9296875,
+    "xMax": 0.921875,
+    "zMin": -0.921875,
+    "zMax": 0.921875
+  },
+  "unionGeometryBoundsSource": {
+    "xMin": -1.1318912506103516,
+    "xMax": 0.9176396131515503,
+    "zMin": -0.9174991250038147,
+    "zMax": 1.1361498832702637,
+    "source": "union of all mapped VAT rows plus selected pedestal"
+  },
+  "marginsCells": {
+    "left": 0,
+    "right": 0,
+    "top": 0,
+    "bottom": 0
+  },
+  "footprintOffsetCells": {
+    "x": 0,
+    "y": 0
+  },
+  "stableFraming": true,
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      256,
+      256
+    ],
+    "resultFramePixels": [
+      256,
+      256
+    ],
+    "resized": false
+  }
+}

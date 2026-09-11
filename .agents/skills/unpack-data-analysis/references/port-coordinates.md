@@ -34,6 +34,8 @@
 
 ## 两套坐标
 
+<!-- AI-CORRECTION 2026-09-11: 原文曾把游戏 x 轴镜像并直接使用 z 轴，导致与游戏实测 transmuter_1 及 raw5x5 端口相差 180°；以下映射已按独立实测证据订正。 -->
+
 ### 项目注册表二维坐标
 
 项目 `rotation=0` 时：
@@ -47,21 +49,21 @@
 
 ### 解包数据的全局归一化
 
-以已确认和解包数据一致的气液转换机 `transmuter_1_liquidtrans` 为校准锚点，`FactoryBuildingTable` 中全部设备统一使用：
+以用户在游戏中放置 `transmuter_1` 的独立实测为校准证据，`FactoryBuildingTable` 中全部设备统一使用：
 
 ```text
-localCellX = range.width - 1 - position.x
-localCellY = position.z
+localCellX = position.x
+localCellY = range.depth - 1 - position.z
 ```
 
-因此原始 X 轴与项目横轴方向相反，原始 Z 轴与项目纵轴方向相同：
+实测记录：raw5x5 输入 `(x,z)=(0,1),(0,3),(2,4)`、输出 `(4,1),(4,3)`，游戏默认朝向为左侧两个输入、上侧第三输入、右侧两个输出、下侧空；因此项目坐标为 `X=x,Y=depth-1-z`。原始 X 轴与项目横轴同向，原始 Z 轴与项目纵轴相反：
 
 | 解包坐标 | registry 坐标 / 方位 |
 | --- | --- |
-| `position.x = 0` | E（东） |
-| `position.x = width - 1` | W（西） |
-| `position.z = 0` | N（北） |
-| `position.z = depth - 1` | S（南） |
+| `position.x = 0` | W（西） |
+| `position.x = width - 1` | E（东） |
+| `position.z = 0` | S（南） |
+| `position.z = depth - 1` | N（北） |
 
 该映射是 `FactoryBuildingTable` 到 registry 的项目级坐标约定，不按设备类型重新校准。设备精灵可能存在预处理旋转，但这只影响修改后的视觉验收，不改变逻辑端口对账结论。
 
@@ -71,10 +73,10 @@ localCellY = position.z
 
 | 设备 | 解包端口 | 注册表端口 | 结论 |
 | --- | --- | --- | --- |
-| 精炼炉液体输入 | `x=0, z=1, isOutput=0` | `(2,1), EAST, input` | 一致 |
-| 精炼炉液体输出 | `x=2, z=1, isOutput=1` | `(0,1), WEST, output` | 一致 |
-| 种植机液体输入 | `x=0, z=2, isOutput=0` | `(4,2), EAST, input` | 一致 |
-| 灌装机液体输入 | `x=0, z=2, isOutput=0` | `(5,2), EAST, input` | 一致 |
+| 精炼炉液体输入 | `x=0, z=1, isOutput=0` | `(2,1), EAST, input` | 相差 180°；raw 归一化为 `(0,1)` |
+| 精炼炉液体输出 | `x=2, z=1, isOutput=1` | `(0,1), WEST, output` | 相差 180°；raw 归一化为 `(2,1)` |
+| 种植机液体输入 | `x=0, z=2, isOutput=0` | `(4,2), EAST, input` | 需按当前 raw 重新审计 |
+| 灌装机液体输入 | `x=0, z=2, isOutput=0` | `(5,2), EAST, input` | 需按当前 raw 重新审计 |
 
 精炼炉输入和输出管口在解包数据中都是 `rotation.y=90`，转换后却分别位于 E 和 W。这证明 `rotation.y=90` 不能脱离位置、角色和设备坐标基准解释为固定方位。
 
@@ -106,5 +108,7 @@ localCellY = position.z
 ## 既有错误结论
 
 “非默认变体应统一反转 W↔E”的结论无效，基于该结论生成的清单不能作为修改 registry 的依据。
+
+“`localCellX = width - 1 - position.x`、`localCellY = position.z`”的旧全局映射同样无效；它与 transmuter_1 的独立游戏实测相差 180°，不得继续写入脚本、审计报告或迁移依据。
 
 “解包与 registry 不一致只表示未校准，必须先看精灵才能判断 registry 是否错误”的结论同样无效。全局坐标映射已经由校准锚点确定；唯一旋转差异本身就足以确定 registry 需要修改，精灵与 renderer 属于后续验收层。

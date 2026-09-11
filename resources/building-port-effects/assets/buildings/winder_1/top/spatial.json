@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 6,
+    "height": 4
+  },
+  "framePixels": {
+    "width": 768,
+    "height": 512
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 6,
+    "height": 4,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 3.0,
+    "y": 2.0
+  },
+  "pivotPixels": {
+    "x": 384.0,
+    "y": 256.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      1024,
+      768
+    ],
+    "resultFramePixels": [
+      768,
+      512
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      128,
+      128,
+      896,
+      640
+    ]
+  },
+  "solidPorts": [
+    {
+      "kind": "input",
+      "index": 0,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 64.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 64.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 1,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 192.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 192.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 2,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 320.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 320.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 3,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 448.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 448.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 4,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 576.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 576.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 5,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 704.0,
+        "y": 448.0
+      },
+      "indicatorCenterPixels": {
+        "x": 704.0,
+        "y": 473.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 0,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 64.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 64.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 1,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 192.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 192.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 2,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 320.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 320.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 3,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 448.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 448.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 4,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 576.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 576.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "output",
+      "index": 5,
+      "stripRole": "yellow-output",
+      "cellCenterPixels": {
+        "x": 704.0,
+        "y": 64.0
+      },
+      "indicatorCenterPixels": {
+        "x": 704.0,
+        "y": 38.400000000000006
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    }
+  ],
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  }
+}

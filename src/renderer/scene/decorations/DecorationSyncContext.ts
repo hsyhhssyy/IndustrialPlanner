@@ -33,6 +33,8 @@ export interface DecorationSyncContext {
   renderHost: RenderHost;
   theme: AppTheme;
   nowMs: number;
+  /** 已由高度特效接管的实际端口，加载完成后撤下旧虚影。 */
+  buildingEffectPortKeys?: ReadonlySet<string>;
   logisticsMaterials?: LogisticsMaterialFrameState;
   createLogisticsMaterialView?: (
     assets: Awaited<ReturnType<RenderHost["textureManager"]["acquireLogisticsDynamic"]>["ready"]>,

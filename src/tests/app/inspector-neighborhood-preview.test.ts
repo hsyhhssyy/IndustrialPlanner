@@ -180,6 +180,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       definitionId: selectedDefinition.id,
       x: 10,
       y: 20,
+      rotation: 180,
     });
     const document = createWorldDocument([selectedEntity]);
     const entityDefinitionMap = new Map([

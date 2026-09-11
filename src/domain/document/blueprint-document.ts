@@ -8,7 +8,8 @@ import type { RegionAnnotation } from "./region-annotation";
 
 // AI-CORRECTION 2026-08-19: schema 5 将资源泵的仓库代理配置迁移为真实手选配方或对应作弊设备。
 // AI-CORRECTION 2026-09-09: schema 6 新增可选来源的区域标记，普通蓝图仍保存空数组。
-export const BLUEPRINT_SCHEMA_VERSION = 6;
+// AI-CORRECTION 2026-09-11: schema 7 承载 AKEData 端口朝向兼容迁移；schema 6 文档必须先经过 6→7。
+export const BLUEPRINT_SCHEMA_VERSION = 7;
 
 export interface BlueprintDocument {
 	schemaVersion: number;

@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "resourceId": "v1.5/fx/P_fxfac_interactive_mixpool_orange_2502",
+  "source": {
+    "prefab": "P_fxfac_interactive_mixpool_orange_2502",
+    "sourceCab": "CAB-93b7ce01c47ee32594f6170756f12fc1",
+    "sourcePathId": 1538369131125267568,
+    "sameVersionVerified": true
+  },
+  "identity": {
+    "state": "static",
+    "color": "orange",
+    "direction": "ring",
+    "size": "mixpool",
+    "bend": "ring"
+  },
+  "geometry": {
+    "prefabTransformsBakedOnce": true,
+    "additionalPrefabTransformRequired": false,
+    "instancePlacementRequired": true,
+    "runtimePlacement": "resolved port position/yaw once",
+    "excludedGeometry": [
+      "sanjiao",
+      "disabled-long-arrow (arrowAlpha=0)"
+    ],
+    "includedNames": [
+      "ring_01"
+    ]
+  },
+  "projection": {
+    "imageOrigin": "top-left",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "pixelsPerCell": 128,
+    "pivotPixels": [
+      16,
+      54
+    ],
+    "cameraCenterSource": [
+      0.0,
+      0.0
+    ],
+    "heightOrigin": "source-Y=0 at baked anchor",
+    "worldRectLocal": {
+      "x": -0.125,
+      "z": -0.421875,
+      "width": 0.2421875,
+      "depth": 0.84375
+    },
+    "meshWorldRectLocal": {
+      "x": -0.11700021697899482,
+      "z": -0.42168294618128643,
+      "width": 0.224729797169466,
+      "depth": 0.8433658923625729
+    },
+    "localYRange": [
+      -0.4269392515203036,
+      0.426939221647068
+    ],
+    "heightMin": -0.4269392515203036,
+    "heightMax": 0.426939221647068,
+    "worldToPixel": {
+      "pivotPixels": [
+        16,
+        54
+      ],
+      "pixelsPerCell": 128,
+      "sourceAxes": {
+        "pixelX": "+sourceX",
+        "pixelY": "+sourceZ"
+      },
+      "cameraCenterSource": [
+        0.0,
+        0.0
+      ],
+      "heightOrigin": "source-Y=0 at baked anchor"
+    },
+    "cropRectSourcePixels": [
+      240,
+      202,
+      271,
+      310
+    ],
+    "resized": false
+  },
+  "motion": {
+    "fps": 0,
+    "sourceFrameCount": 1,
+    "sourceTimeRangeSeconds": [
+      0,
+      0
+    ],
+    "periodSeconds": null,
+    "loopFrameCount": 1,
+    "uvSpeeds": [],
+    "uvPeriodDerivation": "period=common cycle of nonzero authored visible-texture UV speeds",
+    "seamValidation": {
+      "status": "not-applicable"
+    },
+    "ringMotion": "unresolved; single-frame authored ring"
+  },
+  "playback": {
+    "mode": "hold",
+    "durationMs": 0,
+    "frameCount": 1,
+    "staticFrame": 0
+  },
+  "material": {
+    "viewTransform": "Standard",
+    "exposure": 0,
+    "alphaMode": "straight RGBA",
+    "arrowAlpha": 0.0,
+    "shaderStatus": "approximate; authored UV speeds and vertex alpha retained; Fresnel/soft-depth unresolved"
+  },
+  "heightTemplate": {
+    "file": "height.webp",
+    "encoding": "RG16-packed-R-high-G-low",
+    "B": 0,
+    "alpha": "binary occupancy (255 valid, 0 empty)",
+    "heightMin": -0.4269392515203036,
+    "heightMax": 0.426939221647068,
+    "heightOrigin": "source-Y=0 at baked anchor",
+    "validValue16": [
+      37919,
+      65534
+    ],
+    "inputAlphaPixels": 3345,
+    "aaSupportPixels": 213,
+    "aaSupportRadiusPixels": 1.41421356237,
+    "unprojectedAfterAaPixels": 0,
+    "losslessNumeric": true,
+    "alphaRoundtrip": true,
+    "staticApproximation": true,
+    "colorTrimmedNoHeight": {
+      "pixels": 0,
+      "maxAlpha": 0,
+      "maxDistancePixels": 0.0,
+      "reason": "none"
+    }
+  },
+  "spritesheet": "spritesheet.json",
+  "frames": [
+    {
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 31,
+      "height": 108,
+      "durationMs": 1000.0,
+      "timeSeconds": 0.0
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "worldUnitsPerCell": 1.0,
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 3,
+    "height": 3
+  },
+  "canvasSourceBounds": {
+    "x": [
+      -1.5,
+      1.5
+    ],
+    "z": [
+      -1.5,
+      1.5
+    ]
+  },
+  "framePixels": {
+    "width": 384,
+    "height": 384
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 1,
+    "top": 1,
+    "width": 1,
+    "height": 1,
+    "verticalRange": 4,
+    "source": "FactoryLiquidRouterTable.json.log_pipe_converger.range"
+  },
+  "footprintRectPixels": {
+    "left": 128,
+    "top": 128,
+    "right": 256,
+    "bottom": 256
+  },
+  "pivotCells": {
+    "x": 1.5,
+    "y": 1.5
+  },
+  "pivotPixels": {
+    "x": 192.0,
+    "y": 192.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "unionVisualBoundsSource": {
+    "xMin": -0.4999767541885376,
+    "xMax": 0.5001544952392578,
+    "zMin": -0.5000677108764648,
+    "zMax": 0.5001086592674255
+  },
+  "boundsPolicy": "standalone-static-logistics-mesh",
+  "placementRule": {
+    "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+    "spriteCanvasLeft": "gridX - 1",
+    "spriteCanvasTop": "gridY - 1"
+  },
+  "verticalTransform": {
+    "operation": "flip-top-bottom",
+    "sourceImageAxisY": "-sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "resized": false,
+    "source": "Existing approved RGBA frames; no new scene render"
+  }
+}

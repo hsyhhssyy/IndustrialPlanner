@@ -990,6 +990,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 本设备 slot.lock=null（未锁定），用户可通过 storageManagement 面板锁定。
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "storager_1",
     nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
@@ -1007,13 +1008,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -1207,6 +1208,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 配方：immediate-consume（进度 0% 时立即扣除原料）
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "mix_pool_1",
     nameKey: "registry.entity.mix_pool_1.name",
     spriteId: "item_port_mix_pool_1",
@@ -1245,31 +1247,31 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
+        [1, 3].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [1, 3].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_output_a",
         FLUID_PIPE_PORT,
         "output",
-        [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+        [createPort(`out_w_1`, 4, 3, "E", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_output_b",
         FLUID_PIPE_PORT,
         "output",
-        [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+        [createPort(`out_w_3`, 4, 1, "E", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((y) => createPort(`in_e_${y}`, 4, y, "E")),
+        [1, 3].map((y) => createPort(`in_e_${y}`, 0, 4 - (y), "W")),
       ),
     ],
     storageSlotGroups: [
@@ -1329,6 +1331,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 配方：immediate-consume + recipeShell（选择外部配方 "r_crusher_*"）
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "grinder_1",
     nameKey: "registry.entity.grinder_1.name",
     spriteId: "item_port_grinder_1",
@@ -1345,13 +1348,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -1413,6 +1416,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-07-16: fluid_input 及其输入缓冲现兼容 liquid/gas。
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_filling_pd_mc_1",
     nameKey: "registry.entity.liquid_filling_pd_mc_1.name",
     spriteId: "item_port_liquid_filling_pd_mc_1",
@@ -1428,13 +1432,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_e_2", 5, 2, "E", {
+        [createPort("in_e_2", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })],
       ),
@@ -1442,7 +1446,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -1488,6 +1492,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "filling_pd_mc_1",
     nameKey: "registry.entity.filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
@@ -1509,13 +1514,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -2391,11 +2396,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-08-20: 解包坐标确认 0° 输入端口位于东侧；原“西”描述与端口定义同步订正。
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_loader_1",
     nameKey: "registry.entity.udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
     iconPath: "device-icons/item_port_udpipe_loader_1.webp",
     footprint: { width: 3, height: 3 },
+    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，西侧扩展改到东侧。
+    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
     spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 407,
@@ -2447,7 +2455,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 2, 1, "E")],
+        [createPort("in_w_1", 0, 1, "W")],
       ),
     ],
     // AI-REMOVED 2026-06-06:
@@ -2520,11 +2528,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_unloader_1",
     nameKey: "registry.entity.udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
     iconPath: "device-icons/item_port_udpipe_unloader_1.webp",
     footprint: { width: 3, height: 3 },
+    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
+    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 408,
@@ -2546,7 +2557,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 0, 1, "W")],
+        [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
     storageSlotGroups: [
@@ -2632,6 +2643,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "furnance_1",
     nameKey: "registry.entity.furnance_1.name",
     spriteId: "item_port_furnance_1",
@@ -2653,13 +2665,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2668,6 +2680,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_furnance_1",
     nameKey: "registry.entity.liquid_furnance_1.name",
     spriteId: "item_port_liquid_furnance_1",
@@ -2684,13 +2697,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_e_1", 2, 1, "E", {
+        [createPort("in_e_1", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -2698,7 +2711,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_w_1", 0, 1, "W", {
+        [createPort("out_w_1", 2, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -2706,7 +2719,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -2729,6 +2742,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "cmpt_mc_1",
     nameKey: "registry.entity.cmpt_mc_1.name",
     spriteId: "item_port_cmpt_mc_1",
@@ -2747,13 +2761,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2762,6 +2776,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "shaper_1",
     nameKey: "registry.entity.shaper_1.name",
     spriteId: "item_port_shaper_1",
@@ -2783,13 +2798,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2798,6 +2813,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "shaper_1_gas",
     nameKey: "registry.entity.shaper_1_gas.name",
     spriteId: "shaper_1_gas",
@@ -2818,20 +2834,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, 2 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, 2 - (x), 2, "S")),
       ),
       createPortGroup(
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_e_1", 2, 1, "E", {
+          createPort("in_e_1", 0, 1, "W", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -2870,6 +2886,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "seedcol_1",
     nameKey: "registry.entity.seedcol_1.name",
     spriteId: "item_port_seedcol_1",
@@ -2886,13 +2903,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2901,6 +2918,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "planter_1",
     nameKey: "registry.entity.planter_1.name",
     spriteId: "item_port_planter_1",
@@ -2922,13 +2940,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2937,6 +2955,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "hydro_planter_1",
     nameKey: "registry.entity.hydro_planter_1.name",
     spriteId: "item_port_hydro_planter_1",
@@ -2953,13 +2972,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_e_2", 4, 2, "E", {
+        [createPort("in_e_2", 0, 2, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -2967,7 +2986,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -2988,6 +3007,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "winder_1",
     nameKey: "registry.entity.winder_1.name",
     spriteId: "item_port_winder_1",
@@ -3004,13 +3024,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -3019,6 +3039,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "tools_asm_mc_1",
     nameKey: "registry.entity.tools_asm_mc_1.name",
     spriteId: "item_port_tools_asm_mc_1",
@@ -3035,13 +3056,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -3050,6 +3071,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "thickener_1",
     nameKey: "registry.entity.thickener_1.name",
     spriteId: "item_port_thickener_1",
@@ -3068,13 +3090,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -3083,6 +3105,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "power_sta_1",
     nameKey: "registry.entity.power_sta_1.name",
     spriteId: "item_port_power_sta_1",
@@ -3099,7 +3122,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1].map((x) => createPort(`in_s_${x}`, x, 1, "S")),
+        [0, 1].map((x) => createPort(`in_s_${x}`, 1 - (x), 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
@@ -3107,6 +3130,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "mix_pool_2",
     nameKey: "registry.entity.mix_pool_2.name",
     spriteId: "item_port_mix_pool_2",
@@ -3124,31 +3148,31 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
+        [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, 5 - (x), 4, "S", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_output_a",
         FLUID_PIPE_PORT,
         "output",
-        [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+        [createPort(`out_w_1`, 5, 3, "E", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_output_b",
         FLUID_PIPE_PORT,
         "output",
-        [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+        [createPort(`out_w_3`, 5, 1, "E", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((y) => createPort(`in_e_${y}`, 5, y, "E")),
+        [1, 3].map((y) => createPort(`in_e_${y}`, 0, 4 - (y), "W")),
       ),
     ],
     storageSlotGroups: [
@@ -3206,6 +3230,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_purifier_1",
     nameKey: "registry.entity.liquid_purifier_1.name",
     spriteId: "item_port_liquid_purifier_1",
@@ -3229,7 +3254,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_s_${z}`, 4, 4 - z, "E", {
+        [1, 3].map((z) => createPort(`in_s_${z}`, 0, 4 - (4 - z), "W", {
           acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })),
       ),
@@ -3238,10 +3263,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_n_1", 0, 3, "W", {
+          createPort("out_n_1", 4, 1, "E", {
             acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_LEFT_OUTPUT_ITEM_IDS),
           }),
-          createPort("out_n_3", 0, 1, "W", {
+          createPort("out_n_3", 4, 3, "E", {
             acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_RIGHT_OUTPUT_ITEM_IDS),
           }),
         ],
@@ -3289,6 +3314,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_purifier_1_gas",
     nameKey: "registry.entity.liquid_purifier_1_gas.name",
     spriteId: "liquid_purifier_1_gas",
@@ -3310,14 +3336,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_e_2", 4, 2, "E", {
+          createPort("in_e_2", 0, 2, "W", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -3326,7 +3352,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 4, 4 - (z), "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3364,6 +3390,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "xiranite_oven_1",
     nameKey: "registry.entity.xiranite_oven_1.name",
     spriteId: "item_port_xiranite_oven_1",
@@ -3380,13 +3407,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_e_2", 4, 2, "E", {
+        [createPort("in_e_2", 0, 2, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -3394,7 +3421,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S")),
       ),
     ],
     storageSlotGroups: [
@@ -3415,6 +3442,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "dismantler_1",
     nameKey: "registry.entity.dismantler_1.name",
     spriteId: "item_port_dismantler_1",
@@ -3431,19 +3459,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, 5 - (x), 0, "N")),
       ),
       createPortGroup(
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, 5 - (x), 3, "S")),
       ),
       createPortGroup(
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_w_2", 0, 2, "W", {
+        [createPort("out_w_2", 5, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })],
       ),
@@ -3499,12 +3527,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_2_gastrans",
     nameKey: "registry.entity.transmuter_2_gastrans.name",
     spriteId: "transmuter_2_gastrans",
     iconPath: "device-icons/transmuter_2_gastrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
+    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
     spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
@@ -3541,13 +3572,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [1, 3].map((x) => createPort(`in_s_${x}`, 4 - (x), 0, "N")),
       ),
       createPortGroup(
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 4, 4 - (z), "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3556,7 +3587,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_s_2", 2, 4, "S", {
+          createPort("in_s_2", 2, 0, "N", {
             acceptRule: { base: { kind: "item", itemId: "item_gas_xiranite" }, exclude: [] },
           }),
         ],
@@ -3620,12 +3651,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_2_solidtrans",
     nameKey: "registry.entity.transmuter_2_solidtrans.name",
     spriteId: "transmuter_2_solidtrans",
     iconPath: "device-icons/transmuter_2_solidtrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
+    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
     spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
@@ -3654,7 +3688,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`in_e_${z}`, 0, 4 - (z), "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3662,14 +3696,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [1, 3].map((x) => createPort(`out_n_${x}`, 4 - (x), 4, "S")),
       ),
       createPortGroup(
         "consume_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_s_2", 2, 4, "S", {
+          createPort("in_s_2", 2, 0, "N", {
             acceptRule: { base: { kind: "item", itemId: "item_gas_xiranite" }, exclude: [] },
           }),
         ],
@@ -3729,6 +3763,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_reactor_1",
     nameKey: "registry.entity.gas_reactor_1.name",
     spriteId: "item_port_gas_reactor_1",
@@ -3763,7 +3798,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_w_${z}`, 4, 4 - z, "E", {
+        [1, 3].map((z) => createPort(`in_w_${z}`, 0, 4 - (4 - z), "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3771,7 +3806,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 0, 4 - z, "W", {
+        [1, 3].map((z) => createPort(`out_e_${z}`, 4, 4 - (4 - z), "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3803,6 +3838,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_1_gastrans",
     nameKey: "registry.entity.transmuter_1_gastrans.name",
     spriteId: "transmuter_1_gastrans",
@@ -3842,7 +3878,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`in_e_${z}`, 0, 4 - (z), "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })),
       ),
@@ -3850,7 +3886,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 4, 4 - (z), "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3859,7 +3895,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_s_2", 2, 4, "S", {
+          createPort("in_s_2", 2, 0, "N", {
             acceptRule: { base: { kind: "item", itemId: "item_liquid_xiranite" }, exclude: [] },
           }),
         ],
@@ -3923,6 +3959,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_1_liquidtrans",
     nameKey: "registry.entity.transmuter_1_liquidtrans.name",
     spriteId: "transmuter_1_liquidtrans",
@@ -3956,7 +3993,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`in_e_${z}`, 0, 4 - (z), "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3964,7 +4001,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 4, 4 - (z), "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })),
       ),
@@ -3973,7 +4010,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_s_2", 2, 4, "S", {
+          createPort("in_s_2", 2, 0, "N", {
             acceptRule: { base: { kind: "item", itemId: "item_liquid_xiranite" }, exclude: [] },
           }),
         ],
@@ -4266,6 +4303,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "water_pump_1",
     nameKey: "registry.entity.water_pump_1.name",
     spriteId: "item_port_water_pump_1",
@@ -4292,7 +4330,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 0, 1, "W", {
+        [createPort("out_e_1", 2, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4362,6 +4400,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // }),
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_loader_2",
     nameKey: "registry.entity.udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
@@ -4411,8 +4450,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 2, 3, "E"),
-          createPort("in_w_2", 2, 1, "E"),
+          createPort("in_w_1", 0, 1, "W"),
+          createPort("in_w_2", 0, 3, "W"),
         ],
       ),
     ],
@@ -4469,6 +4508,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_unloader_2",
     nameKey: "registry.entity.udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
@@ -4486,8 +4526,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_e_1", 0, 1, "W"),
-          createPort("out_e_2", 0, 3, "W"),
+          createPort("out_e_1", 2, 3, "E"),
+          createPort("out_e_2", 2, 1, "E"),
         ],
       ),
     ],
@@ -4532,6 +4572,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_cleaner_1",
     nameKey: "registry.entity.liquid_cleaner_1.name",
     spriteId: "item_liquid_cleaner_1",
@@ -4549,7 +4590,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 2, 1, "E", {
+        [createPort("in_w_1", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4718,6 +4759,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_storager_1",
     nameKey: "registry.entity.liquid_storager_1.name",
     spriteId: "item_port_liquid_storager_1",
@@ -4735,7 +4777,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 2, 1, "E", {
+        [createPort("in_w_1", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4743,7 +4785,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 0, 1, "W", {
+        [createPort("out_e_1", 2, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4773,6 +4815,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_storager_1",
     nameKey: "registry.entity.gas_storager_1.name",
     spriteId: "gas_storager_1",
@@ -4790,7 +4833,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 2, 1, "E", {
+          createPort("in_w_1", 0, 1, "W", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -4800,7 +4843,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_e_1", 0, 1, "W", {
+          createPort("out_e_1", 2, 1, "E", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -4837,6 +4880,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
   }),
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "vaporizer_1",
     nameKey: "registry.entity.vaporizer_1.name",
     spriteId: "vaporizer_1",
@@ -4879,7 +4923,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 2, 1, "E", {
+          createPort("in_w_1", 0, 1, "W", {
             acceptRule: createGasItemWhitelistAcceptRule(VAPORIZER_CONSUMPTION_ITEM_IDS),
           }),
         ],
@@ -5168,6 +5212,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 // AI-CORRECTION 2026-08-07: 解包数据 buildingTable.gas_pump_1 中 needPower=false, powerConsume=0，
 //   游戏中描述为"无需通电即可工作"。移除 requiresPower 和 powerDemand。
   createEntityDefinition({
+    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_pump_1",
     nameKey: "registry.entity.gas_pump_1.name",
     spriteId: "gas_pump_1",
@@ -5191,7 +5236,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_e_1", 0, 1, "W", {
+          createPort("out_e_1", 2, 1, "E", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],

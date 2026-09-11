@@ -274,7 +274,7 @@ describe("BeltFlowDecoration", () => {
       nowMs: 500,
       entities: [
         createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-        createEntity("target-storager", "storager_1", { x: 1, y: -1 }, 90),
+        createEntity("target-storager", "storager_1", { x: 1, y: -1 }, 270),
       ],
     }) as never)
     const generalLogisticsEndMarks = resolveBeltFlowMarks(createFlowContext({
@@ -313,7 +313,7 @@ describe("BeltFlowDecoration", () => {
           id: "target-storager",
           definitionId: "storager_1",
           position: { x: 1, y: -1 },
-          rotation: 90,
+          rotation: 270,
           config: {},
           tags: [],
         },

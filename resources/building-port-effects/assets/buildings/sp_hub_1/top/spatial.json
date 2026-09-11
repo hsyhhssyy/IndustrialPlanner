@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "worldUnitsPerCell": 1,
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 11,
+    "height": 9
+  },
+  "framePixels": {
+    "width": 1408,
+    "height": 1152
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 1,
+    "top": 0,
+    "width": 9,
+    "height": 9
+  },
+  "pivotCells": {
+    "x": 5.5,
+    "y": 4.5
+  },
+  "pivotPixels": {
+    "x": 704.0,
+    "y": 576.0
+  },
+  "unionAlphaBoundsPixels": [
+    119,
+    1,
+    1289,
+    1151
+  ],
+  "sourceFramePixels": [
+    1664,
+    1664
+  ],
+  "sourceCropPixels": [
+    128,
+    256,
+    1536,
+    1408
+  ],
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "resized": false
+  }
+}

@@ -197,7 +197,7 @@ function isWorldDocumentLike(
     isRecord(value.entities) &&
     Array.isArray(value.entityOrder) &&
     Array.isArray(value.slotLinks) &&
-    (value.schemaVersion < 6 || Array.isArray(value.regions)) &&
+    (value.schemaVersion < 7 || Array.isArray(value.regions)) &&
     isWorldDocumentSettingsLike(value.documentSettings)
   );
 }

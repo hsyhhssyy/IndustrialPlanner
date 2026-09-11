@@ -1094,7 +1094,7 @@ function createRuntimeExport(
 
 function createEmptyTopology(documentHash = "hash:timeline-test"): CompiledSimulationTopology {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     simulationMode: "single-base",
     topologyId: "topology:timeline-test",
     documentKey: "document:timeline-test",

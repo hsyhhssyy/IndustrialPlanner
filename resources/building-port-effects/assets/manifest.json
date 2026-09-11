@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 1,
+  "version": "v1.5",
+  "taskId": "20260911-building-port-delivery",
+  "profile": "top-sprite-height-v1",
+  "buildings": [
+    {
+      "buildingId": "component_mc_1",
+      "view": "top",
+      "displayName": "配件机",
+      "package": "buildings/component_mc_1/top/package.json"
+    },
+    {
+      "buildingId": "dismantler_1",
+      "view": "top",
+      "displayName": "拆解机",
+      "package": "buildings/dismantler_1/top/package.json"
+    },
+    {
+      "buildingId": "filling_powder_mc_1",
+      "view": "top",
+      "displayName": "灌装机",
+      "package": "buildings/filling_powder_mc_1/top/package.json"
+    },
+    {
+      "buildingId": "furnance_1",
+      "view": "top",
+      "displayName": "精炼炉",
+      "package": "buildings/furnance_1/top/package.json"
+    },
+    {
+      "buildingId": "gas_pump_1",
+      "view": "top",
+      "displayName": "气体收集泵",
+      "package": "buildings/gas_pump_1/top/package.json"
+    },
+    {
+      "buildingId": "gas_reactor_1",
+      "view": "top",
+      "displayName": "气体反应炉",
+      "package": "buildings/gas_reactor_1/top/package.json"
+    },
+    {
+      "buildingId": "gas_storager_1",
+      "view": "top",
+      "displayName": "储气罐",
+      "package": "buildings/gas_storager_1/top/package.json"
+    },
+    {
+      "buildingId": "grid_belt_01_left",
+      "view": "top",
+      "displayName": "传送带左弯",
+      "package": "buildings/grid_belt_01_left/top/package.json"
+    },
+    {
+      "buildingId": "grid_belt_01_mid",
+      "view": "top",
+      "displayName": "传送带直段",
+      "package": "buildings/grid_belt_01_mid/top/package.json"
+    },
+    {
+      "buildingId": "grid_belt_01_right",
+      "view": "top",
+      "displayName": "传送带右弯",
+      "package": "buildings/grid_belt_01_right/top/package.json"
+    },
+    {
+      "buildingId": "grinder_1",
+      "view": "top",
+      "displayName": "粉碎机",
+      "package": "buildings/grinder_1/top/package.json"
+    },
+    {
+      "buildingId": "liquid_cleaner_1",
+      "view": "top",
+      "displayName": "废水处理机",
+      "package": "buildings/liquid_cleaner_1/top/package.json"
+    },
+    {
+      "buildingId": "liquid_purifier_1",
+      "view": "top",
+      "displayName": "提纯机",
+      "package": "buildings/liquid_purifier_1/top/package.json"
+    },
+    {
+      "buildingId": "liquid_purifier_1",
+      "view": "top-gas",
+      "displayName": "提纯机",
+      "package": "buildings/liquid_purifier_1/top-gas/package.json"
+    },
+    {
+      "buildingId": "liquid_storager_1",
+      "view": "top",
+      "displayName": "储液罐",
+      "package": "buildings/liquid_storager_1/top/package.json"
+    },
+    {
+      "buildingId": "loader_1",
+      "view": "top",
+      "displayName": "仓库存货口",
+      "package": "buildings/loader_1/top/package.json"
+    },
+    {
+      "buildingId": "log_conditioner",
+      "view": "top",
+      "displayName": "物品准入口",
+      "package": "buildings/log_conditioner/top/package.json"
+    },
+    {
+      "buildingId": "log_connector",
+      "view": "top",
+      "displayName": "桥接器",
+      "package": "buildings/log_connector/top/package.json"
+    },
+    {
+      "buildingId": "log_converger",
+      "view": "top",
+      "displayName": "汇流器",
+      "package": "buildings/log_converger/top/package.json"
+    },
+    {
+      "buildingId": "log_hongs_bus",
+      "view": "top",
+      "displayName": "存取线基段",
+      "package": "buildings/log_hongs_bus/top/package.json"
+    },
+    {
+      "buildingId": "log_hongs_bus_source",
+      "view": "top",
+      "displayName": "存取线源桩",
+      "package": "buildings/log_hongs_bus_source/top/package.json"
+    },
+    {
+      "buildingId": "log_pipe_02_mid",
+      "view": "top",
+      "displayName": "管道与可染色流体",
+      "package": "buildings/log_pipe_02_mid/top/package.json"
+    },
+    {
+      "buildingId": "log_splitter",
+      "view": "top",
+      "displayName": "分流器",
+      "package": "buildings/log_splitter/top/package.json"
+    },
+    {
+      "buildingId": "mix_pool_1",
+      "view": "top",
+      "displayName": "反应池",
+      "package": "buildings/mix_pool_1/top/package.json"
+    },
+    {
+      "buildingId": "mix_pool_2",
+      "view": "top",
+      "displayName": "扩容反应池",
+      "package": "buildings/mix_pool_2/top/package.json"
+    },
+    {
+      "buildingId": "pipe_conditioner",
+      "view": "top",
+      "displayName": "管道准入口",
+      "package": "buildings/pipe_conditioner/top/package.json"
+    },
+    {
+      "buildingId": "pipe_connector",
+      "view": "top",
+      "displayName": "管道桥接器",
+      "package": "buildings/pipe_connector/top/package.json"
+    },
+    {
+      "buildingId": "pipe_converger",
+      "view": "top",
+      "displayName": "管道汇流器",
+      "package": "buildings/pipe_converger/top/package.json"
+    },
+    {
+      "buildingId": "pipe_splitter",
+      "view": "top",
+      "displayName": "管道分流器",
+      "package": "buildings/pipe_splitter/top/package.json"
+    },
+    {
+      "buildingId": "pipesupport_1_03",
+      "view": "top",
+      "displayName": "管道直向支架",
+      "package": "buildings/pipesupport_1_03/top/package.json"
+    },
+    {
+      "buildingId": "pipesupport_1_04",
+      "view": "top",
+      "displayName": "管道转角支架",
+      "package": "buildings/pipesupport_1_04/top/package.json"
+    },
+    {
+      "buildingId": "planter_1",
+      "view": "top",
+      "displayName": "planter_1",
+      "package": "buildings/planter_1/top/package.json"
+    },
+    {
+      "buildingId": "power_diffuser_1",
+      "view": "top",
+      "displayName": "供电桩",
+      "package": "buildings/power_diffuser_1/top/package.json"
+    },
+    {
+      "buildingId": "power_station_1",
+      "view": "top",
+      "displayName": "热能池",
+      "package": "buildings/power_station_1/top/package.json"
+    },
+    {
+      "buildingId": "pump_1",
+      "view": "top",
+      "displayName": "水泵",
+      "package": "buildings/pump_1/top/package.json"
+    },
+    {
+      "buildingId": "seedcollector_1",
+      "view": "top",
+      "displayName": "seedcollector_1",
+      "package": "buildings/seedcollector_1/top/package.json"
+    },
+    {
+      "buildingId": "shaper_1",
+      "view": "top",
+      "displayName": "shaper_1",
+      "package": "buildings/shaper_1/top/package.json"
+    },
+    {
+      "buildingId": "sp_hub_1",
+      "view": "top",
+      "displayName": "协议核心",
+      "package": "buildings/sp_hub_1/top/package.json"
+    },
+    {
+      "buildingId": "sp_sub_hub_1",
+      "view": "top-level4",
+      "displayName": "次级协议核心（四级）",
+      "package": "buildings/sp_sub_hub_1/top-level4/package.json"
+    },
+    {
+      "buildingId": "storager_1",
+      "view": "top",
+      "displayName": "协议储存箱",
+      "package": "buildings/storager_1/top/package.json"
+    },
+    {
+      "buildingId": "thickener_1",
+      "view": "top",
+      "displayName": "研磨机",
+      "package": "buildings/thickener_1/top/package.json"
+    },
+    {
+      "buildingId": "tools_assebling_mc_1",
+      "view": "top",
+      "displayName": "封装机",
+      "package": "buildings/tools_assebling_mc_1/top/package.json"
+    },
+    {
+      "buildingId": "transmuter_1",
+      "view": "top",
+      "displayName": "液气转化机",
+      "package": "buildings/transmuter_1/top/package.json"
+    },
+    {
+      "buildingId": "transmuter_2",
+      "view": "top",
+      "displayName": "固气转化机",
+      "package": "buildings/transmuter_2/top/package.json"
+    },
+    {
+      "buildingId": "transmuter_2",
+      "view": "top-solidtrans",
+      "displayName": "固气转化机",
+      "package": "buildings/transmuter_2/top-solidtrans/package.json"
+    },
+    {
+      "buildingId": "udpipe_loader_1",
+      "view": "top",
+      "displayName": "暗管入口",
+      "package": "buildings/udpipe_loader_1/top/package.json"
+    },
+    {
+      "buildingId": "udpipe_loader_2",
+      "view": "top",
+      "displayName": "多口暗管入口",
+      "package": "buildings/udpipe_loader_2/top/package.json"
+    },
+    {
+      "buildingId": "udpipe_unloader_1",
+      "view": "top",
+      "displayName": "暗管出口",
+      "package": "buildings/udpipe_unloader_1/top/package.json"
+    },
+    {
+      "buildingId": "udpipe_unloader_2",
+      "view": "top",
+      "displayName": "多口暗管出口",
+      "package": "buildings/udpipe_unloader_2/top/package.json"
+    },
+    {
+      "buildingId": "unloader_1",
+      "view": "top",
+      "displayName": "仓库取货口",
+      "package": "buildings/unloader_1/top/package.json"
+    },
+    {
+      "buildingId": "vaporizer_1",
+      "view": "top",
+      "displayName": "气体散布机",
+      "package": "buildings/vaporizer_1/top/package.json"
+    },
+    {
+      "buildingId": "winder_1",
+      "view": "top",
+      "displayName": "装备原件机",
+      "package": "buildings/winder_1/top/package.json"
+    },
+    {
+      "buildingId": "xiranite_oven_1",
+      "view": "top",
+      "displayName": "天有洪炉",
+      "package": "buildings/xiranite_oven_1/top/package.json"
+    },
+    {
+      "buildingId": "xiranite_oven_1",
+      "view": "top-gasliquid",
+      "displayName": "天有洪炉",
+      "package": "buildings/xiranite_oven_1/top-gasliquid/package.json"
+    }
+  ],
+  "sharedEffects": [
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeoff_in_green_01",
+      "manifest": "effects/P_fxfac_interactive_large_pipeoff_in_green_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeon_in_03",
+      "manifest": "effects/P_fxfac_interactive_large_pipeon_in_03/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeon_in_green_01",
+      "manifest": "effects/P_fxfac_interactive_large_pipeon_in_green_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeon_out_02",
+      "manifest": "effects/P_fxfac_interactive_large_pipeon_out_02/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_green_2501",
+      "manifest": "effects/P_fxfac_interactive_mixpool_green_2501/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_green_2502",
+      "manifest": "effects/P_fxfac_interactive_mixpool_green_2502/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_orange_2502",
+      "manifest": "effects/P_fxfac_interactive_mixpool_orange_2502/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_yellow_2501",
+      "manifest": "effects/P_fxfac_interactive_mixpool_yellow_2501/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_bendlarge_pipeon_in_01",
+      "manifest": "effects/P_interactive_bendlarge_pipeon_in_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeoff_in_01",
+      "manifest": "effects/P_interactive_large_pipeoff_in_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeoff_out_01",
+      "manifest": "effects/P_interactive_large_pipeoff_out_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeon_in_01",
+      "manifest": "effects/P_interactive_large_pipeon_in_01/effect.json"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeon_out_01",
+      "manifest": "effects/P_interactive_large_pipeon_out_01/effect.json"
+    }
+  ]
+}

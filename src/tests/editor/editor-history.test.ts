@@ -248,23 +248,23 @@ describe("editor document history", () => {
     ]);
     expect(record?.delta.entities.added.pool).toMatchObject({
       definitionId: "mix_pool_2",
-      rotation: 90,
+      rotation: 270,
     });
     expect(record?.delta.entities.removed.grinder).toMatchObject({
       definitionId: "grinder_1",
-      rotation: 270,
+      rotation: 90,
     });
     expect(record?.delta.entities.added.pump).toMatchObject({
       definitionId: "water_pump_1",
-      rotation: 270,
+      rotation: 90,
     });
     expect(record?.delta.entities.updated.pool).toMatchObject({
-      before: { definitionId: "mix_pool_2", rotation: 90 },
-      after: { definitionId: "grinder_1", rotation: 270 },
+      before: { definitionId: "mix_pool_2", rotation: 270 },
+      after: { definitionId: "grinder_1", rotation: 90 },
     });
     expect(record?.delta.entities.updated.pump).toMatchObject({
-      before: { definitionId: "water_pump_1", rotation: 270 },
-      after: { definitionId: "water_pump_1", rotation: 0 },
+      before: { definitionId: "water_pump_1", rotation: 90 },
+      after: { definitionId: "water_pump_1", rotation: 180 },
     });
 
     if (restored !== null) {

@@ -722,7 +722,7 @@ function createRuntimeExport(tickNumber = 1): SimulationRuntimeExport {
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     simulationMode: "single-base",
     topologyId: "topology:timeline-empty",
     documentKey: "document:timeline",

@@ -18,6 +18,15 @@ import {
   resolveLogisticsPathCells,
 } from "@/editor/logistics/logistics-utils";
 import { createRegistryContract } from "@/registry";
+import { rotateGridRotation } from "@/shared/geometry/grid";
+
+const LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS = new Set([
+  "furnance_1",
+  "gas_storager_1",
+  "grinder_1",
+  "storager_1",
+  "water_pump_1",
+]);
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -38,11 +47,16 @@ function createTestEntity(
   y: number,
   rotation: 0 | 90 | 180 | 270 = 0,
 ): WorldDocument["entities"][string] {
+  // AI-CORRECTION 2026-09-11: these hand-written fixtures model pre-schema-7
+  // world layouts; preserve their world-facing ports after registry correction.
+  const fixtureRotation = LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS.has(definitionId)
+    ? rotateGridRotation(rotation, 180)
+    : rotation;
   return {
     id,
     definitionId,
     position: { x, y },
-    rotation,
+    rotation: fixtureRotation,
     config: {},
     tags: [],
   };
@@ -146,7 +160,9 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("source-device", "storager_1", 0, 8),
+      // AI-CORRECTION 2026-09-11: express the pre-schema-7 world layout
+      // explicitly; createTestEntity translates it to the corrected registry.
+      createTestEntity("source-device", "storager_1", 0, 8, 180),
     ]));
 
     editorHost.actions.createLogisticsDraftStart({

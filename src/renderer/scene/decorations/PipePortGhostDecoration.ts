@@ -95,6 +95,7 @@ export function createPipePortGhostDecoration(): DecorationLayer {
         app?.state.settings.gameUseBlueprintStyleDeviceImages === true ? "blueprint" : "top",
         editor?.state.suppressPipes === true ? "suppressed" : "visible",
         [...strongOverlayEntityIds].sort().join(","),
+        [...ctx.buildingEffectPortKeys ?? []].sort().join(","),
       ].join(":");
       const versions = ctx.versions;
 
@@ -157,6 +158,7 @@ export function createPipePortGhostDecoration(): DecorationLayer {
       let visibleIndex = 0;
 
       for (const entry of entries) {
+        if (ctx.buildingEffectPortKeys?.has(`${entry.entityId}:${entry.portGroupId}:${entry.portId}`)) continue;
         const boundary = resolvePipePortBoundaryViewportPoint(ctx, entry);
         if (
           !isViewportPointVisible(

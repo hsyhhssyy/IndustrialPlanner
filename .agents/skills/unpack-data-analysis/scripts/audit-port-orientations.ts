@@ -117,14 +117,15 @@ function resolveBuildingId(
 }
 
 function normalizeExportedPorts(building: ExportedBuilding): readonly LogicalPort[] {
+  // AI-CORRECTION 2026-09-11: raw5x5 transmuter_1 游戏实测证明项目坐标为 X=x、Y=depth-1-z；旧镜像映射会把所有非对称布局旋转 180°。
   const normalize = (
     port: ExportedPort,
     direction: Exclude<PortDirection, "bidirectional">,
   ): LogicalPort => ({
     direction,
     isPipe: port.isPipe,
-    x: building.range.width - 1 - port.trans.position.x,
-    y: port.trans.position.z,
+    x: port.trans.position.x,
+    y: building.range.depth - 1 - port.trans.position.z,
   });
   return [
     ...(building.inputPorts ?? []).map((port) => normalize(port, "input")),
@@ -205,9 +206,13 @@ function registryPorts(
 function audit(exportRoot: ExportRoot): {
   readonly records: readonly AuditRecord[];
   readonly unmappedRegistryDefinitions: number;
+  readonly unmappedRegistryDefinitionIds: readonly string[];
   readonly mappedDefinitionsWithoutPorts: number;
+  readonly mappedDefinitionsWithoutPortsIds: readonly string[];
 } {
   const records: AuditRecord[] = [];
+  const unmappedRegistryDefinitionIds: string[] = [];
+  const mappedDefinitionsWithoutPortsIds: string[] = [];
   let unmappedRegistryDefinitions = 0;
   let mappedDefinitionsWithoutPorts = 0;
 
@@ -215,6 +220,7 @@ function audit(exportRoot: ExportRoot): {
     const buildingId = resolveBuildingId(definition, exportRoot.buildings.buildingTable);
     if (buildingId === null) {
       unmappedRegistryDefinitions += 1;
+      unmappedRegistryDefinitionIds.push(definition.id);
       continue;
     }
 
@@ -223,6 +229,7 @@ function audit(exportRoot: ExportRoot): {
     const exportedPorts = normalizeExportedPorts(building);
     if (currentPorts.length === 0 || exportedPorts.length === 0) {
       mappedDefinitionsWithoutPorts += 1;
+      mappedDefinitionsWithoutPortsIds.push(definition.id);
       continue;
     }
 
@@ -263,7 +270,13 @@ function audit(exportRoot: ExportRoot): {
     });
   }
 
-  return { records, unmappedRegistryDefinitions, mappedDefinitionsWithoutPorts };
+  return {
+    records,
+    unmappedRegistryDefinitions,
+    unmappedRegistryDefinitionIds,
+    mappedDefinitionsWithoutPorts,
+    mappedDefinitionsWithoutPortsIds,
+  };
 }
 
 function printMarkdown(

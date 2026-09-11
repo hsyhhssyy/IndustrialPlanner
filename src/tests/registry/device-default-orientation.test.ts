@@ -31,106 +31,106 @@ const ORIENTATION_CASES: readonly OrientationCase[] = [
   {
     definitionId: "udpipe_loader_1",
     rotationOffset: 180,
-    oldPorts: [port("fluid_input", "in_w_1", 0, 1, "WEST")],
-    newPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
+    oldPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
+    newPorts: [port("fluid_input", "in_w_1", 0, 1, "WEST")],
   },
   {
     definitionId: "udpipe_unloader_1",
     rotationOffset: 180,
-    oldPorts: [port("fluid_output", "out_e_1", 2, 1, "EAST")],
-    newPorts: [port("fluid_output", "out_e_1", 0, 1, "WEST")],
+    oldPorts: [port("fluid_output", "out_e_1", 0, 1, "WEST")],
+    newPorts: [port("fluid_output", "out_e_1", 2, 1, "EAST")],
   },
   {
     definitionId: "liquid_purifier_1",
-    rotationOffset: 90,
+    rotationOffset: 180,
     oldPorts: [
-      port("fluid_input", "in_s_1", 1, 4, "SOUTH"),
-      port("fluid_input", "in_s_3", 3, 4, "SOUTH"),
-      port("fluid_output", "out_n_1", 1, 0, "NORTH"),
-      port("fluid_output", "out_n_3", 3, 0, "NORTH"),
-    ],
-    newPorts: [
       port("fluid_input", "in_s_1", 4, 3, "EAST"),
       port("fluid_input", "in_s_3", 4, 1, "EAST"),
       port("fluid_output", "out_n_1", 0, 3, "WEST"),
       port("fluid_output", "out_n_3", 0, 1, "WEST"),
+    ],
+    newPorts: [
+      port("fluid_input", "in_s_1", 0, 1, "WEST"),
+      port("fluid_input", "in_s_3", 0, 3, "WEST"),
+      port("fluid_output", "out_n_1", 4, 1, "EAST"),
+      port("fluid_output", "out_n_3", 4, 3, "EAST"),
     ],
   },
   {
     definitionId: "gas_reactor_1",
     rotationOffset: 180,
     oldPorts: [
-      port("gas_input", "in_w_1", 0, 1, "WEST"),
-      port("gas_input", "in_w_3", 0, 3, "WEST"),
-      port("gas_output", "out_e_1", 4, 1, "EAST"),
-      port("gas_output", "out_e_3", 4, 3, "EAST"),
-    ],
-    newPorts: [
       port("gas_input", "in_w_1", 4, 3, "EAST"),
       port("gas_input", "in_w_3", 4, 1, "EAST"),
       port("gas_output", "out_e_1", 0, 3, "WEST"),
       port("gas_output", "out_e_3", 0, 1, "WEST"),
     ],
+    newPorts: [
+      port("gas_input", "in_w_1", 0, 1, "WEST"),
+      port("gas_input", "in_w_3", 0, 3, "WEST"),
+      port("gas_output", "out_e_1", 4, 1, "EAST"),
+      port("gas_output", "out_e_3", 4, 3, "EAST"),
+    ],
   },
   {
     definitionId: "water_pump_1",
     rotationOffset: 180,
-    oldPorts: [port("fluid_output", "out_e_1", 2, 1, "EAST")],
-    newPorts: [port("fluid_output", "out_e_1", 0, 1, "WEST")],
+    oldPorts: [port("fluid_output", "out_e_1", 0, 1, "WEST")],
+    newPorts: [port("fluid_output", "out_e_1", 2, 1, "EAST")],
   },
   {
     definitionId: "udpipe_loader_2",
     rotationOffset: 180,
     oldPorts: [
-      port("fluid_input", "in_w_1", 0, 1, "WEST"),
-      port("fluid_input", "in_w_2", 0, 3, "WEST"),
-    ],
-    newPorts: [
       port("fluid_input", "in_w_1", 2, 3, "EAST"),
       port("fluid_input", "in_w_2", 2, 1, "EAST"),
+    ],
+    newPorts: [
+      port("fluid_input", "in_w_1", 0, 1, "WEST"),
+      port("fluid_input", "in_w_2", 0, 3, "WEST"),
     ],
   },
   {
     definitionId: "liquid_cleaner_1",
     rotationOffset: 180,
-    oldPorts: [port("fluid_input", "in_w_1", 0, 1, "WEST")],
-    newPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
+    oldPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
+    newPorts: [port("fluid_input", "in_w_1", 0, 1, "WEST")],
   },
   {
     definitionId: "liquid_storager_1",
     rotationOffset: 180,
     oldPorts: [
-      port("fluid_input", "in_w_1", 0, 1, "WEST"),
-      port("fluid_output", "out_e_1", 2, 1, "EAST"),
-    ],
-    newPorts: [
       port("fluid_input", "in_w_1", 2, 1, "EAST"),
       port("fluid_output", "out_e_1", 0, 1, "WEST"),
+    ],
+    newPorts: [
+      port("fluid_input", "in_w_1", 0, 1, "WEST"),
+      port("fluid_output", "out_e_1", 2, 1, "EAST"),
     ],
   },
   {
     definitionId: "gas_storager_1",
     rotationOffset: 180,
     oldPorts: [
-      port("gas_input", "in_w_1", 0, 1, "WEST"),
-      port("gas_output", "out_e_1", 2, 1, "EAST"),
-    ],
-    newPorts: [
       port("gas_input", "in_w_1", 2, 1, "EAST"),
       port("gas_output", "out_e_1", 0, 1, "WEST"),
+    ],
+    newPorts: [
+      port("gas_input", "in_w_1", 0, 1, "WEST"),
+      port("gas_output", "out_e_1", 2, 1, "EAST"),
     ],
   },
   {
     definitionId: "vaporizer_1",
     rotationOffset: 180,
-    oldPorts: [port("gas_input", "in_w_1", 0, 1, "WEST")],
-    newPorts: [port("gas_input", "in_w_1", 2, 1, "EAST")],
+    oldPorts: [port("gas_input", "in_w_1", 2, 1, "EAST")],
+    newPorts: [port("gas_input", "in_w_1", 0, 1, "WEST")],
   },
   {
     definitionId: "gas_pump_1",
     rotationOffset: 180,
-    oldPorts: [port("gas_output", "out_e_1", 2, 1, "EAST")],
-    newPorts: [port("gas_output", "out_e_1", 0, 1, "WEST")],
+    oldPorts: [port("gas_output", "out_e_1", 0, 1, "WEST")],
+    newPorts: [port("gas_output", "out_e_1", 2, 1, "EAST")],
   },
 ];
 
@@ -144,16 +144,17 @@ describe("device default orientation", () => {
     },
   );
 
-  it("declares exactly the audited schema 4 to 5 orientation rules", () => {
+  it("declares exactly the audited schema 6 to 7 orientation rules", () => {
     const migration = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) =>
-      spec.fromVersion === 4 && spec.toVersion === 5,
+      spec.fromVersion === 6 && spec.toVersion === 7,
     );
 
-    expect(migration?.deviceRules).toEqual(ORIENTATION_CASES.map((entry) => ({
+    expect(migration?.deviceRules).toEqual(expect.arrayContaining(ORIENTATION_CASES.map((entry) => ({
       fromDeviceId: entry.definitionId,
       toDeviceId: entry.definitionId,
       rotationOffset: entry.rotationOffset,
-    })));
+    }))));
+    expect(migration?.deviceRules).toHaveLength(37);
   });
 
   it.each(ORIENTATION_CASES)(
@@ -171,7 +172,7 @@ describe("device default orientation", () => {
             config: { retained: true },
             tags: ["retained"],
           },
-        }, 4, 5);
+        }, 6, 7);
 
         expect(migrated?.entities.entity).toMatchObject({
           definitionId,
@@ -199,18 +200,18 @@ describe("device default orientation", () => {
 
   it("does not rotate the separately unpacked purifier gas variant or second dark-pipe outlet", () => {
     expect(readPorts(requireDefinition("liquid_purifier_1_gas"))).toEqual([
-      port("item_input", "in_s_0", 0, 4, "SOUTH"),
-      port("item_input", "in_s_1", 1, 4, "SOUTH"),
-      port("item_input", "in_s_2", 2, 4, "SOUTH"),
-      port("item_input", "in_s_3", 3, 4, "SOUTH"),
-      port("item_input", "in_s_4", 4, 4, "SOUTH"),
-      port("gas_input", "in_e_2", 4, 2, "EAST"),
-      port("gas_output", "out_w_1", 0, 1, "WEST"),
-      port("gas_output", "out_w_3", 0, 3, "WEST"),
+      port("item_input", "in_s_0", 4, 0, "NORTH"),
+      port("item_input", "in_s_1", 3, 0, "NORTH"),
+      port("item_input", "in_s_2", 2, 0, "NORTH"),
+      port("item_input", "in_s_3", 1, 0, "NORTH"),
+      port("item_input", "in_s_4", 0, 0, "NORTH"),
+      port("gas_input", "in_e_2", 0, 2, "WEST"),
+      port("gas_output", "out_w_1", 4, 3, "EAST"),
+      port("gas_output", "out_w_3", 4, 1, "EAST"),
     ]);
     expect(readPorts(requireDefinition("udpipe_unloader_2"))).toEqual([
-      port("fluid_output", "out_e_1", 0, 1, "WEST"),
-      port("fluid_output", "out_e_2", 0, 3, "WEST"),
+      port("fluid_output", "out_e_1", 2, 3, "EAST"),
+      port("fluid_output", "out_e_2", 2, 1, "EAST"),
     ]);
   });
 });

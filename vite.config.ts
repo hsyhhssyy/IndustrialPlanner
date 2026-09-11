@@ -137,7 +137,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,webp,svg,json,webmanifest,md}"],
+        globPatterns: ["**/*.{js,css,html,webp,svg,json,webmanifest,md}", "3d-top-view/port-effects/**/*.rgba.bin"],
         globIgnores: [
           "**/sw.js",
           "**/workbox-*.js",

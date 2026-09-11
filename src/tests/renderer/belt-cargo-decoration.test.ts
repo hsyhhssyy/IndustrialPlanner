@@ -971,7 +971,9 @@ function createContext(options: {
       id: "target-storager",
       definitionId: "storager_1",
       position: { x: 1, y: -1 },
-      rotation: 90,
+      // AI-CORRECTION 2026-09-11: preserve the historical world-facing
+      // belt connection after the storager registry orientation correction.
+      rotation: 270,
       config: {},
       tags: [],
     })
@@ -981,7 +983,9 @@ function createContext(options: {
       id: "source-storager",
       definitionId: "storager_1",
       position: { x: -3, y: 0 },
-      rotation: 90,
+      // AI-CORRECTION 2026-09-11: preserve the historical world-facing
+      // belt connection after the storager registry orientation correction.
+      rotation: 270,
       config: {},
       tags: [],
     })

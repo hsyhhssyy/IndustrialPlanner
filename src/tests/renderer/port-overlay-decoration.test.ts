@@ -24,7 +24,7 @@ const OVERLAPPING_PORT_DEVICE_CASES = [
 
 describe("PortOverlayDecoration 端口语义", () => {
   it("空地出口可合法引出时显示箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device],
@@ -43,7 +43,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向正确的既有传送带已连接时隐藏对应出口", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
     const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 4, 270);
 
     const entries = resolveLogisticsPortOverlayEntries({
@@ -61,7 +61,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口正前方横跨已连接传送带时允许创建桥接器并保留箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
     const left = createEntity("left", "belt_straight_1x1", 4, 4, 0);
     const crossing = createEntity("crossing", "belt_straight_1x1", 5, 4, 0);
     const right = createEntity("right", "belt_straight_1x1", 6, 4, 0);
@@ -78,7 +78,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口正前方是同轴但方向错误的传送带时隐藏箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
     const reversedBelt = createEntity("reversed", "belt_straight_1x1", 5, 4, 90);
 
     const entries = resolveLogisticsPortOverlayEntries({
@@ -93,8 +93,8 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口紧贴另一台设备足印时隐藏箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
-    const wall = createEntity("wall", "storager_1", 5, 2, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
+    const wall = createEntity("wall", "storager_1", 5, 2, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
@@ -108,7 +108,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("传送带模式将液体端口和输入端口绘制为红叉", () => {
-    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 0);
+    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device],
@@ -127,7 +127,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口已经合法连接时不显示叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
     const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 8, 270);
 
     const entries = resolveLogisticsPortOverlayEntries({
@@ -145,8 +145,8 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口被设备足印堵塞时不显示叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
-    const wall = createEntity("wall", "storager_1", 5, 8, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
+    const wall = createEntity("wall", "storager_1", 5, 8, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
@@ -160,7 +160,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口可正交桥接时保留叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
     const left = createEntity("left", "belt_straight_1x1", 4, 8, 0);
     const crossing = createEntity("crossing", "belt_straight_1x1", 5, 8, 0);
     const right = createEntity("right", "belt_straight_1x1", 6, 8, 0);
@@ -177,8 +177,8 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("类型不匹配的液体端口被设备堵塞时不显示叉号", () => {
-    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 0);
-    const wall = createEntity("wall", "storager_1", 11, 6, 0);
+    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 180);
+    const wall = createEntity("wall", "storager_1", 11, 6, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
@@ -196,8 +196,8 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("管道铺设模式同时展示液体端口和气体端口", () => {
-    const liquid = createEntity("liquid", "liquid_storager_1", 5, 5, 0);
-    const gas = createEntity("gas", "gas_storager_1", 12, 5, 0);
+    const liquid = createEntity("liquid", "liquid_storager_1", 5, 5, 180);
+    const gas = createEntity("gas", "gas_storager_1", 12, 5, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [liquid, gas],
@@ -223,7 +223,7 @@ describe("PortOverlayDecoration 端口语义", () => {
 
   for (const deviceCase of OVERLAPPING_PORT_DEVICE_CASES) {
     it(`${deviceCase.definitionId} 在匹配物流模式下将同位置输入叉号和输出箭头聚合为一个箭头`, () => {
-      const device = createEntity("device", deviceCase.definitionId, 5, 5, 0);
+      const device = createEntity("device", deviceCase.definitionId, 5, 5, 180);
 
       const entries = resolveLogisticsPortOverlayEntries({
         entities: [device],
@@ -336,7 +336,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("单设备 selection 和 preview 语义下展示全部端口箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 0);
+    const device = createEntity("device", "storager_1", 5, 5, 180);
 
     const entries = resolveSelectedPortOverlayEntries({
       entities: [device],
@@ -349,8 +349,8 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("多设备 selection 不展示端口箭头", () => {
-    const first = createEntity("first", "storager_1", 5, 5, 0);
-    const second = createEntity("second", "storager_1", 10, 5, 0);
+    const first = createEntity("first", "storager_1", 5, 5, 180);
+    const second = createEntity("second", "storager_1", 10, 5, 180);
 
     const entries = resolveSelectedPortOverlayEntries({
       entities: [first, second],

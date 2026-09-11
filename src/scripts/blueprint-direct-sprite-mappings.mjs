@@ -91,13 +91,15 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     assetFileName: 'bg_machine_udpipe_loader_1.png',
     spriteId: 'item_port_udpipe_loader_1',
     // AI-CORRECTION 2026-08-20: 蓝图素材随解包默认朝向旋转 180°。
-    rotationDegrees: 180,
+    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
+    rotationDegrees: 0,
   },
   {
     assetFileName: 'bg_machine_udpipe_unloader_1.png',
     spriteId: 'item_port_udpipe_unloader_1',
     // AI-CORRECTION 2026-08-20: 蓝图素材随解包默认朝向旋转 180°。
-    rotationDegrees: 180,
+    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
+    rotationDegrees: 0,
   },
   {
     assetFileName: 'item_port_water_pump_1-schema4.png',
@@ -105,7 +107,8 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     repositoryAssetPath: 'resources/blueprint-direct-sprites/item_port_water_pump_1-schema4.png',
     trimPx: 0,
     // AI-CORRECTION 2026-08-20: 保留既有抽水泵专用蓝图素材，仅订正其默认朝向。
-    rotationDegrees: 180,
+    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
+    rotationDegrees: 0,
   },
   // AI-REMOVED 2026-07-12:
   // Reason: 废水处理机改为标准计算生成蓝图精灵，不再使用直接素材映射

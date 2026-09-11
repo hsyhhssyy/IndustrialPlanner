@@ -82,7 +82,7 @@ function migratePumpDocument(options: {
 
 describe("blueprint device id migration version chain", () => {
   it("declares one contiguous migration for every schema version up to current", () => {
-    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(6);
+    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(7);
     expect(BLUEPRINT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.map((spec) => [
@@ -94,6 +94,7 @@ describe("blueprint device id migration version chain", () => {
       [3, 4],
       [4, 5],
       [5, 6],
+      [6, 7],
     ]);
   });
 
@@ -104,6 +105,7 @@ describe("blueprint device id migration version chain", () => {
     { source: 1, target: 4, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 1, target: 5, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 1, target: 6, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    { source: 1, target: 7, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 2, target: 2, sourceId: "item_port_mix_pool_2", expectedId: "item_port_mix_pool_2" },
     { source: 2, target: 3, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
     { source: 2, target: 4, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
@@ -119,6 +121,8 @@ describe("blueprint device id migration version chain", () => {
     { source: 5, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 5, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 6, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 6, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 7, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
   ])(
     "covers the complete supported migration matrix: schema $source to $target",
     ({ source, target, sourceId, expectedId }) => {
@@ -127,7 +131,7 @@ describe("blueprint device id migration version chain", () => {
       expect(result?.schemaVersion).toBe(target);
       expect(result?.entities.entity).toMatchObject({
         definitionId: expectedId,
-        rotation: 0,
+        rotation: target === 7 && source < 7 ? 180 : 0,
         position: { x: 4, y: 8 },
         config: { retained: true },
         tags: ["retained"],
@@ -183,9 +187,28 @@ describe("blueprint device id migration version chain", () => {
     expect(version6?.schemaVersion).toBe(6);
     expect(version6?.entities).toEqual(version5?.entities);
 
+    const version7 = migrateBlueprintEntityDeviceIds(version6?.entities ?? {}, 6, 7);
+
+    expect(version7?.schemaVersion).toBe(7);
+    expect(version7?.entities.pool).toMatchObject({ rotation: 180 });
+    expect(version7?.entities.grinder).toMatchObject({ rotation: 90 });
+
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
-    expect(directToCurrent).toEqual(version6);
+    expect(directToCurrent).toEqual(version7);
+  });
+
+  it("keeps schema 7 entities and links unchanged when normalized again", () => {
+    const entities = {
+      pool: createEntity("mix_pool_2", 180),
+      grinder: createEntity("grinder_1", 90),
+    };
+    const current = migrateBlueprintEntityDeviceIds(entities, 7);
+
+    expect(current).toEqual({
+      schemaVersion: 7,
+      entities,
+    });
   });
 
   it.each([
@@ -219,6 +242,11 @@ describe("blueprint device id migration version chain", () => {
       sourceDeviceId: "mix_pool_2",
       expectedDeviceId: "mix_pool_2",
     },
+    {
+      sourceSchemaVersion: 7,
+      sourceDeviceId: "mix_pool_2",
+      expectedDeviceId: "mix_pool_2",
+    },
   ])(
     "migrates schema $sourceSchemaVersion to current schema from its own canonical state",
     ({ sourceSchemaVersion, sourceDeviceId, expectedDeviceId }) => {
@@ -230,7 +258,7 @@ describe("blueprint device id migration version chain", () => {
 
       expect(result?.schemaVersion).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
       expect(result?.entities.entity?.definitionId).toBe(expectedDeviceId);
-      expect(result?.entities.entity?.rotation).toBe(0);
+      expect(result?.entities.entity?.rotation).toBe(sourceSchemaVersion < 7 ? 180 : 0);
     },
   );
 
@@ -241,8 +269,9 @@ describe("blueprint device id migration version chain", () => {
     { schemaVersion: 4, deviceId: "mix_pool_2" },
     { schemaVersion: 5, deviceId: "mix_pool_2" },
     { schemaVersion: 6, deviceId: "mix_pool_2" },
+    { schemaVersion: 7, deviceId: "mix_pool_2" },
   ])(
-    "normalizes blueprint and world documents from schema $schemaVersion to schema 6",
+    "normalizes blueprint and world documents from schema $schemaVersion to schema 7",
     ({ schemaVersion, deviceId }) => {
       const entity = createEntity(deviceId);
       const blueprint = normalizeBlueprintDocument({
@@ -285,12 +314,12 @@ describe("blueprint device id migration version chain", () => {
       });
 
       expect(blueprint).toMatchObject({
-        schemaVersion: 6,
-        entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
+        schemaVersion: 7,
+        entities: { entity: { definitionId: "mix_pool_2", rotation: schemaVersion < 7 ? 180 : 0 } },
       });
       expect(world).toMatchObject({
-        schemaVersion: 6,
-        entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
+        schemaVersion: 7,
+        entities: { entity: { definitionId: "mix_pool_2", rotation: schemaVersion < 7 ? 180 : 0 } },
       });
     },
   );
@@ -644,7 +673,7 @@ describe("blueprint device id migration version chain", () => {
     const entities = { entity: createEntity("mix_pool_2") };
 
     expect(migrateBlueprintEntityDeviceIds(entities, 0)).toBeNull();
-    expect(migrateBlueprintEntityDeviceIds(entities, 7)).toBeNull();
+    expect(migrateBlueprintEntityDeviceIds(entities, 8)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 2, 1)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 1.5)).toBeNull();
   });

@@ -10,7 +10,7 @@ import { rotateLocalPortCell } from "@/shared/geometry/port";
 import { normalizeRegionAnnotations } from "@/shared/region-annotations";
 
 // AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 6;
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 7;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
@@ -239,8 +239,108 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
   {
     fromVersion: 5,
     toVersion: 6,
+    // AI-CORRECTION 2026-09-11: schema 6 文档可能已在用户环境存在，5→6 保持原空规则以避免重放本次端口补偿。
     deviceRules: [],
   },
+  {
+    fromVersion: 6,
+    toVersion: 7,
+    // AI-CORRECTION 2026-09-11: 将 AKEData 1.5.3@9913107-5 确认的 37 个唯一 180°修正放入新兼容边界；schema 6 文档只在本 step 旋转一次。
+    // 对称、无映射和无端口定义继续不纳入。
+    deviceRules: [
+      { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
+      { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
+      { fromDeviceId: "grinder_1", toDeviceId: "grinder_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "liquid_filling_pd_mc_1", rotationOffset: 180 },
+      { fromDeviceId: "filling_pd_mc_1", toDeviceId: "filling_pd_mc_1", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_loader_1", toDeviceId: "udpipe_loader_1", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_unloader_1", toDeviceId: "udpipe_unloader_1", rotationOffset: 180 },
+      { fromDeviceId: "furnance_1", toDeviceId: "furnance_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_furnance_1", toDeviceId: "liquid_furnance_1", rotationOffset: 180 },
+      { fromDeviceId: "cmpt_mc_1", toDeviceId: "cmpt_mc_1", rotationOffset: 180 },
+      { fromDeviceId: "shaper_1", toDeviceId: "shaper_1", rotationOffset: 180 },
+      { fromDeviceId: "shaper_1_gas", toDeviceId: "shaper_1_gas", rotationOffset: 180 },
+      { fromDeviceId: "seedcol_1", toDeviceId: "seedcol_1", rotationOffset: 180 },
+      { fromDeviceId: "planter_1", toDeviceId: "planter_1", rotationOffset: 180 },
+      { fromDeviceId: "hydro_planter_1", toDeviceId: "hydro_planter_1", rotationOffset: 180 },
+      { fromDeviceId: "winder_1", toDeviceId: "winder_1", rotationOffset: 180 },
+      { fromDeviceId: "tools_asm_mc_1", toDeviceId: "tools_asm_mc_1", rotationOffset: 180 },
+      { fromDeviceId: "thickener_1", toDeviceId: "thickener_1", rotationOffset: 180 },
+      { fromDeviceId: "power_sta_1", toDeviceId: "power_sta_1", rotationOffset: 180 },
+      { fromDeviceId: "mix_pool_2", toDeviceId: "mix_pool_2", rotationOffset: 180 },
+      { fromDeviceId: "liquid_purifier_1", toDeviceId: "liquid_purifier_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_purifier_1_gas", toDeviceId: "liquid_purifier_1_gas", rotationOffset: 180 },
+      { fromDeviceId: "xiranite_oven_1", toDeviceId: "xiranite_oven_1", rotationOffset: 180 },
+      { fromDeviceId: "dismantler_1", toDeviceId: "dismantler_1", rotationOffset: 180 },
+      { fromDeviceId: "transmuter_2_gastrans", toDeviceId: "transmuter_2_gastrans", rotationOffset: 180 },
+      { fromDeviceId: "transmuter_2_solidtrans", toDeviceId: "transmuter_2_solidtrans", rotationOffset: 180 },
+      { fromDeviceId: "gas_reactor_1", toDeviceId: "gas_reactor_1", rotationOffset: 180 },
+      { fromDeviceId: "transmuter_1_gastrans", toDeviceId: "transmuter_1_gastrans", rotationOffset: 180 },
+      { fromDeviceId: "transmuter_1_liquidtrans", toDeviceId: "transmuter_1_liquidtrans", rotationOffset: 180 },
+      { fromDeviceId: "water_pump_1", toDeviceId: "water_pump_1", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_loader_2", toDeviceId: "udpipe_loader_2", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_unloader_2", toDeviceId: "udpipe_unloader_2", rotationOffset: 180 },
+      { fromDeviceId: "liquid_cleaner_1", toDeviceId: "liquid_cleaner_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_storager_1", toDeviceId: "liquid_storager_1", rotationOffset: 180 },
+      { fromDeviceId: "gas_storager_1", toDeviceId: "gas_storager_1", rotationOffset: 180 },
+      { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
+      { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
+    ],
+  },
+  // AI-REMOVED 2026-09-11:
+  // Reason: 端口旋转规则从 5→6 移入新建 6→7，保护可能已经存在的 schema 6 文档不被重复旋转。
+  // Trigger: 无法由仓库 tag、发布提交或本地存档证明用户环境不存在 schema 6。
+  // Evidence: schema 6 已是当前代码声明，且用户要求兼容已有 schema 6 文档。
+  // Replacement: 上方 6→7 migration step。
+  // Risk: Low；历史代码仅作为审计记录保留。
+  // Human Review: Required
+  //
+  // Original code:
+//   {
+//     fromVersion: 5,
+//     toVersion: 6,
+//     // AI-CORRECTION 2026-09-11: 仓库可见发布证据显示 schema 6 引入提交 513e460c（2026-09-09）晚于全部正式/beta/pre tag（最新正式 tag v1.4.2.1，2026-08-28）及 2026-08-29 Alpha 发布提交；现有 public/blueprints 仍为 schema 5。因此在尚未暴露的 5→6 step 加入 AKEData 1.5.3@9913107-5 端口审计确认的 37 个唯一 180° 修正，保留既有 4→5 历史迁移。
+//     // `unloader_1`、`loader_1`、`sp_hub_1` 为 180° 对称，未纳入无证据旋转；未映射和无端口定义同样不纳入。
+//     deviceRules: [
+//       { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
+//       { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
+//       { fromDeviceId: "grinder_1", toDeviceId: "grinder_1", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "liquid_filling_pd_mc_1", rotationOffset: 180 },
+//       { fromDeviceId: "filling_pd_mc_1", toDeviceId: "filling_pd_mc_1", rotationOffset: 180 },
+//       { fromDeviceId: "udpipe_loader_1", toDeviceId: "udpipe_loader_1", rotationOffset: 180 },
+//       { fromDeviceId: "udpipe_unloader_1", toDeviceId: "udpipe_unloader_1", rotationOffset: 180 },
+//       { fromDeviceId: "furnance_1", toDeviceId: "furnance_1", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_furnance_1", toDeviceId: "liquid_furnance_1", rotationOffset: 180 },
+//       { fromDeviceId: "cmpt_mc_1", toDeviceId: "cmpt_mc_1", rotationOffset: 180 },
+//       { fromDeviceId: "shaper_1", toDeviceId: "shaper_1", rotationOffset: 180 },
+//       { fromDeviceId: "shaper_1_gas", toDeviceId: "shaper_1_gas", rotationOffset: 180 },
+//       { fromDeviceId: "seedcol_1", toDeviceId: "seedcol_1", rotationOffset: 180 },
+//       { fromDeviceId: "planter_1", toDeviceId: "planter_1", rotationOffset: 180 },
+//       { fromDeviceId: "hydro_planter_1", toDeviceId: "hydro_planter_1", rotationOffset: 180 },
+//       { fromDeviceId: "winder_1", toDeviceId: "winder_1", rotationOffset: 180 },
+//       { fromDeviceId: "tools_asm_mc_1", toDeviceId: "tools_asm_mc_1", rotationOffset: 180 },
+//       { fromDeviceId: "thickener_1", toDeviceId: "thickener_1", rotationOffset: 180 },
+//       { fromDeviceId: "power_sta_1", toDeviceId: "power_sta_1", rotationOffset: 180 },
+//       { fromDeviceId: "mix_pool_2", toDeviceId: "mix_pool_2", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_purifier_1", toDeviceId: "liquid_purifier_1", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_purifier_1_gas", toDeviceId: "liquid_purifier_1_gas", rotationOffset: 180 },
+//       { fromDeviceId: "xiranite_oven_1", toDeviceId: "xiranite_oven_1", rotationOffset: 180 },
+//       { fromDeviceId: "dismantler_1", toDeviceId: "dismantler_1", rotationOffset: 180 },
+//       { fromDeviceId: "transmuter_2_gastrans", toDeviceId: "transmuter_2_gastrans", rotationOffset: 180 },
+//       { fromDeviceId: "transmuter_2_solidtrans", toDeviceId: "transmuter_2_solidtrans", rotationOffset: 180 },
+//       { fromDeviceId: "gas_reactor_1", toDeviceId: "gas_reactor_1", rotationOffset: 180 },
+//       { fromDeviceId: "transmuter_1_gastrans", toDeviceId: "transmuter_1_gastrans", rotationOffset: 180 },
+//       { fromDeviceId: "transmuter_1_liquidtrans", toDeviceId: "transmuter_1_liquidtrans", rotationOffset: 180 },
+//       { fromDeviceId: "water_pump_1", toDeviceId: "water_pump_1", rotationOffset: 180 },
+//       { fromDeviceId: "udpipe_loader_2", toDeviceId: "udpipe_loader_2", rotationOffset: 180 },
+//       { fromDeviceId: "udpipe_unloader_2", toDeviceId: "udpipe_unloader_2", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_cleaner_1", toDeviceId: "liquid_cleaner_1", rotationOffset: 180 },
+//       { fromDeviceId: "liquid_storager_1", toDeviceId: "liquid_storager_1", rotationOffset: 180 },
+//       { fromDeviceId: "gas_storager_1", toDeviceId: "gas_storager_1", rotationOffset: 180 },
+//       { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
+//       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
+//     ],
+//   },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
 const MIGRATION_SPEC_BY_SOURCE_VERSION = createMigrationSpecBySourceVersion(

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 2,
+    "height": 2
+  },
+  "framePixels": {
+    "width": 256,
+    "height": 256
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 2,
+    "height": 2,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 1.0,
+    "y": 1.0
+  },
+  "pivotPixels": {
+    "x": 128.0,
+    "y": 128.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      512,
+      512
+    ],
+    "resultFramePixels": [
+      256,
+      256
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      128,
+      128,
+      384,
+      384
+    ]
+  },
+  "solidPorts": [
+    {
+      "kind": "input",
+      "index": 0,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 64.0,
+        "y": 192.0
+      },
+      "indicatorCenterPixels": {
+        "x": 64.0,
+        "y": 217.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    },
+    {
+      "kind": "input",
+      "index": 1,
+      "stripRole": "white-input",
+      "cellCenterPixels": {
+        "x": 192.0,
+        "y": 192.0
+      },
+      "indicatorCenterPixels": {
+        "x": 192.0,
+        "y": 217.6
+      },
+      "flowDirectionImage": {
+        "x": 0.0,
+        "y": -1.0
+      },
+      "sourceYawDegrees": 180
+    }
+  ],
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  }
+}

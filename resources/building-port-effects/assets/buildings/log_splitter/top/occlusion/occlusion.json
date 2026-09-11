@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "building": "log_splitter",
+  "view": "top",
+  "spatial": "../spatial.json",
+  "fields": [
+    {
+      "name": "static",
+      "file": "height_static.webp",
+      "sourcePose": "static",
+      "poseMetadata": {},
+      "sourceIdentity": {
+        "model": "A_splitter+1_001_01_dynamic_lod0",
+        "source": "current-vfs-mesh-data"
+      },
+      "alphaTestAudit": {
+        "status": "current-vfs-meshdata",
+        "policy": "opaque mesh-data triangles; transparent FX are not part of source model geometry"
+      },
+      "geometryProjection": "frontmost opaque evaluated triangle; max sourceY per pixel",
+      "encoding": {
+        "format": "lossless-webp",
+        "channels": "RGBA",
+        "R": "uint16 height high byte",
+        "G": "uint16 height low byte",
+        "B": 0,
+        "A": "255 valid projected surface, 0 empty",
+        "sampling": "nearest",
+        "colorSpace": "linear-data"
+      },
+      "heightMin": -8.5830685e-08,
+      "heightMax": 0.6481811,
+      "heightUnits": "source-world-units",
+      "coordinateSpace": "evaluated source-space scene Y; base included",
+      "worldToPixel": {
+        "x": "pixelX = pivotPixels.x + (sourceX - cameraCenterSource.x) * pixelsPerCell.x",
+        "y": "pixelY = pivotPixels.y + (sourceZ - cameraCenterSource.z) * pixelsPerCell.y",
+        "sample": "pixel-center; source top view +X right, +Z down",
+        "pivotPixels": {
+          "x": 192.0,
+          "y": 192.0
+        },
+        "cameraCenterSource": {
+          "x": 0.0,
+          "z": 0.0
+        },
+        "pixelsPerCell": {
+          "x": 128.0,
+          "y": 128.0
+        }
+      },
+      "validCoverage": {
+        "pixels": 14340,
+        "fraction": 0.09724934895833333,
+        "boundsPixels": [
+          132,
+          132,
+          252,
+          252
+        ]
+      },
+      "triangleCount": 110,
+      "clippedTriangles": 0,
+      "fullyOutsideTriangles": 0,
+      "excludedObjects": []
+    }
+  ],
+  "staticPose": "static",
+  "stateMapping": {
+    "default": "static"
+  },
+  "epsilon": {
+    "units": "source-world-units",
+    "value": 0.001,
+    "rule": "effectWorldY + epsilon < sceneWorldY rejects effect pixel"
+  }
+}

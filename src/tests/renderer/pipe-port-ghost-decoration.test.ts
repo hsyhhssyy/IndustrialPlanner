@@ -18,7 +18,7 @@ describe("生产设备管口虚影语义", () => {
     "transmuter_1_gastrans",
     "transmuter_1_liquidtrans",
   ])("%s 显示四个普通管口和一个运行消耗管口", (definitionId) => {
-    const device = createEntity("device", definitionId, 10, 10, 0);
+    const device = createEntity("device", definitionId, 10, 10, 180);
 
     const entries = resolveProductionPipePortGhostEntries({
       entities: [device],
@@ -50,7 +50,7 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("方向正确的真实管道连接后隐藏对应生产设备管口", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 0);
+    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
     const connectedPipe = createEntity("pipe", "pipe_straight_1x1", 15, 11, 180);
 
     const entries = resolveProductionPipePortGhostEntries({
@@ -67,7 +67,7 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("外侧格与传送带族重叠时保留生产设备管口虚影", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 0);
+    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
     const overlappingBelt = createEntity("belt", "belt_straight_1x1", 15, 11, 0);
 
     const entries = resolveProductionPipePortGhostEntries({
@@ -84,8 +84,8 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("外侧格被普通设备足印阻挡时隐藏生产设备管口虚影", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 0);
-    const blocker = createEntity("blocker", "storager_1", 15, 10, 0);
+    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
+    const blocker = createEntity("blocker", "storager_1", 15, 10, 180);
 
     const entries = resolveProductionPipePortGhostEntries({
       entities: [device, blocker],
@@ -100,7 +100,7 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("强端口提示对应的生产设备可从虚影结果中排除", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 0);
+    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
 
     const entries = resolveProductionPipePortGhostEntries({
       entities: [device],

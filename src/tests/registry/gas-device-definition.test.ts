@@ -165,13 +165,13 @@ describe("gas item and device definitions", () => {
     expect(gasMode.footprint).toEqual({ width: 5, height: 5 });
     expect(solidMode.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(requirePortGroup(gasMode, "item_input"), [
-      { id: "in_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
-      { id: "in_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+      { id: "in_s_1", localCellX: 3, localCellY: 0, edge: "NORTH" },
+      { id: "in_s_3", localCellX: 1, localCellY: 0, edge: "NORTH" },
     ]);
     const gasOutput = requirePortGroup(gasMode, "gas_output");
     expectPortLayout(gasOutput, [
-      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "out_w_1", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_3", localCellX: 4, localCellY: 1, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasOutput);
     expect(gasMode.recipeChannels.find((channel) => channel.type === "normal-channel")).toMatchObject({
@@ -181,13 +181,13 @@ describe("gas item and device definitions", () => {
 
     const gasInput = requirePortGroup(solidMode, "gas_input");
     expectPortLayout(gasInput, [
-      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "in_e_1", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_3", localCellX: 0, localCellY: 1, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectPortLayout(requirePortGroup(solidMode, "item_output"), [
-      { id: "out_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
-      { id: "out_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
+      { id: "out_n_1", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+      { id: "out_n_3", localCellX: 1, localCellY: 4, edge: "SOUTH" },
     ]);
     expect(solidMode.recipeChannels.find((channel) => channel.type === "normal-channel")).toMatchObject({
       ingredientStorageGroupIds: ["gas_input_buffer"],
@@ -206,40 +206,40 @@ describe("gas item and device definitions", () => {
     expect(gasMode.footprint).toEqual({ width: 5, height: 5 });
     expect(liquidMode.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(liquidInput, [
-      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "in_e_1", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_3", localCellX: 0, localCellY: 1, edge: "WEST" },
     ]);
     expectLiquidOnlyPorts(liquidInput);
     expectPortLayout(gasOutput, [
-      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "out_w_1", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_3", localCellX: 4, localCellY: 1, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasOutput);
     expectPortLayout(gasInput, [
-      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "in_e_1", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_3", localCellX: 0, localCellY: 1, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectPortLayout(liquidOutput, [
-      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "out_w_1", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_3", localCellX: 4, localCellY: 1, edge: "EAST" },
     ]);
     expectLiquidOnlyPorts(liquidOutput);
   });
 
-  it("defines gas reactor as gas-only east input and west output", () => {
+  it("defines gas reactor as gas-only west input and east output", () => {
     const definition = requireEntity("gas_reactor_1");
     const gasInput = requirePortGroup(definition, "gas_input");
     const gasOutput = requirePortGroup(definition, "gas_output");
 
     expect(definition.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(gasInput, [
-      { id: "in_w_1", localCellX: 4, localCellY: 3, edge: "EAST" },
-      { id: "in_w_3", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectPortLayout(gasOutput, [
-      { id: "out_e_1", localCellX: 0, localCellY: 3, edge: "WEST" },
-      { id: "out_e_3", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectGasOnlyPorts(gasOutput);
@@ -301,12 +301,12 @@ describe("gas item and device definitions", () => {
     const fluidOutput = requirePortGroup(definition, "fluid_output");
 
     expectPortLayout(fluidInput, [
-      { id: "in_s_1", localCellX: 4, localCellY: 3, edge: "EAST" },
-      { id: "in_s_3", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_s_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "in_s_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectPortLayout(fluidOutput, [
-      { id: "out_n_1", localCellX: 0, localCellY: 3, edge: "WEST" },
-      { id: "out_n_3", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_n_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "out_n_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectFluidBasePorts(fluidInput);
     expectFluidBasePorts(fluidOutput);

@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "resourceRoot": ".",
+  "pixelsPerCell": 128,
+  "pageLimitPixels": [
+    4096,
+    4096
+  ],
+  "alphaPolicy": "lossless",
+  "standardEffectDisplay": {
+    "viewTransform": "Standard",
+    "exposure": 0
+  },
+  "heightProjection": {
+    "encoding": "RG16-packed-R-high-G-low",
+    "B": 0,
+    "alpha": "binary occupancy (255 valid, 0 empty)",
+    "heightOrigin": "source-Y=0 at baked anchor",
+    "worldToPixel": {
+      "pixelsPerCell": 128,
+      "sourceAxes": {
+        "pixelX": "+sourceX",
+        "pixelY": "+sourceZ"
+      },
+      "cameraCenterSource": [
+        0.0,
+        0.0
+      ],
+      "pivotPixels": "per-resource effect.json projection.worldToPixel.pivotPixels"
+    }
+  },
+  "resources": [
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeoff_in_green_01",
+      "path": "../../../../effects/P_fxfac_interactive_large_pipeoff_in_green_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_fxfac_interactive_large_pipeoff_in_green_01",
+      "state": "off",
+      "color": "green",
+      "size": "large",
+      "bend": "straight",
+      "direction": "in",
+      "frameCount": 185,
+      "cell": [
+        133,
+        60
+      ],
+      "height": "../../../../effects/P_fxfac_interactive_large_pipeoff_in_green_01/height.webp",
+      "spritesheet": "../../../../effects/P_fxfac_interactive_large_pipeoff_in_green_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_large_pipeon_in_green_01",
+      "path": "../../../../effects/P_fxfac_interactive_large_pipeon_in_green_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_fxfac_interactive_large_pipeon_in_green_01",
+      "state": "on",
+      "color": "green",
+      "size": "large",
+      "bend": "straight",
+      "direction": "in",
+      "frameCount": 120,
+      "cell": [
+        186,
+        60
+      ],
+      "height": "../../../../effects/P_fxfac_interactive_large_pipeon_in_green_01/height.webp",
+      "spritesheet": "../../../../effects/P_fxfac_interactive_large_pipeon_in_green_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    },
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_green_2502",
+      "path": "../../../../effects/P_fxfac_interactive_mixpool_green_2502/effect.json",
+      "kind": "ring",
+      "sourcePrefab": "P_fxfac_interactive_mixpool_green_2502",
+      "state": "static",
+      "color": "green",
+      "size": "mixpool",
+      "bend": "ring",
+      "direction": "ring",
+      "frameCount": 1,
+      "cell": [
+        100,
+        29
+      ],
+      "height": "../../../../effects/P_fxfac_interactive_mixpool_green_2502/height.webp",
+      "spritesheet": "../../../../effects/P_fxfac_interactive_mixpool_green_2502/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "single-frame; motion unresolved"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeoff_in_01",
+      "path": "../../../../effects/P_interactive_large_pipeoff_in_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_interactive_large_pipeoff_in_01",
+      "state": "off",
+      "color": "orange",
+      "size": "large",
+      "bend": "straight",
+      "direction": "in",
+      "frameCount": 185,
+      "cell": [
+        165,
+        74
+      ],
+      "height": "../../../../effects/P_interactive_large_pipeoff_in_01/height.webp",
+      "spritesheet": "../../../../effects/P_interactive_large_pipeoff_in_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeoff_out_01",
+      "path": "../../../../effects/P_interactive_large_pipeoff_out_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_interactive_large_pipeoff_out_01",
+      "state": "off",
+      "color": "orange",
+      "size": "large",
+      "bend": "straight",
+      "direction": "out",
+      "frameCount": 185,
+      "cell": [
+        165,
+        74
+      ],
+      "height": "../../../../effects/P_interactive_large_pipeoff_out_01/height.webp",
+      "spritesheet": "../../../../effects/P_interactive_large_pipeoff_out_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeon_in_01",
+      "path": "../../../../effects/P_interactive_large_pipeon_in_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_interactive_large_pipeon_in_01",
+      "state": "on",
+      "color": "orange",
+      "size": "large",
+      "bend": "straight",
+      "direction": "in",
+      "frameCount": 120,
+      "cell": [
+        232,
+        74
+      ],
+      "height": "../../../../effects/P_interactive_large_pipeon_in_01/height.webp",
+      "spritesheet": "../../../../effects/P_interactive_large_pipeon_in_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    },
+    {
+      "id": "v1.5/fx/P_interactive_large_pipeon_out_01",
+      "path": "../../../../effects/P_interactive_large_pipeon_out_01/effect.json",
+      "kind": "pipe",
+      "sourcePrefab": "P_interactive_large_pipeon_out_01",
+      "state": "on",
+      "color": "orange",
+      "size": "large",
+      "bend": "straight",
+      "direction": "out",
+      "frameCount": 120,
+      "cell": [
+        232,
+        74
+      ],
+      "height": "../../../../effects/P_interactive_large_pipeon_out_01/height.webp",
+      "spritesheet": "../../../../effects/P_interactive_large_pipeon_out_01/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "authored UV speeds"
+    }
+  ]
+}

@@ -3454,6 +3454,14 @@ describe("createAppHost", () => {
     // Place a device with input ports (3x3 footprint, input ports on south edge)
     editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
+    // AI-CORRECTION 2026-09-11: keep this historical interaction fixture's
+    // north-facing ports while the corrected default registry faces south.
+    {
+      const snapshot = editorHost.document.getSnapshot();
+      const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
+      if (storage !== undefined) storage.rotation = 180;
+      editorHost.internalDocument.setSnapshot(snapshot);
+    }
 
     // Enter belt logistics placement mode
     appHost.gestureAdapter.handleKeyDown(keyEvent({
@@ -3586,7 +3594,9 @@ describe("createAppHost", () => {
         id: "storage",
         definitionId: "storager_1",
         position: { x: 6, y: 6 },
-        rotation: 0,
+        // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
+        // output used by this fixed world-coordinate gesture fixture.
+        rotation: 180,
         config: {},
         tags: [],
       },
@@ -3652,7 +3662,9 @@ describe("createAppHost", () => {
         id: "storage",
         definitionId: "storager_1",
         position: { x: 6, y: 6 },
-        rotation: 0,
+        // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
+        // output used by this fixed world-coordinate gesture fixture.
+        rotation: 180,
         config: {},
         tags: [],
       },
@@ -3697,6 +3709,14 @@ describe("createAppHost", () => {
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
     editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
+    // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
+    // in this historical gesture fixture after the default port correction.
+    {
+      const snapshot = editorHost.document.getSnapshot();
+      const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
+      if (storage !== undefined) storage.rotation = 180;
+      editorHost.internalDocument.setSnapshot(snapshot);
+    }
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -3748,6 +3768,14 @@ describe("createAppHost", () => {
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
     editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
+    // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
+    // in this historical gesture fixture after the default port correction.
+    {
+      const snapshot = editorHost.document.getSnapshot();
+      const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
+      if (storage !== undefined) storage.rotation = 180;
+      editorHost.internalDocument.setSnapshot(snapshot);
+    }
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({

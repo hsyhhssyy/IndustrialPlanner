@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "worldUnitsPerCell": 1.0,
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+  "canvasCells": {
+    "width": 3,
+    "height": 3
+  },
+  "canvasSourceBounds": {
+    "x": [
+      -1.5,
+      1.5
+    ],
+    "z": [
+      -1.5,
+      1.5
+    ]
+  },
+  "framePixels": {
+    "width": 384,
+    "height": 384
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 3,
+    "height": 3,
+    "source": "FactoryBuildingTable.shaper_1.range"
+  },
+  "footprintRectPixels": {
+    "left": 0,
+    "top": 0,
+    "right": 384,
+    "bottom": 384
+  },
+  "pivotCells": {
+    "x": 1.5,
+    "y": 1.5
+  },
+  "pivotPixels": {
+    "x": 192,
+    "y": 192
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "unionVisualBoundsSource": {
+    "min": [
+      -1.4649998,
+      -1.4649998,
+      0.0015964828
+    ],
+    "max": [
+      1.4649998,
+      1.4649998,
+      3.16923
+    ]
+  },
+  "crop": {
+    "sourceCanvasPixels": [
+      640,
+      640
+    ],
+    "rect": [
+      128,
+      128,
+      512,
+      512
+    ],
+    "resultPixels": [
+      384,
+      384
+    ],
+    "resize": false
+  },
+  "verticalTransform": {
+    "operation": "flip-top-bottom",
+    "sourceImageAxisY": "-sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      640,
+      640
+    ],
+    "resultFramePixels": [
+      384,
+      384
+    ],
+    "resized": false
+  },
+  "boundsPolicy": "union of close_idle and open_idle machine, selected pedestal, and six runtime port arrows"
+}

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "worldUnitsPerCell": 1.0,
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 5,
+    "height": 5
+  },
+  "canvasSourceBounds": {
+    "x": [
+      -2.5,
+      2.5
+    ],
+    "z": [
+      -2.5,
+      2.5
+    ]
+  },
+  "framePixels": {
+    "width": 640,
+    "height": 640
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 5,
+    "height": 5,
+    "source": "FactoryBuildingTable.seedcollector_1.range"
+  },
+  "footprintRectPixels": {
+    "left": 0,
+    "top": 0,
+    "width": 640,
+    "height": 640
+  },
+  "crop": {
+    "sourceCanvasPixels": [
+      896,
+      896
+    ],
+    "rect": [
+      128,
+      128,
+      768,
+      768
+    ],
+    "resultPixels": [
+      640,
+      640
+    ],
+    "resize": null
+  },
+  "visibleGeometrySourceBounds": {
+    "combinedBlender": {
+      "min": [
+        -2.4841037,
+        -2.4650006,
+        0.0015791005
+      ],
+      "max": [
+        2.484105,
+        2.4649997,
+        3.5626116
+      ]
+    }
+  },
+  "verticalTransform": {
+    "sourceRenderAxisY": "-sourceZ",
+    "deliveredAxisY": "+sourceZ",
+    "operation": "flip top-bottom once after crop"
+  },
+  "notes": [
+    "Canvas is a conservative 5x5 footprint with one-cell source overscan on every side.",
+    "No resampling or image resize was used."
+  ]
+}

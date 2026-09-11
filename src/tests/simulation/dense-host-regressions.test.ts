@@ -26,12 +26,20 @@ import {
   SIMULATION_ENGINE_MATRIX,
 } from "./simulation-engine-matrix";
 
-const DENSE_TRANSFER_PHASE_TICKS =
+const DENSE_TIMELINE_ORIGIN_STANDARD_TICK = 1;
+const DENSE_TIMELINE_STEP_STANDARD_TICKS =
   DENSE_STANDARD_TICK_RATE_PER_SECOND * RECIPE_PHASE_DURATION_SECONDS;
-const DENSE_FIRST_TRANSFER_TICK = 1;
-const DENSE_SECOND_TRANSFER_TICK =
-  DENSE_FIRST_TRANSFER_TICK + DENSE_TRANSFER_PHASE_TICKS;
-const DENSE_EMPTY_TRANSFER_TICK = DENSE_SECOND_TRANSFER_TICK + 1;
+const DENSE_FIRST_TRANSFER_STANDARD_TICK = DENSE_TIMELINE_ORIGIN_STANDARD_TICK;
+const DENSE_SECOND_TRANSFER_STANDARD_TICK =
+  DENSE_FIRST_TRANSFER_STANDARD_TICK + DENSE_TIMELINE_STEP_STANDARD_TICKS;
+const DENSE_EMPTY_TRANSFER_STANDARD_TICK =
+  DENSE_SECOND_TRANSFER_STANDARD_TICK + DENSE_TIMELINE_STEP_STANDARD_TICKS;
+const DENSE_SECOND_TRANSFER_TIMELINE_TICK =
+  (DENSE_SECOND_TRANSFER_STANDARD_TICK - DENSE_TIMELINE_ORIGIN_STANDARD_TICK)
+  / DENSE_TIMELINE_STEP_STANDARD_TICKS;
+const DENSE_EMPTY_TRANSFER_TIMELINE_TICK =
+  (DENSE_EMPTY_TRANSFER_STANDARD_TICK - DENSE_TIMELINE_ORIGIN_STANDARD_TICK)
+  / DENSE_TIMELINE_STEP_STANDARD_TICKS;
 
 describe("ST2-RQ-023 dense host regressions", () => {
   it.each([
@@ -327,19 +335,19 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await baselineHost.actions.start();
         baselineHost.actions.pause();
-        await baselineHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_TICK);
+        await baselineHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_STANDARD_TICK);
         const firstTransfers = readSimulationSnapshot(baselineHost)?.transfers;
-        await baselineHost.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
+        await baselineHost.internalActions.syncToTick(DENSE_SECOND_TRANSFER_STANDARD_TICK);
         const expectedSnapshot = readSimulationSnapshot(baselineHost);
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
         expect(expectedSnapshot?.transfers).not.toEqual(firstTransfers);
 
         await presentationHost.actions.start();
         presentationHost.actions.pause();
-        await presentationHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_TICK);
+        await presentationHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_STANDARD_TICK);
         await presentationHost.actions.enableTimeline();
         expect(await presentationHost.actions.seekTimelineToTick(
-          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+          DENSE_SECOND_TRANSFER_TIMELINE_TICK,
         )).toBe(true);
         expect(readSimulationSnapshot(presentationHost)).toEqual(expectedSnapshot);
       } finally {
@@ -354,18 +362,18 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await host.actions.start();
         host.actions.pause();
-        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
+        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_STANDARD_TICK);
         const expectedSnapshot = readSimulationSnapshot(host);
         expect(expectedSnapshot?.standardTickRate).toBe(
           DENSE_STANDARD_TICK_RATE_PER_SECOND,
         );
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
 
-        await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK);
+        await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_STANDARD_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
         await host.actions.enableTimeline();
         expect(await host.actions.seekTimelineToTick(
-          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+          DENSE_SECOND_TRANSFER_TIMELINE_TICK,
         )).toBe(true);
         expect(readSimulationSnapshot(host)).toEqual(expectedSnapshot);
       } finally {
@@ -379,32 +387,32 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await host.actions.start();
         host.actions.pause();
-        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
+        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_STANDARD_TICK);
         const transferSnapshot = readSimulationSnapshot(host);
         expect(transferSnapshot?.transfers.length).toBeGreaterThan(0);
 
         await host.actions.enableTimeline();
         expect(await host.actions.seekTimelineToTick(
-          DENSE_EMPTY_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+          DENSE_EMPTY_TRANSFER_TIMELINE_TICK,
         )).toBe(true);
-        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_TICK);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_STANDARD_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
-        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK)).status)
+        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_STANDARD_TICK)).status)
           .toBe("ready");
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
-        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK)).status)
+        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_STANDARD_TICK)).status)
           .toBe("ready");
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
         expect(await host.actions.seekTimelineToTick(
-          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+          DENSE_SECOND_TRANSFER_TIMELINE_TICK,
         )).toBe(true);
         expect(readSimulationSnapshot(host)).toEqual(transferSnapshot);
         expect(await host.actions.seekTimelineToTick(
-          DENSE_EMPTY_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+          DENSE_EMPTY_TRANSFER_TIMELINE_TICK,
         )).toBe(true);
-        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_TICK);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_STANDARD_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
       } finally {
         host.dispose();

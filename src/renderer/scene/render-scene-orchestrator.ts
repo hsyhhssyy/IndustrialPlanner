@@ -14,7 +14,7 @@ import {
   rotateGridRotation,
   resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
-import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
+import { resolveDisplayRotationRadians, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid"
 import type {
   LogisticsDraftReadonlyState,
@@ -108,6 +108,7 @@ import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecora
 import { createConfiguredItemIconDecoration } from "./decorations/ConfiguredItemIconDecoration"
 
 import { LogisticsMaterialSceneState } from "./logistics-material-state"
+import { BuildingEffectsScene } from "../building-effects"
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
@@ -327,6 +328,7 @@ export function createRenderSceneOrchestrator(
     renderHost.workspace.registry.recipeDefinitions,
   )
   const logisticsMaterialState = new LogisticsMaterialSceneState()
+  const buildingEffects = new BuildingEffectsScene()
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
   const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
@@ -670,6 +672,35 @@ export function createRenderSceneOrchestrator(
     )
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
 
+    measureRenderStage(frameProfiler, "buildingEffects.sync", () => {
+      // AI-REMOVED 2026-09-11:
+      // Reason: 变换应由特效组件随已加载资源统一管理。
+      // Trigger: 高度渲染接入需要保持现有场景编排边界。
+      // Evidence: 编排层不需要直接操作子组件的 Pixi 变换。
+      // Replacement: BuildingEffectsScene.sync 的 view 参数。
+      // Risk: Low; Human Review: Required
+      // Original code:
+      // buildingEffects.container.position.set(ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
+      //   ctx.viewportBounds.top + ctx.viewportBounds.height / 2)
+      // buildingEffects.container.pivot.set(viewportState.centerX, viewportState.centerY)
+      // buildingEffects.container.scale.set(viewportState.gridCellPixelSize)
+      // buildingEffects.container.rotation = resolveDisplayRotationRadians(viewportState.displayRotation)
+      buildingEffects.sync({
+        view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
+          y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
+          centerX: viewportState.centerX, centerY: viewportState.centerY,
+          scale: viewportState.gridCellPixelSize, rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },
+        enabled: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
+          && renderHost.workspace.editor?.state.suppressPipes !== true,
+        version: `${frameVersions.document}:${frameVersions.collections}`,
+        nowMs: frameTime.nowMs,
+        bounds: resolveVisibleWorldRect(viewportState, ctx.viewportBounds),
+        entities, definitions: entityDefinitionMap, materials: logisticsMaterials,
+        hiddenIds: new Set(editorCollections[EntityCollectionType.ghost]),
+      })
+      ctx.buildingEffectPortKeys = buildingEffects.portKeys
+    })
+
     measureRenderStage(frameProfiler, "decoration.invalidPlacement", () => {
       invalidPlacementDecoration.sync(ctx)
     })
@@ -813,6 +844,7 @@ export function createRenderSceneOrchestrator(
   // Human Review: Required
   // Original code:
   // layers.logisticsPipe.addChild(pipeFlowLayer)
+  layers.logisticsPipe.addChild(buildingEffects.container)
   layers.logisticsPipe.addChild(darkPipeLinkLineLayer)
 
   app.stage.addChild(
@@ -822,6 +854,14 @@ export function createRenderSceneOrchestrator(
     layers.entityHigh,
     layers.logisticsBelt,
     layers.logisticsPipe,
+    // AI-REMOVED 2026-09-11:
+    // Reason: 特效属于既有管道绘制阶段，不新增顶层阶段。
+    // Trigger: 高度管道特效接入。
+    // Evidence: pipeSubEntity 之后、暗管连接线之前即为所需排序。
+    // Replacement: layers.logisticsPipe 内的 buildingEffects.container。
+    // Risk: Low; Human Review: Required
+    // Original code:
+    // buildingEffects.container,
     layers.draft,
     layers.overlay,
     invalidPlacementOverlayLayer,
@@ -907,6 +947,7 @@ export function createRenderSceneOrchestrator(
       hoverCornersDecoration.destroy()
       portOverlayDecoration.destroy()
       pipePortGhostDecoration.destroy()
+      buildingEffects.destroy()
       configuredItemIconDecoration.destroy()
 // AI-REMOVED 2026-09-10:
 // Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+  "canvasCells": {
+    "width": 5,
+    "height": 5
+  },
+  "framePixels": {
+    "width": 640,
+    "height": 640
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 5,
+    "height": 5,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 2.5,
+    "y": 2.5
+  },
+  "pivotPixels": {
+    "x": 320.0,
+    "y": 320.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "description": "When gridX/gridY is the logical footprint top-left, place the sprite canvas at gridX-left, gridY-top.",
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "flip-top-bottom",
+    "sourceImageAxisY": "-sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      896,
+      896
+    ],
+    "resultFramePixels": [
+      640,
+      640
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      128,
+      128,
+      768,
+      768
+    ]
+  }
+}

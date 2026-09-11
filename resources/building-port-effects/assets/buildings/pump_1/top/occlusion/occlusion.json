@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "building": "pump_1",
+  "view": "top",
+  "spatial": "../spatial.json",
+  "fields": [
+    {
+      "name": "open_idle",
+      "file": "height_open_idle.webp",
+      "sourcePose": "open_idle",
+      "poseMetadata": {
+        "clip": "open_idle",
+        "vatRow": 133,
+        "vatPhysicalRow": 60,
+        "static": false,
+        "vatLayout": "quaternion-translation",
+        "vatRowOrder": "reverse-single-stack"
+      },
+      "sourceIdentity": {
+        "model": "A_pump+1_001_01_variant_dynamic_lod0",
+        "cab": "CAB-275ba4f58887e41388d251ff700231d9",
+        "pathId": 4248521321616442432,
+        "baseModel": "A_pedestal+1_001_03x03_04a_dynamic_lod0",
+        "baseCab": "CAB-d4c86b93568f2b5f832a6997fc57b670",
+        "basePathId": -7205891563814230343
+      },
+      "alphaTestAudit": {
+        "status": "present-source-alpha-test-materials",
+        "source": "current-VFS exported materials metadata",
+        "materials": [
+          "M_pump+1_001_01_variant_com_alphatest+1_001_03_vat",
+          "M_pump+1_001_01_variant_transparency+1_001_01_vat"
+        ],
+        "policy": "Alpha-test material is retained in source audit; standalone evaluated mesh exposes one render material slot, so no texture-to-submesh assignment was inferred. Height mask is validated against the formal current delivery silhouette."
+      },
+      "alphaTestProjection": {
+        "rulesApplied": 2,
+        "filteredPixels": 0,
+        "missingUVTriangles": 0
+      },
+      "cropCompatibility": {
+        "status": "verified-existing-color-crop",
+        "sourceCanvas": "formal output/v1.5 pump_1/top open_idle 384x384 color alpha",
+        "retainedVisibleScope": "height retains evaluated opaque source geometry pixels inside the declared 3x3 spatial canvas; in-canvas silhouette compared to formal color alpha",
+        "formalAlphaThreshold": 16,
+        "clippedTrianglesPolicy": "retain diagnostic count 84; do not zero or rescale"
+      },
+      "geometryProjection": "frontmost opaque evaluated triangle; max sourceY per pixel",
+      "encoding": {
+        "format": "lossless-webp",
+        "channels": "RGBA",
+        "R": "uint16 height high byte",
+        "G": "uint16 height low byte",
+        "B": 0,
+        "A": "255 valid projected surface, 0 empty",
+        "sampling": "nearest",
+        "colorSpace": "linear-data"
+      },
+      "heightMin": -99.6504898071289,
+      "heightMax": 5.083152770996094,
+      "heightUnits": "source-world-units",
+      "coordinateSpace": "evaluated source-space scene Y; base included",
+      "worldToPixel": {
+        "x": "pixelX = pivotPixels.x + (sourceX - cameraCenterSource.x) * pixelsPerCell.x",
+        "y": "pixelY = pivotPixels.y + (sourceZ - cameraCenterSource.z) * pixelsPerCell.y",
+        "sample": "pixel-center; source top view +X right, +Z down",
+        "pivotPixels": {
+          "x": 192.0,
+          "y": 192.0
+        },
+        "cameraCenterSource": {
+          "x": 0.0,
+          "z": 0.0
+        },
+        "pixelsPerCell": {
+          "x": 128.0,
+          "y": 128.0
+        }
+      },
+      "validCoverage": {
+        "pixels": 91003,
+        "fraction": 0.6171535915798612,
+        "boundsPixels": [
+          0,
+          7,
+          383,
+          377
+        ]
+      },
+      "triangleCount": 2448,
+      "clippedTriangles": 84,
+      "fullyOutsideTriangles": 562,
+      "excludedObjects": []
+    }
+  ],
+  "staticPose": "open_idle",
+  "stateMapping": {
+    "default": "open_idle"
+  },
+  "epsilon": {
+    "units": "source-world-units",
+    "value": 0.001,
+    "rule": "effectWorldY + epsilon < sceneWorldY rejects effect pixel"
+  }
+}

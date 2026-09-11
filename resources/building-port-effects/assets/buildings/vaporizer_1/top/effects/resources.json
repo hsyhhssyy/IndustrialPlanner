@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "resourceRoot": ".",
+  "pixelsPerCell": 128,
+  "pageLimitPixels": [
+    4096,
+    4096
+  ],
+  "alphaPolicy": "lossless",
+  "standardEffectDisplay": {
+    "viewTransform": "Standard",
+    "exposure": 0
+  },
+  "heightProjection": {
+    "encoding": "RG16-packed-R-high-G-low",
+    "B": 0,
+    "alpha": "binary occupancy (255 valid, 0 empty)",
+    "heightOrigin": "source-Y=0 at baked anchor",
+    "worldToPixel": {
+      "pixelsPerCell": 128,
+      "sourceAxes": {
+        "pixelX": "+sourceX",
+        "pixelY": "+sourceZ"
+      },
+      "cameraCenterSource": [
+        0.0,
+        0.0
+      ],
+      "pivotPixels": "per-resource effect.json projection.worldToPixel.pivotPixels"
+    }
+  },
+  "resources": [
+    {
+      "id": "v1.5/fx/P_fxfac_interactive_mixpool_green_2501",
+      "path": "../../../../effects/P_fxfac_interactive_mixpool_green_2501/effect.json",
+      "kind": "ring",
+      "sourcePrefab": "P_fxfac_interactive_mixpool_green_2501",
+      "state": "static",
+      "color": "green",
+      "size": "mixpool",
+      "bend": "ring",
+      "direction": "ring",
+      "frameCount": 1,
+      "cell": [
+        29,
+        104
+      ],
+      "height": "../../../../effects/P_fxfac_interactive_mixpool_green_2501/height.webp",
+      "spritesheet": "../../../../effects/P_fxfac_interactive_mixpool_green_2501/spritesheet.json",
+      "heightEncoding": "RG16-packed-R-high-G-low,B=0,alpha=binary occupancy",
+      "motionProvenance": "single-frame; motion unresolved"
+    }
+  ]
+}

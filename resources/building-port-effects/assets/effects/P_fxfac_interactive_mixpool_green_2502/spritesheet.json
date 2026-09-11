@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "cellWidth": 100,
+  "cellHeight": 29,
+  "frameCount": 1,
+  "pixelsPerCell": 128,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 100,
+      "height": 29,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "losslessAlpha": true,
+      "quality": 85
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 100,
+      "height": 29,
+      "durationMs": 1000.0,
+      "timeSeconds": 0.0
+    }
+  ]
+}

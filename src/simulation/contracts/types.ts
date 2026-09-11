@@ -136,7 +136,8 @@ export interface CompiledRegionalResourceSupply {
 }
 
 export interface CompiledSimulationTopology {
-  readonly schemaVersion: 6;
+  // AI-CORRECTION 2026-09-11: 当前文档 schema 已升至 7，拓扑契约跟随当前版本。
+  readonly schemaVersion: 7;
   /** 编译时使用的显式模式；Worker 与 runtime 不得从区域上下文存在性推断。 */
   readonly simulationMode: SimulationMode;
   readonly topologyId: string;

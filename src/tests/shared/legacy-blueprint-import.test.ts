@@ -62,7 +62,7 @@ describe("legacy-blueprint-import", () => {
         id: "legacy_c96944de_0002",
         definitionId: "furnance_1",
         position: { x: 3, y: 4 },
-        rotation: 0,
+        rotation: 180,
         config: {
           "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
           "storageSlotGroups[0].slots[0].initialCount": 50,

@@ -24,7 +24,7 @@
 脚本固定执行以下逻辑：
 
 1. 通过 `alter:` tag、已知历史别名或同名 ID，把 registry 实体映射到 `FactoryBuildingTable`。
-2. 对解包端口统一应用 `localCellX = width - 1 - position.x`、`localCellY = position.z`。
+2. 对解包端口统一应用已由 transmuter_1 游戏实测校准的 `localCellX = position.x`、`localCellY = depth - 1 - position.z`；禁止以当前 registry 反推这一步，避免循环论证。
 3. 以方向角色、`isPipe` 和坐标构造多重集；registry 变体可以是 building 全部端口的子集。
 4. 按项目 `GridRotation` 约定枚举四个顺时针正交旋转，并同时核对旋转后的占地尺寸。
 5. 输出 `changed`、`unchanged`、`symmetric` 或 `unresolved`。唯一匹配角 `A` 表示“解包标准端口 → 当前 registry”；registry 修正角为 `-A mod 360`，既有蓝图和基地文档的旋转迁移量为 `+A mod 360`。`symmetric` 和 `unresolved` 必须单独调查。

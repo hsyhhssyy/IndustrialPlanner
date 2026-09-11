@@ -14,9 +14,9 @@ describe("port priority groups", () => {
     const document: WorldDocument = {
       ...createWorldDocument(),
       entities: {
-        source: createEntity("source", "storager_1", 0, 0, 0),
+        source: createEntity("source", "storager_1", 0, 0, 180),
         belt: createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-        sink: createEntity("sink", "storager_1", 0, -4, 0),
+        sink: createEntity("sink", "storager_1", 0, -4, 180),
       },
       entityOrder: ["source", "belt", "sink"],
     };

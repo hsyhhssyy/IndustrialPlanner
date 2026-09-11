@@ -12,6 +12,7 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
+import { rotateGridRotation } from "@/shared/geometry/grid";
 import type {
   BlueprintSimulationReport,
   BlueprintSimulationTickReport,
@@ -35,6 +36,48 @@ export function createWarehouseSlotLink(entityId: string, itemId: string, storag
 
 export const BASE_ID = "wuling_protocol_core";
 export const TIMESTAMP = new Date(0).toISOString();
+
+// AI-CORRECTION 2026-09-11: 这些历史 simulation 夹具按 AKEData 校准前的默认端口布局书写。
+// 端口 registry 已统一到 raw 坐标；将夹具实体显式转 180°，保持测试场景的世界连接语义。
+const LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS = new Set([
+  "storager_1",
+  "mix_pool_1",
+  "grinder_1",
+  "liquid_filling_pd_mc_1",
+  "filling_pd_mc_1",
+  "udpipe_loader_1",
+  "udpipe_unloader_1",
+  "furnance_1",
+  "liquid_furnance_1",
+  "cmpt_mc_1",
+  "shaper_1",
+  "shaper_1_gas",
+  "seedcol_1",
+  "planter_1",
+  "hydro_planter_1",
+  "winder_1",
+  "tools_asm_mc_1",
+  "thickener_1",
+  "power_sta_1",
+  "mix_pool_2",
+  "liquid_purifier_1",
+  "liquid_purifier_1_gas",
+  "xiranite_oven_1",
+  "dismantler_1",
+  "transmuter_2_gastrans",
+  "transmuter_2_solidtrans",
+  "gas_reactor_1",
+  "transmuter_1_gastrans",
+  "transmuter_1_liquidtrans",
+  "water_pump_1",
+  "udpipe_loader_2",
+  "udpipe_unloader_2",
+  "liquid_cleaner_1",
+  "liquid_storager_1",
+  "gas_storager_1",
+  "vaporizer_1",
+  "gas_pump_1",
+]);
 
 export function createBlueprint(
   name: string,
@@ -63,7 +106,16 @@ export function createEntity(
   rotation: WorldEntity["rotation"] = 0,
   config: WorldEntity["config"] = {},
 ): WorldEntity {
-  return { id, definitionId, position: { x, y }, rotation, config, tags: [] };
+  return {
+    id,
+    definitionId,
+    position: { x, y },
+    rotation: LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS.has(definitionId)
+      ? rotateGridRotation(rotation, 180)
+      : rotation,
+    config,
+    tags: [],
+  };
 }
 
 export function getTick(

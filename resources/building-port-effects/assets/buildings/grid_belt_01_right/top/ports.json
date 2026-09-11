@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "version": "1.5",
+  "buildingId": "grid_belt_01_right",
+  "view": "top",
+  "status": "not-applicable-logistics-component",
+  "configStatus": "not-applicable-logistics-component",
+  "portConfigStatus": "pending-current-vfs-decode",
+  "portFxApplicable": false,
+  "configEvidence": "transport/pipe helper; no factory port-FX config expected",
+  "special": null,
+  "sourceTableName": "FactoryBuildingTable",
+  "portConfigIssues": [],
+  "spatial": "spatial.json",
+  "occlusion": "occlusion/occlusion.json",
+  "sourceIdentity": {
+    "tableBuildingId": "grid_belt_01_right",
+    "version": "1.5",
+    "source": "current-vfs-table",
+    "currentVfsAssetRefs": []
+  },
+  "deliveryMode": null,
+  "deliveryVariantKeys": [],
+  "deliveryVariantSelection": "single-view",
+  "rendererTemplateCount": 0,
+  "variants": [],
+  "activePorts": "state-specific; select one variants[*].activePorts for the runtime mode",
+  "resourceIds": [],
+  "resourceIdSchema": "v1.5/fx/<sourcePrefabName>",
+  "resourceIdsStatus": "complete-for-this-view; audit-only FX excluded",
+  "resourceSourceNames": [],
+  "pipeEffects": {},
+  "pipeFxStatus": "pending-current-vfs-decode",
+  "rings": [],
+  "effectAudit": {
+    "status": "pending-current-vfs-decode",
+    "effects": [],
+    "note": "Only interactive_mixpool_* effects are runtime rings; other effectCfg entries remain audit evidence."
+  },
+  "ringInventory": {
+    "status": "pending-current-vfs-decode",
+    "bindings": [],
+    "emptyMeansNoRings": false
+  },
+  "effectResources": {
+    "input": "effects/resources.json",
+    "on": null,
+    "off": null
+  },
+  "omissions": {
+    "sanjiao": "user-approved omission",
+    "onLongArrow": "arrowAlpha=0"
+  }
+}
