@@ -36,8 +36,12 @@ describe("v1.5 建筑素材发布", () => {
     expect(entity?.spriteId).toBe(entry.spriteId);
     expect(entity?.spriteOffset?.topView ?? { x: 0, y: 0, ...entity?.footprint }).toEqual(entry.spriteOffset);
     expect(entry.spriteOffset).toEqual({
-      x: -entry.sourceMetadata.spatial.footprintRectCells.left,
-      y: -entry.sourceMetadata.spatial.footprintRectCells.top,
+      x: entry.sourceMetadata.spatial.footprintRectCells.left === 0
+        ? 0
+        : -entry.sourceMetadata.spatial.footprintRectCells.left,
+      y: entry.sourceMetadata.spatial.footprintRectCells.top === 0
+        ? 0
+        : -entry.sourceMetadata.spatial.footprintRectCells.top,
       width: entry.sourceMetadata.spatial.canvasCells.width,
       height: entry.sourceMetadata.spatial.canvasCells.height,
     });

@@ -8,14 +8,31 @@ import type {
   RenderQuery,
 } from "@/domain/renderer"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry"
 import {
   getGridBoundingBox,
   getGridBoundsCenterCells,
   getGridFootprintCenterCells,
-  getRotatedGridFootprint,
   resolveSpriteGridRect,
   type GridBounds,
 } from "@/shared/geometry/grid"
+// AI-REMOVED 2026-09-11:
+// Reason: 蓝图实体的 definition 查找与旋转占地计算已由共享实体几何函数负责。
+// Trigger: 修复蓝图属性面板尺寸并统一编辑器、渲染器和面板的包围盒算法。
+// Evidence: resolveEntityGridGeometry 返回的 gridArea 与原逐实体 getRotatedGridFootprint 结果一致。
+// Replacement: src/shared/geometry/entity-grid-geometry.ts resolveEntityGridGeometry
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import {
+//   getGridBoundingBox,
+//   getGridBoundsCenterCells,
+//   getGridFootprintCenterCells,
+//   getRotatedGridFootprint,
+//   resolveSpriteGridRect,
+//   type GridBounds,
+// } from "@/shared/geometry/grid"
 import {
   createRegionOutlineSegments,
   normalizeRegionRects,
@@ -291,18 +308,11 @@ function syncBlueprintPreviewSprites(state: PreviewState): void {
     .map((entityId) => state.blueprint.entities[entityId])
     .filter((entity): entity is WorldEntity => entity !== undefined)
   const nextEntityIds = new Set<string>()
-  const areas = orderedEntities.flatMap((entity) => {
-    const definition = state.entityDefinitionMap.get(entity.definitionId)
-
-    if (!definition) {
-      return []
-    }
-
-    return [{
-      position: entity.position,
-      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
-    }]
+  const entityGeometry = resolveEntityGridGeometry({
+    entities: orderedEntities,
+    entityDefinitionMap: state.entityDefinitionMap,
   })
+  const areas = entityGeometry?.entries.map(({ gridArea }) => gridArea) ?? []
   areas.push(...state.blueprint.regions.flatMap((region) => region.rects.map((rect) => ({
     position: { x: rect.x, y: rect.y },
     footprint: { width: rect.width, height: rect.height },

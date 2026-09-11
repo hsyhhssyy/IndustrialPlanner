@@ -5,10 +5,21 @@ import type {
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import {
-  getGridBoundingBox,
-  getRotatedGridFootprint,
-} from "@/shared/geometry/grid";
+import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
+
+// AI-REMOVED 2026-09-11:
+// Reason: 实体 definition 查找、旋转占地与包围盒计算已提取为共享几何能力。
+// Trigger: 修复蓝图属性面板只按锚点跨度计算尺寸的问题，并统一各调用方的包围盒语义。
+// Evidence: resolveEntityGridGeometry 同时覆盖原 getRotatedGridFootprint 与 getGridBoundingBox 调用链。
+// Replacement: src/shared/geometry/entity-grid-geometry.ts resolveEntityGridGeometry
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import {
+//   getGridBoundingBox,
+//   getRotatedGridFootprint,
+// } from "@/shared/geometry/grid";
 
 import { resolveEntityById } from "./entity-resolvers";
 
@@ -30,7 +41,7 @@ export function resolveEntityCollectionGeometry(options: {
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): ResolvedEntityCollectionGeometry | null {
-  const entries: EntityCollectionGeometryEntry[] = [];
+  const entities: WorldEntity[] = [];
 
   for (const entityId of options.collection) {
     const entity = resolveEntityById({
@@ -43,51 +54,33 @@ export function resolveEntityCollectionGeometry(options: {
       continue;
     }
 
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-
-    if (definition === undefined) {
-      continue;
-    }
-
-    const footprint = getRotatedGridFootprint(
-      definition.footprint,
-      entity.rotation,
-    );
-
-    entries.push({
-      entity,
-      definition,
-      gridRect: {
-        x: entity.position.x,
-        y: entity.position.y,
-        width: footprint.width,
-        height: footprint.height,
-      },
-    });
+    entities.push(entity);
   }
 
-  const bounds = getGridBoundingBox(
-    entries.map(({ gridRect }) => ({
-      position: {
-        x: gridRect.x,
-        y: gridRect.y,
-      },
-      footprint: {
-        width: gridRect.width,
-        height: gridRect.height,
-      },
-    })),
-  );
-
-  if (bounds === null) {
+  const geometry = resolveEntityGridGeometry({
+    entities,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+  if (geometry === null) {
     return null;
   }
 
+  const entries: EntityCollectionGeometryEntry[] = geometry.entries.map((entry) => ({
+    entity: entry.entity,
+    definition: entry.definition,
+    gridRect: {
+      x: entry.gridArea.position.x,
+      y: entry.gridArea.position.y,
+      width: entry.gridArea.footprint.width,
+      height: entry.gridArea.footprint.height,
+    },
+  }));
+
   const boundingBox = {
-    x: bounds.left,
-    y: bounds.top,
-    width: bounds.width,
-    height: bounds.height,
+    x: geometry.boundingBox.left,
+    y: geometry.boundingBox.top,
+    width: geometry.boundingBox.width,
+    height: geometry.boundingBox.height,
   };
   const centerPoint = {
     x: boundingBox.x + boundingBox.width / 2,

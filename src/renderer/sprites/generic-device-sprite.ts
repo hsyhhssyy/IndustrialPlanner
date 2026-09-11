@@ -1,8 +1,10 @@
 import {
+  CanvasTextMetrics,
   Container,
   Graphics,
   Sprite,
   Text,
+  TextStyle,
   Texture,
   TilingSprite,
   Assets,
@@ -1412,10 +1414,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
     const labelAnchorLayout = this.currentFootprintLayout ?? layout;
+    const deviceName = showDeviceName ? resolveDeviceDisplayName(this.definition, app) : null;
     const labelLayout = resolveDeviceLabelLayout({
       layout: labelAnchorLayout,
       showDeviceIcon: effectiveShowIcon,
       showDeviceName,
+      deviceName,
+      useBlueprintStyle,
+      allowInlineDeviceIcon: showDeviceIconSetting && !hasPrimaryOutput,
       gridCellPixelSize: this.currentGridCellPixelSize,
     });
 
@@ -1441,7 +1447,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     if (showDeviceName) {
-      const nextText = resolveDeviceDisplayName(this.definition, app);
+      const nextText = deviceName ?? "";
       if (this.currentDeviceNameText !== nextText) {
         this.currentDeviceNameText = nextText;
         this.deviceNameText.text = nextText;
@@ -2438,6 +2444,9 @@ function resolveDeviceLabelLayout(options: {
   layout: Pick<RenderSpriteLayout, "x" | "y" | "width" | "height">;
   showDeviceIcon: boolean;
   showDeviceName: boolean;
+  deviceName: string | null;
+  useBlueprintStyle: boolean;
+  allowInlineDeviceIcon: boolean;
   gridCellPixelSize: number;
 }): {
   icon: {
@@ -2452,7 +2461,15 @@ function resolveDeviceLabelLayout(options: {
     maxWidth: number;
   };
 } {
-  const { layout, showDeviceIcon, showDeviceName, gridCellPixelSize } = options;
+  const {
+    layout,
+    showDeviceIcon,
+    showDeviceName,
+    deviceName,
+    useBlueprintStyle,
+    allowInlineDeviceIcon,
+    gridCellPixelSize,
+  } = options;
   const centerX = layout.x + layout.width / 2;
   const centerY = layout.y + layout.height / 2;
   const zoomRatio = Number.isFinite(gridCellPixelSize) && gridCellPixelSize > 0
@@ -2462,6 +2479,46 @@ function resolveDeviceLabelLayout(options: {
   const fontSize = DEVICE_LABEL_FONT_SIZE * zoomRatio;
   const lineHeight = showDeviceName ? fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO : 0;
   const gap = showDeviceIcon && showDeviceName ? DEVICE_LABEL_GAP * zoomRatio : 0;
+  const maxWidth = Math.max(
+    DEVICE_LABEL_MIN_TEXT_WIDTH * zoomRatio,
+    layout.width * DEVICE_LABEL_TEXT_WIDTH_RATIO,
+  );
+  const measuredTextWidth = deviceName === null || !allowInlineDeviceIcon
+    ? 0
+    : CanvasTextMetrics.measureText(
+        deviceName,
+        new TextStyle(createDeviceNameTextStyle({
+          useBlueprintStyle,
+          fontSize,
+          wordWrapWidth: maxWidth,
+        })),
+        undefined,
+        false,
+      ).width;
+  const useInlineLayout = allowInlineDeviceIcon
+    && showDeviceIcon
+    && showDeviceName
+    && iconSize + gap + measuredTextWidth <= layout.width;
+
+  if (useInlineLayout) {
+    const totalWidth = iconSize + gap + measuredTextWidth;
+    const left = centerX - totalWidth / 2;
+
+    return {
+      icon: {
+        x: left + iconSize / 2,
+        y: centerY,
+        size: iconSize,
+      },
+      text: {
+        x: left + iconSize + gap + measuredTextWidth / 2,
+        y: centerY,
+        fontSize,
+        maxWidth,
+      },
+    };
+  }
+
   const totalHeight = iconSize + gap + lineHeight;
   const top = centerY - totalHeight / 2;
   const iconY = showDeviceIcon
@@ -2481,10 +2538,7 @@ function resolveDeviceLabelLayout(options: {
       x: centerX,
       y: textY,
       fontSize,
-      maxWidth: Math.max(
-        DEVICE_LABEL_MIN_TEXT_WIDTH * zoomRatio,
-        layout.width * DEVICE_LABEL_TEXT_WIDTH_RATIO,
-      ),
+      maxWidth,
     },
   };
 }

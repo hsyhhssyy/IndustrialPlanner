@@ -46,7 +46,7 @@
 
 ESLint、TypeScript、Vitest normal（2443 通过、2 跳过）及 Build 全部通过。素材一致性测试同时校验 Registry、集合清单与包内占地元数据，避免 Registry 和清单以相同错误值通过检查。未执行正式 E2E 和 Blueprint。
 
-三档浏览器验证使用 764×345、711×665、2552×1315 三组规定 Screen Profile，检查本轮 16 个重发动画的静态首帧，并逐段解码首末分页，共抽检 85 个动画页；最大边长 3840px，未出现白模或解码失败。每档测试后均关闭浏览器和专用 5188 端口。截图保留在 `.temp/playwright-test/building-v15-fix/`。这部分验证不代表仍待处理的原图方向和运行时材质已经验收通过。
+三档浏览器验证使用 764×345、711×665、2552×1315 三组规定 Screen Profile，检查本轮 16 个重发动画的静态首帧，并逐段解码首末分页，共抽检 85 个动画页；最大边长 3840px，未出现白模或解码失败。偏移专项另行叠加画布网格和逻辑占地，检查 `log_hongs_bus_source`、两个 `transmuter_2` 变体、`loader_1`、`unloader_1`。每档测试后均关闭浏览器和专用 5188 端口。截图保留在 `.temp/playwright-test/building-v15-fix/` 和 `.temp/playwright-test/building-v15-offset-fix/`。这部分验证不代表仍待处理的原图方向和运行时材质已经验收通过。
 
 | 测试文件 | 本轮验证行为与修改原因 |
 | --- | --- |

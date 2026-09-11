@@ -6,11 +6,25 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
 import {
-  getGridBoundingBox,
   getRotatedGridFootprint,
-  type GridArea,
 } from "@/shared/geometry/grid";
+
+// AI-REMOVED 2026-09-11:
+// Reason: 集合包围盒已统一由共享实体几何函数计算，不再直接组装 GridArea 并调用 getGridBoundingBox。
+// Trigger: 修复蓝图属性面板尺寸并消除编辑器、渲染器和面板之间的重复算法。
+// Evidence: resolveEntityGridGeometry 保留缺失实体或 definition 时跳过的既有语义。
+// Replacement: src/shared/geometry/entity-grid-geometry.ts resolveEntityGridGeometry
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import {
+//   getGridBoundingBox,
+//   getRotatedGridFootprint,
+//   type GridArea,
+// } from "@/shared/geometry/grid";
 import {
   areGridRectsIntersecting,
   resolvePowerRangeGridRect,
@@ -191,7 +205,7 @@ function resolveEntityCollectionGridRect(options: {
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): GridRect | null {
-  const areas: GridArea[] = [];
+  const entities: WorldEntity[] = [];
 
   for (const entityId of options.collection) {
     const entity = resolveEntityById({
@@ -204,32 +218,22 @@ function resolveEntityCollectionGridRect(options: {
       continue;
     }
 
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-
-    if (!definition) {
-      continue;
-    }
-
-    areas.push({
-      position: entity.position,
-      footprint: getRotatedGridFootprint(
-        definition.footprint,
-        entity.rotation,
-      ),
-    });
+    entities.push(entity);
   }
 
-  const bounds = getGridBoundingBox(areas);
-
-  if (bounds === null) {
+  const geometry = resolveEntityGridGeometry({
+    entities,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+  if (geometry === null) {
     return null;
   }
 
   return {
-    x: bounds.left,
-    y: bounds.top,
-    width: bounds.width,
-    height: bounds.height,
+    x: geometry.boundingBox.left,
+    y: geometry.boundingBox.top,
+    width: geometry.boundingBox.width,
+    height: geometry.boundingBox.height,
   };
 }
 

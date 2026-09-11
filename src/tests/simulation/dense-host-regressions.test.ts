@@ -11,6 +11,10 @@ import {
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import {
+  DENSE_STANDARD_TICK_RATE_PER_SECOND,
+  RECIPE_PHASE_DURATION_SECONDS,
+} from "@/simulation/contracts";
 
 import {
   createBlueprint,
@@ -21,6 +25,13 @@ import {
   describeSimulationEngineMatrix,
   SIMULATION_ENGINE_MATRIX,
 } from "./simulation-engine-matrix";
+
+const DENSE_TRANSFER_PHASE_TICKS =
+  DENSE_STANDARD_TICK_RATE_PER_SECOND * RECIPE_PHASE_DURATION_SECONDS;
+const DENSE_FIRST_TRANSFER_TICK = 1;
+const DENSE_SECOND_TRANSFER_TICK =
+  DENSE_FIRST_TRANSFER_TICK + DENSE_TRANSFER_PHASE_TICKS;
+const DENSE_EMPTY_TRANSFER_TICK = DENSE_SECOND_TRANSFER_TICK + 1;
 
 describe("ST2-RQ-023 dense host regressions", () => {
   it.each([
@@ -316,18 +327,20 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await baselineHost.actions.start();
         baselineHost.actions.pause();
-        await baselineHost.internalActions.syncToTick(1);
+        await baselineHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_TICK);
         const firstTransfers = readSimulationSnapshot(baselineHost)?.transfers;
-        await baselineHost.internalActions.syncToTick(2);
+        await baselineHost.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
         const expectedSnapshot = readSimulationSnapshot(baselineHost);
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
         expect(expectedSnapshot?.transfers).not.toEqual(firstTransfers);
 
         await presentationHost.actions.start();
         presentationHost.actions.pause();
-        await presentationHost.internalActions.syncToTick(1);
+        await presentationHost.internalActions.syncToTick(DENSE_FIRST_TRANSFER_TICK);
         await presentationHost.actions.enableTimeline();
-        expect(await presentationHost.actions.seekTimelineToTick(1)).toBe(true);
+        expect(await presentationHost.actions.seekTimelineToTick(
+          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+        )).toBe(true);
         expect(readSimulationSnapshot(presentationHost)).toEqual(expectedSnapshot);
       } finally {
         baselineHost.dispose();
@@ -341,15 +354,19 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await host.actions.start();
         host.actions.pause();
-        await host.internalActions.syncToTick(2);
+        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
         const expectedSnapshot = readSimulationSnapshot(host);
-        expect(expectedSnapshot?.standardTickRate).toBe(2);
+        expect(expectedSnapshot?.standardTickRate).toBe(
+          DENSE_STANDARD_TICK_RATE_PER_SECOND,
+        );
         expect(expectedSnapshot?.transfers.length).toBeGreaterThan(0);
 
-        await host.internalActions.syncToTick(4);
+        await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
         await host.actions.enableTimeline();
-        expect(await host.actions.seekTimelineToTick(1)).toBe(true);
+        expect(await host.actions.seekTimelineToTick(
+          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+        )).toBe(true);
         expect(readSimulationSnapshot(host)).toEqual(expectedSnapshot);
       } finally {
         host.dispose();
@@ -362,24 +379,32 @@ describe("ST2-RQ-023 dense host regressions", () => {
       try {
         await host.actions.start();
         host.actions.pause();
-        await host.internalActions.syncToTick(2);
+        await host.internalActions.syncToTick(DENSE_SECOND_TRANSFER_TICK);
         const transferSnapshot = readSimulationSnapshot(host);
         expect(transferSnapshot?.transfers.length).toBeGreaterThan(0);
 
         await host.actions.enableTimeline();
-        expect(await host.actions.seekTimelineToTick(2)).toBe(true);
-        expect(readSimulationSnapshot(host)?.tickNumber).toBe(3);
+        expect(await host.actions.seekTimelineToTick(
+          DENSE_EMPTY_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+        )).toBe(true);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
-        expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
+        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK)).status)
+          .toBe("ready");
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
-        expect((await host.internalActions.syncToTick(3)).status).toBe("ready");
+        expect((await host.internalActions.syncToTick(DENSE_EMPTY_TRANSFER_TICK)).status)
+          .toBe("ready");
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
 
-        expect(await host.actions.seekTimelineToTick(1)).toBe(true);
+        expect(await host.actions.seekTimelineToTick(
+          DENSE_SECOND_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+        )).toBe(true);
         expect(readSimulationSnapshot(host)).toEqual(transferSnapshot);
-        expect(await host.actions.seekTimelineToTick(2)).toBe(true);
-        expect(readSimulationSnapshot(host)?.tickNumber).toBe(3);
+        expect(await host.actions.seekTimelineToTick(
+          DENSE_EMPTY_TRANSFER_TICK - DENSE_FIRST_TRANSFER_TICK,
+        )).toBe(true);
+        expect(readSimulationSnapshot(host)?.tickNumber).toBe(DENSE_EMPTY_TRANSFER_TICK);
         expect(readSimulationSnapshot(host)?.transfers).toEqual([]);
       } finally {
         host.dispose();
@@ -387,7 +412,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
   });
 
-  it("publishes the Dense 2 TPS timing contract", async () => {
+  it("publishes the Dense 4 TPS timing contract", async () => {
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const workspace = createDenseTestWorkspace({
       currentDocument,
@@ -402,12 +427,12 @@ describe("ST2-RQ-023 dense host regressions", () => {
     try {
       await host.actions.start();
       expect(host.queries.getDocumentRuntimeStatus()).toMatchObject({
-        standardTickRate: 2,
-        tickRate: 2,
+        standardTickRate: 4,
+        tickRate: 4,
       });
       expect(readSimulationSnapshot(host)).toMatchObject({
-        standardTickRate: 2,
-        tickRate: 2,
+        standardTickRate: 4,
+        tickRate: 4,
       });
     } finally {
       host.dispose();
@@ -677,6 +702,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
 function createDenseTransferCheckpointHost(name: string): ReturnType<typeof createSimulationHost> {
   // 两端普通设备不会直接建立运输边；复用 pipe-transport 的真实管道布局。
   // Dense 的 0.5 秒管道周期对应 1 tick：tick 1 入管，tick 2 出管，tick 3 为空。
+  // AI-CORRECTION 2026-09-11: 上述 2 TPS 时序已失效；当前 4 TPS 下半秒周期为 2 tick，传输检查点由文件顶部时间常量推导。
   const document = createWorldDocumentFromBlueprint(createBlueprint(name, [
     createEntity("source-storage", "liquid_storager_1", 0, 0, 180, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",

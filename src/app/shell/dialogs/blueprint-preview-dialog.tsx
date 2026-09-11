@@ -22,6 +22,8 @@ import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blue
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { BlueprintPreviewHandle, BlueprintPreviewViewport } from "@/domain/renderer";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
 import {
   createEmptyBlueprintLibraryDirectory,
   type BlueprintLibraryDirectoryListing,
@@ -80,26 +82,28 @@ interface PreviewTouchGestureState {
 //   }).format(timestamp);
 // }
 
-function resolveBlueprintFootprint(record: BlueprintLibraryRecord) {
+function resolveBlueprintFootprint(
+  record: BlueprintLibraryRecord,
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>,
+) {
   const orderedEntities = record.entityOrder
     .map((entityId) => record.entities[entityId])
     .filter((entity): entity is NonNullable<typeof entity> => entity !== undefined);
+  const geometry = resolveEntityGridGeometry({
+    entities: orderedEntities,
+    entityDefinitionMap,
+  });
 
-  if (orderedEntities.length === 0) {
+  if (geometry === null) {
     return {
       width: 0,
       height: 0,
     };
   }
 
-  const minX = Math.min(...orderedEntities.map((entity) => entity.position.x));
-  const maxX = Math.max(...orderedEntities.map((entity) => entity.position.x));
-  const minY = Math.min(...orderedEntities.map((entity) => entity.position.y));
-  const maxY = Math.max(...orderedEntities.map((entity) => entity.position.y));
-
   return {
-    width: maxX - minX + 1,
-    height: maxY - minY + 1,
+    width: geometry.boundingBox.width,
+    height: geometry.boundingBox.height,
   };
 }
 
@@ -618,7 +622,12 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   if (!dialogState.visible || record === null) {
     return null;
   }
-  const footprint = resolveBlueprintFootprint(record);
+  const footprint = resolveBlueprintFootprint(
+    record,
+    new Map(
+      appHost.workspace.registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    ),
+  );
   const moveFolderPath = formatBlueprintFolderPath({
     rootLabel: rootFolderLabel,
     folderStack: moveFolderStack,

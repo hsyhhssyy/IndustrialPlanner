@@ -2,6 +2,20 @@ import type { LogisticsMaterialEntityState } from "@/shared/logistics-material"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
+  class MockTextStyle {
+    public fontSize?: number
+
+    public constructor(options: { fontSize?: number }) {
+      Object.assign(this, options)
+    }
+  }
+
+  const MockCanvasTextMetrics = {
+    measureText: vi.fn((text: string, style: { fontSize?: number }) => ({
+      width: Array.from(text).length * (style.fontSize ?? 0) * 0.6,
+    })),
+  }
+
   class MockContainer {
     public readonly children: unknown[] = []
     public parent: {
@@ -187,9 +201,11 @@ vi.mock("pixi.js", () => {
   }
 
   return {
+    CanvasTextMetrics: MockCanvasTextMetrics,
     Container: MockContainer,
     Sprite: MockSprite,
     Text: MockText,
+    TextStyle: MockTextStyle,
     TilingSprite: MockTilingSprite,
     Graphics: MockGraphics,
     Texture: MockTexture,
@@ -509,7 +525,7 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
-  it("draws device icon above the name with top-view avatar and outlined white text", async () => {
+  it("draws the blueprint avatar before a device name when the combined label fits", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
     const entityLayer = createLayerStub()
@@ -517,7 +533,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
+      [BLUEPRINT_AVATAR_KEY]: createLoadedTextureMock("blueprint-avatar"),
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
@@ -555,10 +571,11 @@ describe("GenericDeviceSprite", () => {
     const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(TOP_VIEW_AVATAR_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_AVATAR_KEY)
     expect(labelRoot?.visible).toBe(true)
     expect(icon?.visible).toBe(true)
-    expect(icon?.y).toBeLessThan(text?.y ?? 0)
+    expect(icon?.x).toBeLessThan(text?.x ?? 0)
+    expect(icon?.y).toBe(text?.y)
     expect(text?.visible).toBe(true)
     expect(text?.text).toBe("Storage")
     expect(text?.style.fill).toBe(0xffffff)
@@ -626,7 +643,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       "device-sprite-item_port_water_pump_1": resolvedTexture,
       "device-masks-item_port_water_pump_1": resolvedMaskTexture,
-      "top-view-avatar-item_port_water_pump_1": createLoadedTextureMock("water-pump-avatar"),
+      "blueprint-avatar-item_port_water_pump_1": createLoadedTextureMock("water-pump-avatar"),
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
@@ -761,7 +778,8 @@ describe("GenericDeviceSprite", () => {
     expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_AVATAR_KEY)
     expect(labelRoot?.visible).toBe(true)
     expect(icon?.visible).toBe(true)
-    expect(icon?.y).toBeLessThan(text?.y ?? 0)
+    expect(icon?.x).toBeLessThan(text?.x ?? 0)
+    expect(icon?.y).toBe(text?.y)
     expect(text?.visible).toBe(true)
     expect(text?.text).toBe("Storage")
     expect(text?.style.fill).toBe(0x111111)
@@ -769,10 +787,10 @@ describe("GenericDeviceSprite", () => {
     expect(text?.style.dropShadow).toBeUndefined()
   })
 
-  it("keeps device icon and font size fixed across device sizes", async () => {
+  it("keeps label sizes fixed and stacks labels that exceed the device width", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
-    const resolvedAvatarTexture = createLoadedTextureMock("top-view-avatar")
+    const resolvedBlueprintAvatarTexture = createLoadedTextureMock("blueprint-avatar")
 
     const smallEntityLayer = createLayerStub()
     const smallOverlayLayer = createLayerStub()
@@ -781,7 +799,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-      [TOP_VIEW_AVATAR_KEY]: resolvedAvatarTexture,
+      [BLUEPRINT_AVATAR_KEY]: resolvedBlueprintAvatarTexture,
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
@@ -858,6 +876,10 @@ describe("GenericDeviceSprite", () => {
     })
     expect(smallText?.style.fontSize).toBe(8)
     expect(largeText?.style.fontSize).toBe(8)
+    expect(smallIcon?.x).toBe(smallText?.x)
+    expect(smallIcon?.y).toBeLessThan(smallText?.y ?? 0)
+    expect(largeIcon?.x).toBeLessThan(largeText?.x ?? 0)
+    expect(largeIcon?.y).toBe(largeText?.y)
   })
 
   it("does not draw labels for pipe-family devices even when settings enable them", async () => {
