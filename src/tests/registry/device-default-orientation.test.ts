@@ -144,9 +144,9 @@ describe("device default orientation", () => {
     },
   );
 
-  it("declares exactly the audited schema 6 to 7 orientation rules", () => {
+  it("declares exactly the audited schema 5 to 6 orientation rules", () => {
     const migration = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) =>
-      spec.fromVersion === 6 && spec.toVersion === 7,
+      spec.fromVersion === 5 && spec.toVersion === 6,
     );
 
     expect(migration?.deviceRules).toEqual(expect.arrayContaining(ORIENTATION_CASES.map((entry) => ({
@@ -172,7 +172,7 @@ describe("device default orientation", () => {
             config: { retained: true },
             tags: ["retained"],
           },
-        }, 6, 7);
+        }, 5, 6);
 
         expect(migrated?.entities.entity).toMatchObject({
           definitionId,

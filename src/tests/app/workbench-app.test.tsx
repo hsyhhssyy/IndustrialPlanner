@@ -37,6 +37,7 @@ import {
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { listBlueprintDirectory } from "@/shared/storage";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
@@ -94,6 +95,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
   debugSimulationWorkerDetailedReport: false,
+  debugForceFlattenBlueprintVersion: false,
   debugMode: false,
   virtualMousePointer: false,
 } as const;
@@ -2878,6 +2880,9 @@ describe("WorkbenchApp", () => {
     const simulationWorkerDetailedReportToggle = container.querySelector(
       'input[name="debug-simulation-worker-detailed-report"]',
     ) as HTMLInputElement | null;
+    const forceFlattenBlueprintVersionToggle = container.querySelector(
+      'input[name="debug-force-flatten-blueprint-version"]',
+    ) as HTMLInputElement | null;
     const groupTitles = Array.from(
       dialog?.querySelectorAll(".settings-dialog-group-header h3") ?? [],
     ).map((element) => element.textContent);
@@ -2967,6 +2972,12 @@ describe("WorkbenchApp", () => {
     expect(showFpsToggle?.checked).toBe(true);
     expect(showGestureTestWindowToggle?.checked).toBe(true);
     expect(simulationWorkerDetailedReportToggle?.checked).toBe(true);
+    expect(forceFlattenBlueprintVersionToggle !== null).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
+    expect(forceFlattenBlueprintVersionToggle?.checked).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED ? false : undefined,
+    );
 
     const closeButton = container.querySelector(
       ".settings-dialog-close",
@@ -4422,12 +4433,54 @@ describe("WorkbenchApp", () => {
   });
 
   it("writes debug settings into AppSettings storage without applying them to the UI", () => {
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        debugForceFlattenBlueprintVersion: true,
+      }),
+    );
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
+
+    expect(appHost.internalState.settings.debugForceFlattenBlueprintVersion).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        debugForceFlattenBlueprintVersion:
+          FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+      }),
+    );
+
+    act(() => {
+      appHost.internalState.settings.debugForceFlattenBlueprintVersion = true;
+    });
+
+    expect(appHost.internalState.settings.debugForceFlattenBlueprintVersion).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        debugForceFlattenBlueprintVersion:
+          FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+      }),
+    );
+
+    act(() => {
+      appHost.internalState.settings.debugForceFlattenBlueprintVersion = false;
+    });
+
+    expect(appHost.internalState.settings.debugForceFlattenBlueprintVersion).toBe(false);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(DEFAULT_APP_SETTINGS_STORAGE),
+    );
 
     const settingsButton = container.querySelector(
       ".toolbar-rail-utility .rail-button:last-child",
@@ -4460,6 +4513,9 @@ describe("WorkbenchApp", () => {
     const simulationWorkerDetailedReportToggle = container.querySelector(
       'input[name="debug-simulation-worker-detailed-report"]',
     ) as HTMLInputElement | null;
+    const forceFlattenBlueprintVersionToggle = container.querySelector(
+      'input[name="debug-force-flatten-blueprint-version"]',
+    ) as HTMLInputElement | null;
     const backendApiAddressInput = container.querySelector(
       'input[name="debug-backend-api-address-override"]',
     ) as HTMLInputElement | null;
@@ -4467,11 +4523,20 @@ describe("WorkbenchApp", () => {
     expect(showFpsToggle).not.toBeNull();
     expect(showGestureTestWindowToggle).not.toBeNull();
     expect(simulationWorkerDetailedReportToggle).not.toBeNull();
+    expect(forceFlattenBlueprintVersionToggle !== null).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
+    expect(container.textContent?.includes("强制拉平蓝图版本")).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
     expect(backendApiAddressInput).not.toBeNull();
     expect(container.textContent).toContain("v2 数据迁移");
     expect(showFpsToggle?.checked).toBe(false);
     expect(showGestureTestWindowToggle?.checked).toBe(false);
     expect(simulationWorkerDetailedReportToggle?.checked).toBe(false);
+    expect(forceFlattenBlueprintVersionToggle?.checked).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED ? false : undefined,
+    );
     expect(backendApiAddressInput?.placeholder).toBe(
       "https://endfield-api.anonymous-test.top",
     );
@@ -4483,11 +4548,15 @@ describe("WorkbenchApp", () => {
       showFpsToggle?.click();
       showGestureTestWindowToggle?.click();
       simulationWorkerDetailedReportToggle?.click();
+      forceFlattenBlueprintVersionToggle?.click();
     });
 
     expect(appHost.state.settings.debugShowFps).toBe(true);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(true);
     expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(true);
+    expect(appHost.internalState.settings.debugForceFlattenBlueprintVersion).toBe(
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+    );
     expect(backendApiAddressInput?.value).toBe("http://localhost:8787");
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
@@ -4495,6 +4564,8 @@ describe("WorkbenchApp", () => {
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
         debugSimulationWorkerDetailedReport: true,
+        debugForceFlattenBlueprintVersion:
+          FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
         debugMode: true,
       }),
     );
@@ -4510,6 +4581,7 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
+    expect(appHost.internalState.settings.debugForceFlattenBlueprintVersion).toBe(false);
     expect(container.querySelector(
       'input[name="debug-simulation-worker-detailed-report"]',
     )).toBeNull();

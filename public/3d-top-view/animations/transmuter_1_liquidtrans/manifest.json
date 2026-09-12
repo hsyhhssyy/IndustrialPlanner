@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "frameWidth": 640,
   "frameHeight": 640,
+  "appliedSourceToPublishedTransform": "flip-top-bottom",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
   "maskFile": "mask.webp",
   "clips": {
     "open": {

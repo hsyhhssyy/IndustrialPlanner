@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "frameWidth": 384,
   "frameHeight": 384,
+  "appliedSourceToPublishedTransform": "flip-top-bottom",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
   "maskFile": "mask.webp",
   "clips": {
     "open": {
@@ -56,9 +58,15 @@
       "pages": [
         {
           "file": "open-0.webp",
-          "rows": 5,
-          "columns": 10,
-          "frameCount": 44
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "open-1.webp",
+          "rows": 2,
+          "columns": 5,
+          "frameCount": 9
         }
       ]
     },
@@ -84,8 +92,8 @@
       "pages": [
         {
           "file": "open_idle-0.webp",
-          "rows": 2,
-          "columns": 10,
+          "rows": 3,
+          "columns": 5,
           "frameCount": 14
         }
       ]
@@ -147,9 +155,15 @@
       "pages": [
         {
           "file": "close-0.webp",
-          "rows": 5,
-          "columns": 10,
-          "frameCount": 49
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "close-1.webp",
+          "rows": 3,
+          "columns": 5,
+          "frameCount": 14
         }
       ]
     },

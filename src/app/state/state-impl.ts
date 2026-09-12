@@ -107,6 +107,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
   debugSimulationWorkerDetailedReport: boolean;
+  debugForceFlattenBlueprintVersion: boolean;
   debugMode: boolean;
   virtualMousePointer: boolean;
 }
@@ -818,6 +819,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
     debugSimulationWorkerDetailedReport: false,
+    debugForceFlattenBlueprintVersion: false,
     debugMode: false,
     virtualMousePointer: false,
   };

@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "frameWidth": 384,
   "frameHeight": 384,
+  "appliedSourceToPublishedTransform": "flip-top-bottom",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
   "maskFile": "mask.webp",
   "clips": {
     "open": {
@@ -133,15 +135,27 @@
       "pages": [
         {
           "file": "open-0.webp",
-          "rows": 10,
-          "columns": 10,
-          "frameCount": 100
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
         },
         {
           "file": "open-1.webp",
-          "rows": 3,
-          "columns": 10,
-          "frameCount": 21
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "open-2.webp",
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "open-3.webp",
+          "rows": 4,
+          "columns": 5,
+          "frameCount": 16
         }
       ]
     },
@@ -194,9 +208,15 @@
       "pages": [
         {
           "file": "open_idle-0.webp",
-          "rows": 5,
-          "columns": 10,
-          "frameCount": 41
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "open_idle-1.webp",
+          "rows": 2,
+          "columns": 5,
+          "frameCount": 6
         }
       ]
     },
@@ -334,15 +354,27 @@
       "pages": [
         {
           "file": "close-0.webp",
-          "rows": 10,
-          "columns": 10,
-          "frameCount": 100
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
         },
         {
           "file": "close-1.webp",
-          "rows": 3,
-          "columns": 10,
-          "frameCount": 26
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "close-2.webp",
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
+        },
+        {
+          "file": "close-3.webp",
+          "rows": 5,
+          "columns": 5,
+          "frameCount": 21
         }
       ]
     },

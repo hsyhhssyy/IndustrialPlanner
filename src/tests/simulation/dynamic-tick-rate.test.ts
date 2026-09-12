@@ -701,7 +701,7 @@ function readProductionStatsAtSpeed(
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 7,
+    schemaVersion: 6,
     simulationMode: "single-base",
     topologyId: "topology:empty",
     documentKey: "document:test",

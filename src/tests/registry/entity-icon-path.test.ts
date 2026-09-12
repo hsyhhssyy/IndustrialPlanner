@@ -18,12 +18,12 @@ describe("entity icon paths", () => {
 
   it("allows the UI icon path to differ from both the definition and sprite resource ids", () => {
     const definition = createRegistryContract().entityDefinitions.find(
-      (candidate) => candidate.id === "liquid_filling_pd_mc_1",
+      (candidate) => candidate.id === "filling_pd_mc_1_liquid",
     );
 
     expect(definition).toBeDefined();
     expect(definition).toMatchObject({
-      id: "liquid_filling_pd_mc_1",
+      id: "filling_pd_mc_1_liquid",
       spriteId: "item_port_liquid_filling_pd_mc_1",
       iconPath: "device-icons/item_port_filling_pd_mc_1.webp",
     });

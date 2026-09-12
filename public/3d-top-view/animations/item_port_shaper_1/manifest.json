@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "frameWidth": 384,
   "frameHeight": 384,
+  "appliedSourceToPublishedTransform": "flip-top-bottom",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
   "maskFile": "mask.webp",
   "clips": {
     "open": {
@@ -132,15 +134,21 @@
       "pages": [
         {
           "file": "open_idle-0.webp",
-          "rows": 10,
-          "columns": 10,
-          "frameCount": 100
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
         },
         {
           "file": "open_idle-1.webp",
-          "rows": 1,
+          "rows": 7,
           "columns": 5,
-          "frameCount": 5
+          "frameCount": 35
+        },
+        {
+          "file": "open_idle-2.webp",
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 35
         }
       ]
     },

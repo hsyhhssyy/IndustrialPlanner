@@ -102,7 +102,7 @@ describe("REQ-076: topology migration", () => {
       createStorageToFactorySlotLink(),
     ]);
     const nextDocument = createVariantSwitchDocument(
-      "liquid_filling_pd_mc_1",
+      "filling_pd_mc_1_liquid",
       [],
     );
     const previousTopology = compileSimulationTopology({
@@ -135,7 +135,7 @@ describe("REQ-076: topology migration", () => {
   it("hot-swaps a switched device without resetting unaffected device runtime state", () => {
     const registry = createRegistryContract();
     const previousDocument = createVariantSwitchDocument("furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("furnance_1_liquid", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
@@ -210,7 +210,7 @@ describe("REQ-076: topology migration", () => {
   it("retains the last displayed tick as the exact topology migration anchor", () => {
     const registry = createRegistryContract();
     const previousDocument = createVariantSwitchDocument("furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("furnance_1_liquid", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
@@ -265,7 +265,7 @@ describe("REQ-076: topology migration", () => {
   it("rejects a migration with no exact anchor instead of resetting or advancing time", () => {
     const registry = createRegistryContract();
     const previousDocument = createVariantSwitchDocument("furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("furnance_1_liquid", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,

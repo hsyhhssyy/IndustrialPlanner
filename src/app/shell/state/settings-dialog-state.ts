@@ -1,6 +1,7 @@
 import { makeAutoObservable } from "mobx";
 
 import type { UiKey } from "@/shared/i18n";
+import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import { BUILD_BACKEND_API_BASE_URL } from "@/shared/storage/backend-api-address";
 import type { SyncProviderId } from "@/shared/storage/sync-provider-activation";
@@ -944,6 +945,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.debug-simulation-worker-detailed-reportDescription",
         defaultValue: false,
       },
+      ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED ? [{
+        id: "debug-force-flatten-blueprint-version",
+        kind: "switch",
+        labelKey: "settingsField.debug-force-flatten-blueprint-version",
+        descriptionKey: "settingsField.debug-force-flatten-blueprint-versionDescription",
+        defaultValue: false,
+      } satisfies WorkbenchSwitchSettingDefinition] : []),
       {
         id: "debug-backend-api-address-override",
         kind: "text",

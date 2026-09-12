@@ -94,7 +94,7 @@ interface ItemFlowEndpoint {
 
 const FLOW_EPSILON = 0.0001;
 const EXTERNAL_SUPPLY_ENTITY_ICON_SRC = createPublicAssetUrl("3d-top-view/sprites/item_port_sp_hub_1.webp");
-const PLANTER_MACHINE_IDS = new Set(["planter_1", "hydro_planter_1"]);
+const PLANTER_MACHINE_IDS = new Set(["planter_1", "planter_1_liquid"]);
 const SEED_COLLECTOR_MACHINE_IDS = new Set(["seedcol_1"]);
 
 export function buildProductionFlowGraph(

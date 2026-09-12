@@ -102,10 +102,11 @@ export function resolveBuildingEffectScene(options: {
     const key = selectEffectVariant(view, definition);
     if (key === undefined) continue;
     for (const port of view.variants[key]!) {
+      // 发布清单已将源平面 X/Z 转为项目平面 x/y（project x=X、project y=-Z）；此处只应用实体旋转。
       const [px, py] = rotatePoint(port.position[0], port.position[2], entity.rotation);
       const x = originX + px, y = originY + py;
       const sign = port.role === 'input' ? -1 : 1;
-      const [dx, dy] = rotatePoint(sign, 0, entity.rotation - port.yaw);
+      const [dx, dy] = rotatePoint(sign, 0, entity.rotation + port.yaw);
       const matches = (byEntity.get(entity.id) ?? []).filter((candidate) =>
         Math.abs(candidate.x - x) < .001 && Math.abs(candidate.y - y) < .001
         && Math.abs(candidate.dx - dx) < .001 && Math.abs(candidate.dy - dy) < .001
@@ -121,7 +122,7 @@ export function resolveBuildingEffectScene(options: {
       const id = `${entity.id}:${key}:${port.role}:${port.index}`;
       const add = (resourceId: string | null, suffix: string) => {
         if (!resourceId || !options.manifest.effects[resourceId]) return;
-        result.effects.push({ id: id + suffix, resourceId, x, y, rotation: entity.rotation - port.yaw,
+        result.effects.push({ id: id + suffix, resourceId, x, y, rotation: entity.rotation + port.yaw,
           baseY: port.position[1], epsilon: view.epsilon, ring: false });
         result.portKeys.set(id + suffix, match.key);
       };
@@ -137,7 +138,7 @@ export function resolveBuildingEffectScene(options: {
       seen.add(signature);
       const [px, py] = rotatePoint(ring.position[0], ring.position[2], entity.rotation);
       result.effects.push({ id: `${entity.id}:ring:${signature}`, resourceId: ring.resourceId,
-        x: originX + px, y: originY + py, rotation: entity.rotation - ring.yaw,
+        x: originX + px, y: originY + py, rotation: entity.rotation + ring.yaw,
         baseY: ring.position[1], epsilon: view.epsilon, ring: true });
     }
   }

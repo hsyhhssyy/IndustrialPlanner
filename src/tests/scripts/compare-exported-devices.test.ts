@@ -396,7 +396,7 @@ describe("compare-exported-devices", () => {
           tags: ["alter:furnance_1", "alter-variant:normal"],
         },
         {
-          id: "liquid_furnance_1",
+          id: "furnance_1_liquid",
           nameKey: "liquidFurnance",
           tags: ["alter:furnance_1", "alter-variant:liquid"],
         },

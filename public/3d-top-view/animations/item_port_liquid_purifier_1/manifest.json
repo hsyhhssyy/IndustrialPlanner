@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "frameWidth": 640,
   "frameHeight": 640,
+  "appliedSourceToPublishedTransform": "flip-top-bottom",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
   "maskFile": "mask.webp",
   "clips": {
     "open": {
@@ -76,14 +78,20 @@
         {
           "file": "open-0.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open-1.webp",
-          "rows": 5,
-          "columns": 6,
-          "frameCount": 27
+          "rows": 6,
+          "columns": 5,
+          "frameCount": 30
+        },
+        {
+          "file": "open-2.webp",
+          "rows": 1,
+          "columns": 3,
+          "frameCount": 3
         }
       ]
     },
@@ -283,37 +291,43 @@
         {
           "file": "open_idle-0.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open_idle-1.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open_idle-2.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open_idle-3.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open_idle-4.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "open_idle-5.webp",
+          "rows": 6,
+          "columns": 5,
+          "frameCount": 30
+        },
+        {
+          "file": "open_idle-6.webp",
           "rows": 2,
-          "columns": 6,
+          "columns": 5,
           "frameCount": 7
         }
       ]
@@ -496,32 +510,38 @@
         {
           "file": "close-0.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "close-1.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "close-2.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "close-3.webp",
           "rows": 6,
-          "columns": 6,
-          "frameCount": 36
+          "columns": 5,
+          "frameCount": 30
         },
         {
           "file": "close-4.webp",
-          "rows": 5,
-          "columns": 6,
-          "frameCount": 25
+          "rows": 6,
+          "columns": 5,
+          "frameCount": 30
+        },
+        {
+          "file": "close-5.webp",
+          "rows": 4,
+          "columns": 5,
+          "frameCount": 19
         }
       ]
     },

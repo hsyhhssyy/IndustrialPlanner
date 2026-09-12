@@ -1,15 +1,17 @@
 # 建筑高度与管道端口特效
 
-本次用户要求适配 `buildings_frontend_v1.5.zip` 的高度遮挡，并明确指定端口以当前 Registry 为准，向客户确认冲突素材的修正。主模块为 Renderer，资源发布和测试为配套改动。
+本次交付适配 `buildings_frontend_v1.5.zip` 的高度遮挡与端口特效。主模块为 Renderer，资源发布和审计为配套改动。
 
 ## 当前交付状态
 
-已实现高度缓存、特效批量绘制、资源加载释放、精确端口连接判断，以及场景编排接入。原包与当前 Registry 的候选端口尚存在冲突，不能把渲染基础设施完成当作原包已经可用。
+已实现高度缓存、特效批量绘制、资源加载释放、精确端口连接判断，以及场景编排接入。普通资源已完成发布：当前 Registry 有 51 条映射（31 条动画、20 条静态），31 条动画共 532 个分页；原始 463 个文件与 ZIP 逐字节一致。`filling_pd_mc_1_liquid` 的 public 动画与 Registry `spriteAnimation` 声明均已接入。
 
 - 54 个建筑视图、13 个共享特效已发布。原件的精度、字符串和大整数保持原始字节，源归档 SHA-256 和文件摘要见 `building-port-effects/source.json`。
 - 不重复导入建筑颜色动画：已有颜色资源继续由 `building-top-view-v15.json` 管理。原件选集保留端口、空间、高度和共享特效，因此入口里的建筑颜色文件不包含在这个选集中。
 - 11 条 `deliveryVariantKeys` 引用不能解析到实际 variant，发布清单的 `issues` 保留问题，未猜测修正模式键。
-- `building-port-effects/registry-audit.json` 列出原包端口锚点和当前 Registry 端口在同一源平面的边界位置。Registry 没有端口竖直高度，因此该报告不替客户指定 Y 高度。
+- 保留 2 个 `pipe_admission` 锚点冲突；它们属于 Registry 审计问题，未通过视觉或猜测修改端口。
+- 普通建筑视图在离线发布时将 source `+Z` 无损逐行转换到项目 `-y`，同步转换 `pivot`、`center`、`origin`、端口/环位置及共享特效帧区域；contract2 物流视图依据 `canonicalSourceZReflection` 保留自身 canonical 画布语义，并在清单记录 `coordinateSpace`。
+- `building-port-effects/registry-audit.json` 按项目坐标列出端口锚点和当前 Registry 端口边界位置。Registry 没有端口竖直高度，因此该报告不替客户指定 Y 高度。ZIP 中仍有 `sp_sub_hub_1/top-level4` 与 `xiranite_oven_1/top-gasliquid` 两个视图没有当前实体或确定模式映射。
 - 原始 `statusKey` 到业务运行状态的映射，以及 `activateOn` / `activateOff` 的触发条件仍待客户说明。组件支持显式传入已确认的状态，宿主暂不猜测启用环或激活覆盖层。
 
 ## 发布与核验
@@ -19,9 +21,9 @@ node src/scripts/publish-building-port-effects.mjs
 npx tsx --tsconfig tsconfig.app.json src/scripts/audit-building-port-effects.ts
 ```
 
-源目录为 `resources/building-port-effects`，发布目录为 `public/3d-top-view/port-effects`。JSON 中的原始相对引用在离线发布阶段解析；运行时只消费精简清单。高度图用 Sharp 解码为原始 RGBA，再 gzip 压缩，以 `.rgba.bin` 发布；没有缩放、插值或有损压缩。该后缀避免静态服务器按 `.gz` 自动添加 `Content-Encoding` 后，客户端又二次解压。运行时用 `DecompressionStream` 解压后直接上传数值纹理，最近邻采样，无 mipmap。PWA 预缓存覆盖该目录的数值文件。
+源目录为 `resources/building-port-effects`，发布目录为 `public/3d-top-view/port-effects`。普通建筑采用 `source X → project x`、`source Z → project -y`，高度和特效颜色页无损垂直转换并同步 pivot/center/origin/frame rect；contract2 物流视图保留自身 canonical 画布语义。高度图用 Sharp 解码为原始 RGBA，再 gzip 压缩，以 `.rgba.bin` 发布；没有缩放、插值或有损压缩。运行时用 `DecompressionStream` 解压后直接上传数值纹理，最近邻采样，无 mipmap。
 
-客户修正原始 `ports.json` / 模式键后重新发布并运行审计；不得用自动反转坐标来消除审计差异。发布器不重新生成建筑颜色动画；如客户同时修正颜色朝向，需要沿用既有建筑素材发布流程核验一致性。
+发布器严格读取 `resolvedTransform` 和 `resourceBinding`，不按目视方向、旧图片或自动反转猜测端口。端口变体以交付的 `deliveryVariantKeys` 为基础，并组合映射到同一视图、且源数据实际存在的 Registry `alter-variant`；由此接入 `filling_pd_mc_1_liquid/liquid__0` 与 `shaper_1_gas/gas__0`。11 条无法解析的 `deliveryVariantKeys` 和 2 条 Registry 审计 issue 原样保留。
 
 ## 渲染与失效范围
 
@@ -39,12 +41,12 @@ Search-First 决策为 Extend / Compose：沿用 Registry 端口几何、现有�
 
 `src/tests/renderer/building-height-effects.test.ts` 验证无损数据、负坐标与旋转、相邻遮挡与移除、冲突拒绝、独立连接状态、环的显式状态与去重、逐帧时长。新增这些测试源于高度渲染和端口状态接入，不调整既有超时或断言。
 
-开发浏览器场景放在 `.temp/playwright-test/building-height`。它显式使用测试夹具提供修正后的端口锚点和环状态，验证真实 Shader、资源生命周期及三档 Screen Profile；该夹具不是客户确认的素材修正规则，不能视为原包视觉验收。图形证据、检查结果应与 Registry 审计同时阅读。
+最终 normal 为 `2523 passed / 11 failed / 2 skipped`（285 个文件通过、1 个文件失败），11 项失败全部对应待接入的 Registry 显示字段；本次新增的动画与端口变体测试均通过。component 测试随新版 JSON 更新为 99 个去重帧、逐帧时间线与 5033ms 总时长；物流 JSON 测试验证完整材质语义，旧补丁归档和 WebP 字节校验仍保留。ESLint、TypeScript、Build 均通过。检查遵循 simple-check，日志见 `.temp/full-check/runs/20260911-173009-2355713/`，旧轮次记录保留。
 
-2026-09-11 的三档开发验证均通过：764×345 / DPR 3.125（mobile）、711×665 / DPR 3.125（tablet）、2552×1315 / DPR 1（desktop），均支持触控。desktop 测试明确模拟同时具备鼠标和触屏的环境，将主指针和 hover 的媒体特征设为 fine / hover；未改变产品环境判断规则。测试拦截外部 Analytics 请求，避免其本地 CORS 错误混入渲染验证，未修改产品 Analytics。
+本轮最终资源（2026-09-11）的三档开发验证均通过：764×345 / DPR 3.125（mobile）、711×665 / DPR 3.125（tablet）、2552×1315 / DPR 1（desktop），均支持触控。desktop 测试明确模拟同时具备鼠标和触屏的环境，将主指针和 hover 的媒体特征设为 fine / hover；未改变产品环境判断规则。测试拦截外部 Analytics 请求，避免其本地 CORS 错误混入渲染验证，未修改产品 Analytics。 每档加载 51 套图片和遮罩、31 套动画的 100 个抽查帧；四角旋转以及蓝图/动画开关检查通过，页面异常和素材失败请求为 0。结果及清理记录见 `.temp/playwright-test/building-v15-replacement/verification.json`。该轮液体灌装动画仅使用测试局部能力声明完成资源解码；后续已补入 Registry，并按其他生产设备相同的四阶段契约启用。
 
-夹具中的 5 个特效合成 4 个绘制批次和 4 个高度区域；播放动画后构建次数仍为 4。加入邻近建筑仅新增一次区域构建，移除再新增一次；可见 Alpha 总量从 2,721,971 降至 2,528,005，移除后精确恢复 2,721,971。旋转和移动后的高度区域正常重建，停用后批次和区域驻留均为 0。三档还分别打开真实主页面，确认唯一高度特效阶段已接入、原包冲突绑定数为 0，无页面运行错误。每轮均关闭 CLI 浏览器及专用 6013 服务，并检查无残留；原有用户服务未停止。
+本轮审计（2026-09-11）对当前 Registry 全部定义使用默认朝向汇总为 `surfaces=51`、`effects=35`、`issues=2`。publish 已输出 54 个视图、13 个共享特效；新增的 2 个绑定效果来自 `filling_pd_mc_1_liquid/liquid__0` 与 `shaper_1_gas/gas__0`。
 
 高度本身仍是静态姿态近似，不能精确跟随运动边缘或多层透明几何。原包没有覆盖的设备不生成猜测高度；需要新增对应交付才能参与准确遮挡。显存开销随可见特效覆盖区域和活跃资源页增长，分页及可见区域释放不等于固定全局显存上限。
 
-最终基础检查的 ESLint、TypeScript、Build 全部通过。Vitest normal 在 `VITEST_MAX_WORKERS=2` 下完成 286 个文件，2453 项通过、2 项跳过；包含新增的 7 项高度特效测试。默认并发曾使新增无损资源核验超过 5 秒、既有全量图片扫描超过 30 秒，复跑未修改断言、测试逻辑或超时设置。首轮编排边界问题已在 Renderer 内修正，既有编排测试没有改动。日志保留在 `.temp/full-check/runs/20260911-080907-2100224`，早期记录使用 `-first` / `-second` 后缀。最终构建的 Service Worker 包含全部 69 个高度数值文件。未执行正式 E2E、Blueprint 或仿真性能基线。
+2026-09-11 订正：8 个物流功能建筑的 3×3 显示字段方案已撤回，按用户要求暂停处理。颜色与高度素材的像素范围不能直接视为同一比例，原 12 项合并补丁不得应用。3 个仓储显示偏移仍未接入；`filling_pd_mc_1_liquid.spriteAnimation` 已在后续补齐。本次 definition ID 重命名不包含这些显示变更。

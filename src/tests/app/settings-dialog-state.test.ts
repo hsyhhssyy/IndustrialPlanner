@@ -7,6 +7,7 @@ import {
   WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/state/settings-dialog-state";
+import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
   afterEach(() => {
@@ -64,6 +65,10 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(resolveGroupSettingIds("shortcuts")).toEqual([
       "game-show-hotkeys",
     ]);
+    expect(resolveGroupSettingIds("debug").includes(
+      "debug-force-flatten-blueprint-version",
+    )).toBe(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED);
+    expect(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED).toBe(false);
   });
 
   it("persists schema-driven values and hydrates them on the next controller", () => {
@@ -154,6 +159,9 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-debug-mode": true,
         "other-experimental-features": false,
         "debug-simulation-worker-detailed-report": true,
+        ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+          ? { "debug-force-flatten-blueprint-version": false }
+          : {}),
         "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
@@ -656,6 +664,9 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-debug-mode": true,
         "other-experimental-features": false,
         "debug-simulation-worker-detailed-report": false,
+        ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+          ? { "debug-force-flatten-blueprint-version": false }
+          : {}),
         "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,

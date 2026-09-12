@@ -14,7 +14,9 @@
       "frameDurationsMs": [
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "c236610a3b2ae1187a92468776417742f900a34b97323117fa120a3c1ef81a62"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -23,7 +25,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         67
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "2995ba70d40305eec5563b210dcb1201dde7e13148f18262c4cd57c8b86cced9"
     }
   },
   "clips": {
@@ -61,5 +65,9 @@
         ]
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

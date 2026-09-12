@@ -1,53 +1,68 @@
-# v1.5 建筑俯视图
+# v1.5 建筑俯视图素材
 
-2026-09-10 从 `endfield-building-animation-assets-v1.5-all.zip` 接入首批素材；2026-09-11 顺序叠加 fix1、fix2、fix3 后，共接入 36 个独立子包，映射为 40 个现有设备定义（28 个动画、12 个静态）。设备和最终来源对应关系、原始空间元数据见 `building-top-view-v15.json`。
+权威来源是 `动画素材包/buildings_frontend_v1.5.zip`，SHA-256 记录在 `building-top-view-v15.json`。当前清单覆盖 51 条 Registry 映射：31 条动画、20 条静态，对应 46 个唯一普通视图；31 条动画共 532 个分页。原始普通资源共 463 个文件，已与 ZIP 逐字节核对。另有 6 个连续物流材质视图由 `logistics-materials/contract2/` 覆盖。ZIP 共 54 个视图，其中 2 个没有当前实体或确定的模式映射。
 
-## 发布方式
+## 来源与发布
 
-- 静态源位于 `device-sprite-original/v15/`，由 `node src/scripts/sync-device-sprites.mjs` 的同一静态同步入口发布。新版源优先于旧中文命名源。
-- 动画源位于 `device-sprite-animation/<spriteId>/`，沿用 `node src/scripts/sync-device-sprites.mjs --animations` 发布。
-- 动画源 manifest 的 `sources.*.frameDurationsMs` 保存逐帧时长；逻辑片段 range 的同名字段可覆盖被循环边界拆分的停留时间。输出 manifest 保留实际时长，不通过重复图像补时长。
-- 旧固定 FPS manifest 仍通过同一标准化入口构建累计帧结束时刻，既有两种建筑的源文件和公开产物未重新生成。
-- 静态首帧和 Alpha 遮罩独立发布；动画遮罩由所有逻辑帧 Alpha 并集生成。旧遮罩在 `device-sprite-mask-overrides/archive-v15/` 留档，不再覆盖新图。
+- 动画源位于 `device-sprite-animation/<spriteId>/`，静态源位于 `device-sprite-original/v15/`。source 文件保留 ZIP 原始字节；来源 hash 不以发布后的 WebP hash 代替。
+- 统一入口为 `node src/scripts/import-building-top-view-v15.mjs`（完整动画发布须先接入下文的 Registry 能力声明）。可用 `--entity-id=<entityId>` 只重发一个已知映射；未知 ID 必须 fail-fast。
+- 可用 `--prepare-only` 导入原始图集、元数据并发布静态图，暂缓动画重发。各条目的来源 hash 独立记录，单建筑更新不改其他条目；集合顶层 hash 记录最近一次完整导入。
+- 导入入口自行校验并解压 ZIP 到专用临时目录，处理结束后清理临时目录。
+- 动画发布复用既有分页、逐帧时长和 Alpha mask 流程，不新增播放器或分页协议。动画 source manifest 的 `frameDurationsMs` 来自 ZIP 的 `animation.json`，每个分页 source 保持独立 range。
+- 新 JSON 决定页面布局和帧数；仅在源帧数、列数和逐帧时长一致时保留已确认的四阶段切分。其他情况重新采用交付的完整阶段；所有逻辑 range 都必须落在实际源帧范围内。
+- 静态发布复用 `publishDeviceSprite`，按声明的 crop 与变换生成 public sprite 和 mask。`port-effects`、物流连续材质和 grid belt/log pipe/support 材质不属于本清单的发布范围。
 
-## 片段与变体选择
+## 变体 ID 与蓝图迁移（2026-09-11）
 
-- `dismantler_1` 仅循环已在原包通过接缝检查的源帧 `[35,215]`，前后部分分配到开启、关闭阶段。fix2 重导出后继续按 `sourceSpan` 拆分跨范围的去重帧停留时间，总时长不变。
-- 无开启、关闭片段的循环动画沿用既有四阶段约定，以关闭静态首帧表达缺省过渡；没有周期运动的转化机把源姿态过渡放入 open/close，idle 保持终态。
-- `grinder_1` 使用 fix2 恢复的四段当前模型动画，不再按旧包的重复帧发布为静态图。
-- `storager_1` 按 fix2 撤回 3×4 重复包，使用与占地一致的 3×3 包。
-- `xiranite_oven_1` 使用默认 `top` 包；当前 Registry 没有独立的 `top-gasliquid` 实体或按配方切图契约，不新增这一行为。
-- 包内 aliases 映射到现有 Registry 变体，不新建实体，不改变端口或仿真规则。动画工作目标继续使用现有 `channelRecipes.isProgressing`；没有推进通道的设备保持关闭待机姿态。
+Search-First 决策为 Extend：复用 `src/shared/blueprint-device-id-migration.ts` 的逐版本迁移。远端最新发布 tag `v1.5.0` 和两处 live 站点对应的蓝图 schema 均为 5；区域标记、37 项端口旋转和以下三台设备重命名统一进入当前未发布的 5→6。1→5 历史规则保持原样，三台设备在重命名时同时执行已有的 180° 端口补偿，schema 6 重读不再旋转。旧蓝图、基地文档、快捷放置及模块图标沿用现有迁移入口。
 
-## fix1-fix3 修复结果
+| 旧 definition ID | 当前 definition ID | 保留的 spriteId |
+| --- | --- | --- |
+| `liquid_filling_pd_mc_1` | `filling_pd_mc_1_liquid` | `item_port_liquid_filling_pd_mc_1` |
+| `hydro_planter_1` | `planter_1_liquid` | `item_port_hydro_planter_1` |
+| `liquid_furnance_1` | `furnance_1_liquid` | `item_port_liquid_furnance_1` |
 
-- fix2 重导出的 `dismantler_1`、`furnance_1`、`grinder_1`、`liquid_purifier_1/top-gas`、`transmuter_2` 和 `xiranite_oven_1` 已按源 `+Z` 向下生成；其南侧白色输入与北侧黄色输出和 Registry 一致。共享别名计入后，修复 11 个既有冲突设备定义中的 8 个。
-- fix2/fix3 解除 `filling_pd_mc_1`、`liquid_cleaner_1`、`mix_pool_2`、`thickener_1`、`tools_asm_mc_1`、`winder_1` 的图集尺寸阻塞，并补齐 `liquid_purifier_1/top`，这 7 个设备已接入。
-- fix2 改变了 `log_hongs_bus_source` 与两个 `transmuter_2` 包的裁剪原点；三者按新元数据改为零偏移。`loader_1` 的零偏移及 `unloader_1` 的上移一格与各自包内占地区域一致，无需修改。
-- 所有接入动画沿用逐帧时长；发布器重新分页到严格小于 4096px 的页面，并重新生成静态首帧、静态遮罩和动画 Alpha 并集遮罩。
+设备显示名称、配方 ID、资源文件名及交付 JSON 的原始字段不改。更新的是 Registry ID、配方 machineId、翻译 key、应用引用和资源清单的实体映射。7 组共 14 个变体均已核对：以基础 ID 注册的主设备保留基础 ID，其余使用 `<基础 ID>_<模式>`。内置历史蓝图保留原 schema 和原始数据，由读取入口迁移。
 
-## 仍待处理
+## 坐标契约
 
-- `planter_1`/`hydro_planter_1` 共用的 14 张 WebP、`seedcol_1` 的 15 张 WebP 在 fix2 中与原接入文件逐一相同，只清理了 JSON；三者的南侧输入、北侧输出方向冲突仍未修复。
-- `tools_asm_mc_1` 的 `open_idle` 原始首尾帧未通过美工的循环接缝阈值；当前保留原帧和时序，不做合成修补。
-- `mix_pool_2` 的运行时液位和液面着色尚未复现，当前是机械动画正确、透明材质近似的预览。
-- 提纯机气体模式的运行时进度指示器没有独立动画和底色贴图，本次未伪造成不透明零件。
-- 美工未在 fix2 实际 WebP 中复现反馈中的“整机白模”，该现象仍需用具体页面、设备和截图定位。
+ZIP 的 `spatial.json` 是原始空间元数据，必须原样保留。其图像轴声明为 `x=+sourceX`、`y=+sourceZ`；当前 Registry 图像约定为 `X=x、Y=depth-1-z`。发布阶段按每个帧单元执行 `projectY = depth - 1 - sourceZ`，栅格实现是逐帧上下翻转，不能对整张多帧图集翻转。
 
-## 继续排除
+该变换写在清单的 `publishedTransform` 与动画发布 manifest 的 `appliedSourceToPublishedTransform` 中，避免播放器重复翻转。`spriteOffset` 按源 footprint 与 canvas 计算：`x = -footprint.left`，`y = footprint.top + footprint.height - canvas.height`。
 
-- 用户此前明确要求跳过：`component_mc_1`、`mix_pool_1`；修复包未自动推翻该范围决定。
-- 网格未核验：`water_purifier_node_1`。
-- 坐标方向待核验：`log_conditioner`、`log_connector`、`log_converger`、`log_splitter` 以及对应四个 `pipe_` 包。
+端口方向必须由 RAW `solidPorts` 经上述坐标变换后与 Registry 的物理端口坐标和 role 对比，不能凭图片外观或端口 ID 名称判断。
 
-图集按页面加载并释放；全部建筑同时处于不同动画页时仍可能占用较多显存，4096 分页上限不等于全局内存预算。
+## 覆盖范围
 
-## 本轮代码与资源验证
+已覆盖普通建筑和变体包括生产设备、液体/气体变体、仓储与暗管设备、共享动画别名，以及 8 个物流功能建筑：log/pipe 的 splitter、converger、connector、admission。两个 admission 分别来自 ZIP 的 `log_conditioner` 和 `pipe_conditioner`。它们使用普通建筑的 3×3 画布，与连续物流材质的 contract2 契约分开发布。
 
-ESLint、TypeScript、Vitest normal（2443 通过、2 跳过）及 Build 全部通过。素材一致性测试同时校验 Registry、集合清单与包内占地元数据，避免 Registry 和清单以相同错误值通过检查。未执行正式 E2E 和 Blueprint。
+`component_mc_1`、`mix_pool_1` 和 `filling_pd_mc_1_liquid` 已纳入本轮范围。`filling_pd_mc_1_liquid` 的 public 动画与 Registry `spriteAnimation` 声明均已接入。
 
-三档浏览器验证使用 764×345、711×665、2552×1315 三组规定 Screen Profile，检查本轮 16 个重发动画的静态首帧，并逐段解码首末分页，共抽检 85 个动画页；最大边长 3840px，未出现白模或解码失败。偏移专项另行叠加画布网格和逻辑占地，检查 `log_hongs_bus_source`、两个 `transmuter_2` 变体、`loader_1`、`unloader_1`。每档测试后均关闭浏览器和专用 5188 端口。截图保留在 `.temp/playwright-test/building-v15-fix/` 和 `.temp/playwright-test/building-v15-offset-fix/`。这部分验证不代表仍待处理的原图方向和运行时材质已经验收通过。
+未映射视图为 `sp_sub_hub_1/top-level4` 和 `xiranite_oven_1/top-gasliquid`：当前没有对应的子枢纽实体，也没有 gasliquid 变体实体或按配方切换该视图的契约。grid belt、log pipe、pipesupport 的连续材质由现有物流发布流程负责。
 
-| 测试文件 | 本轮验证行为与修改原因 |
-| --- | --- |
-| `src/tests/registry/building-top-view-v15.test.ts` | 将集合覆盖扩展到 40 项，验证 28 个动画、静态首帧、独立遮罩、全部动画分页、新增/排除项，并锁定 8 个已修复设备的南入北出元数据。 |
+## 已知限制
+
+- 当前构建的 PWA 预缓存为 1916 条、约 283.6 MiB；动画目录约 230 MiB。首次建立离线缓存需要承担相应下载与存储成本，尚未运行仿真性能基线。
+- ZIP 中液体运行时液位和液面材质不由本建筑 beauty sprite 重建，相关预览仍使用现有材质契约。
+- `tools_asm_mc_1` 的原始动画接缝问题保留源帧和时序，不做合成修补。
+- Registry 的 `spriteOffset`、`spriteAnimation` 授权变更由 Registry 模块统一协调；本文件只记录资源来源与发布契约。
+
+2026-09-11 订正：8 个物流功能建筑的 3×3 显示字段方案已撤回，按用户要求暂停处理。颜色与高度素材的像素范围不能直接视为同一比例，原 12 项合并补丁不得应用。3 个仓储显示偏移仍未接入；`filling_pd_mc_1_liquid.spriteAnimation` 已在后续补齐。本次 definition ID 重命名不包含这些显示变更。
+
+## 本轮验证（2026-09-11）
+
+三档浏览器均完成本轮资源验证：764×345 / DPR 3.125（mobile）、711×665 / DPR 3.125（tablet）、2552×1315 / DPR 1（desktop），均支持触控。每档实际加载 51 套静态图和遮罩，并解码 31 套动画共 100 个 open_idle/close_idle 首尾抽查帧。页面异常和素材失败请求均为 0；四个建筑旋转角度都有高度特效绘制，蓝图样式切换释放/恢复特效，关闭建筑动画后仍绘制端口效果。每档浏览器、会话与专用 6014 服务均单独清理。
+
+截图用于检查应用内加载、布局和取景，没有据此判断 ZIP 建筑朝向。证据位于 `.temp/playwright-test/building-v15-replacement/verification.json` 和各档的 `result.log`、`result.png`、`cleanup.log`。该轮液体灌装动画仅使用测试局部能力声明完成资源解码；后续已补入 Registry。浏览器当时记录的 11 个显示偏移仍不等于全部实体已可正确展示。
+
+本轮随发布契约同步更新以下测试：
+
+- `src/tests/registry/building-top-view-v15.test.ts`：新增入口、JSON 坐标转换、源归档摘要，以及 Registry/静态图/遮罩/分页尺寸一致性。
+- `src/tests/scripts/device-sprite-animation.test.ts`：实际发布器的逐帧变换、非等长时序、静态与联合遮罩、裁切后变换顺序，以及单建筑选择和无效输入拒绝。
+- `src/tests/renderer/building-height-effects.test.ts`：发布后高度字节与特效页坐标、旋转/遮挡/连接状态，以及锚点冲突拒绝。
+- `src/tests/registry/device-animation-definition.test.ts`：新版 component JSON 的 30 FPS、99 个去重帧、5033ms 时间线及长停留帧；保留四阶段、分页和图片/遮罩验证。
+- `src/tests/scripts/logistics-materials.test.ts`：新版 ZIP 与旧 UV 补丁保持完整 JSON 语义相等；旧补丁原件字节/hash 和全部原始 WebP hash 继续严格验证。
+
+基础检查日志统一保存在 `.temp/full-check/runs/20260911-173009-2355713/`，旧轮次保留于 `first-pass/`、`second-pass/`。
+
+最终 normal 结果为 `2523 passed / 11 failed / 2 skipped`（286 个文件：285 通过、1 失败）。唯一失败文件为建筑清单与 Registry 的显示字段一致性测试，11 项与仍待接入的显示偏移一一对应；没有将缺失显示字段标记为跳过。本次新增的动画与端口变体测试均通过，ESLint、TypeScript、Build 均通过。

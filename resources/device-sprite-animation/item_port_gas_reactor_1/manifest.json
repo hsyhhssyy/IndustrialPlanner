@@ -4,7 +4,7 @@
   "frameHeight": 640,
   "fps": 30,
   "pageRows": 6,
-  "pageColumns": 6,
+  "pageColumns": 5,
   "sources": {
     "close_000": {
       "file": "close_000.webp",
@@ -13,7 +13,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         70
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -22,7 +24,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         70
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -31,7 +35,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         70
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -75,7 +81,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "874a1a096811bddafcae648b9a64fc3f3d1514ca522217b8a9cf266e37ecac93"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -119,7 +127,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "d6c77231b1c90b779f1f8e47ec291360e735b99ba9a8f616606cefe1e984e114"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -136,7 +146,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_002.webp",
+      "sha256": "967df96ea6e184007a1141cd242e8b5d7de5fa2c91d019e2e3f4bb6f362fa79e"
     }
   },
   "clips": {
@@ -568,5 +580,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

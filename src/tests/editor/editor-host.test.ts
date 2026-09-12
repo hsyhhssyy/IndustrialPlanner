@@ -121,7 +121,7 @@ function createComplexRotationDrafts(): DraftEntity[] {
     createRotationDraft("preview-mix-pool", "mix_pool_1", 20, 20, 0),
     createRotationDraft("preview-furnace", "furnance_1", 30, 21, 180),
     createRotationDraft("preview-belt", "belt_straight_1x1", 27, 27, 270),
-    createRotationDraft("preview-hydro", "hydro_planter_1", 36, 25, 90),
+    createRotationDraft("preview-hydro", "planter_1_liquid", 36, 25, 90),
     createRotationDraft("preview-large-pool", "mix_pool_2", 42, 18, 270),
     createRotationDraft("preview-planter", "planter_1", 20, 30, 0),
   ];
@@ -1884,13 +1884,13 @@ describe("createEditorHost", () => {
     expect(
       editorHost.actions.replaceEntityDefinition(
         "factory",
-        "liquid_filling_pd_mc_1",
+        "filling_pd_mc_1_liquid",
       ),
     ).toBe(true);
 
     const snapshot = editorHost.document.getSnapshot();
     expect(snapshot.entities.factory).toMatchObject({
-      definitionId: "liquid_filling_pd_mc_1",
+      definitionId: "filling_pd_mc_1_liquid",
       config: {},
     });
     expect(snapshot.entities.storage).toEqual(document.entities.storage);
@@ -1917,12 +1917,12 @@ describe("createEditorHost", () => {
     expect(
       applyEditorHost.actions.replaceEntityDefinition(
         applyDraftId ?? "",
-        "liquid_filling_pd_mc_1",
+        "filling_pd_mc_1_liquid",
       ),
     ).toBe(true);
     expect(applyEditorHost.actions.applyMoveOerationDraft()).toBe(true);
     expect(applyEditorHost.document.getSnapshot().entities.factory).toMatchObject({
-      definitionId: "liquid_filling_pd_mc_1",
+      definitionId: "filling_pd_mc_1_liquid",
       config: {},
     });
     expect(applyEditorHost.document.getSnapshot().slotLinks).toEqual([]);
@@ -1943,7 +1943,7 @@ describe("createEditorHost", () => {
     expect(
       cancelEditorHost.actions.replaceEntityDefinition(
         cancelDraftId ?? "",
-        "liquid_filling_pd_mc_1",
+        "filling_pd_mc_1_liquid",
       ),
     ).toBe(true);
     cancelEditorHost.actions.cancelMoveOperationDraft();

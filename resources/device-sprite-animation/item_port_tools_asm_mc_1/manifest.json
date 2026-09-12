@@ -52,7 +52,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -92,7 +94,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_001.webp",
+      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -102,7 +106,9 @@
       "frameDurationsMs": [
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "525b12ebb447a6a596359eb90c39156cc9a5978fffab108e929d9a0345e9d488"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -150,7 +156,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -190,7 +198,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "f112b34de22f8cde70b2e8ee835bec29d391d88d0de44582cb6d304902c6daa6"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -238,7 +248,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "0bf6cbb7fbb8b5c02cd55f866d93b52300300faed45d2f965b5428fa2028b764"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -278,7 +290,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
     }
   },
   "clips": {
@@ -325,5 +339,9 @@
         "frameCount": 2
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

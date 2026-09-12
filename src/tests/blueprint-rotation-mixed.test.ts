@@ -60,7 +60,7 @@ const FOOTPRINT_MAP: Record<string, { w: number; h: number }> = {
   thickener_1: { w: 3, h: 2 },
   furnance_1: { w: 4, h: 3 },
   power_diffuser_1: { w: 3, h: 3 },
-  hydro_planter_1: { w: 4, h: 3 },
+  planter_1_liquid: { w: 4, h: 3 },
   seedcol_1: { w: 2, h: 2 },
   planter_1: { w: 4, h: 3 },
   xiranite_oven_1: { w: 3, h: 3 },

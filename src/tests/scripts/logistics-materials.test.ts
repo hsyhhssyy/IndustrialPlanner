@@ -26,7 +26,10 @@ describe("物流素材离线发布", () => {
     }
     for (const mode of ["static", "dynamic"]) {
       const bytes = await readFile(path.join(patchRoot, mode, "material-computation.json"));
-      expect(await readFile(path.join(collectionRoot, mode, "log_pipe_02_mid/top", mode, "material-computation.json"))).toEqual(bytes);
+      // AI-CORRECTION 2026-09-11: v1.5 ZIP delivery permits LF/CRLF differences;
+      // compare parsed JSON semantics while retaining the patch byte/hash archive checks above.
+      const packageBytes = await readFile(path.join(collectionRoot, mode, "log_pipe_02_mid/top", mode, "material-computation.json"));
+      expect(JSON.parse(packageBytes.toString("utf8"))).toEqual(JSON.parse(bytes.toString("utf8")));
       const source = JSON.parse(bytes.toString("utf8")) as Record<string, unknown>;
       const combined = JSON.parse(await readFile(path.join(collectionRoot, mode, "material-computation.json"), "utf8")) as Record<string, unknown>;
       // 发布器读取集合级规范；只替换包内 JSON 会使实际 Shader 保持旧版本。

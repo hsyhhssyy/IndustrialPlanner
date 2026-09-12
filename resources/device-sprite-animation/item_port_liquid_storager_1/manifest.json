@@ -3,8 +3,8 @@
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
-  "pageRows": 10,
-  "pageColumns": 10,
+  "pageRows": 7,
+  "pageColumns": 5,
   "sources": {
     "close_000": {
       "file": "close_000.webp",
@@ -112,7 +112,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "cc0cfc7de304fda4b999518041597d1c3c53e2a73c3d49135a2f46f6a4ea0e43"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -146,7 +148,9 @@
         30,
         40,
         60
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_001.webp",
+      "sha256": "599129a3b7959b4b03e240c339489877d8d85d6212200c75b6ad21c050246460"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -155,7 +159,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         70
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "c1069c1740adb25d434bb6e879d13a61a7f64ba5174929bf8f05c5bc464e93e6"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -263,7 +269,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "dc989cf6a8d439f0217162e58bfb3c243f6754985d48ee5cb572ccecc593cb46"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -292,7 +300,9 @@
         40,
         30,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "64c205fbca38902281befa7b95d20f44045dc72641adcd2d5128ce0657257331"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -341,7 +351,9 @@
         30,
         30,
         70
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "49e4460d1ed665b312aa14190beab6f82c58af26b4948ccf19bdab81fd6a5d49"
     }
   },
   "clips": {
@@ -1798,5 +1810,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

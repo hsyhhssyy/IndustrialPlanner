@@ -539,7 +539,7 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
   entities: {
     "item_port_liquid_furnance_1:2": {
       id: "item_port_liquid_furnance_1:2",
-      definitionId: "liquid_furnance_1",
+      definitionId: "furnance_1_liquid",
       position: { x: 4, y: 0 },
       rotation: 180,
       config: {},
@@ -655,7 +655,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
     },
     "item_port_liquid_furnance_1:9": {
       id: "item_port_liquid_furnance_1:9",
-      definitionId: "liquid_furnance_1",
+      definitionId: "furnance_1_liquid",
       position: { x: 4, y: 0 },
       rotation: 180,
       config: {},
@@ -962,7 +962,7 @@ const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = {
   entities: {
     "liquid-furnance": {
       id: "liquid-furnance",
-      definitionId: "liquid_furnance_1",
+      definitionId: "furnance_1_liquid",
       position: { x: 50, y: 0 },
       rotation: 0,
       config: {},
@@ -1050,7 +1050,7 @@ function resetCanvasFromUserBlueprint(
   // belt and pipe fixtures remain byte-for-byte equivalent.
   const correctedOrientationIds = new Set([
     "cmpt_mc_1",
-    "liquid_furnance_1",
+    "furnance_1_liquid",
   ]);
   for (const entity of Object.values(entities)) {
     if (correctedOrientationIds.has(entity.definitionId)) {

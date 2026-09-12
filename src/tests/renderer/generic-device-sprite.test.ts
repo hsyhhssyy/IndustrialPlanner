@@ -3010,8 +3010,8 @@ function createEntityDefinitionStub(): EntityDefinition {
 function createLiquidInputEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
-    id: "liquid_filling_pd_mc_1",
-    nameKey: "registry.entity.liquid_filling_pd_mc_1.name",
+    id: "filling_pd_mc_1_liquid",
+    nameKey: "registry.entity.filling_pd_mc_1_liquid.name",
     footprint: { width: 6, height: 4 },
     portGroups: [
       {

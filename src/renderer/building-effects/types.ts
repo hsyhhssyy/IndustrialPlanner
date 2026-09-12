@@ -28,6 +28,7 @@ export interface BuildingHeightView {
   epsilon: number;
   variants: Record<string, BuildingEffectPort[]>;
   rings: (EffectTransform & { statusKey: number; resourceId: string })[];
+  coordinateSpace?: 'project-reflected-source' | 'contract2-canonical';
 }
 
 export interface EffectFrame {
@@ -44,6 +45,7 @@ export interface BuildingEffectResource {
   pages: { file: string; width: number; height: number }[];
   frames: EffectFrame[];
   playback: { mode: string; durationMs: number; staticFrame: number };
+  coordinateSpace?: 'project-reflected-source' | 'contract2-canonical';
 }
 
 export interface BuildingEffectsManifest {

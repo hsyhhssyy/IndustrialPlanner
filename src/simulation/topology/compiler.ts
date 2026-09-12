@@ -392,7 +392,8 @@ export function compileSimulationTopology(
 
   return {
     // AI-CORRECTION 2026-09-11: 当前文档 schema 已升至 7，拓扑快照跟随当前版本。
-    schemaVersion: 7,
+    // AI-CORRECTION 2026-09-11: 发布 tag v1.5.0 的 schema 为 5，当前文档及拓扑统一为未发布 schema 6。
+    schemaVersion: 6,
     simulationMode: options.simulationMode,
     topologyId: hashStable(topologyHashInput),
     documentKey: options.document.documentKey,

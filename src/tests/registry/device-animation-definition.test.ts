@@ -21,21 +21,37 @@ describe("device animation definitions", () => {
     const sourceManifest = JSON.parse(await readFile(path.resolve(
       `resources/device-sprite-animation/${COMPONENT_MACHINE_SPRITE_ID}/manifest.json`,
     ), "utf8"));
-    expect(sourceManifest.fps).toBeCloseTo(100 / 3);
+    // AI-CORRECTION 2026-09-11: v1.5 ZIP source declares 30fps and 151 source frames.
+    // 本次交付将连续重复帧合并为 99 帧，保留 5033ms 总时长与非等长停留。
+    expect(sourceManifest.fps).toBe(30);
     expect(sourceManifest.clips.open).toEqual([
       { source: "close_idle_000", startFrame: 0, frameCount: 1 },
     ]);
     expect(sourceManifest.clips.open_idle.reduce(
       (total: number, range: { frameCount: number }) => total + range.frameCount,
       0,
-    )).toBe(151);
+    )).toBe(99);
     expect(sourceManifest.clips.close).toEqual([
       { source: "close_idle_000", startFrame: 0, frameCount: 1 },
     ]);
+    // AI-REMOVED 2026-09-11:
+    // Reason: 新交付把 close_idle 的两个相同源帧合并为单帧。
+    // Trigger: 用户要求按 v1.5 JSON 更新全部建筑素材。
+    // Evidence: component_mc_1 的 close_idle/animation.json 声明 retainedFrameCount=1、durationMs=67。
+    // Replacement: 下方单帧声明与运行时 67ms 时间线断言。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // expect(sourceManifest.clips.close_idle).toEqual([
+    //   { source: "close_idle_000", startFrame: 0, frameCount: 1 },
+    //   { source: "close_idle_000", startFrame: 0, frameCount: 1 },
+    // ]);
     expect(sourceManifest.clips.close_idle).toEqual([
       { source: "close_idle_000", startFrame: 0, frameCount: 1 },
-      { source: "close_idle_000", startFrame: 0, frameCount: 1 },
     ]);
+    expect(sourceManifest.sources.open_idle_000.frameDurationsMs).toEqual(
+      expect.arrayContaining([67, 400, 500, 533]),
+    );
 
     const animationDirectory = path.resolve(`public/3d-top-view/animations/${COMPONENT_MACHINE_SPRITE_ID}`);
     const runtimeManifest = JSON.parse(await readFile(path.join(animationDirectory, "manifest.json"), "utf8"));
@@ -46,14 +62,28 @@ describe("device animation definitions", () => {
       frameHeight: 384,
       clips: {
         open: { frameCount: 1 },
-        open_idle: { frameCount: 151 },
+        open_idle: { frameCount: 99 },
         close: { frameCount: 1 },
-        close_idle: { frameCount: 2 },
+        close_idle: { frameCount: 1 },
       },
     });
-    expect(normalized.clips.open_idle.durationMs).toBeCloseTo(4_530);
-    expect(normalized.clips.open_idle.pages.map((page) => page.frameCount)).toEqual([100, 51]);
-    expect(normalized.clips.close_idle.durationMs).toBeCloseTo(60);
+    const sourceTimeline: number[] = sourceManifest.clips.open_idle.flatMap((range: { source: string; startFrame: number; frameCount: number }) => {
+      const durations = sourceManifest.sources[range.source].frameDurationsMs;
+      return durations.slice(range.startFrame, range.startFrame + range.frameCount);
+    });
+    expect(sourceTimeline.reduce((total: number, duration: number) => total + duration, 0)).toBe(5033);
+    expect(normalized.clips.open_idle.durationMs).toBe(5033);
+    expect(normalized.clips.open_idle.frameEndTimesMs.at(-1)).toBe(5033);
+    expect(normalized.clips.open_idle.pages.map((page) => page.frameCount)).toEqual([35, 35, 29]);
+    expect(normalized.clips.close_idle.durationMs).toBe(67);
+    expect(sourceTimeline).toHaveLength(99);
+    expect(runtimeManifest.clips.open_idle.frameDurationsMs).toEqual(sourceTimeline);
+    let elapsedMs = 0;
+    expect(normalized.clips.open_idle.frameEndTimesMs).toEqual(sourceTimeline.map((duration) => {
+      elapsedMs += duration;
+      return elapsedMs;
+    }));
+    expect(normalized.clips.close_idle.frameEndTimesMs).toEqual([67]);
 
     await Promise.all(Object.values(normalized.clips).flatMap((clip) => clip.pages.map(async (page) => {
       const metadata = await sharp(path.join(animationDirectory, page.file)).metadata();

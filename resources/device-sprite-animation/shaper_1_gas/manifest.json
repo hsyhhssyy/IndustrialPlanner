@@ -3,8 +3,8 @@
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
-  "pageRows": 10,
-  "pageColumns": 10,
+  "pageRows": 7,
+  "pageColumns": 5,
   "sources": {
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -13,7 +13,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         70
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "68b4079dd484aaa87a1c80eafc3b92b85c878d575cb31942b60610aea0c89e2f"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -121,7 +123,9 @@
         30,
         30,
         40
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "e4fa222663aacf952fabea0e01cd754a4e13518a7f9490750dd86160b98b329c"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -134,7 +138,9 @@
         40,
         30,
         70
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "70703364ded6cfff0866aa598494196a8031f2d84dbe3d611e6495d02cac81aa"
     }
   },
   "clips": {
@@ -686,5 +692,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

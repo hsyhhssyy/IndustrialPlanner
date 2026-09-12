@@ -230,11 +230,11 @@ describe("EncyclopediaPanel", () => {
 
     runInAction(() => {
       currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
-        { type: "entity", id: "liquid_filling_pd_mc_1" },
+        { type: "entity", id: "filling_pd_mc_1_liquid" },
       ];
       currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
         kind: "entity",
-        id: "liquid_filling_pd_mc_1",
+        id: "filling_pd_mc_1_liquid",
       };
     });
 

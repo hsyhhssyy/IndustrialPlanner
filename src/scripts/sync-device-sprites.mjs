@@ -134,14 +134,21 @@ export async function publishDeviceSprite(
   maskOutputFilePath,
   maskOverrideFilePath,
   rotation = 0,
+  { frameTransform = null, crop = null } = {},
 ) {
+  if (frameTransform !== null && frameTransform !== 'flip-top-bottom') {
+    throw new Error('frameTransform must be null or flip-top-bottom');
+  }
   await mkdir(path.dirname(spriteOutputFilePath), { recursive: true });
   await mkdir(path.dirname(maskOutputFilePath), { recursive: true });
 
   // 先构建旋转后的像素数据用于遮罩生成
+  // AI-CORRECTION 2026-09-11: 先提取源帧，再按源坐标契约反射和旋转；颜色与遮罩使用相同顺序。
   const rotatedPipeline = sharp(sourceFilePath)
     .ensureAlpha();
 
+  if (crop) rotatedPipeline.extract(crop);
+  if (frameTransform === 'flip-top-bottom') rotatedPipeline.flip();
   if (rotation !== 0) {
     rotatedPipeline.rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
   }
@@ -151,9 +158,12 @@ export async function publishDeviceSprite(
     .toBuffer({ resolveWithObject: true });
 
   // 输出旋转后的 WebP sprite
+  // AI-CORRECTION 2026-09-11: 裁剪、反射与上方生成遮罩的顺序一致。
   const webpPipeline = sharp(sourceFilePath)
     .ensureAlpha();
 
+  if (crop) webpPipeline.extract(crop);
+  if (frameTransform === 'flip-top-bottom') webpPipeline.flip();
   if (rotation !== 0) {
     webpPipeline.rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
   }
@@ -254,6 +264,7 @@ async function readRegistryAnimationDefinitions() {
 /** AI-CORRECTION 2026-09-06: Registry 只声明能力；源清单负责重切分，发布 manifest 负责分页布局与时序。 */
 export async function publishDeviceSpriteAnimations({
   definitions,
+  spriteIds,
   sourceDirectory = defaultAnimationSourceDirectory,
   spriteDirectory = defaultSpriteDirectory,
   maskDirectory = defaultMaskDirectory,
@@ -263,6 +274,7 @@ export async function publishDeviceSpriteAnimations({
 } = {}) {
   return publishPaginatedDeviceSpriteAnimations({
     definitions,
+    spriteIds,
     sourceDirectory,
     spriteDirectory,
     maskDirectory,
@@ -304,7 +316,9 @@ async function main() {
     path.join(projectRoot, 'resources/building-top-view-v15.json'), 'utf8',
   ));
   const importedStaticMappings = importedCollection.entries.filter((entry) => !entry.animated)
-    .map((entry) => [`v15/${entry.spriteId}.webp`, entry.spriteId, 0]);
+    .map((entry) => [`v15/${entry.spriteId}.webp`, entry.spriteId, 0,
+      entry.sourceMetadata?.publishedTransform?.operation === 'flip-top-bottom per frame' ? 'flip-top-bottom' : null,
+      { left: 0, top: 0, width: entry.spriteOffset.width * 128, height: entry.spriteOffset.height * 128 }]);
   const importedStaticIds = new Set(importedStaticMappings.map((entry) => entry[1]));
   const mappings = [...importedStaticMappings,
     ...DEVICE_SPRITE_MAPPINGS.filter((entry) => !importedStaticIds.has(entry[1]))];
@@ -315,7 +329,7 @@ async function main() {
   // Risk: Low; Human Review: Required
   // Original code:
   // for (const [sourceName, spriteId, rotation = 0] of DEVICE_SPRITE_MAPPINGS) {
-  for (const [sourceName, spriteId, rotation = 0] of mappings) {
+  for (const [sourceName, spriteId, rotation = 0, frameTransform = null, crop = null] of mappings) {
     if (animatedSpriteIds.has(spriteId)) continue;
     const sourceFileName = path.extname(sourceName) === '' ? `${sourceName}.png` : sourceName;
     const sourceFilePath = path.join(sourceDirectory, sourceFileName);
@@ -328,6 +342,7 @@ async function main() {
       maskOutputFilePath,
       maskOverrideFilePath,
       rotation,
+      { frameTransform, crop },
     );
 
     console.log(`${spriteId}: ${width}x${height}${rotation ? ` (rotated ${rotation}°)` : ''}`);

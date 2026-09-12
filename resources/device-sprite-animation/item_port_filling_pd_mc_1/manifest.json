@@ -13,7 +13,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         67
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "b56e1b462a79df5952f9b687be1a5bd9af39bffdcd50b6f254a706687e5763ec"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -22,7 +24,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         67
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "b56e1b462a79df5952f9b687be1a5bd9af39bffdcd50b6f254a706687e5763ec"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -70,7 +74,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "011dd4da1fc51a82d08a258ffbee6c6e5477a8ba5d7a2558105e14fb7aa43b4e"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -109,7 +115,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "9a59631fec7a77659637f828bf74a7668256a72669f5e67d7b7fb797335c7ae0"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -157,7 +165,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "ff9297e568b4349cb1392eba4db7ac71363c627093ca661d0d996f1f565eb7b0"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -196,7 +206,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "98c88f5bf4ff803c0f7a3a0739501d02a0f2856aca1044a742bff8e62e64cace"
     }
   },
   "clips": {
@@ -238,5 +250,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

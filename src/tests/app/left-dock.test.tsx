@@ -459,16 +459,16 @@ describe("Left dock panel switching", () => {
     });
     expect(container.querySelector(".placement-variant-menu")).toBeNull();
     expect(
-      container.querySelector('[data-ui-button-id="placement-liquid_filling_pd_mc_1"]'),
+      container.querySelector('[data-ui-button-id="placement-filling_pd_mc_1_liquid"]'),
     ).not.toBeNull();
     expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
       uiButtonId:
-        "ui-left-dock-placement-mode-liquid_filling_pd_mc_1-mouse-tap",
+        "ui-left-dock-placement-mode-filling_pd_mc_1_liquid-mouse-tap",
     }));
 
     placementTap.mockClear();
     const selectedDeviceButton = container.querySelector(
-      '[data-ui-button-id="placement-liquid_filling_pd_mc_1"]',
+      '[data-ui-button-id="placement-filling_pd_mc_1_liquid"]',
     );
     act(() => {
       if (selectedDeviceButton !== null) {
@@ -489,7 +489,7 @@ describe("Left dock panel switching", () => {
     });
     expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
       uiButtonId:
-        "ui-left-dock-placement-mode-liquid_filling_pd_mc_1-mouse-tap",
+        "ui-left-dock-placement-mode-filling_pd_mc_1_liquid-mouse-tap",
     }));
   });
 
@@ -575,7 +575,7 @@ describe("Left dock panel switching", () => {
       visiblePanel?.querySelector('[data-ui-button-id="placement-filling_pd_mc_1"]'),
     ).not.toBeNull();
     expect(
-      visiblePanel?.querySelector('[data-ui-button-id="placement-liquid_filling_pd_mc_1"]'),
+      visiblePanel?.querySelector('[data-ui-button-id="placement-filling_pd_mc_1_liquid"]'),
     ).not.toBeNull();
     expect(visiblePanel?.querySelector(".placement-entity-variant-trigger")).toBeNull();
     expect(

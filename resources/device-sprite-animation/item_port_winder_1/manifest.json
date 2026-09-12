@@ -38,7 +38,9 @@
         33,
         33,
         234
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "6775f3d68e40c0c79a8c55e636f6c2222573c3fcfe961052e52afa3024fe44a5"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -47,7 +49,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         200
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "c1b9c602f6df6d6ed53e8e3dd1faceadcf01c0269fe2bf2810df1d9fde2fe24c"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -95,7 +99,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "b7b6aebd33c208190931d7b5a16136b8d9e46a432bb1310a2472bf0f0321e319"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -114,7 +120,9 @@
         33,
         34,
         66
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "22cda35c9693c23d19fa42954fde0f2732fa67c1645332f06f2215a72af6fb8a"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -162,7 +170,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "aee25ad1633c4618688f0740cf7b84971935b911b1c21ffa5a793e0a9e151996"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -178,7 +188,9 @@
         33,
         34,
         66
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "e3b2e6e0b0760c337516fda3d286e2a649fa950e5e1b193d02b6f0450c54fd90"
     }
   },
   "clips": {
@@ -220,5 +232,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

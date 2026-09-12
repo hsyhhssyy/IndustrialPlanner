@@ -328,7 +328,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("makes liquid filling machine pipe input and buffer accept fluid", () => {
-    const definition = requireEntity("liquid_filling_pd_mc_1");
+    const definition = requireEntity("filling_pd_mc_1_liquid");
     const fluidInput = requirePortGroup(definition, "fluid_input");
     const fluidInputBuffer = definition.storageSlotGroups.find(
       (slotGroup) => slotGroup.id === "fluid_input_buffer",
@@ -368,7 +368,7 @@ describe("gas item and device definitions", () => {
 
     expect(gasFillingRecipes).toHaveLength(8);
     expect(gasFillingRecipes.every(
-      (recipe) => recipe.machineId === "liquid_filling_pd_mc_1",
+      (recipe) => recipe.machineId === "filling_pd_mc_1_liquid",
     )).toBe(true);
   });
 });

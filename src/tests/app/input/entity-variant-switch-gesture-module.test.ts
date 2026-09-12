@@ -27,7 +27,7 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "selected-entity",
-      "liquid_filling_pd_mc_1",
+      "filling_pd_mc_1_liquid",
     );
   });
 
@@ -44,7 +44,7 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     })).toEqual({ status: "handled" });
     expect(panel.editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "selected-entity",
-      "liquid_filling_pd_mc_1",
+      "filling_pd_mc_1_liquid",
     );
 
     expect(handleKeyboardShortcutThroughRouter({

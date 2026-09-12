@@ -103,7 +103,10 @@ import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/app/types/theme";
-import { publishDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
+import {
+  FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+  publishDebugModeEnabled,
+} from "@/shared/logging/debug-mode-runtime";
 import {
   DEFAULT_WORKBENCH_LOG_LEVEL,
   setLogLevel,
@@ -649,6 +652,18 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.debugSimulationWorkerDetailedReport = value;
         }),
       },
+      "debug-force-flatten-blueprint-version": {
+        readValue: () => FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+          && appHost.internalState.settings.debugForceFlattenBlueprintVersion,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          appHost.internalState.settings.debugForceFlattenBlueprintVersion =
+            FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED && value;
+        }),
+      },
       "debug-backend-api-address-override": {
         readValue: () => readBackendApiAddressOverride(),
         writeValue: (value) => {
@@ -675,6 +690,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
             appHost.internalState.settings.debugShowFps = false;
             appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
             appHost.internalState.settings.debugSimulationWorkerDetailedReport = false;
+            appHost.internalState.settings.debugForceFlattenBlueprintVersion = false;
             appHost.internalState.settings.virtualMousePointer = false;
           }
         }),

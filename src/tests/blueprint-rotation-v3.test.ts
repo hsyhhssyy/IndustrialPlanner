@@ -148,7 +148,7 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
       initialGridPoint: { x: 5, y: 2 },
       entities: {
         pool: { id: "p1", definitionId: "mix_pool_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        hydro: { id: "h1", definitionId: "hydro_planter_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
+        hydro: { id: "h1", definitionId: "planter_1_liquid", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p1", "h1"],
       slotLinks: [],

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type {
@@ -12,9 +12,11 @@ import {
   applyBlueprintDeviceIdMigrationRules,
   BLUEPRINT_DEVICE_ID_MIGRATION_SPECS,
   BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
+  migrateBlueprintDeviceReference,
   migrateBlueprintDocumentState,
   migrateBlueprintEntityDeviceIds,
 } from "@/shared/blueprint-device-id-migration";
+import { publishForceFlattenBlueprintVersionEnabled } from "@/shared/logging/debug-mode-runtime";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 
 function createEntity(definitionId: string, rotation: WorldEntity["rotation"] = 0): WorldEntity {
@@ -80,9 +82,13 @@ function migratePumpDocument(options: {
   }, 4, 5);
 }
 
+afterEach(() => {
+  publishForceFlattenBlueprintVersionEnabled(false);
+});
+
 describe("blueprint device id migration version chain", () => {
   it("declares one contiguous migration for every schema version up to current", () => {
-    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(7);
+    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(6);
     expect(BLUEPRINT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.map((spec) => [
@@ -94,7 +100,17 @@ describe("blueprint device id migration version chain", () => {
       [3, 4],
       [4, 5],
       [5, 6],
-      [6, 7],
+      // AI-REMOVED 2026-09-11:
+      // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+      // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+      // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+      // Replacement: 当前连续的 schema 1→2→3→4→5→6。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      //       [6, 7],
+      //       [7, 8],
     ]);
   });
 
@@ -105,7 +121,6 @@ describe("blueprint device id migration version chain", () => {
     { source: 1, target: 4, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 1, target: 5, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 1, target: 6, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
-    { source: 1, target: 7, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 2, target: 2, sourceId: "item_port_mix_pool_2", expectedId: "item_port_mix_pool_2" },
     { source: 2, target: 3, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
     { source: 2, target: 4, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
@@ -121,8 +136,30 @@ describe("blueprint device id migration version chain", () => {
     { source: 5, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 5, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 6, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    { source: 6, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    { source: 7, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    // AI-REMOVED 2026-09-11:
+    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+    // Replacement: 上方 schema 1～6 的完整矩阵。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    //     { source: 1, target: 7, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    //     { source: 6, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 7, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 2, target: 7, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 3, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 4, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 5, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 1, target: 8, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    //     { source: 2, target: 8, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 3, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 4, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 5, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 6, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 7, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    //     { source: 8, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
   ])(
     "covers the complete supported migration matrix: schema $source to $target",
     ({ source, target, sourceId, expectedId }) => {
@@ -131,7 +168,7 @@ describe("blueprint device id migration version chain", () => {
       expect(result?.schemaVersion).toBe(target);
       expect(result?.entities.entity).toMatchObject({
         definitionId: expectedId,
-        rotation: target === 7 && source < 7 ? 180 : 0,
+        rotation: target === 6 && source < 6 ? 180 : 0,
         position: { x: 4, y: 8 },
         config: { retained: true },
         tags: ["retained"],
@@ -185,28 +222,43 @@ describe("blueprint device id migration version chain", () => {
     const version6 = migrateBlueprintEntityDeviceIds(version5?.entities ?? {}, 5, 6);
 
     expect(version6?.schemaVersion).toBe(6);
-    expect(version6?.entities).toEqual(version5?.entities);
+    expect(version6?.entities.pool).toMatchObject({ rotation: 180 });
+    expect(version6?.entities.grinder).toMatchObject({ rotation: 90 });
 
-    const version7 = migrateBlueprintEntityDeviceIds(version6?.entities ?? {}, 6, 7);
-
-    expect(version7?.schemaVersion).toBe(7);
-    expect(version7?.entities.pool).toMatchObject({ rotation: 180 });
-    expect(version7?.entities.grinder).toMatchObject({ rotation: 90 });
+    // AI-REMOVED 2026-09-11:
+    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+    // Replacement: 上方 schema 5→6 合并迁移的最终状态。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    //     const version7 = migrateBlueprintEntityDeviceIds(version6?.entities ?? {}, 6, 7);
+    //
+    //     expect(version7?.schemaVersion).toBe(7);
+    //     expect(version7?.entities.pool).toMatchObject({ rotation: 180 });
+    //     expect(version7?.entities.grinder).toMatchObject({ rotation: 90 });
+    //
+    //     const version8 = migrateBlueprintEntityDeviceIds(version7?.entities ?? {}, 7, 8);
+    //
+    //     expect(version8?.schemaVersion).toBe(8);
+    //     expect(version8?.entities).toEqual(version7?.entities);
 
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
-    expect(directToCurrent).toEqual(version7);
+    expect(directToCurrent).toEqual(version6);
   });
 
-  it("keeps schema 7 entities and links unchanged when normalized again", () => {
+  it("keeps current schema entities unchanged when normalized again", () => {
     const entities = {
       pool: createEntity("mix_pool_2", 180),
       grinder: createEntity("grinder_1", 90),
     };
-    const current = migrateBlueprintEntityDeviceIds(entities, 7);
+    const current = migrateBlueprintEntityDeviceIds(entities, 6);
 
     expect(current).toEqual({
-      schemaVersion: 7,
+      schemaVersion: 6,
       entities,
     });
   });
@@ -242,11 +294,34 @@ describe("blueprint device id migration version chain", () => {
       sourceDeviceId: "mix_pool_2",
       expectedDeviceId: "mix_pool_2",
     },
-    {
-      sourceSchemaVersion: 7,
-      sourceDeviceId: "mix_pool_2",
-      expectedDeviceId: "mix_pool_2",
-    },
+    // AI-REMOVED 2026-09-11:
+    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+    // Replacement: schema 1～5 迁入当前 schema 6；schema 6 仅验证幂等。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    //     {
+    //       sourceSchemaVersion: 7,
+    //       sourceDeviceId: "mix_pool_2",
+    //       expectedDeviceId: "mix_pool_2",
+    //     },
+    // AI-REMOVED 2026-09-11:
+    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+    // Replacement: schema 1～5 迁入当前 schema 6；schema 6 仅验证幂等。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    //     {
+    //       sourceSchemaVersion: 8,
+    //       sourceDeviceId: "mix_pool_2",
+    //       expectedDeviceId: "mix_pool_2",
+    //     },
   ])(
     "migrates schema $sourceSchemaVersion to current schema from its own canonical state",
     ({ sourceSchemaVersion, sourceDeviceId, expectedDeviceId }) => {
@@ -258,21 +333,59 @@ describe("blueprint device id migration version chain", () => {
 
       expect(result?.schemaVersion).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
       expect(result?.entities.entity?.definitionId).toBe(expectedDeviceId);
-      expect(result?.entities.entity?.rotation).toBe(sourceSchemaVersion < 7 ? 180 : 0);
+      expect(result?.entities.entity?.rotation).toBe(sourceSchemaVersion < 6 ? 180 : 0);
     },
   );
 
+  // AI-REMOVED 2026-09-11:
+  // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+  // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+  // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+  // Replacement: 下方以真实历史 schema 2/5 验证重命名，schema 6 仅使用新 ID。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  //   it.each([
+  //     { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 2, deviceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 3, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 4, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 5, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 6, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 7, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 8, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+  //     { schemaVersion: 2, deviceId: "item_port_liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
+  //     { schemaVersion: 6, deviceId: "liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
+  //     { schemaVersion: 7, deviceId: "liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
+  //     { schemaVersion: 8, deviceId: "filling_pd_mc_1_liquid", expectedId: "filling_pd_mc_1_liquid" },
+  //     { schemaVersion: 2, deviceId: "item_port_hydro_planter_1", expectedId: "planter_1_liquid" },
+  //     { schemaVersion: 6, deviceId: "hydro_planter_1", expectedId: "planter_1_liquid" },
+  //     { schemaVersion: 7, deviceId: "hydro_planter_1", expectedId: "planter_1_liquid" },
+  //     { schemaVersion: 8, deviceId: "planter_1_liquid", expectedId: "planter_1_liquid" },
+  //     { schemaVersion: 2, deviceId: "item_port_liquid_furnance_1", expectedId: "furnance_1_liquid" },
+  //     { schemaVersion: 6, deviceId: "liquid_furnance_1", expectedId: "furnance_1_liquid" },
+  //     { schemaVersion: 7, deviceId: "liquid_furnance_1", expectedId: "furnance_1_liquid" },
+  //     { schemaVersion: 8, deviceId: "furnance_1_liquid", expectedId: "furnance_1_liquid" },
   it.each([
-    { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1" },
-    { schemaVersion: 2, deviceId: "item_port_mix_pool_2" },
-    { schemaVersion: 3, deviceId: "mix_pool_2" },
-    { schemaVersion: 4, deviceId: "mix_pool_2" },
-    { schemaVersion: 5, deviceId: "mix_pool_2" },
-    { schemaVersion: 6, deviceId: "mix_pool_2" },
-    { schemaVersion: 7, deviceId: "mix_pool_2" },
+    { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    { schemaVersion: 2, deviceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+    { schemaVersion: 3, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { schemaVersion: 4, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { schemaVersion: 5, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { schemaVersion: 6, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { schemaVersion: 2, deviceId: "item_port_liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
+    { schemaVersion: 5, deviceId: "liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
+    { schemaVersion: 6, deviceId: "filling_pd_mc_1_liquid", expectedId: "filling_pd_mc_1_liquid" },
+    { schemaVersion: 2, deviceId: "item_port_hydro_planter_1", expectedId: "planter_1_liquid" },
+    { schemaVersion: 5, deviceId: "hydro_planter_1", expectedId: "planter_1_liquid" },
+    { schemaVersion: 6, deviceId: "planter_1_liquid", expectedId: "planter_1_liquid" },
+    { schemaVersion: 2, deviceId: "item_port_liquid_furnance_1", expectedId: "furnance_1_liquid" },
+    { schemaVersion: 5, deviceId: "liquid_furnance_1", expectedId: "furnance_1_liquid" },
+    { schemaVersion: 6, deviceId: "furnance_1_liquid", expectedId: "furnance_1_liquid" },
   ])(
-    "normalizes blueprint and world documents from schema $schemaVersion to schema 7",
-    ({ schemaVersion, deviceId }) => {
+    "normalizes blueprint and world $deviceId documents from schema $schemaVersion to current",
+    ({ schemaVersion, deviceId, expectedId }) => {
       const entity = createEntity(deviceId);
       const blueprint = normalizeBlueprintDocument({
         schemaVersion,
@@ -314,12 +427,12 @@ describe("blueprint device id migration version chain", () => {
       });
 
       expect(blueprint).toMatchObject({
-        schemaVersion: 7,
-        entities: { entity: { definitionId: "mix_pool_2", rotation: schemaVersion < 7 ? 180 : 0 } },
+        schemaVersion: 6,
+        entities: { entity: { definitionId: expectedId, rotation: schemaVersion < 6 ? 180 : 0 } },
       });
       expect(world).toMatchObject({
-        schemaVersion: 7,
-        entities: { entity: { definitionId: "mix_pool_2", rotation: schemaVersion < 7 ? 180 : 0 } },
+        schemaVersion: 6,
+        entities: { entity: { definitionId: expectedId, rotation: schemaVersion < 6 ? 180 : 0 } },
       });
     },
   );
@@ -342,6 +455,59 @@ describe("blueprint device id migration version chain", () => {
       config: { retained: true },
       tags: ["retained"],
     });
+  });
+
+  it.each([
+    ["liquid_filling_pd_mc_1", "filling_pd_mc_1_liquid"],
+    ["hydro_planter_1", "planter_1_liquid"],
+    ["liquid_furnance_1", "furnance_1_liquid"],
+  ])("migrates published schema 5 %s with one rotation while retaining document facts", (oldId, newId) => {
+    for (const rotation of [0, 90, 180, 270] as const) {
+      const entity = createEntity(oldId, rotation);
+      entity.config = {
+        channelRecipes: { default: "retained-recipe" },
+        "portGroups[0].ports[0].admissionRule": { itemId: "item_liquid_water", limit: 2 },
+      };
+      const state = {
+        entities: { entity, unrelated: { ...createEntity("power_diffuser_1"), id: "unrelated" } },
+        entityOrder: ["unrelated", "entity"],
+        slotLinks: [createPumpWarehouseLink("item_liquid_water")],
+        // AI-REMOVED 2026-09-11:
+        // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
+        // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
+        // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
+        // Replacement: schema 5 不含区域字段；迁移得到空区域，当前区域保留由 region-annotation-migration.test.ts 验证。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        //         regions: [{
+        //           id: "region", name: "生产区", description: "保留区域", color: "#3B82F6",
+        //           rects: [{ x: -2, y: 4, width: 6, height: 3 }],
+        //         }],
+      };
+      const original = structuredClone(state);
+      const renamed = migrateBlueprintDocumentState(state, 5);
+
+      expect(renamed).toEqual({
+        ...state,
+        schemaVersion: 6,
+        entities: { ...state.entities, entity: { ...entity, definitionId: newId, rotation: (rotation + 180) % 360 } },
+        regions: [],
+      });
+      expect(state).toEqual(original);
+      expect(migrateBlueprintDocumentState(renamed!, 6)).toEqual(renamed);
+      expect(migrateBlueprintDocumentState(state, 5)?.entities.entity).toEqual({
+        ...entity, definitionId: newId, rotation: (rotation + 180) % 360,
+      });
+      expect(migrateBlueprintDeviceReference(oldId, rotation, 5)).toEqual({
+        schemaVersion: 6, deviceId: newId, rotation: (rotation + 180) % 360,
+      });
+      expect(migrateBlueprintDeviceReference(`item_port_${oldId}`)?.deviceId).toBe(newId);
+      expect(migrateBlueprintDeviceReference(newId, rotation)).toEqual({
+        schemaVersion: 6, deviceId: newId, rotation,
+      });
+    }
   });
 
   it("keeps every production schema 2 to 3 rotation offset at zero in this release", () => {
@@ -654,13 +820,17 @@ describe("blueprint device id migration version chain", () => {
     },
   );
 
-  it("maps every schema 3 target to a registered prefix-free entity definition", () => {
+  it("migrates every schema 3 target onward to a registered prefix-free entity definition", () => {
     const registeredIds = new Set(ENTITY_DEFINITIONS.map((definition) => definition.id));
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
     expect(ENTITY_DEFINITIONS).toHaveLength(65);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
-    expect(version3Spec?.deviceRules.every((rule) => registeredIds.has(rule.toDeviceId))).toBe(true);
+    expect(version3Spec?.deviceRules.every((rule) => {
+      const currentId = migrateOneEntity(rule.toDeviceId, 3, BLUEPRINT_DEVICE_ID_SCHEMA_VERSION)
+        ?.entities.entity?.definitionId;
+      return currentId !== undefined && registeredIds.has(currentId);
+    })).toBe(true);
     expect(new Set(version3Spec?.deviceRules.map((rule) => rule.fromDeviceId)).size).toBe(
       version3Spec?.deviceRules.length,
     );
@@ -673,8 +843,29 @@ describe("blueprint device id migration version chain", () => {
     const entities = { entity: createEntity("mix_pool_2") };
 
     expect(migrateBlueprintEntityDeviceIds(entities, 0)).toBeNull();
-    expect(migrateBlueprintEntityDeviceIds(entities, 8)).toBeNull();
+    expect(migrateBlueprintEntityDeviceIds(entities, BLUEPRINT_DEVICE_ID_SCHEMA_VERSION + 1)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 2, 1)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 1.5)).toBeNull();
+  });
+
+  it("flattens a future schema to the current version without applying migrations when forced", () => {
+    const entity = createEntity("item_port_mix_pool_large_1", 90);
+    const state = {
+      entities: { entity },
+      entityOrder: ["entity"],
+      slotLinks: [] as SlotLinkDefinition[],
+      regions: [],
+    };
+
+    publishForceFlattenBlueprintVersionEnabled(true);
+
+    expect(migrateBlueprintDocumentState(
+      state,
+      BLUEPRINT_DEVICE_ID_SCHEMA_VERSION + 1,
+    )).toEqual({
+      ...state,
+      schemaVersion: BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
+    });
+    expect(state.entities.entity).toEqual(entity);
   });
 });

@@ -4,7 +4,7 @@
   "frameHeight": 640,
   "fps": 30,
   "pageRows": 6,
-  "pageColumns": 6,
+  "pageColumns": 5,
   "sources": {
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -13,7 +13,9 @@
       "frameCount": 1,
       "frameDurationsMs": [
         67
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "af713d5341fc439a6859e2de5ebe37595c77d5dcdb5de337cd5c9d5b65d1ff6f"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -57,7 +59,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "815f97a7ab79e417793263f2a3a7aedebd1f643effd54e4516ecc5852133e28f"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -101,7 +105,9 @@
         34,
         1100,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "7db8e0f65de981e791613bab9d5cb9ff8c89f14f5837b06466264d9a3f64f716"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -145,7 +151,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_002.webp",
+      "sha256": "c6a6b494e96c7ae24cca3a61221a78de04b9557f90dedcb5cb3fc64029f8522a"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -189,7 +197,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_003.webp",
+      "sha256": "2e88cacc9a4148a1f3be8a2f96f593f3d29006415dc2c29e0239d5c0f5b0b5c7"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -233,7 +243,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_004.webp",
+      "sha256": "cbf346f8253e6d24b8456724ea17f68d933e2f95e5f11aa2340e58a70c3af64e"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -277,7 +289,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_005.webp",
+      "sha256": "b88611033b0ddc48a37e1c1ef56491a053986777cca78d258cf3520f6de2f9e3"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -321,7 +335,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_006.webp",
+      "sha256": "e0502c5da464b2b643b7cf486038d473f4fbcd3554fcf36ac8ae2075054f1365"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -365,7 +381,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_007.webp",
+      "sha256": "2105c8da1396f5a2c590e1f6560e7223cd6b2b0eb75a2dd86524fbb4e6f1c2e5"
     },
     "open_idle_008": {
       "file": "open_idle_008.webp",
@@ -409,7 +427,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_008.webp",
+      "sha256": "c81b544f228c681fbee09fd61109f730bafee078150a07334f4140a5f2ea7906"
     },
     "open_idle_009": {
       "file": "open_idle_009.webp",
@@ -453,7 +473,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_009.webp",
+      "sha256": "81336ed597e0e0de93e63cab065cfb381f3569b3ed25c16dc45031d2bff064a0"
     },
     "open_idle_010": {
       "file": "open_idle_010.webp",
@@ -497,7 +519,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_010.webp",
+      "sha256": "c50797c7cb79c62afe4ddfebf5409a8adf071b02696226a4f605f00b4f2160e1"
     },
     "open_idle_011": {
       "file": "open_idle_011.webp",
@@ -541,7 +565,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_011.webp",
+      "sha256": "17251664bc37582fdbaedf73a51735be1551480e80d32650af1965cca57e81c0"
     },
     "open_idle_012": {
       "file": "open_idle_012.webp",
@@ -585,7 +611,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_012.webp",
+      "sha256": "5e6133d011e192ee7134a82ea410673c3d926f0fbdf90b9e520cdb87ece9bb50"
     },
     "open_idle_013": {
       "file": "open_idle_013.webp",
@@ -629,7 +657,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_013.webp",
+      "sha256": "f5509708bbf831c403bfb625ca538c0842acef472ecbfcc0cdf0a1d0a2a0c1d9"
     },
     "open_idle_014": {
       "file": "open_idle_014.webp",
@@ -673,7 +703,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_014.webp",
+      "sha256": "dea244e7f99e83ff9c2f2524210ab22309a7117690b1550be058ab2df9bce1e4"
     },
     "open_idle_015": {
       "file": "open_idle_015.webp",
@@ -717,7 +749,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_015.webp",
+      "sha256": "168d3eb0ede39b0877da1a89037593d1889a271fde2b54325e1fdcb9824c4dfa"
     },
     "open_idle_016": {
       "file": "open_idle_016.webp",
@@ -761,7 +795,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_016.webp",
+      "sha256": "d9cd41c272a7c108e8e089e8524fed00701ddc85f209df4bc8a02e3980d2aa26"
     },
     "open_idle_017": {
       "file": "open_idle_017.webp",
@@ -805,7 +841,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_017.webp",
+      "sha256": "d4cc3a074440787c42ddda173641a47ff30514e2ed6586b5d6d5da43eaf43fc4"
     },
     "open_idle_018": {
       "file": "open_idle_018.webp",
@@ -849,7 +887,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_018.webp",
+      "sha256": "457ec30945476e7fffaa35785fc2c0f5937e2deea39c3b9e8f6531ef37a916d9"
     },
     "open_idle_019": {
       "file": "open_idle_019.webp",
@@ -893,7 +933,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_019.webp",
+      "sha256": "8be9a703d4278f4b6e47fb3bfdbc36506725efce7db2844814a4986304a37b5c"
     },
     "open_idle_020": {
       "file": "open_idle_020.webp",
@@ -936,7 +978,9 @@
         33,
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_020.webp",
+      "sha256": "615d64ff088541c340f2e56203ae3b61dc7662db95ad232a996d60a6acb2ff6a"
     }
   },
   "clips": {
@@ -1074,5 +1118,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

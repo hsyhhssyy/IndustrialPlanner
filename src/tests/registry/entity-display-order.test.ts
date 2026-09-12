@@ -66,20 +66,20 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
 
     // 500 — basicProduction
     furnance_1: 501,
-    liquid_furnance_1: 502,
+    furnance_1_liquid: 502,
     grinder_1: 503,
     cmpt_mc_1: 504,
     shaper_1: 505,
     shaper_1_gas: 506,
     seedcol_1: 507,
     planter_1: 508,
-    hydro_planter_1: 509,
+    planter_1_liquid: 509,
     liquid_cleaner_1: 510,
 
     // 600 — advancedManufacturing
     winder_1: 601,
     filling_pd_mc_1: 602,
-    liquid_filling_pd_mc_1: 603,
+    filling_pd_mc_1_liquid: 603,
     tools_asm_mc_1: 604,
     thickener_1: 605,
     mix_pool_1: 606,
@@ -186,7 +186,7 @@ describe("displayOrder ascending within uiGroup", () => {
   it("basicProduction entities begin with furnance→liquid_furnance→grinder→cmpt", () => {
     const ids = sortedIdsByGroup("basicProduction");
     const furnanceIdx = ids.indexOf("furnance_1");
-    const liquidIdx = ids.indexOf("liquid_furnance_1");
+    const liquidIdx = ids.indexOf("furnance_1_liquid");
     const grinderIdx = ids.indexOf("grinder_1");
     const cmptIdx = ids.indexOf("cmpt_mc_1");
     expect(furnanceIdx).toBeLessThan(liquidIdx);

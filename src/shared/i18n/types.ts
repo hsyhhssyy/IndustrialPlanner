@@ -534,6 +534,8 @@ export type UiKey =
   | "settingsField.game-play-device-animationsDescription"
   | "settingsField.game-use-inspector-panel"
   | "settingsField.game-use-inspector-panelDescription"
+  | "settingsField.debug-force-flatten-blueprint-version"
+  | "settingsField.debug-force-flatten-blueprint-versionDescription"
   | "settingsField.other-debug-mode"
   | "settingsField.other-debug-modeDescription"
   | "settingsField.other-experimental-features"

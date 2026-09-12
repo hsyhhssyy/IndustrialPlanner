@@ -297,6 +297,8 @@ const UI: Record<string, string> = {
     "settingsDialog.title": "设置",
     "settingsField.debug-backend-api-address-override": "覆盖后端地址",
     "settingsField.debug-backend-api-address-overrideDescription": "填写后会覆盖后端 API 地址；留空或只输入空白字符时使用当前构建配置的默认地址。",
+    "settingsField.debug-force-flatten-blueprint-version": "强制拉平蓝图版本",
+    "settingsField.debug-force-flatten-blueprint-versionDescription": "将高于当前支持版本的蓝图及基地文档版本号强制改为当前最高版本并写回，不执行迁移。仅用于修复调试期间产生的未发布版本数据。",
     "settingsField.debug-show-fps": "显示 FPS/TPS",
     "settingsField.debug-show-fpsDescription": "开启后在画布左上角显示可折叠的 FPS/TPS 指示面板。",
     "settingsField.debug-show-gesture-diagnostics-window": "显示手势测试窗口",

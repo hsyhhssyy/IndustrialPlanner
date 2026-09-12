@@ -18,7 +18,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "22d220c61448ae72b666fe0d790a0dce94057068e2f6e9e906cf248b10f95bcb"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -32,7 +34,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_001.webp",
+      "sha256": "bb84163fb1274194f00ed510b6d9747001e3d98a3ade1420d444bbb0cb590365"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -46,7 +50,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_002.webp",
+      "sha256": "5946360f05dc9d08a2c2ba56bc8cf1dceea9c3c1e4b4fdf099fede3717a40ba6"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -60,7 +66,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_003.webp",
+      "sha256": "052063b738a730536f192969a3d8c950e70b1d9e71191d85f2fa7d11cefee830"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -74,7 +82,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_004.webp",
+      "sha256": "2ee3eea704637b5f6b835a73da850533422de48738a3540fe0a69004487fc4a2"
     },
     "close_005": {
       "file": "close_005.webp",
@@ -88,7 +98,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_005.webp",
+      "sha256": "92fa658435088b7da9f5a462879b2fa9225f53da37363a1232d3b94e94f92159"
     },
     "close_006": {
       "file": "close_006.webp",
@@ -102,7 +114,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_006.webp",
+      "sha256": "4fd8d8d02899c930c9d2decc15565d00340429d6e52ebdc68b15eb74911049de"
     },
     "close_007": {
       "file": "close_007.webp",
@@ -116,7 +130,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_007.webp",
+      "sha256": "a2ff80ca1815071d4e95e7ff77c2564cdc0a2437b5e6b03a87f236d640a6f870"
     },
     "close_008": {
       "file": "close_008.webp",
@@ -130,7 +146,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_008.webp",
+      "sha256": "add13fa8c4a9947de142899be3f3a8b468af54ac761d124aab46aecdbffcc3fc"
     },
     "close_009": {
       "file": "close_009.webp",
@@ -144,7 +162,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_009.webp",
+      "sha256": "141ee6d1499106c12037cd601ad2c93a83646bee9d9349498b693b3e23328b24"
     },
     "close_010": {
       "file": "close_010.webp",
@@ -158,7 +178,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_010.webp",
+      "sha256": "a047aa38f9c71cd0507c39c0db6592f7a2ceded22dc6faa2587398363bd7346e"
     },
     "close_011": {
       "file": "close_011.webp",
@@ -172,7 +194,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_011.webp",
+      "sha256": "0edfb32179426f185aa1ae8e35e12c5eb974d0baf765c25b9c76b5d385814035"
     },
     "close_012": {
       "file": "close_012.webp",
@@ -186,7 +210,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_012.webp",
+      "sha256": "4b9c2dfdc4cb8ed5ae514717355af24a3a3363eabf668889b6861a2b67b92e28"
     },
     "close_013": {
       "file": "close_013.webp",
@@ -200,7 +226,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_013.webp",
+      "sha256": "07fb8f547a859c3ff524d1fa93f2578c636c6101f60cc80e2f5f13bfc7d4337f"
     },
     "close_014": {
       "file": "close_014.webp",
@@ -214,7 +242,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_014.webp",
+      "sha256": "7c17242efcd70b8242104d6913225ddc880650cadd56b10da40def097e7d8a41"
     },
     "close_015": {
       "file": "close_015.webp",
@@ -228,7 +258,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_015.webp",
+      "sha256": "301016d669f29951cee99cae222355c455602fac50d3558bd7967bfd2ff7e410"
     },
     "close_016": {
       "file": "close_016.webp",
@@ -242,7 +274,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_016.webp",
+      "sha256": "8f30951c67ef3d48d6f29ecf6721541b5a382cb01e370062bed5fa508c00fadd"
     },
     "close_017": {
       "file": "close_017.webp",
@@ -256,7 +290,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_017.webp",
+      "sha256": "b4d8075b0749493f9f0ff26d3cd59ff54a0636cf6e8bb474a2dd7bc8e42785c7"
     },
     "close_018": {
       "file": "close_018.webp",
@@ -270,7 +306,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_018.webp",
+      "sha256": "63dc724cf796de812fb163ea299437f3fbb1b963b335b757368a20750f0e7ff8"
     },
     "close_019": {
       "file": "close_019.webp",
@@ -284,7 +322,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_019.webp",
+      "sha256": "73699ef5d653172d103fc051eae054cbf269bbd32329ee499353918b4b84d0aa"
     },
     "close_020": {
       "file": "close_020.webp",
@@ -298,7 +338,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_020.webp",
+      "sha256": "5148336f907b91e7cc2c00b4d341609ecc758f88a4e421227c095aae7b35ed45"
     },
     "close_021": {
       "file": "close_021.webp",
@@ -312,7 +354,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_021.webp",
+      "sha256": "2e57e3a3cea9a83c26a64b68b3fcbceb62b964fbeeb9fef43494b73934293778"
     },
     "close_022": {
       "file": "close_022.webp",
@@ -326,7 +370,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_022.webp",
+      "sha256": "a123e797fc56687ce54aa034b07827f7c282c48a6f64a4f8808595f2efc9a81e"
     },
     "close_023": {
       "file": "close_023.webp",
@@ -340,7 +386,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_023.webp",
+      "sha256": "66658d94836401a51ea2a1c903ee298a6724f036cbc1075ad60b80cd77bda1e8"
     },
     "close_024": {
       "file": "close_024.webp",
@@ -354,7 +402,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_024.webp",
+      "sha256": "d079e65caab3fc368735dfa77dcacf6e9e72af7db3466d31a2414b6221663b22"
     },
     "close_025": {
       "file": "close_025.webp",
@@ -368,7 +418,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_025.webp",
+      "sha256": "bbf28487fc1a48004c9f9f50c77419a0fcbe9677199ccd2d8d2c4def2b71b878"
     },
     "close_026": {
       "file": "close_026.webp",
@@ -382,7 +434,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_026.webp",
+      "sha256": "3b0915e093dac0beea99f87647f09280f264f6b9dbc0c540d87282e1ca6eacdb"
     },
     "close_027": {
       "file": "close_027.webp",
@@ -396,7 +450,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_027.webp",
+      "sha256": "5034ec64bb8e4cb05aa561011c18ccc2c0294bdaf311885819afc33dd44016d2"
     },
     "close_028": {
       "file": "close_028.webp",
@@ -410,7 +466,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_028.webp",
+      "sha256": "de4e8f34c6e97d5addc26946838aae048a91cc24726831e59a4d137670134475"
     },
     "close_029": {
       "file": "close_029.webp",
@@ -424,7 +482,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_029.webp",
+      "sha256": "cefcaadb169fd80a0e5c8760971e9dafc8c3253e6d9b2775a2efe705158bbb8b"
     },
     "close_030": {
       "file": "close_030.webp",
@@ -438,7 +498,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_030.webp",
+      "sha256": "5538f110f862a939cc676e0461287abd13fe8742c86f5a2a19bfd1cb23f0c24f"
     },
     "close_031": {
       "file": "close_031.webp",
@@ -452,7 +514,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_031.webp",
+      "sha256": "4b4fab2046ecfd44e4672c1906107877deb6fea349a6a9c7012c69d064bdd5ea"
     },
     "close_032": {
       "file": "close_032.webp",
@@ -466,7 +530,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_032.webp",
+      "sha256": "8acdfa3c46a765aada924c315ffd60e42e3e11278439628174c38f74e38a6f3d"
     },
     "close_033": {
       "file": "close_033.webp",
@@ -480,7 +546,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_033.webp",
+      "sha256": "759d0e76673cfe2155d63640310c253ea3895a397e72c6f5e5799afd68d1cae3"
     },
     "close_034": {
       "file": "close_034.webp",
@@ -494,7 +562,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_034.webp",
+      "sha256": "dfcd32856cbbb7ef58f1e046ab80f432050557064d235f1ed9553cd84dd1b95c"
     },
     "close_035": {
       "file": "close_035.webp",
@@ -508,7 +578,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_035.webp",
+      "sha256": "f768be9715ede80341f852ad93d22bfe64d7b18457db10a8ca647f51cf370d3b"
     },
     "close_036": {
       "file": "close_036.webp",
@@ -522,7 +594,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_036.webp",
+      "sha256": "ba52717a5e8e47638b96717409436b32c2b863196b56bfd67c540052ee7d6f69"
     },
     "close_037": {
       "file": "close_037.webp",
@@ -536,7 +610,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_037.webp",
+      "sha256": "3aedf8579aa797617b16ea94588b270d3fe6dce3036d90db138762a000a9bd41"
     },
     "close_038": {
       "file": "close_038.webp",
@@ -550,7 +626,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_038.webp",
+      "sha256": "aafc25cb8cba6ca0fd1ef767d73783cf37aaabc5482b2ad1109dc9fb2f74fcb0"
     },
     "close_039": {
       "file": "close_039.webp",
@@ -564,7 +642,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_039.webp",
+      "sha256": "471b60248f1e7bb5614842779a11dc5f12c3b206d11cdfc70ba5e61e720e5da6"
     },
     "close_040": {
       "file": "close_040.webp",
@@ -578,7 +658,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_040.webp",
+      "sha256": "29242fba8b96650505bfcda3a8c60b4c4bf89ff23d8bae53ed66526fe8c4b002"
     },
     "close_041": {
       "file": "close_041.webp",
@@ -592,7 +674,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_041.webp",
+      "sha256": "c3abdc1f64afbc5a38aacff889fcbc5232b7419ae8428582371ee7f64315c3f9"
     },
     "close_042": {
       "file": "close_042.webp",
@@ -606,7 +690,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_042.webp",
+      "sha256": "b8bf1a547e8eb9068a4967df8cf856faa060a73a251ce385111d0c90d818abe5"
     },
     "close_043": {
       "file": "close_043.webp",
@@ -620,7 +706,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_043.webp",
+      "sha256": "15d0c3a0505bf1a3805a834c2944947342499dd06ecf8698958613b0fb6224dc"
     },
     "close_044": {
       "file": "close_044.webp",
@@ -634,7 +722,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_044.webp",
+      "sha256": "a0168d8116d9b59cad785cb25e587d0a1075b388ce4e7005531c34529fb97bea"
     },
     "close_045": {
       "file": "close_045.webp",
@@ -648,7 +738,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_045.webp",
+      "sha256": "a257c521ddf8a968c4a80a8f678bee17495a38872be4780247e93cbce0fc2cc1"
     },
     "close_046": {
       "file": "close_046.webp",
@@ -662,7 +754,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_046.webp",
+      "sha256": "104fe79f4104c178fea632ce79b4750f02bdbd61b9266b28117437af2117878d"
     },
     "close_047": {
       "file": "close_047.webp",
@@ -676,7 +770,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_047.webp",
+      "sha256": "385e3dafcc78e6934be271720aef74731a1895a74264d2745730362500f65238"
     },
     "close_048": {
       "file": "close_048.webp",
@@ -690,7 +786,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_048.webp",
+      "sha256": "0993e5dcde5716c624b3bcc81f44cf2995f698c4feb61cddf4d57d0e6aaa613a"
     },
     "close_049": {
       "file": "close_049.webp",
@@ -704,7 +802,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_049.webp",
+      "sha256": "e98ed69a12d02c03129aa71526c809535550c955ae2f310bb95bc89af0ce37e3"
     },
     "close_050": {
       "file": "close_050.webp",
@@ -718,7 +818,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_050.webp",
+      "sha256": "e981bdec3e3ef7444f242527c0473cc47336a2b452bc1516cf8f6cd8ae27b97d"
     },
     "close_051": {
       "file": "close_051.webp",
@@ -732,7 +834,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_051.webp",
+      "sha256": "850cb9369fa99b1a7245b179784ba541da34ca82c1eef49c7a9637c0e86ec614"
     },
     "close_052": {
       "file": "close_052.webp",
@@ -746,7 +850,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_052.webp",
+      "sha256": "0e5710a5b101853fb9a2ce4a9cf375086fadc73a2a3c3d0eeab74d3059f43b96"
     },
     "close_053": {
       "file": "close_053.webp",
@@ -760,7 +866,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_053.webp",
+      "sha256": "73f80ac7036532bc318bdecea482bc97c6a280c86c85ee070ec94445ea4af5a3"
     },
     "close_054": {
       "file": "close_054.webp",
@@ -774,7 +882,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_054.webp",
+      "sha256": "9bf390a13d9e558a71f830b7f6db6dc6ce12a62102015ee3fc7124d7a039a86f"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -784,7 +894,9 @@
       "frameDurationsMs": [
         30,
         40
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "35c704ca9d92c4a1b1ba1d232276d6ce8aff8bd68140446b5635824299759505"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -798,7 +910,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "4d87441a504f8819e8ca6e2c836f594eddc21fca85eb0f479de8f16439a16aeb"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -812,7 +926,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "43f8e748cafff04579d32e97a1f4bc5727cac4c9083ec1c7f557e698234ca100"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -826,7 +942,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_002.webp",
+      "sha256": "642e98d0fe18b83a1d0af4459467c78a9c0e62698bcfd6491899142730fbcda4"
     },
     "open_003": {
       "file": "open_003.webp",
@@ -840,7 +958,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_003.webp",
+      "sha256": "06482ff06854255215162a49c4346139d3e8488b13a62e39404b8177f52dd39a"
     },
     "open_004": {
       "file": "open_004.webp",
@@ -854,7 +974,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_004.webp",
+      "sha256": "9460c6d7503aef7915dfc464573643068117731d8e74547cfea8c49888d0b0a7"
     },
     "open_005": {
       "file": "open_005.webp",
@@ -868,7 +990,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_005.webp",
+      "sha256": "4fcdc340c21187327d3973cc585b61a9292d0382fc4c2f647753421b9b062527"
     },
     "open_006": {
       "file": "open_006.webp",
@@ -882,7 +1006,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_006.webp",
+      "sha256": "1fd8329fde9bf92307f1077630be0e9b83d7351bd3d0d700c1ef650b072c37b1"
     },
     "open_007": {
       "file": "open_007.webp",
@@ -896,7 +1022,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_007.webp",
+      "sha256": "e99e9c25c288545d840df1b5e4f49c51d290466e39050d75fe082785db010973"
     },
     "open_008": {
       "file": "open_008.webp",
@@ -910,7 +1038,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_008.webp",
+      "sha256": "7b6327c7d607c243ff0bae2080bf163bee828d82d2c1b5dd30785060605df9be"
     },
     "open_009": {
       "file": "open_009.webp",
@@ -924,7 +1054,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_009.webp",
+      "sha256": "610fdca86f95b8e75d6578cb5cf7f01e304f095f22308b562dc86034eaeab57d"
     },
     "open_010": {
       "file": "open_010.webp",
@@ -938,7 +1070,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_010.webp",
+      "sha256": "373f5e98c26845086ce871873ebca08687f7813246129f6aa4cc862eef6ecc88"
     },
     "open_011": {
       "file": "open_011.webp",
@@ -952,7 +1086,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_011.webp",
+      "sha256": "4d94256807b512b290a74e19df02f737fca6c0e1a49da9f96c7e892e49cf2648"
     },
     "open_012": {
       "file": "open_012.webp",
@@ -966,7 +1102,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_012.webp",
+      "sha256": "23ff90c3391991e88e1f44f23108bf3dedebc278ee10646c81c996dc80e94df4"
     },
     "open_013": {
       "file": "open_013.webp",
@@ -980,7 +1118,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_013.webp",
+      "sha256": "97d9b4733546173e4ded8e9d4b72caad067e44f2dce150c90b5ad3dbb5e0b438"
     },
     "open_014": {
       "file": "open_014.webp",
@@ -994,7 +1134,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_014.webp",
+      "sha256": "24bf1655f995dccf661248fe6a085f6f7af29e910da5e663f854396e5e4121a7"
     },
     "open_015": {
       "file": "open_015.webp",
@@ -1008,7 +1150,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_015.webp",
+      "sha256": "adb5efdf3e76e01f7b8cf234e10150c2c80b0cad74510bb77fa4923ae2e62758"
     },
     "open_016": {
       "file": "open_016.webp",
@@ -1022,7 +1166,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_016.webp",
+      "sha256": "dce80c9c7d36207dafe498d7f9745644ea7fbca576463cf995518f3ce76b88cf"
     },
     "open_017": {
       "file": "open_017.webp",
@@ -1036,7 +1182,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_017.webp",
+      "sha256": "9aee6525c49620e12918edea336649f03adbeb9dff211160db20ebaf9282db6e"
     },
     "open_018": {
       "file": "open_018.webp",
@@ -1050,7 +1198,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_018.webp",
+      "sha256": "5e451f2eae5bb77b119497fe84e881f9ea4da1ff86f44415240f920e08bcfdd6"
     },
     "open_019": {
       "file": "open_019.webp",
@@ -1064,7 +1214,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_019.webp",
+      "sha256": "88fa839c05d95902bc36ebfe51b70c0f29da8fa79795330d33b323b9579304d8"
     },
     "open_020": {
       "file": "open_020.webp",
@@ -1078,7 +1230,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_020.webp",
+      "sha256": "a805eabe5b48e5c277fe05841d69b88d19f0d41c44be4032b6860ecf97180423"
     },
     "open_021": {
       "file": "open_021.webp",
@@ -1092,7 +1246,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_021.webp",
+      "sha256": "7c4e8655927fc6efe762dd763c8515ce0b30a4cb8e5e02542cda823e7ab554e3"
     },
     "open_022": {
       "file": "open_022.webp",
@@ -1106,7 +1262,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_022.webp",
+      "sha256": "4ec15e3c1d5f308560eaf122dd7394798fe90a48b5cf79705f0a604591649068"
     },
     "open_023": {
       "file": "open_023.webp",
@@ -1120,7 +1278,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_023.webp",
+      "sha256": "88b2be0d364e3eda2654c032fb6b3f1879dfafef94db0719caf20ec66905e58b"
     },
     "open_024": {
       "file": "open_024.webp",
@@ -1134,7 +1294,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_024.webp",
+      "sha256": "c51a669b7ba845ece0d6492671feaf34e54f6a12db5b21cb20bf6454d848f1dd"
     },
     "open_025": {
       "file": "open_025.webp",
@@ -1148,7 +1310,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_025.webp",
+      "sha256": "f825844c36b1d74dcda4b4ef35f7a6652e3c643317008b408196a4d456a5ae78"
     },
     "open_026": {
       "file": "open_026.webp",
@@ -1162,7 +1326,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_026.webp",
+      "sha256": "7962efcf87f8052c354f7288c7e81a572a99c09915617bbe32b38ad31fa62479"
     },
     "open_027": {
       "file": "open_027.webp",
@@ -1176,7 +1342,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_027.webp",
+      "sha256": "e504fb23c81bae286853bda48302954a76f06749476fc691954c4ecc333f1c9c"
     },
     "open_028": {
       "file": "open_028.webp",
@@ -1190,7 +1358,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_028.webp",
+      "sha256": "256c2e72abc9b43bbb3c4d2dadb7c520a34ce69463a9de8636989a98eaf3e5af"
     },
     "open_029": {
       "file": "open_029.webp",
@@ -1204,7 +1374,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_029.webp",
+      "sha256": "f42bf12c080a02a0d336854bd00a817f762b583f836e714f4c57dc8f86084ff9"
     },
     "open_030": {
       "file": "open_030.webp",
@@ -1218,7 +1390,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_030.webp",
+      "sha256": "4790986c8c069e59752ff84dfd327f9712ad2d9fb1fe74df4d5e7c51011df278"
     },
     "open_031": {
       "file": "open_031.webp",
@@ -1232,7 +1406,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_031.webp",
+      "sha256": "76052b7e60f207f2326f5d82d3f7c419ee1707e174ee44055d72dab3ae373587"
     },
     "open_032": {
       "file": "open_032.webp",
@@ -1246,7 +1422,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_032.webp",
+      "sha256": "749e605a47e400cfb305f221ed0560d8735b1283fd1ba4abf2e757f52e1cd10b"
     },
     "open_033": {
       "file": "open_033.webp",
@@ -1260,7 +1438,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_033.webp",
+      "sha256": "6f95ffab7f70053b6ee41db69094e45dc1a9dea4806cfc3d44e06d46171cf108"
     },
     "open_034": {
       "file": "open_034.webp",
@@ -1274,7 +1454,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_034.webp",
+      "sha256": "e7578c5def1c29942ae357ea336c66c4b2eb11de60d6d200cee1ef63813ab6f1"
     },
     "open_035": {
       "file": "open_035.webp",
@@ -1288,7 +1470,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_035.webp",
+      "sha256": "10e5a1470e7c7ce482cbf38703e48760b443187c8e32957201dd13e84cd983a3"
     },
     "open_036": {
       "file": "open_036.webp",
@@ -1302,7 +1486,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_036.webp",
+      "sha256": "942e1a2743554099230fa41ce873164a701ecf445447486a4cb889380683ea32"
     },
     "open_037": {
       "file": "open_037.webp",
@@ -1316,7 +1502,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_037.webp",
+      "sha256": "4be32baeaf39580c8519e767fd0ae5a3d4c7de71183808950690af10bc249d71"
     },
     "open_038": {
       "file": "open_038.webp",
@@ -1330,7 +1518,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_038.webp",
+      "sha256": "ff329316a0e0991266f386d81fe2651b955ee0aa3d2cbf95233a333a4fe5bd0c"
     },
     "open_039": {
       "file": "open_039.webp",
@@ -1344,7 +1534,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_039.webp",
+      "sha256": "b4e3c137024de25f0561080266aea9f14144f6310ea4663da4f733598bd26e32"
     },
     "open_040": {
       "file": "open_040.webp",
@@ -1358,7 +1550,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_040.webp",
+      "sha256": "db8d67ac465fc5a896c5635c885bf98e6b99b03592252bf5ca07524f16457605"
     },
     "open_041": {
       "file": "open_041.webp",
@@ -1372,7 +1566,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_041.webp",
+      "sha256": "287b3a585d2f881b08f9ecf12d00a761230a05ba151fcda05930bc2f937482b4"
     },
     "open_042": {
       "file": "open_042.webp",
@@ -1386,7 +1582,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_042.webp",
+      "sha256": "d91e9c74405925e59347178d268b64c1b970c1a88a50d6908cf922585fe529d1"
     },
     "open_043": {
       "file": "open_043.webp",
@@ -1400,7 +1598,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_043.webp",
+      "sha256": "ee88b4d5ffc211920ded8b54d76fe76b2773e01466ecb5a61c0a11cc75531268"
     },
     "open_044": {
       "file": "open_044.webp",
@@ -1414,7 +1614,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_044.webp",
+      "sha256": "5b1e6de1873f65f86a92ba28b85a496f878e99f412c5f1734a93f2537e4d89e9"
     },
     "open_045": {
       "file": "open_045.webp",
@@ -1428,7 +1630,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_045.webp",
+      "sha256": "0a36b46f792de3ab8e74076f0d023d4232af50bba892308e14b514ef431c12be"
     },
     "open_046": {
       "file": "open_046.webp",
@@ -1442,7 +1646,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_046.webp",
+      "sha256": "9fc9b897d404003b5b0c0b63bc63d7d3313930abfbeb5e42fc8eec0adaf8889e"
     },
     "open_047": {
       "file": "open_047.webp",
@@ -1456,7 +1662,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_047.webp",
+      "sha256": "5b42947055cea17067a7a8b5ffa58d24bba89a6fe5c731b76db9a58a66ea349b"
     },
     "open_048": {
       "file": "open_048.webp",
@@ -1470,7 +1678,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_048.webp",
+      "sha256": "0ac749cf7b260285f806cce94714e4bd0f46476d20aa1d8fdf30255c8cc9b70d"
     },
     "open_049": {
       "file": "open_049.webp",
@@ -1484,7 +1694,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_049.webp",
+      "sha256": "9fc52a70583c4219a534bf594f72c82c1408c41a69cc009f838975f449f39dd1"
     },
     "open_050": {
       "file": "open_050.webp",
@@ -1498,7 +1710,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_050.webp",
+      "sha256": "b793e14cfeb1364b8f7ebd091f5193175164f3cb3239410da34080b29a3963f1"
     },
     "open_051": {
       "file": "open_051.webp",
@@ -1512,7 +1726,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_051.webp",
+      "sha256": "8a91bf4491158ba3010348a7dd48efc5c14387542dc3bfb9b7b82bc2a377592e"
     },
     "open_052": {
       "file": "open_052.webp",
@@ -1526,7 +1742,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_052.webp",
+      "sha256": "34b2ca8194fb344d921e4bfa3cf540d4239ed4f5c0ad5e77fa0011e9ee6719cc"
     },
     "open_053": {
       "file": "open_053.webp",
@@ -1540,7 +1758,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_053.webp",
+      "sha256": "fce4ecfa8a588855a4ef24f327cbf26177bfbb13896e70b453912f204f1807e8"
     },
     "open_054": {
       "file": "open_054.webp",
@@ -1554,7 +1774,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_054.webp",
+      "sha256": "f61c5dd2179a5d6d1e0bcb8c7f261e3f80f22c357e1fe032ff860e0e08ff836b"
     },
     "open_055": {
       "file": "open_055.webp",
@@ -1568,7 +1790,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_055.webp",
+      "sha256": "50825d83444e15d434154eabcde4588b3742112de529849b04183dc795603e84"
     },
     "open_056": {
       "file": "open_056.webp",
@@ -1582,7 +1806,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_056.webp",
+      "sha256": "9e9326ed6fe258ffb2f289ca3c4c4d6b813fae39c24e95e28a691fda1c93edce"
     },
     "open_057": {
       "file": "open_057.webp",
@@ -1596,7 +1822,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_057.webp",
+      "sha256": "1fe256bb2a0b7bd7c3a124d8681a7167b2a81f0582cbe35baf8b3ad61ca18a50"
     },
     "open_058": {
       "file": "open_058.webp",
@@ -1610,7 +1838,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_058.webp",
+      "sha256": "4491fbb5f25caeec1dddcf6a7fba9fee7e24f0429127a697ec21f829c6991d86"
     },
     "open_059": {
       "file": "open_059.webp",
@@ -1624,7 +1854,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_059.webp",
+      "sha256": "6ee5fde48c724b96caf547d4f0079decf1a06953a78d0e4f7ac626e9ed46394d"
     },
     "open_060": {
       "file": "open_060.webp",
@@ -1638,7 +1870,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_060.webp",
+      "sha256": "d5a5254c85bc1dc0c6d26b3f2cfd854dba669898d526a7ab94c7126b7786ae00"
     },
     "open_061": {
       "file": "open_061.webp",
@@ -1652,7 +1886,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_061.webp",
+      "sha256": "5ef0813ed6994521190a8de78380cd777e08ef2349b63ebd22832ffc94afae68"
     },
     "open_062": {
       "file": "open_062.webp",
@@ -1666,7 +1902,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_062.webp",
+      "sha256": "1160af627e89ae7066c4c3e9f7cd9a1423743b9944be7ceaa56b7aa11e88f5f1"
     },
     "open_063": {
       "file": "open_063.webp",
@@ -1680,7 +1918,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_063.webp",
+      "sha256": "2b4d8d740e284369b7bc0fb92abc1847741434872ad1cfe0485f03762b5b3c73"
     },
     "open_064": {
       "file": "open_064.webp",
@@ -1694,7 +1934,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_064.webp",
+      "sha256": "941cd693a59e5603d5aa45ef602c18df78a78939a2bd1f3f76009afc7c9bbd74"
     },
     "open_065": {
       "file": "open_065.webp",
@@ -1708,7 +1950,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_065.webp",
+      "sha256": "2cbaa83dd63fc979d2e5cab9e3d3539bfad11de9ed98681fbe0c2882af83d419"
     },
     "open_066": {
       "file": "open_066.webp",
@@ -1722,7 +1966,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_066.webp",
+      "sha256": "a7c4cac850cd4682fa2388689f4094c487d4ba84fa3e549c26b48f7afb372042"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -1736,7 +1982,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "d02e76c7ba5aa290daac9c328fc68644591c672dd527d7b02e38bcf9b29c4e2f"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -1750,7 +1998,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "740af0663cd26cc0984b364faa9eeac288f731277de4532df38d5f606933ab38"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -1764,7 +2014,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_002.webp",
+      "sha256": "c25e0baa06e9672bf9dd9361fb270fbb43163e435dd9e463f54b5e44357425fd"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -1778,7 +2030,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_003.webp",
+      "sha256": "3e0efb3af48c5f0d1888b93df1bf7f8e7cbaaecabe92a6feb7dafda085f78126"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -1792,7 +2046,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_004.webp",
+      "sha256": "72610a89b678b8b7a212645a3d074aa03af185b75dfb34b05743ec1d3dfb609d"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -1806,7 +2062,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_005.webp",
+      "sha256": "e735da9d431b2ccec7b464371f50fc75b15544525de43ddf19fff3e3abb6ce39"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -1820,7 +2078,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_006.webp",
+      "sha256": "33662fac4b2e1b263813e3a861584d231357bb35538fe33ab26c3d4c04dd5930"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -1834,7 +2094,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_007.webp",
+      "sha256": "cbbf19bcdc5ee615ebac85e192665e082cce7b39329a1a44cb9e8bf1bfca5761"
     },
     "open_idle_008": {
       "file": "open_idle_008.webp",
@@ -1848,7 +2110,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_008.webp",
+      "sha256": "e8441edc9e447fd0140f33d8dced9457c3840517c6113c1dae8e9022ddc1e072"
     },
     "open_idle_009": {
       "file": "open_idle_009.webp",
@@ -1862,7 +2126,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_009.webp",
+      "sha256": "38f5499a25ac107e514adb484e4751b1fe30622058f80481e35ce594a6db7cf2"
     },
     "open_idle_010": {
       "file": "open_idle_010.webp",
@@ -1876,7 +2142,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_010.webp",
+      "sha256": "c1d4a22303f73aea084ef82c64ee9463dd5b33621e13c32891271f16ad486c4f"
     },
     "open_idle_011": {
       "file": "open_idle_011.webp",
@@ -1890,7 +2158,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_011.webp",
+      "sha256": "1cd09388206754e0bb764dcb45e04764389cc33272a1194b91faddd9ac17c4ba"
     },
     "open_idle_012": {
       "file": "open_idle_012.webp",
@@ -1904,7 +2174,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_012.webp",
+      "sha256": "e0b29738221f7932d44b7311cefe0c1090d99fe1445643fd38f7be06964cc3f4"
     },
     "open_idle_013": {
       "file": "open_idle_013.webp",
@@ -1918,7 +2190,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_013.webp",
+      "sha256": "d3083be3b493e2ca046ecd30727a3390215f3373df0353d5b1a35bf14ce90e2a"
     },
     "open_idle_014": {
       "file": "open_idle_014.webp",
@@ -1932,7 +2206,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_014.webp",
+      "sha256": "41e392ccf14289117ef3c75f02bd450e5ce3ae4e56d75ed46b733f1b85f8ac24"
     },
     "open_idle_015": {
       "file": "open_idle_015.webp",
@@ -1946,7 +2222,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_015.webp",
+      "sha256": "916ac1cea78a46b7a67942f6ea10d8c942a1e69b2ac0eb27216f78d1c32b10b8"
     },
     "open_idle_016": {
       "file": "open_idle_016.webp",
@@ -1960,7 +2238,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_016.webp",
+      "sha256": "84cf00064de157ff69cd254dc55ca63a501066f209fb5a4e4789d28d07180c4a"
     },
     "open_idle_017": {
       "file": "open_idle_017.webp",
@@ -1974,7 +2254,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_017.webp",
+      "sha256": "2f557af61369e9fd7e477f0fe2e87e866c962b54b26181a1e1107c6d6a5c8e99"
     },
     "open_idle_018": {
       "file": "open_idle_018.webp",
@@ -1988,7 +2270,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_018.webp",
+      "sha256": "95cce88c82079d32159d4ab14cf7a5d970b54869acef73a13afb9593bf103e75"
     },
     "open_idle_019": {
       "file": "open_idle_019.webp",
@@ -2002,7 +2286,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_019.webp",
+      "sha256": "d2806b9d77c1d441d21cd59166eabf7d464b64e19ba9620f1030b19130c2edca"
     },
     "open_idle_020": {
       "file": "open_idle_020.webp",
@@ -2016,7 +2302,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_020.webp",
+      "sha256": "df0e79031d9fec0c4c8e5c2d3bc0d1a0970dddc0783da8135606581c7df17fe9"
     },
     "open_idle_021": {
       "file": "open_idle_021.webp",
@@ -2030,7 +2318,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_021.webp",
+      "sha256": "55ad19c73902ec8a1a39ba3046cc70b2ec5fc46104a8c5063817697940b670cb"
     },
     "open_idle_022": {
       "file": "open_idle_022.webp",
@@ -2044,7 +2334,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_022.webp",
+      "sha256": "8831a30f597a1bdad571cd9c39bd15e2a1059ac5109a879c42ffc82ebb8b491d"
     },
     "open_idle_023": {
       "file": "open_idle_023.webp",
@@ -2058,7 +2350,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_023.webp",
+      "sha256": "dcc07770d3280d36364ad404c5af89f1a1f475c284db300eef46361d7da6fc04"
     },
     "open_idle_024": {
       "file": "open_idle_024.webp",
@@ -2072,7 +2366,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_024.webp",
+      "sha256": "1f34fad0bef65a6376676624334fd7b700f20444cf04d4d20c34c42139a9457b"
     },
     "open_idle_025": {
       "file": "open_idle_025.webp",
@@ -2086,7 +2382,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_025.webp",
+      "sha256": "ca16dfe3f212053b2e3c97f4a459770ff81d66d7c531c0048af3730fa33c6f74"
     },
     "open_idle_026": {
       "file": "open_idle_026.webp",
@@ -2100,7 +2398,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_026.webp",
+      "sha256": "334f1a2d6773deb723bfbaaeb213150c78195aea462c6a84c4b288601811eed5"
     },
     "open_idle_027": {
       "file": "open_idle_027.webp",
@@ -2114,7 +2414,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_027.webp",
+      "sha256": "2296a07effb8f734012211c3de8bcafe4dd038460f7eebc8b9af8dfae306a2eb"
     },
     "open_idle_028": {
       "file": "open_idle_028.webp",
@@ -2128,7 +2430,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_028.webp",
+      "sha256": "af69b722be43b9de8738b4d230f255ba5f35260258aa94cadbc818a7c87f458d"
     },
     "open_idle_029": {
       "file": "open_idle_029.webp",
@@ -2142,7 +2446,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_029.webp",
+      "sha256": "ef6461dd172820963031319e6b0dd9eece98941e59c6021ca5097a8c93206023"
     },
     "open_idle_030": {
       "file": "open_idle_030.webp",
@@ -2156,7 +2462,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_030.webp",
+      "sha256": "8ab28418c354c736def3b52b976836a60b62203c9d8fad0b878f7bc01e0a4ef6"
     },
     "open_idle_031": {
       "file": "open_idle_031.webp",
@@ -2170,7 +2478,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_031.webp",
+      "sha256": "f87ede84c9911be92767902523555469da8553e125308c982e6d0e839931ff4e"
     },
     "open_idle_032": {
       "file": "open_idle_032.webp",
@@ -2184,7 +2494,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_032.webp",
+      "sha256": "4c9d653d0db1ee24b3472279425ef7667044f710ff20ee5120cf37eb77eb039b"
     },
     "open_idle_033": {
       "file": "open_idle_033.webp",
@@ -2198,7 +2510,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_033.webp",
+      "sha256": "9f14e00baef7e2f6810078ef9e2a210ec7dfd92e5b375e976dfb4860960e89ef"
     },
     "open_idle_034": {
       "file": "open_idle_034.webp",
@@ -2212,7 +2526,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_034.webp",
+      "sha256": "63cdfc13690307b27c9be0212bc0fe9d23152afaa107671c662c698830daac9f"
     },
     "open_idle_035": {
       "file": "open_idle_035.webp",
@@ -2226,7 +2542,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_035.webp",
+      "sha256": "9b1d1e3e153fa9b62e22efc93ad719066a969f09699c7184a11f508831027878"
     },
     "open_idle_036": {
       "file": "open_idle_036.webp",
@@ -2240,7 +2558,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_036.webp",
+      "sha256": "a6d930ef53db63c756da0eeec974d082ba9bfb6833fd8f74c484bfc2b18734d3"
     },
     "open_idle_037": {
       "file": "open_idle_037.webp",
@@ -2254,7 +2574,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_037.webp",
+      "sha256": "f7074759e2c85c4fe7a27cbbf32c1cbf90ebaed4d24c941b2f0d395b2ed4991d"
     },
     "open_idle_038": {
       "file": "open_idle_038.webp",
@@ -2268,7 +2590,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_038.webp",
+      "sha256": "f507e492ebb2515ee073a0081f7b94da18097d9408a2f2d6bf9f9e8b4253ff0b"
     },
     "open_idle_039": {
       "file": "open_idle_039.webp",
@@ -2282,7 +2606,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_039.webp",
+      "sha256": "69f41da984fb3fe539cf13a63845c2823aa50b0a47c521526c644b2d9dc23799"
     },
     "open_idle_040": {
       "file": "open_idle_040.webp",
@@ -2296,7 +2622,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_040.webp",
+      "sha256": "65aa6831b685290a3f9754977fbc623ad1e829611918de9366b7514ae8d65151"
     },
     "open_idle_041": {
       "file": "open_idle_041.webp",
@@ -2310,7 +2638,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_041.webp",
+      "sha256": "769ed7fba63dd7fd11bd556d581085a95010b2fb99369e917d14f57e460971f9"
     },
     "open_idle_042": {
       "file": "open_idle_042.webp",
@@ -2324,7 +2654,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_042.webp",
+      "sha256": "2d2198307a7693331f60e9e518d6f1fc56dca5becdef5616ee3baed4b62f3063"
     },
     "open_idle_043": {
       "file": "open_idle_043.webp",
@@ -2338,7 +2670,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_043.webp",
+      "sha256": "7d6c455051166f0304bd386f8934ae8dd59c9838e1bcef1ff10678ee8bec8543"
     },
     "open_idle_044": {
       "file": "open_idle_044.webp",
@@ -2352,7 +2686,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_044.webp",
+      "sha256": "526f65631bfbdbc9f0098d743b8c39abad95f3a68cba6e002c6e4377a8c65266"
     },
     "open_idle_045": {
       "file": "open_idle_045.webp",
@@ -2366,7 +2702,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_045.webp",
+      "sha256": "31d2d0006c0d45aacb5b37a1f3ce5404e7f4a6e21b1d50613ad186a021b1ea3a"
     },
     "open_idle_046": {
       "file": "open_idle_046.webp",
@@ -2380,7 +2718,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_046.webp",
+      "sha256": "8e57872deea18d342c5f9be25874725b6f19b5510ff7a3e6b09607a4edaf9959"
     },
     "open_idle_047": {
       "file": "open_idle_047.webp",
@@ -2394,7 +2734,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_047.webp",
+      "sha256": "56ac7d3da8f9d8f87f102c66371a0c27b5a13b8e50cc299bd1bd972418704c1e"
     },
     "open_idle_048": {
       "file": "open_idle_048.webp",
@@ -2408,7 +2750,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_048.webp",
+      "sha256": "59d76bab5de35969a2f55313132b40a1157bc0ab64307fd9f7b93d286f505da7"
     },
     "open_idle_049": {
       "file": "open_idle_049.webp",
@@ -2422,7 +2766,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_049.webp",
+      "sha256": "12f5ffb361b2170a5fb7371ede7aa0d8f3417c1495a9d09002eb5adfc28533d7"
     },
     "open_idle_050": {
       "file": "open_idle_050.webp",
@@ -2436,7 +2782,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_050.webp",
+      "sha256": "4eb6254a899c466cd9fa1e50342fa3198db21accb5bd09a30f1dea4083e1e055"
     },
     "open_idle_051": {
       "file": "open_idle_051.webp",
@@ -2450,7 +2798,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_051.webp",
+      "sha256": "7b6d2c655952f2e0c1ecc1f21149393ff2c31105f89094afd0441fc35d498e91"
     },
     "open_idle_052": {
       "file": "open_idle_052.webp",
@@ -2464,7 +2814,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_052.webp",
+      "sha256": "c6af29785626c9ecf5d127e2effc116588c0ea19bf8d511e9c0dfde46d87491b"
     },
     "open_idle_053": {
       "file": "open_idle_053.webp",
@@ -2478,7 +2830,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_053.webp",
+      "sha256": "65e01abbf69646769ea3eb2fc439afec2e320e5b9e3a35f67d9ef35a1d3dd3c5"
     },
     "open_idle_054": {
       "file": "open_idle_054.webp",
@@ -2492,7 +2846,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_054.webp",
+      "sha256": "1d277d6accdd6993b14153242dc494750b2ad838fb0f67175fa9fc61828fe749"
     },
     "open_idle_055": {
       "file": "open_idle_055.webp",
@@ -2506,7 +2862,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_055.webp",
+      "sha256": "3fc1cab6e0cccf60acac325781bf5b437918e39667f1a8783af6086d429ab4e3"
     },
     "open_idle_056": {
       "file": "open_idle_056.webp",
@@ -2520,7 +2878,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_056.webp",
+      "sha256": "c7227fbf07601ff1fe33773c1a156d0e266b8437eff5f6c10423f5fea2bca280"
     },
     "open_idle_057": {
       "file": "open_idle_057.webp",
@@ -2534,7 +2894,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_057.webp",
+      "sha256": "9dd9f0c0593dc7db84ca25b93fc4813051ec55c7edf62af4463d454f2d7d56c5"
     },
     "open_idle_058": {
       "file": "open_idle_058.webp",
@@ -2545,7 +2907,9 @@
         30,
         40,
         30
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_058.webp",
+      "sha256": "30f04f9a6c6b33a53c0312926d1eb616ad6d3bab7b018134a9c82c2c807521db"
     }
   },
   "clips": {
@@ -7982,5 +8346,9 @@
         "frameCount": 1
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

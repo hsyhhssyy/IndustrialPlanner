@@ -108,8 +108,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("filters items: solid ports reject fluid items, liquid ports reject gas items", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "liquid_furnance_1");
-    const entity = createEmptyEntity("furnace-2", "liquid_furnance_1");
+    const definition = requireDefinition(workspace, "furnance_1_liquid");
+    const entity = createEmptyEntity("furnace-2", "furnance_1_liquid");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");

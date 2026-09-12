@@ -4,7 +4,7 @@
   "frameHeight": 640,
   "fps": 30,
   "pageRows": 6,
-  "pageColumns": 6,
+  "pageColumns": 5,
   "sources": {
     "close_000": {
       "file": "close_000.webp",
@@ -48,7 +48,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "cae037b3d14aeede8b688bd8705271bc1524a0a54136a75e987d4bd576a9c6bc"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -92,7 +94,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_001.webp",
+      "sha256": "2b189f7353e4192c1bc15da45a810aeab9dc0af5b046aa0b9381f7c1c1c22584"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -136,7 +140,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_002.webp",
+      "sha256": "3f5813804cb8e163bd90bcefefff4f9fe4ea0ffc77c3fb9ae79d75a874e3a2f8"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -180,7 +186,9 @@
         67,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_003.webp",
+      "sha256": "0a345f3b250b12ebccdb41d084f0a3afc2bb3142b5c95f2b2cc70a3771365a48"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -213,7 +221,9 @@
         33,
         33,
         100
-      ]
+      ],
+      "sourcePath": "animations/close/spritesheet_004.webp",
+      "sha256": "0496bea5da1bbc90fb257c9f221b22035638696f8aad7b64434756939abdb002"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -223,7 +233,9 @@
       "frameDurationsMs": [
         33,
         34
-      ]
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "cfe78aa53900eb91c83ecbf518a6f7deeae9548a59a830b4d5a55484fd19498b"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -267,7 +279,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "034636731f424dff6083b38c23e8d1d70c43a496e310e62bd63b2509854cb24a"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -302,7 +316,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open/spritesheet_001.webp",
+      "sha256": "5f829cf6ec5a3a8d9bcfab3ebe76b237326615c0ba8bbd209f71033ea43dab8f"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -346,7 +362,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "6572d3fa2cd9f2b3b32bd6e34ed00c85f3c75b8d320a2ccbd1c8efba202c5346"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -390,7 +408,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sha256": "d9a052ed538857d7f8757c3dd9756eb8e1eae11d9b5d64e3b62f2899d7199def"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -434,7 +454,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_002.webp",
+      "sha256": "2969c402c2cb030118c8e90266a62dd1c8c7e300ff17ea2d04b708ed8ba37034"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -478,7 +500,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_003.webp",
+      "sha256": "1d29f8ecdbed4fa7bf8a9f88fb584d4610467aa0c878865cae102a5b15fc56ed"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -522,7 +546,9 @@
         33,
         34,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_004.webp",
+      "sha256": "7842a268f0cf85ab5daa3e6ce0a1a01eeea822e2ae722ccb1eb360e9e2779687"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -537,7 +563,9 @@
         34,
         33,
         33
-      ]
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_005.webp",
+      "sha256": "fbd5e2db23c26936b9795e81dd8796507f27b0caf8775a3299e163360db2d759"
     }
   },
   "clips": {
@@ -619,5 +647,9 @@
         "frameCount": 2
       }
     ]
-  }
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
 }

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "sourceArchive": "endfield-building-animation-assets-v1.5-all.zip",
+  "sourceArchive": "buildings_frontend_v1.5.zip",
   "entries": [
     {
       "entityId": "dismantler_1",
       "spriteId": "item_port_dismantler_1",
-      "package": "dismantler_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "dismantler_1/top",
       "spriteOffset": {
         "x": 0,
@@ -305,7 +305,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "dismantler_1",
           "tableBuildingId": "dismantler_1",
@@ -800,6 +800,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -809,6 +817,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -817,7 +832,7 @@
     {
       "entityId": "furnance_1",
       "spriteId": "item_port_furnance_1",
-      "package": "furnance_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "furnance_1/top",
       "spriteOffset": {
         "x": 0,
@@ -1009,7 +1024,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "furnance_1",
           "tableBuildingId": "furnance_1",
@@ -1187,6 +1202,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -1196,15 +1219,22 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
       "packageSha256": "a274ecbc0f7884c383e1007bffd2b38289ff2f98726340a34a5fef6cd4030d7c"
     },
     {
-      "entityId": "liquid_furnance_1",
+      "entityId": "furnance_1_liquid",
       "spriteId": "item_port_liquid_furnance_1",
-      "package": "furnance_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "furnance_1/top",
       "spriteOffset": {
         "x": 0,
@@ -1396,7 +1426,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "furnance_1",
           "tableBuildingId": "furnance_1",
@@ -1574,6 +1604,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -1583,6 +1621,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -1591,7 +1636,7 @@
     {
       "entityId": "gas_pump_1",
       "spriteId": "gas_pump_1",
-      "package": "gas_pump_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "gas_pump_1/top",
       "spriteOffset": {
         "x": 0,
@@ -1718,8 +1763,16 @@
             "mode": "transparent",
             "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
           },
-          "taskId": "20260910-163029-building-e52e2a8c",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-163029-building-e52e2a8c",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -1729,6 +1782,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "gas_pump_1.webp",
@@ -1737,7 +1797,7 @@
     {
       "entityId": "gas_reactor_1",
       "spriteId": "item_port_gas_reactor_1",
-      "package": "gas_reactor_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "gas_reactor_1/top",
       "spriteOffset": {
         "x": 0,
@@ -1863,9 +1923,17 @@
           "rendererTemplate": "gas__0",
           "baseSelection": "nonLogisticBaseUnit",
           "periodicSubranges": {},
-          "taskId": "20260909-building-path-contract",
+          "taskId": "20260911-building-port-delivery",
           "maintenanceTaskId": "20260909-building-path-contract",
           "archive": null,
+          "beautyTaskId": "20260909-building-path-contract",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -1875,6 +1943,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -1883,7 +1958,7 @@
     {
       "entityId": "gas_storager_1",
       "spriteId": "gas_storager_1",
-      "package": "gas_storager_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "gas_storager_1/top",
       "spriteOffset": {
         "x": 0,
@@ -2010,8 +2085,16 @@
             "mode": "transparent",
             "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
           },
-          "taskId": "20260910-163029-building-e52e2a8c",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-163029-building-e52e2a8c",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -2021,6 +2104,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "gas_storager_1.webp",
@@ -2029,7 +2119,7 @@
     {
       "entityId": "grinder_1",
       "spriteId": "item_port_grinder_1",
-      "package": "grinder_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "grinder_1/top",
       "spriteOffset": {
         "x": 0,
@@ -2221,7 +2311,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "grinder_1",
           "tableBuildingId": "grinder_1",
@@ -2399,6 +2489,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -2408,6 +2506,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_grinder_1.webp",
@@ -2417,7 +2522,7 @@
     {
       "entityId": "liquid_purifier_1_gas",
       "spriteId": "liquid_purifier_1_gas",
-      "package": "liquid_purifier_1_top-gas_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "liquid_purifier_1/top-gas",
       "spriteOffset": {
         "x": 0,
@@ -2591,7 +2696,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "liquid_purifier_1",
           "tableBuildingId": "liquid_purifier_1",
@@ -2762,6 +2867,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -2771,6 +2884,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -2779,7 +2899,7 @@
     {
       "entityId": "liquid_storager_1",
       "spriteId": "item_port_liquid_storager_1",
-      "package": "liquid_storager_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "liquid_storager_1/top",
       "spriteOffset": {
         "x": 0,
@@ -2909,8 +3029,16 @@
             "mode": "transparent",
             "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
           },
-          "taskId": "20260910-163029-building-e52e2a8c",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-163029-building-e52e2a8c",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -2920,6 +3048,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -2928,11 +3063,11 @@
     {
       "entityId": "loader_1",
       "spriteId": "item_port_loader_1",
-      "package": "loader_1_top_pixi_canvas_3x2_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "loader_1/top",
       "spriteOffset": {
         "x": 0,
-        "y": 0,
+        "y": -1,
         "width": 3,
         "height": 2
       },
@@ -3056,16 +3191,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_loader_1.webp",
@@ -3074,11 +3225,11 @@
     {
       "entityId": "log_hongs_bus_source",
       "spriteId": "item_port_log_hongs_bus_source",
-      "package": "log_hongs_bus_source_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "log_hongs_bus_source/top",
       "spriteOffset": {
         "x": 0,
-        "y": 0,
+        "y": -1,
         "width": 5,
         "height": 5
       },
@@ -3157,7 +3308,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "log_hongs_bus_source",
           "tableBuildingId": "log_hongs_bus_source",
@@ -3225,6 +3376,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -3234,6 +3393,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_log_hongs_bus_source.webp",
@@ -3242,7 +3408,7 @@
     {
       "entityId": "log_hongs_bus",
       "spriteId": "item_port_log_hongs_bus",
-      "package": "log_hongs_bus_top_pixi_canvas_6x10_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "log_hongs_bus/top",
       "spriteOffset": {
         "x": -1,
@@ -3325,7 +3491,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "log_hongs_bus",
           "tableBuildingId": "log_hongs_bus",
@@ -3393,6 +3559,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -3402,6 +3576,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_log_hongs_bus.webp",
@@ -3410,7 +3591,7 @@
     {
       "entityId": "planter_1",
       "spriteId": "item_port_planter_1",
-      "package": "planter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "planter_1/top",
       "spriteOffset": {
         "x": 0,
@@ -3665,16 +3846,32 @@
               768
             ],
             "resized": false
-          }
+          },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
       "packageSha256": "3df7b8de9bd48eb768277adf3749899bce2a19a5b8f3bdafb6f9cf419d3e84d1"
     },
     {
-      "entityId": "hydro_planter_1",
+      "entityId": "planter_1_liquid",
       "spriteId": "item_port_hydro_planter_1",
-      "package": "planter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "planter_1/top",
       "spriteOffset": {
         "x": 0,
@@ -3929,7 +4126,23 @@
               768
             ],
             "resized": false
-          }
+          },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -3938,7 +4151,7 @@
     {
       "entityId": "power_diffuser_1",
       "spriteId": "item_port_power_diffuser_1",
-      "package": "power_diffuser_1_top_pixi_canvas_2x2_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "power_diffuser_1/top",
       "spriteOffset": {
         "x": 0,
@@ -4102,6 +4315,15 @@
           "solidPortCount": 0,
           "canvasCoordinateSystem": "PixiJS top-left, x +sourceX, y +sourceZ",
           "archive": null,
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -4111,6 +4333,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -4119,7 +4348,7 @@
     {
       "entityId": "power_sta_1",
       "spriteId": "item_port_power_sta_1",
-      "package": "power_station_1_top_pixi_canvas_2x2_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "power_station_1/top",
       "spriteOffset": {
         "x": 0,
@@ -4239,7 +4468,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "power_station_1",
           "tableBuildingId": "power_station_1",
@@ -4348,6 +4577,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -4357,6 +4594,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -4365,7 +4609,7 @@
     {
       "entityId": "water_pump_1",
       "spriteId": "item_port_water_pump_1",
-      "package": "pump_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "pump_1/top",
       "spriteOffset": {
         "x": 0,
@@ -4495,8 +4739,16 @@
             "mode": "transparent",
             "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
           },
-          "taskId": "20260910-163029-building-e52e2a8c",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-163029-building-e52e2a8c",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -4506,6 +4758,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "loop",
@@ -4514,7 +4773,7 @@
     {
       "entityId": "seedcol_1",
       "spriteId": "item_port_seedcol_1",
-      "package": "seedcollector_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "seedcollector_1/top",
       "spriteOffset": {
         "x": 0,
@@ -4652,7 +4911,23 @@
             "webp"
           ],
           "sourcePackName": "seedcollector_1_top_v15_r2",
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "archive": null
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -4661,7 +4936,7 @@
     {
       "entityId": "shaper_1",
       "spriteId": "item_port_shaper_1",
-      "package": "shaper_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "shaper_1/top",
       "spriteOffset": {
         "x": 0,
@@ -4826,7 +5101,23 @@
           "baseSelection": "logisticBaseUnit",
           "rendererTemplate": "normal__0",
           "sourcePackName": "A_shaper+1_001_01_variant_dynamic_lod0",
-          "lightingPreset": "fixed30-fourfold-pbr-2300-v1"
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -4835,7 +5126,7 @@
     {
       "entityId": "shaper_1_gas",
       "spriteId": "shaper_1_gas",
-      "package": "shaper_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "shaper_1/top",
       "spriteOffset": {
         "x": 0,
@@ -5000,7 +5291,23 @@
           "baseSelection": "logisticBaseUnit",
           "rendererTemplate": "normal__0",
           "sourcePackName": "A_shaper+1_001_01_variant_dynamic_lod0",
-          "lightingPreset": "fixed30-fourfold-pbr-2300-v1"
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -5009,7 +5316,7 @@
     {
       "entityId": "sp_hub_1",
       "spriteId": "item_port_sp_hub_1",
-      "package": "sp_hub_1_top_pixi_canvas_11x9_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "sp_hub_1/top",
       "spriteOffset": {
         "x": -1,
@@ -5123,8 +5430,16 @@
           "sourceFrameCount": 1085,
           "retainedFrameCount": 1085,
           "canvasVariant": "pixi-canvas-y-down",
-          "taskId": "20260910-protocol-cores",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-protocol-cores",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -5134,6 +5449,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -5142,7 +5464,7 @@
     {
       "entityId": "storager_1",
       "spriteId": "item_port_storager_1",
-      "package": "storager_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "storager_1/top",
       "spriteOffset": {
         "x": 0,
@@ -5276,16 +5598,32 @@
           "lutIndex": 0,
           "lutCount": 122,
           "lutGroup": "storager_1",
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_storager_1.webp",
@@ -5294,7 +5632,7 @@
     {
       "entityId": "transmuter_1_gastrans",
       "spriteId": "transmuter_1_gastrans",
-      "package": "transmuter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "transmuter_1/top",
       "spriteOffset": {
         "x": 0,
@@ -5418,9 +5756,17 @@
           "rendererTemplate": "gastrans__0",
           "baseSelection": "nonLogisticBaseUnit",
           "periodicSubranges": {},
-          "taskId": "20260909-building-path-contract",
+          "taskId": "20260911-building-port-delivery",
           "maintenanceTaskId": "20260909-building-path-contract",
           "archive": null,
+          "beautyTaskId": "20260909-building-path-contract",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -5430,6 +5776,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -5438,7 +5791,7 @@
     {
       "entityId": "transmuter_1_liquidtrans",
       "spriteId": "transmuter_1_liquidtrans",
-      "package": "transmuter_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "transmuter_1/top",
       "spriteOffset": {
         "x": 0,
@@ -5562,9 +5915,17 @@
           "rendererTemplate": "gastrans__0",
           "baseSelection": "nonLogisticBaseUnit",
           "periodicSubranges": {},
-          "taskId": "20260909-building-path-contract",
+          "taskId": "20260911-building-port-delivery",
           "maintenanceTaskId": "20260909-building-path-contract",
           "archive": null,
+          "beautyTaskId": "20260909-building-path-contract",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -5574,6 +5935,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -5582,7 +5950,7 @@
     {
       "entityId": "transmuter_2_solidtrans",
       "spriteId": "transmuter_2_solidtrans",
-      "package": "transmuter_2_top-solidtrans_pixi_canvas_6x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "transmuter_2/top-solidtrans",
       "spriteOffset": {
         "x": 0,
@@ -5702,7 +6070,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "transmuter_2",
           "tableBuildingId": "transmuter_2",
@@ -5855,6 +6223,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -5864,6 +6240,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -5872,7 +6255,7 @@
     {
       "entityId": "transmuter_2_gastrans",
       "spriteId": "transmuter_2_gastrans",
-      "package": "transmuter_2_top_pixi_canvas_6x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "transmuter_2/top",
       "spriteOffset": {
         "x": 0,
@@ -5992,7 +6375,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "transmuter_2",
           "tableBuildingId": "transmuter_2",
@@ -6145,6 +6528,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -6154,6 +6545,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -6162,7 +6560,7 @@
     {
       "entityId": "udpipe_loader_1",
       "spriteId": "item_port_udpipe_loader_1",
-      "package": "udpipe_loader_1_top_pixi_canvas_4x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "udpipe_loader_1/top",
       "spriteOffset": {
         "x": -1,
@@ -6290,16 +6688,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_udpipe_loader_1.webp",
@@ -6308,7 +6722,7 @@
     {
       "entityId": "udpipe_loader_2",
       "spriteId": "item_port_udpipe_loader_2",
-      "package": "udpipe_loader_2_top_pixi_canvas_4x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "udpipe_loader_2/top",
       "spriteOffset": {
         "x": -1,
@@ -6436,16 +6850,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_udpipe_loader_2.webp",
@@ -6454,7 +6884,7 @@
     {
       "entityId": "udpipe_unloader_1",
       "spriteId": "item_port_udpipe_unloader_1",
-      "package": "udpipe_unloader_1_top_pixi_canvas_4x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "udpipe_unloader_1/top",
       "spriteOffset": {
         "x": 0,
@@ -6582,16 +7012,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_udpipe_unloader_1.webp",
@@ -6600,7 +7046,7 @@
     {
       "entityId": "udpipe_unloader_2",
       "spriteId": "item_port_udpipe_unloader_2",
-      "package": "udpipe_unloader_2_top_pixi_canvas_4x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "udpipe_unloader_2/top",
       "spriteOffset": {
         "x": 0,
@@ -6728,16 +7174,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_udpipe_unloader_2.webp",
@@ -6746,11 +7208,11 @@
     {
       "entityId": "unloader_1",
       "spriteId": "item_port_unloader_1",
-      "package": "unloader_1_top_pixi_canvas_3x2_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "unloader_1/top",
       "spriteOffset": {
         "x": 0,
-        "y": -1,
+        "y": 0,
         "width": 3,
         "height": 2
       },
@@ -6874,16 +7336,32 @@
             "status": "not-applicable",
             "expectedSolidPortCount": 0
           },
+          "beautyTaskId": null,
+          "taskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "archive": null,
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
           "combinedGif": null,
           "perAnimationGifDirectory": null,
-          "archive": null,
           "archiveContent": [
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "item_port_unloader_1.webp",
@@ -6892,7 +7370,7 @@
     {
       "entityId": "vaporizer_1",
       "spriteId": "vaporizer_1",
-      "package": "vaporizer_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "vaporizer_1/top",
       "spriteOffset": {
         "x": 0,
@@ -7019,8 +7497,16 @@
             "mode": "transparent",
             "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
           },
-          "taskId": "20260910-163029-building-e52e2a8c",
+          "taskId": "20260911-building-port-delivery",
           "archive": null,
+          "beautyTaskId": "20260910-163029-building-e52e2a8c",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -7030,6 +7516,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "staticSource": "vaporizer_1.webp",
@@ -7038,7 +7531,7 @@
     {
       "entityId": "xiranite_oven_1",
       "spriteId": "item_port_xiranite_oven_1",
-      "package": "xiranite_oven_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "xiranite_oven_1/top",
       "spriteOffset": {
         "x": 0,
@@ -7302,7 +7795,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "xiranite_oven_1",
           "tableBuildingId": "xiranite_oven_1",
@@ -7729,6 +8222,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -7738,6 +8239,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -7746,7 +8254,7 @@
     {
       "entityId": "filling_pd_mc_1",
       "spriteId": "item_port_filling_pd_mc_1",
-      "package": "filling_powder_mc_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "filling_powder_mc_1/top",
       "spriteOffset": {
         "x": 0,
@@ -8046,7 +8554,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "filling_powder_mc_1",
           "tableBuildingId": "filling_powder_mc_1",
@@ -8760,6 +9268,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -8769,6 +9285,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -8777,7 +9300,7 @@
     {
       "entityId": "liquid_cleaner_1",
       "spriteId": "item_liquid_cleaner_1",
-      "package": "liquid_cleaner_1_top_pixi_canvas_3x3_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "liquid_cleaner_1/top",
       "spriteOffset": {
         "x": 0,
@@ -8860,7 +9383,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-variant-fix3",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "liquid_cleaner_1",
           "tableBuildingId": "liquid_cleaner_1",
@@ -8937,6 +9460,14 @@
           "observedSolidPortCount": 0,
           "baseMatchStatus": "exact current serialized mesh/material slots; zero active solid ports",
           "archive": null,
+          "beautyTaskId": "20260910-building-variant-fix3",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -8946,6 +9477,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -8954,7 +9492,7 @@
     {
       "entityId": "liquid_purifier_1",
       "spriteId": "item_port_liquid_purifier_1",
-      "package": "liquid_purifier_1_top_pixi_canvas_5x5_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "liquid_purifier_1/top",
       "spriteOffset": {
         "x": 0,
@@ -9037,7 +9575,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-variant-fix3",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "liquid_purifier_1",
           "tableBuildingId": "liquid_purifier_1",
@@ -9211,6 +9749,14 @@
           "observedSolidPortCount": 0,
           "baseMatchStatus": "exact current serialized mesh/material slots; zero active solid ports",
           "archive": null,
+          "beautyTaskId": "20260910-building-variant-fix3",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -9220,6 +9766,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -9228,7 +9781,7 @@
     {
       "entityId": "mix_pool_2",
       "spriteId": "item_port_mix_pool_2",
-      "package": "mix_pool_2_top_pixi_canvas_8x7_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "mix_pool_2/top",
       "spriteOffset": {
         "x": -1,
@@ -9456,7 +10009,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "mix_pool_2",
           "tableBuildingId": "mix_pool_2",
@@ -9671,6 +10224,14 @@
           },
           "materialAcceptance": "approximate-liquid-preview",
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -9680,6 +10241,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -9688,7 +10256,7 @@
     {
       "entityId": "thickener_1",
       "spriteId": "item_port_thickener_1",
-      "package": "thickener_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "thickener_1/top",
       "spriteOffset": {
         "x": 0,
@@ -9988,7 +10556,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "thickener_1",
           "tableBuildingId": "thickener_1",
@@ -10268,6 +10836,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -10277,6 +10853,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -10285,7 +10868,7 @@
     {
       "entityId": "tools_asm_mc_1",
       "spriteId": "item_port_tools_asm_mc_1",
-      "package": "tools_assebling_mc_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "tools_assebling_mc_1/top",
       "spriteOffset": {
         "x": 0,
@@ -10585,7 +11168,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "tools_assebling_mc_1",
           "tableBuildingId": "tools_assebling_mc_1",
@@ -10872,6 +11455,14 @@
             }
           ],
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -10881,6 +11472,13 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
@@ -10889,7 +11487,7 @@
     {
       "entityId": "winder_1",
       "spriteId": "item_port_winder_1",
-      "package": "winder_1_top_pixi_canvas_6x4_128px_webp4096.zip",
+      "package": "buildings_frontend_v1.5.zip",
       "sourcePath": "winder_1/top",
       "spriteOffset": {
         "x": 0,
@@ -11189,7 +11787,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260910-building-ports-rebuild",
+          "taskId": "20260911-building-port-delivery",
           "version": "v1.5",
           "building": "winder_1",
           "tableBuildingId": "winder_1",
@@ -11469,6 +12067,14 @@
             "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
           },
           "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "gifsIncludedInZip": false,
@@ -11478,21 +12084,3187 @@
             "json",
             "webp"
           ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       },
       "closeIdleMode": "hold-last",
       "packageSha256": "4242c64c03b545baa8cd37c7fe02d98665e6b5ae11d8225da78d10045f94b5a0"
+    },
+    {
+      "entityId": "cmpt_mc_1",
+      "spriteId": "item_port_cmpt_mc_1",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "component_mc_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              640,
+              640
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              512,
+              512
+            ]
+          },
+          "solidPorts": [
+            {
+              "kind": "input",
+              "index": 0,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 64,
+                "y": 320
+              },
+              "indicatorCenterPixels": {
+                "x": 64,
+                "y": 345.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 1,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 192,
+                "y": 320
+              },
+              "indicatorCenterPixels": {
+                "x": 192,
+                "y": 345.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 2,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 320
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 345.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 0,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 64,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 64,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 1,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 192,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 192,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 2,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            }
+          ],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20260911-building-port-delivery",
+          "version": "v1.5",
+          "building": "component_mc_1",
+          "tableBuildingId": "component_mc_1",
+          "displayName": "配件机",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 2,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "materialLimitations": [],
+          "rendererVariants": [
+            {
+              "key": "normal__0",
+              "machineModeType": "normal",
+              "machineRenderId": "component_mc_1",
+              "logisticBaseUnit": "pedestal+1_001_03x03_01",
+              "nonLogisticBaseUnit": "pedestal+1_001_03x03_03",
+              "activeSolidPorts": {
+                "input": [
+                  {
+                    "index": 0,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 2
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 2
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 2
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ],
+                "output": [
+                  {
+                    "index": 0,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rendererTemplateCount": 1,
+          "selectedBase": {
+            "field": "logisticBaseUnit",
+            "value": "pedestal+1_001_03x03_01"
+          },
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "mix_pool_1",
+      "spriteId": "item_port_mix_pool_1",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "mix_pool_1/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": 0,
+        "width": 7,
+        "height": 5
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 7,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 896,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 448,
+            "y": 320
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              896,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              0,
+              128,
+              896,
+              768
+            ]
+          },
+          "solidPorts": [
+            {
+              "kind": "input",
+              "index": 0,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 576
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 601.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 1,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 576,
+                "y": 576
+              },
+              "indicatorCenterPixels": {
+                "x": 576,
+                "y": 601.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 0,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 38.39999999999998
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 1,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 576,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 576,
+                "y": 38.39999999999998
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            }
+          ],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20260911-building-port-delivery",
+          "version": "v1.5",
+          "building": "mix_pool_1",
+          "tableBuildingId": "mix_pool_1",
+          "displayName": "反应池",
+          "view": "top",
+          "mode": "liquid",
+          "rendererTemplate": "liquid__0",
+          "canvasCells": [
+            7,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            1,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            896,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 29,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "materialLimitations": [
+            "Runtime liquid fill and liquid-surface shading are not reconstructed; shared glass/liquid material remains an approximate transparent preview."
+          ],
+          "rendererVariants": [
+            {
+              "key": "liquid__0",
+              "machineModeType": "liquid",
+              "machineRenderId": "mix_pool_1",
+              "logisticBaseUnit": "pedestal+1_001_05x05_04",
+              "nonLogisticBaseUnit": "pedestal+1_001_05x05_03",
+              "activeSolidPorts": {
+                "input": [
+                  {
+                    "index": 0,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 4
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 4
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ],
+                "output": [
+                  {
+                    "index": 0,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rendererTemplateCount": 1,
+          "selectedBase": {
+            "field": "logisticBaseUnit",
+            "value": "pedestal+1_001_05x05_04"
+          },
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "materialAcceptance": "approximate-liquid-preview",
+          "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "filling_pd_mc_1_liquid",
+      "spriteId": "item_port_liquid_filling_pd_mc_1",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "filling_powder_mc_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "animated": true,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 6,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 768,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 6,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 3,
+            "y": 2
+          },
+          "pivotPixels": {
+            "x": 384,
+            "y": 256
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1024,
+              768
+            ],
+            "resultFramePixels": [
+              768,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              896,
+              640
+            ]
+          },
+          "solidPorts": [
+            {
+              "kind": "input",
+              "index": 0,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 64,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 64,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 1,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 192,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 192,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 2,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 3,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 448,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 448,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 4,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 576,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 576,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "input",
+              "index": 5,
+              "stripRole": "white-input",
+              "cellCenterPixels": {
+                "x": 704,
+                "y": 448
+              },
+              "indicatorCenterPixels": {
+                "x": 704,
+                "y": 473.6
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 0,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 64,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 64,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 1,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 192,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 192,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 2,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 320,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 320,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 3,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 448,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 448,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 4,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 576,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 576,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            },
+            {
+              "kind": "output",
+              "index": 5,
+              "stripRole": "yellow-output",
+              "cellCenterPixels": {
+                "x": 704,
+                "y": 64
+              },
+              "indicatorCenterPixels": {
+                "x": 704,
+                "y": 38.400000000000006
+              },
+              "flowDirectionImage": {
+                "x": 0,
+                "y": -1
+              },
+              "sourceYawDegrees": 180
+            }
+          ],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20260911-building-port-delivery",
+          "version": "v1.5",
+          "building": "filling_powder_mc_1",
+          "tableBuildingId": "filling_powder_mc_1",
+          "displayName": "灌装机",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            6,
+            4
+          ],
+          "footprintCells": [
+            6,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            768,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle"
+          ],
+          "animationCount": 4,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true,
+            "gifPreviews": true
+          },
+          "archiveDelivery": {
+            "individualPngFrames": false,
+            "gifPreviews": false
+          },
+          "materialLimitations": [],
+          "rendererVariants": [
+            {
+              "key": "gasliquid__0",
+              "machineModeType": "gasliquid",
+              "machineRenderId": "filling_powder_mc_1",
+              "logisticBaseUnit": "pedestal+1_001_04x06_01",
+              "nonLogisticBaseUnit": "pedestal+1_001_04x06_03",
+              "activeSolidPorts": {
+                "input": [
+                  {
+                    "index": 0,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ],
+                "output": [
+                  {
+                    "index": 0,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "key": "liquid__0",
+              "machineModeType": "liquid",
+              "machineRenderId": "filling_powder_mc_1",
+              "logisticBaseUnit": "pedestal+1_001_04x06_01",
+              "nonLogisticBaseUnit": "pedestal+1_001_04x06_03",
+              "activeSolidPorts": {
+                "input": [
+                  {
+                    "index": 0,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ],
+                "output": [
+                  {
+                    "index": 0,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "key": "normal__0",
+              "machineModeType": "normal",
+              "machineRenderId": "filling_powder_mc_1",
+              "logisticBaseUnit": "pedestal+1_001_04x06_01",
+              "nonLogisticBaseUnit": "pedestal+1_001_04x06_03",
+              "activeSolidPorts": {
+                "input": [
+                  {
+                    "index": 0,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 0,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 3
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ],
+                "output": [
+                  {
+                    "index": 0,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 1,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 1,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 2,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 2,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 3,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 3,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 4,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 4,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  },
+                  {
+                    "index": 5,
+                    "isOutput": 1,
+                    "isPipe": false,
+                    "trans": {
+                      "position": {
+                        "x": 5,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rotation": {
+                        "x": 0,
+                        "y": 180,
+                        "z": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rendererTemplateCount": 3,
+          "selectedBase": {
+            "field": "logisticBaseUnit",
+            "value": "pedestal+1_001_04x06_01"
+          },
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "archive": null,
+          "beautyTaskId": "20260910-building-ports-rebuild",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ]
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "log_admission",
+      "spriteId": "item_log_admission",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "log_conditioner/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 1,
+            "source": "FactoryBoxValveTable.json.log_conditioner.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.48728224635124207,
+            "xMax": 0.48728224635124207,
+            "zMin": -0.4767257571220398,
+            "zMax": 0.4767257571220398
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_conditioner",
+          "tableBuildingId": "log_conditioner",
+          "displayName": "物品准入口",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "normal__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_logconditioner+1_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_logconditioner\\+1_001_01_build_logconditioner\\+1_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "log_connector",
+      "spriteId": "item_log_connector",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "log_connector/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 1,
+            "source": "FactoryGridConnecterTable.json.log_connector.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.4731654226779938,
+            "xMax": 0.4735584855079651,
+            "zMin": -0.4681210219860077,
+            "zMax": 0.4681210219860077
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_connector",
+          "tableBuildingId": "log_connector",
+          "displayName": "桥接器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "normal__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_connector+1_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_connector\\+1_001_01_build_connecter\\+1_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "log_converger",
+      "spriteId": "item_log_converger",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "log_converger/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 1,
+            "source": "FactoryGridRouterTable.json.log_converger.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.4706091284751892,
+            "xMax": 0.4706091284751892,
+            "zMin": -0.4715225100517273,
+            "zMax": 0.4716784656047821
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_converger",
+          "tableBuildingId": "log_converger",
+          "displayName": "汇流器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "normal__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_converger+1_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_converger\\+1_001_01_build_converger\\+1_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "log_splitter",
+      "spriteId": "item_log_splitter",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "log_splitter/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 1,
+            "source": "FactoryGridRouterTable.json.log_splitter.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.47060850262641907,
+            "xMax": 0.47060850262641907,
+            "zMin": -0.47160017490386963,
+            "zMax": 0.47160017490386963
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "log_splitter",
+          "tableBuildingId": "log_splitter",
+          "displayName": "分流器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "normal__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_splitter+1_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_splitter\\+1_001_01_build_diverter\\+1_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "pipe_admission",
+      "spriteId": "item_pipe_admission",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "pipe_conditioner/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 1,
+            "source": "FactoryFluidValveTable.json.log_pipe_conditioner.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.402383416891098,
+            "xMax": 0.402383416891098,
+            "zMin": -0.5615931749343872,
+            "zMax": 0.5615931749343872
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "pipe_conditioner",
+          "tableBuildingId": "log_pipe_conditioner",
+          "displayName": "管道准入口",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_logpipeconditioner+1_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_logpipeconditioner\\+1_001_01_build_logpipeconditioner\\+1_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "pipe_connector",
+      "spriteId": "item_pipe_connector",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "pipe_connector/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 4,
+            "source": "FactoryLiquidConnectorTable.json.log_pipe_connector.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.5000243782997131,
+            "xMax": 0.5000171065330505,
+            "zMin": -0.5000200867652893,
+            "zMax": 0.5000225901603699
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "pipe_connector",
+          "tableBuildingId": "log_pipe_connector",
+          "displayName": "管道桥接器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_connector+2_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_connector\\+2_001_01_build_connector\\+2_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "pipe_converger",
+      "spriteId": "item_pipe_converger",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "pipe_converger/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 4,
+            "source": "FactoryLiquidRouterTable.json.log_pipe_converger.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.4999767541885376,
+            "xMax": 0.5001544952392578,
+            "zMin": -0.5000677108764648,
+            "zMax": 0.5001086592674255
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "pipe_converger",
+          "tableBuildingId": "log_pipe_converger",
+          "displayName": "管道汇流器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_converger+2_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_converger\\+2_001_01_build_converger\\+2_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "pipe_splitter",
+      "spriteId": "item_pipe_splitter",
+      "package": "buildings_frontend_v1.5.zip",
+      "sourcePath": "pipe_splitter/top",
+      "spriteOffset": {
+        "x": -1,
+        "y": -1,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "sourceMetadata": {
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "worldUnitsPerCell": 1,
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "canvasSourceBounds": {
+            "x": [
+              -1.5,
+              1.5
+            ],
+            "z": [
+              -1.5,
+              1.5
+            ]
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 1,
+            "top": 1,
+            "width": 1,
+            "height": 1,
+            "verticalRange": 4,
+            "source": "FactoryLiquidRouterTable.json.log_pipe_splitter.range"
+          },
+          "footprintRectPixels": {
+            "left": 128,
+            "top": 128,
+            "right": 256,
+            "bottom": 256
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192,
+            "y": 192
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "unionVisualBoundsSource": {
+            "xMin": -0.5001544952392578,
+            "xMax": 0.49997660517692566,
+            "zMin": -0.5001104474067688,
+            "zMax": 0.5000665187835693
+          },
+          "boundsPolicy": "standalone-static-logistics-mesh",
+          "placementRule": {
+            "description": "Place the centered sprite canvas at gridX-1, gridY-1 for the 1x1 helper footprint.",
+            "spriteCanvasLeft": "gridX - 1",
+            "spriteCanvasTop": "gridY - 1"
+          },
+          "verticalTransform": {
+            "operation": "flip-top-bottom",
+            "sourceImageAxisY": "-sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "resized": false,
+            "source": "Existing approved RGBA frames; no new scene render"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "building": "pipe_splitter",
+          "tableBuildingId": "log_pipe_splitter",
+          "displayName": "管道分流器",
+          "version": "v1.5",
+          "view": "top",
+          "assetKind": "logistics-top-view-static-pack",
+          "static": true,
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            1,
+            1
+          ],
+          "footprintOffsetCells": [
+            1,
+            1
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "spritesheetCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": {
+            "quality": 85,
+            "alphaQuality": 100,
+            "alphaLossless": true,
+            "exactTransparentRgb": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "gifsIncludedInZip": false,
+          "combinedGif": null,
+          "perAnimationGifDirectory": null,
+          "archiveContent": [
+            "json",
+            "webp"
+          ],
+          "rendererTemplate": "liquid__0",
+          "baseSelection": "none (standalone logistics helper)",
+          "vatLayout": null,
+          "sourceModel": "A_splitter+2_001_01_dynamic_lod0",
+          "sourceMaterial": "^M_splitter\\+2_001_01_build_splitter\\+2_001_01_vat$",
+          "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+          "sourceAxisNormalizationTaskId": "20260911-building-port-delivery",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "taskId": "20260911-building-port-delivery",
+          "archive": null,
+          "beautyTaskId": "20260911-building-port-delivery",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission"
+        },
+        "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
     }
   ],
   "validationStatus": "pending-orientation-review",
   "orientationConflicts": [
     "dismantler_1",
     "furnance_1",
-    "liquid_furnance_1",
+    "furnance_1_liquid",
     "grinder_1",
     "liquid_purifier_1_gas",
     "planter_1",
-    "hydro_planter_1",
+    "planter_1_liquid",
     "seedcol_1",
     "transmuter_2_gastrans",
     "transmuter_2_solidtrans",
@@ -11502,5 +15274,14 @@
     "endfield-building-animation-assets-v1.5-fix1.zip",
     "endfield-building-animation-assets-v1.5-fix2.zip",
     "endfield-building-animation-assets-v1.5-fix3.zip"
-  ]
+  ],
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "sourceCoordinateTransform": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "projectY = depth - 1 - sourceZ",
+    "rasterOperation": "flip-top-bottom per frame cell"
+  }
 }

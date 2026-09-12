@@ -6,6 +6,10 @@ import {
   MODULE_BALANCING_CUSTOM_MODULE_SCHEMA_VERSION,
 } from "@/app/module-balancing-schema";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
+import {
+  FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
+  publishForceFlattenBlueprintVersionEnabled,
+} from "@/shared/logging/debug-mode-runtime";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import {
@@ -59,12 +63,23 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   );
 
   if (persistedAppSettings !== null) {
+    const normalizedAppSettings = normalizePersistedAppSettings(
+      persistedAppSettings,
+      appHost.internalState.settings,
+    );
     runInAction(() => {
       Object.assign(
         appHost.internalState.settings,
-        normalizePersistedAppSettings(persistedAppSettings, appHost.internalState.settings),
+        normalizedAppSettings,
       );
     });
+    if (!FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+      && persistedAppSettings.debugForceFlattenBlueprintVersion === true) {
+      saveToLocalStorage<AppSettingsReadWrite>(
+        APP_SETTINGS_LOCAL_STORAGE_KEY,
+        normalizedAppSettings,
+      );
+    }
   }
 
   if (persistedWorkbenchState !== null) {
@@ -123,6 +138,26 @@ export function hookLocalstorage(appHost: AppHost): () => void {
       );
     },
   );
+  const disposeForceFlattenBlueprintVersionReaction = reaction(
+    () => [
+      appHost.internalState.settings.debugMode,
+      appHost.internalState.settings.debugForceFlattenBlueprintVersion,
+    ] as const,
+    ([debugMode, forceFlattenBlueprintVersion]) => {
+      if (!FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+        && forceFlattenBlueprintVersion) {
+        runInAction(() => {
+          appHost.internalState.settings.debugForceFlattenBlueprintVersion = false;
+        });
+      }
+      publishForceFlattenBlueprintVersionEnabled(
+        FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+          && debugMode
+          && forceFlattenBlueprintVersion,
+      );
+    },
+    { fireImmediately: true },
+  );
   const disposeModuleBalancingReaction = reaction(
     () => JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing),
     () => {
@@ -133,7 +168,9 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   return () => {
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();
+    disposeForceFlattenBlueprintVersionReaction();
     disposeModuleBalancingReaction();
+    publishForceFlattenBlueprintVersionEnabled(false);
   };
 }
 
@@ -254,6 +291,9 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugSimulationWorkerDetailedReport === "boolean"
         ? persistedAppSettings.debugSimulationWorkerDetailedReport
         : fallback.debugSimulationWorkerDetailedReport,
+    debugForceFlattenBlueprintVersion:
+      FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
+      && persistedAppSettings.debugForceFlattenBlueprintVersion === true,
     debugMode: typeof persistedAppSettings.debugMode === "boolean"
       ? persistedAppSettings.debugMode
       : fallback.debugMode,

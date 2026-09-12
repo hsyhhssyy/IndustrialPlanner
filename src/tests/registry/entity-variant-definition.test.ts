@@ -89,6 +89,34 @@ describe("entity variant definitions", () => {
     }
   });
 
+  it("names variants with their craft group base ID and mode suffix", () => {
+    const registry = createRegistryContract();
+    for (const definition of registry.entityDefinitions) {
+      const baseId = resolveEntityCraftGroupKey(definition);
+      if (baseId === null) continue;
+      if (definition.id === baseId) {
+        expect(definition.tags).toContain(MAIN_CRAFT_GROUP_TAG);
+      } else {
+        expect(definition.id).toBe(`${baseId}_${resolveEntityVariantName(definition)}`);
+      }
+    }
+  });
+
+  it.each([
+    ["liquid_filling_pd_mc_1", "filling_pd_mc_1_liquid", "item_port_liquid_filling_pd_mc_1"],
+    ["hydro_planter_1", "planter_1_liquid", "item_port_hydro_planter_1"],
+    ["liquid_furnance_1", "furnance_1_liquid", "item_port_liquid_furnance_1"],
+  ])("registers %s under %s while retaining its sprite and recipes", (oldId, newId, spriteId) => {
+    const registry = createRegistryContract();
+    expect(registry.entityDefinitions.find((definition) => definition.id === oldId)).toBeUndefined();
+    expect(registry.entityDefinitions.find((definition) => definition.id === newId)).toMatchObject({
+      spriteId,
+      nameKey: `registry.entity.${newId}.name`,
+    });
+    expect(registry.recipeDefinitions.filter((recipe) => recipe.machineId === oldId)).toEqual([]);
+    expect(registry.recipeDefinitions.filter((recipe) => recipe.machineId === newId).length).toBeGreaterThan(0);
+  });
+
   it("uses MachineMode icons for every placement variant", () => {
     expect(createRegistryContract().entityVariantDefinitions).toMatchObject({
       normal: { iconPath: "assets/machine-mode-icons/icon_port_normal.webp" },

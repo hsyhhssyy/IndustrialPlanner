@@ -29,15 +29,15 @@ describe("entity variant helpers", () => {
       }).map((definition) => definition.id),
     ).toEqual([
       "filling_pd_mc_1",
-      "liquid_filling_pd_mc_1",
+      "filling_pd_mc_1_liquid",
     ]);
 
     expect(resolveNextEntityVariantDefinitionId({
       definitionId: "filling_pd_mc_1",
       definitions,
-    })).toBe("liquid_filling_pd_mc_1");
+    })).toBe("filling_pd_mc_1_liquid");
     expect(resolveNextEntityVariantDefinitionId({
-      definitionId: "liquid_filling_pd_mc_1",
+      definitionId: "filling_pd_mc_1_liquid",
       definitions,
     })).toBe("filling_pd_mc_1");
   });
@@ -85,7 +85,7 @@ describe("entity variant helpers", () => {
     );
 
     expect(resolveMainEntityVariantDefinition({
-      definitionId: "hydro_planter_1",
+      definitionId: "planter_1_liquid",
       definitions,
     })?.id).toBe("planter_1");
     expect(collapseEntityVariantDefinitions({
@@ -93,7 +93,7 @@ describe("entity variant helpers", () => {
       selectedVariantNameByCraftGroup: {
         planter_1: "liquid",
       },
-    }).map((definition) => definition.id)).toEqual(["hydro_planter_1"]);
+    }).map((definition) => definition.id)).toEqual(["planter_1_liquid"]);
     expect(collapseEntityVariantDefinitions({
       definitions: planterDefinitions,
       selectedVariantNameByCraftGroup: {

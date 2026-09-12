@@ -78,6 +78,10 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
   if (typeof source.fps !== 'number' || !Number.isFinite(source.fps) || source.fps <= 0) {
     throw new Error('source manifest.fps must be finite and positive');
   }
+  const frameTransform = source.frameTransform ?? null;
+  if (frameTransform !== null && frameTransform !== 'flip-top-bottom') {
+    throw new Error('source manifest.frameTransform must be null or flip-top-bottom');
+  }
   const sourceDefinitions = requireRecord(source.sources, 'source manifest.sources');
   const sources = new Map();
   for (const [name, sourceValue] of Object.entries(sourceDefinitions)) {
@@ -140,6 +144,8 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
     pageRows,
     pageColumns,
     frameDurationMs: 1000 / source.fps,
+    frameTransform,
+    sourceArchiveSha256: source.sourceArchiveSha256 ?? null,
     sources,
     clips: Object.freeze(clips),
   });
@@ -184,7 +190,26 @@ function createOutputPlan(sourceManifest, phases) {
   return { pagesByPhase, mappingsBySource };
 }
 
-function copyFrameToPage(sourceData, sourceWidth, sourceFrameIndex, sourceColumns, page, localFrameIndex, frameWidth, frameHeight) {
+// AI-REMOVED 2026-09-11:
+// Reason: 此辅助函数只有测试调用，未参与真实发布；时长断言仅与自身比较，不能验证需求。
+// Trigger: 统一验证实际 publisher 的逐帧反射、排序、时长与遮罩行为。
+// Evidence: 全仓引用仅在此测试；真实发布使用 copyFrameToPage/mergeFrameAlpha/extractFrame。
+// Replacement: src/tests/scripts/device-sprite-animation.test.ts 中实际文件发布回归测试。
+// Risk: Low；正式发布入口的覆盖已由实际产物断言补齐。
+// Human Review: Required
+//
+// Original code:
+// export function transformRgbaFrameRows(frame, width, height, transform = null) {
+//   if (transform !== 'flip-top-bottom') return Buffer.from(frame);
+//   const rowBytes = width * 4;
+//   const output = Buffer.alloc(frame.length);
+//   for (let y = 0; y < height; y += 1) {
+//     frame.copy(output, y * rowBytes, (height - 1 - y) * rowBytes, (height - y) * rowBytes);
+//   }
+//   return output;
+// }
+
+function copyFrameToPage(sourceData, sourceWidth, sourceFrameIndex, sourceColumns, page, localFrameIndex, frameWidth, frameHeight, frameTransform = null) {
   page.buffer ??= Buffer.alloc(page.columns * frameWidth * page.rows * frameHeight * 4);
   const sourceLeft = (sourceFrameIndex % sourceColumns) * frameWidth;
   const sourceTop = Math.floor(sourceFrameIndex / sourceColumns) * frameHeight;
@@ -194,7 +219,7 @@ function copyFrameToPage(sourceData, sourceWidth, sourceFrameIndex, sourceColumn
   const targetStride = page.columns * frameWidth * 4;
   const rowBytes = frameWidth * 4;
   for (let y = 0; y < frameHeight; y += 1) {
-    const sourceOffset = (sourceTop + y) * sourceStride + sourceLeft * 4;
+    const sourceOffset = (sourceTop + (frameTransform === 'flip-top-bottom' ? frameHeight - 1 - y : y)) * sourceStride + sourceLeft * 4;
     const targetOffset = (targetTop + y) * targetStride + targetLeft * 4;
     sourceData.copy(page.buffer, targetOffset, sourceOffset, sourceOffset + rowBytes);
   }
@@ -202,11 +227,11 @@ function copyFrameToPage(sourceData, sourceWidth, sourceFrameIndex, sourceColumn
   return { sourceLeft, sourceTop };
 }
 
-function mergeFrameAlpha(sourceData, sourceWidth, sourceLeft, sourceTop, unionAlpha, frameWidth, frameHeight) {
+function mergeFrameAlpha(sourceData, sourceWidth, sourceLeft, sourceTop, unionAlpha, frameWidth, frameHeight, frameTransform = null) {
   let hasTransparentPixel = false;
   let hasVisiblePixel = false;
   for (let y = 0; y < frameHeight; y += 1) {
-    let sourceOffset = ((sourceTop + y) * sourceWidth + sourceLeft) * 4 + 3;
+    let sourceOffset = ((sourceTop + (frameTransform === 'flip-top-bottom' ? frameHeight - 1 - y : y)) * sourceWidth + sourceLeft) * 4 + 3;
     let targetOffset = y * frameWidth;
     for (let x = 0; x < frameWidth; x += 1) {
       const alpha = sourceData[sourceOffset];
@@ -248,12 +273,12 @@ function assertUnusedSourceCellsTransparent(
   }
 }
 
-function extractFrame(sourceData, sourceWidth, sourceLeft, sourceTop, frameWidth, frameHeight) {
+function extractFrame(sourceData, sourceWidth, sourceLeft, sourceTop, frameWidth, frameHeight, frameTransform = null) {
   const frame = Buffer.alloc(frameWidth * frameHeight * 4);
   const sourceStride = sourceWidth * 4;
   const rowBytes = frameWidth * 4;
   for (let y = 0; y < frameHeight; y += 1) {
-    const sourceOffset = (sourceTop + y) * sourceStride + sourceLeft * 4;
+    const sourceOffset = (sourceTop + (frameTransform === 'flip-top-bottom' ? frameHeight - 1 - y : y)) * sourceStride + sourceLeft * 4;
     sourceData.copy(frame, y * rowBytes, sourceOffset, sourceOffset + rowBytes);
   }
   return frame;
@@ -336,6 +361,7 @@ async function publishOneAnimation({
           mapping.localFrameIndex,
           sourceManifest.frameWidth,
           sourceManifest.frameHeight,
+          sourceManifest.frameTransform,
         );
         const alphaCoverage = mergeFrameAlpha(
           data,
@@ -345,6 +371,7 @@ async function publishOneAnimation({
           unionAlpha,
           sourceManifest.frameWidth,
           sourceManifest.frameHeight,
+          sourceManifest.frameTransform,
         );
         if (!alphaCoverage.hasTransparentPixel || !alphaCoverage.hasVisiblePixel) {
           throw new Error(
@@ -360,6 +387,7 @@ async function publishOneAnimation({
             sourceTop,
             sourceManifest.frameWidth,
             sourceManifest.frameHeight,
+            sourceManifest.frameTransform,
           );
         }
         await encodeCompletedPage(
@@ -396,6 +424,8 @@ async function publishOneAnimation({
       schemaVersion: 1,
       frameWidth: sourceManifest.frameWidth,
       frameHeight: sourceManifest.frameHeight,
+      appliedSourceToPublishedTransform: sourceManifest.frameTransform,
+      ...(sourceManifest.sourceArchiveSha256 ? { sourceArchiveSha256: sourceManifest.sourceArchiveSha256 } : {}),
       maskFile: 'mask.webp',
       clips: Object.fromEntries(phases.map((phase) => [phase, {
         frameDurationMs: sourceManifest.frameDurationMs,
@@ -446,6 +476,7 @@ async function publishOneAnimation({
 
 export async function publishPaginatedDeviceSpriteAnimations({
   definitions,
+  spriteIds,
   sourceDirectory,
   spriteDirectory,
   maskDirectory,
@@ -454,6 +485,14 @@ export async function publishPaginatedDeviceSpriteAnimations({
   maxTextureSize,
   animationProtocol,
   readRegistryAnimationDefinitions,
+  // AI-REMOVED 2026-09-11:
+  // Reason: 未声明动画的源目录不得通过例外名单绕过 Registry 校验。
+  // Trigger: 资源准备需与正式发布区分。
+  // Evidence: import-building-top-view-v15.mjs 已提供 --prepare-only。
+  // Replacement: 下方 bySpriteId 严格校验。
+  // Risk: Low; Human Review: Required
+  // Original code:
+  // allowUnregisteredSourceIds = new Set(),
 }) {
   const {
     DEVICE_SPRITE_ANIMATION_PHASES: phases,
@@ -483,8 +522,14 @@ export async function publishPaginatedDeviceSpriteAnimations({
       }
     }
   }
+  if (spriteIds !== undefined) {
+    for (const spriteId of spriteIds) {
+      if (!bySpriteId.has(spriteId)) throw new Error(`Selected animation ${spriteId} has no Registry declaration`);
+    }
+  }
   const results = [];
   for (const [spriteId, { registryDefinition }] of bySpriteId) {
+    if (spriteIds !== undefined && !spriteIds.has(spriteId)) continue;
     results.push(await publishOneAnimation({
       spriteId,
       sourceDirectory,

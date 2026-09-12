@@ -7,10 +7,12 @@ import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import { rotateLocalPortCell } from "@/shared/geometry/port";
+import { readForceFlattenBlueprintVersionEnabled } from "@/shared/logging/debug-mode-runtime";
 import { normalizeRegionAnnotations } from "@/shared/region-annotations";
 
 // AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 7;
+// AI-CORRECTION 2026-09-11: 远端发布 tag v1.5.0 仍为 schema 5；所有当前未发布变更统一进入 5→6。
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 6;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
@@ -236,33 +238,43 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       "remove-dark-pipe-recipe-channel-config",
     ],
   },
+  // AI-REMOVED 2026-09-11:
+  // Reason: 撤回为未发布 schema 6 保留空迁移的假设。
+  // Trigger: 用户明确要求未发布改动复用同一个蓝图版本，不以未发布版本作为历史迁移边界。
+  // Evidence: 远端 v1.5.0 的蓝图、基地及迁移 schema 均为 5。
+  // Replacement: 下方合并后的 5→6 迁移。
+  // Risk: Low；仅兼容已发布 schema 1～5，当前未发布目标统一为 6。
+  // Human Review: Required
+  //
+  // Original code:
+  //   {
+  //     fromVersion: 5,
+  //     toVersion: 6,
+  //     // AI-CORRECTION 2026-09-11: schema 6 文档可能已在用户环境存在，5→6 保持原空规则以避免重放本次端口补偿。
+  //     deviceRules: [],
+  //   },
   {
     fromVersion: 5,
     toVersion: 6,
-    // AI-CORRECTION 2026-09-11: schema 6 文档可能已在用户环境存在，5→6 保持原空规则以避免重放本次端口补偿。
-    deviceRules: [],
-  },
-  {
-    fromVersion: 6,
-    toVersion: 7,
     // AI-CORRECTION 2026-09-11: 将 AKEData 1.5.3@9913107-5 确认的 37 个唯一 180°修正放入新兼容边界；schema 6 文档只在本 step 旋转一次。
+    // AI-CORRECTION 2026-09-11: 上述 6→7 边界未发布，现合并回 5→6；37 项端口补偿保持不变，三台液体变体同时重命名。
     // 对称、无映射和无端口定义继续不纳入。
     deviceRules: [
       { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
       { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
       { fromDeviceId: "grinder_1", toDeviceId: "grinder_1", rotationOffset: 180 },
-      { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "liquid_filling_pd_mc_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "filling_pd_mc_1_liquid", rotationOffset: 180 },
       { fromDeviceId: "filling_pd_mc_1", toDeviceId: "filling_pd_mc_1", rotationOffset: 180 },
       { fromDeviceId: "udpipe_loader_1", toDeviceId: "udpipe_loader_1", rotationOffset: 180 },
       { fromDeviceId: "udpipe_unloader_1", toDeviceId: "udpipe_unloader_1", rotationOffset: 180 },
       { fromDeviceId: "furnance_1", toDeviceId: "furnance_1", rotationOffset: 180 },
-      { fromDeviceId: "liquid_furnance_1", toDeviceId: "liquid_furnance_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_furnance_1", toDeviceId: "furnance_1_liquid", rotationOffset: 180 },
       { fromDeviceId: "cmpt_mc_1", toDeviceId: "cmpt_mc_1", rotationOffset: 180 },
       { fromDeviceId: "shaper_1", toDeviceId: "shaper_1", rotationOffset: 180 },
       { fromDeviceId: "shaper_1_gas", toDeviceId: "shaper_1_gas", rotationOffset: 180 },
       { fromDeviceId: "seedcol_1", toDeviceId: "seedcol_1", rotationOffset: 180 },
       { fromDeviceId: "planter_1", toDeviceId: "planter_1", rotationOffset: 180 },
-      { fromDeviceId: "hydro_planter_1", toDeviceId: "hydro_planter_1", rotationOffset: 180 },
+      { fromDeviceId: "hydro_planter_1", toDeviceId: "planter_1_liquid", rotationOffset: 180 },
       { fromDeviceId: "winder_1", toDeviceId: "winder_1", rotationOffset: 180 },
       { fromDeviceId: "tools_asm_mc_1", toDeviceId: "tools_asm_mc_1", rotationOffset: 180 },
       { fromDeviceId: "thickener_1", toDeviceId: "thickener_1", rotationOffset: 180 },
@@ -287,6 +299,25 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
     ],
   },
+  // AI-REMOVED 2026-09-11:
+  // Reason: 撤回额外的 schema 8；三台设备重命名与端口旋转属于同一次未发布升级。
+  // Trigger: 用户明确要求未发布改动复用同一个蓝图版本，不以未发布版本作为历史迁移边界。
+  // Evidence: 远端 v1.5.0 的蓝图、基地及迁移 schema 均为 5。
+  // Replacement: 上方 5→6 的三个 old ID → new ID + 180° 规则。
+  // Risk: Low；仅兼容已发布 schema 1～5，当前未发布目标统一为 6。
+  // Human Review: Required
+  //
+  // Original code:
+  //   {
+  //     fromVersion: 7,
+  //     toVersion: 8,
+  //     // 2026-09-11: 液体变体统一为基础设备 ID + 模式后缀；历史旋转补偿仍只由 6→7 执行。
+  //     deviceRules: [
+  //       { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "filling_pd_mc_1_liquid", rotationOffset: 0 },
+  //       { fromDeviceId: "hydro_planter_1", toDeviceId: "planter_1_liquid", rotationOffset: 0 },
+  //       { fromDeviceId: "liquid_furnance_1", toDeviceId: "furnance_1_liquid", rotationOffset: 0 },
+  //     ],
+  //   },
   // AI-REMOVED 2026-09-11:
   // Reason: 端口旋转规则从 5→6 移入新建 6→7，保护可能已经存在的 schema 6 文档不被重复旋转。
   // Trigger: 无法由仓库 tag、发布提交或本地存档证明用户环境不存在 schema 6。
@@ -406,12 +437,17 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
   sourceSchemaVersion: number,
   targetSchemaVersion: number = BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
 ): BlueprintDocumentMigrationResult<TEntity> | null {
+  const forceFlattenFutureVersion =
+    sourceSchemaVersion > BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
+    && targetSchemaVersion === BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
+    && readForceFlattenBlueprintVersionEnabled();
+
   if (
     !Number.isInteger(sourceSchemaVersion)
     || !Number.isInteger(targetSchemaVersion)
     || sourceSchemaVersion < 1
-    || targetSchemaVersion < sourceSchemaVersion
     || targetSchemaVersion > BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
+    || (!forceFlattenFutureVersion && targetSchemaVersion < sourceSchemaVersion)
   ) {
     return null;
   }
@@ -423,7 +459,11 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     return null;
   }
 
-  let schemaVersion = sourceSchemaVersion;
+  // 2026-09-11: 调试开关仅将未发布的未来 schema 降写为当前最高版本，
+  // 不执行任何历史迁移；关闭开关时仍由上方校验拒绝。
+  let schemaVersion = forceFlattenFutureVersion
+    ? BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
+    : sourceSchemaVersion;
   let nextState: BlueprintDocumentMigrationState<TEntity> = {
     entities: state.entities,
     entityOrder: state.entityOrder,

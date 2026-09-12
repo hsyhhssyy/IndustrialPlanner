@@ -62,7 +62,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-5": {
         id: "dummy-entity-5",
-        definitionId: "liquid_filling_pd_mc_1",
+        definitionId: "filling_pd_mc_1_liquid",
         position: {
           x: 24,
           y: 4,

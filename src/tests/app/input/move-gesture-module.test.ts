@@ -701,7 +701,7 @@ describe("createHypergryphMoveGestureModule", () => {
     })).toEqual({ status: "handled" });
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "preview-entity",
-      "liquid_filling_pd_mc_1",
+      "filling_pd_mc_1_liquid",
     );
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 12, y: 11 });
 

@@ -30,7 +30,7 @@ describe("recipe channel definitions", () => {
   });
 
   it("declares liquid filling machine input and output buffers explicitly", () => {
-    expect(getDefaultChannel("liquid_filling_pd_mc_1")).toMatchObject({
+    expect(getDefaultChannel("filling_pd_mc_1_liquid")).toMatchObject({
       ingredientStorageGroupIds: ["item_input_buffer", "fluid_input_buffer"],
       productStorageGroupIds: ["item_output_buffer"],
     });

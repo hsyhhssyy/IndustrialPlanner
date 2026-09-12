@@ -434,6 +434,28 @@ describe("production planning flow graph", () => {
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
+  it("retains liquid planter seed feedback after its definition ID rename", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_plant_grass_seed_1", 60)],
+      supplies: [],
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const graph = buildProductionFlowGraph(result, index, t, "device");
+    const planterRecipeId = "r_hydro_planter_grass_1_from_seed_1_and_water_basic";
+    const feedback = graph.links.find((link) =>
+      link.source.includes(planterRecipeId) && link.itemId === "item_plant_grass_1",
+    );
+    const seedInput = graph.links.find((link) =>
+      link.target.includes(planterRecipeId) && link.itemId === "item_plant_grass_seed_1",
+    );
+
+    expect(feedback).toMatchObject({ preferredFeedback: true, targetSide: "right" });
+    expect(seedInput).toMatchObject({ sourceSide: "left" });
+  });
+
   it("collapses recipes in item mode to show item-to-item flow", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({

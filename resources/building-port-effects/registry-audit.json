@@ -1,60 +1,25 @@
 {
   "sourceArchive": "buildings_frontend_v1.5.zip",
-  "policy": "Exact Registry anchor, outward direction and input/output role. No inferred reflection or index remapping.",
-  "heightDefinitionCount": 47,
-  "boundEffectCount": 0,
+  "policy": "Exact Registry anchor, project-plane outward direction and input/output role. Source X maps to project x, source Z maps to project -y; no inferred reflection or index remapping.",
+  "heightDefinitionCount": 51,
+  "boundEffectCount": 35,
   "issues": [
-    "mix_pool_1/liquid__0/input:2: source anchor or direction conflicts with Registry",
-    "mix_pool_1/liquid__0/input:3: source anchor or direction conflicts with Registry",
-    "mix_pool_1/liquid__0/output:2: source anchor or direction conflicts with Registry",
-    "mix_pool_1/liquid__0/output:3: source anchor or direction conflicts with Registry",
-    "pipe_splitter/liquid__0/input:0: source anchor or direction conflicts with Registry",
-    "pipe_splitter/liquid__0/output:1: source anchor or direction conflicts with Registry",
-    "pipe_converger/liquid__0/input:1: source anchor or direction conflicts with Registry",
-    "pipe_converger/liquid__0/output:0: source anchor or direction conflicts with Registry",
-    "mix_pool_2/liquid__0/input:4: source anchor or direction conflicts with Registry",
-    "mix_pool_2/liquid__0/input:5: source anchor or direction conflicts with Registry",
-    "mix_pool_2/liquid__0/output:4: source anchor or direction conflicts with Registry",
-    "mix_pool_2/liquid__0/output:5: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1/liquid__0/input:0: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1/liquid__0/input:1: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1/liquid__0/output:0: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1/liquid__0/output:1: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1_gas/gas__0/input:2: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1_gas/gas__0/output:0: source anchor or direction conflicts with Registry",
-    "liquid_purifier_1_gas/gas__0/output:1: source anchor or direction conflicts with Registry",
-    "xiranite_oven_1/liquid__0/input:5: source anchor or direction conflicts with Registry",
-    "dismantler_1/liquid__0/output:6: source anchor or direction conflicts with Registry",
-    "transmuter_2_gastrans/gastrans__0/output:0: source anchor or direction conflicts with Registry",
-    "transmuter_2_gastrans/gastrans__0/output:1: source anchor or direction conflicts with Registry",
-    "transmuter_2_solidtrans/solidtrans__0/input:0: source anchor or direction conflicts with Registry",
-    "transmuter_2_solidtrans/solidtrans__0/input:1: source anchor or direction conflicts with Registry",
-    "gas_reactor_1/gas__0/input:0: source anchor or direction conflicts with Registry",
-    "gas_reactor_1/gas__0/input:1: source anchor or direction conflicts with Registry",
-    "gas_reactor_1/gas__0/output:0: source anchor or direction conflicts with Registry",
-    "gas_reactor_1/gas__0/output:1: source anchor or direction conflicts with Registry",
-    "transmuter_1_gastrans/gastrans__0/input:0: source anchor or direction conflicts with Registry",
-    "transmuter_1_gastrans/gastrans__0/input:1: source anchor or direction conflicts with Registry",
-    "transmuter_1_gastrans/gastrans__0/output:0: source anchor or direction conflicts with Registry",
-    "transmuter_1_gastrans/gastrans__0/output:1: source anchor or direction conflicts with Registry",
-    "transmuter_1_liquidtrans/liquidtrans__0/input:0: source anchor or direction conflicts with Registry",
-    "transmuter_1_liquidtrans/liquidtrans__0/input:1: source anchor or direction conflicts with Registry",
-    "transmuter_1_liquidtrans/liquidtrans__0/output:0: source anchor or direction conflicts with Registry",
-    "transmuter_1_liquidtrans/liquidtrans__0/output:1: source anchor or direction conflicts with Registry"
+    "pipe_admission/liquid__0/input:0: source anchor or direction conflicts with Registry",
+    "pipe_admission/liquid__0/output:0: source anchor or direction conflicts with Registry"
   ],
   "comparisons": [
     {
       "entityId": "mix_pool_1",
       "view": "mix_pool_1/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 2,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -64,7 +29,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -74,7 +39,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -84,7 +49,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -94,12 +59,12 @@
           "groupId": "fluid_output_a",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -107,12 +72,12 @@
           "groupId": "fluid_output_b",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -120,12 +85,12 @@
           "groupId": "fluid_input",
           "portId": "in_e_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -133,12 +98,44 @@
           "groupId": "fluid_input",
           "portId": "in_e_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "entityId": "filling_pd_mc_1_liquid",
+      "view": "filling_powder_mc_1/top",
+      "variant": "liquid__0",
+      "projectPorts": [
+        {
+          "role": "input",
+          "index": 6,
+          "position": [
+            -3,
+            3,
+            -0.5
+          ],
+          "yaw": 0
+        }
+      ],
+      "registryPorts": [
+        {
+          "groupId": "fluid_input",
+          "portId": "in_e_2",
+          "direction": "input",
+          "projectPlanePosition": [
+            -3,
+            -0.5
+          ],
+          "projectOutward": [
+            -1,
             0
           ]
         }
@@ -148,14 +145,14 @@
       "entityId": "pipe_splitter",
       "view": "pipe_splitter/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             0,
             3,
-            0.5
+            -0.5
           ],
           "yaw": 90
         },
@@ -175,7 +172,7 @@
           "position": [
             0,
             3,
-            -0.5
+            0.5
           ],
           "yaw": 90
         },
@@ -195,11 +192,11 @@
           "groupId": "fluid_input",
           "portId": "in_n",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             -0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             -1
           ]
@@ -208,11 +205,11 @@
           "groupId": "fluid_output",
           "portId": "out_e",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             1,
             0
           ]
@@ -221,11 +218,11 @@
           "groupId": "fluid_output",
           "portId": "out_w",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             -0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             -1,
             0
           ]
@@ -234,11 +231,11 @@
           "groupId": "fluid_output",
           "portId": "out_s",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             1
           ]
@@ -249,7 +246,7 @@
       "entityId": "pipe_converger",
       "view": "pipe_converger/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
@@ -266,7 +263,7 @@
           "position": [
             0,
             3,
-            0.5
+            -0.5
           ],
           "yaw": 90
         },
@@ -286,7 +283,7 @@
           "position": [
             0,
             3,
-            -0.5
+            0.5
           ],
           "yaw": 90
         }
@@ -296,11 +293,11 @@
           "groupId": "fluid_input",
           "portId": "in_n",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             -0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             -1
           ]
@@ -309,11 +306,11 @@
           "groupId": "fluid_input",
           "portId": "in_e",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             1,
             0
           ]
@@ -322,11 +319,11 @@
           "groupId": "fluid_input",
           "portId": "in_w",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             -0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             -1,
             0
           ]
@@ -335,11 +332,11 @@
           "groupId": "fluid_output",
           "portId": "out_s",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             1
           ]
@@ -350,14 +347,14 @@
       "entityId": "pipe_connector",
       "view": "pipe_connector/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             0,
             3,
-            0.5
+            -0.5
           ],
           "yaw": 90
         },
@@ -367,7 +364,7 @@
           "position": [
             0,
             3,
-            -0.5
+            0.5
           ],
           "yaw": -90
         },
@@ -397,7 +394,7 @@
           "position": [
             0,
             3,
-            -0.5
+            0.5
           ],
           "yaw": 90
         },
@@ -407,7 +404,7 @@
           "position": [
             0,
             3,
-            0.5
+            -0.5
           ],
           "yaw": -90
         },
@@ -437,11 +434,11 @@
           "groupId": "fluid_input_ns",
           "portId": "in_n",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             -0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             -1
           ]
@@ -450,11 +447,11 @@
           "groupId": "fluid_input_ns",
           "portId": "in_s",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             1
           ]
@@ -463,11 +460,11 @@
           "groupId": "fluid_output_ns",
           "portId": "out_n",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             -0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             -1
           ]
@@ -476,11 +473,11 @@
           "groupId": "fluid_output_ns",
           "portId": "out_s",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
             0.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
             1
           ]
@@ -489,11 +486,11 @@
           "groupId": "fluid_input_ew",
           "portId": "in_w",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             -0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             -1,
             0
           ]
@@ -502,11 +499,11 @@
           "groupId": "fluid_input_ew",
           "portId": "in_e",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             1,
             0
           ]
@@ -515,11 +512,11 @@
           "groupId": "fluid_output_ew",
           "portId": "out_w",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             -0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             -1,
             0
           ]
@@ -528,12 +525,44 @@
           "groupId": "fluid_output_ew",
           "portId": "out_e",
           "direction": "output",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0.5,
             0
           ],
-          "outward": [
+          "projectOutward": [
             1,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "entityId": "shaper_1_gas",
+      "view": "shaper_1/top",
+      "variant": "gas__0",
+      "projectPorts": [
+        {
+          "role": "input",
+          "index": 3,
+          "position": [
+            -1.5,
+            3,
+            0
+          ],
+          "yaw": 0
+        }
+      ],
+      "registryPorts": [
+        {
+          "groupId": "gas_input",
+          "portId": "in_e_1",
+          "direction": "input",
+          "projectPlanePosition": [
+            -1.5,
+            0
+          ],
+          "projectOutward": [
+            -1,
             0
           ]
         }
@@ -543,14 +572,14 @@
       "entityId": "mix_pool_2",
       "view": "mix_pool_2/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 4,
           "position": [
             -3,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -560,7 +589,7 @@
           "position": [
             -3,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -570,7 +599,7 @@
           "position": [
             3,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -580,7 +609,7 @@
           "position": [
             3,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -590,12 +619,12 @@
           "groupId": "fluid_output_a",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -3,
-            -1
+          "projectPlanePosition": [
+            3,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -603,12 +632,12 @@
           "groupId": "fluid_output_b",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -3,
-            1
+          "projectPlanePosition": [
+            3,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -616,12 +645,12 @@
           "groupId": "fluid_input",
           "portId": "in_e_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            3,
-            -1
+          "projectPlanePosition": [
+            -3,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -629,12 +658,12 @@
           "groupId": "fluid_input",
           "portId": "in_e_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            3,
-            1
+          "projectPlanePosition": [
+            -3,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         }
@@ -644,14 +673,14 @@
       "entityId": "liquid_purifier_1",
       "view": "liquid_purifier_1/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -661,7 +690,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -671,7 +700,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -681,7 +710,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -691,12 +720,12 @@
           "groupId": "fluid_input",
           "portId": "in_s_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -704,12 +733,12 @@
           "groupId": "fluid_input",
           "portId": "in_s_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -717,12 +746,12 @@
           "groupId": "fluid_output",
           "portId": "out_n_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -730,12 +759,12 @@
           "groupId": "fluid_output",
           "portId": "out_n_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         }
@@ -745,7 +774,7 @@
       "entityId": "liquid_purifier_1_gas",
       "view": "liquid_purifier_1/top-gas",
       "variant": "gas__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 2,
@@ -762,7 +791,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -772,7 +801,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -782,12 +811,12 @@
           "groupId": "gas_input",
           "portId": "in_e_2",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
+          "projectPlanePosition": [
+            -2.5,
             0
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -795,12 +824,12 @@
           "groupId": "gas_output",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -808,12 +837,12 @@
           "groupId": "gas_output",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         }
@@ -823,7 +852,7 @@
       "entityId": "xiranite_oven_1",
       "view": "xiranite_oven_1/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 5,
@@ -840,12 +869,12 @@
           "groupId": "fluid_input",
           "portId": "in_e_2",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
+          "projectPlanePosition": [
+            -2.5,
             0
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         }
@@ -855,14 +884,14 @@
       "entityId": "dismantler_1",
       "view": "dismantler_1/top",
       "variant": "liquid__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "output",
           "index": 6,
           "position": [
             3,
             3,
-            0.5
+            -0.5
           ],
           "yaw": 0
         }
@@ -872,12 +901,12 @@
           "groupId": "fluid_output",
           "portId": "out_w_2",
           "direction": "output",
-          "sourcePlanePosition": [
-            -3,
-            0.5
+          "projectPlanePosition": [
+            3,
+            -0.5
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         }
@@ -887,14 +916,14 @@
       "entityId": "transmuter_2_gastrans",
       "view": "transmuter_2/top",
       "variant": "gastrans__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "output",
           "index": 0,
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -904,7 +933,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -914,12 +943,12 @@
           "groupId": "gas_output",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -927,12 +956,12 @@
           "groupId": "gas_output",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -940,13 +969,13 @@
           "groupId": "consume_input",
           "portId": "in_s_2",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
-            2.5
+            -2.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
-            1
+            -1
           ]
         }
       ]
@@ -955,14 +984,14 @@
       "entityId": "transmuter_2_solidtrans",
       "view": "transmuter_2/top-solidtrans",
       "variant": "solidtrans__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -972,7 +1001,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -982,12 +1011,12 @@
           "groupId": "gas_input",
           "portId": "in_e_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -995,12 +1024,12 @@
           "groupId": "gas_input",
           "portId": "in_e_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1008,13 +1037,13 @@
           "groupId": "consume_input",
           "portId": "in_s_2",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
-            2.5
+            -2.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
-            1
+            -1
           ]
         }
       ]
@@ -1023,14 +1052,14 @@
       "entityId": "gas_reactor_1",
       "view": "gas_reactor_1/top",
       "variant": "gas__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1040,7 +1069,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -1050,7 +1079,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1060,7 +1089,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -1070,12 +1099,12 @@
           "groupId": "gas_input",
           "portId": "in_w_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1083,12 +1112,12 @@
           "groupId": "gas_input",
           "portId": "in_w_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1096,12 +1125,12 @@
           "groupId": "gas_output",
           "portId": "out_e_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -1109,12 +1138,12 @@
           "groupId": "gas_output",
           "portId": "out_e_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         }
@@ -1124,14 +1153,14 @@
       "entityId": "transmuter_1_gastrans",
       "view": "transmuter_1/top",
       "variant": "gastrans__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1141,7 +1170,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -1151,7 +1180,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1161,7 +1190,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -1171,12 +1200,12 @@
           "groupId": "liquid_input",
           "portId": "in_e_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1184,12 +1213,12 @@
           "groupId": "liquid_input",
           "portId": "in_e_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1197,12 +1226,12 @@
           "groupId": "gas_output",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -1210,12 +1239,12 @@
           "groupId": "gas_output",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -1223,13 +1252,13 @@
           "groupId": "consume_input",
           "portId": "in_s_2",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
-            2.5
+            -2.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
-            1
+            -1
           ]
         }
       ]
@@ -1238,14 +1267,14 @@
       "entityId": "transmuter_1_liquidtrans",
       "view": "transmuter_1/top",
       "variant": "liquidtrans__0",
-      "sourcePorts": [
+      "projectPorts": [
         {
           "role": "input",
           "index": 0,
           "position": [
             -2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1255,7 +1284,7 @@
           "position": [
             -2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         },
@@ -1265,7 +1294,7 @@
           "position": [
             2.5,
             3,
-            -1
+            1
           ],
           "yaw": 0
         },
@@ -1275,7 +1304,7 @@
           "position": [
             2.5,
             3,
-            1
+            -1
           ],
           "yaw": 0
         }
@@ -1285,12 +1314,12 @@
           "groupId": "gas_input",
           "portId": "in_e_1",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            -1
+          "projectPlanePosition": [
+            -2.5,
+            1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1298,12 +1327,12 @@
           "groupId": "gas_input",
           "portId": "in_e_3",
           "direction": "input",
-          "sourcePlanePosition": [
-            2.5,
-            1
+          "projectPlanePosition": [
+            -2.5,
+            -1
           ],
-          "outward": [
-            1,
+          "projectOutward": [
+            -1,
             0
           ]
         },
@@ -1311,12 +1340,12 @@
           "groupId": "liquid_output",
           "portId": "out_w_1",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            -1
+          "projectPlanePosition": [
+            2.5,
+            1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -1324,12 +1353,12 @@
           "groupId": "liquid_output",
           "portId": "out_w_3",
           "direction": "output",
-          "sourcePlanePosition": [
-            -2.5,
-            1
+          "projectPlanePosition": [
+            2.5,
+            -1
           ],
-          "outward": [
-            -1,
+          "projectOutward": [
+            1,
             0
           ]
         },
@@ -1337,13 +1366,68 @@
           "groupId": "consume_input",
           "portId": "in_s_2",
           "direction": "input",
-          "sourcePlanePosition": [
+          "projectPlanePosition": [
             0,
-            2.5
+            -2.5
           ],
-          "outward": [
+          "projectOutward": [
             0,
-            1
+            -1
+          ]
+        }
+      ]
+    },
+    {
+      "entityId": "pipe_admission",
+      "view": "pipe_conditioner/top",
+      "variant": "liquid__0",
+      "projectPorts": [
+        {
+          "role": "input",
+          "index": 0,
+          "position": [
+            0,
+            0,
+            -0.5
+          ],
+          "yaw": 90
+        },
+        {
+          "role": "output",
+          "index": 0,
+          "position": [
+            0,
+            0,
+            0.5
+          ],
+          "yaw": 90
+        }
+      ],
+      "registryPorts": [
+        {
+          "groupId": "fluid_input",
+          "portId": "in_w",
+          "direction": "input",
+          "projectPlanePosition": [
+            -0.5,
+            0
+          ],
+          "projectOutward": [
+            -1,
+            0
+          ]
+        },
+        {
+          "groupId": "fluid_output",
+          "portId": "out_e",
+          "direction": "output",
+          "projectPlanePosition": [
+            0.5,
+            0
+          ],
+          "projectOutward": [
+            1,
+            0
           ]
         }
       ]

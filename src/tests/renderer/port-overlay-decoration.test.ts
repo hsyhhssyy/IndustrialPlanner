@@ -108,7 +108,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("传送带模式将液体端口和输入端口绘制为红叉", () => {
-    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 180);
+    const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device],
@@ -177,7 +177,7 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("类型不匹配的液体端口被设备堵塞时不显示叉号", () => {
-    const device = createEntity("device", "liquid_filling_pd_mc_1", 5, 5, 180);
+    const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
     const wall = createEntity("wall", "storager_1", 11, 6, 180);
 
     const entries = resolveLogisticsPortOverlayEntries({

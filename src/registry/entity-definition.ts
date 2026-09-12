@@ -1417,11 +1417,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
-    id: "liquid_filling_pd_mc_1",
-    nameKey: "registry.entity.liquid_filling_pd_mc_1.name",
+    id: "filling_pd_mc_1_liquid",
+    nameKey: "registry.entity.filling_pd_mc_1_liquid.name",
     spriteId: "item_port_liquid_filling_pd_mc_1",
     iconPath: "device-icons/item_port_filling_pd_mc_1.webp",
     footprint: { width: 6, height: 4 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 603,
     tags: [PRODUCER_TAG, "alter:filling_pd_mc_1", "alter-variant:liquid"],
@@ -2681,8 +2682,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
-    id: "liquid_furnance_1",
-    nameKey: "registry.entity.liquid_furnance_1.name",
+    id: "furnance_1_liquid",
+    nameKey: "registry.entity.furnance_1_liquid.name",
     spriteId: "item_port_liquid_furnance_1",
     iconPath: "device-icons/item_port_liquid_furnance_1.webp",
     footprint: { width: 3, height: 3 },
@@ -2956,8 +2957,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
-    id: "hydro_planter_1",
-    nameKey: "registry.entity.hydro_planter_1.name",
+    id: "planter_1_liquid",
+    nameKey: "registry.entity.planter_1_liquid.name",
     spriteId: "item_port_hydro_planter_1",
     iconPath: "device-icons/item_port_hydro_planter_1.webp",
     footprint: { width: 5, height: 5 },
