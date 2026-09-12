@@ -1,13 +1,19 @@
 import type {
+  SimulationDeviceOperatingStatus,
   SimulationDeviceRuntimeStatusReadModel,
   SimulationDocumentRuntimeReadModel,
   SimulationGasDiffusionRangeReadModel,
+  SimulationPerformanceDiagnosticsReadModel,
   WarehouseStatsReadModel,
 } from "./types/simulation-types";
 
 export interface SimulationQuery {
   getStatusRuntimeJson(): string;
   getDocumentRuntimeStatus(): SimulationDocumentRuntimeReadModel | null;
+  /** 按需读取仿真引擎最近一个完整采样窗口的性能诊断。 */
+  getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel;
+  /** 获取指定设备的轻量互斥运行状态；仿真停止时返回 closed。 */
+  getDeviceOperatingStatus(deviceId: string): SimulationDeviceOperatingStatus | null;
   getDeviceRuntimeStatus(deviceId: string): SimulationDeviceRuntimeStatusReadModel | null;
   getPipeFluidItemId(deviceId: string): string | null;
   /** 查询管道设备的 slot 是否当前有液体占用（O(1) 哈希查寻）。 */

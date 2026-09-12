@@ -130,6 +130,7 @@ export function createLegacySimulationHost(
           ?? (typeof override === "number" && Number.isFinite(override) && override >= 0 ? override : topology.totalPowerDemand);
       },
       getWarehouseStats: () => presentation.getWarehouseStats(),
+      getPerformanceDiagnostics: () => actionImpl.getPerformanceDiagnostics(),
       getDebugDataEnabled: () => options.getDebugDataEnabled?.() === true,
       beforeReadDebugData: requestPausedCurrentTickDebugRefresh,
     }),

@@ -152,6 +152,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       await expectReady(host.internalActions.syncToTick(oneSecondTick));
       // 没电时研磨机不应有产出
       expect(readGrinderRecipeId(host)).toBeNull();
+      expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("not-in-power-net");
 
       // 2. 在同一文档中新增供电桩（不替换整个文档，模拟用户放置行为）
       const currentDoc = documentStore.getSnapshot();
@@ -212,6 +213,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
         3_500,
       );
       await expectReady(host.internalActions.syncToTick(halfSecondTick));
+      expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("normal");
       const poweredProgressSeconds = readGrinderProgressSeconds(host);
 
       documentStore.setSnapshot(createWorldDocumentFromBlueprint(
@@ -223,6 +225,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       expect(host.topology.getSnapshot()?.totalPowerDemand).toBe(0);
 
       await expectReady(host.internalActions.syncToTick(oneAndHalfSecondTick));
+      expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("not-in-power-net");
       expect(readGrinderProgressSeconds(host)).toBe(poweredProgressSeconds);
 
       documentStore.setSnapshot(createWorldDocumentFromBlueprint(
@@ -372,10 +375,12 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
         );
 
         await expectReady(host.internalActions.syncToTick(halfSecondTick));
+        expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("normal");
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(0);
 
         await expectReady(host.internalActions.syncToTick(threeSecondTick));
         expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(true);
+        expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("no-power");
         const frozenProgressSeconds = readGrinderProgressSeconds(host);
 
         const outageDocument = documentStore.getSnapshot();
@@ -390,6 +395,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
         await expectReady(host.internalActions.syncToTick(threeAndHalfSecondTick));
 
         expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(false);
+        expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("normal");
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(frozenProgressSeconds);
       } finally {
         host.dispose();

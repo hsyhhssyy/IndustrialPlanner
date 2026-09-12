@@ -444,9 +444,20 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
       setTotalPowerDemand(docStatus?.totalPowerDemand ?? null);
       setCurrentPowerGeneration(docStatus?.currentPowerGeneration ?? null);
       setIsPowerOutage(docStatus?.isPowerOutage ?? false);
-      const stats = appHost.workspace.simulation?.state.statistics;
-      setBaseBatteryJoules(stats?.baseBatteryJoules ?? null);
-      setBaseBatteryCapacity(stats?.baseBatteryCapacity ?? null);
+      // AI-REMOVED 2026-09-12:
+      // Reason: 电池读数属于文档运行时投影，不再借用已退役的性能 statistics 状态。
+      // Trigger: 用户确认从 SimulationState 移除 statistics。
+      // Evidence: getDocumentRuntimeStatus 已统一返回双引擎的电池当前值与容量。
+      // Replacement: 下方 docStatus.baseBatteryJoules / baseBatteryCapacity。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // const stats = appHost.workspace.simulation?.state.statistics;
+      // setBaseBatteryJoules(stats?.baseBatteryJoules ?? null);
+      // setBaseBatteryCapacity(stats?.baseBatteryCapacity ?? null);
+      setBaseBatteryJoules(docStatus?.baseBatteryJoules ?? null);
+      setBaseBatteryCapacity(docStatus?.baseBatteryCapacity ?? null);
     };
 
     tick();

@@ -1,0 +1,60 @@
+// AI-REMOVED 2026-09-12:
+// Reason: 用户明确决定不对生成后的 WebP avatar 做逐像素测试。
+// Trigger: WebP 能保证 alpha 通道，但编码器不保证 alpha=0 像素下不可见 RGB 的逐字节保留；用户要求“这里干脆不测了”。
+// Evidence: 首轮 Vitest 中仅该新增测试失败；alpha 与所有可见像素均一致，差异只存在于 alpha=0 的 RGB。
+// Replacement: None；运行时资源路径仍由 generic-device-sprite.test.ts 验证，视觉结果已通过三档 Playwright 检查。
+// Risk: 资源发布脚本的批量像素规则不再由 Vitest 回归保护。
+// Human Review: Required
+//
+// Original code:
+// import path from "node:path"
+//
+// import { readdir } from "node:fs/promises"
+// import sharp from "sharp"
+// import { describe, expect, it } from "vitest"
+//
+// // @ts-expect-error 此脚本由 Node 直接执行，没有单独维护声明文件。
+// import { createWhiteShadowPixels } from "../../scripts/publish-device-label-avatars.mjs"
+//
+// const PROJECT_ROOT = process.cwd()
+// const SOURCE_DIRECTORY = path.resolve(PROJECT_ROOT, "public/blueprint-view/avatar")
+// const OUTPUT_DIRECTORY = path.resolve(PROJECT_ROOT, "public/3d-top-view/avatar")
+//
+// describe("device label avatars", () => {
+//   it("publishes every blueprint silhouette as an exact white foreground with southeast shadow", async () => {
+//     const sourceFiles = (await readdir(SOURCE_DIRECTORY))
+//       .filter(fileName => fileName.endsWith(".webp"))
+//       .sort()
+//     const outputFiles = (await readdir(OUTPUT_DIRECTORY))
+//       .filter(fileName => fileName.endsWith(".webp"))
+//       .sort()
+//
+//     expect(outputFiles).toEqual(sourceFiles)
+//
+//     for (const fileName of sourceFiles) {
+//       const source = await readRgba(path.join(SOURCE_DIRECTORY, fileName))
+//       const output = await readRgba(path.join(OUTPUT_DIRECTORY, fileName))
+//
+//       expect({ width: output.width, height: output.height }).toEqual({
+//         width: source.width,
+//         height: source.height,
+//       })
+//       expect(output.data).toEqual(
+//         createWhiteShadowPixels(source.data, source.width, source.height),
+//       )
+//     }
+//   })
+// })
+//
+// async function readRgba(filePath: string) {
+//   const { data, info } = await sharp(filePath)
+//     .ensureAlpha()
+//     .raw()
+//     .toBuffer({ resolveWithObject: true })
+//
+//   return {
+//     data,
+//     width: info.width,
+//     height: info.height,
+//   }
+// }

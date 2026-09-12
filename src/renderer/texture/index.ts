@@ -5,3 +5,4 @@ export {
 export type { DeviceAnimationTextures, DeviceAnimationTextureStats } from "./device-animation-textures"
 export { isFallbackTexture } from "./texture-manager"
 export type { LogisticsDynamicAssets, LogisticsDynamicSession } from "./logistics-material-textures"
+export { TexturePerfDiagnostics } from "./texture-perf-diagnostics"

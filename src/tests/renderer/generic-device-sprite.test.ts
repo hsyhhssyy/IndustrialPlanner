@@ -277,7 +277,16 @@ describe("GenericDeviceSprite", () => {
   const BLUEPRINT_BODY_KEY = "blueprint-sprite-item_port_storager_1"
   const BLUEPRINT_MASK_KEY = "blueprint-masks-item_port_storager_1"
   const TOP_VIEW_AVATAR_KEY = "top-view-avatar-item_port_storager_1"
-  const BLUEPRINT_AVATAR_KEY = "blueprint-avatar-item_port_storager_1"
+  // AI-REMOVED 2026-09-12:
+  // Reason: 设备标签统一读取 3D View 目录内的白色右下投影 avatar。
+  // Trigger: 用户要求替换灰色蓝图 avatar 的标签用途，并将新资源放入 3D View avatar 目录。
+  // Evidence: resolveDeviceLabelIconTextureKey 现固定返回 top-view-avatar key。
+  // Replacement: TOP_VIEW_AVATAR_KEY。
+  // Risk: Low；蓝图本体样式仍由 BLUEPRINT_BODY_KEY 与 BLUEPRINT_MASK_KEY 独立验证。
+  // Human Review: Required
+  //
+  // Original code:
+  // const BLUEPRINT_AVATAR_KEY = "blueprint-avatar-item_port_storager_1"
   const PIPE_BODY_KEY = "device-sprite-pipe_straight_1x1"
   const PIPE_MASK_KEY = "device-masks-pipe_straight_1x1"
   const PIPE_TOP_VIEW_AVATAR_KEY = "top-view-avatar-pipe_straight_1x1"
@@ -525,7 +534,7 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
-  it("draws the blueprint avatar before a device name when the combined label fits", async () => {
+  it("draws matching outlined top-view icon and text when the combined label fits", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
     const entityLayer = createLayerStub()
@@ -533,7 +542,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-      [BLUEPRINT_AVATAR_KEY]: createLoadedTextureMock("blueprint-avatar"),
+      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
@@ -571,7 +580,7 @@ describe("GenericDeviceSprite", () => {
     const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_AVATAR_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(TOP_VIEW_AVATAR_KEY)
     expect(labelRoot?.visible).toBe(true)
     expect(icon?.visible).toBe(true)
     expect(icon?.x).toBeLessThan(text?.x ?? 0)
@@ -579,8 +588,18 @@ describe("GenericDeviceSprite", () => {
     expect(text?.visible).toBe(true)
     expect(text?.text).toBe("Storage")
     expect(text?.style.fill).toBe(0xffffff)
-    expect(text?.style.stroke).toEqual(expect.objectContaining({ color: 0x20242a }))
-    expect(text?.style.dropShadow).toEqual(expect.objectContaining({ color: 0x20242a }))
+    expect(text?.style.stroke).toEqual({
+      color: 0x252525,
+      width: 1,
+      alpha: 0.96,
+    })
+    expect(text?.style.dropShadow).toEqual({
+      color: 0x4c4c4c,
+      alpha: 0.72,
+      blur: 0,
+      distance: Math.SQRT2,
+      angle: Math.PI / 4,
+    })
   })
 
   it("hides both device icon and name for AvatarHidden devices", async () => {
@@ -643,7 +662,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       "device-sprite-item_port_water_pump_1": resolvedTexture,
       "device-masks-item_port_water_pump_1": resolvedMaskTexture,
-      "blueprint-avatar-item_port_water_pump_1": createLoadedTextureMock("water-pump-avatar"),
+      "top-view-avatar-item_port_water_pump_1": createLoadedTextureMock("water-pump-avatar"),
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
@@ -728,7 +747,7 @@ describe("GenericDeviceSprite", () => {
     expect(text?.style.wordWrapWidth).toBeCloseTo(42.24)
   })
 
-  it("uses blueprint avatar and black unoutlined text when simplified device icons are enabled", async () => {
+  it("keeps the white-shadow top-view avatar and black unoutlined text when simplified device icons are enabled", async () => {
     const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("blueprint-mask-texture")
     const entityLayer = createLayerStub()
@@ -736,7 +755,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BLUEPRINT_BODY_KEY]: resolvedTexture,
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
-      [BLUEPRINT_AVATAR_KEY]: createLoadedTextureMock("blueprint-avatar"),
+      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
     }, {
       gameUseBlueprintStyleDeviceImages: true,
       gameShowDeviceIcons: true,
@@ -775,7 +794,7 @@ describe("GenericDeviceSprite", () => {
     const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_AVATAR_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(TOP_VIEW_AVATAR_KEY)
     expect(labelRoot?.visible).toBe(true)
     expect(icon?.visible).toBe(true)
     expect(icon?.x).toBeLessThan(text?.x ?? 0)
@@ -790,7 +809,7 @@ describe("GenericDeviceSprite", () => {
   it("keeps label sizes fixed and stacks labels that exceed the device width", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
-    const resolvedBlueprintAvatarTexture = createLoadedTextureMock("blueprint-avatar")
+    const resolvedTopViewAvatarTexture = createLoadedTextureMock("top-view-avatar")
 
     const smallEntityLayer = createLayerStub()
     const smallOverlayLayer = createLayerStub()
@@ -799,7 +818,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-      [BLUEPRINT_AVATAR_KEY]: resolvedBlueprintAvatarTexture,
+      [TOP_VIEW_AVATAR_KEY]: resolvedTopViewAvatarTexture,
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,

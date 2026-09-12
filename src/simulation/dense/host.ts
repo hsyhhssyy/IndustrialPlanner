@@ -6,6 +6,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { SimulationContract } from "@/domain/simulation/simulation-contract";
+import type { SimulationPerformanceDiagnosticsReadModel } from "@/domain/simulation";
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
 // Trigger: Host / legacy 控制器重构。
@@ -78,6 +79,7 @@ import {
   createInitialSimulationRuntimeStatus,
   createInitialSimulationTimelineState,
   createSimulationStateReadWrite,
+  SimulationPerformanceRateWindow,
   type SimulationStateReadWrite,
 } from "../contracts";
 import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
@@ -139,6 +141,7 @@ export function createDenseSimulationHost(
       getTotalPowerDemand: (_topology, projection) => internalState.regionalTotalPowerDemand
         ?? controller.currentPowerConsumptionOverride ?? projection.totalPowerDemand,
       getWarehouseStats: () => controller.currentWarehouseStats,
+      getPerformanceDiagnostics: () => controller.getPerformanceDiagnostics(),
       getDebugDataEnabled: () => true,
     }),
     dispose: () => {
@@ -184,6 +187,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private playbackRemainderTicks = 0;
   private playbackTargetTickNumber = 0;
   private playbackAdvanceInFlight: Promise<void> | null = null;
+  private readonly playbackTickRateWindow = new SimulationPerformanceRateWindow();
+  private pendingPlaybackPerformanceElapsedMs = 0;
+  private pendingPlaybackPerformanceTicks = 0;
+  private runtimeRetainedStateCount = 0;
   private primaryTickNumber = 0;
   private compiledDocument: WorldDocument | null = null;
   private sourceDocumentSignature: string | null = null;
@@ -232,6 +239,24 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     return this.regionalWarehouseStats
       ?? this.projection?.getWarehouseStats()
       ?? null;
+  }
+
+  public getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel {
+    const topology = this.topologyStore.getSnapshot();
+    const tickRate = this.projection?.tickRate ?? topology?.standardTickRate ?? 0;
+    return {
+      tickPerSecond: this.playbackTickRateWindow.ratePerSecond,
+      targetTickPerSecond: this.state.runningState === "start"
+        ? this.state.simulationSpeed * tickRate
+        : 0,
+      playbackBufferedFrameCount: this.regionalSession === null
+        ? (this.projection === null ? 0 : 1)
+        : this.regionalPlaybackDeltas.size + (this.projection === null ? 0 : 1),
+      runtimeRetainedStateCount: this.regionalSession?.runtimeRetainedStateCount
+        ?? this.runtimeRetainedStateCount,
+      timelineRetainedFrameCount: 0,
+      timelineGeneratedFramePerSecond: 0,
+    };
   }
 
   public hasSimulationRelevantDocumentChange(document: WorldDocument): boolean {
@@ -329,11 +354,17 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     }
     const topology = this.topologyStore.getSnapshot();
     if (topology === null) return;
+    this.pendingPlaybackPerformanceElapsedMs += deltaMs;
     this.playbackRemainderTicks += deltaMs / 1000
       * topology.standardTickRate
       * this.state.simulationSpeed;
     const wholeTicks = Math.floor(this.playbackRemainderTicks);
-    if (wholeTicks <= 0) return;
+    if (wholeTicks <= 0) {
+      if (this.playbackAdvanceInFlight === null) {
+        this.flushPlaybackPerformanceWindow();
+      }
+      return;
+    }
     this.playbackRemainderTicks -= wholeTicks;
     this.playbackTargetTickNumber = Math.max(
       this.playbackTargetTickNumber,
@@ -347,6 +378,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (this.playbackAdvanceInFlight === null) {
       const drain = this.drainPlaybackAdvances();
       const tracked = drain.finally(() => {
+        this.flushPlaybackPerformanceWindow();
         if (this.playbackAdvanceInFlight === tracked) {
           this.playbackAdvanceInFlight = null;
         }
@@ -424,8 +456,18 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         + timelineTickNumber * DENSE_TIMELINE_STEP_STANDARD_TICKS;
       const response = await this.bridge.requestPresentationCheckpoint(standardTickNumber);
       this.projection?.replaceCheckpoint(response.delta);
+      this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.timelinePresentationActive = true;
-      this.publishProjectionSnapshot();
+      // AI-REMOVED 2026-09-12:
+      // Reason: 性能与电池读数不再由 SimulationState 发布，避免把诊断数据写入领域状态。
+      // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+      // Evidence: presentation-checkpoint 已直接更新投影与 runtimeRetainedStateCount，查询可读取两者。
+      // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.publishProjectionSnapshot();
       runInAction(() => {
         this.state.timeline.cursorTickNumber = timelineTickNumber;
         this.state.currentPlaybackTickNumber = standardTickNumber;
@@ -580,6 +622,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       // this.emitter = emitter;
       this.projection = projection;
       this.primaryTickNumber = response.initialDelta.tickNumber;
+      this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.playbackTargetTickNumber = migrationApplied
         ? Math.max(this.playbackTargetTickNumber, response.initialDelta.tickNumber)
         : response.initialDelta.tickNumber;
@@ -587,7 +630,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.compiledDocument = cloneWorldDocument(document);
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
       this.topologyStore.setSnapshot(topology);
-      this.publishProjectionSnapshot();
+      // AI-REMOVED 2026-09-12:
+      // Reason: 性能与电池读数不再由 SimulationState 发布，初始化只需提交投影和运行态。
+      // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+      // Evidence: projection 与 runtimeRetainedStateCount 已在 Host 内部就绪。
+      // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.publishProjectionSnapshot();
       runInAction(() => {
         this.state.hasStarted = true;
         this.state.currentPlaybackTickNumber = response.initialDelta.tickNumber;
@@ -666,8 +718,18 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const response = await this.bridge.advanceToTick(tickNumber, Number.MAX_SAFE_INTEGER);
       projection.apply(response.delta);
       this.primaryTickNumber = response.delta.tickNumber;
+      this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.timelinePresentationActive = false;
-      this.publishProjectionSnapshot();
+      // AI-REMOVED 2026-09-12:
+      // Reason: 性能与电池读数不再由 SimulationState 发布，推进结果直接留在 Host 投影和诊断采样器中。
+      // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+      // Evidence: frame-delta 已更新 projection、primaryTickNumber 与 runtimeRetainedStateCount。
+      // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.publishProjectionSnapshot();
       runInAction(() => {
         this.state.currentPlaybackTickNumber = tickNumber;
         this.state.runtimeStatus = {
@@ -707,6 +769,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.playbackRemainderTicks = 0;
     this.playbackTargetTickNumber = 0;
     this.playbackAdvanceInFlight = null;
+    this.playbackTickRateWindow.reset();
+    this.pendingPlaybackPerformanceElapsedMs = 0;
+    this.pendingPlaybackPerformanceTicks = 0;
+    this.runtimeRetainedStateCount = 0;
     this.primaryTickNumber = 0;
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
@@ -717,12 +783,21 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
     this.state.currentPlaybackTickNumber = 0;
     this.state.runtimeStatus = createInitialSimulationRuntimeStatus();
-    this.state.statistics = {
-      tickPerSecond: 0,
-      targetTickPerSecond: 0,
-      baseBatteryJoules: 0,
-      baseBatteryCapacity: 0,
-    };
+    // AI-REMOVED 2026-09-12:
+    // Reason: SimulationState 不再承载性能诊断或电池投影，reset 只重置领域运行态。
+    // Trigger: 用户确认移除 SimulationState.statistics，并改由统一 Query 读取。
+    // Evidence: 性能采样器已在上方重置；电池值由 document runtime read model 查询投影。
+    // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 SimulationQuery.getDocumentRuntimeStatus。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.state.statistics = {
+    //   tickPerSecond: 0,
+    //   targetTickPerSecond: 0,
+    //   baseBatteryJoules: 0,
+    //   baseBatteryCapacity: 0,
+    // };
   });
 
   public dispose(): void {
@@ -893,7 +968,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.regionalWarehouseStats = createInitialRegionalWarehouseStats(
         currentTopology?.regionalResourceSupply,
       );
-      this.publishProjectionSnapshot();
+      // AI-REMOVED 2026-09-12:
+      // Reason: regional 初始化不再向 SimulationState 发布性能与电池读数。
+      // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+      // Evidence: regionalSession 与 projection 已保存查询所需的运行态。
+      // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.publishProjectionSnapshot();
       startStage = "commit-first-epoch";
       await this.fillOneRegionalEpoch();
       runInAction(() => {
@@ -994,7 +1078,20 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       } else {
         await this.syncToTick(targetTickNumber);
       }
+      this.pendingPlaybackPerformanceTicks += Math.max(
+        0,
+        this.primaryTickNumber - currentTickNumber,
+      );
     }
+  }
+
+  private flushPlaybackPerformanceWindow(): void {
+    this.playbackTickRateWindow.record(
+      this.pendingPlaybackPerformanceElapsedMs,
+      this.pendingPlaybackPerformanceTicks,
+    );
+    this.pendingPlaybackPerformanceElapsedMs = 0;
+    this.pendingPlaybackPerformanceTicks = 0;
   }
 
   private async advanceRegionalPresentationToTick(targetTickNumber: number): Promise<void> {
@@ -1021,7 +1118,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       }
     }
     this.primaryTickNumber = targetTickNumber;
-    this.publishProjectionSnapshot();
+    // AI-REMOVED 2026-09-12:
+    // Reason: regional 播放推进不再向 SimulationState 发布性能与电池读数。
+    // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+    // Evidence: projection、regionalSession 与播放缓存已保存查询所需的运行态。
+    // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.publishProjectionSnapshot();
     runInAction(() => {
       this.state.currentPlaybackTickNumber = targetTickNumber;
       this.state.runtimeStatus = {
@@ -1051,20 +1157,29 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.state.regionalTotalPowerDemand = null;
   }
 
-  private publishProjectionSnapshot(): void {
-    const projection = this.projection;
-    if (projection === null) return;
-    runInAction(() => {
-      // runtime 模式只供 engine/Blueprint 测试使用；browser dense 路径不物化 legacy snapshot。
-      // AI-CORRECTION 2026-09-09: 两种模式都只发布投影统计；完整快照改由 testkit 按需读取。
-      this.state.statistics = {
-        tickPerSecond: 0,
-        targetTickPerSecond: 0,
-        baseBatteryJoules: projection.batteryJoules,
-        baseBatteryCapacity: projection.batteryCapacity,
-      };
-    });
-  }
+  // AI-REMOVED 2026-09-12:
+  // Reason: 性能诊断不是领域状态，电池读数也已有 document runtime read model，禁止继续向 SimulationState 写入。
+  // Trigger: 用户确认移除公共 contract 中的仿真计数，并由界面每秒调用统一 Query。
+  // Evidence: SimulationQuery.getPerformanceDiagnostics 提供 Host 内部采样；getDocumentRuntimeStatus 提供电池投影。
+  // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 SimulationQuery.getDocumentRuntimeStatus。
+  // Risk: Low；依赖 MobX statistics 变更通知的旧调用方必须改为主动轮询 Query。
+  // Human Review: Required
+  //
+  // Original code:
+  // private publishProjectionSnapshot(): void {
+  //   const projection = this.projection;
+  //   if (projection === null) return;
+  //   runInAction(() => {
+  //     // runtime 模式只供 engine/Blueprint 测试使用；browser dense 路径不物化 legacy snapshot。
+  //     // AI-CORRECTION 2026-09-09: 两种模式都只发布投影统计；完整快照改由 testkit 按需读取。
+  //     this.state.statistics = {
+  //       tickPerSecond: 0,
+  //       targetTickPerSecond: 0,
+  //       baseBatteryJoules: projection.batteryJoules,
+  //       baseBatteryCapacity: projection.batteryCapacity,
+  //     };
+  //   });
+  // }
 
   private failStart(
     message: string,
@@ -1073,6 +1188,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.projection = null;
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
+    this.runtimeRetainedStateCount = 0;
     this.topologyStore.setSnapshot(null);
     runInAction(() => {
       this.state.hasStarted = false;
@@ -1129,8 +1245,18 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     try {
       const response = await this.bridge.requestPresentationCheckpoint(this.primaryTickNumber);
       this.projection?.replaceCheckpoint(response.delta);
+      this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.timelinePresentationActive = false;
-      this.publishProjectionSnapshot();
+      // AI-REMOVED 2026-09-12:
+      // Reason: 恢复主投影不再向 SimulationState 发布性能与电池读数。
+      // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
+      // Evidence: presentation-checkpoint 已更新 projection 与 runtimeRetainedStateCount。
+      // Replacement: DenseSimulationController.getPerformanceDiagnostics 与 DenseProjectionStore。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.publishProjectionSnapshot();
       runInAction(() => {
         this.state.currentPlaybackTickNumber = this.primaryTickNumber;
       });

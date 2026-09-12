@@ -159,8 +159,10 @@ describe("simulation playback backpressure", () => {
     );
 
     expect(getTickSnapshotRange).toHaveBeenCalledTimes(1);
-    expect(state.statistics.tickPerSecond).toBe(0);
-    expect(state.statistics.targetTickPerSecond).toBe(20);
+    expect(action.getPerformanceDiagnostics()).toMatchObject({
+      tickPerSecond: 0,
+      targetTickPerSecond: 20,
+    });
 
     response.resolve(createNotReadyRangeResponse(1, 20, 0));
     await firstAdvance;

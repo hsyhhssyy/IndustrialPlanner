@@ -1,5 +1,6 @@
 import { action, runInAction } from "mobx";
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
+import type { SimulationPerformanceDiagnosticsReadModel } from "@/domain/simulation";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -12,7 +13,7 @@ import { compileSimulationTopology, createSimulationDocumentHash } from "../topo
 import { prepareCurrentSimulationDocument } from "../topology";
 import { createSimulationTopologyMigration } from "../topology";
 import { createInitialSimulationRuntimeStatus, createInitialSimulationTimelineState } from "../contracts";
-import { DEFAULT_SIMULATION_SPEED } from "../contracts";
+import { DEFAULT_SIMULATION_SPEED, STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
 import type {
   CompiledSimulationTopology,
   SimulationStartResult,
@@ -221,6 +222,23 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
       regionalWorkerMode: this.regionalWorkerMode, playback: this.playback,
       recoverFromStartFailure: (error) => this.recoverFromStartFailure(error),
     });
+  }
+
+  public getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel {
+    const dynamicTickRate = this.stateReadWrite.runtimeStatus.dynamicTickRate
+      ?? this.topology.getSnapshot()?.standardTickRate
+      ?? STANDARD_TICK_RATE_PER_SECOND;
+    return {
+      tickPerSecond: this.playback.tickPerSecond,
+      targetTickPerSecond: this.stateReadWrite.runningState === "start"
+        ? this.stateReadWrite.simulationSpeed * dynamicTickRate
+        : 0,
+      playbackBufferedFrameCount:
+        this.playback.bufferedSize + (this.presentation.currentSnapshot === null ? 0 : 1),
+      runtimeRetainedStateCount: this.stateReadWrite.runtimeStatus.bufferSize,
+      timelineRetainedFrameCount: this.timeline.retainedFrameCount,
+      timelineGeneratedFramePerSecond: this.timeline.generatedFramePerSecond,
+    };
   }
 
   public readonly start: SimulationAction["start"] = async () => {
@@ -681,14 +699,23 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 
       if (response.result.status.status === "ready") {
         this.presentation.currentSnapshot = response.result.currentTick;
-        const snap = response.result.currentTick;
-        if (snap !== null) {
-          this.stateReadWrite.statistics = {
-            ...this.stateReadWrite.statistics,
-            baseBatteryJoules: snap.baseBatteryJoules,
-            baseBatteryCapacity: snap.baseBatteryCapacity,
-          };
-        }
+        // AI-REMOVED 2026-09-12:
+        // Reason: 电池读数由当前 Presentation 直接进入文档级运行时 Query，不再复制到公共 State。
+        // Trigger: 用户确认移除 SimulationState.statistics。
+        // Evidence: response.result.currentTick 已是 LegacySnapshotPresentationProjection 的唯一数据源。
+        // Replacement: SimulationQuery.getDocumentRuntimeStatus
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // const snap = response.result.currentTick;
+        // if (snap !== null) {
+        //   this.stateReadWrite.statistics = {
+        //     ...this.stateReadWrite.statistics,
+        //     baseBatteryJoules: snap.baseBatteryJoules,
+        //     baseBatteryCapacity: snap.baseBatteryCapacity,
+        //   };
+        // }
         if (playbackTickNumberOnReady !== undefined) {
           this.stateReadWrite.currentPlaybackTickNumber = playbackTickNumberOnReady;
           this.playback.playbackTargetTickNumber = playbackTickNumberOnReady;
@@ -802,7 +829,16 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.stateReadWrite.currentPlaybackTickNumber = 0;
     this.stateReadWrite.regionalTotalPowerDemand = null;
     this.playback.playbackTargetTickNumber = 0;
-    this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
+    // AI-REMOVED 2026-09-12:
+    // Reason: 性能窗口由 LegacyPlaybackController 私有持有，电池读数来自当前 Presentation。
+    // Trigger: 用户确认移除 SimulationState.statistics。
+    // Evidence: 下方 resetStatistics 已完整清理内部 TPS；presentation=null 已清理电池投影。
+    // Replacement: LegacyPlaybackController.resetStatistics
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
     this.playback.resetStatistics();
     this.nextPerfReportTick = 180;
     this.playback.resetPlaybackHotQueue();

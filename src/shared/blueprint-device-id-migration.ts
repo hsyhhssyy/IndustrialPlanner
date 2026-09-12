@@ -259,6 +259,7 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
     // AI-CORRECTION 2026-09-11: 将 AKEData 1.5.3@9913107-5 确认的 37 个唯一 180°修正放入新兼容边界；schema 6 文档只在本 step 旋转一次。
     // AI-CORRECTION 2026-09-11: 上述 6→7 边界未发布，现合并回 5→6；37 项端口补偿保持不变，三台液体变体同时重命名。
     // 对称、无映射和无端口定义继续不纳入。
+    // AI-CORRECTION 2026-09-12: AKEData 1.5.3@9885010-4 的物流阀门专表补充确认两个准入口各需 270°文档补偿；本 step 现共 39 项。
     deviceRules: [
       { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
       { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
@@ -297,6 +298,8 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "gas_storager_1", toDeviceId: "gas_storager_1", rotationOffset: 180 },
       { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
+      { fromDeviceId: "log_admission", toDeviceId: "log_admission", rotationOffset: 270 },
+      { fromDeviceId: "pipe_admission", toDeviceId: "pipe_admission", rotationOffset: 270 },
     ],
   },
   // AI-REMOVED 2026-09-11:

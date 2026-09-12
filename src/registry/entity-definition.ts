@@ -5027,12 +5027,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-09-12: AKEData FactoryBoxValveTable.log_conditioner 的角色+yaw 端口面规则确认 rotation=0 为 N→S；稳定端口 ID 保留以兼容既有配置。
     portGroups: [
       createPortGroup(
         "item_input",
         SOLID_BELT_PORT,
         "input",
-        [createPort("in_w", 0, 0, "W", {
+        [createPort("in_w", 0, 0, "N", {
           admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
         })],
       ),
@@ -5040,7 +5041,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         SOLID_BELT_PORT,
         "output",
-        [createPort("out_e", 0, 0, "E")],
+        [createPort("out_e", 0, 0, "S")],
       ),
     ],
     // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。
@@ -5086,12 +5087,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-09-12: AKEData FactoryFluidValveTable.log_pipe_conditioner 的角色+yaw 端口面规则确认 rotation=0 为 N→S；稳定端口 ID 保留以兼容既有配置。
     portGroups: [
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w", 0, 0, "W", {
+        [createPort("in_w", 0, 0, "N", {
           admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
         })],
       ),
@@ -5099,7 +5101,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e", 0, 0, "E")],
+        [createPort("out_e", 0, 0, "S")],
       ),
     ],
     // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。

@@ -1,7 +1,16 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
-import type { SimulationRuntimeStatistics } from "@/domain/simulation";
+// AI-REMOVED 2026-09-12:
+// Reason: CanvasPanel 不再读取领域状态中的运行时统计类型，性能诊断统一经 SimulationQuery 拉取。
+// Trigger: 用户确认从公共 SimulationState contract 移除仿真计数。
+// Evidence: SimulationRuntimeStatistics 已退役，getPerformanceDiagnostics 返回跨引擎统一读模型。
+// Replacement: SimulationQuery.getPerformanceDiagnostics。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
 import { SyncSaveIndicator } from "@/app/shell/layout/sync-save-indicator";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
@@ -20,38 +29,46 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-import {
-  calculateTimelineFrameRate,
-  countSavedTimelineFrames,
-  createTimelineFrameStatisticsSample,
-  type TimelineFrameStatisticsSample,
-} from "@/app/shell/canvas/timeline-frame-statistics";
+// AI-REMOVED 2026-09-12:
+// Reason: UI 不再从 timeline state 自行推导仿真缓存指标，避免 Dense 与 Legacy 语义分叉。
+// Trigger: 用户要求所有仿真性能统计统一由 SimulationQuery 提供。
+// Evidence: SimulationPerformanceDiagnosticsReadModel 已定义时间轴保留帧与生成速率。
+// Replacement: SimulationQuery.getPerformanceDiagnostics。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   calculateTimelineFrameRate,
+//   countSavedTimelineFrames,
+//   createTimelineFrameStatisticsSample,
+//   type TimelineFrameStatisticsSample,
+// } from "@/app/shell/canvas/timeline-frame-statistics";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 
+// AI-CORRECTION 2026-09-12: 仿真指标改为统一 Query 读模型字段，FPS 仍由 UI 本地计数。
 interface FpsSnapshot {
   fps: number;
   tps: number;
   targetTps: number;
-  bufferSize: number;
-  timelineSavedFrames: number;
-  timelineFrameRate: number;
+  playbackBufferedFrameCount: number;
+  runtimeRetainedStateCount: number;
+  timelineRetainedFrameCount: number;
+  timelineGeneratedFramePerSecond: number;
 }
 
-function pollSimulationStats(
-  appHost: AppHost,
-  timelineSample: TimelineFrameStatisticsSample,
-  timelineFrameRate: number,
-): FpsSnapshot {
+function pollSimulationStats(appHost: AppHost): FpsSnapshot {
   const sim = appHost.workspace.simulation;
-  const stats: SimulationRuntimeStatistics | undefined = sim?.state.statistics;
+  const diagnostics = sim?.queries.getPerformanceDiagnostics();
   return {
     // fps 由 setInterval 回调中的 rAF 计数器填充，此处仅返回其他字段
     fps: 0,
-    tps: stats?.tickPerSecond ?? 0,
-    targetTps: stats?.targetTickPerSecond ?? 0,
-    bufferSize: sim?.state.bufferSize ?? 0,
-    timelineSavedFrames: countSavedTimelineFrames(timelineSample),
-    timelineFrameRate,
+    tps: diagnostics?.tickPerSecond ?? 0,
+    targetTps: diagnostics?.targetTickPerSecond ?? 0,
+    playbackBufferedFrameCount: diagnostics?.playbackBufferedFrameCount ?? 0,
+    runtimeRetainedStateCount: diagnostics?.runtimeRetainedStateCount ?? 0,
+    timelineRetainedFrameCount: diagnostics?.timelineRetainedFrameCount ?? 0,
+    timelineGeneratedFramePerSecond: diagnostics?.timelineGeneratedFramePerSecond ?? 0,
   };
 }
 
@@ -89,15 +106,20 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const [diagnosticsSnapshot, setDiagnosticsSnapshot] = useState<GestureDiagnosticsSnapshot>(() =>
     gestureDiagnostics.getSnapshot(),
   );
-  const [fpsSnapshot, setFpsSnapshot] = useState<FpsSnapshot>(() => {
-    const timelineSample = createTimelineFrameStatisticsSample(
-      appHost.workspace.simulation?.state.timeline,
-      performance.now(),
-    );
-    return pollSimulationStats(appHost, timelineSample, 0);
-  });
+  const [fpsSnapshot, setFpsSnapshot] = useState<FpsSnapshot>(() =>
+    pollSimulationStats(appHost),
+  );
   const fpsFrameCountRef = useRef(0);
-  const timelineFrameSampleRef = useRef<TimelineFrameStatisticsSample | null>(null);
+  // AI-REMOVED 2026-09-12:
+  // Reason: 时间轴帧速率改由仿真内部高速采样，UI 无需保留上一份领域状态样本。
+  // Trigger: 用户要求界面只按固定周期查询统一性能读模型。
+  // Evidence: SimulationQuery.getPerformanceDiagnostics 已返回 timelineGeneratedFramePerSecond。
+  // Replacement: SimulationPerformanceDiagnosticsReadModel.timelineGeneratedFramePerSecond。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const timelineFrameSampleRef = useRef<TimelineFrameStatisticsSample | null>(null);
 
   // rAF 计数器：每帧递增
   useEffect(() => {
@@ -112,28 +134,14 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 
   // 每秒轮询一次 simulation stats + FPS 帧计数
   useEffect(() => {
-    timelineFrameSampleRef.current = createTimelineFrameStatisticsSample(
-      appHost.workspace.simulation?.state.timeline,
-      performance.now(),
-    );
     const id = setInterval(() => {
       const fps = fpsFrameCountRef.current;
       fpsFrameCountRef.current = 0;
-      const timelineSample = createTimelineFrameStatisticsSample(
-        appHost.workspace.simulation?.state.timeline,
-        performance.now(),
-      );
-      const timelineFrameRate = calculateTimelineFrameRate(
-        timelineFrameSampleRef.current,
-        timelineSample,
-      );
-      timelineFrameSampleRef.current = timelineSample;
-      const base = pollSimulationStats(appHost, timelineSample, timelineFrameRate);
+      const base = pollSimulationStats(appHost);
       setFpsSnapshot({ ...base, fps });
     }, 1000);
     return () => {
       clearInterval(id);
-      timelineFrameSampleRef.current = null;
     };
   }, [appHost]);
 
@@ -398,24 +406,28 @@ function CanvasFpsOverlay({
                 <td>{snapshot.fps}</td>
               </tr>
               <tr>
-                <th>Tick生成/秒</th>
+                <th>实际Tick/秒</th>
                 <td>{snapshot.tps.toFixed(1)}</td>
               </tr>
               <tr>
-                <th>动态Tick因数</th>
+                <th>目标Tick/秒</th>
                 <td>{snapshot.targetTps}</td>
               </tr>
               <tr>
-                <th>帧缓存</th>
-                <td>{snapshot.bufferSize}</td>
+                <th>播放帧缓存</th>
+                <td>{snapshot.playbackBufferedFrameCount}</td>
+              </tr>
+              <tr>
+                <th>运行时保留状态</th>
+                <td>{snapshot.runtimeRetainedStateCount}</td>
               </tr>
               <tr>
                 <th>时间轴保存帧</th>
-                <td>{snapshot.timelineSavedFrames}</td>
+                <td>{snapshot.timelineRetainedFrameCount}</td>
               </tr>
               <tr>
-                <th>时间轴计算帧/秒</th>
-                <td>{snapshot.timelineFrameRate.toFixed(1)}</td>
+                <th>时间轴预计算帧/秒</th>
+                <td>{snapshot.timelineGeneratedFramePerSecond.toFixed(1)}</td>
               </tr>
             </tbody>
           </table>

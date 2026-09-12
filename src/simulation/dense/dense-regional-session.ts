@@ -40,6 +40,7 @@ interface DenseRegionalBaseRuntime {
   readonly projection: DenseProjectionStore;
   readonly dictionary: DenseTopologyDictionary;
   readonly identity: { readonly sessionId: string; readonly topologyVersion: number };
+  runtimeRetainedStateCount: number;
 }
 
 export class DenseRegionalSimulationSession {
@@ -100,6 +101,7 @@ export class DenseRegionalSimulationSession {
           projection,
           dictionary: response.layout.dictionary,
           identity,
+          runtimeRetainedStateCount: response.runtimeRetainedStateCount,
           initialDelta: response.initialDelta,
         };
       } catch (error) {
@@ -134,6 +136,10 @@ export class DenseRegionalSimulationSession {
 
   public get currentWarehouseCounts(): Readonly<Record<string, number>> {
     return this.authorityState.warehouseCounts;
+  }
+
+  public get runtimeRetainedStateCount(): number {
+    return this.bases.reduce((total, base) => total + base.runtimeRetainedStateCount, 0);
   }
 
   public async runNextEpoch(): Promise<DenseRegionalCommittedEpoch> {
@@ -205,6 +211,7 @@ export class DenseRegionalSimulationSession {
     })));
     const playbackDeltas: DenseFrameDelta[] = [];
     for (const { base, response } of finalized) {
+      base.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       const preparedResponse = prepared.find((entry) => entry.base === base)?.response;
       if (preparedResponse === undefined) {
         throw new Error(`Dense regional prepared response is missing base "${base.input.baseId}".`);

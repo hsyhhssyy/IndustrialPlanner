@@ -187,7 +187,23 @@ const DEVICE_LABEL_MIN_TEXT_WIDTH = 24;
 const DEVICE_LABEL_GAP = 2;
 const DEVICE_LABEL_LINE_HEIGHT_RATIO = 1.16;
 const DEVICE_LABEL_DEFAULT_TEXT_COLOR = 0xffffff;
-const DEVICE_LABEL_DEFAULT_STROKE_COLOR = 0x20242a;
+// AI-REMOVED 2026-09-12:
+// Reason: 3D Top 设备名称不再使用描边与旧的柔化下投影，改为匹配白色 avatar 的东南硬投影。
+// Trigger: 用户要求设备名称文字使用与图片相同的阴影，且只在 3D Top 下生效。
+// Evidence: createDeviceNameTextStyle 的非蓝图分支是 3D Top 标签文字的唯一样式入口。
+// Replacement: DEVICE_LABEL_TOP_VIEW_SHADOW_COLOR 与配套阴影参数。
+// Risk: Low；蓝图分支仍保持黑色无阴影。
+// Human Review: Required
+//
+// Original code:
+// const DEVICE_LABEL_DEFAULT_STROKE_COLOR = 0x20242a;
+const DEVICE_LABEL_TOP_VIEW_SHADOW_COLOR = 0x4c4c4c;
+const DEVICE_LABEL_TOP_VIEW_SHADOW_ALPHA = 0.72;
+// AI-CORRECTION 2026-09-12: 游戏内覆盖文字使用全向深色轮廓与独立右下硬阴影；阴影不再承担轮廓职责。
+const DEVICE_LABEL_TOP_VIEW_OUTLINE_COLOR = 0x252525;
+const DEVICE_LABEL_TOP_VIEW_OUTLINE_ALPHA = 0.96;
+const DEVICE_LABEL_TOP_VIEW_OUTLINE_WIDTH_RATIO = 0.12;
+const DEVICE_LABEL_TOP_VIEW_SHADOW_OFFSET_RATIO = 0.08;
 const DEVICE_LABEL_BLUEPRINT_TEXT_COLOR = 0x111111;
 
 // AI-REMOVED 2026-06-14:
@@ -2425,17 +2441,35 @@ function createDeviceNameTextStyle(options: {
     wordWrap: true,
     wordWrapWidth: options.wordWrapWidth,
     lineHeight: options.fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO,
+    // AI-REMOVED 2026-09-12:
+    // Reason: 白色文字改用与 avatar 相同的东南硬投影，旧描边会叠加成双重边缘。
+    // Trigger: 用户要求仅在 3D Top 下让设备名称文字匹配图片阴影。
+    // Evidence: 本分支仅在 useBlueprintStyle=false 时执行；蓝图文字分支不受影响。
+    // Replacement: 下方 dropShadow。
+    // Risk: Low；浅色背景下的可读性改由 72% 深灰硬投影保证。
+    // Human Review: Required
+    //
+    // Original code:
+    // stroke: {
+    //   color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
+    //   width: Math.max(1, Math.round(options.fontSize * 0.16)),
+    //   alpha: 0.42,
+    // },
+    // AI-CORRECTION 2026-09-12: 对照游戏内“暗管入口”“提纯机”覆盖层后，确认右下阴影不能替代全向轮廓；新增高不透明度细描边以恢复复杂背景上的辨识度。
     stroke: {
-      color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
-      width: Math.max(1, Math.round(options.fontSize * 0.16)),
-      alpha: 0.42,
+      color: DEVICE_LABEL_TOP_VIEW_OUTLINE_COLOR,
+      width: Math.max(1, options.fontSize * DEVICE_LABEL_TOP_VIEW_OUTLINE_WIDTH_RATIO),
+      alpha: DEVICE_LABEL_TOP_VIEW_OUTLINE_ALPHA,
     },
     dropShadow: {
-      color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
-      alpha: 0.32,
-      blur: 2,
-      distance: 1,
-      angle: Math.PI / 2,
+      color: DEVICE_LABEL_TOP_VIEW_SHADOW_COLOR,
+      alpha: DEVICE_LABEL_TOP_VIEW_SHADOW_ALPHA,
+      blur: 0,
+      distance: Math.SQRT2 * Math.max(
+        1,
+        options.fontSize * DEVICE_LABEL_TOP_VIEW_SHADOW_OFFSET_RATIO,
+      ),
+      angle: Math.PI / 4,
     },
   };
 }

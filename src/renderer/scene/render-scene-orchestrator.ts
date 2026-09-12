@@ -28,6 +28,7 @@ import {
   UPDATE_PRIORITY,
 } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
+import type { TexturePerfDiagnostics } from "../texture"
 import {
   createPixiRenderDiagnostics,
   type PixiRenderDiagnosticsSnapshot,
@@ -108,7 +109,7 @@ import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecora
 import { createConfiguredItemIconDecoration } from "./decorations/ConfiguredItemIconDecoration"
 
 import { LogisticsMaterialSceneState } from "./logistics-material-state"
-import { BuildingEffectsScene } from "../building-effects"
+import { BuildingEffectsScene, resolveBuildingEffectStatusKey } from "../building-effects"
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
@@ -253,6 +254,7 @@ export interface RenderSceneOrchestrator {
 
 export function createRenderSceneOrchestrator(
   renderHost: RenderHost,
+  textureProfiler?: TexturePerfDiagnostics,
 ): RenderSceneOrchestrator {
   const app = renderHost.app
   const layers = createRenderLayers()
@@ -329,6 +331,11 @@ export function createRenderSceneOrchestrator(
   )
   const logisticsMaterialState = new LogisticsMaterialSceneState()
   const buildingEffects = new BuildingEffectsScene()
+  const resolveBuildingEffectRingStatus = (entityId: string): number | undefined => {
+    const status = renderHost.workspace.simulation?.queries.getDeviceOperatingStatus?.(entityId)
+      ?? "closed"
+    return resolveBuildingEffectStatusKey(status)
+  }
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
   const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
@@ -345,6 +352,7 @@ export function createRenderSceneOrchestrator(
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const pixiRenderDiagnostics = createPixiRenderDiagnostics({
     app,
+    textureProfiler,
     layers: {
       stage: app.stage,
       pipeFlow: pipeSubEntity,
@@ -693,10 +701,12 @@ export function createRenderSceneOrchestrator(
         enabled: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
           && renderHost.workspace.editor?.state.suppressPipes !== true,
         version: `${frameVersions.document}:${frameVersions.collections}`,
+        statusVersion: frameVersions.simulation,
         nowMs: frameTime.nowMs,
         bounds: resolveVisibleWorldRect(viewportState, ctx.viewportBounds),
         entities, definitions: entityDefinitionMap, materials: logisticsMaterials,
         hiddenIds: new Set(editorCollections[EntityCollectionType.ghost]),
+        resolveRingStatus: resolveBuildingEffectRingStatus,
       })
       ctx.buildingEffectPortKeys = buildingEffects.portKeys
     })

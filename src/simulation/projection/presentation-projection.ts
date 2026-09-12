@@ -17,6 +17,8 @@ export interface SimulationPresentationProjection {
   readonly totalPowerDemand: number | null;
   readonly currentPowerGeneration: number | null;
   readonly isPowerOutage: boolean;
+  readonly baseBatteryJoules: number;
+  readonly baseBatteryCapacity: number;
   getSlot(slotId: string): RuntimeSlotSnapshot | null;
   getDevice(deviceId: string): RuntimeDeviceSnapshot | null;
   getNode(nodeId: string): RuntimeNodeSnapshot | null;

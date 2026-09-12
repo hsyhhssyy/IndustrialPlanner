@@ -438,6 +438,15 @@ describe("ST2-RQ-023 dense host regressions", () => {
         standardTickRate: 4,
         tickRate: 4,
       });
+      await host.actions.advancePlaybackByDeltaMs(1_000);
+      expect(host.queries.getPerformanceDiagnostics()).toMatchObject({
+        tickPerSecond: 4,
+        targetTickPerSecond: 4,
+        playbackBufferedFrameCount: 1,
+        runtimeRetainedStateCount: expect.any(Number),
+        timelineRetainedFrameCount: 0,
+        timelineGeneratedFramePerSecond: 0,
+      });
       expect(readSimulationSnapshot(host)).toMatchObject({
         standardTickRate: 4,
         tickRate: 4,

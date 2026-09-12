@@ -104,6 +104,7 @@ node .agents/skills/unpack-data-analysis/scripts/fetch-akedata-tables.mjs \
 | 任务 | 首选原始表 |
 | --- | --- |
 | 设备占地、供电、端口、renderer mode | `FactoryBuildingTable` |
+| 物品准入口 / 管道准入口端口 | `FactoryBoxValveTable`、`FactoryFluidValveTable` |
 | 制造设备语义变体与配方组 | `FactoryMachineCrafterTable.modeMap` |
 | 建筑物品到设备 ID | `FactoryBuildingItemTable` |
 | renderer template 细节 | `FactoryBuildingRendererTemplateTable`，并结合 `FactoryBuildingTable.rendererTemplateMap` |

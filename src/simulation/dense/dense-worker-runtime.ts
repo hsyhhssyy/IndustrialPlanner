@@ -144,6 +144,7 @@ export class DenseWorkerRuntime {
       type: "topology-ready",
       layout,
       initialDelta,
+      runtimeRetainedStateCount: this.session.checkpoints.size,
     };
   }
 
@@ -168,6 +169,7 @@ export class DenseWorkerRuntime {
         type: "presentation-checkpoint",
         delta: session.emitter.emitCheckpoint(session.kernel),
         bufferIds: new Uint32Array(),
+        runtimeRetainedStateCount: session.checkpoints.size,
       };
     }
 
@@ -184,6 +186,7 @@ export class DenseWorkerRuntime {
       type: "frame-delta",
       delta: session.emitter.emitTick(session.kernel, result),
       bufferIds: new Uint32Array(),
+      runtimeRetainedStateCount: session.checkpoints.size,
     };
   }
 
@@ -259,6 +262,7 @@ export class DenseWorkerRuntime {
       tickNumber: delta.tickNumber,
       delta,
       bufferIds: new Uint32Array(),
+      runtimeRetainedStateCount: session.checkpoints.size,
     };
   }
 
@@ -313,6 +317,7 @@ export class DenseWorkerRuntime {
       type: "presentation-checkpoint",
       delta: session.emitter.emitCheckpoint(presentationKernel),
       bufferIds: new Uint32Array(),
+      runtimeRetainedStateCount: session.checkpoints.size,
     };
   }
 

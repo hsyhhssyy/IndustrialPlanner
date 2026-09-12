@@ -403,17 +403,36 @@ describe("CanvasPanel", () => {
       runningState: "start",
       simulationMode: "single-base",
         simulationSpeed: 1,
-        statistics: {
-          tickPerSecond: 20,
-          targetTickPerSecond: 20,
-          baseBatteryJoules: 0,
-          baseBatteryCapacity: 0,
-        },
-        bufferSize: 180,
+        // AI-REMOVED 2026-09-12:
+        // Reason: CanvasPanel 不再从 SimulationState 读取性能统计与公共缓存字段。
+        // Trigger: 用户确认面板每秒统一查询 SimulationQuery。
+        // Evidence: 下方 getPerformanceDiagnostics 测试桩提供全部面板仿真指标。
+        // Replacement: queries.getPerformanceDiagnostics。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // statistics: {
+        //   tickPerSecond: 20,
+        //   targetTickPerSecond: 20,
+        //   baseBatteryJoules: 0,
+        //   baseBatteryCapacity: 0,
+        // },
+        // bufferSize: 180,
         timeline,
       },
       actions: {} as SimulationContract["actions"],
-      queries: {} as SimulationContract["queries"],
+      queries: {
+        getPerformanceDiagnostics: () => ({
+          tickPerSecond: 20,
+          targetTickPerSecond: 20,
+          playbackBufferedFrameCount: 180,
+          runtimeRetainedStateCount: 180,
+          timelineRetainedFrameCount:
+            timeline.availableToTickNumber - timeline.availableFromTickNumber + 1,
+          timelineGeneratedFramePerSecond: 50,
+        }),
+      } as SimulationContract["queries"],
     };
     const appHost = createAppHost(workspace);
 
@@ -432,7 +451,9 @@ describe("CanvasPanel", () => {
 
     const panelText = container.querySelector(".canvas-fps")?.textContent ?? "";
     expect(panelText).toContain("时间轴保存帧60");
-    expect(panelText).toContain("时间轴计算帧/秒50.0");
+    expect(panelText).toContain("时间轴预计算帧/秒50.0");
+    expect(panelText).toContain("播放帧缓存180");
+    expect(panelText).toContain("运行时保留状态180");
   });
 
   it("pans the editor viewport on middle mouse drag", () => {

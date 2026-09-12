@@ -2838,17 +2838,30 @@ describe("Base panel power bar", () => {
     if (simulationStatus !== null) {
       const getDocumentRuntimeStatus = vi.fn(() => ({
         tickNumber: 0,
+        standardTickRate: 20,
+        tickRate: 20,
         totalPowerDemand: simulationStatus.totalPowerDemand,
         currentPowerGeneration: simulationStatus.currentPowerGeneration,
         isPowerOutage: simulationStatus.isPowerOutage ?? false,
+        baseBatteryJoules: simulationStatus.batteryJoules ?? 0,
+        baseBatteryCapacity: simulationStatus.batteryCapacity ?? 0,
       }));
 
       workspace.simulation = {
         state: {
-          statistics: {
-            baseBatteryJoules: simulationStatus.batteryJoules ?? 0,
-            baseBatteryCapacity: simulationStatus.batteryCapacity ?? 0,
-          },
+          // AI-REMOVED 2026-09-12:
+          // Reason: 电池测试数据改由文档运行时 Query 提供，不再放入 SimulationState.statistics。
+          // Trigger: 用户确认移除 SimulationState.statistics。
+          // Evidence: 上方 getDocumentRuntimeStatus 已包含 battery fields。
+          // Replacement: getDocumentRuntimeStatus 测试桩。
+          // Risk: Low。
+          // Human Review: Required
+          //
+          // Original code:
+          // statistics: {
+          //   baseBatteryJoules: simulationStatus.batteryJoules ?? 0,
+          //   baseBatteryCapacity: simulationStatus.batteryCapacity ?? 0,
+          // },
         },
         queries: {
           getStatusRuntimeJson: vi.fn(() => "{}"),
@@ -2932,10 +2945,19 @@ describe("Base panel power bar", () => {
 
     workspace.simulation = {
       state: {
-        statistics: {
-          baseBatteryJoules: 0,
-          baseBatteryCapacity: 0,
-        },
+        // AI-REMOVED 2026-09-12:
+        // Reason: null 文档运行时状态已足以表达无电池读数，不再构造已退役 statistics。
+        // Trigger: 用户确认移除 SimulationState.statistics。
+        // Evidence: getDocumentRuntimeStatus 测试桩明确返回 null。
+        // Replacement: queries.getDocumentRuntimeStatus。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // statistics: {
+        //   baseBatteryJoules: 0,
+        //   baseBatteryCapacity: 0,
+        // },
       },
       queries: {
         getStatusRuntimeJson: vi.fn(() => "{}"),

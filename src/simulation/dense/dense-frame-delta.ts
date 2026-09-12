@@ -330,8 +330,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private currentTotalPowerDemand = 0;
   private currentPowerGenerationValue = 0;
   private currentIsPowerOutage = false;
-  private baseBatteryJoules = 0;
-  private baseBatteryCapacity = 0;
+  private baseBatteryJoulesValue = 0;
+  private baseBatteryCapacityValue = 0;
   private transfers: RuntimeTickSnapshot["transfers"] = [];
   private diagnostics: RuntimeTickSnapshot["diagnostics"] = [];
   private gasDiffusions: RuntimeTickSnapshot["gasDiffusions"] = [];
@@ -389,6 +389,14 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     return this.currentIsPowerOutage;
   }
 
+  public get baseBatteryJoules(): number {
+    return this.baseBatteryJoulesValue;
+  }
+
+  public get baseBatteryCapacity(): number {
+    return this.baseBatteryCapacityValue;
+  }
+
   public get batteryJoules(): number {
     return this.baseBatteryJoules;
   }
@@ -433,8 +441,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     this.currentTotalPowerDemand = delta.totalPowerDemand;
     this.currentPowerGenerationValue = delta.currentPowerGeneration;
     this.currentIsPowerOutage = delta.isPowerOutage;
-    this.baseBatteryJoules = delta.baseBatteryJoules;
-    this.baseBatteryCapacity = delta.baseBatteryCapacity;
+    this.baseBatteryJoulesValue = delta.baseBatteryJoules;
+    this.baseBatteryCapacityValue = delta.baseBatteryCapacity;
     this.transfers = decodeTransfers(delta, this.dictionary);
     this.diagnostics = delta.diagnostics.map((diagnostic) => ({ ...diagnostic }));
     this.gasDiffusions = decodeGasDiffusions(delta, this.dictionary);
@@ -497,8 +505,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       totalPowerDemand: this.currentTotalPowerDemand,
       currentPowerGeneration: this.currentPowerGenerationValue,
       isPowerOutage: this.currentIsPowerOutage,
-      baseBatteryJoules: this.baseBatteryJoules,
-      baseBatteryCapacity: this.baseBatteryCapacity,
+      baseBatteryJoules: this.baseBatteryJoulesValue,
+      baseBatteryCapacity: this.baseBatteryCapacityValue,
       slots: materializeIndexedRecord(this.dictionary.slotIds, this.slots, "slot"),
       devices: materializeIndexedRecord(this.dictionary.deviceIds, this.devices, "device"),
       nodes: materializeIndexedRecord(this.dictionary.nodeIds, this.nodes, "node"),

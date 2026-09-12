@@ -98,16 +98,19 @@ export type DenseWorkerResponse =
       readonly type: "topology-ready";
       readonly layout: DenseTopologyLayout;
       readonly initialDelta: DenseFrameDelta;
+      readonly runtimeRetainedStateCount: number;
     })
   | (DenseProtocolIdentity & {
       readonly type: "frame-delta";
       readonly delta: DenseFrameDelta;
       readonly bufferIds: Uint32Array;
+      readonly runtimeRetainedStateCount: number;
     })
   | (DenseProtocolIdentity & {
       readonly type: "presentation-checkpoint";
       readonly delta: DenseFrameDelta;
       readonly bufferIds: Uint32Array;
+      readonly runtimeRetainedStateCount: number;
     })
   | (DenseProtocolIdentity & {
       readonly type: "command-ack";
@@ -133,6 +136,7 @@ export type DenseWorkerResponse =
       readonly tickNumber: number;
       readonly delta: DenseFrameDelta;
       readonly bufferIds: Uint32Array;
+      readonly runtimeRetainedStateCount: number;
     })
   | (DenseProtocolIdentity & {
       readonly type: "protocol-error";

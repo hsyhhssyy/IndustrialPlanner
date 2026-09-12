@@ -69,6 +69,12 @@ localCellY = range.depth - 1 - position.z
 
 端口位于角点时，仅凭坐标不能唯一决定 `edge`。朝向审计应先以“角色、`isPipe`、坐标”的多重集识别设备整体旋转；registry 的端口坐标和 `edge` 再作为同一整体一起旋转，不能用 `rotation.y` 为单个角点另造方向规则。
 
+### 1×1 物流阀门专表
+
+`FactoryBoxValveTable.log_conditioner` 与 `FactoryFluidValveTable.log_pipe_conditioner` 的输入、输出端口都位于 `(x,z)=(0,0)`，仅靠中心坐标无法区分默认朝向。这两个专表使用已经过同族 `FactoryLiquidRouterTable` 和运行时端口面解码交叉验证的规则：输出端口按 `rotation.y` 的 `0/90/180/270` 依次映射到项目 `N/E/S/W`，输入端口取反向端口面。
+
+该规则必须同时具备“物流阀门专表、输入/输出角色、正交 yaw”三项证据；它不是 `rotation.y` 到 `edge` 的全局映射，不得用于 `FactoryBuildingTable` 普通设备。当前两个准入口的输入和输出均为 `rotation.y=180`，因此 `rotation=0` 时输入为 N、输出为 S。
+
 ## 已确认案例
 
 | 设备 | 解包端口 | 注册表端口 | 结论 |
@@ -94,11 +100,11 @@ localCellY = range.depth - 1 - position.z
 
 ## 分析步骤
 
-1. 通过 `FactoryBuildingItemTable` 从物品 ID 找到真实 `buildingId`。
+1. 普通设备通过 `FactoryBuildingItemTable` 从物品 ID 找到真实 `buildingId`；物流阀门分别通过 `gridUnitData.itemId` / `liquidUnitData.itemId` 建立物品到专表记录的映射。
 2. 读取 `FactoryMachineCrafterTable[buildingId].modeMap`，用 `modeName` 建立语义变体，用 `groupName` 关联配方组。
-3. 读取 `FactoryBuildingTable[buildingId]` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
+3. 普通设备读取 `FactoryBuildingTable[buildingId]`；物品准入口与管道准入口分别读取 `FactoryBoxValveTable.log_conditioner`、`FactoryFluidValveTable.log_pipe_conditioner` 的 `range`、`inputPorts`、`outputPorts` 和 `rendererTemplateMap`。
 4. 用 `isPipe` 区分管道和传送带端口，保留 `inputPorts` / `outputPorts` 的角色语义。
-5. 对全部 `FactoryBuildingTable` 记录应用全局映射，得到项目 `(localCellX, localCellY)`；不要逐设备重新校准。
+5. 对全部 `FactoryBuildingTable` 记录应用全局坐标映射；对 1×1 物流阀门专表应用本页限定的角色+yaw 端口面规则；不要逐设备重新校准。
 6. 用“角色、`isPipe`、坐标”的多重集匹配 registry。多变体实体允许匹配原始 building 全部端口的子集，但不得改变角色或管道类型来凑结果。
 7. 按项目 `GridRotation` 约定（俯视坐标 Y 轴向下，90° 为顺时针）枚举 0°、90°、180°、270°。唯一非 0° 匹配表示 registry 默认朝向需要旋转；唯一 0° 匹配表示一致；多个匹配表示端口布局旋转对称，单靠端口不能确定视觉角度；无匹配表示映射、变体端口子集或 registry 相对布局存在其他问题。
 8. 把“解包标准端口旋转到当前 registry”的唯一匹配角记为 `A`：registry 端口及其视觉资源的修正角是 `-A mod 360`；为了保持既有设备在世界中的朝向，蓝图和基地文档中保存的设备旋转迁移量是 `+A mod 360`。不得把这两个方向混用。

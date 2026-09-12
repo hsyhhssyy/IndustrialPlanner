@@ -15,8 +15,9 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
 - 对账物品中英文名称时读取 [物品名称对账](references/item-reconciliation.md)，并使用其中的脚本区分普通物品、缺少直接翻译和项目组合命名物品。
 - 取得解包数据后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。
-- 端口朝向任务必须先完成“解包逻辑端口 → registry”的数据对账，再把精灵、mask、renderer 输出和 `spriteOffset` 作为修改后的视觉验收项。
+- 端口朝向任务必须先完成“解包逻辑端口 → registry”的数据对账，再把精灵、mask、renderer 输出和 `spriteOffset` 作为修改后的视觉验收项；普通设备读取 `FactoryBuildingTable`，物流阀门读取 `FactoryBoxValveTable` / `FactoryFluidValveTable`。
 - 端口坐标映射固定为 `localCellX = position.x`、`localCellY = range.depth - 1 - position.z`。该映射由用户对 `transmuter_1` 的独立游戏实测校准：raw5x5 输入 `(0,1),(0,3),(2,4)`、输出 `(4,1),(4,3)` 对应游戏左侧两个输入、上侧第三输入、右侧两个输出、下侧空。不得以当前 registry 或旧审计报告反推映射；这会形成循环论证并把整体方向旋转 180°。
+- 1×1 物流阀门的输入输出端口共用中心坐标，必须按 [端口坐标与变体规则](references/port-coordinates.md) 同时使用端口角色与专表正交 `rotation.y` 解析端口面；不得把该规则外推到 `FactoryBuildingTable` 普通设备。
 
 ## 不能做什么
 

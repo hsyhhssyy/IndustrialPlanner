@@ -34,6 +34,7 @@
 - [ ] 根据 `FactoryMachineCrafterTable.modeMap` 建立 raw building → 语义变体 → `formulaGroupId` 映射；不得只使用 renderer mode。
 - [ ] 根据 `FactoryMachineCraftTable` 的配方 ID 与当前 `recipe-definition.ts.machineId` 核对项目实体覆盖的全部 raw mode；不得假设一项目实体只能映射一个 mode。
 - [ ] 根据 `FactoryBuildingTable` 核对占地、`needPower`、`powerConsume`、类型、端口和 `rendererTemplateMap`。
+- [ ] 物品准入口与管道准入口分别根据 `FactoryBoxValveTable`、`FactoryFluidValveTable` 核对物品映射、占地、端口角色、正交 yaw 和 renderer mode；不得因 `FactoryBuildingTable` 缺少记录而归入未映射。
 - [ ] 按 [端口坐标与变体规则](port-coordinates.md) 核对端口角色、`isPipe`、坐标和默认朝向。
 - [ ] 核对 `src/registry/entity-definition.ts`。
 - [ ] 核对 `src/registry/entity-variant-definition.ts`。

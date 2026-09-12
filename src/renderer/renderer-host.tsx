@@ -152,7 +152,7 @@ export async function createRenderHost(
     },
   };
 
-  orchestrator = createRenderSceneOrchestrator(host);
+  orchestrator = createRenderSceneOrchestrator(host, textureManager.performanceDiagnostics);
 
   workspace.render = host;
 

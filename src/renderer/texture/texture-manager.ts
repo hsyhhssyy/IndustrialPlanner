@@ -8,6 +8,7 @@ import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
 import { LogisticsMaterialTextureCache, type LogisticsDynamicSession } from "./logistics-material-textures"
+import { TexturePerfDiagnostics } from "./texture-perf-diagnostics"
 
 import {
   DeviceAnimationTextureCache,
@@ -41,8 +42,10 @@ export function isFallbackTexture(texture: Texture): boolean {
  * TextureActions 是 src/renderer/texture 对外唯一出口。
  * 目录外代码不得 import texture 目录下其他任何东西。
  * AI-CORRECTION 2026-09-05: 动画结果类型通过 texture/index.ts 公开；运行时加载仍统一由 TextureActions 提供。
+ * AI-CORRECTION 2026-09-12: texture/index.ts 额外公开诊断收集器，由 TextureActions 持有并交给主渲染诊断使用。
  */
 interface TextureActions {
+  readonly performanceDiagnostics: TexturePerfDiagnostics;
   getTexture(unifiedResourceKey: string): Promise<Texture>;
   getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null>;
   getDeviceAnimationStats(): DeviceAnimationTextureStats;
@@ -54,6 +57,7 @@ interface TextureActions {
 }
 
 class TextureActionsImpl implements TextureActions {
+  public readonly performanceDiagnostics = new TexturePerfDiagnostics(() => this.deviceAnimations.getStats())
   private textureConfig: RenderTextureConfig
 
   private readonly texturePromisesByKey = new Map<string, Promise<Texture>>()
@@ -89,10 +93,10 @@ class TextureActionsImpl implements TextureActions {
         }
         return response.json()
       },
-      loadTexture: (path) => Assets.load<Texture>(path),
+      loadTexture: (path) => this.performanceDiagnostics.load(path, () => Assets.load<Texture>(path)),
       unloadTexture: async (path, texture) => {
         this.trackedBitmapTextures.delete(texture)
-        await Assets.unload(path)
+        await this.performanceDiagnostics.unload(path, texture, () => Assets.unload(path))
       },
       configureTexture: (texture) => {
         this.trackedBitmapTextures.add(texture)
@@ -135,6 +139,7 @@ class TextureActionsImpl implements TextureActions {
 
   public destroy(): void {
     this.destroyed = true
+    this.performanceDiagnostics.syncDebugState(false)
     this.deviceAnimations.destroy()
     this.logisticsMaterials.destroy()
     this.disposeResolutionReaction?.()
@@ -300,6 +305,7 @@ class TextureActionsImpl implements TextureActions {
  * AI-CORRECTION 2026-09-05: 增加 getDeviceAnimation，按 spriteId 共享完整四阶段纹理与并集遮罩。
  * AI-CORRECTION 2026-09-06: 增加动画分页驻留统计；getDeviceAnimation 改为按实例返回页级纹理会话。
  * AI-CORRECTION 2026-09-10: 增加物流静态图集、可释放的动态材质会话及驻留统计。
+ * AI-CORRECTION 2026-09-12: 增加只读 performanceDiagnostics，采集动画生命周期及实际 WebGL 上传。
  * textureConfig 作为内部状态由 render host 持有，不额外 export。
  */
 export function createTextureActions(options: {

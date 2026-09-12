@@ -1,4 +1,5 @@
 import type { Application, Container } from "pixi.js"
+import type { TexturePerfDiagnostics } from "./texture"
 
 export const PIXI_RENDER_LAYER_PROFILE_STORAGE_KEY = "industrial-planner:pixi-render-layer-profile"
 export const PIXI_RENDER_ANTIALIAS_STORAGE_KEY = "industrial-planner:pixi-render-antialias"
@@ -32,6 +33,7 @@ export interface PixiRenderDiagnosticLayerTargets {
 }
 
 export interface PixiRenderDiagnosticsSnapshot {
+  readonly textures: ReturnType<TexturePerfDiagnostics["flush"]>;
   readonly backend: "webgl" | "unknown";
   readonly antialias: boolean;
   readonly msaaSamples: number | null;
@@ -105,6 +107,7 @@ interface WebGl1TimerExtension {
 }
 
 interface RendererInternals {
+  readonly texture?: unknown;
   readonly uid?: number;
   readonly resolution?: number;
   readonly width?: number;
@@ -133,6 +136,7 @@ export function resolveMainRendererAntialias(debugMode: boolean): boolean {
 
 export function createPixiRenderDiagnostics(options: {
   readonly app: Application;
+  readonly textureProfiler?: TexturePerfDiagnostics;
   readonly layers: PixiRenderDiagnosticLayerTargets;
 }): PixiRenderDiagnostics {
   const renderer = options.app.renderer as unknown as RendererInternals
@@ -158,6 +162,55 @@ export function createPixiRenderDiagnostics(options: {
     ): void => {
       if (installMethodHook(target, key, wrap, hookRestorers)) {
         installedHooks.push(name)
+      }
+    }
+
+    if (options.textureProfiler !== undefined) {
+      const textureSystem = asRecord(renderer.texture)
+      let activeSource: unknown = null
+      const readSource = (): unknown => activeSource
+        ?? asRecord(textureSystem?._boundTextures)?.[String(textureSystem?._activeTextureLocation)]
+      // onSourceUpdate 会作为事件监听器注册；保持其身份，普通更新从绑定纹理缓存归属。
+      for (const [method, operation] of [["_initSource", "init"], ["updateStyle", null]] as const) {
+        install(renderer.texture, method, `texture.${method}`, (original) => function (...args) {
+          const previous = activeSource
+          activeSource = args[0]
+          const startedAtMs = operation === null ? 0 : performance.now()
+          let failed = true
+          try {
+            const result = Reflect.apply(original, this, args)
+            failed = false
+            return result
+          } finally {
+            if (operation !== null) options.textureProfiler?.record(operation, activeSource,
+              performance.now() - startedAtMs, trackingRender, failed)
+            activeSource = previous
+          }
+        })
+      }
+      for (const [method, operation] of [
+        ["texImage2D", "texImage2D"], ["texSubImage2D", "texSubImage2D"],
+        ["generateMipmap", "mipmap"], ["getParameter", "anisotropyQuery"],
+      ] as const) {
+        install(renderer.gl, method, `gl.${method}`, (original) => function (...args) {
+          // MAX_TEXTURE_MAX_ANISOTROPY_EXT；不增加任何 GL 查询或同步操作。
+          if (method === "getParameter" && args[0] !== 0x84FF) return Reflect.apply(original, this, args)
+          const source = readSource()
+          const dimensions: readonly [number, number] | undefined = args.length >= 9
+            && (method === "texImage2D" || method === "texSubImage2D")
+            ? method === "texImage2D" ? [Number(args[3]), Number(args[4])] : [Number(args[4]), Number(args[5])]
+            : undefined
+          const startedAtMs = performance.now()
+          let failed = true
+          try {
+            const result = Reflect.apply(original, this, args)
+            failed = false
+            return result
+          } finally {
+            options.textureProfiler?.record(operation, source, performance.now() - startedAtMs,
+              trackingRender, failed, dimensions)
+          }
+        })
       }
     }
 
@@ -235,6 +288,7 @@ export function createPixiRenderDiagnostics(options: {
     }
 
     enabled = true
+    options.textureProfiler?.syncDebugState(true)
     layerProfile = readPixiRenderLayerProfile()
     installRendererHooks()
     gpuTimer = createGpuTimerCollector(renderer.gl)
@@ -257,6 +311,7 @@ export function createPixiRenderDiagnostics(options: {
     layerProfile = "full"
     msaaSamples = null
     enabled = false
+    options.textureProfiler?.syncDebugState(false)
   }
 
   return {
@@ -322,6 +377,7 @@ export function createPixiRenderDiagnostics(options: {
       const framebufferHeight = normalizeDimension(renderer.canvas?.height)
 
       return {
+        textures: options.textureProfiler?.flush() ?? null,
         backend: renderer.gl === undefined ? "unknown" : "webgl",
         antialias: renderer.view?.antialias === true,
         msaaSamples,

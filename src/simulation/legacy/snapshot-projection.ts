@@ -43,6 +43,14 @@ export class LegacySnapshotPresentationProjection implements SimulationPresentat
     return this.readSnapshot()?.isPowerOutage ?? false;
   }
 
+  public get baseBatteryJoules(): number {
+    return this.readSnapshot()?.baseBatteryJoules ?? 0;
+  }
+
+  public get baseBatteryCapacity(): number {
+    return this.readSnapshot()?.baseBatteryCapacity ?? 0;
+  }
+
   public getSlot(slotId: string): RuntimeTickSnapshot["slots"][string] | null {
     return this.readSnapshot()?.slots[slotId] ?? null;
   }

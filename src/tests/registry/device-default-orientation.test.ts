@@ -29,6 +29,30 @@ interface OrientationCase {
 
 const ORIENTATION_CASES: readonly OrientationCase[] = [
   {
+    definitionId: "log_admission",
+    rotationOffset: 270,
+    oldPorts: [
+      port("item_input", "in_w", 0, 0, "WEST"),
+      port("item_output", "out_e", 0, 0, "EAST"),
+    ],
+    newPorts: [
+      port("item_input", "in_w", 0, 0, "NORTH"),
+      port("item_output", "out_e", 0, 0, "SOUTH"),
+    ],
+  },
+  {
+    definitionId: "pipe_admission",
+    rotationOffset: 270,
+    oldPorts: [
+      port("fluid_input", "in_w", 0, 0, "WEST"),
+      port("fluid_output", "out_e", 0, 0, "EAST"),
+    ],
+    newPorts: [
+      port("fluid_input", "in_w", 0, 0, "NORTH"),
+      port("fluid_output", "out_e", 0, 0, "SOUTH"),
+    ],
+  },
+  {
     definitionId: "udpipe_loader_1",
     rotationOffset: 180,
     oldPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
@@ -154,7 +178,7 @@ describe("device default orientation", () => {
       toDeviceId: entry.definitionId,
       rotationOffset: entry.rotationOffset,
     }))));
-    expect(migration?.deviceRules).toHaveLength(37);
+    expect(migration?.deviceRules).toHaveLength(39);
   });
 
   it.each(ORIENTATION_CASES)(

@@ -2,6 +2,8 @@ export const RAW_BUILDING_ID_BY_PROJECT_ID = Object.freeze({
   cmpt_mc_1: "component_mc_1",
   filling_pd_mc_1: "filling_powder_mc_1",
   filling_pd_mc_1_liquid: "filling_powder_mc_1",
+  log_admission: "log_conditioner",
+  pipe_admission: "log_pipe_conditioner",
   power_sta_1: "power_station_1",
   seedcol_1: "seedcollector_1",
   tools_asm_mc_1: "tools_assebling_mc_1",

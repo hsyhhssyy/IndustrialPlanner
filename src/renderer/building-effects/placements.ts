@@ -3,7 +3,13 @@ import type { EntityDefinition } from '@/domain/registry/types/entity-definition
 import { resolveRotatedPortGeometry } from '@/shared/geometry/port';
 import type { LogisticsMaterialFrameState } from '@/shared/logistics-material';
 import { getRotatedGridFootprint } from '@/shared/geometry/grid';
-import type { BuildingEffectsManifest, BuildingHeightView, EffectPlacement, SurfacePlacement } from './types';
+import type {
+  BuildingEffectsManifest,
+  BuildingHeightView,
+  EffectPlacement,
+  RingEffectPlacement,
+  SurfacePlacement,
+} from './types';
 import { rotatePoint } from './height-field';
 
 interface PhysicalPort {
@@ -20,6 +26,7 @@ interface PhysicalPort {
 export interface EffectScene {
   surfaces: SurfacePlacement[];
   effects: EffectPlacement[];
+  ringEffects: RingEffectPlacement[];
   portKeys: Map<string, string>;
   issues: string[];
 }
@@ -44,6 +51,19 @@ export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][
   return Math.max(0, resource.frames.length - 1);
 }
 
+export function selectRingEffectPlacements(
+  candidates: readonly RingEffectPlacement[],
+  resolveStatus: (entityId: string) => number | undefined,
+): RingEffectPlacement[] {
+  const statusByEntity = new Map<string, number | undefined>();
+  return candidates.filter((candidate) => {
+    if (!statusByEntity.has(candidate.entityId)) {
+      statusByEntity.set(candidate.entityId, resolveStatus(candidate.entityId));
+    }
+    return candidate.statusKey === statusByEntity.get(candidate.entityId);
+  });
+}
+
 export function resolveBuildingEffectScene(options: {
   manifest: BuildingEffectsManifest;
   entities: readonly WorldEntity[];
@@ -54,7 +74,7 @@ export function resolveBuildingEffectScene(options: {
   ringStatus?: ReadonlyMap<string, number>;
   activatedIds?: ReadonlySet<string>;
 }): EffectScene {
-  const result: EffectScene = { surfaces: [], effects: [], portKeys: new Map(), issues: [] };
+  const result: EffectScene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
   const physical = new Map<string, PhysicalPort[]>();
   const byEntity = new Map<string, PhysicalPort[]>();
   const entities = options.entities.filter((entity) => !options.hiddenIds?.has(entity.id) && !('originalEntityId' in entity));
@@ -132,14 +152,19 @@ export function resolveBuildingEffectScene(options: {
     const status = options.ringStatus?.get(entity.id);
     const seen = new Set<string>();
     for (const ring of view.rings) {
-      if (ring.statusKey !== status || !options.manifest.effects[ring.resourceId]) continue;
+      if (!options.manifest.effects[ring.resourceId]) continue;
       const signature = JSON.stringify([ring.statusKey, ring.resourceId, ring.position, ring.yaw]);
       if (seen.has(signature)) continue;
       seen.add(signature);
       const [px, py] = rotatePoint(ring.position[0], ring.position[2], entity.rotation);
-      result.effects.push({ id: `${entity.id}:ring:${signature}`, resourceId: ring.resourceId,
+      const placement: RingEffectPlacement = {
+        id: `${entity.id}:ring:${signature}`, entityId: entity.id,
+        statusKey: ring.statusKey, resourceId: ring.resourceId,
         x: originX + px, y: originY + py, rotation: entity.rotation + ring.yaw,
-        baseY: ring.position[1], epsilon: view.epsilon, ring: true });
+        baseY: ring.position[1], epsilon: view.epsilon, ring: true,
+      };
+      result.ringEffects.push(placement);
+      if (ring.statusKey === status) result.effects.push(placement);
     }
   }
   return result;

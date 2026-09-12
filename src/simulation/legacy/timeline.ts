@@ -9,8 +9,11 @@ import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import { createSimulationDocumentHash } from "../topology";
 
-import { createInitialSimulationTimelineState } from "../contracts";
-import { STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
+import {
+  createInitialSimulationTimelineState,
+  SimulationPerformanceRateWindow,
+  STANDARD_TICK_RATE_PER_SECOND,
+} from "../contracts";
 import type { CompiledSimulationTopology, RuntimeTickSnapshot } from "../contracts";
 import type { SimulationRuntimeExport } from "./runtime-export";
 import type { SimulationWorkerResponse } from "./worker-protocol";
@@ -203,11 +206,35 @@ interface LegacyTimelineContext {
 export class LegacyTimelineController {
   public constructor(private readonly context: LegacyTimelineContext) {}
 
+  public get retainedFrameCount(): number {
+    const timeline = this.context.stateReadWrite.timeline;
+    if (
+      !timeline.enabled
+      || (timeline.readiness !== "catching-up" && timeline.readiness !== "ready")
+    ) return 0;
+    return Math.max(
+      0,
+      Math.floor(timeline.availableToTickNumber)
+        - Math.floor(timeline.availableFromTickNumber)
+        + 1,
+    );
+  }
+
+  public get generatedFramePerSecond(): number {
+    return this.timelineGeneratedFrameRateWindow.ratePerSecond;
+  }
+
   private timelineBridge: TimelineWorkerBridge | null = null;
 
   private timelineStatusTimerId: ReturnType<typeof setInterval> | null = null;
 
   private timelineStatusRefreshInFlight = false;
+
+  private readonly timelineGeneratedFrameRateWindow = new SimulationPerformanceRateWindow();
+
+  private timelineRateSampledAtMs: number | null = null;
+
+  private timelineRateAvailableToTickNumber: number | null = null;
 
   private timelineSeekSerial = 0;
 
@@ -1019,10 +1046,29 @@ export class LegacyTimelineController {
   }
 
   private applyTimelineStatus(status: TimelineWorkerStatus): void {
+    this.recordTimelineGenerationRate(status, performance.now());
     this.context.stateReadWrite.timeline.availableFromTickNumber =
       status.availableFromTimelineTickNumber ?? this.context.stateReadWrite.timeline.cursorTickNumber;
     this.context.stateReadWrite.timeline.availableToTickNumber =
       status.availableToTimelineTickNumber ?? this.context.stateReadWrite.timeline.cursorTickNumber;
+  }
+
+  private recordTimelineGenerationRate(status: TimelineWorkerStatus, sampledAtMs: number): void {
+    const availableToTickNumber = status.availableToTimelineTickNumber;
+    if (availableToTickNumber === null) {
+      this.timelineRateSampledAtMs = sampledAtMs;
+      this.timelineRateAvailableToTickNumber = null;
+      return;
+    }
+    const previousSampledAtMs = this.timelineRateSampledAtMs;
+    const previousAvailableToTickNumber = this.timelineRateAvailableToTickNumber;
+    this.timelineRateSampledAtMs = sampledAtMs;
+    this.timelineRateAvailableToTickNumber = availableToTickNumber;
+    if (previousSampledAtMs === null || previousAvailableToTickNumber === null) return;
+    this.timelineGeneratedFrameRateWindow.record(
+      sampledAtMs - previousSampledAtMs,
+      Math.max(0, availableToTickNumber - previousAvailableToTickNumber),
+    );
   }
 
   private updateTimelineReadiness(status: TimelineWorkerStatus): void {
@@ -1244,6 +1290,9 @@ export class LegacyTimelineController {
     this.timelineWindowRetargetPending = false;
     this.lastTimelineRetargetRange = null;
     this.timelinePlaybackAnchorOffsetTicks = null;
+    this.timelineGeneratedFrameRateWindow.reset();
+    this.timelineRateSampledAtMs = null;
+    this.timelineRateAvailableToTickNumber = null;
     this.resetTimelinePresentationFrameCache();
     this.timelineCheckpointMetadataByTickNumber.clear();
     this.timelineBridge?.dispose();

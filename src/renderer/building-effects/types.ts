@@ -77,4 +77,10 @@ export interface EffectPlacement {
   ring: boolean;
 }
 
+export interface RingEffectPlacement extends EffectPlacement {
+  entityId: string;
+  statusKey: number;
+  ring: true;
+}
+
 export interface WorldBounds { left: number; top: number; right: number; bottom: number }

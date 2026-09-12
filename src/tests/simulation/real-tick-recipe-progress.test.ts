@@ -104,6 +104,8 @@ describe("ST2-RQ-024 real tick recipe progress", () => {
       totalPowerDemand: 0,
       currentPowerGeneration: 0,
       isPowerOutage: false,
+      baseBatteryJoules: 0,
+      baseBatteryCapacity: 0,
     };
     const simulationState = createRunningSimulationState();
 
@@ -197,13 +199,22 @@ function createRunningSimulationState(): SimulationState {
     runningState: "start",
     simulationMode: "single-base",
     simulationSpeed: 2,
-    statistics: {
-      tickPerSecond: 0,
-      targetTickPerSecond: 0,
-      baseBatteryJoules: 0,
-      baseBatteryCapacity: 0,
-    },
-    bufferSize: 0,
+    // AI-REMOVED 2026-09-12:
+    // Reason: SimulationState 测试夹具同步移除已退役的性能统计与公共缓存字段。
+    // Trigger: 用户确认性能诊断改由 SimulationQuery 返回。
+    // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
+    // Replacement: SimulationQuery.getPerformanceDiagnostics 的宿主级测试。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // statistics: {
+    //   tickPerSecond: 0,
+    //   targetTickPerSecond: 0,
+    //   baseBatteryJoules: 0,
+    //   baseBatteryCapacity: 0,
+    // },
+    // bufferSize: 0,
     timeline: {
       enabled: false,
       readiness: "idle",

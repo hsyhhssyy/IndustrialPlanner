@@ -6,7 +6,12 @@ import { createRegistryContract } from '@/registry';
 import type { WorldEntity } from '@/domain/document/world-document';
 import type { BuildingEffectsManifest, HeightField, SurfacePlacement } from '@/renderer/building-effects/types';
 import { decodeHeight, fieldBounds, rasterizeHeightTile, HEIGHT_TILE_PIXELS, tileKeys } from '@/renderer/building-effects/height-field';
-import { resolveBuildingEffectScene, resolveEffectFrame } from '@/renderer/building-effects/placements';
+import {
+  resolveBuildingEffectScene,
+  resolveEffectFrame,
+  selectRingEffectPlacements,
+} from '@/renderer/building-effects/placements';
+import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
 
 const manifest = JSON.parse(await readFile('public/3d-top-view/port-effects/manifest.json', 'utf8')) as BuildingEffectsManifest;
 const registry = createRegistryContract();
@@ -63,7 +68,36 @@ describe('建筑高度与端口特效', () => {
     const scene = resolveBuildingEffectScene({ manifest, definitions, entities: [entity] });
     expect(scene.surfaces).toHaveLength(1);
     expect(scene.effects).toHaveLength(4);
+    expect(scene.ringEffects).toHaveLength(7);
     expect(scene.issues).toHaveLength(0);
+  });
+
+  it.each([
+    ['closed', 1],
+    ['idle', 3],
+    ['normal', 4],
+    ['blocked', 5],
+    ['no-power', 6],
+    ['not-in-power-net', 7],
+  ] as const)('将仿真状态 %s 映射到素材 statusKey %s', (status, statusKey) => {
+    expect(resolveBuildingEffectStatusKey(status)).toBe(statusKey);
+  });
+
+  it('同一设备的多个环候选只查询一次状态并选择精确枚举', () => {
+    const scene = resolveBuildingEffectScene({ manifest, definitions, entities: [entity] });
+    let queryCount = 0;
+    const rings = selectRingEffectPlacements(scene.ringEffects, () => {
+      queryCount += 1;
+      return 4;
+    });
+
+    expect(queryCount).toBe(1);
+    expect(rings).toHaveLength(1);
+    expect(rings[0]).toMatchObject({
+      entityId: entity.id,
+      statusKey: 4,
+      resourceId: 'v1.5/fx/P_fxfac_interactive_mixpool_green_2502',
+    });
   });
 
   it.each([
@@ -109,6 +143,7 @@ describe('建筑高度与端口特效', () => {
     const ring = isolatedView.rings.find((candidate) => candidate.statusKey === 1)!;
     isolatedView.rings.push(structuredClone(ring));
     const scene = resolveBuildingEffectScene({ manifest: fixture, definitions, entities: [entity], ringStatus: new Map([[entity.id, 1]]) });
+    expect(scene.ringEffects).toHaveLength(7);
     expect(scene.effects.filter((effect) => effect.ring)).toHaveLength(1);
     const changed = resolveBuildingEffectScene({ manifest: fixture, definitions,
       entities: [{ ...entity, definitionId: 'transmuter_1_liquidtrans' }], ringStatus: new Map([[entity.id, -1]]) });

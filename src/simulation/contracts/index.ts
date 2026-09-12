@@ -78,6 +78,7 @@ export {
   createInitialSimulationTimelineState,
   createSimulationStateReadWrite,
 } from "./state";
+export { SimulationPerformanceRateWindow } from "./performance-rate-window";
 export {
   type SimulationHost,
   type SimulationHostWorkerMode,

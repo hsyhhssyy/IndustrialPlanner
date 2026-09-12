@@ -1298,8 +1298,17 @@ describe("WorkbenchApp", () => {
         runningState: "stop",
         simulationMode: "single-base",
         simulationSpeed: 1,
-        statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
-        bufferSize: 0,
+        // AI-REMOVED 2026-09-12:
+        // Reason: SimulationState 测试桩同步移除已退役的 diagnostics 字段。
+        // Trigger: 用户确认性能统计改由统一 Query 提供。
+        // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
+        // Replacement: queries.getPerformanceDiagnostics。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
+        // bufferSize: 0,
         timeline: createInitialSimulationTimelineState(),
       },
       topology: createSnapshotStore(null),
@@ -1328,6 +1337,14 @@ describe("WorkbenchApp", () => {
             }),
           },
         }),
+        getPerformanceDiagnostics: () => ({
+          tickPerSecond: 0,
+          targetTickPerSecond: 0,
+          playbackBufferedFrameCount: 1,
+          runtimeRetainedStateCount: 1,
+          timelineRetainedFrameCount: 0,
+          timelineGeneratedFramePerSecond: 0,
+        }),
         getDocumentRuntimeStatus: () => ({
           tickNumber: 3,
           standardTickRate: 20,
@@ -1335,7 +1352,10 @@ describe("WorkbenchApp", () => {
           totalPowerDemand: null,
           currentPowerGeneration: null,
           isPowerOutage: false,
+          baseBatteryJoules: 0,
+          baseBatteryCapacity: 0,
         }),
+        getDeviceOperatingStatus: () => "closed",
         getDeviceRuntimeStatus: () => null,
         getPipeFluidItemId: () => null,
         isPipeDeviceSlotOccupied: () => false,

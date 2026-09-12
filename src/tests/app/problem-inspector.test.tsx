@@ -266,6 +266,8 @@ describe("ProblemInspector", () => {
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
+        baseBatteryJoules: 0,
+        baseBatteryCapacity: 0,
       },
     });
 
@@ -300,6 +302,8 @@ describe("ProblemInspector", () => {
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
+        baseBatteryJoules: 0,
+        baseBatteryCapacity: 0,
       },
     });
 
@@ -333,6 +337,8 @@ describe("ProblemInspector", () => {
         totalPowerDemand: 100,
         currentPowerGeneration: 120,
         isPowerOutage: false,
+        baseBatteryJoules: 0,
+        baseBatteryCapacity: 0,
       },
     });
 
@@ -469,6 +475,8 @@ describe("ProblemInspector", () => {
         totalPowerDemand: 100,
         currentPowerGeneration: 20,
         isPowerOutage: true,
+        baseBatteryJoules: 0,
+        baseBatteryCapacity: 0,
       },
     });
 
@@ -521,6 +529,8 @@ describe("ProblemInspector", () => {
         totalPowerDemand: 100,
         currentPowerGeneration: 120,
         isPowerOutage: false,
+        baseBatteryJoules: 0,
+        baseBatteryCapacity: 0,
       },
     });
 

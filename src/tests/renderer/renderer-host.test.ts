@@ -88,7 +88,10 @@ describe("createRenderHost", () => {
         },
       },
     })
-    expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
+    expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(
+      renderHost,
+      renderHost.textureManager.performanceDiagnostics,
+    )
     expect(workspace.render).toBe(renderHost)
   })
 

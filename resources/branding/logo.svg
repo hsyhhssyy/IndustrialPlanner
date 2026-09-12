@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="logo-title logo-description">
+  <title id="logo-title">终末地工业系统仿真器</title>
+  <desc id="logo-description">橙色直线传送带从实体带面延伸为线框模型，侧面的三个采样节点表示仿真的离散时间步进。</desc>
+  <g stroke-linejoin="round">
+    <path d="M93.2 354.24 285.2 423.36V445.36L93.2 376.24Z" fill="#A8562D"/>
+    <path d="M362.64 257.92 285.2 423.36V445.36L362.64 279.92Z" fill="#C66B34"/>
+    <g transform="matrix(1 .36 -.44 .94 330 88)">
+      <path d="M-96 144H96V320H-96Z" fill="#ED944D"/>
+      <path d="M-96 144V0H96V144" stroke="#D98143" stroke-width="10"/>
+      <path d="M-96 144H96" stroke="#D98143" stroke-width="6"/>
+      <path d="M-78 42H78M-78 88H78" stroke="#D98143" stroke-opacity=".4" stroke-width="5"/>
+      <path d="M-78 18V124M78 18V124" stroke="#D98143" stroke-width="7"/>
+      <path d="M-78 166V301M78 166V301" stroke="#FFF3CC" stroke-width="10" stroke-linecap="square"/>
+      <path d="M0 43 18 70H-18Z" stroke="#D98143" stroke-width="6"/>
+      <path d="M0 169 19 198H-19ZM0 254 19 283H-19Z" fill="#FFF9EA"/>
+      <path d="M-102-6H-90V6H-102ZM90-6H102V6H90Z" fill="#D98143"/>
+      <path d="M132 70V159M132 173V262" stroke="#D98143" stroke-width="4"/>
+      <path d="M125 56H139V70H125ZM125 159H139V173H125Z" stroke="#D98143" stroke-width="4"/>
+      <path d="M123 262H141V280H123Z" fill="#D98143"/>
+    </g>
+  </g>
+</svg>

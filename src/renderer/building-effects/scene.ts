@@ -7,15 +7,23 @@ import { BuildingEffectAssets } from './assets';
 import { BuildingEffectBatch } from './batch';
 import { SceneHeightCache } from './height-cache';
 import { fieldBounds, tileKeys } from './height-field';
-import { resolveBuildingEffectScene, resolveEffectFrame, type EffectScene } from './placements';
+import {
+  resolveBuildingEffectScene,
+  resolveEffectFrame,
+  selectRingEffectPlacements,
+  type EffectScene,
+} from './placements';
 
 export class BuildingEffectsScene {
   public readonly container = new Container({ label: 'building-height-effects', eventMode: 'none' });
   public readonly portKeys = new Set<string>();
   private assets: BuildingEffectAssets | null = null;
   private readonly height = new SceneHeightCache();
-  private scene: EffectScene = { surfaces: [], effects: [], portKeys: new Map(), issues: [] };
+  private scene: EffectScene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+  private activeEffects: EffectPlacement[] = [];
   private version = '';
+  private statusVersion = -1;
+  private ringSignature = '';
   private batches = new Map<string, { batch: BuildingEffectBatch; resourceId: string }>();
   private batchSignature = '';
   private readonly reported = new Set<string>();
@@ -24,10 +32,12 @@ export class BuildingEffectsScene {
 
   public sync(options: {
     view: { x: number; y: number; centerX: number; centerY: number; scale: number; rotation: number };
-    enabled: boolean; version: string; nowMs: number; bounds: WorldBounds;
+    enabled: boolean; version: string; statusVersion: number; nowMs: number; bounds: WorldBounds;
     entities: readonly WorldEntity[]; definitions: ReadonlyMap<string, EntityDefinition>;
     materials?: LogisticsMaterialFrameState; hiddenIds?: ReadonlySet<string>;
-    ringStatus?: ReadonlyMap<string, number>; activatedIds?: ReadonlySet<string>;
+    ringStatus?: ReadonlyMap<string, number>;
+    resolveRingStatus?: (entityId: string) => number | undefined;
+    activatedIds?: ReadonlySet<string>;
   }): void {
     this.container.visible = options.enabled;
     if (!options.enabled) { this.release(); return; }
@@ -39,26 +49,45 @@ export class BuildingEffectsScene {
     this.container.scale.set(options.view.scale);
     this.container.rotation = options.view.rotation;
     const version = options.version;
-    if (this.version !== version) {
-      this.scene = resolveBuildingEffectScene({ ...options, manifest });
+    const structureChanged = this.version !== version;
+    if (structureChanged) {
+      this.scene = resolveBuildingEffectScene({
+        manifest,
+        entities: options.entities,
+        definitions: options.definitions,
+        materials: options.materials,
+        hiddenIds: options.hiddenIds,
+        activatedIds: options.activatedIds,
+      });
       this.height.sync(this.scene.surfaces);
       this.version = version;
       for (const issue of this.scene.issues) if (!this.reported.has(issue)) {
         this.reported.add(issue); console.warn('[building-port-effects]', issue);
       }
     }
+    if (structureChanged || this.statusVersion !== options.statusVersion) {
+      const resolveStatus = options.resolveRingStatus
+        ?? ((entityId: string) => options.ringStatus?.get(entityId));
+      const rings = selectRingEffectPlacements(this.scene.ringEffects, resolveStatus);
+      const ringSignature = rings.map((ring) => ring.id).join('|');
+      if (structureChanged || this.ringSignature !== ringSignature) {
+        this.activeEffects = [...this.scene.effects, ...rings];
+        this.ringSignature = ringSignature;
+      }
+      this.statusVersion = options.statusVersion;
+    }
     const nextFrames = new Map<string, number>();
-    for (const effect of this.scene.effects) {
+    for (const effect of this.activeEffects) {
       if (!nextFrames.has(effect.resourceId)) nextFrames.set(effect.resourceId,
         resolveEffectFrame(manifest.effects[effect.resourceId]!, options.nowMs));
     }
-    const syncSignature = `${version}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
+    const syncSignature = `${version}:${this.ringSignature}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
     if (syncSignature === this.syncSignature) return;
     this.syncSignature = syncSignature;
     const groups = new Map<string, { placements: EffectPlacement[]; tile: string; resourceId: string; page: number }>();
     const retainedHeights = new Set<string>(), retainedColors = new Set<string>(), retainedTiles = new Set<string>();
     this.frames.clear(); this.portKeys.clear();
-    const visible = this.scene.effects.filter((effect) => {
+    const visible = this.activeEffects.filter((effect) => {
       const field = manifest.effects[effect.resourceId]!.height;
       const b = fieldBounds({ ...effect, field });
       return b.right > options.bounds.left && b.left < options.bounds.right && b.bottom > options.bounds.top && b.top < options.bounds.bottom;
@@ -109,6 +138,8 @@ export class BuildingEffectsScene {
 
   private release(): void {
     this.clearBatches(); this.height.destroy(); this.assets?.destroy(); this.assets = null;
-    this.version = ''; this.batchSignature = ''; this.syncSignature = ''; this.portKeys.clear();
+    this.scene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+    this.activeEffects = []; this.version = ''; this.statusVersion = -1; this.ringSignature = '';
+    this.batchSignature = ''; this.syncSignature = ''; this.portKeys.clear();
   }
 }

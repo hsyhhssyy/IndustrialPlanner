@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { Texture, TextureSource } from "pixi.js"
+import { TexturePerfDiagnostics } from "@/renderer/texture/texture-perf-diagnostics"
 
 import {
   createPixiRenderDiagnostics,
@@ -28,6 +30,72 @@ describe("resolveMainRendererAntialias", () => {
 })
 
 describe("createPixiRenderDiagnostics", () => {
+  it("attributes native uploads, excludes other queries, and restores hooks after an exception", () => {
+    let now = 0
+    vi.spyOn(performance, "now").mockImplementation(() => now)
+    const texture = new Texture({ source: new TextureSource({ width: 32, height: 16, label: "/page.webp" }) })
+    const profiler = new TexturePerfDiagnostics(() => ({
+      activeSessions: 0, loadingPages: 0, residentDecodedBytes: 0, residentMasks: 0, residentPages: 0,
+    }))
+    const failure = new Error("upload failed")
+    let shouldFail = false
+    const texImage2D = function (this: unknown, ..._args: unknown[]) {
+      expect(this).toBe(gl)
+      now += 20
+      if (shouldFail) throw failure
+      return "uploaded"
+    }
+    const gl = {
+      texImage2D,
+      texSubImage2D: vi.fn(),
+      generateMipmap: vi.fn(),
+      getParameter: vi.fn((parameter: number) => { if (parameter === 0x84FF) now += 3; return 4 }),
+      getExtension: () => null,
+    }
+    const textureSystem = {
+      _boundTextures: [texture.source], _activeTextureLocation: 0,
+      _initSource(source: unknown) {
+        this.onSourceUpdate(source)
+        this.updateStyle()
+      },
+      onSourceUpdate(_source: unknown) { return gl.texImage2D(0, 0, 0, 32, 16, 0, 0, 0, {}) },
+      updateStyle() { gl.getParameter(0x84FF) },
+    }
+    const originalInit = textureSystem._initSource
+    const originalSourceUpdate = textureSystem.onSourceUpdate
+    const originalQuery = gl.getParameter
+    const diagnostics = createPixiRenderDiagnostics({
+      app: { renderer: { gl, texture: textureSystem } } as never,
+      textureProfiler: profiler,
+      layers: { stage: { children: [] }, pipeFlow: {}, beltFlow: {}, beltInsertion: {}, beltCargo: {}, entities: [] } as never,
+    })
+    try {
+      expect(gl.texImage2D).toBe(texImage2D)
+      diagnostics.syncDebugState(true)
+      expect(textureSystem.onSourceUpdate).toBe(originalSourceUpdate)
+      diagnostics.beforeRender({ count: () => undefined })
+      textureSystem._initSource(texture.source)
+      gl.getParameter(123)
+      diagnostics.afterRender({ count: () => undefined })
+      const report = diagnostics.readSnapshot().textures!
+      expect(report.totals.texImage2D).toMatchObject({ calls: 1, totalMs: 20, inRenderMs: 20, rgba8EquivalentBytes: 2048 })
+      expect(report.totals.anisotropyQuery).toMatchObject({ calls: 1, totalMs: 3 })
+      expect(report.totals.init).toMatchObject({ calls: 1, totalMs: 23 })
+      expect(report.topResources[0]?.resource).toBe("/page.webp")
+      shouldFail = true
+      expect(() => textureSystem._initSource(texture.source)).toThrow(failure)
+      expect(diagnostics.readSnapshot().textures!.totals.texImage2D?.failedCalls).toBe(1)
+      diagnostics.syncDebugState(false)
+      expect(gl.texImage2D).toBe(texImage2D)
+      expect(gl.getParameter).toBe(originalQuery)
+      expect(textureSystem._initSource).toBe(originalInit)
+      expect(diagnostics.readSnapshot().textures).toBeNull()
+    } finally {
+      diagnostics.destroy()
+      texture.destroy(true)
+    }
+  })
+
   it("installs hooks only in debug mode, records one render, and restores all state", () => {
     const draw = vi.fn()
     const batchBreak = vi.fn()

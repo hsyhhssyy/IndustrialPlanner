@@ -3,7 +3,10 @@ import type { SimulationAction } from "@/domain/simulation/simulation-action";
 
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
-import { STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
+import {
+  SimulationPerformanceRateWindow,
+  STANDARD_TICK_RATE_PER_SECOND,
+} from "../contracts";
 import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
@@ -36,8 +39,17 @@ import type { SimulationWorkerBridge } from "./bridge-contract";
 
 import { PLAYBACK_HOT_QUEUE_CAPACITY, PLAYBACK_HOT_QUEUE_LOW_WATER } from "./controller-support";
 
-/** TPS 统计的累积窗口，毫秒 */
-const TPS_WINDOW_MS = 1000;
+// AI-REMOVED 2026-09-12:
+// Reason: 双引擎统一使用固定一秒的低成本性能窗口。
+// Trigger: 用户确认性能计数从公共 State 迁移到按需 Query。
+// Evidence: src/simulation/contracts/performance-rate-window.ts 提供相同窗口语义。
+// Replacement: SimulationPerformanceRateWindow
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// /** TPS 统计的累积窗口，毫秒 */
+// const TPS_WINDOW_MS = 1000;
 
 const PLAYBACK_PREFETCH_RETRY_MS = 50;
 
@@ -45,6 +57,11 @@ interface TopologyPresentationBoundary {
   readonly maxPlaybackTickNumber: number;
   readonly reached: Promise<void>;
   readonly resolveReached: () => void;
+}
+
+interface PlaybackSnapshotConsumption {
+  readonly snapshot: RuntimeTickSnapshot;
+  readonly consumedTickCount: number;
 }
 
 interface LegacyPlaybackContext {
@@ -67,6 +84,7 @@ export class LegacyPlaybackController {
 
   public get pendingRequest(): Promise<void> | null { return this.playbackTickRequestCompletion; }
   public get bufferedSize(): number { return this.playbackHotQueue.size; }
+  public get tickPerSecond(): number { return this.tickRateWindow.ratePerSecond; }
   public get latestBufferedTick(): number {
     let latest = 0;
     for (const snapshot of this.playbackHotQueue.values()) latest = Math.max(latest, snapshot.tickNumber);
@@ -76,13 +94,21 @@ export class LegacyPlaybackController {
     this.playbackHotQueue.set(snapshot.tickNumber, snapshot);
   }
   public resetStatistics(): void {
-    this.tpsAccumulatedTicks = 0;
-    this.tpsAccumulatedMs = 0;
+    this.tickRateWindow.reset();
   }
 
-  private tpsAccumulatedTicks = 0;
-
-  private tpsAccumulatedMs = 0;
+  // AI-REMOVED 2026-09-12:
+  // Reason: 累积字段封装到双引擎共享的固定窗口计数器中。
+  // Trigger: 用户确认 Legacy 与 Dense 使用统一性能统计语义。
+  // Evidence: SimulationPerformanceRateWindow 只消费已有帧 delta 与真实 tick 数，不引入逐 tick 时钟读取。
+  // Replacement: LegacyPlaybackController.tickRateWindow
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private tpsAccumulatedTicks = 0;
+  // private tpsAccumulatedMs = 0;
+  private readonly tickRateWindow = new SimulationPerformanceRateWindow();
 
   private playbackTickRequestInFlight = false;
 
@@ -144,7 +170,7 @@ export class LegacyPlaybackController {
           `inFlightSkip=${this.diagInFlightSkipCount}(${inFlightRate}%) notReady=${this.diagNotReadyCount}(${notReadyRate}%) ` +
           `rollbackMaxConsec=${this.diagMaxConsecutiveRollbacks} ` +
           `playbackΔ=${playbackProgress.toFixed(2)} ` +
-          `tps=${this.context.stateReadWrite.statistics.tickPerSecond} buff=${this.context.stateReadWrite.runtimeStatus.bufferSize}`,
+          `tps=${this.tickPerSecond} buff=${this.context.stateReadWrite.runtimeStatus.bufferSize}`,
         );
 
         this.diagLastLogFrame = this.diagFrameCount;
@@ -286,14 +312,11 @@ export class LegacyPlaybackController {
     }
 
     this.diagConsecutiveRollbacks = 0;
-    this.publishPlaybackSnapshot(prefetchedSnapshot);
-    actualTicksProcessed = Math.max(
-      0,
-      prefetchedSnapshot.tickNumber - synchronizedTickNumber,
-    );
+    this.publishPlaybackSnapshot(prefetchedSnapshot.snapshot);
+    actualTicksProcessed = prefetchedSnapshot.consumedTickCount;
     this.diagTickConsumedCount += actualTicksProcessed;
     this.accumulateTps(deltaMs, actualTicksProcessed);
-    this.acknowledgePresentedTick(prefetchedSnapshot.tickNumber);
+    this.acknowledgePresentedTick(prefetchedSnapshot.snapshot.tickNumber);
     this.ensurePlaybackHotQueue();
   };
 
@@ -303,7 +326,7 @@ export class LegacyPlaybackController {
   private takePlaybackSnapshotThrough(
     fromTickNumber: number,
     toTickNumber: number,
-  ): RuntimeTickSnapshot | null {
+  ): PlaybackSnapshotConsumption | null {
     const availableTickNumbers = [...this.playbackHotQueue.keys()]
       .filter((tickNumber) => tickNumber >= fromTickNumber && tickNumber <= toTickNumber)
       .sort((left, right) => left - right);
@@ -342,17 +365,28 @@ export class LegacyPlaybackController {
     //   snapshot = this.playbackHotQueue.get(tickNumber) ?? null;
     //   this.playbackHotQueue.delete(tickNumber);
     // }
-    return snapshot;
+    return snapshot === null
+      ? null
+      : { snapshot, consumedTickCount: availableTickNumbers.length };
   }
 
   private publishPlaybackSnapshot(snapshot: RuntimeTickSnapshot): void {
     runInAction(() => {
       this.context.presentation.currentSnapshot = snapshot;
-      this.context.stateReadWrite.statistics = {
-        ...this.context.stateReadWrite.statistics,
-        baseBatteryJoules: snapshot.baseBatteryJoules,
-        baseBatteryCapacity: snapshot.baseBatteryCapacity,
-      };
+      // AI-REMOVED 2026-09-12:
+      // Reason: 电池读数直接由当前 Presentation 通过文档级运行时 Query 返回。
+      // Trigger: 用户确认移除 SimulationState.statistics。
+      // Evidence: LegacySnapshotPresentationProjection 已公开同一快照中的电池字段。
+      // Replacement: SimulationQuery.getDocumentRuntimeStatus
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // this.context.stateReadWrite.statistics = {
+      //   ...this.context.stateReadWrite.statistics,
+      //   baseBatteryJoules: snapshot.baseBatteryJoules,
+      //   baseBatteryCapacity: snapshot.baseBatteryCapacity,
+      // };
       this.context.syncTimelineCursorFromPlayback();
     });
 
@@ -602,28 +636,42 @@ export class LegacyPlaybackController {
   }
 
   /** 累积 tick 和时间，每 TPS_WINDOW_MS 刷新一次 TPS 统计 */
+  /** AI-CORRECTION 2026-09-12: 窗口常量已封装到共享计数器；actualTicks 现表示稀疏真实运行帧数量，结果只保存在 Simulation 内部。 */
   private accumulateTps(deltaMs: number, actualTicks: number): void {
-    this.tpsAccumulatedTicks += actualTicks;
-    this.tpsAccumulatedMs += deltaMs;
-
-    if (this.tpsAccumulatedMs >= TPS_WINDOW_MS) {
-      const tps = this.tpsAccumulatedMs > 0
-        ? this.tpsAccumulatedTicks / (this.tpsAccumulatedMs / 1000)
-        : 0;
-
-      const dynamicTickRate = this.context.stateReadWrite.runtimeStatus.dynamicTickRate ?? STANDARD_TICK_RATE_PER_SECOND;
-      const targetTps = this.context.stateReadWrite.simulationSpeed * dynamicTickRate;
-
-      runInAction(() => {
-        this.context.stateReadWrite.statistics = {
-          ...this.context.stateReadWrite.statistics,
-          tickPerSecond: Math.round(tps * 10) / 10,
-          targetTickPerSecond: targetTps,
-        };
-      });
-
-      this.tpsAccumulatedTicks = 0;
-      this.tpsAccumulatedMs = 0;
-    }
+    this.tickRateWindow.record(deltaMs, actualTicks);
   }
+
+  // AI-REMOVED 2026-09-12:
+  // Reason: TPS 窗口不再写入公共 MobX State，且实际 tick 改按消费的稀疏真实帧数量统计。
+  // Trigger: 用户确认 Simulation 内部高速统计、UI 每秒 Query。
+  // Evidence: ST2-RQ-024 后 tickNumber 是标准时间坐标，不能用坐标差冒充真实运行 tick 数。
+  // Replacement: SimulationPerformanceRateWindow + PlaybackSnapshotConsumption.consumedTickCount
+  // Risk: Medium - 性能面板 TPS 口径从标准 tick 坐标推进量收敛为真实运行帧数量。
+  // Human Review: Required
+  //
+  // Original code:
+  // private accumulateTps(deltaMs: number, actualTicks: number): void {
+  //   this.tpsAccumulatedTicks += actualTicks;
+  //   this.tpsAccumulatedMs += deltaMs;
+  //
+  //   if (this.tpsAccumulatedMs >= TPS_WINDOW_MS) {
+  //     const tps = this.tpsAccumulatedMs > 0
+  //       ? this.tpsAccumulatedTicks / (this.tpsAccumulatedMs / 1000)
+  //       : 0;
+  //
+  //     const dynamicTickRate = this.context.stateReadWrite.runtimeStatus.dynamicTickRate ?? STANDARD_TICK_RATE_PER_SECOND;
+  //     const targetTps = this.context.stateReadWrite.simulationSpeed * dynamicTickRate;
+  //
+  //     runInAction(() => {
+  //       this.context.stateReadWrite.statistics = {
+  //         ...this.context.stateReadWrite.statistics,
+  //         tickPerSecond: Math.round(tps * 10) / 10,
+  //         targetTickPerSecond: targetTps,
+  //       };
+  //     });
+  //
+  //     this.tpsAccumulatedTicks = 0;
+  //     this.tpsAccumulatedMs = 0;
+  //   }
+  // }
 }

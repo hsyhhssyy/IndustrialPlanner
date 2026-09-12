@@ -3,29 +3,72 @@ import type { SimulationMode } from "../../shared/simulation-mode";
 export type SimulationEngineKind = "legacy" | "dense-v2";
 export type SimulationRunState = "stop" | "starting" | "start" | "pause";
 
-export interface SimulationRuntimeStatistics {
-  /** 实测 TPS（滑动窗口均值） */
+/** 设备在当前仿真快照中的互斥运行状态；不包含项目无法判定的游戏 INACTIVE 状态。 */
+export type SimulationDeviceOperatingStatus =
+  | "closed"
+  | "idle"
+  | "normal"
+  | "blocked"
+  | "no-power"
+  | "not-in-power-net";
+
+// AI-REMOVED 2026-09-12:
+// Reason: 性能诊断不再作为可观察 SimulationState，电池读数并入文档级运行时 Query。
+// Trigger: 用户确认由 Simulation 内部高速计数、UI 每秒通过 Query 拉取诊断快照。
+// Evidence: Dense 曾在每次投影发布时写入固定 0，且 bufferSize 在双引擎间语义不一致。
+// Replacement: SimulationPerformanceDiagnosticsReadModel + SimulationDocumentRuntimeReadModel
+// Risk: Medium - 所有 State 消费方必须迁移到 Query。
+// Human Review: Required
+//
+// Original code:
+// export interface SimulationRuntimeStatistics {
+//   /** 实测 TPS（滑动窗口均值） */
+//   readonly tickPerSecond: number;
+//   /** 目标确定性 TPS = simulationSpeed × dynamicTickRate */
+//   readonly targetTickPerSecond: number;
+//   /** 基地电池当前电量（焦耳） */
+//   readonly baseBatteryJoules: number;
+//   /** 基地电池满容量（焦耳） */
+//   readonly baseBatteryCapacity: number;
+// }
+
+/** 仿真引擎内部采样后按需发布的性能诊断快照。 */
+export interface SimulationPerformanceDiagnosticsReadModel {
+  /** 最近一个完整采样窗口内实际展示的真实运行 tick 数量/墙钟秒。 */
   readonly tickPerSecond: number;
-  /** 目标确定性 TPS = simulationSpeed × dynamicTickRate */
+  /** 目标真实运行 TPS = simulationSpeed × 当前引擎 tickRate。 */
   readonly targetTickPerSecond: number;
-  /** 基地电池当前电量（焦耳） */
-  readonly baseBatteryJoules: number;
-  /** 基地电池满容量（焦耳） */
-  readonly baseBatteryCapacity: number;
+  /** 主线程中无需等待 Worker 即可继续展示的帧数量。 */
+  readonly playbackBufferedFrameCount: number;
+  /** Worker 内为继续运行或历史重建保留的状态数量。 */
+  readonly runtimeRetainedStateCount: number;
+  /** 时间轴专用 Worker 当前保留的已计算帧数量；无独立时间轴缓存时为 0。 */
+  readonly timelineRetainedFrameCount: number;
+  /** 最近一个完整采样窗口内时间轴专用 Worker 计算的帧数量/墙钟秒。 */
+  readonly timelineGeneratedFramePerSecond: number;
 }
 
-export interface SimulationState{
+export interface SimulationState {
   readonly runningState: SimulationRunState;
   /** 当前编辑与下一次编译使用的仿真模式；仿真停止时同样可观察。 */
   readonly simulationMode: SimulationMode;
   /**
    * 仅作为 advancePlaybackByDeltaMs 的时间推进倍率使用。
    * 禁止在任何其他逻辑中直接消费该值；tick 和 second 的换算一律使用 standard tick rate。
-   */
+  */
   readonly simulationSpeed: number;
-  readonly statistics: SimulationRuntimeStatistics;
-  /** Worker 缓存中当前保留的 tick 快照数 */
-  readonly bufferSize: number;
+  // AI-REMOVED 2026-09-12:
+  // Reason: 轮询型性能诊断不属于长期可观察的仿真状态。
+  // Trigger: 用户确认从公共 State 移除仿真计数，改由统一 Query 查询。
+  // Evidence: CanvasPanel 本就每秒轮询；Dense 高频替换 statistics 会产生无收益的响应式通知。
+  // Replacement: SimulationQuery.getPerformanceDiagnostics；电池数据由 getDocumentRuntimeStatus 返回。
+  // Risk: Medium - 旧调用方必须迁移后才能删除公开字段。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly statistics: SimulationRuntimeStatistics;
+  // /** Worker 缓存中当前保留的 tick 快照数 */
+  // readonly bufferSize: number;
   readonly timeline: SimulationTimelineState;
 }
 
@@ -203,4 +246,8 @@ export interface SimulationDocumentRuntimeReadModel {
   readonly currentPowerGeneration: number | null;
   /** 真实电力模式下发电量不足总需求时为 true，无限电力模式下始终为 false */
   readonly isPowerOutage: boolean;
+  /** 基地电池当前电量（焦耳）。 */
+  readonly baseBatteryJoules: number;
+  /** 基地电池满容量（焦耳）。 */
+  readonly baseBatteryCapacity: number;
 }

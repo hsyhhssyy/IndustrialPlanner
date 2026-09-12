@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="logo-mono-title logo-mono-description">
+  <title id="logo-mono-title">终末地工业系统仿真器 · 单色标志</title>
+  <desc id="logo-mono-description">实体传送带与线框仿真模型组成的单色标志，颜色继承 currentColor。</desc>
+  <g transform="matrix(1 .36 -.44 .94 330 88)" stroke="currentColor" stroke-linejoin="round">
+    <path d="M-96 144H96V340H-96Z M-83 161V306H-73V161Z M73 161V306H83V161Z M0 169-19 198H19Z M0 254-19 283H19Z" fill="currentColor" fill-rule="evenodd" stroke="none"/>
+    <path d="M-96 144V0H96V144" stroke-width="10"/>
+    <path d="M-78 42H78M-78 88H78" stroke-width="5"/>
+    <path d="M-78 18V124M78 18V124" stroke-width="7"/>
+    <path d="M0 43 18 70H-18Z" stroke-width="6"/>
+    <path d="M-102-6H-90V6H-102ZM90-6H102V6H90Z" fill="currentColor" stroke="none"/>
+    <path d="M132 70V159M132 173V262" stroke-width="4"/>
+    <path d="M125 56H139V70H125ZM125 159H139V173H125Z" stroke-width="4"/>
+    <path d="M123 262H141V280H123Z" fill="currentColor" stroke="none"/>
+  </g>
+</svg>

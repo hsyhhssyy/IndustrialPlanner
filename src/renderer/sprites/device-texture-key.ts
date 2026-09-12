@@ -15,7 +15,18 @@ const BLUEPRINT_MASK_PREFIX = "blueprint-masks-"
 //
 // Original code:
 // const TOP_VIEW_AVATAR_PREFIX = "top-view-avatar-"
-const BLUEPRINT_AVATAR_PREFIX = "blueprint-avatar-"
+// AI-CORRECTION 2026-09-12: 标签 avatar 已按用户要求改由 public/3d-top-view/avatar 提供白色右下投影版本。
+const TOP_VIEW_AVATAR_PREFIX = "top-view-avatar-"
+// AI-REMOVED 2026-09-12:
+// Reason: 蓝图 avatar 保持灰色蓝图语义，不再承担通用设备标签图标职责。
+// Trigger: 用户要求将白色右下投影版本放入现有 3D View avatar 目录并用于设备标签。
+// Evidence: TextureManager 的 top-view-avatar key 已直接映射 public/3d-top-view/avatar；新发布脚本为该目录生成完整资源。
+// Replacement: TOP_VIEW_AVATAR_PREFIX 与 public/3d-top-view/avatar。
+// Risk: Low；标签图标不再读取 public/blueprint-view/avatar。
+// Human Review: Required
+//
+// Original code:
+// const BLUEPRINT_AVATAR_PREFIX = "blueprint-avatar-"
 
 export function readSimplifiedDeviceIconPreference(app: AppContract | null): boolean {
   return app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
@@ -55,7 +66,8 @@ export function resolveDeviceLabelIconTextureKey(
   // return `${readSimplifiedDeviceIconPreference(app)
   //   ? BLUEPRINT_AVATAR_PREFIX
   //   : TOP_VIEW_AVATAR_PREFIX}${spriteId}`
-  return `${BLUEPRINT_AVATAR_PREFIX}${spriteId}`
+  // AI-CORRECTION 2026-09-12: 标签固定使用 3D View 目录内的白色右下投影 avatar，不再跟随蓝图本体样式。
+  return `${TOP_VIEW_AVATAR_PREFIX}${spriteId}`
 }
 
 /** 本体素材与动画资格由同一入口决定，蓝图图片始终优先。 */

@@ -1,13 +1,16 @@
 import type { SimulationQuery } from "@/domain/simulation/simulation-query";
 import type {
+  SimulationDeviceOperatingStatus,
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
+  SimulationPerformanceDiagnosticsReadModel,
 } from "@/domain/simulation/types/simulation-types";
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import {
   convertSimulationTicksToSeconds,
   type CompiledSimulationTopology,
+  type RuntimeDeviceSnapshot,
   type SimulationStateReadWrite,
   type WarehouseStats,
 } from "@/simulation/contracts";
@@ -21,6 +24,7 @@ export interface SimulationQueryContext {
   getPresentation(): SimulationPresentationProjection | null;
   getTotalPowerDemand(topology: CompiledSimulationTopology, presentation: SimulationPresentationProjection): number | null;
   getWarehouseStats(): WarehouseStats | null;
+  getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel;
   getDebugDataEnabled(): boolean;
   beforeReadDebugData?(): void;
 }
@@ -30,6 +34,15 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
   // BeltCargoDecoration 等 decoration 每帧对多个 entity 调用此方法时命中缓存。
   let cachedTopology: CompiledSimulationTopology | null = null;
   let cachedShareCapSlotIds: Set<string> | null = null;
+  let cachedOperatingTopology: CompiledSimulationTopology | null = null;
+  let cachedOperatingPresentation: SimulationPresentationProjection | null = null;
+  let cachedOperatingTickNumber: number | null = null;
+  let cachedOperatingRunningState: SimulationStateReadWrite["runningState"] | null = null;
+  let cachedOperatingPowerOutage = false;
+  const cachedOperatingStatuses = new Map<string, {
+    readonly snapshot: RuntimeDeviceSnapshot;
+    readonly status: SimulationDeviceOperatingStatus;
+  }>();
   return {
     getStatusRuntimeJson: () => {
       context.beforeReadDebugData?.();
@@ -57,6 +70,7 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
             },
       });
     },
+    getPerformanceDiagnostics: () => context.getPerformanceDiagnostics(),
     getDocumentRuntimeStatus: () => {
       const topology = context.getTopology();
       const presentation = context.getPresentation();
@@ -68,7 +82,47 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
         totalPowerDemand: context.getTotalPowerDemand(topology, presentation),
         currentPowerGeneration: presentation.currentPowerGeneration,
         isPowerOutage: presentation.isPowerOutage,
+        baseBatteryJoules: presentation.baseBatteryJoules,
+        baseBatteryCapacity: presentation.baseBatteryCapacity,
       };
+    },
+    getDeviceOperatingStatus: (deviceId) => {
+      const runningState = context.state.runningState;
+      const topology = context.getTopology();
+      const presentation = context.getPresentation();
+      const tickNumber = presentation?.tickNumber ?? null;
+      if (topology === null || presentation === null || tickNumber === null) {
+        return runningState === "stop" ? "closed" : null;
+      }
+
+      if (cachedOperatingTopology !== topology
+        || cachedOperatingPresentation !== presentation
+        || cachedOperatingTickNumber !== tickNumber
+        || cachedOperatingRunningState !== runningState
+        || cachedOperatingPowerOutage !== presentation.isPowerOutage) {
+        cachedOperatingStatuses.clear();
+        cachedOperatingTopology = topology;
+        cachedOperatingPresentation = presentation;
+        cachedOperatingTickNumber = tickNumber;
+        cachedOperatingRunningState = runningState;
+        cachedOperatingPowerOutage = presentation.isPowerOutage;
+      }
+
+      const compiledDeviceId = resolveCompiledDeviceId(topology, deviceId);
+      if (compiledDeviceId === null) return null;
+      const device = topology.devices[compiledDeviceId];
+      const snapshot = presentation.getDevice(compiledDeviceId);
+      if (device === undefined || snapshot === null) return null;
+
+      const cached = cachedOperatingStatuses.get(deviceId);
+      if (cached?.snapshot === snapshot) return cached.status;
+      const status = resolveDeviceOperatingStatus({
+        device,
+        snapshot,
+        isPowerOutage: presentation.isPowerOutage,
+      });
+      cachedOperatingStatuses.set(deviceId, { snapshot, status });
+      return status;
     },
     getDeviceRuntimeStatus: (deviceId) => {
       const topology = context.getTopology();
@@ -136,6 +190,22 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
       };
     },
   };
+}
+
+function resolveDeviceOperatingStatus(options: {
+  device: CompiledSimulationTopology["devices"][string];
+  snapshot: RuntimeDeviceSnapshot;
+  isPowerOutage: boolean;
+}): SimulationDeviceOperatingStatus {
+  if (options.device.powerStatus === "out-of-power-range") return "not-in-power-net";
+  if (options.device.requiresPower && options.isPowerOutage) return "no-power";
+
+  let hasProgressingRecipe = false;
+  for (const recipe of Object.values(options.snapshot.channelRecipes)) {
+    if (recipe?.state === "waiting-output") return "blocked";
+    hasProgressingRecipe ||= recipe?.state === "running" && recipe.isProgressing;
+  }
+  return hasProgressingRecipe ? "normal" : "idle";
 }
 
 

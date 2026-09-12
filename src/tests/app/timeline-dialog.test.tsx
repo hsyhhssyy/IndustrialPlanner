@@ -64,13 +64,22 @@ function createTimelineReadinessWorkspace(
       runningState: "pause",
       simulationMode: "single-base",
         simulationSpeed: 1,
-        statistics: {
-          tickPerSecond: 0,
-          targetTickPerSecond: 0,
-          baseBatteryJoules: 0,
-          baseBatteryCapacity: 0,
-        },
-        bufferSize: 1,
+        // AI-REMOVED 2026-09-12:
+        // Reason: timeline 测试状态同步移除已退役的 diagnostics 字段。
+        // Trigger: 用户确认性能统计改由统一 Query 提供。
+        // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
+        // Replacement: SimulationQuery.getPerformanceDiagnostics。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // statistics: {
+        //   tickPerSecond: 0,
+        //   targetTickPerSecond: 0,
+        //   baseBatteryJoules: 0,
+        //   baseBatteryCapacity: 0,
+        // },
+        // bufferSize: 1,
         timeline: {
           enabled: true,
           readiness,
@@ -145,13 +154,22 @@ describe("TimelineDialog", () => {
         runningState: "pause",
         simulationMode: "single-base",
           simulationSpeed: 1,
-          statistics: {
-            tickPerSecond: 0,
-            targetTickPerSecond: 0,
-            baseBatteryJoules: 0,
-            baseBatteryCapacity: 0,
-          },
-          bufferSize: 501,
+          // AI-REMOVED 2026-09-12:
+          // Reason: timeline 测试状态同步移除已退役的 diagnostics 字段。
+          // Trigger: 用户确认性能统计改由统一 Query 提供。
+          // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
+          // Replacement: SimulationQuery.getPerformanceDiagnostics。
+          // Risk: Low。
+          // Human Review: Required
+          //
+          // Original code:
+          // statistics: {
+          //   tickPerSecond: 0,
+          //   targetTickPerSecond: 0,
+          //   baseBatteryJoules: 0,
+          //   baseBatteryCapacity: 0,
+          // },
+          // bufferSize: 501,
           timeline: {
             enabled: true,
             readiness: "ready",
