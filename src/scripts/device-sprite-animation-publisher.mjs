@@ -12,6 +12,7 @@ import {
 import path from 'node:path';
 
 import sharp from 'sharp';
+import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from './building-asset-publish-config.mjs';
 
 function requireRecord(value, label) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -62,7 +63,7 @@ async function fileExists(filePath) {
   }
 }
 
-async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
+async function readSourceManifest(sourceRoot, phases, maxTextureSize, resolution) {
   const manifestPath = path.join(sourceRoot, 'manifest.json');
   const source = requireRecord(JSON.parse(await readFile(manifestPath, 'utf8')), 'source manifest');
   if (source.schemaVersion !== 1) {
@@ -70,9 +71,14 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
   }
   const frameWidth = requirePositiveInteger(source.frameWidth, 'source manifest.frameWidth');
   const frameHeight = requirePositiveInteger(source.frameHeight, 'source manifest.frameHeight');
+  if (!Number.isFinite(resolution) || resolution <= 0 || resolution > 1) {
+    throw new Error('animation resolution must be greater than 0 and at most 1');
+  }
+  const pixelFrameWidth = requirePositiveInteger(frameWidth * resolution, 'published pixel frameWidth');
+  const pixelFrameHeight = requirePositiveInteger(frameHeight * resolution, 'published pixel frameHeight');
   const pageRows = requirePositiveInteger(source.pageRows, 'source manifest.pageRows');
   const pageColumns = requirePositiveInteger(source.pageColumns, 'source manifest.pageColumns');
-  if (frameWidth * pageColumns >= maxTextureSize || frameHeight * pageRows >= maxTextureSize) {
+  if (pixelFrameWidth * pageColumns >= maxTextureSize || pixelFrameHeight * pageRows >= maxTextureSize) {
     throw new Error(`generated pages must be smaller than the texture limit ${maxTextureSize}`);
   }
   if (typeof source.fps !== 'number' || !Number.isFinite(source.fps) || source.fps <= 0) {
@@ -102,6 +108,7 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
     sources.set(name, Object.freeze({
       name,
       file: requireWebpFile(sourceDefinition.file, `sources.${name}.file`),
+      sourcePath: sourceDefinition.sourcePath,
       rows,
       columns,
       frameCount,
@@ -146,6 +153,7 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize) {
     frameDurationMs: 1000 / source.fps,
     frameTransform,
     sourceArchiveSha256: source.sourceArchiveSha256 ?? null,
+    sourceSite: source.sourceSite ?? null,
     sources,
     clips: Object.freeze(clips),
   });
@@ -284,14 +292,36 @@ function extractFrame(sourceData, sourceWidth, sourceLeft, sourceTop, frameWidth
   return frame;
 }
 
-async function encodeCompletedPage(page, outputDirectory, frameWidth, frameHeight) {
+/** 每帧独立缩小，防止滤波读取相邻帧或污染分页尾部的透明空格。 */
+async function resizePageFrames(page, frameWidth, frameHeight, resolution) {
+  const width = frameWidth * resolution;
+  const height = frameHeight * resolution;
+  const pageWidth = page.columns * width;
+  const buffer = Buffer.alloc(pageWidth * page.rows * height * 4);
+  for (let index = 0; index < page.frameCount; index += 1) {
+    const column = index % page.columns;
+    const row = Math.floor(index / page.columns);
+    const original = extractFrame(page.buffer, page.columns * frameWidth,
+      column * frameWidth, row * frameHeight, frameWidth, frameHeight);
+    const resized = await sharp(original, { raw: { width: frameWidth, height: frameHeight, channels: 4 } })
+      .resize(width, height, { kernel: 'lanczos3' }).raw().toBuffer();
+    for (let y = 0; y < height; y += 1) {
+      resized.copy(buffer, ((row * height + y) * pageWidth + column * width) * 4,
+        y * width * 4, (y + 1) * width * 4);
+    }
+  }
+  return buffer;
+}
+
+async function encodeCompletedPage(page, outputDirectory, frameWidth, frameHeight, resolution) {
   if (page.buffer === null || page.filledFrames !== page.frameCount) {
     return;
   }
-  await sharp(page.buffer, {
+  const pixels = resolution === 1 ? page.buffer : await resizePageFrames(page, frameWidth, frameHeight, resolution);
+  await sharp(pixels, {
     raw: {
-      width: page.columns * frameWidth,
-      height: page.rows * frameHeight,
+      width: page.columns * frameWidth * resolution,
+      height: page.rows * frameHeight * resolution,
       channels: 4,
     },
   }).webp({ quality: 85, alphaQuality: 100, effort: 4 }).toFile(path.join(outputDirectory, page.file));
@@ -306,6 +336,7 @@ async function publishOneAnimation({
   animationDirectory,
   maskOverrideDirectory,
   maxTextureSize,
+  resolution,
   phases,
   registryDefinition,
   normalizeDeviceSpriteAnimationDefinition,
@@ -314,7 +345,7 @@ async function publishOneAnimation({
     throw new Error(`Animation ${spriteId} has an existing mask override; resolve it before publishing`);
   }
   const sourceRoot = path.join(sourceDirectory, spriteId);
-  const sourceManifest = await readSourceManifest(sourceRoot, phases, maxTextureSize);
+  const sourceManifest = await readSourceManifest(sourceRoot, phases, maxTextureSize, resolution);
   const { pagesByPhase, mappingsBySource } = createOutputPlan(sourceManifest, phases);
   const stagingRootParent = path.resolve('.temp/.trash');
   await mkdir(stagingRootParent, { recursive: true });
@@ -326,7 +357,11 @@ async function publishOneAnimation({
 
   try {
     for (const sourceDefinition of sourceManifest.sources.values()) {
-      const sourceFile = path.join(sourceRoot, sourceDefinition.file);
+      const sourceFile = sourceManifest.sourceSite
+        ? path.resolve(sourceRoot, sourceManifest.sourceSite.relativeRoot, sourceDefinition.sourcePath)
+        : path.join(sourceRoot, sourceDefinition.file);
+      const resourceRoot = path.dirname(path.resolve(sourceDirectory));
+      if (!sourceFile.startsWith(`${resourceRoot}${path.sep}`)) throw new Error(`Source escapes resource root: ${sourceFile}`);
       const metadata = await sharp(sourceFile).metadata();
       const expectedWidth = sourceDefinition.columns * sourceManifest.frameWidth;
       const expectedHeight = sourceDefinition.rows * sourceManifest.frameHeight;
@@ -395,6 +430,7 @@ async function publishOneAnimation({
           stagingAnimationDirectory,
           sourceManifest.frameWidth,
           sourceManifest.frameHeight,
+          resolution,
         );
       }
     }
@@ -415,17 +451,23 @@ async function publishOneAnimation({
     const raw = { width: sourceManifest.frameWidth, height: sourceManifest.frameHeight, channels: 4 };
     const stagingStatic = path.join(stagingRoot, 'static.webp');
     const stagingStaticMask = path.join(stagingRoot, 'static-mask.webp');
-    await sharp(firstFrame, { raw }).webp({ lossless: true, effort: 6 }).toFile(stagingStatic);
+    await sharp(firstFrame, { raw })
+      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
+      .webp({ lossless: true, effort: 6 }).toFile(stagingStatic);
     await sharp(createMaskBuffer(firstFrame, raw.width, raw.height), { raw })
+      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
       .webp({ lossless: true, effort: 6 }).toFile(stagingStaticMask);
     await sharp(createMaskBuffer(unionRgba, raw.width, raw.height), { raw })
+      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
       .webp({ lossless: true, effort: 6 }).toFile(path.join(stagingAnimationDirectory, 'mask.webp'));
     const outputManifest = {
       schemaVersion: 1,
+      resolution,
       frameWidth: sourceManifest.frameWidth,
       frameHeight: sourceManifest.frameHeight,
       appliedSourceToPublishedTransform: sourceManifest.frameTransform,
       ...(sourceManifest.sourceArchiveSha256 ? { sourceArchiveSha256: sourceManifest.sourceArchiveSha256 } : {}),
+      ...(sourceManifest.sourceSite ? { sourceSite: sourceManifest.sourceSite } : {}),
       maskFile: 'mask.webp',
       clips: Object.fromEntries(phases.map((phase) => [phase, {
         frameDurationMs: sourceManifest.frameDurationMs,
@@ -483,6 +525,7 @@ export async function publishPaginatedDeviceSpriteAnimations({
   animationDirectory,
   maskOverrideDirectory,
   maxTextureSize,
+  resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0],
   animationProtocol,
   readRegistryAnimationDefinitions,
   // AI-REMOVED 2026-09-11:
@@ -538,6 +581,7 @@ export async function publishPaginatedDeviceSpriteAnimations({
       animationDirectory,
       maskOverrideDirectory,
       maxTextureSize,
+      resolution,
       phases,
       registryDefinition,
       normalizeDeviceSpriteAnimationDefinition,

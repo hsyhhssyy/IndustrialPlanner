@@ -41,6 +41,8 @@ export interface NormalizedDeviceSpriteAnimationDefinition {
   readonly closeIdleMode: DeviceSpriteAnimationDefinition["closeIdleMode"];
   readonly frameWidth: number;
   readonly frameHeight: number;
+  /** 发布图片相对逻辑帧尺寸的像素密度，运行时只解码，不缩放。 */
+  readonly resolution: number;
   readonly maskFile: string;
 }
 
@@ -79,6 +81,12 @@ export function normalizeDeviceSpriteAnimationDefinition(
   }
   const frameWidth = requirePositiveInteger(manifestSource.frameWidth, "animation manifest.frameWidth");
   const frameHeight = requirePositiveInteger(manifestSource.frameHeight, "animation manifest.frameHeight");
+  const resolution = manifestSource.resolution ?? 1;
+  if (typeof resolution !== "number" || !Number.isFinite(resolution) || resolution <= 0 || resolution > 1) {
+    throw new Error("animation manifest.resolution must be greater than 0 and at most 1");
+  }
+  requirePositiveInteger(frameWidth * resolution, "animation manifest pixel frameWidth");
+  requirePositiveInteger(frameHeight * resolution, "animation manifest pixel frameHeight");
   const maskFile = requireAssetFile(manifestSource.maskFile, "animation manifest.maskFile");
   const sourceClips = requireRecord(manifestSource.clips, "animation manifest.clips");
   const clips = {} as Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipDefinition>;
@@ -156,6 +164,7 @@ export function normalizeDeviceSpriteAnimationDefinition(
     closeIdleMode: source.closeIdleMode,
     frameWidth,
     frameHeight,
+    resolution,
     maskFile,
   });
 }
@@ -172,19 +181,29 @@ export function validateDeviceSpriteAnimationId(spriteId: string): void {
 
 /** 构建与运行时共用同一网格边界，禁止缩放、余数裁剪和跨阶段尺寸变化。 */
 /** AI-CORRECTION 2026-09-06: 校验单位由“四阶段各一张图”改为 manifest 中的单个分页。 */
+/** AI-CORRECTION 2026-09-12: 允许显式 resolution 表示位图缩放；清单和返回帧坐标仍为原逻辑尺寸，GPU 上限按实际像素校验。 */
+/** AI-CORRECTION 2026-09-13: 分辨率以发布清单为准，传入纹理密度时必须一致。 */
 export function resolveDeviceSpriteAnimationGrid(
   definition: NormalizedDeviceSpriteAnimationDefinition,
   page: DeviceSpriteAnimationManifestPage,
-  dimensions: { readonly width: number; readonly height: number },
+  dimensions: { readonly width: number; readonly height: number; readonly resolution?: number },
   maxTextureSize: number = DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE,
 ): { readonly frameWidth: number; readonly frameHeight: number } {
   requirePositiveInteger(maxTextureSize, "maxTextureSize");
   const width = requirePositiveInteger(dimensions.width, `${page.file}.width`);
   const height = requirePositiveInteger(dimensions.height, `${page.file}.height`);
+  const resolution = dimensions.resolution ?? definition.resolution;
+  if (!Number.isFinite(resolution) || resolution <= 0) {
+    throw new Error(`${page.file}.resolution must be positive and finite`);
+  }
+  if (resolution !== definition.resolution) {
+    throw new Error(`${page.file}.resolution differs from its manifest`);
+  }
   if (width >= maxTextureSize || height >= maxTextureSize) {
     throw new Error(`${page.file} must be smaller than GPU texture limit ${maxTextureSize}`);
   }
-  if (width !== page.columns * definition.frameWidth || height !== page.rows * definition.frameHeight) {
+  if (width !== page.columns * definition.frameWidth * resolution
+    || height !== page.rows * definition.frameHeight * resolution) {
     throw new Error(`${page.file} dimensions differ from its manifest grid`);
   }
   return { frameWidth: definition.frameWidth, frameHeight: definition.frameHeight };

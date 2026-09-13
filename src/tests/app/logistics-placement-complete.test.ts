@@ -478,6 +478,26 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("连续布设管道绕回穿越已有直管时(2,2)应生成管道桥接器", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING);
+    enterPipeLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 2, y: 1 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 3, y: 1 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 3, y: 1 }, nextPointerId++);
+
+    moveToCell(appHost, editorHost, { x: 3, y: 2 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 1, y: 2 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 1, y: 2 }, nextPointerId++);
+    rightClickCell(appHost, editorHost, { x: 1, y: 2 }, nextPointerId++);
+
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_connector",
+      position: { x: 2, y: 2 },
+    });
+  });
+
   it("被压制的管道不干扰传送带布设-从(2,3)到(4,3)生成直道", () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP);
     enterBeltLogisticsPlacement(appHost);
@@ -998,6 +1018,60 @@ const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = {
   regions: [],
   createdAt: "2026-07-23T10:00:00.000Z",
   updatedAt: "2026-07-23T10:00:00.000Z",
+};
+
+const USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING: BlueprintDocument = {
+  schemaVersion: 5,
+  blueprintId: "16247ed5-4276-4419-a608-9856720b46e4",
+  version: "",
+  name: "未命名蓝图-20260913230402",
+  description: "",
+  baseId: "wuling_tianwangping_aid",
+  initialGridPoint: { x: 3, y: 3 },
+  entities: {
+    "pipe_splitter:5": {
+      id: "pipe_splitter:5",
+      definitionId: "pipe_splitter",
+      position: { x: 2, y: 1 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe_straight_1x1:5": {
+      id: "pipe_straight_1x1:5",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 2, y: 2 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "pipe_straight_1x1:6": {
+      id: "pipe_straight_1x1:6",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 2, y: 3 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "pipe_straight_1x1:7": {
+      id: "pipe_straight_1x1:7",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 2, y: 4 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "pipe_splitter:5",
+    "pipe_straight_1x1:5",
+    "pipe_straight_1x1:6",
+    "pipe_straight_1x1:7",
+  ],
+  slotLinks: [],
+  regions: [],
+  createdAt: "2026-09-13T15:04:03.139Z",
+  updatedAt: "2026-09-13T15:04:03.139Z",
 };
 
 function createWorkspace(): WorkspaceContract {

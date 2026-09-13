@@ -14,12 +14,28 @@ import {
   type NormalizedDeviceSpriteAnimationDefinition,
 } from "@/shared/device-sprite-animation";
 
+// AI-REMOVED 2026-09-13:
+// Reason: 取消软预算，不再选择性保留动画页。
+// Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+// Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+// Replacement: DeviceAnimationTextureCache.reconcileResidency
+// Risk: 全量驻留提高内存与显存占用。
+// Human Review: Required
+// Original code:
+// export const DEFAULT_ANIMATION_RESIDENCY_BYTES = 512 * 1024 * 1024;
+const OFFSCREEN_GRACE_MS = 20_000;
+const PAGE_QUEUE_INTERVAL_MS = 16;
+
 interface DeviceAnimationPageRuntime {
   readonly phase: DeviceSpriteAnimationPhase;
   readonly pageIndex: number;
   readonly manifest: DeviceSpriteAnimationManifestPage;
   readonly url: string;
+  readonly resolution: number;
   readonly owners: Set<symbol>;
+  readonly estimatedBytes: number;
+  warm: boolean;
+  failed: boolean;
   texture: Texture | null;
   frames: readonly Texture[] | null;
   loadPromise: Promise<boolean> | null;
@@ -31,6 +47,9 @@ interface DeviceAnimationAsset {
   readonly mask: Texture;
   readonly maskUrl: string;
   readonly pages: Readonly<Record<DeviceSpriteAnimationPhase, readonly DeviceAnimationPageRuntime[]>>;
+  readonly spriteId: string;
+  readonly visibleOwners: Map<symbol, DeviceSpriteAnimationPhase>;
+  lastVisibleAt: number;
   unavailable: boolean;
 }
 
@@ -40,6 +59,40 @@ export interface DeviceAnimationTextureStats {
   readonly residentDecodedBytes: number;
   readonly residentMasks: number;
   readonly residentPages: number;
+  readonly residency: {
+    // AI-REMOVED 2026-09-13:
+    // Reason: 预算诊断不再对应当前的全量驻留规则。
+    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+    // Replacement: mode / offscreenGraceMs / retainedSetBytes
+    // Risk: 全量驻留提高内存与显存占用。
+    // Human Review: Required
+    // Original code:
+    // readonly budgetBytes: number;
+    // readonly reservedBytes: number;
+    // readonly overBudgetBytes: number;
+    readonly mode: "full-set";
+    readonly offscreenGraceMs: number;
+    readonly retainedSetBytes: number;
+    readonly retainedAssets: number;
+    readonly visibleSessions: number;
+    readonly visibleAssets: number;
+    readonly queuedPages: number;
+    readonly totalsSinceCreation: Readonly<Record<string, number>>;
+    readonly assets: readonly {
+      readonly spriteId: string;
+      readonly visibleInstances: number;
+      readonly totalSetBytes: number;
+      readonly selectedPages: number;
+      readonly totalPages: number;
+      readonly totalFrames: number;
+      readonly preparedFrames: number;
+      readonly failedPages: number;
+      readonly graceRemainingMs: number | null;
+      readonly preparedPages: number;
+    }[];
+    readonly omittedAssets: number;
+  };
 }
 
 export interface DeviceAnimationTextures {
@@ -60,6 +113,7 @@ export interface DeviceAnimationTextures {
   hasFrame(phase: DeviceSpriteAnimationPhase, frameIndex: number): boolean;
   prepareFrame(phase: DeviceSpriteAnimationPhase, frameIndex: number): Promise<Texture | null>;
   commitFrame(phase: DeviceSpriteAnimationPhase, frameIndex: number): Texture | null;
+  setVisible(visible: boolean): void;
   destroy(): void;
 }
 
@@ -72,6 +126,9 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
   private readonly owner = Symbol("device-animation-texture-session");
   private readonly retainedPages = new Set<DeviceAnimationPageRuntime>();
   private destroyed = false;
+  // 未报告可见性时，首次请求帧视为激活；显式隐藏后禁止帧请求重新激活会话。
+  private visible: boolean | null = null;
+  private phase: DeviceSpriteAnimationPhase = "close_idle";
 
   public constructor(
     private readonly cache: DeviceAnimationTextureCache,
@@ -95,6 +152,9 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
     if (this.destroyed || this.asset.unavailable) {
       return null;
     }
+    if (this.visible === false) return null;
+    if (this.visible === null) this.setVisible(true);
+    this.updatePhase(phase);
     const pages = this.resolveRetainedPages(phase, frameIndex);
     const currentPage = pages[0];
     if (currentPage === undefined) {
@@ -115,10 +175,13 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
     if (this.destroyed || this.asset.unavailable) {
       return null;
     }
+    this.updatePhase(phase);
     const texture = this.resolveFrame(phase, frameIndex);
+    this.cache.recordFrameAccess(texture !== null);
     if (texture === null) {
       return null;
     }
+    if (this.visible !== true) return texture;
     const nextPages = new Set(this.resolveRetainedPages(phase, frameIndex));
     for (const page of nextPages) {
       void this.cache.retainPage(page, this.owner);
@@ -130,16 +193,33 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
     }
     queueMicrotask(() => {
       for (const page of releasedPages) {
-        this.cache.releasePage(page, this.owner);
+        if (!this.retainedPages.has(page)) this.cache.releasePage(page, this.owner);
       }
     });
     return texture;
+  }
+
+  public setVisible(visible: boolean): void {
+    if (this.destroyed || this.visible === visible) return;
+    this.visible = visible;
+    this.cache.setSessionVisibility(this.asset, this.owner, visible ? this.phase : null);
+    if (!visible) {
+      for (const page of this.retainedPages) this.cache.releasePage(page, this.owner);
+      this.retainedPages.clear();
+    }
+  }
+
+  private updatePhase(phase: DeviceSpriteAnimationPhase): void {
+    if (this.phase === phase) return;
+    this.phase = phase;
+    if (this.visible) this.cache.setSessionVisibility(this.asset, this.owner, phase);
   }
 
   public destroy(): void {
     if (this.destroyed) {
       return;
     }
+    this.setVisible(false);
     this.destroyed = true;
     for (const page of this.retainedPages) {
       this.cache.releasePage(page, this.owner);
@@ -197,6 +277,8 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
 }
 
 /** 只拥有分页子纹理；页面无人使用时立即释放基础纹理，避免整套动画常驻 GPU。 */
+// AI-CORRECTION 2026-09-13: 当前/相邻页由会话保护，可见类型的其他阶段按预算预热驻留；离屏缓冲到期后回收。
+// AI-CORRECTION 2026-09-13: 按用户新要求取消预算裁剪，任一阶段激活整套预上传，最后同类实例离屏超过 20 秒才回收。
 export class DeviceAnimationTextureCache {
   private readonly entries = new Map<string, {
     readonly signature: string;
@@ -205,14 +287,54 @@ export class DeviceAnimationTextureCache {
   private readonly reportedErrors = new Set<string>();
   private readonly sessions = new Set<DeviceAnimationTextureSession>();
   private readonly resolvedAssets = new Set<DeviceAnimationAsset>();
+  private readonly pageAssets = new WeakMap<DeviceAnimationPageRuntime, DeviceAnimationAsset>();
+  private readonly queuedPages = new Map<DeviceAnimationPageRuntime, (ready: boolean) => void>();
+  private queueTimer: ReturnType<typeof setTimeout> | null = null;
+  private expiryTimer: ReturnType<typeof setTimeout> | null = null;
+  private loading = false;
+  private reconcileScheduled = false;
+  // AI-REMOVED 2026-09-13:
+  // Reason: 不再维护按预算选择的容量。
+  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+  // Replacement: getStats().residency.retainedSetBytes
+  // Risk: 全量驻留提高内存与显存占用。
+  // Human Review: Required
+  // Original code:
+  // private reservedBytes = 0;
+  private warmPriorities = new Map<DeviceAnimationPageRuntime, number>();
+  private readonly totals = {
+    frameHits: 0, frameMisses: 0, demandLoads: 0, prewarmLoads: 0,
+    preparedPages: 0, prewarmFailures: 0, loadFailures: 0, unloadFailures: 0,
+    // AI-REMOVED 2026-09-13:
+    // Reason: 取消预算驱逐计数；仅保留离屏超时回收计数。
+    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+    // Replacement: totals.offscreenEvictions
+    // Risk: 全量驻留提高内存与显存占用。
+    // Human Review: Required
+    // Original code:
+    // budgetEvictions: 0, offscreenEvictions: 0,
+    offscreenEvictions: 0,
+  };
   private destroyed = false;
 
   public constructor(private readonly options: {
     readonly loadManifest: (path: string) => Promise<unknown>;
-    readonly loadTexture: (path: string) => Promise<Texture>;
+    readonly loadTexture: (path: string, resolution: number) => Promise<Texture>;
     readonly unloadTexture: (path: string, texture: Texture) => Promise<void>;
     readonly configureTexture: (texture: Texture) => void;
     readonly getMaxTextureSize: () => number;
+    readonly uploadTexture: (texture: Texture) => void;
+    // AI-REMOVED 2026-09-13:
+    // Reason: 缓存不再接受预算覆盖。
+    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+    // Replacement: reconcileResidency 整套驻留
+    // Risk: 全量驻留提高内存与显存占用。
+    // Human Review: Required
+    // Original code:
+    // readonly budgetBytes?: number;
   }) {}
 
   public async get(
@@ -265,29 +387,71 @@ export class DeviceAnimationTextureCache {
     let residentPages = 0;
     for (const asset of this.resolvedAssets) {
       residentMasks += 1;
-      residentDecodedBytes += asset.definition.frameWidth * asset.definition.frameHeight * 4;
+      residentDecodedBytes += asset.mask.source.pixelWidth * asset.mask.source.pixelHeight * 4;
       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
         for (const page of asset.pages[phase]) {
           if (page.loadPromise !== null) loadingPages += 1;
-          if (page.frames !== null) {
+          if (page.frames !== null && page.texture !== null) {
             residentPages += 1;
-            residentDecodedBytes += page.manifest.rows * asset.definition.frameHeight
-              * page.manifest.columns * asset.definition.frameWidth * 4;
+            residentDecodedBytes += page.texture.source.pixelWidth * page.texture.source.pixelHeight * 4;
           }
         }
       }
     }
+    const now = performance.now();
+    const retainedAssets = [...this.resolvedAssets].filter(asset => this.isAssetRetained(asset, now));
     return Object.freeze({
       activeSessions: this.sessions.size,
       loadingPages,
       residentDecodedBytes,
       residentMasks,
       residentPages,
+      residency: {
+        // AI-REMOVED 2026-09-13:
+        // Reason: 以整套目标容量与离屏期限替代软预算。
+        // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+        // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+        // Replacement: residency.mode / retainedSetBytes / offscreenGraceMs
+        // Risk: 全量驻留提高内存与显存占用。
+        // Human Review: Required
+        // Original code:
+        // budgetBytes: this.budgetBytes,
+        // reservedBytes: this.reservedBytes,
+        // overBudgetBytes: Math.max(0, this.reservedBytes - this.budgetBytes),
+        mode: "full-set" as const,
+        offscreenGraceMs: OFFSCREEN_GRACE_MS,
+        retainedSetBytes: retainedAssets.reduce((sum, asset) => sum + DEVICE_SPRITE_ANIMATION_PHASES
+          .reduce((bytes, phase) => bytes + asset.pages[phase].reduce((total, page) => total + page.estimatedBytes, 0), 0), 0),
+        retainedAssets: retainedAssets.length,
+        visibleSessions: [...this.resolvedAssets].reduce((sum, asset) => sum + asset.visibleOwners.size, 0),
+        visibleAssets: [...this.resolvedAssets].filter(asset => asset.visibleOwners.size > 0).length,
+        queuedPages: this.queuedPages.size,
+        totalsSinceCreation: { ...this.totals },
+        assets: retainedAssets.slice(0, 12).map(asset => {
+            const pages = DEVICE_SPRITE_ANIMATION_PHASES.flatMap(phase => asset.pages[phase]);
+            return { spriteId: asset.spriteId, visibleInstances: asset.visibleOwners.size,
+              totalSetBytes: pages.reduce((sum, page) => sum + page.estimatedBytes, 0),
+              totalPages: pages.length,
+              totalFrames: pages.reduce((sum, page) => sum + page.manifest.frameCount, 0),
+              preparedFrames: pages.reduce((sum, page) => sum + (page.frames?.length ?? 0), 0),
+              failedPages: pages.filter(page => page.failed).length,
+              graceRemainingMs: asset.visibleOwners.size > 0 ? null : Math.max(0, Math.ceil(asset.lastVisibleAt + OFFSCREEN_GRACE_MS - now)),
+              selectedPages: pages.filter(page => this.isWanted(page)).length,
+              preparedPages: pages.filter(page => page.frames !== null).length };
+          }),
+        omittedAssets: Math.max(0, retainedAssets.length - 12),
+      },
     });
   }
 
   public destroy(): void {
     this.destroyed = true;
+    if (this.queueTimer !== null) clearTimeout(this.queueTimer);
+    if (this.expiryTimer !== null) clearTimeout(this.expiryTimer);
+    this.queueTimer = null;
+    this.expiryTimer = null;
+    for (const finish of this.queuedPages.values()) finish(false);
+    this.queuedPages.clear();
     for (const session of [...this.sessions]) {
       session.destroy();
     }
@@ -295,10 +459,11 @@ export class DeviceAnimationTextureCache {
       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
         for (const page of asset.pages[phase]) {
           page.owners.clear();
+          page.warm = false;
           void this.unloadPage(page);
         }
       }
-      void this.options.unloadTexture(asset.maskUrl, asset.mask);
+      void this.disposeTexture(asset.maskUrl, asset.mask);
     }
     this.resolvedAssets.clear();
     this.entries.clear();
@@ -309,32 +474,239 @@ export class DeviceAnimationTextureCache {
     if (this.destroyed) {
       return false;
     }
+    const added = !page.owners.has(owner);
     page.owners.add(owner);
+    if (added) this.scheduleResidency();
     if (page.frames !== null) {
       return true;
     }
     if (page.loadPromise !== null) {
       return page.loadPromise;
     }
-    page.loadPromise = this.loadPage(page).finally(() => {
-      page.loadPromise = null;
-    });
-    return page.loadPromise;
+    return this.enqueuePage(page);
   }
 
   public releasePage(page: DeviceAnimationPageRuntime, owner: symbol): void {
-    page.owners.delete(owner);
-    if (page.owners.size === 0) {
-      void this.unloadPage(page);
+    if (!page.owners.delete(owner)) return;
+    this.scheduleResidency();
+  }
+
+  public recordFrameAccess(hit: boolean): void {
+    if (hit) this.totals.frameHits += 1;
+    else this.totals.frameMisses += 1;
+  }
+
+  public setSessionVisibility(asset: DeviceAnimationAsset, owner: symbol, phase: DeviceSpriteAnimationPhase | null): void {
+    if (phase === null) {
+      if (!asset.visibleOwners.delete(owner)) return;
+    } else asset.visibleOwners.set(owner, phase);
+    asset.lastVisibleAt = performance.now();
+    this.scheduleResidency();
+  }
+
+  // AI-REMOVED 2026-09-13:
+  // Reason: 整套保留不能被预算值覆盖。
+  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+  // Replacement: isAssetRetained / reconcileResidency
+  // Risk: 全量驻留提高内存与显存占用。
+  // Human Review: Required
+  // Original code:
+  // private get budgetBytes(): number {
+  //   const value = this.options.budgetBytes ?? DEFAULT_ANIMATION_RESIDENCY_BYTES;
+  //   return Number.isFinite(value) && value >= 0 ? value : DEFAULT_ANIMATION_RESIDENCY_BYTES;
+  // }
+
+  private isAssetRetained(asset: DeviceAnimationAsset, now: number): boolean {
+    return asset.visibleOwners.size > 0 || now <= asset.lastVisibleAt + OFFSCREEN_GRACE_MS;
+  }
+
+  private isWanted(page: DeviceAnimationPageRuntime): boolean {
+    return page.owners.size > 0 || page.warm;
+  }
+
+  private scheduleResidency(): void {
+    if (this.destroyed || this.reconcileScheduled) return;
+    this.reconcileScheduled = true;
+    queueMicrotask(() => {
+      this.reconcileScheduled = false;
+      if (!this.destroyed) this.reconcileResidency();
+    });
+  }
+
+  // AI-REMOVED 2026-09-13:
+  // Reason: 预算选择和离屏立即取消队列与全量驻留要求冲突。
+  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+  // Replacement: 下方 reconcileResidency
+  // Risk: 全量驻留提高内存与显存占用。
+  // Human Review: Required
+  // Original code:
+  // private reconcileResidency(): void {
+  //   if (this.expiryTimer !== null) clearTimeout(this.expiryTimer);
+  //   this.expiryTimer = null;
+  //   const now = performance.now();
+  //   const assets = [...this.resolvedAssets];
+  //   const allPages = assets.flatMap(asset => DEVICE_SPRITE_ANIMATION_PHASES.flatMap(phase => asset.pages[phase]));
+  //   // 必需页可超过软预算，不能为了满足缓存上限销毁当前正在显示的纹理。
+  //   let reserved = assets.reduce((sum, asset) => sum + asset.mask.source.pixelWidth * asset.mask.source.pixelHeight * 4, 0);
+  //   for (const page of allPages) {
+  //     page.warm = false;
+  //     if (page.owners.size > 0) reserved += page.estimatedBytes;
+  //   }
+  //   const candidates = new Map<DeviceAnimationPageRuntime, number>();
+  //   const add = (page: DeviceAnimationPageRuntime | undefined, priority: number) => {
+  //     if (page !== undefined && !page.failed) candidates.set(page, Math.min(candidates.get(page) ?? Infinity, priority));
+  //   };
+  //   let nextExpiry = Infinity;
+  //   for (const asset of assets) {
+  //     if (asset.unavailable) continue;
+  //     if (asset.visibleOwners.size > 0) {
+  //       // 所有可见类型先准备各状态入口，再补当前阶段、其他循环和过渡阶段；同类实例共享一份。
+  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) add(asset.pages[phase][0], 0);
+  //       for (const phase of new Set(asset.visibleOwners.values())) {
+  //         for (const page of asset.pages[phase]) add(page, 1);
+  //       }
+  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+  //         for (const page of asset.pages[phase]) add(page, phase.endsWith("idle") ? 2 : 3);
+  //       }
+  //     } else if (now < asset.lastVisibleAt + OFFSCREEN_GRACE_MS) {
+  //       nextExpiry = Math.min(nextExpiry, asset.lastVisibleAt + OFFSCREEN_GRACE_MS);
+  //       // 离屏缓冲只保留已有/正在加载的页，不继续扩大预热集合。
+  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+  //         for (const page of asset.pages[phase]) if (page.texture !== null || (page.loadPromise !== null && !this.queuedPages.has(page))) add(page, 4);
+  //       }
+  //     }
+  //   }
+  //   for (const [page] of [...candidates].sort((a, b) => a[1] - b[1])) {
+  //     if (page.owners.size > 0 || reserved + page.estimatedBytes > this.budgetBytes) continue;
+  //     page.warm = true;
+  //     reserved += page.estimatedBytes;
+  //   }
+  //   this.reservedBytes = reserved;
+  //   this.warmPriorities = candidates;
+  //   for (const page of allPages) {
+  //     if (this.isWanted(page)) {
+  //       if (page.frames === null && page.loadPromise === null && !page.failed
+  //         && this.resolveAsset(page)?.unavailable === false) void this.enqueuePage(page);
+  //     } else if (!this.isWanted(page)) {
+  //       const finish = this.queuedPages.get(page);
+  //       if (finish !== undefined) {
+  //         this.queuedPages.delete(page);
+  //         finish(false);
+  //       }
+  //       if (page.texture === null || page.unloadPromise !== null) continue;
+  //       const asset = this.resolveAsset(page)!;
+  //       if (asset.visibleOwners.size === 0 && now >= asset.lastVisibleAt + OFFSCREEN_GRACE_MS) this.totals.offscreenEvictions += 1;
+  //       else this.totals.budgetEvictions += 1;
+  //       void this.unloadPage(page);
+  //     }
+  //   }
+  //   if (Number.isFinite(nextExpiry)) {
+  //     this.expiryTimer = setTimeout(() => { this.expiryTimer = null; this.scheduleResidency(); }, Math.max(1, nextExpiry - now));
+  //   }
+  //   this.scheduleQueue();
+  // }
+
+  private reconcileResidency(): void {
+    if (this.expiryTimer !== null) clearTimeout(this.expiryTimer);
+    this.expiryTimer = null;
+    const now = performance.now();
+    this.warmPriorities.clear();
+    let nextExpiry = Infinity;
+    for (const asset of this.resolvedAssets) {
+      const retained = this.isAssetRetained(asset, now);
+      const visible = asset.visibleOwners.size > 0;
+      if (retained && !visible) nextExpiry = Math.min(nextExpiry, asset.lastVisibleAt + OFFSCREEN_GRACE_MS);
+      const currentPhases = new Set(asset.visibleOwners.values());
+      for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+        for (const page of asset.pages[phase]) {
+          // 优先级只决定加载顺序；整套页面在可见期及离屏 20 秒内均保留并继续加载。
+          page.warm = retained;
+          if (retained) {
+            const priority = !visible ? 4 : page.pageIndex === 0 ? 0 : currentPhases.has(phase) ? 1 : phase.endsWith("idle") ? 2 : 3;
+            this.warmPriorities.set(page, priority);
+          }
+          if (this.isWanted(page)) {
+            if (page.frames === null && page.loadPromise === null && !page.failed && !asset.unavailable) {
+              void this.enqueuePage(page);
+            }
+          } else {
+            const finish = this.queuedPages.get(page);
+            if (finish !== undefined) {
+              this.queuedPages.delete(page);
+              finish(false);
+            }
+            if (page.texture === null || page.unloadPromise !== null) continue;
+            this.totals.offscreenEvictions += 1;
+            void this.unloadPage(page);
+          }
+        }
+      }
+    }
+    if (Number.isFinite(nextExpiry)) {
+      // 用户要求“超过 20 秒”，边界时刻仍保留，下一毫秒再回收。
+      this.expiryTimer = setTimeout(() => { this.expiryTimer = null; this.scheduleResidency(); }, Math.max(1, Math.ceil(nextExpiry - now) + 1));
+    }
+    this.scheduleQueue();
+  }
+
+  private enqueuePage(page: DeviceAnimationPageRuntime): Promise<boolean> {
+    if (page.loadPromise !== null) return page.loadPromise;
+    if (page.failed) {
+      if (page.owners.size > 0) {
+        const asset = this.resolveAsset(page);
+        if (asset !== null) asset.unavailable = true;
+      }
+      return Promise.resolve(false);
+    }
+    page.loadPromise = new Promise<boolean>(resolve => this.queuedPages.set(page, resolve)).finally(() => {
+      page.loadPromise = null;
+      // 取消排队与重新入屏可能交错；Promise 清理后重新核对，避免整套有页漏排。
+      this.scheduleResidency();
+    });
+    this.scheduleQueue();
+    return page.loadPromise;
+  }
+
+  private scheduleQueue(): void {
+    if (this.destroyed || this.loading || this.queueTimer !== null || this.queuedPages.size === 0) return;
+    this.queueTimer = setTimeout(() => {
+      this.queueTimer = null;
+      void this.processQueue();
+    }, PAGE_QUEUE_INTERVAL_MS);
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.destroyed || this.loading) return;
+    // 每次只处理一页；已有人等待的帧始终优先于后台预热。
+    const page = [...this.queuedPages.keys()].find(candidate => candidate.owners.size > 0)
+      ?? [...this.queuedPages.keys()].sort((a, b) => (this.warmPriorities.get(a) ?? 99) - (this.warmPriorities.get(b) ?? 99))[0];
+    if (page === undefined) return;
+    const finish = this.queuedPages.get(page)!;
+    this.queuedPages.delete(page);
+    this.loading = true;
+    let ready = false;
+    try {
+      if (this.isWanted(page) && this.resolveAsset(page)?.unavailable === false) {
+        if (page.owners.size > 0) this.totals.demandLoads += 1;
+        else this.totals.prewarmLoads += 1;
+        ready = await this.loadPage(page);
+      }
+    } finally {
+      this.loading = false;
+      finish(ready);
+      this.scheduleResidency();
+      this.scheduleQueue();
     }
   }
 
-  private report(spriteId: string, error: unknown): void {
+  private report(spriteId: string, error: unknown, message = "animation unavailable; using static sprite."): void {
     if (this.reportedErrors.has(spriteId)) {
       return;
     }
     this.reportedErrors.add(spriteId);
-    console.error(`[DeviceAnimation] ${spriteId}: animation unavailable; using static sprite.`, error);
+    console.error(`[DeviceAnimation] ${spriteId}: ${message}`, error);
   }
 
   private async load(
@@ -345,23 +717,34 @@ export class DeviceAnimationTextureCache {
     const manifest = await this.options.loadManifest(createPublicAssetUrl(`${root}/manifest.json`));
     const definition = normalizeDeviceSpriteAnimationDefinition(registryDefinition, manifest);
     const maskUrl = createPublicAssetUrl(`${root}/${definition.maskFile}`);
-    const mask = await this.options.loadTexture(maskUrl);
+    const mask = await this.options.loadTexture(maskUrl, definition.resolution);
     if (this.destroyed) {
-      await this.options.unloadTexture(maskUrl, mask);
+      await this.disposeTexture(maskUrl, mask);
       return null;
     }
-    this.validateCompleteTexture(mask);
-    if (mask.width !== definition.frameWidth || mask.height !== definition.frameHeight) {
-      throw new Error("Animation union mask dimensions differ from frame dimensions");
+    try {
+      this.validateCompleteTexture(mask);
+      if (mask.source.resolution !== definition.resolution
+        || mask.width !== definition.frameWidth || mask.height !== definition.frameHeight) {
+        throw new Error("Animation union mask dimensions differ from frame dimensions");
+      }
+      this.options.configureTexture(mask);
+    } catch (error) {
+      await this.disposeTexture(maskUrl, mask);
+      throw error;
     }
-    this.options.configureTexture(mask);
     const createPageRuntimes = (phase: DeviceSpriteAnimationPhase) => (
       definition.clips[phase].pages.map((page, pageIndex): DeviceAnimationPageRuntime => ({
         phase,
         pageIndex,
         manifest: page,
         url: createPublicAssetUrl(`${root}/${page.file}`),
+        resolution: definition.resolution,
         owners: new Set(),
+        estimatedBytes: definition.frameWidth * definition.resolution * page.columns
+          * definition.frameHeight * definition.resolution * page.rows * 4,
+        warm: false,
+        failed: false,
         texture: null,
         frames: null,
         loadPromise: null,
@@ -374,8 +757,13 @@ export class DeviceAnimationTextureCache {
       close: createPageRuntimes("close"),
       close_idle: createPageRuntimes("close_idle"),
     };
-    const asset: DeviceAnimationAsset = { definition, mask, maskUrl, pages, unavailable: false };
+    const asset: DeviceAnimationAsset = { definition, mask, maskUrl, pages, spriteId,
+      visibleOwners: new Map(), lastVisibleAt: -Infinity, unavailable: false };
+    for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+      for (const page of pages[phase]) this.pageAssets.set(page, asset);
+    }
     this.resolvedAssets.add(asset);
+    this.scheduleResidency();
     return asset;
   }
 
@@ -383,29 +771,37 @@ export class DeviceAnimationTextureCache {
     if (page.unloadPromise !== null) {
       await page.unloadPromise;
     }
-    if (this.destroyed || page.owners.size === 0) {
+    if (this.destroyed || !this.isWanted(page)) {
       return false;
     }
     let texture: Texture | null = null;
     try {
-      texture = await this.options.loadTexture(page.url);
-      if (this.destroyed || page.owners.size === 0) {
-        await this.options.unloadTexture(page.url, texture);
+      texture = await this.options.loadTexture(page.url, page.resolution);
+      if (this.destroyed || !this.isWanted(page)) {
+        await this.disposeTexture(page.url, texture);
         return false;
       }
       this.validateCompleteTexture(texture);
       const asset = this.resolveAsset(page);
       if (asset === null || asset.unavailable) {
-        await this.options.unloadTexture(page.url, texture);
+        await this.disposeTexture(page.url, texture);
         return false;
       }
       const { frameWidth, frameHeight } = resolveDeviceSpriteAnimationGrid(
         asset.definition,
         page.manifest,
-        { width: texture.source.pixelWidth, height: texture.source.pixelHeight },
+        {
+          width: texture.source.pixelWidth,
+          height: texture.source.pixelHeight,
+          resolution: texture.source.resolution,
+        },
         this.options.getMaxTextureSize(),
       );
       this.options.configureTexture(texture);
+      // 驻留期间由当前缓存统一回收；禁止 Pixi 按未绘制时长自动卸载预热源。
+      texture.source.autoGarbageCollect = false;
+      this.options.uploadTexture(texture);
+      this.totals.preparedPages += 1;
       const frames = Object.freeze(Array.from({ length: page.manifest.frameCount }, (_, index) => new Texture({
         source: texture!.source,
         frame: new Rectangle(
@@ -420,19 +816,22 @@ export class DeviceAnimationTextureCache {
       return true;
     } catch (error) {
       const asset = this.resolveAsset(page);
-      if (asset !== null) {
-        asset.unavailable = true;
-      }
+      page.failed = true;
+      if (page.owners.size > 0) {
+        this.totals.loadFailures += 1;
+        if (asset !== null) asset.unavailable = true;
+      } else this.totals.prewarmFailures += 1;
       if (texture !== null) {
-        await this.options.unloadTexture(page.url, texture);
+        await this.disposeTexture(page.url, texture);
       }
-      this.report(page.url, error);
+      if (page.owners.size > 0) this.report(page.url, error);
+      else console.warn(`[DeviceAnimation] ${page.url}: prewarm failed; current animation retained.`, error);
       return false;
     }
   }
 
   private async unloadPage(page: DeviceAnimationPageRuntime): Promise<void> {
-    if (page.owners.size > 0 || page.unloadPromise !== null || page.texture === null) {
+    if (this.isWanted(page) || page.unloadPromise !== null || page.texture === null) {
       return page.unloadPromise ?? Promise.resolve();
     }
     const texture = page.texture;
@@ -442,27 +841,32 @@ export class DeviceAnimationTextureCache {
     for (const frame of frames) {
       frame.destroy(false);
     }
-    page.unloadPromise = this.options.unloadTexture(page.url, texture).finally(() => {
+    page.unloadPromise = this.disposeTexture(page.url, texture).finally(() => {
       page.unloadPromise = null;
-      const owner = page.owners.values().next().value;
-      if (!this.destroyed && owner !== undefined) {
-        void this.retainPage(page, owner);
-      }
+      if (!this.destroyed) this.scheduleResidency();
     });
     return page.unloadPromise;
   }
 
   private resolveAsset(page: DeviceAnimationPageRuntime): DeviceAnimationAsset | null {
-    return [...this.resolvedAssets].find(
-      (candidate) => candidate.pages[page.phase][page.pageIndex] === page,
-    ) ?? null;
+    return this.pageAssets.get(page) ?? null;
+  }
+
+  private async disposeTexture(path: string, texture: Texture): Promise<void> {
+    try {
+      await this.options.unloadTexture(path, texture);
+    } catch (error) {
+      this.totals.unloadFailures += 1;
+      this.report(path, error, "texture unload failed.");
+    }
   }
 
   private validateCompleteTexture(texture: Texture): void {
-    if (texture.destroyed || texture.source.destroyed || texture.source.resolution !== 1
+    if (texture.destroyed || texture.source.destroyed
+      || !Number.isFinite(texture.source.resolution) || texture.source.resolution <= 0
       || texture.frame.x !== 0 || texture.frame.y !== 0 || texture.rotate !== 0
-      || texture.width !== texture.source.pixelWidth || texture.height !== texture.source.pixelHeight) {
-      throw new Error("Animation resources must be complete, unscaled image textures");
+      || texture.width !== texture.source.width || texture.height !== texture.source.height) {
+      throw new Error("Animation resources must be complete image textures with a valid resolution");
     }
   }
 }

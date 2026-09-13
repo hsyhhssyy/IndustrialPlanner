@@ -2,6 +2,7 @@ import { Graphics } from "pixi.js";
 import { resolveViewportPointFromWorldPoint, resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationActivityGuard } from "./DecorationRedrawGuard";
 
 const IDLE_CURSOR_SIZE_RATIO = 2 / 3;
 const IDLE_CURSOR_COLOR = 0xcc8800;
@@ -25,19 +26,24 @@ interface AppWithLogisticsPlacementRuntime {
  */
 export function createLogisticsPlacementIdleCursorDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationActivityGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      const app = ctx.renderHost.workspace.app;
+      const runtime = app !== null && "internalState" in app
+        ? (app as AppWithLogisticsPlacementRuntime).internalState.runtime.logisticsPlacement
+        : null;
+      if (!shouldSync(runtime?.phase === "idle" && runtime.pointerMode === "mouse" && runtime.lastMousePosition !== null)) return;
       graphics.clear();
 
-      const app = ctx.renderHost.workspace.app;
       if (app === null || !("internalState" in app)) {
         return;
       }
 
-      const runtime = (app as AppWithLogisticsPlacementRuntime).internalState.runtime.logisticsPlacement;
+      if (runtime === null) return;
 
       // 仅在 idle 阶段 && 鼠标模式下显示
       if (runtime.phase !== "idle" || runtime.pointerMode !== "mouse") {

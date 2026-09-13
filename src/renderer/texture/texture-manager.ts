@@ -9,9 +9,19 @@ import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
 import { LogisticsMaterialTextureCache, type LogisticsDynamicSession } from "./logistics-material-textures"
 import { TexturePerfDiagnostics } from "./texture-perf-diagnostics"
+import { loadDeviceAnimationTexture } from "./device-animation-texture-loader"
 
 import {
   DeviceAnimationTextureCache,
+  // AI-REMOVED 2026-09-13:
+  // Reason: 不再读取默认驻留预算。
+  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+  // Replacement: DeviceAnimationTextureCache 全量策略
+  // Risk: 全量驻留提高内存与显存占用。
+  // Human Review: Required
+  // Original code:
+  // DEFAULT_ANIMATION_RESIDENCY_BYTES,
   type DeviceAnimationTextures,
   type DeviceAnimationTextureStats,
 } from "./device-animation-textures"
@@ -86,6 +96,25 @@ class TextureActionsImpl implements TextureActions {
     })
     this.syncTextureConfigState(this.textureConfig)
     this.deviceAnimations = new DeviceAnimationTextureCache({
+      // AI-REMOVED 2026-09-13:
+      // Reason: 遗留 localStorage 预算不能缩减整套驻留。
+      // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+      // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+      // Replacement: DeviceAnimationTextureCache 全量策略
+      // Risk: 全量驻留提高内存与显存占用。
+      // Human Review: Required
+      // Original code:
+      // budgetBytes: readAnimationResidencyBudget(this.app?.state.settings?.debugMode === true),
+      uploadTexture: (texture) => {
+        const startedAt = performance.now()
+        let failed = true
+        try {
+          this.renderer.texture.initSource(texture.source)
+          failed = false
+        } finally {
+          this.performanceDiagnostics.record("preupload", texture.source, performance.now() - startedAt, false, failed)
+        }
+      },
       loadManifest: async (path) => {
         const response = await fetch(path, { credentials: "same-origin" })
         if (!response.ok) {
@@ -93,7 +122,7 @@ class TextureActionsImpl implements TextureActions {
         }
         return response.json()
       },
-      loadTexture: (path) => this.performanceDiagnostics.load(path, () => Assets.load<Texture>(path)),
+      loadTexture: (path, resolution) => this.performanceDiagnostics.load(path, () => loadDeviceAnimationTexture(path, resolution)),
       unloadTexture: async (path, texture) => {
         this.trackedBitmapTextures.delete(texture)
         await this.performanceDiagnostics.unload(path, texture, () => Assets.unload(path))
@@ -315,3 +344,25 @@ export function createTextureActions(options: {
 }): TextureActions {
   return new TextureActionsImpl(options)
 }
+
+// AI-REMOVED 2026-09-13:
+// Reason: 取消调试预算开关，整套与 20 秒规则始终生效。
+// Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
+// Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
+// Replacement: DeviceAnimationTextureCache.reconcileResidency
+// Risk: 全量驻留提高内存与显存占用。
+// Human Review: Required
+// Original code:
+// /** 仅调试实验覆盖软预算；不推测设备显存，不新增产品设置。 */
+// function readAnimationResidencyBudget(debug: boolean): number {
+//   if (debug) {
+//     try {
+//       const raw = localStorage.getItem("industrial-planner:animation-residency-mib")
+//       const mib = raw === null || raw.trim() === "" ? NaN : Number(raw)
+//       if (Number.isFinite(mib) && mib >= 0 && mib <= 4096) return mib * 1024 * 1024
+//     } catch {
+//       // 存储不可用时使用实验默认预算。
+//     }
+//   }
+//   return DEFAULT_ANIMATION_RESIDENCY_BYTES
+// }

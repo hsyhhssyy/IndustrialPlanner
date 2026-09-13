@@ -100,7 +100,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     definition: EntityDefinition,
     protected readonly renderHost: RenderHost,
   ) {
-    super(entityId)
+    super(entityId, definition.id)
     this.spriteId = definition.spriteId
     this.materialSpec = resolveLogisticsMaterialSpec(this.spriteId)
     this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, color: "empty" } : null

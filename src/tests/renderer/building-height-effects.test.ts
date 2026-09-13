@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
@@ -12,6 +13,8 @@ import {
   selectRingEffectPlacements,
 } from '@/renderer/building-effects/placements';
 import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
+// @ts-expect-error Node 发布配置直接复用，数值采样期望由测试独立计算。
+import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from '../../scripts/building-asset-publish-config.mjs';
 
 const manifest = JSON.parse(await readFile('public/3d-top-view/port-effects/manifest.json', 'utf8')) as BuildingEffectsManifest;
 const registry = createRegistryContract();
@@ -159,6 +162,8 @@ describe('建筑高度与端口特效', () => {
   });
 
   it('发布高度字节按坐标契约逐行转换，所有数值文件及颜色页存在', async () => {
+    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
+    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
     for (const view of Object.values(manifest.views)) for (const field of Object.values(view.fields)) {
       fields.set(field.file, { field, reflected: view.coordinateSpace === 'project-reflected-source' });
@@ -169,49 +174,63 @@ describe('建筑高度与端口特效', () => {
     }
     for (const { field, reflected } of fields.values()) {
       const delivered = gunzipSync(await readFile(`public/3d-top-view/port-effects/${field.file}`));
-      const original = await sharp(`resources/building-port-effects/assets/${field.file.replace(/\.rgba\.bin$/, '')}`).ensureAlpha().raw().toBuffer();
-      const expected = Buffer.alloc(original.length);
+      const { data: original, info } = await sharp(path.join(collection.sourceSite.root, field.file.replace(/\.rgba\.bin$/, '')))
+        .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const expected = Buffer.alloc(field.width * field.height * 4);
       const rowBytes = field.width * 4;
       for (let row = 0; row < field.height; row++) {
-        const sourceRow = reflected ? field.height - 1 - row : row;
-        original.copy(expected, row * rowBytes, sourceRow * rowBytes, (sourceRow + 1) * rowBytes);
+        const sampledRow = Math.floor((row + 0.5) / resolution);
+        const sourceRow = reflected ? info.height - 1 - sampledRow : sampledRow;
+        for (let pixel = 0; pixel < field.width; pixel++) {
+          const sourcePixel = Math.floor((pixel + 0.5) / resolution);
+          if (sourcePixel >= info.width || sourceRow < 0 || sourceRow >= info.height) continue;
+          const offset = (sourceRow * info.width + sourcePixel) * 4;
+          original.copy(expected, row * rowBytes + pixel * 4, offset, offset + 4);
+        }
       }
       expect(delivered.equals(expected), field.file).toBe(true);
       expect(delivered.length).toBe(field.width * field.height * 4);
     }
   });
 
-  it('发布特效页逐帧保持 RGBA，仅反射像素行且不改变帧索引与时长', async () => {
+  it('发布特效逐帧补边缩放并重新排布，保持帧序、时长与采样位置', async () => {
+    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
+    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
     const resourceId = 'v1.5/fx/P_interactive_large_pipeoff_out_01';
     const resource = manifest.effects[resourceId]!;
     const reflected = resource.coordinateSpace === 'project-reflected-source';
-    const sourceEffect = JSON.parse(await readFile('resources/building-port-effects/assets/effects/P_interactive_large_pipeoff_out_01/effect.json', 'utf8')) as {
+    const sourceDirectory = path.join(collection.sourceSite.root, path.dirname(resource.height.file));
+    const sourceEffect = JSON.parse(await readFile(path.join(sourceDirectory, 'effect.json'), 'utf8')) as {
       frames: { page: number; x: number; y: number; width: number; height: number; durationMs: number }[];
       spritesheet: string;
     };
-    const sourceSheet = JSON.parse(await readFile('resources/building-port-effects/assets/effects/P_interactive_large_pipeoff_out_01/spritesheet.json', 'utf8')) as {
-      pages: { width: number; height: number }[];
+    const sourceSheet = JSON.parse(await readFile(path.join(sourceDirectory, sourceEffect.spritesheet), 'utf8')) as {
+      pages: { image: string; width: number; height: number }[];
     };
-    expect(resource.frames.map(({ page, x, width, height, durationMs }, index) => ({
-      page, x, width, height, durationMs,
-      sourceY: sourceEffect.frames[index]!.y,
-      publishedY: sourceSheet.pages[page]!.height - sourceEffect.frames[index]!.y - height,
-    }))).toEqual(sourceEffect.frames.map(({ page, x, width, height, durationMs, y }) => ({
-      page, x, width, height, durationMs,
-      sourceY: y,
-      publishedY: sourceSheet.pages[page]!.height - y - height,
+    expect(resource.frames.map(({ width, height, durationMs }) => ({
+      width, height, durationMs,
+    }))).toEqual(sourceEffect.frames.map(({ width, height, durationMs }) => ({
+      width: Math.ceil(width * resolution), height: Math.ceil(height * resolution), durationMs,
     })));
     for (const [pageIndex, page] of resource.pages.entries()) {
-      const source = await sharp(`resources/building-port-effects/assets/${page.file}`).ensureAlpha().raw().toBuffer();
       const delivered = await sharp(`public/3d-top-view/port-effects/${page.file}`).ensureAlpha().raw().toBuffer();
       const pageFrames = resource.frames.filter((frame) => frame.page === pageIndex);
       let mismatches = 0;
       for (const frame of pageFrames) {
-        const sourceY = reflected ? page.height - frame.y - frame.height : frame.y;
+        const original = sourceEffect.frames[resource.frames.indexOf(frame)]!;
+        const sheetPage = sourceSheet.pages[original.page]!;
+        let extract = sharp(path.join(sourceDirectory, sheetPage.image))
+          .extract({ left: original.x, top: original.y, width: original.width, height: original.height });
+        if (reflected) extract = extract.flip();
+        const pixels = await extract.ensureAlpha().raw().toBuffer();
+        const source = await sharp(pixels, { raw: { width: original.width, height: original.height, channels: 4 } })
+          .extend({ left: 0, top: 0, right: frame.width / resolution - original.width,
+            bottom: frame.height / resolution - original.height, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer();
         for (let row = 0; row < frame.height; row++) {
-          const sourceRow = reflected ? sourceY + frame.height - 1 - row : frame.y + row;
+          const sourceRow = row;
           const deliveredRow = frame.y + row;
-          const sourceOffset = (sourceRow * page.width + frame.x) * 4;
+          const sourceOffset = sourceRow * frame.width * 4;
           const deliveredOffset = (deliveredRow * page.width + frame.x) * 4;
           for (let pixel = 0; pixel < frame.width; pixel++) {
             const sourcePixel = sourceOffset + pixel * 4;

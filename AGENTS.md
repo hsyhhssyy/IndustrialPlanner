@@ -303,6 +303,12 @@ AI 在分析代码时必须区分：
 
 运行仿真性能基线测试使用 `simulation-performace-monitor` skill。
 
+## 美术网站素材导入
+
+从 `https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/` 导入、同步或更新建筑、动画、物流及高度特效时，使用 `.agents/skills/import-building-assets/SKILL.md`。网站清单和逐文件哈希是新交付入口，不再使用 ZIP 导入或 PNG 大图拆分。
+
+创建或维护该技能不构成执行导入的授权。`src/scripts/archived-building-imports/` 仅保留注释化删除的审计原文，不得执行或恢复为旧入口；现有分页、遮罩、物流和特效发布器继续作为通用处理能力使用。
+
 ## 更新日志
 
 编写或修改 `public/changelog/` 下的更新日志时使用 `changelog-writing` skill。

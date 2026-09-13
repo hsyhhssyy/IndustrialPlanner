@@ -17,6 +17,9 @@ export class LogisticsDynamicView {
     this.root.pivot.set(64, 64);
     const sprite = (suffix: string) => {
       const image = new Sprite(this.texture(`static/${state.kind === "belt" ? "conveyor" : "pipe"}.${state.shape}.${suffix}`));
+      // 发布纹理密度可变，分层画布始终使用 128 个逻辑单位。
+      image.width = 128;
+      image.height = 128;
       this.root.addChild(image);
       return image;
     };
@@ -81,7 +84,15 @@ export class LogisticsDynamicView {
       uFilled: { value: 0, type: "f32" },
       uDirection: { value: p.waterDirection ?? 0, type: "f32" },
       uLayer: { value: layer, type: "f32" },
-      uAtlasHalfTexel: { value: .5 / 2048, type: "f32" },
+      uAtlasHalfTexel: { value: .5 / manifest.resources["dynamic/conveyor.arrow"]!.width, type: "f32" },
+      // 新交付 Shader 支持局部填充；当前实体状态表示整段充满，沿用现有仿真语义。
+      uFillBounds: { value: new Float32Array([-1e6, 1e6, 0, 0]), type: "vec4<f32>" },
+      uColor: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uTint: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uSkin: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uSkin2: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uFoam: { value: new Float32Array([1, 1, 1, 1]), type: "vec4<f32>" },
+      uFluidType: { value: 0, type: "f32" },
       uParams: { value: new Float32Array([b.arrowSpeed ?? 1, b.flowSpeed ?? 1.25, b.timeOffset ?? 1, b.arrowSpace ?? 1]), type: "vec4<f32>" },
       uPipe: { value: new Float32Array([p.staticDensity ?? .11, p.flowDensity ?? .18, p.flowOffset ?? 1.97, p.flowSpeed ?? 1.23]), type: "vec4<f32>" },
       uWidths: { value: new Float32Array([p.staticWidth ?? .922, p.flowWidth ?? .88, p.waterWaveSpeed ?? .8, b.flowSpace ?? .27]), type: "vec4<f32>" },
@@ -99,6 +110,8 @@ export class LogisticsDynamicView {
         uFlow: this.texture(belt ? "dynamic/conveyor.highlight" : "dynamic/pipe.fluid-motion").source,
         uPattern: belt ? glyph.source : this.texture("dynamic/pipe.pattern").source,
         uFluidMap: belt ? map.source : this.texture(`dynamic/pipe.${this.state.shape}.fluid-mapping`).source,
+        uBase: map.source,
+        uSplash: this.texture(belt ? "dynamic/conveyor.highlight" : "dynamic/pipe.splash-noise").source,
       },
     });
     const mesh = new Mesh({

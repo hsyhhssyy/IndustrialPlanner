@@ -447,6 +447,7 @@ describe("GenericDeviceSprite", () => {
         hasFrame: vi.fn(() => true),
         prepareFrame: vi.fn(async () => animationFrame),
         commitFrame: vi.fn(() => animationFrame),
+        setVisible: vi.fn(),
         destroy: vi.fn(),
       })),
     })

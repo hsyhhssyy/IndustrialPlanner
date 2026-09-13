@@ -5,6 +5,7 @@ import type { GridRect } from "@/domain/shared/grid";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationRedrawGuard } from "./DecorationRedrawGuard";
 import {
   resolveMarqueeGridRectLayout,
   resolveWorldAuxiliaryStrokeWidth,
@@ -94,14 +95,24 @@ export function resolveBaseBoundaryStrokeWidth(
 
 export function createBaseBoundaryDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldRedraw = createDecorationRedrawGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      const redraw = shouldRedraw([
+        baseDefinition?.placeableArea.width, baseDefinition?.placeableArea.height,
+        ctx.viewportBounds.left, ctx.viewportBounds.top,
+        ctx.viewportBounds.width, ctx.viewportBounds.height,
+        ctx.viewportState.centerX, ctx.viewportState.centerY,
+        ctx.viewportState.gridCellPixelSize, ctx.viewportState.displayRotation,
+      ]);
+      ctx.profiler?.count("baseBoundary.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
       graphics.clear();
 
-      const baseDefinition = resolveCurrentBaseDefinition(ctx);
       if (baseDefinition === null) {
         return;
       }

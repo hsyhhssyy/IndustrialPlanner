@@ -2,7 +2,7 @@ import type { Texture } from "pixi.js"
 
 import type { DeviceAnimationTextureStats } from "./device-animation-textures"
 
-type TextureOperation = "load" | "unload" | "init" | "texImage2D" | "texSubImage2D" | "mipmap" | "anisotropyQuery"
+type TextureOperation = "load" | "unload" | "preupload" | "init" | "texImage2D" | "texSubImage2D" | "mipmap" | "anisotropyQuery"
 interface OperationStats {
   calls: number;
   failedCalls: number;
@@ -16,6 +16,7 @@ interface ResourceStats {
   resource: string;
   width: number;
   height: number;
+  resolution: number;
   format: string;
   mipLevelCount: number;
   operations: Partial<Record<TextureOperation, OperationStats>>;
@@ -103,6 +104,7 @@ export class TexturePerfDiagnostics {
     } else if (description.width > 0 && description.height > 0) {
       resource.width = description.width
       resource.height = description.height
+      resource.resolution = description.resolution
       resource.format = description.format
       resource.mipLevelCount = description.mipLevelCount
     }
@@ -158,7 +160,8 @@ export class TexturePerfDiagnostics {
     return report
   }
 
-  private describe(source: unknown) {
+  /** 复用纹理资源归属；只返回标量，不延长 source 生命周期，也不查询 GPU。 */
+  public describe(source: unknown) {
     const record = source !== null && typeof source === "object" ? source as Record<string, unknown> : {}
     const existingPath = this.sourcePaths.get(record)
     const path = existingPath ?? record.label ?? record._sourceOrigin
@@ -169,6 +172,7 @@ export class TexturePerfDiagnostics {
       resource,
       width: finiteDimension(record.pixelWidth),
       height: finiteDimension(record.pixelHeight),
+      resolution: finiteDimension(record.resolution),
       format: typeof record.format === "string" ? record.format : "unknown",
       mipLevelCount: finiteDimension(record.mipLevelCount),
     }

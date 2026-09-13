@@ -26,6 +26,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   protected constructor(
     protected readonly entityId: string,
+    private readonly diagnosticDefinitionId?: string,
   ) {}
 
   public attach(layers: RenderLayerMap): void {
@@ -204,7 +205,8 @@ export abstract class BaseRenderSprite implements RenderSprite {
       return existingRoot;
     }
 
-    const root = new Container();
+    // 诊断标签保留实体与定义标识，子 Sprite 验证失效时可沿父链定位所属设备。
+    const root = new Container({ label: `entity.${this.entityId}.${this.diagnosticDefinitionId ?? this.constructor.name}.${layerId}` });
     this.layerRoots.set(layerId, root);
 
     if (this.currentLayerMap !== null) {

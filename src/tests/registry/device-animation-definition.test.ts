@@ -60,6 +60,7 @@ describe("device animation definitions", () => {
       closeIdleMode: "hold-last",
       frameWidth: 384,
       frameHeight: 384,
+      resolution: 0.5,
       clips: {
         open: { frameCount: 1 },
         open_idle: { frameCount: 99 },
@@ -87,8 +88,8 @@ describe("device animation definitions", () => {
 
     await Promise.all(Object.values(normalized.clips).flatMap((clip) => clip.pages.map(async (page) => {
       const metadata = await sharp(path.join(animationDirectory, page.file)).metadata();
-      expect(metadata.width).toBe(page.columns * normalized.frameWidth);
-      expect(metadata.height).toBe(page.rows * normalized.frameHeight);
+      expect(metadata.width).toBe(page.columns * normalized.frameWidth * normalized.resolution);
+      expect(metadata.height).toBe(page.rows * normalized.frameHeight * normalized.resolution);
       expect(metadata.hasAlpha).toBe(true);
     })));
 
@@ -99,6 +100,6 @@ describe("device animation definitions", () => {
     ]);
     expect([staticMetadata.width, staticMetadata.height]).toEqual([384, 384]);
     expect([staticMaskMetadata.width, staticMaskMetadata.height]).toEqual([384, 384]);
-    expect([animationMaskMetadata.width, animationMaskMetadata.height]).toEqual([384, 384]);
+    expect([animationMaskMetadata.width, animationMaskMetadata.height]).toEqual([192, 192]);
   });
 });

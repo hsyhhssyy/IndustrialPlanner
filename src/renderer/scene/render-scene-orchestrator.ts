@@ -23,6 +23,7 @@ import type {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import { createMemorySnapshotCollector, type MemorySnapshotCollector } from "./memory-monitor"
+import { configureSceneRenderGroups } from "./render-group-policy"
 import {
   Container,
   UPDATE_PRIORITY,
@@ -350,11 +351,41 @@ export function createRenderSceneOrchestrator(
     visibility: new Map(),
   }
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
+  const renderGroupRoots = {
+    ...layers,
+    beltCargo: beltCargoOverlayLayer,
+    interaction: marqueeOverlayLayer,
+  }
+  const renderGroupMode = configureSceneRenderGroups(renderGroupRoots, isRenderPerfDiagnosticsEnabled(renderHost))
+  app.stage.label = "scene.stage"
+  // 稳定标签用于诊断来源归属；不改变显示树、可见性或渲染顺序。
+  for (const [name, decoration] of Object.entries({
+    grid: gridDecoration, baseBoundary: baseBoundaryDecoration,
+    powerRange: powerRangeDecoration, gasDiffusionRange: gasDiffusionRangeDecoration,
+    previewRect: previewRectDecoration, invalidPlacement: invalidPlacementDecoration,
+    marquee: marqueeDecoration, regionBackground: regionBackgroundDecoration,
+    regionOverlay: regionOverlayDecoration, marqueeCanvas: marqueeCanvasDecoration,
+    blueprintPlacement: blueprintPlacementCanvasDecoration,
+    logisticsPlacement: logisticsPlacementCanvasDecoration,
+    logisticsIdleCursor: logisticsPlacementIdleCursorDecoration,
+    hoverCorners: hoverCornersDecoration, portOverlay: portOverlayDecoration,
+    pipePortGhost: pipePortGhostDecoration, configuredItemIcon: configuredItemIconDecoration,
+    darkPipeLinkLine: darkPipeLinkLineDecoration, darkPipeLinkSelection: darkPipeLinkSelectionDecoration,
+    beltInsertion: beltPortInsertionDecoration, beltCargo: beltCargoDecoration,
+    grassBackground: grassBackgroundDecoration,
+  })) {
+    const label = decoration.container.label
+    if (!label || label === "Graphics" || label === "Container") {
+      decoration.container.label = `decoration.${name}`
+    }
+  }
   const pixiRenderDiagnostics = createPixiRenderDiagnostics({
     app,
     textureProfiler,
+    renderGroupMode,
     layers: {
       stage: app.stage,
+      renderGroups: Object.values(renderGroupRoots),
       pipeFlow: pipeSubEntity,
       beltFlow: beltSubEntity,
       beltInsertion: beltInsertionLayer,
@@ -372,6 +403,7 @@ export function createRenderSceneOrchestrator(
   const renderPerfDiagnostics = createRenderPerfDiagnostics(
     renderHost,
     () => pixiRenderDiagnostics.readSnapshot(),
+    pixiRenderDiagnostics.measureSceneStage,
   )
   let activeFrameProfiler: RenderFrameProfiler | null = null
   let documentVersion = 0
@@ -1793,6 +1825,7 @@ function recordEntitySpriteSyncStats(
 function createRenderPerfDiagnostics(
   renderHost: RenderHost,
   readPixiDiagnostics: () => PixiRenderDiagnosticsSnapshot,
+  measureSceneStage: DecorationProfiler["measure"],
 ): {
   startFrame(options: {
     startedAtMs: number;
@@ -1866,7 +1899,7 @@ function createRenderPerfDiagnostics(
         measure(stage, callback) {
           const stageStartedAtMs = performance.now()
           try {
-            return callback()
+            return measureSceneStage(stage, callback)
           } finally {
             addPerfSample(stageAggregates, stage, performance.now() - stageStartedAtMs)
           }
@@ -1928,7 +1961,8 @@ function createRenderPerfDiagnostics(
             return
           }
 
-          console.debug("[render-perf] " + JSON.stringify({
+          const report = {
+            schemaVersion: 3,
             windowMs: roundPerfValue(windowMs),
             fps: roundPerfValue((frameCount * 1000) / windowMs),
             activeTool: resolveDominantActiveTool(activeToolFrameCounts),
@@ -1970,7 +2004,15 @@ function createRenderPerfDiagnostics(
             },
             counts: summarizePerfAggregates(countAggregates, countAggregates.size),
             stages: summarizePerfAggregates(stageAggregates, RENDER_PERF_TOP_STAGE_COUNT),
-          }))
+          }
+          console.debug("[render-perf] " + JSON.stringify(report))
+          // 每个十秒窗口只写一条，detail 随 DevTools trace 导出；清理页面缓冲不删除已录制事件。
+          performance.measure("IndustrialPlanner.render-perf", {
+            start: windowStartedAtMs,
+            end: finishedAtMs,
+            detail: report,
+          })
+          performance.clearMeasures("IndustrialPlanner.render-perf")
           resetWindow()
         },
       }

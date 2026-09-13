@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { normalizeDeviceSpriteAnimationDefinition } from "@/shared/device-sprite-animation";
+// @ts-expect-error 发布配置为 Node mjs；测试直接核对实际配置。
+import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from "../../scripts/building-asset-publish-config.mjs";
 // AI-REMOVED 2026-09-11:
 // Reason: 此辅助函数只有测试调用，未参与真实发布；时长断言仅与自身比较，不能验证需求。
 // Trigger: 统一验证实际 publisher 的逐帧反射、排序、时长与遮罩行为。
@@ -26,7 +28,7 @@ interface ImportedBuilding {
   animated: boolean;
   spriteOffset: { x: number; y: number; width: number; height: number };
   sourceMetadata: {
-    sourceArchiveSha256: string;
+    sourceSite: { root: string; indexSha256: string; releaseId: string };
     spatial: {
       canvasCells: { width: number; height: number };
       footprintRectCells: { left: number; top: number; width: number; height: number };
@@ -41,7 +43,7 @@ interface ImportedBuilding {
 }
 
 const collection = JSON.parse(await readFile(path.resolve("resources/building-top-view-v15.json"), "utf8")) as {
-  sourceArchiveSha256: string;
+  sourceSite: { root: string; indexSha256: string; releaseId: string };
   sourceCoordinateTransform: unknown;
   entries: ImportedBuilding[];
 };
@@ -117,31 +119,32 @@ describe("v1.5 建筑素材发布", () => {
     const height = entry.spriteOffset.height * 128;
     for (const directory of ["sprites", "sprite-masks"]) {
       const image = await sharp(path.resolve(`public/3d-top-view/${directory}/${entry.spriteId}.webp`)).metadata();
-      expect([image.width, image.height]).toEqual([width, height]);
+      expect([image.width, image.height]).toEqual([width * BUILDING_ASSET_PUBLISH_RESOLUTIONS[0], height * BUILDING_ASSET_PUBLISH_RESOLUTIONS[0]]);
     }
     if (!entry.animated) {
       expect(entity?.spriteAnimation).toBeUndefined();
-      const source = await readFile(path.resolve(`resources/device-sprite-original/v15/${entry.spriteId}.webp`));
+      const source = await readFile(path.resolve(entry.sourceMetadata.sourceSite.root, entry.package));
       expect(source.length).toBeGreaterThan(0);
       return;
     }
     const directory = path.resolve(`public/3d-top-view/animations/${entry.spriteId}`);
     const manifest = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8"));
-    expect(manifest.sourceArchiveSha256).toBe(entry.sourceMetadata.sourceArchiveSha256);
+    expect(manifest.sourceSite.indexSha256).toBe(entry.sourceMetadata.sourceSite.indexSha256);
     const animation = normalizeDeviceSpriteAnimationDefinition(entity?.spriteAnimation, manifest);
+    expect(animation.resolution).toBe(BUILDING_ASSET_PUBLISH_RESOLUTIONS[0]);
     expect([animation.frameWidth, animation.frameHeight]).toEqual([width, height]);
     for (const clip of Object.values(animation.clips)) {
       expect(clip.frameEndTimesMs).toHaveLength(clip.frameCount);
       expect(clip.frameEndTimesMs.at(-1)).toBe(clip.durationMs);
       for (const page of clip.pages) {
         const image = await sharp(path.join(directory, page.file)).metadata();
-        expect([image.width, image.height]).toEqual([page.columns * width, page.rows * height]);
+        expect([image.width, image.height]).toEqual([page.columns * width * animation.resolution, page.rows * height * animation.resolution]);
         expect(image.hasAlpha).toBe(true);
         expect(Math.max(image.width ?? 0, image.height ?? 0)).toBeLessThan(4096);
       }
     }
     const mask = await sharp(path.join(directory, animation.maskFile)).metadata();
-    expect([mask.width, mask.height]).toEqual([width, height]);
+    expect([mask.width, mask.height]).toEqual([width * animation.resolution, height * animation.resolution]);
   });
 
   it("接入最终修复集合，不重复导入实体或保留被撤回的包", () => {
@@ -183,15 +186,16 @@ describe("v1.5 建筑素材发布", () => {
     }
   });
 
-  it("记录 ZIP 来源 hash，并锁定 source→project 的逐帧坐标变换", () => {
-    expect(collection.sourceArchiveSha256).toMatch(/^[a-f0-9]{64}$/);
+  it("记录网站发布与索引 hash，并锁定 source→project 的逐帧坐标变换", () => {
+    expect(collection.sourceSite.indexSha256).toMatch(/^[a-f0-9]{64}$/);
     expect(collection.sourceCoordinateTransform).toEqual({
       imageAxes: { x: "+sourceX", y: "+sourceZ" },
       operation: "projectY = depth - 1 - sourceZ",
       rasterOperation: "flip-top-bottom per frame cell",
     });
     for (const entry of collection.entries) {
-      expect(entry.sourceMetadata.sourceArchiveSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(entry.sourceMetadata.sourceSite.indexSha256).toBe(collection.sourceSite.indexSha256);
+      expect(entry.sourceMetadata.sourceSite.releaseId).toBe(collection.sourceSite.releaseId);
       expect(entry.sourceMetadata.publishedTransform.operation)
         .toBe("flip-top-bottom per frame");
     }

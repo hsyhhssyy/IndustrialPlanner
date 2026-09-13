@@ -1,16 +1,19 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+// AI-REMOVED 2026-09-13: copyFile 已由按纹理语义缩放后写入替代；Trigger: 同批多规格发布；Evidence: 本文件无复制调用；Replacement: publishLogisticsMaterials；Risk: Low；Human Review: Required。
+// Original code: import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
+import { publishedImageSize, resizeAssetRgba } from './building-asset-image.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const importOptions = { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') };
 const protocol = await tsImport('../shared/logistics-material.ts', importOptions);
 const TILE = 128;
 const PADDING = 2;
-const STRIDE = TILE + PADDING * 2;
 
 /**
  * 2026-09-10 用户依据装配截图订正：contract2 直段支架与管轴平行，须绕中心转 90°。
@@ -41,20 +44,22 @@ export function compositeLogisticsLayers(layers) {
   return output;
 }
 
-async function readCollection(sourceDirectory, mode) {
-  const directory = path.join(sourceDirectory, mode);
-  const collection = JSON.parse(await readFile(path.join(directory, 'collection.json'), 'utf8'));
-  if (collection.materialContractVersion !== 2 || collection.mode !== mode
-    || (mode === 'dynamic' && collection.requiresBaseContract !== 2)) throw new Error(`Invalid ${mode} collection`);
+async function readCollection(sourceDirectory, mode, websiteCollection = null) {
+  const directory = websiteCollection ? sourceDirectory : path.join(sourceDirectory, mode);
+  const collection = websiteCollection ?? JSON.parse(await readFile(path.join(directory, 'collection.json'), 'utf8'));
+  if (collection.materialContractVersion !== 2 || (!websiteCollection && collection.mode !== mode)
+    || (!websiteCollection && mode === 'dynamic' && collection.requiresBaseContract !== 2)) throw new Error(`Invalid ${mode} collection`);
   const resources = new Map();
   const manifests = new Map();
-  for (const entry of collection.packages) {
-    const manifestPath = path.join(directory, entry.manifest);
+  for (const entry of websiteCollection ? collection.deliveries : collection.packages) {
+    const manifestPath = path.join(directory, websiteCollection ? entry[mode === 'static' ? 'base' : 'extension'] : entry.manifest);
+    if (!path.resolve(manifestPath).startsWith(`${path.resolve(sourceDirectory)}${path.sep}`)) throw new Error(`Material manifest escapes source: ${entry.id}`);
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
     if (manifest.materialContractVersion !== 2) throw new Error(`Invalid material version: ${entry.id}`);
     manifests.set(entry.id, manifest);
     for (const [key, resource] of Object.entries(manifest.resources)) {
       const file = path.join(path.dirname(manifestPath), resource.file);
+      if (!path.resolve(file).startsWith(`${path.resolve(sourceDirectory)}${path.sep}`)) throw new Error(`Material resource escapes source: ${key}`);
       const bytes = await readFile(file);
       const digest = createHash('sha256').update(bytes).digest('hex');
       const metadata = await sharp(bytes).metadata();
@@ -68,31 +73,38 @@ async function readCollection(sourceDirectory, mode) {
       resources.set(key, { ...resource, path: file });
     }
   }
-  const specification = JSON.parse(await readFile(path.join(directory, collection.materialSpecification), 'utf8'));
+  const specificationPath = websiteCollection
+    ? path.join(path.dirname(path.join(directory, collection.deliveries[0][mode === 'static' ? 'base' : 'extension'])), 'material-computation.json')
+    : path.join(directory, collection.materialSpecification);
+  const specification = JSON.parse(await readFile(specificationPath, 'utf8'));
   return { resources, manifests, specification };
 }
 
 /** 固定小图集及挤出边缘；运行时仅创建子纹理，不合成画布或 RenderTexture。 */
-async function publishAtlas(directory, name, entries, manifest) {
+async function publishAtlas(directory, name, entries, manifest, resolution) {
+  const tileSize = publishedImageSize(TILE, TILE, resolution).width;
+  const STRIDE = tileSize + PADDING * 2;
   const columns = Math.min(4, entries.length);
   const rows = Math.ceil(entries.length / columns);
   const width = columns * STRIDE;
   const height = rows * STRIDE;
   const pixels = Buffer.alloc(width * height * 4);
-  entries.forEach(([key, tile], index) => {
+  for (const [index, [key, sourceTile]] of entries.entries()) {
+    const { data: tile } = await resizeAssetRgba(sourceTile, TILE, TILE, resolution);
     const left = index % columns * STRIDE;
     const top = Math.floor(index / columns) * STRIDE;
     for (let y = 0; y < STRIDE; y++) {
       for (let x = 0; x < STRIDE; x++) {
-        const sx = Math.min(TILE - 1, Math.max(0, x - PADDING));
-        const sy = Math.min(TILE - 1, Math.max(0, y - PADDING));
-        tile.copy(pixels, ((top + y) * width + left + x) * 4, (sy * TILE + sx) * 4, (sy * TILE + sx) * 4 + 4);
+        const sx = Math.min(tileSize - 1, Math.max(0, x - PADDING));
+        const sy = Math.min(tileSize - 1, Math.max(0, y - PADDING));
+        tile.copy(pixels, ((top + y) * width + left + x) * 4, (sy * tileSize + sx) * 4, (sy * tileSize + sx) * 4 + 4);
       }
     }
-    manifest.frames[key] = { page: name, rect: [left + PADDING, top + PADDING, TILE, TILE] };
-  });
+    manifest.frames[key] = { page: name, rect: [left + PADDING, top + PADDING, tileSize, tileSize] };
+  }
   const file = `${name}.webp`;
-  await sharp(pixels, { raw: { width, height, channels: 4 } }).webp({ lossless: true }).toFile(path.join(directory, file));
+  await sharp(pixels, { raw: { width, height, channels: 4 } })
+    .webp({ lossless: true }).toFile(path.join(directory, file));
   manifest.pages[name] = { file, width, height };
 }
 
@@ -102,14 +114,17 @@ export async function publishLogisticsMaterials({
   spriteDirectory = path.join(projectRoot, 'public/3d-top-view/sprites'),
   maskDirectory = path.join(projectRoot, 'public/3d-top-view/sprite-masks'),
   registry,
+  websiteCollection = null,
+  resolution = 1,
 } = {}) {
   registry ??= (await tsImport('../registry/index.ts', importOptions)).createRegistryContract();
-  const sourceStatic = await readCollection(sourceDirectory, 'static');
-  const sourceDynamic = await readCollection(sourceDirectory, 'dynamic');
+  const sourceStatic = await readCollection(sourceDirectory, 'static', websiteCollection);
+  const sourceDynamic = await readCollection(sourceDirectory, 'dynamic', websiteCollection);
   const staticDirectory = path.join(outputDirectory, 'static');
   const dynamicDirectory = path.join(outputDirectory, '../animations/logistics-contract2');
   for (const directory of [staticDirectory, dynamicDirectory, spriteDirectory, maskDirectory]) await mkdir(directory, { recursive: true });
-  const manifest = { schemaVersion: 1, materialContractVersion: 2, pixelsPerCell: TILE, pages: {}, frames: {} };
+  publishedImageSize(TILE, TILE, resolution);
+  const manifest = { schemaVersion: 1, materialContractVersion: 2, pixelsPerCell: TILE * resolution, pages: {}, frames: {} };
   const decoded = new Map();
   const normalizedColorImages = new Map();
   for (const [key, resource] of sourceStatic.resources) {
@@ -128,7 +143,7 @@ export async function publishLogisticsMaterials({
   const shapes = protocol.LOGISTICS_MATERIAL_SHAPES;
   const beltEntries = shapes.map((shape) => [`belt/${shape}`, get(`conveyor.${shape}.static`)]);
   beltEntries.push(['belt/straight-base', get('conveyor.straight.base')]);
-  await publishAtlas(staticDirectory, 'belt', beltEntries, manifest);
+  await publishAtlas(staticDirectory, 'belt', beltEntries, manifest, resolution);
   const colors = ['empty', ...new Set(['ffffff', ...registry.itemDefinitions
     .filter((item) => item.tags.some((tag) => /^(gas_color|fluid_color|liquid_color):/.test(tag)))
     .map((item) => protocol.resolveLogisticsFluidColor(item.tags))])].sort();
@@ -157,7 +172,7 @@ export async function publishLogisticsMaterials({
         }
       }
     }
-    await publishAtlas(staticDirectory, `pipe-${color}`, entries, manifest);
+    await publishAtlas(staticDirectory, `pipe-${color}`, entries, manifest, resolution);
   }
   await writeFile(path.join(staticDirectory, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -168,26 +183,35 @@ export async function publishLogisticsMaterials({
     const pixels = spec.kind === 'belt' ? get(`conveyor.${spec.shape}.static`) : defaultPipeImages.get(spec.shape);
     const rotated = await sharp(pixels, { raw: { width: TILE, height: TILE, channels: 4 } })
       .rotate(spec.rotation).raw().toBuffer();
-    await sharp(rotated, { raw: { width: TILE, height: TILE, channels: 4 } }).webp({ lossless: true })
+    await sharp(rotated, { raw: { width: TILE, height: TILE, channels: 4 } })
+      .resize(TILE * resolution, TILE * resolution, { kernel: 'lanczos3' }).webp({ lossless: true })
       .toFile(path.join(spriteDirectory, `${definition.spriteId}.webp`));
     const mask = Buffer.alloc(rotated.length);
     for (let i = 0; i < mask.length; i += 4) {
       mask[i] = mask[i + 1] = mask[i + 2] = rotated[i + 3];
       mask[i + 3] = 255;
     }
-    await sharp(mask, { raw: { width: TILE, height: TILE, channels: 4 } }).webp({ lossless: true })
+    await sharp(mask, { raw: { width: TILE, height: TILE, channels: 4 } })
+      .resize(TILE * resolution, TILE * resolution, { kernel: 'lanczos3' }).webp({ lossless: true })
       .toFile(path.join(maskDirectory, `${definition.spriteId}.webp`));
   }
   const resources = {};
   for (const [key, resource] of [...sourceStatic.resources, ...sourceDynamic.resources]) {
     if (key.startsWith('static/') && !/^static\/(conveyor\..+\.base|pipe\..+\.(shell|fluid-body|fluid-specular|support-back|support-middle|support-front))$/.test(key)) continue;
     const normalized = normalizedColorImages.get(key);
-    const digest = normalized ? createHash('sha256').update(normalized).digest('hex') : resource.sha256;
-    const file = `${digest.slice(0, 16)}.webp`;
-    if (normalized) await writeFile(path.join(dynamicDirectory, file), normalized);
-    else await copyFile(resource.path, path.join(dynamicDirectory, file));
+    const raw = await sharp(normalized ?? resource.path).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const resized = await resizeAssetRgba(raw.data, raw.info.width, raw.info.height, resolution, resource.colorSpace === 'linear-data');
+    const numeric = resource.colorSpace === 'linear-data';
+    // WebP 即使 lossless 也会清除透明像素的 RGB；数值纹理必须保留全部通道。
+    const encoded = numeric ? gzipSync(resized.data, { level: 9 })
+      : resolution === 1 ? (normalized ?? await readFile(resource.path))
+        : await sharp(resized.data, { raw: { width: resized.width, height: resized.height, channels: 4 } })
+          .webp({ lossless: true }).toBuffer();
+    const digest = createHash('sha256').update(encoded).digest('hex');
+    const file = `${digest.slice(0, 16)}.${numeric ? 'rgba.bin' : 'webp'}`;
+    await writeFile(path.join(dynamicDirectory, file), encoded);
     resources[key] = {
-      file, width: resource.width, height: resource.height,
+      file, width: resized.width, height: resized.height,
       data: resource.colorSpace === 'linear-data', filter: resource.filter, wrap: resource.wrap,
     };
   }

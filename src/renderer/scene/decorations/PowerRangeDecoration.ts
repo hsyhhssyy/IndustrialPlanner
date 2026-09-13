@@ -11,6 +11,7 @@ import {
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationRedrawGuard } from "./DecorationRedrawGuard";
 import {
   resolveVisibleWorldRect,
   type VisibleWorldRect,
@@ -101,12 +102,12 @@ export function resolvePowerRangeOutlineLayouts(options: {
 
 export function createPowerRangeDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldRedraw = createDecorationRedrawGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      graphics.clear();
 
       // AI-REMOVED 2026-08-22:
       // Reason: 批量移动不应关闭整个供电范围图层，只应隐藏被移动设备自身的范围。
@@ -123,6 +124,9 @@ export function createPowerRangeDecoration(): DecorationLayer {
 
       const editor = ctx.renderHost.workspace.editor;
       if (!editor) {
+        const redraw = shouldRedraw([]);
+        ctx.profiler?.count("powerRange.redraws", redraw ? 1 : 0);
+        if (redraw) graphics.clear();
         return;
       }
 
@@ -159,11 +163,19 @@ export function createPowerRangeDecoration(): DecorationLayer {
         displayRotation: ctx.viewportState.displayRotation,
       });
 
+      const strokeWidth = resolvePowerRangeStrokeWidth(ctx.viewportState.gridCellPixelSize);
+      const redraw = shouldRedraw([
+        strokeWidth, layouts.length,
+        ...layouts.flatMap((layout) => [layout.x, layout.y, layout.width, layout.height]),
+      ]);
+      ctx.profiler?.count("powerRange.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
+      graphics.clear();
       for (const layout of layouts) {
         graphics
           .rect(layout.x, layout.y, layout.width, layout.height)
           .stroke({
-            width: resolvePowerRangeStrokeWidth(ctx.viewportState.gridCellPixelSize),
+            width: strokeWidth,
             color: POWER_RANGE_STROKE_COLOR,
             alpha: POWER_RANGE_STROKE_ALPHA,
           });

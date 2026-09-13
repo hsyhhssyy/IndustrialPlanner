@@ -3,9 +3,37 @@ import { describe, expect, it } from "vitest"
 
 import { TexturePerfDiagnostics } from "@/renderer/texture/texture-perf-diagnostics"
 
-const residency = { activeSessions: 2, loadingPages: 0, residentDecodedBytes: 1024, residentMasks: 1, residentPages: 1 }
+// AI-REMOVED 2026-09-13:
+// Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
+// Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
+// Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
+// Replacement: 下方全量驻留诊断快照
+// Risk: Low; Human Review: Required
+// Original code:
+// const residency = { activeSessions: 2, loadingPages: 0, residentDecodedBytes: 1024, residentMasks: 1, residentPages: 1, residency: { budgetBytes: 512, reservedBytes: 512, overBudgetBytes: 0, visibleSessions: 2, visibleAssets: 1, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 } }
+const residency = { activeSessions: 2, loadingPages: 0, residentDecodedBytes: 1024, residentMasks: 1, residentPages: 1, residency: { mode: "full-set" as const, offscreenGraceMs: 20_000, retainedSetBytes: 512, retainedAssets: 1, visibleSessions: 2, visibleAssets: 1, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 } }
 
 describe("TexturePerfDiagnostics", () => {
+  it("reports half-resolution upload pixels and preserves the scale after unloading", async () => {
+    const profiler = new TexturePerfDiagnostics(() => residency)
+    const texture = new Texture({ source: new TextureSource({ width: 3840, height: 3584, resolution: 0.5 }) })
+    const path = "/3d-top-view/animations/example/half.webp"
+    try {
+      profiler.syncDebugState(true)
+      await profiler.load(path, () => Promise.resolve(texture))
+      profiler.record("texImage2D", texture.source, 5, true, false)
+      await profiler.unload(path, texture, async () => { texture.destroy(true) })
+      const report = profiler.flush()!
+      expect(report.topResources[0]).toMatchObject({
+        resource: path, width: 1920, height: 1792, resolution: 0.5,
+      })
+      expect(report.totals.texImage2D?.rgba8EquivalentBytes).toBe(1920 * 1792 * 4)
+    } finally {
+      profiler.syncDebugState(false)
+      if (!texture.destroyed) texture.destroy(true)
+    }
+  })
+
   it("separates loading from uploads and preserves repeat counts across log windows", async () => {
     let now = 0
     const profiler = new TexturePerfDiagnostics(() => residency, () => now)

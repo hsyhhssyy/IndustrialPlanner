@@ -16,6 +16,7 @@ import {
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationRedrawGuard } from "./DecorationRedrawGuard";
 import { resolveWorldAuxiliaryStrokeWidth } from "./MarqueeRectDecoration";
 
 const REGION_FILL_ALPHA = 0.13;
@@ -37,12 +38,17 @@ interface RegionLabelEntry {
 
 export function createRegionAnnotationBackgroundDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldRedraw = createDecorationRedrawGuard();
 
   return {
     container: graphics,
     sync(ctx) {
+      const regions = resolveDisplayRegions(ctx);
+      const redraw = shouldRedraw(resolveRegionDrawingInputs(ctx, regions));
+      ctx.profiler?.count("regionBackground.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
       graphics.clear();
-      for (const region of resolveDisplayRegions(ctx)) {
+      for (const region of regions) {
         const color = parseRegionColor(region.annotation.color);
         for (const rect of region.annotation.rects) {
           const layout = resolveRegionRectLayout(ctx, rect);
@@ -66,6 +72,7 @@ export function createRegionAnnotationBackgroundDecoration(): DecorationLayer {
 
 export function createRegionAnnotationOverlayDecoration(): DecorationLayer {
   const container = new Container();
+  const shouldRedraw = createDecorationRedrawGuard();
   const outline = new Graphics({ roundPixels: true });
   const marquee = new Graphics({ roundPixels: true });
   let marqueeLabel: Text | null = null;
@@ -75,10 +82,13 @@ export function createRegionAnnotationOverlayDecoration(): DecorationLayer {
   return {
     container,
     sync(ctx) {
+      const regions = resolveDisplayRegions(ctx);
+      const redraw = shouldRedraw(resolveRegionDrawingInputs(ctx, regions));
+      ctx.profiler?.count("regionOverlay.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
       outline.clear();
       marquee.clear();
       const activeLabelKeys = new Set<string>();
-      const regions = resolveDisplayRegions(ctx);
 
       for (const region of regions) {
         drawRegionOutline({ ctx, graphics: outline, region });
@@ -116,6 +126,28 @@ export function createRegionAnnotationOverlayDecoration(): DecorationLayer {
       container.destroy({ children: true });
     },
   };
+}
+
+/** 区域交互可在文档版本不变时更新，必须包含悬停、草稿、语言和逐矩形坐标。 */
+function resolveRegionDrawingInputs(ctx: DecorationSyncContext, regions: readonly DisplayRegion[]) {
+  const settings = ctx.renderHost.workspace.app?.state?.settings;
+  const state = ctx.renderHost.workspace.editor?.state.regionAnnotations;
+  const marquee = settings?.showRegionAnnotations === true ? state?.draftMarqueeGridRect : null;
+  const inputs: Array<string | number | boolean | null | undefined> = [
+    ctx.viewportBounds.left, ctx.viewportBounds.top,
+    ctx.viewportBounds.width, ctx.viewportBounds.height,
+    ctx.viewportState.centerX, ctx.viewportState.centerY,
+    ctx.viewportState.gridCellPixelSize, ctx.viewportState.displayRotation,
+    settings?.locale, settings?.showRegionAnnotations,
+    marquee?.x, marquee?.y, marquee?.width, marquee?.height, state?.draftOperation,
+    regions.length,
+  ];
+  for (const region of regions) {
+    const { annotation } = region;
+    inputs.push(region.kind, region.highlighted, annotation.id, annotation.name, annotation.color, annotation.rects.length);
+    for (const rect of annotation.rects) inputs.push(rect.x, rect.y, rect.width, rect.height);
+  }
+  return inputs;
 }
 
 function resolveDisplayRegions(ctx: DecorationSyncContext): DisplayRegion[] {

@@ -14,6 +14,7 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationActivityGuard } from "./DecorationRedrawGuard";
 import {
   resolveMarqueeGridRectLayout,
   resolveWorldAuxiliaryStrokeWidth,
@@ -31,6 +32,7 @@ const INVALID_PLACEMENT_TOAST_RADIUS = 4;
 
 export function createInvalidPlacementDecoration(): DecorationLayer {
   const container = new Container();
+  const shouldSync = createDecorationActivityGuard();
   const graphics = new Graphics({ roundPixels: true });
   const reasonTexts = new Map<string, Text>();
 
@@ -40,6 +42,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
+      if (!shouldSync((ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.invalidPlacement]?.length ?? 0) > 0)) return;
       measureDecorationStep(ctx, "invalidPlacement.clear", () => {
         graphics.clear();
       });

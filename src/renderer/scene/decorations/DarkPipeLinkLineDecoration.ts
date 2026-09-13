@@ -5,6 +5,7 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationRedrawGuard } from "./DecorationRedrawGuard";
 import {
   buildEntityDefinitionMap,
   clipSegmentToViewport,
@@ -18,20 +19,19 @@ const DARK_PIPE_LINK_GAP_LENGTH = 8;
 
 export function createDarkPipeLinkLineDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationRedrawGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      graphics.clear();
-
+      const documentSnapshot = ctx.renderHost.workspace.editor?.document?.getSnapshot?.() ?? null;
       const editor = ctx.renderHost.workspace.editor;
-      if (editor === null) {
-        return;
-      }
-
-      const documentSnapshot = editor.document?.getSnapshot?.() ?? null;
-      if (documentSnapshot === null) {
+      if (editor === null || documentSnapshot === null
+        || !documentSnapshot.slotLinks.some(link => isDarkPipeSlotLink(link, documentSnapshot.entities))) {
+        const redraw = shouldSync([]);
+        ctx.profiler?.count("darkPipeLinkLine.redraws", redraw ? 1 : 0);
+        if (redraw) graphics.clear();
         return;
       }
       const entityDefinitionMap = buildEntityDefinitionMap(ctx.renderHost.workspace.registry.entityDefinitions);
@@ -40,6 +40,7 @@ export function createDarkPipeLinkLineDecoration(): DecorationLayer {
         ctx.theme.renderer.worldEntitySelectionStrokeColorKey,
       );
       const strokeWidth = Math.max(1, Math.min(3, ctx.viewportState.gridCellPixelSize / 10));
+      const segments: Array<{ start: ViewportPoint; end: ViewportPoint }> = [];
 
       for (const link of documentSnapshot.slotLinks) {
         if (!isDarkPipeSlotLink(link, documentSnapshot.entities)) {
@@ -66,7 +67,17 @@ export function createDarkPipeLinkLineDecoration(): DecorationLayer {
         if (clipped === null) {
           continue;
         }
-
+        segments.push(clipped);
+      }
+      // 比较最终线段与样式，覆盖端点原地移动、视口裁剪、旋转和主题变化。
+      const redraw = shouldSync(segments.length === 0 ? [] : [
+        strokeColor, strokeWidth,
+        ...segments.flatMap(({ start, end }) => [start.x, start.y, end.x, end.y]),
+      ]);
+      ctx.profiler?.count("darkPipeLinkLine.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
+      graphics.clear();
+      for (const clipped of segments) {
         drawDashedLine({
           graphics,
           start: clipped.start,

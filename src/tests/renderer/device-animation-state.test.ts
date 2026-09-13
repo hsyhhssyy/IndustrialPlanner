@@ -37,6 +37,7 @@ function createDefinition(
     closeIdleMode,
     frameWidth: 1,
     frameHeight: 1,
+    resolution: 1,
     maskFile: "mask.webp",
   };
 }
@@ -242,6 +243,7 @@ describe("DeviceAnimationState", () => {
       closeIdleMode: "hold-last",
       frameWidth: 1,
       frameHeight: 1,
+      resolution: 1,
       maskFile: "mask.webp",
     };
     const state = new DeviceAnimationState(definition, true);
@@ -272,6 +274,7 @@ describe("DeviceAnimationState", () => {
       closeIdleMode: "hold-last",
       frameWidth: 1,
       frameHeight: 1,
+      resolution: 1,
       maskFile: "mask.webp",
     }, true);
     state.setDesiredWorking(false);

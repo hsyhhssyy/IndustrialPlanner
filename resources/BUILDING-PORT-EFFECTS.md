@@ -1,6 +1,8 @@
 # 建筑高度与管道端口特效
 
-本次交付适配 `buildings_frontend_v1.5.zip` 的高度遮挡与端口特效。主模块为 Renderer，资源发布和审计为配套改动。
+后续高度遮挡与端口特效通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 接收，统一校验网站清单、文件来源和物流高度契约。技能已固化，本轮未导入或重发资源。
+
+下文记录已从 `buildings_frontend_v1.5.zip` 接入的历史交付及当前发布能力。主模块为 Renderer，资源发布和审计为配套改动；历史源文件和摘要继续保留。
 
 ## 当前交付状态
 
@@ -15,6 +17,8 @@
 - 原始 `statusKey` 到业务运行状态的映射，以及 `activateOn` / `activateOff` 的触发条件仍待客户说明。组件支持显式传入已确认的状态，宿主暂不猜测启用环或激活覆盖层。
 
 ## 发布与核验
+
+以下命令用于重发已准备好的本地历史来源，不是网站导入入口。网站导入必须按技能解析当前清单、准备并校验输入，不能直接运行默认命令覆盖来源。
 
 ```bash
 node src/scripts/publish-building-port-effects.mjs

@@ -49,7 +49,7 @@
 - [ ] 核对 `public/blueprint-view/` 的 sprite 与 mask。
 - [ ] 核对 `public/device-icons/` 与 `public/device-avatar/`。
 - [ ] 核对 renderer 输出、sprite 预处理方向和 `spriteOffset`。
-- [ ] 需要同步资源时检查 `src/scripts/sync-device-sprites.mjs`。
+- [ ] 需要从美术网站同步建筑资源时使用 `import-building-assets` skill；`src/scripts/sync-device-sprites.mjs` 只保留通用发布函数及动画/蓝图遮罩重发，不能再执行旧静态批量导入。
 - [ ] 视觉结果只能验收逻辑修改，不能反向否定已经唯一确定的 raw 端口对账。
 
 ## 6. 聚落、区域与模块配平

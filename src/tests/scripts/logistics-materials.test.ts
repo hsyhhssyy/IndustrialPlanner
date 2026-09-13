@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -109,6 +110,10 @@ describe("物流素材离线发布", () => {
                 expect(actual[offset + 3]).toBe(expected[offset + 3]);
                 if (expected[offset + 3]) expect(actual.subarray(offset, offset + 3)).toEqual(expected.subarray(offset, offset + 3));
               }
+            } else if (published.data) {
+              // 数值发布现在是完整 RGBA；用 Buffer.equals 做精确字节比较，避免逐元素断言遍历大图。
+              const rawSource = await sharp(original).ensureAlpha().raw().toBuffer();
+              expect(gunzipSync(await readFile(output)).equals(rawSource), key).toBe(true);
             } else {
               expect(await readFile(output)).toEqual(await readFile(original));
             }

@@ -1,4 +1,4 @@
-import { ImageSource, Rectangle, Texture } from "pixi.js";
+import { BufferImageSource, ImageSource, Rectangle, Texture } from "pixi.js";
 import type {
   LogisticsDynamicManifest,
   LogisticsDynamicResource,
@@ -21,7 +21,7 @@ export interface LogisticsDynamicSession {
 
 interface LoadedImage {
   readonly texture: Texture;
-  readonly bitmap: ImageBitmap;
+  readonly bitmap: ImageBitmap | null;
 }
 
 interface DynamicLoad {
@@ -42,6 +42,15 @@ async function readManifest<T>(url: string, signal?: AbortSignal): Promise<T> {
 async function loadImage(url: string, resource: LogisticsDynamicResource, signal: AbortSignal): Promise<LoadedImage> {
   const response = await fetch(createPublicAssetUrl(url), { signal, credentials: "same-origin" });
   if (!response.ok) throw new Error(`Logistics texture request failed: ${response.status} ${url}`);
+  if (resource.data) {
+    if (!response.body) throw new Error(`Empty numeric texture response: ${url}`);
+    const data = new Uint8Array(await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+    if (signal.aborted || data.length !== resource.width * resource.height * 4) throw new Error(`Numeric texture aborted or dimensions differ: ${url}`);
+    const source = new BufferImageSource({ resource: data, width: resource.width, height: resource.height,
+      format: "rgba8unorm", alphaMode: "no-premultiply-alpha", scaleMode: resource.filter,
+      addressMode: resource.wrap === "repeat" ? "repeat" : "clamp-to-edge", autoGenerateMipmaps: false });
+    return { texture: new Texture({ source }), bitmap: null };
+  }
   const bitmap = await createImageBitmap(await response.blob(), {
     premultiplyAlpha: resource.data ? "none" : "premultiply",
     colorSpaceConversion: "none",
@@ -63,7 +72,7 @@ async function loadImage(url: string, resource: LogisticsDynamicResource, signal
 function destroyImages(images: LoadedImage[]): void {
   for (const image of images.splice(0)) {
     image.texture.destroy(true);
-    image.bitmap.close();
+    image.bitmap?.close();
   }
 }
 
@@ -155,7 +164,8 @@ export class LogisticsMaterialTextureCache {
     const texture = await loading;
     if (this.destroyed) throw new Error("Logistics texture cache is destroyed");
     const [x, y, width, height] = frame.rect;
-    if (![x, y, width, height].every(Number.isSafeInteger) || x < 0 || y < 0 || width !== 128 || height !== 128
+    if (![x, y, width, height, manifest.pixelsPerCell].every(Number.isSafeInteger) || x < 0 || y < 0
+      || manifest.pixelsPerCell <= 0 || width !== manifest.pixelsPerCell || height !== manifest.pixelsPerCell
       || x + width > page.width || y + height > page.height) throw new Error(`Invalid logistics frame rectangle: ${key}`);
     const result = new Texture({ source: texture.source, frame: new Rectangle(x, y, width, height) });
     this.frameTextures.add(result);
@@ -168,7 +178,8 @@ export class LogisticsMaterialTextureCache {
       const unique = new Map<string, Promise<LoadedImage>>();
       const textures = new Map<string, Texture>();
       const results = await Promise.allSettled(Object.entries(manifest.resources).map(async ([key, resource]) => {
-        if (!/^[\w-]+\.webp$/.test(resource.file)) throw new Error(`Invalid logistics texture: ${key}`);
+        const filePattern = resource.data ? /^[\w-]+\.rgba\.bin$/ : /^[\w-]+\.webp$/;
+        if (!filePattern.test(resource.file)) throw new Error(`Invalid logistics texture: ${key}`);
         const identity = `${resource.file}/${resource.data}/${resource.filter}/${resource.wrap}`;
         let loading = unique.get(identity);
         if (!loading) {

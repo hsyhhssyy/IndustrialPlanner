@@ -5,6 +5,10 @@ export const PIXI_RENDER_LAYER_PROFILE_STORAGE_KEY = "industrial-planner:pixi-re
 export const PIXI_RENDER_ANTIALIAS_STORAGE_KEY = "industrial-planner:pixi-render-antialias"
 
 const MAX_PENDING_GPU_TIMER_QUERIES = 8
+const MAX_RENDER_GROUP_SOURCES = 48
+const MAX_SAMPLED_DIRTY_RENDERABLES = 4096
+const MAX_TEXTURE_VALIDATION_SAMPLES = 64
+const MAX_BATCH_TEXTURE_SAMPLES = 32
 
 export type PixiRenderLayerProfile =
   | "full"
@@ -25,6 +29,7 @@ interface VisibilityTarget {
 
 export interface PixiRenderDiagnosticLayerTargets {
   readonly stage: Container;
+  readonly renderGroups?: readonly Container[];
   readonly pipeFlow: Container;
   readonly beltFlow: Container;
   readonly beltInsertion: Container;
@@ -33,6 +38,15 @@ export interface PixiRenderDiagnosticLayerTargets {
 }
 
 export interface PixiRenderDiagnosticsSnapshot {
+  readonly renderGroups: {
+    readonly mode: "layers" | "single";
+    readonly sources: readonly RenderGroupSourceSample[];
+    readonly textureValidation: {
+      readonly failures: number;
+      readonly omittedFailures: number;
+      readonly samples: readonly TextureValidationSample[];
+    };
+  };
   readonly textures: ReturnType<TexturePerfDiagnostics["flush"]>;
   readonly backend: "webgl" | "unknown";
   readonly antialias: boolean;
@@ -50,6 +64,7 @@ export interface PixiRenderDiagnosticsSnapshot {
 
 export interface PixiRenderDiagnostics {
   syncDebugState(enabled: boolean): void;
+  measureSceneStage<T>(stage: string, callback: () => T): T;
   beforeRender(profiler: PixiDiagnosticProfiler | null): void;
   afterRender(profiler: PixiDiagnosticProfiler | null): void;
   readSnapshot(): PixiRenderDiagnosticsSnapshot;
@@ -57,6 +72,11 @@ export interface PixiRenderDiagnostics {
 }
 
 interface FrameCounters {
+  textureValidationFailures: number;
+  renderGroupBuilds: number;
+  renderGroupBuildMs: number;
+  renderGroupBuildFailures: number;
+  renderGroupUpdates: number;
   drawCalls: number;
   batchBreakCalls: number;
   graphicsContextRebuilds: number;
@@ -66,6 +86,20 @@ interface FrameCounters {
   stencilMaskPops: number;
   alphaMaskPushes: number;
   alphaMaskPops: number;
+}
+
+interface RenderGroupSourceSample {
+  readonly reason: string;
+  readonly source: string;
+  calls: number;
+  totalMs: number;
+}
+
+interface TextureValidationSample {
+  calls: number;
+  readonly firstFrame: number;
+  lastFrame: number;
+  last: ReturnType<typeof describeSpriteTextureValidation>;
 }
 
 type HookMethod = (this: unknown, ...args: unknown[]) => unknown
@@ -107,6 +141,7 @@ interface WebGl1TimerExtension {
 }
 
 interface RendererInternals {
+  readonly renderGroup?: unknown;
   readonly texture?: unknown;
   readonly uid?: number;
   readonly resolution?: number;
@@ -119,6 +154,7 @@ interface RendererInternals {
   readonly geometry?: unknown;
   readonly graphicsContext?: unknown;
   readonly renderPipes?: {
+    readonly [key: string]: unknown;
     readonly batch?: unknown;
     readonly graphics?: unknown;
     readonly stencilMask?: unknown;
@@ -137,12 +173,24 @@ export function resolveMainRendererAntialias(debugMode: boolean): boolean {
 export function createPixiRenderDiagnostics(options: {
   readonly app: Application;
   readonly textureProfiler?: TexturePerfDiagnostics;
+  readonly renderGroupMode?: "layers" | "single";
   readonly layers: PixiRenderDiagnosticLayerTargets;
 }): PixiRenderDiagnostics {
   const renderer = options.app.renderer as unknown as RendererInternals
   const counters: FrameCounters = createEmptyFrameCounters()
   const hookRestorers: Array<() => void> = []
   const installedHooks: string[] = []
+  const renderGroupSources = new Map<string, RenderGroupSourceSample>()
+  const textureValidationSamples = new Map<string, TextureValidationSample>()
+  const sceneGroupRoots = [options.layers.stage, ...options.layers.renderGroups ?? []]
+  const sceneGroupInvalidations = new WeakMap<Container, number>()
+  let textureValidationFailures = 0
+  let omittedTextureValidationFailures = 0
+  let activeBuildReason = "unclassified"
+  let activeRenderGroupRoot: unknown = null
+  let sceneInvalidationSerial = 0
+  let frameSerial = 0
+  let samplePendingGraphics = false
   const hiddenTargets: Array<{
     readonly target: VisibilityTarget;
     readonly visible: boolean;
@@ -152,6 +200,41 @@ export function createPixiRenderDiagnostics(options: {
   let layerProfile: PixiRenderLayerProfile = "full"
   let gpuTimer: GpuTimerCollector = createUnavailableGpuTimerCollector()
   let msaaSamples: number | null = null
+
+  const recordRenderGroupSource = (reason: string, source: string, elapsedMs = 0): void => {
+    let key = `${reason}:${source}`
+    if (!renderGroupSources.has(key) && renderGroupSources.size >= MAX_RENDER_GROUP_SOURCES) {
+      key = "overflow"
+      reason = "overflow"
+      source = "other"
+    }
+    let sample = renderGroupSources.get(key)
+    if (sample === undefined) {
+      sample = { reason, source, calls: 0, totalMs: 0 }
+      renderGroupSources.set(key, sample)
+    }
+    sample.calls += 1
+    sample.totalMs += elapsedMs
+  }
+
+  const recordTextureValidation = (sprite: unknown): void => {
+    counters.textureValidationFailures += 1
+    textureValidationFailures += 1
+    const detail = describeSpriteTextureValidation(sprite, renderer.uid, activeRenderGroupRoot, options.textureProfiler)
+    // 同实体、同资源切换合并计数；UID、UV 与批次保留最近一次实际失败时的标量快照。
+    const key = JSON.stringify([detail.group, detail.renderableUid, detail.renderable,
+      detail.previous.resource, detail.next.resource, detail.reason])
+    const sample = textureValidationSamples.get(key)
+    if (sample !== undefined) {
+      sample.calls += 1
+      sample.lastFrame = frameSerial
+      sample.last = detail
+    } else if (textureValidationSamples.size < MAX_TEXTURE_VALIDATION_SAMPLES) {
+      textureValidationSamples.set(key, { calls: 1, firstFrame: frameSerial, lastFrame: frameSerial, last: detail })
+    } else {
+      omittedTextureValidationFailures += 1
+    }
+  }
 
   const installRendererHooks = (): void => {
     const install = (
@@ -163,6 +246,68 @@ export function createPixiRenderDiagnostics(options: {
       if (installMethodHook(target, key, wrap, hookRestorers)) {
         installedHooks.push(name)
       }
+    }
+
+    install(renderer.renderGroup, "_updateRenderGroups", "renderGroup._updateRenderGroups", (original) => function (...args) {
+      const previous = activeBuildReason
+      const previousRoot = activeRenderGroupRoot
+      activeRenderGroupRoot = asRecord(args[0])?.root
+      activeBuildReason = asRecord(args[0])?.structureDidChange === true ? "structure" : "unclassified"
+      try {
+        if (trackingRender && samplePendingGraphics) {
+          const pending = asRecord(asRecord(args[0])?.childrenRenderablesToUpdate)
+          const list = pending?.list
+          if (Array.isArray(list) && typeof pending?.index === "number") {
+            recordRenderGroupSource("pending.sampledGroup", describeRenderObject(asRecord(args[0])?.root))
+            const limit = Math.min(pending.index, list.length, MAX_SAMPLED_DIRTY_RENDERABLES)
+            for (let index = 0; index < limit; index += 1) {
+              if (asRecord(list[index])?.renderPipeId === "graphics") {
+                recordRenderGroupSource("pending.graphics", describeRenderObject(list[index]))
+              }
+            }
+            if (pending.index > limit) recordRenderGroupSource("pending.truncated", "dirty-renderables")
+          }
+        }
+        return Reflect.apply(original, this, args)
+      } finally {
+        activeBuildReason = previous
+        activeRenderGroupRoot = previousRoot
+      }
+    })
+    install(renderer.renderGroup, "_buildInstructions", "renderGroup._buildInstructions", (original) => function (...args) {
+      if (!trackingRender) return Reflect.apply(original, this, args)
+      const startedAtMs = performance.now()
+      counters.renderGroupBuilds += 1
+      let failed = true
+      try {
+        const result = Reflect.apply(original, this, args)
+        failed = false
+        return result
+      } finally {
+        const elapsedMs = performance.now() - startedAtMs
+        counters.renderGroupBuildMs += elapsedMs
+        if (failed) counters.renderGroupBuildFailures += 1
+        recordRenderGroupSource(`build.${activeBuildReason}`, describeRenderObject(asRecord(args[0])?.root), elapsedMs)
+      }
+    })
+    install(renderer.renderGroup, "_updateRenderables", "renderGroup._updateRenderables", (original) => function (...args) {
+      if (trackingRender) {
+        counters.renderGroupUpdates += 1
+        recordRenderGroupSource("reuse", describeRenderObject(asRecord(args[0])?.root))
+      }
+      return Reflect.apply(original, this, args)
+    })
+    // 只记录实际返回 true 的验证；Pixi 在第一个失效对象处停止，不能把它当成全部脏对象清单。
+    for (const [pipeId, pipe] of Object.entries(renderer.renderPipes ?? {})) {
+      install(pipe, "validateRenderable", `${pipeId}.validateRenderable`, (original) => function (...args) {
+        const result = Reflect.apply(original, this, args)
+        if (trackingRender && result === true) {
+          activeBuildReason = `validation.${pipeId}`
+          recordRenderGroupSource(`validation.${pipeId}`, describeRenderObject(args[0]))
+          if (pipeId === "sprite") recordTextureValidation(args[0])
+        }
+        return result
+      })
     }
 
     if (options.textureProfiler !== undefined) {
@@ -308,6 +453,14 @@ export function createPixiRenderDiagnostics(options: {
       hookRestorers.pop()?.()
     }
     installedHooks.length = 0
+    renderGroupSources.clear()
+    textureValidationSamples.clear()
+    textureValidationFailures = 0
+    omittedTextureValidationFailures = 0
+    activeBuildReason = "unclassified"
+    activeRenderGroupRoot = null
+    frameSerial = 0
+    samplePendingGraphics = false
     layerProfile = "full"
     msaaSamples = null
     enabled = false
@@ -315,6 +468,27 @@ export function createPixiRenderDiagnostics(options: {
   }
 
   return {
+    measureSceneStage(stage, callback) {
+      if (!enabled) return callback()
+      const groups = sceneGroupRoots.map((root) => ({
+        root, group: root.renderGroup, wasDirty: root.renderGroup?.structureDidChange,
+        previousSerial: sceneGroupInvalidations.get(root) ?? 0,
+      }))
+      try {
+        return callback()
+      } finally {
+        // 仅读取标志；不改写 Pixi 属性、不扫描场景、不抓堆栈。
+        // AI-CORRECTION 2026-09-13: 按初始化时固定的粗图层列表读取，每个组单独处理嵌套归因。
+        for (const { root, group, wasDirty, previousSerial } of groups) {
+          if (wasDirty === false && group?.structureDidChange === true
+            && previousSerial === (sceneGroupInvalidations.get(root) ?? 0)) {
+            sceneGroupInvalidations.set(root, ++sceneInvalidationSerial)
+            recordRenderGroupSource("scene.structure", `${stage} @ ${describeRenderObject(root)}`)
+          }
+        }
+      }
+    },
+
     syncDebugState(nextEnabled): void {
       if (!nextEnabled) {
         disable()
@@ -330,6 +504,8 @@ export function createPixiRenderDiagnostics(options: {
       }
 
       resetFrameCounters(counters)
+      // 每六十帧查看一次 Pixi 已有的更新队列，避免逐帧扫描所有对象。
+      samplePendingGraphics = frameSerial++ % 60 === 0
       restoreHiddenTargets(hiddenTargets)
       hideProfileTargets(layerProfile, options.layers, hiddenTargets)
 
@@ -358,6 +534,11 @@ export function createPixiRenderDiagnostics(options: {
       trackingRender = false
       restoreHiddenTargets(hiddenTargets)
 
+      profiler.count("pixi.renderGroup.buildCalls", counters.renderGroupBuilds)
+      profiler.count("pixi.renderGroup.build-ms", counters.renderGroupBuildMs)
+      profiler.count("pixi.renderGroup.buildFailures", counters.renderGroupBuildFailures)
+      profiler.count("pixi.renderGroup.reuseCalls", counters.renderGroupUpdates)
+      profiler.count("pixi.sprite.textureValidationFailures", counters.textureValidationFailures)
       profiler.count("pixi.webgl.drawCalls", counters.drawCalls)
       profiler.count("pixi.batch.explicitBreakCalls", counters.batchBreakCalls)
       profiler.count("pixi.graphics.contextRebuilds", counters.graphicsContextRebuilds)
@@ -375,8 +556,21 @@ export function createPixiRenderDiagnostics(options: {
       const logicalHeight = normalizeDimension(renderer.screen?.height ?? renderer.height)
       const framebufferWidth = normalizeDimension(renderer.canvas?.width)
       const framebufferHeight = normalizeDimension(renderer.canvas?.height)
+      const sources = [...renderGroupSources.values()]
+        .map((sample) => ({ ...sample, totalMs: Math.round(sample.totalMs * 1000) / 1000 }))
+        .sort((left, right) => right.calls - left.calls)
+      renderGroupSources.clear()
+      const textureValidation = {
+        failures: textureValidationFailures,
+        omittedFailures: omittedTextureValidationFailures,
+        samples: [...textureValidationSamples.values()].sort((left, right) => right.calls - left.calls),
+      }
+      textureValidationSamples.clear()
+      textureValidationFailures = 0
+      omittedTextureValidationFailures = 0
 
       return {
+        renderGroups: { mode: options.renderGroupMode ?? "single", sources, textureValidation },
         textures: options.textureProfiler?.flush() ?? null,
         backend: renderer.gl === undefined ? "unknown" : "webgl",
         antialias: renderer.view?.antialias === true,
@@ -401,6 +595,11 @@ export function createPixiRenderDiagnostics(options: {
 
 function createEmptyFrameCounters(): FrameCounters {
   return {
+    textureValidationFailures: 0,
+    renderGroupBuilds: 0,
+    renderGroupBuildMs: 0,
+    renderGroupBuildFailures: 0,
+    renderGroupUpdates: 0,
     drawCalls: 0,
     batchBreakCalls: 0,
     graphicsContextRebuilds: 0,
@@ -414,6 +613,11 @@ function createEmptyFrameCounters(): FrameCounters {
 }
 
 function resetFrameCounters(counters: FrameCounters): void {
+  counters.textureValidationFailures = 0
+  counters.renderGroupBuilds = 0
+  counters.renderGroupBuildMs = 0
+  counters.renderGroupBuildFailures = 0
+  counters.renderGroupUpdates = 0
   counters.drawCalls = 0
   counters.batchBreakCalls = 0
   counters.graphicsContextRebuilds = 0
@@ -423,6 +627,75 @@ function resetFrameCounters(counters: FrameCounters): void {
   counters.stencilMaskPops = 0
   counters.alphaMaskPushes = 0
   counters.alphaMaskPops = 0
+}
+
+function describeRenderObject(value: unknown): string {
+  const parts: string[] = []
+  let object = asRecord(value)
+  for (let depth = 0; object !== null && depth < 6; depth += 1) {
+    const label = typeof object.label === "string" && object.label.length > 0
+      ? object.label : typeof object.renderPipeId === "string" ? object.renderPipeId : "container"
+    parts.push(label.slice(0, 160))
+    object = asRecord(object.parent)
+  }
+  return parts.reverse().join("/") || "unknown"
+}
+
+/** 只在实际验证失败后读取已有 CPU 侧批次；不重新验证，不同步查询 GL。 */
+function describeSpriteTextureValidation(
+  value: unknown,
+  rendererUid: number | undefined,
+  groupRoot: unknown,
+  textureProfiler: TexturePerfDiagnostics | undefined,
+) {
+  const sprite = asRecord(value)
+  const gpuSprite = asRecord(asRecord(sprite?._gpuData)?.[String(rendererUid)])
+  const batch = asRecord(gpuSprite?._batch)
+  const textures = asRecord(batch?.textures)
+  const sourceDescription = (source: unknown) => {
+    const record = asRecord(source)
+    const path = textureProfiler?.describe(source).resource ?? record?.label ?? record?._sourceOrigin
+    return {
+      sourceUid: diagnosticNumber(record?.uid),
+      resource: typeof path === "string" ? path.replace(/^https?:\/\/[^/]+/, "").slice(0, 512) : "<unattributed>",
+      width: diagnosticNumber(record?.pixelWidth), height: diagnosticNumber(record?.pixelHeight),
+      resolution: diagnosticNumber(record?.resolution), destroyed: record?.destroyed === true,
+    }
+  }
+  const textureDescription = (texture: unknown) => {
+    const record = asRecord(texture)
+    const frame = asRecord(record?.frame)
+    return {
+      textureUid: diagnosticNumber(record?.uid),
+      ...sourceDescription(record?._source),
+      frame: { x: diagnosticNumber(frame?.x), y: diagnosticNumber(frame?.y),
+        width: diagnosticNumber(frame?.width), height: diagnosticNumber(frame?.height) },
+    }
+  }
+  const previous = textureDescription(gpuSprite?.texture)
+  const next = textureDescription(sprite?._texture)
+  const ids = asRecord(textures?.ids)
+  const textureIndex = next.sourceUid === null ? null : diagnosticNumber(ids?.[String(next.sourceUid)])
+  const count = diagnosticNumber(textures?.count)
+  const list = Array.isArray(textures?.textures) ? textures.textures : []
+  const limit = Math.min(list.length, Math.max(0, count ?? 0), MAX_BATCH_TEXTURE_SAMPLES)
+  return {
+    reason: ids === null || next.sourceUid === null ? "missing-batch-data"
+      : textureIndex === null ? "source-not-in-batch" : "unclassified",
+    renderable: describeRenderObject(value), renderableUid: diagnosticNumber(sprite?.uid),
+    group: describeRenderObject(groupRoot), previous, next,
+    batch: {
+      batcherUid: diagnosticNumber(asRecord(gpuSprite?._batcher)?.uid),
+      start: diagnosticNumber(batch?.start), size: diagnosticNumber(batch?.size),
+      textureCount: count, nextSourceTextureIndex: textureIndex,
+      textures: list.slice(0, limit).map(sourceDescription),
+      omittedTextures: Math.max(0, (count ?? 0) - limit),
+    },
+  }
+}
+
+function diagnosticNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
 function installMethodHook(

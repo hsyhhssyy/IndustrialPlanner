@@ -1,0 +1,4 @@
+interface:
+  display_name: "网站建筑素材导入"
+  short_description: "按逐阶段清单校验并导入网站素材，同批保留原版和全部发布规格，明确缺口与停止条件"
+  default_prompt: "使用 $import-building-assets 按 checklist 逐阶段处理本次指定范围，先检查入口就绪，再同批导入原版和全部发布规格；遇到需要复杂适配的缺口时报告并停止。"

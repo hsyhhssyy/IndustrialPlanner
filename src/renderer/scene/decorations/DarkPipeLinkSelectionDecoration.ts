@@ -5,6 +5,7 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationActivityGuard } from "./DecorationRedrawGuard";
 import {
   buildEntityDefinitionMap,
   resolveEntityViewportRect,
@@ -17,11 +18,13 @@ const DARK_PIPE_SELECTION_STROKE_ALPHA = 0.92;
 
 export function createDarkPipeLinkSelectionDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationActivityGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      if (!shouldSync(ctx.renderHost.workspace.app?.state.activeTool === DARK_PIPE_LINK_TOOL)) return;
       graphics.clear();
 
       const app = ctx.renderHost.workspace.app;

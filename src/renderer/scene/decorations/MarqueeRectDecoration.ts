@@ -5,6 +5,7 @@ import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationActivityGuard } from "./DecorationRedrawGuard";
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
@@ -115,6 +116,7 @@ function resolveGlowAlpha(nowMs: number): number {
 
 export function createMarqueeRectDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationActivityGuard();
   // 内发光描边层：只描边不填充，模糊后仅边缘向内辐射光晕
   const glowStroke = new Graphics({ roundPixels: true });
   const glowMask = new Graphics({ roundPixels: true });
@@ -133,6 +135,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
       const marqueeGridRect =
         ctx.renderHost.workspace.editor!.state.marqueeGridRect;
 
+      if (!shouldSync(marqueeGridRect !== null)) return;
       graphics.clear();
       glowStroke.clear();
       glowMask.clear();

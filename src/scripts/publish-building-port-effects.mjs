@@ -4,18 +4,38 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
+import { publishEffectFrames, resizeAssetRgba } from './building-asset-image.mjs';
+
+/** single-view 交付用显式模式选中唯一模板；不从交付键拼接或猜测模板名称。 */
+export function resolveDeliveredPortVariant(ports, key) {
+  const exact = ports.variants.find((variant) => variant.rendererTemplateKey === key);
+  if (exact) return exact;
+  if (ports.deliveryVariantSelection === 'single-view' && ports.deliveryVariantKeys.length === 1
+    && ports.deliveryVariantKeys[0] === key && ports.variants.length === 1
+    && ports.variants[0].machineModeType === ports.deliveryMode) return ports.variants[0];
+  return null;
+}
 
 /** 保留原件；数值图仅无损解码为 RGBA 并 gzip，避免浏览器颜色管理改变高度字节。 */
 // AI-CORRECTION 2026-09-11: 普通建筑还需无损反射像素行并转换空间元数据；contract2 保留自身画布契约。
+// AI-CORRECTION 2026-09-13: 发布比例显式控制数值图最近邻采样和特效逐帧重排；裁切特效补透明边界。
 export async function publishBuildingPortEffects({
   sourceDirectory = 'resources/building-port-effects',
   outputDirectory = 'public/3d-top-view/port-effects',
+  viewSources = null,
+  sourceVersion = null,
+  collection: suppliedCollection = null,
+  resolution = 1,
 } = {}) {
   const source = path.resolve(sourceDirectory);
   const output = path.resolve(outputDirectory);
-  const json = async (name) => JSON.parse(await readFile(path.join(source, name), 'utf8'));
-  const root = await json('assets/manifest.json');
-  const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
+  const json = async (name) => {
+    const file = path.resolve(source, name);
+    if (!file.startsWith(`${source}${path.sep}`)) throw new Error(`Metadata escapes source root: ${name}`);
+    return JSON.parse(await readFile(file, 'utf8'));
+  };
+  const root = viewSources ? { version: sourceVersion, profile: 'top-sprite-height-v1', buildings: viewSources } : await json('assets/manifest.json');
+  const collection = suppliedCollection ?? JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
   const { createRegistryContract } = await tsImport('../registry/index.ts', {
     parentURL: import.meta.url,
     tsconfig: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'tsconfig.app.json'),
@@ -25,14 +45,14 @@ export async function publishBuildingPortEffects({
   );
   const manifest = { schemaVersion: 1, version: root.version, profile: root.profile,
     definitions: Object.fromEntries(collection.entries.map((entry) => [entry.entityId, entry.sourcePath])),
-    views: {}, effects: {}, issues: [], heightMin: Infinity, heightMax: -Infinity };
+    views: {}, effects: {}, issues: [], normalizations: [], heightMin: Infinity, heightMax: -Infinity };
   const written = new Map();
-  const publish = async (relative, numeric = false, flipVertical = false) => {
+  const publish = async (relative, numeric = false, flipVertical = false, padToPixel = false) => {
     const normalized = path.posix.normalize(relative);
-    if (!normalized.startsWith('assets/')) throw new Error(`Invalid resource path: ${relative}`);
+    if (!normalized.startsWith(viewSources ? 'buildings/' : 'assets/') || normalized.includes('..')) throw new Error(`Invalid resource path: ${relative}`);
     const key = `${normalized}:${numeric}:${flipVertical}`;
     if (written.has(key)) return written.get(key);
-    const file = normalized.slice('assets/'.length) + (numeric ? '.rgba.bin' : '');
+    const file = normalized.replace(/^assets\//, '') + (numeric ? '.rgba.bin' : '');
     const destination = path.join(output, file);
     await mkdir(path.dirname(destination), { recursive: true });
     let result;
@@ -51,8 +71,9 @@ export async function publishBuildingPortEffects({
           row.copy(data, bottom);
         }
       }
-      await writeFile(destination, gzipSync(data, { level: 9 }));
-      result = { file, width: info.width, height: info.height };
+      const scaled = await resizeAssetRgba(data, info.width, info.height, resolution, true, padToPixel);
+      await writeFile(destination, gzipSync(scaled.data, { level: 9 }));
+      result = { file, width: scaled.width, height: scaled.height, sourceHeight: info.height };
     } else {
       if (flipVertical) {
         await sharp(path.join(source, normalized)).flip().webp({ lossless: true }).toFile(destination);
@@ -65,10 +86,11 @@ export async function publishBuildingPortEffects({
     return result;
   };
   for (const building of root.buildings) {
-    const directory = path.posix.dirname(`assets/${building.package}`);
-    const spatial = await json(`${directory}/spatial.json`);
-    const ports = await json(`${directory}/ports.json`);
-    const occlusion = await json(`${directory}/occlusion/occlusion.json`);
+    const directory = building.directory ?? path.posix.dirname(`assets/${building.package}`);
+    const spatial = await json(building.spatial ?? `${directory}/spatial.json`);
+    const ports = building.ports === null ? null : await json(building.ports ?? `${directory}/ports.json`);
+    const occlusionPath = building.occlusion ?? `${directory}/occlusion/occlusion.json`;
+    const occlusion = await json(occlusionPath);
     // contract2 的遮挡字段自带 canonicalSourceZReflection，已由物流发布契约决定画布方向。
     // 只有普通建筑源图需要在此处把 source +Z 逐行反射到项目 -y。
     const canonicalCanvas = occlusion.fields.some((field) =>
@@ -76,14 +98,14 @@ export async function publishBuildingPortEffects({
     const reflectSourcePlane = !canonicalCanvas;
     const fields = {};
     for (const field of occlusion.fields) {
-      const delivered = await publish(`${directory}/occlusion/${field.file}`, true, reflectSourcePlane);
-      fields[field.name] = { ...delivered,
+      const delivered = await publish(`${path.posix.dirname(occlusionPath)}/${field.file}`, true, reflectSourcePlane);
+      fields[field.name] = { file: delivered.file, width: delivered.width, height: delivered.height,
         min: field.heightMin, max: field.heightMax,
-        pivot: [field.worldToPixel.pivotPixels.x, reflectSourcePlane
-          ? delivered.height - field.worldToPixel.pivotPixels.y : field.worldToPixel.pivotPixels.y],
+        pivot: [field.worldToPixel.pivotPixels.x * resolution, (reflectSourcePlane
+          ? delivered.sourceHeight - field.worldToPixel.pivotPixels.y : field.worldToPixel.pivotPixels.y) * resolution],
         center: [field.worldToPixel.cameraCenterSource.x,
           reflectSourcePlane ? -field.worldToPixel.cameraCenterSource.z : field.worldToPixel.cameraCenterSource.z],
-        pixelsPerCell: field.worldToPixel.pixelsPerCell.x };
+        pixelsPerCell: field.worldToPixel.pixelsPerCell.x * resolution };
       manifest.heightMin = Math.min(manifest.heightMin, field.heightMin);
       manifest.heightMax = Math.max(manifest.heightMax, field.heightMax);
     }
@@ -92,8 +114,8 @@ export async function publishBuildingPortEffects({
       && Number.isFinite(value.yawDegrees)
       // 源平面 +Z 朝图像下方；项目平面约定 y=-Z。yaw 保持源值，由运行时以正号组合实体旋转。
       ? { position: [value.position[0], value.position[1], reflectSourcePlane ? -value.position[2] : value.position[2]], yaw: value.yawDegrees } : null;
-    const requestedVariantKeys = new Set(ports.deliveryVariantKeys);
-    const availableVariantKeys = new Set(ports.variants.map((variant) => variant.rendererTemplateKey));
+    const requestedVariantKeys = new Set(ports?.deliveryVariantKeys ?? []);
+    const availableVariantKeys = new Set((ports?.variants ?? []).map((variant) => variant.rendererTemplateKey));
     const sourcePath = `${building.buildingId}/${building.view}`;
     for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath)) {
       const definition = definitions.get(entry.entityId);
@@ -104,12 +126,16 @@ export async function publishBuildingPortEffects({
     }
     const variants = {};
     for (const key of requestedVariantKeys) {
-      const variant = ports.variants.find((entry) => entry.rendererTemplateKey === key);
+      const variant = resolveDeliveredPortVariant(ports, key);
       if (!variant) {
         manifest.issues.push({ view: directory, variant: key, reason: 'deliveryVariantKeys does not resolve to a rendererTemplateKey; no effects bound' });
         continue;
       }
-      variants[key] = ['input', 'output'].flatMap((role) => variant.activePorts.pipe[role]
+      if (variant.rendererTemplateKey !== key) manifest.normalizations.push({
+        view: directory, deliveryKey: key, rendererTemplateKey: variant.rendererTemplateKey,
+        evidence: 'single-view delivery selects its only template by explicit deliveryMode',
+      });
+      variants[variant.rendererTemplateKey] = ['input', 'output'].flatMap((role) => variant.activePorts.pipe[role]
         .filter((port) => port.isPipe === true && port.resolvedTransform?.enabledByBinding === true
           && port.resolvedTransform.disabled !== true && transform(port.resolvedTransform))
         .map((port) => ({ role, index: port.index, ...transform(port.resolvedTransform),
@@ -126,31 +152,35 @@ export async function publishBuildingPortEffects({
       coordinateSpace: reflectSourcePlane ? 'project-reflected-source' : 'contract2-canonical',
       fields, stateMapping: occlusion.stateMapping, epsilon: occlusion.epsilon.value,
       variants,
-      rings: ports.rings.filter((ring) => ring.resourceId && transform(ring.resolvedTransform))
+      rings: (ports?.rings ?? []).filter((ring) => ring.resourceId && transform(ring.resolvedTransform))
         .map((ring) => ({ resourceId: ring.resourceId, statusKey: ring.statusKey, ...transform(ring.resolvedTransform) })),
     };
-    const registry = await json(`${directory}/effects/resources.json`);
-    for (const entry of registry.resources) {
+    const effectsPath = building.effects ?? `${directory}/effects/resources.json`;
+    const registry = building.effects === null ? null : await json(effectsPath);
+    for (const entry of registry?.resources ?? []) {
       const id = entry.id ?? entry.resourceId;
       if (manifest.effects[id]) continue;
-      const effectPath = path.posix.normalize(`${directory}/effects/${entry.path}`);
+      const effectPath = path.posix.normalize(`${path.posix.dirname(effectsPath)}/${entry.path}`);
       const effectDirectory = path.posix.dirname(effectPath);
       const effect = await json(effectPath);
       if (effect.geometry.additionalPrefabTransformRequired) throw new Error(`Unsupported prefab transform: ${id}`);
       const sheet = await json(`${effectDirectory}/${effect.spritesheet}`);
       const pages = [];
-      for (const page of sheet.pages) pages.push({ file: await publish(`${effectDirectory}/${page.image}`, false, reflectSourcePlane),
+      if (resolution === 1) for (const page of sheet.pages) pages.push({ file: await publish(`${effectDirectory}/${page.image}`, false, reflectSourcePlane),
         width: page.width, height: page.height });
+      const packed = resolution === 1 ? null : await publishEffectFrames({
+        sourceRoot: source, outputRoot: output, directory: effectDirectory, effect, sheet, resolution, flipVertical: reflectSourcePlane,
+      });
+      const height = await publish(`${effectDirectory}/${effect.heightTemplate.file}`, true, reflectSourcePlane, true);
       manifest.effects[id] = {
-        height: { ...await publish(`${effectDirectory}/${effect.heightTemplate.file}`, true, reflectSourcePlane),
+        height: { file: height.file, width: height.width, height: height.height,
           min: effect.heightTemplate.heightMin, max: effect.heightTemplate.heightMax,
-          pivot: [effect.projection.pivotPixels[0], reflectSourcePlane
-            ? (await publish(`${effectDirectory}/${effect.heightTemplate.file}`, true, reflectSourcePlane)).height
-              - effect.projection.pivotPixels[1] : effect.projection.pivotPixels[1]],
+          pivot: [effect.projection.pivotPixels[0] * resolution, (reflectSourcePlane
+            ? height.sourceHeight - effect.projection.pivotPixels[1] : effect.projection.pivotPixels[1]) * resolution],
           center: [effect.projection.cameraCenterSource[0], reflectSourcePlane
             ? -effect.projection.cameraCenterSource[1] : effect.projection.cameraCenterSource[1]],
-          pixelsPerCell: effect.projection.pixelsPerCell },
-        pages, frames: effect.frames.map(({ page, x, y, width, height, durationMs }) => ({
+          pixelsPerCell: effect.projection.pixelsPerCell * resolution },
+        pages: packed?.pages ?? pages, frames: packed?.frames ?? effect.frames.map(({ page, x, y, width, height, durationMs }) => ({
           page, x, y: reflectSourcePlane ? sheet.pages[page].height - y - height : y, width, height, durationMs })),
         playback: effect.playback,
         coordinateSpace: reflectSourcePlane ? 'project-reflected-source' : 'contract2-canonical',

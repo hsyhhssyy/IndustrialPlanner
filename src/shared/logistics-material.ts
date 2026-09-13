@@ -17,12 +17,13 @@ export interface LogisticsStaticFrame {
 export interface LogisticsStaticManifest {
   readonly schemaVersion: 1;
   readonly materialContractVersion: 2;
-  readonly pixelsPerCell: 128;
+  readonly pixelsPerCell: number;
   readonly pages: Readonly<Record<string, { readonly file: string; readonly width: number; readonly height: number }>>;
   readonly frames: Readonly<Record<string, LogisticsStaticFrame>>;
 }
 
 export interface LogisticsDynamicResource {
+  /** data=true 使用 gzip 压缩的 RGBA8 字节（.rgba.bin），颜色图使用 WebP。 */
   readonly file: string;
   readonly width: number;
   readonly height: number;

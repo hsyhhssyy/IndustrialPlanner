@@ -3,6 +3,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { isBatchMove } from "@/renderer/move-visual-policy";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationActivityGuard } from "./DecorationRedrawGuard";
 import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
 
 const PREVIEW_RECT_FILL_ALPHA = 0.5;
@@ -10,11 +11,13 @@ const PREVIEW_RECT_FILL_COLOR = 0x0f2f66;
 
 export function createPreviewRectDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationActivityGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      if (!shouldSync((ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.preview]?.length ?? 0) > 0)) return;
       measureDecorationStep(ctx, "previewRect.clear", () => {
         graphics.clear();
       });

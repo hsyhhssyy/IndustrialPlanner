@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "resolution": 0.5,
   "frameWidth": 768,
   "frameHeight": 512,
   "appliedSourceToPublishedTransform": "flip-top-bottom",

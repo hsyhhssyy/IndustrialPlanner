@@ -298,6 +298,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private staticBodyTexture: Texture | null = null
   private staticMaskTexture: Texture | null = null
   private animationTextures: DeviceAnimationTextures | null = null
+  private preparingAnimationTextures: DeviceAnimationTextures | null = null
+  private animationVisible = true
   private animationState: DeviceAnimationState | null = null
   private animationRequested = false
   private animationLoadVersion = 0
@@ -389,12 +391,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     private readonly definition: EntityDefinition,
     private readonly renderHost: RenderHost,
   ) {
-    super(entityId)
+    super(entityId, definition.id)
 
     const spriteId = definition.spriteId
     this.spriteId = spriteId
 
     this.body = new Sprite(Texture.EMPTY)
+    this.body.label = "device.body"
     this.body.anchor.set(0.5)
     this.body.roundPixels = true
     this.body.visible = false
@@ -404,6 +407,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.deviceLabelRoot.visible = false
 
     this.deviceIcon = new Sprite(Texture.EMPTY)
+    this.deviceIcon.label = "device.icon"
     this.deviceIcon.anchor.set(0.5)
     this.deviceIcon.roundPixels = true
     this.deviceIcon.visible = false
@@ -433,6 +437,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewEffectRoot.visible = false
 
     this.previewMask = new Sprite(Texture.EMPTY)
+    this.previewMask.label = "device.previewMask"
     this.previewMask.anchor.set(0.5)
     this.previewMask.roundPixels = true
 
@@ -1124,6 +1129,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.animationFrameLoadVersion += 1
         this.animationFrameLoadKey = null
         this.animationRequested = false
+        this.preparingAnimationTextures?.destroy()
+        this.preparingAnimationTextures = null
         const previousAnimationTextures = this.animationTextures
         this.animationTextures = null
         this.animationState = null
@@ -1190,12 +1197,20 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.animationDesiredWorking,
         this.animationStableResetPending,
       )
+      if (!this.animationVisible) {
+        this.animationRequested = false
+        textures.destroy()
+        return
+      }
+      textures.setVisible(true)
+      this.preparingAnimationTextures = textures
       const initialTexture = await textures.prepareFrame(animationState.stage, animationState.frameIndex)
+      if (this.preparingAnimationTextures === textures) this.preparingAnimationTextures = null
       if (this.disposed || version !== this.animationLoadVersion) {
         textures.destroy()
         return
       }
-      if (initialTexture === null) {
+      if (initialTexture === null || !this.animationVisible) {
         this.animationRequested = false
         textures.destroy()
         this.applyDevicePresentationTextures()
@@ -1213,7 +1228,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private applyAnimationFrame(): void {
-    if (this.animationState === null || this.animationTextures === null) {
+    if (!this.animationVisible || this.animationState === null || this.animationTextures === null) {
       return
     }
     const texture = this.animationTextures.commitFrame(
@@ -1230,7 +1245,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private requestAnimationFrameTexture(): void {
-    if (this.animationState === null || this.animationTextures === null) {
+    if (!this.animationVisible || this.animationState === null || this.animationTextures === null) {
       return
     }
     const animationTextures = this.animationTextures
@@ -1257,7 +1272,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.applyDevicePresentationTextures()
         return
       }
-      if (this.animationState?.stage === stage && this.animationState.frameIndex === frameIndex) {
+      if (this.animationVisible && this.animationState?.stage === stage && this.animationState.frameIndex === frameIndex) {
         const committedTexture = animationTextures.commitFrame(stage, frameIndex)
         if (committedTexture !== null) {
           this.body.texture = committedTexture
@@ -1287,6 +1302,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   public override setVisible(visible: boolean): void {
     super.setVisible(visible)
+    this.animationVisible = visible
+    if (!visible) {
+      // 离屏页可被预算回收；先解除 Sprite 对分页子纹理的引用，重新入屏时按原动画状态取帧。
+      // AI-CORRECTION 2026-09-13: 已取消预算回收；最后同类实例离屏超过 20 秒才释放整套分页。
+      this.body.texture = this.staticBodyTexture ?? Texture.EMPTY
+    }
+    this.animationTextures?.setVisible(visible)
+    this.preparingAnimationTextures?.setVisible(visible)
     if (!visible && this.animationRequested) {
       this.animationWasHidden = true
       this.discardNextAnimationDelta = true
@@ -2305,6 +2328,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.animationLoadVersion += 1
     this.animationFrameLoadVersion += 1
     this.animationState = null
+    this.preparingAnimationTextures?.destroy()
+    this.preparingAnimationTextures = null
     this.animationTextures?.destroy()
     this.animationTextures = null
     this.staticBodyTexture = null

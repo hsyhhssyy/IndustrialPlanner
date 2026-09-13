@@ -18,6 +18,7 @@ const definition: DeviceSpriteAnimationDefinition = {
 async function withFixture(run: (options: {
   sourceDirectory: string; spriteDirectory: string; maskDirectory: string;
   animationDirectory: string; maskOverrideDirectory: string;
+  resolution: number;
   definitions: { spriteId: string; spriteAnimation: DeviceSpriteAnimationDefinition }[];
 }) => Promise<void>): Promise<void> {
   const parent = path.resolve(".temp/.trash");
@@ -25,7 +26,8 @@ async function withFixture(run: (options: {
   const directory = await mkdtemp(path.join(parent, "animation-assets-"));
   const options = { sourceDirectory: path.join(directory, "source"), spriteDirectory: path.join(directory, "sprites"),
     maskDirectory: path.join(directory, "masks"), animationDirectory: path.join(directory, "animations"),
-    maskOverrideDirectory: path.join(directory, "overrides"), definitions: [{ spriteId: "fixture", spriteAnimation: definition }] };
+    maskOverrideDirectory: path.join(directory, "overrides"), resolution: 1,
+    definitions: [{ spriteId: "fixture", spriteAnimation: definition }] };
   try {
     await mkdir(path.join(options.sourceDirectory, "fixture"), { recursive: true });
     for (let index = 0; index < DEVICE_SPRITE_ANIMATION_PHASES.length; index += 1) {
@@ -73,6 +75,49 @@ async function readPixels(file: string): Promise<number[]> {
 }
 
 describe("device animation generation", () => {
+  it("默认发布半尺寸分页和遮罩，保留源文件、逻辑坐标、时长与透明尾格", async () => {
+    await withFixture(async (options) => {
+      const root = path.join(options.sourceDirectory, "fixture");
+      const manifestPath = path.join(root, "manifest.json");
+      const source = JSON.parse(await readFile(manifestPath, "utf8"));
+      source.pageRows = 2;
+      source.clips.open.push({ source: "open_idle", startFrame: 0, frameCount: 1 });
+      await writeFile(manifestPath, JSON.stringify(source));
+      const originals = await Promise.all((await readdir(root)).map(async (file) => ({
+        file, bytes: await readFile(path.join(root, file)),
+      })));
+      await publishDeviceSpriteAnimations({ ...options, resolution: undefined });
+      for (const original of originals) {
+        expect(await readFile(path.join(root, original.file))).toEqual(original.bytes);
+      }
+      const outputRoot = path.join(options.animationDirectory, "fixture");
+      const output = JSON.parse(await readFile(path.join(outputRoot, "manifest.json"), "utf8"));
+      expect(output).toMatchObject({ resolution: 0.5, frameWidth: 2, frameHeight: 2,
+        clips: { open: { frameCount: 3, frameDurationMs: 100,
+          pages: [{ rows: 2, columns: 2, frameCount: 3 }] } } });
+      expect(await sharp(path.join(outputRoot, "open-0.webp")).metadata()).toMatchObject({ width: 2, height: 2 });
+      expect(await sharp(path.join(outputRoot, "mask.webp")).metadata()).toMatchObject({ width: 1, height: 1 });
+      const pixels = await readPixels(path.join(outputRoot, "open-0.webp"));
+      expect([pixels[3], pixels[7], pixels[11]].every((alpha) => alpha! > 0)).toBe(true);
+      expect(pixels[15]).toBe(0);
+      expect(await sharp(path.join(options.spriteDirectory, "fixture.webp")).metadata())
+        .toMatchObject({ width: 1, height: 1 });
+      expect(await sharp(path.join(options.maskDirectory, "fixture.webp")).metadata())
+        .toMatchObject({ width: 1, height: 1 });
+    });
+  });
+
+  it("拒绝不能整像素缩放的源帧，发布失败时保留原发布目录", async () => {
+    await withFixture(async (options) => {
+      await publishDeviceSpriteAnimations(options);
+      const outputPath = path.join(options.animationDirectory, "fixture/manifest.json");
+      const before = await readFile(outputPath);
+      await expect(publishDeviceSpriteAnimations({ ...options, resolution: 0.3 }))
+        .rejects.toThrow("pixel frameWidth");
+      expect(await readFile(outputPath)).toEqual(before);
+    });
+  });
+
   it("发布时保留源帧时长和循环边界拆分时长，不复制长停留帧", async () => {
     await withFixture(async (options) => {
       const sourceFile = path.join(options.sourceDirectory, "fixture/manifest.json");

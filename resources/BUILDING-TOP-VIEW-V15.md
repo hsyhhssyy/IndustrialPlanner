@@ -1,13 +1,15 @@
 # v1.5 建筑俯视图素材
 
-权威来源是 `动画素材包/buildings_frontend_v1.5.zip`，SHA-256 记录在 `building-top-view-v15.json`。当前清单覆盖 51 条 Registry 映射：31 条动画、20 条静态，对应 46 个唯一普通视图；31 条动画共 532 个分页。原始普通资源共 463 个文件，已与 ZIP 逐字节核对。另有 6 个连续物流材质视图由 `logistics-materials/contract2/` 覆盖。ZIP 共 54 个视图，其中 2 个没有当前实体或确定的模式映射。
+后续美术素材统一通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 导入。原 ZIP 导入、PNG 大图拆分和旧静态批量同步入口已退役；通用像素处理和发布器继续复用。本次迁移仅固化技能及清理入口，尚未导入网站素材。
+
+既有资源的历史来源仍是 `动画素材包/buildings_frontend_v1.5.zip`，SHA-256 记录在 `building-top-view-v15.json`，不得改写为网站来源。以下为 2026-09-11 的导入记录：清单覆盖 51 条 Registry 映射，31 条动画、20 条静态，对应 46 个唯一普通视图；31 条动画共 532 个分页。原始普通资源共 463 个文件，已与 ZIP 逐字节核对。另有 6 个连续物流材质视图由 `logistics-materials/contract2/` 覆盖。ZIP 共 54 个视图，其中 2 个没有当时实体或确定的模式映射。
 
 ## 来源与发布
 
 - 动画源位于 `device-sprite-animation/<spriteId>/`，静态源位于 `device-sprite-original/v15/`。source 文件保留 ZIP 原始字节；来源 hash 不以发布后的 WebP hash 代替。
-- 统一入口为 `node src/scripts/import-building-top-view-v15.mjs`（完整动画发布须先接入下文的 Registry 能力声明）。可用 `--entity-id=<entityId>` 只重发一个已知映射；未知 ID 必须 fail-fast。
-- 可用 `--prepare-only` 导入原始图集、元数据并发布静态图，暂缓动画重发。各条目的来源 hash 独立记录，单建筑更新不改其他条目；集合顶层 hash 记录最近一次完整导入。
-- 导入入口自行校验并解压 ZIP 到专用临时目录，处理结束后清理临时目录。
+- 网站导入的版本锁定、哈希校验、范围选择、来源记录及暂存发布流程统一维护在上述技能中，不再提供 ZIP 命令或 `--prepare-only` 兼容入口。
+- 各条目的来源 hash 独立记录，单建筑更新不改其他条目；已有 ZIP 摘要只表示历史输入，网站导入须另记发布编号、索引摘要和逐文件来源。
+- 退役脚本原文以 `AI-REMOVED` 注释保留在 `src/scripts/archived-building-imports/`，仅供审计。
 - 动画发布复用既有分页、逐帧时长和 Alpha mask 流程，不新增播放器或分页协议。动画 source manifest 的 `frameDurationsMs` 来自 ZIP 的 `animation.json`，每个分页 source 保持独立 range。
 - 新 JSON 决定页面布局和帧数；仅在源帧数、列数和逐帧时长一致时保留已确认的四阶段切分。其他情况重新采用交付的完整阶段；所有逻辑 range 都必须落在实际源帧范围内。
 - 静态发布复用 `publishDeviceSprite`，按声明的 crop 与变换生成 public sprite 和 mask。`port-effects`、物流连续材质和 grid belt/log pipe/support 材质不属于本清单的发布范围。

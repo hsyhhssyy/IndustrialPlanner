@@ -3,6 +3,7 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { createDecorationRedrawGuard } from "./DecorationRedrawGuard";
 
 /**
  * 设备/单元格 hover 四角 L 形特效。
@@ -22,32 +23,41 @@ const CORNER_INSET = 2;
 
 export function createHoverCornersDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const shouldSync = createDecorationRedrawGuard();
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      graphics.clear();
-
       const editor = ctx.renderHost.workspace.editor;
-      if (editor === null) return;
-
-      const hoverTarget = editor.state.hoverTarget;
-      if (!hoverTarget) return;
-
-      const { gridPoint, entity } = hoverTarget;
+      const hoverTarget = editor?.state.hoverTarget;
+      const visible = hoverTarget != null
+        && (hoverTarget.entity !== null || ctx.renderHost.workspace.app?.state.activeTool === "logistics-placement");
+      const footprintGridRect = visible
+        ? hoverTarget.entity !== null
+          ? getEntityFootprintGridRect(ctx, hoverTarget.entity, hoverTarget.gridPoint)
+          : { x: hoverTarget.gridPoint.x, y: hoverTarget.gridPoint.y, width: 1, height: 1 }
+        : null;
+      const redraw = shouldSync(footprintGridRect === null ? [] : [
+        footprintGridRect.x, footprintGridRect.y, footprintGridRect.width, footprintGridRect.height,
+        ctx.viewportBounds.left, ctx.viewportBounds.top, ctx.viewportBounds.width, ctx.viewportBounds.height,
+        ctx.viewportState.centerX, ctx.viewportState.centerY,
+        ctx.viewportState.gridCellPixelSize, ctx.viewportState.displayRotation,
+      ]);
+      ctx.profiler?.count("hoverCorners.redraws", redraw ? 1 : 0);
+      if (!redraw) return;
+      graphics.clear();
 
       // 空地且非物流布设模式 → 不绘制四角特效，仅物流 idle 保留。
       // 物流手势 idle 阶段设 hoverTarget，非 idle 清空 hoverTarget，
       // 故此处只要 activeTool === "logistics-placement" 即为 idle。
-      if (entity === null && ctx.renderHost.workspace.app?.state.activeTool !== "logistics-placement") {
+      // AI-CORRECTION 2026-09-13: 可见性已在上方与绘制输入一起判断；不可见时只清理一次。
+      if (footprintGridRect === null) {
         return;
       }
 
       // 计算足印旋转后的网格矩形（仅旋转 footprint，不含 spriteOffset）
-      const footprintGridRect = entity !== null
-        ? getEntityFootprintGridRect(ctx, entity, gridPoint)
-        : { x: gridPoint.x, y: gridPoint.y, width: 1, height: 1 };
+      // AI-CORRECTION 2026-09-13: 足印计算已前移，使用其值快照判断静止悬停是否需要重绘。
 
       // 网格坐标 → viewport 像素坐标
       const viewportRect = resolveViewportRectFromWorldGridRect({
