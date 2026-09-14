@@ -11,6 +11,7 @@ import { decodeHeight, fieldBounds, rasterizeHeightTile, HEIGHT_TILE_PIXELS, til
 import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
+  resolveEffectPlaybackTimeMs,
   selectRingEffectPlacements,
 } from '@/renderer/building-effects/placements';
 import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
@@ -141,6 +142,33 @@ describe('建筑高度与端口特效', () => {
     expect(render([]).effects).toHaveLength(0);
   });
 
+  it.each([
+    ['udpipe_loader_1', [{ id: 'pipe-1', x: -1, y: 1 }]],
+    ['udpipe_unloader_1', [{ id: 'pipe-1', x: 3, y: 1 }]],
+    ['udpipe_loader_2', [{ id: 'pipe-1', x: -1, y: 1 }, { id: 'pipe-2', x: -1, y: 3 }]],
+    ['udpipe_unloader_2', [{ id: 'pipe-1', x: 3, y: 3 }, { id: 'pipe-2', x: 3, y: 1 }]],
+  ] as const)('%s 的每个箭头动画由相邻管道流体状态驱动', (definitionId, pipePositions) => {
+    const target: WorldEntity = { ...entity, id: 'dark-pipe', definitionId };
+    const pipes = pipePositions.map(({ id, x, y }) => ({
+      ...entity,
+      id,
+      definitionId: 'pipe_straight_1x1',
+      position: { x, y },
+      rotation: 0 as const,
+    }));
+    const connected = resolveBuildingEffectScene({ manifest, definitions, entities: [target, ...pipes] });
+    const targetEffects = connected.effects.filter((effect) => effect.id.startsWith(`${target.id}:`));
+
+    expect(connected.issues).toEqual([]);
+    expect(targetEffects).toHaveLength(pipePositions.length);
+    expect(new Set(targetEffects.map((effect) => effect.animationFluidEntityId))).toEqual(
+      new Set(pipePositions.map(({ id }) => id)),
+    );
+
+    const disconnected = resolveBuildingEffectScene({ manifest, definitions, entities: [target] });
+    expect(disconnected.effects.every((effect) => effect.animationFluidEntityId === null)).toBe(true);
+  });
+
   it('按明确状态过滤环，重复绑定只绘制一次；模式切换保留对应变体', () => {
     const fixture = structuredClone(manifest);
     const isolatedView = fixture.views['transmuter_1/top']!;
@@ -159,7 +187,33 @@ describe('建筑高度与端口特效', () => {
     const resource = structuredClone(Object.values(manifest.effects)[0]!);
     resource.frames = [0, 1, 2].map((index) => ({ ...resource.frames[0]!, durationMs: [25, 75, 100][index]! }));
     resource.playback.mode = 'loop';
+    resource.playback.staticFrame = 2;
     expect([0, 24, 25, 99, 100, 199, 200].map((time) => resolveEffectFrame(resource, time))).toEqual([0, 0, 1, 1, 2, 2, 0]);
+    expect(resolveEffectFrame(resource, null)).toBe(2);
+  });
+
+  it('暗管箭头只在相邻管道存在可见流体时使用该运输组时钟', () => {
+    const pipeState = {
+      kind: 'pipe' as const,
+      shape: 'straight' as const,
+      rotation: 0,
+      start: 0,
+      support: false,
+      marker: false,
+      fluidItemId: null as string | null,
+      pipeFlow: { seconds: 2.5, flowing: false },
+    };
+    const materials = {
+      entities: new Map([['pipe', pipeState]]),
+      beltSeconds: 0,
+      animationEnabled: true,
+    };
+
+    expect(resolveEffectPlaybackTimeMs({}, materials, 1234)).toBe(1234);
+    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: null }, materials, 1234)).toBeNull();
+    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBeNull();
+    pipeState.fluidItemId = 'item_liquid_water';
+    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBe(2500);
   });
 
   it('发布高度字节按坐标契约逐行转换，所有数值文件及颜色页存在', async () => {

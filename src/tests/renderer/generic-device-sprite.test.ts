@@ -535,6 +535,44 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
+  it("协议核心始终保持工作动画且不受仿真暂停与时间线 seek 影响", () => {
+    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false })
+    const definition = renderHost.workspace.registry.queries.findEntityDefinition("sp_hub_1")
+    expect(definition?.spriteAnimation).toBeDefined()
+    if (definition === null) throw new Error("Missing protocol core definition.")
+
+    const sprite = new GenericDeviceSprite("protocol-core", definition, renderHost as never)
+    const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
+    const getDeviceRuntimeStatus = vi.fn(() => null)
+    const workspace = context.workspace as unknown as {
+      editor: { queries: { getEntityById?: (entityId: string) => object } };
+      simulation: {
+        state: object;
+        queries: { getDeviceRuntimeStatus?: typeof getDeviceRuntimeStatus };
+      };
+    }
+    workspace.editor.queries.getEntityById = () => ({ id: "protocol-core" })
+    workspace.simulation.state = {
+      runningState: "pause",
+      timeline: { isSeeking: true, cursorTickNumber: 42 },
+    }
+    workspace.simulation.queries.getDeviceRuntimeStatus = getDeviceRuntimeStatus
+    const internals = sprite as unknown as {
+      animationDesiredWorking: boolean;
+      animationPaused: boolean;
+      animationSeeking: boolean;
+      animationCursor: number | null;
+      syncDeviceAnimationInputs: (value: typeof context) => boolean;
+    }
+
+    expect(internals.syncDeviceAnimationInputs(context)).toBe(true)
+    expect(internals.animationDesiredWorking).toBe(true)
+    expect(internals.animationPaused).toBe(false)
+    expect(internals.animationSeeking).toBe(false)
+    expect(internals.animationCursor).toBeNull()
+    expect(getDeviceRuntimeStatus).not.toHaveBeenCalled()
+  })
+
   it("draws matching outlined top-view icon and text when the combined label fits", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
@@ -1303,7 +1341,7 @@ describe("GenericDeviceSprite", () => {
       height: 40,
       rotation: 0,
     }, createRenderContextStub({
-      materialEntities: new Map([["pipe-entity-2", { kind: "pipe", shape: "straight", color: "82d6ff", rotation: 270, start: 0, support: true, marker: true }]]),
+      materialEntities: new Map([["pipe-entity-2", { kind: "pipe", shape: "straight", fluidItemId: "item_liquid_water", rotation: 270, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId,
@@ -1313,14 +1351,15 @@ describe("GenericDeviceSprite", () => {
         nameKey: "registry.item.item_liquid_water.name",
         iconId: "item_liquid_water",
         displayOrder: 10000,
-        tags: ["liquid", "liquid_color:#82d6ff"],
+        tags: ["liquid"],
+        fluidColors: { body: "#5c9fe0", skin: "#52b1d1", skin2: "#07243a", splash: "#afe7ee" },
       }],
     }))
 
     await flushMicrotasks(8)
 
     expect(getPipeFluidItemId).not.toHaveBeenCalled()
-    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/82d6ff/straight/11")
+    expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/empty/straight/11")
     // 贴图方案：bead 填满整个格子，Alpha 通道约束内腔形状
     // AI-CORRECTION 2026-09-10: 三维管道改用完整合成图，不再单独绘制 bead。
     expect(resolveEntitySprite(entityLayer)).toMatchObject({
@@ -1365,7 +1404,7 @@ describe("GenericDeviceSprite", () => {
       height: 40,
       rotation: 90,
     }, createRenderContextStub({
-      materialEntities: new Map([["pipe-turn-entity-1", { kind: "pipe", shape: "left", color: "d97a1f", rotation: 90, start: 0, support: true, marker: true }]]),
+      materialEntities: new Map([["pipe-turn-entity-1", { kind: "pipe", shape: "left", fluidItemId: "item_liquid_acid", rotation: 90, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId: () => "item_liquid_acid",
@@ -1375,7 +1414,8 @@ describe("GenericDeviceSprite", () => {
         nameKey: "registry.item.item_liquid_acid.name",
         iconId: "item_liquid_acid",
         displayOrder: 10000,
-        tags: ["liquid", "liquid_color:#d97a1f"],
+        tags: ["liquid"],
+        fluidColors: { body: "#ffeea0", skin: "#ffd200", skin2: "#89462d", splash: "#ffebbb" },
       }],
     }))
 
@@ -1393,6 +1433,20 @@ describe("GenericDeviceSprite", () => {
       tint: 0xffffff,
     })
   })
+
+  // AI-REMOVED 2026-09-14:
+  // Reason: Renderer 测试状态不再携带 RGB 字符串，测试物品也不再声明颜色 tag。
+  // Trigger: LogisticsMaterialEntityState 改为 fluidItemId，Registry 改为 fluidColors。
+  // Evidence: 管道静态图只表示空管，颜色由渲染边界根据物品 ID 查询。
+  // Replacement: 上方两个填充管道用例中的 fluidItemId、fluidColors 与 pipe/empty 断言。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // materialEntities: new Map([["pipe-entity-2", { kind: "pipe", shape: "straight", color: "82d6ff", rotation: 270, start: 0, support: true, marker: true }]])
+  // tags: ["liquid", "liquid_color:#82d6ff"]
+  // expect(renderHost.textureManager.getLogisticsStatic).toHaveBeenCalledWith("pipe/82d6ff/straight/11")
+  // materialEntities: new Map([["pipe-turn-entity-1", { kind: "pipe", shape: "left", color: "d97a1f", rotation: 90, start: 0, support: true, marker: true }]])
+  // tags: ["liquid", "liquid_color:#d97a1f"]
 
   it("loads blueprint body and mask textures when simplified device icons are enabled", async () => {
     const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
@@ -3209,6 +3263,12 @@ function createRenderContextStub(options: {
     iconId: string;
     displayOrder: number;
     tags: string[];
+    fluidColors?: {
+      body: string;
+      skin: string;
+      skin2?: string;
+      splash?: string;
+    };
   }>;
   deviceClass?: "desktop" | "tablet" | "mobile";
   activeTool?: string;

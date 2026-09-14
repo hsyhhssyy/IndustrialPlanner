@@ -3,6 +3,7 @@ import type { EntityDefinition } from '@/domain/registry/types/entity-definition
 import { resolveRotatedPortGeometry } from '@/shared/geometry/port';
 import type { LogisticsMaterialFrameState } from '@/shared/logistics-material';
 import { getRotatedGridFootprint } from '@/shared/geometry/grid';
+import { isDarkPipeDefinitionId } from '@/shared/dark-pipe-link';
 import type {
   BuildingEffectsManifest,
   BuildingHeightView,
@@ -40,7 +41,10 @@ export function selectEffectVariant(view: BuildingHeightView, definition: Entity
   return selected.length === 1 ? selected[0] : undefined;
 }
 
-export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][string], timeMs: number): number {
+export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][string], timeMs: number | null): number {
+  if (timeMs === null) {
+    return Math.min(Math.max(0, resource.playback.staticFrame), Math.max(0, resource.frames.length - 1));
+  }
   const duration = resource.frames.reduce((sum, frame) => sum + frame.durationMs, 0);
   let remaining = resource.playback.mode === 'loop' && duration > 0
     ? Math.max(0, timeMs) % duration : Math.min(Math.max(0, timeMs), duration);
@@ -49,6 +53,19 @@ export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][
     if (remaining < 0) return index;
   }
   return Math.max(0, resource.frames.length - 1);
+}
+
+export function resolveEffectPlaybackTimeMs(
+  effect: Pick<EffectPlacement, 'animationFluidEntityId'>,
+  materials: LogisticsMaterialFrameState | undefined,
+  nowMs: number,
+): number | null {
+  if (effect.animationFluidEntityId === undefined) return nowMs;
+  if (effect.animationFluidEntityId === null) return null;
+  const fluidState = materials?.entities.get(effect.animationFluidEntityId);
+  return fluidState === undefined || fluidState.fluidItemId === null
+    ? null
+    : (fluidState.pipeFlow?.seconds ?? 0) * 1000;
 }
 
 export function selectRingEffectPlacements(
@@ -136,13 +153,18 @@ export function resolveBuildingEffectScene(options: {
         continue;
       }
       const match = matches[0]!;
-      const connected = (physical.get(`${match.x},${match.y}`) ?? []).some((other) =>
+      const connectedPort = (physical.get(`${match.x},${match.y}`) ?? []).find((other) =>
         other.entityId !== entity.id && other.dx === -match.dx && other.dy === -match.dy
         && (other.kind & match.kind) !== 0 && (other.direction === 'bidirectional' || other.direction !== port.role));
+      const connected = connectedPort !== undefined;
+      const animationFluidEntityId = isDarkPipeDefinitionId(definition.id)
+        ? connectedPort?.entityId ?? null
+        : undefined;
       const id = `${entity.id}:${key}:${port.role}:${port.index}`;
       const add = (resourceId: string | null, suffix: string) => {
         if (!resourceId || !options.manifest.effects[resourceId]) return;
-        result.effects.push({ id: id + suffix, resourceId, x, y, rotation: entity.rotation + port.yaw,
+        result.effects.push({ id: id + suffix, resourceId, animationFluidEntityId,
+          x, y, rotation: entity.rotation + port.yaw,
           baseY: port.position[1], epsilon: view.epsilon, ring: false });
         result.portKeys.set(id + suffix, match.key);
       };

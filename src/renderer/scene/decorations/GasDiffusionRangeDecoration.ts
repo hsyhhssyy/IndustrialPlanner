@@ -4,9 +4,9 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
 import { resolveBatchMoveHiddenRangeEntityIds } from "@/renderer/move-visual-policy";
+import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color";
 import {
   areGridRectsIntersecting,
   resolveGasDiffusionRangeGridRect,
@@ -30,17 +30,34 @@ const GAS_RANGE_STROKE_WIDTH_SCALE = 1.1;
 const GAS_RANGE_PREVIEW_STROKE_ALPHA = 0.55;
 /** 预览模式线条宽度倍率，与供电桩范围线同级 */
 const GAS_RANGE_PREVIEW_STROKE_WIDTH_SCALE = 1.0;
-const DEFAULT_GAS_RANGE_COLOR = 0xa8e6ff;
 /** 预览模式（无活跃气体环境）范围框颜色 */
 const GAS_RANGE_PREVIEW_COLOR = 0x66cc66;
-const GAS_COLOR_TAG_PREFIX = "gas_color:";
-const FLUID_COLOR_TAG_PREFIX = "fluid_color:";
-const LIQUID_COLOR_TAG_PREFIX = "liquid_color:";
+
+// AI-REMOVED 2026-09-14:
+// Reason: 活跃气体颜色不再使用独立默认色或解析 Registry 颜色 tag。
+// Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源，未知流体统一回退 #808080。
+// Evidence: 旧前缀只能承载单色，且已有值与美术 body 色不一致。
+// Replacement: shared/fluid-color.ts。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const DEFAULT_GAS_RANGE_COLOR = 0xa8e6ff;
+// const GAS_COLOR_TAG_PREFIX = "gas_color:";
+// const FLUID_COLOR_TAG_PREFIX = "fluid_color:";
+// const LIQUID_COLOR_TAG_PREFIX = "liquid_color:";
 
 export function createGasDiffusionRangeDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
-  let cachedItemDefinitions: readonly ItemDefinition[] | null = null;
-  let cachedItemById: ReadonlyMap<string, ItemDefinition> = new Map();
+  // AI-REMOVED 2026-09-14:
+  // Reason: Registry 已提供按 ID 精确查询，无需为颜色 tag 另建物品索引。
+  // Trigger: 气体范围改为读取 ItemDefinition.fluidColors。
+  // Evidence: Registry 在会话内稳定，findItemDefinition 已是公共查询入口。
+  // Replacement: syncActiveGasRanges 中的 registry.queries.findItemDefinition。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // let cachedItemDefinitions: readonly ItemDefinition[] | null = null;
+  // let cachedItemById: ReadonlyMap<string, ItemDefinition> = new Map();
   let cachedGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[] | null = null;
   let cachedViewportLayoutState: GasDiffusionViewportLayoutState | null = null;
   let cachedPreviewStamp: GasDiffusionPreviewStamp | null = null;
@@ -52,8 +69,6 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
     ctx: DecorationSyncContext,
     activeGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[],
   ): void {
-    const itemDefinitions = ctx.renderHost.workspace.registry.itemDefinitions ?? [];
-    const itemDefinitionsChanged = cachedItemDefinitions !== itemDefinitions;
     const gasDiffusionsChanged = !haveSameGasDiffusionRanges(
       cachedGasDiffusions,
       activeGasDiffusions,
@@ -62,15 +77,28 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
       cachedViewportLayoutState,
       ctx,
     );
-    if (!itemDefinitionsChanged && !gasDiffusionsChanged && !viewportChanged) {
+    if (!gasDiffusionsChanged && !viewportChanged) {
       return;
     }
 
-    // AI-CORRECTION 2026-07-17：物品定义在会话内稳定，仅在引用变化时重建颜色查询索引。
-    if (itemDefinitionsChanged) {
-      cachedItemDefinitions = itemDefinitions;
-      cachedItemById = new Map(itemDefinitions.map((item) => [item.id, item]));
-    }
+    // AI-REMOVED 2026-09-14:
+    // Reason: 颜色查询不再维护局部物品索引。
+    // Trigger: ItemDefinition.fluidColors 通过 Registry 公共查询直接读取。
+    // Evidence: 原缓存只服务颜色 tag 解析，且 Registry 自身已持有 itemDefinitionById。
+    // Replacement: 下方 findItemDefinition(range.gasItemId)。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // const itemDefinitions = ctx.renderHost.workspace.registry.itemDefinitions ?? [];
+    // const itemDefinitionsChanged = cachedItemDefinitions !== itemDefinitions;
+    // if (!itemDefinitionsChanged && !gasDiffusionsChanged && !viewportChanged) {
+    //   return;
+    // }
+    // // AI-CORRECTION 2026-07-17：物品定义在会话内稳定，仅在引用变化时重建颜色查询索引。
+    // if (itemDefinitionsChanged) {
+    //   cachedItemDefinitions = itemDefinitions;
+    //   cachedItemById = new Map(itemDefinitions.map((item) => [item.id, item]));
+    // }
 
     if (graphicsHasContent) {
       graphics.clear();
@@ -104,7 +132,8 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
         continue;
       }
 
-      const color = resolveGasRangeColor(cachedItemById.get(range.gasItemId) ?? null);
+      const definition = ctx.renderHost.workspace.registry.queries.findItemDefinition(range.gasItemId);
+      const color = fluidColorToNumber(resolveFluidColor(definition?.fluidColors));
       graphics
         .rect(layout.x, layout.y, layout.width, layout.height)
         .fill({
@@ -449,45 +478,53 @@ function captureGasDiffusionViewportLayoutState(
   };
 }
 
-function resolveGasRangeColor(item: ItemDefinition | null): number {
-  const colorTag = item?.tags.find((tag) =>
-    tag.startsWith(GAS_COLOR_TAG_PREFIX)
-    || tag.startsWith(FLUID_COLOR_TAG_PREFIX)
-    || tag.startsWith(LIQUID_COLOR_TAG_PREFIX)
-  );
-  if (colorTag === undefined) {
-    return DEFAULT_GAS_RANGE_COLOR;
-  }
-
-  const prefix = resolveColorTagPrefix(colorTag);
-  if (prefix === null) {
-    return DEFAULT_GAS_RANGE_COLOR;
-  }
-
-  const normalizedHex = colorTag
-    .slice(prefix.length)
-    .trim()
-    .replace(/^#/, "");
-
-  if (!/^[0-9a-fA-F]{6}$/.test(normalizedHex)) {
-    return DEFAULT_GAS_RANGE_COLOR;
-  }
-
-  return Number.parseInt(normalizedHex, 16);
-}
-
-function resolveColorTagPrefix(tag: string): string | null {
-  if (tag.startsWith(GAS_COLOR_TAG_PREFIX)) {
-    return GAS_COLOR_TAG_PREFIX;
-  }
-  if (tag.startsWith(FLUID_COLOR_TAG_PREFIX)) {
-    return FLUID_COLOR_TAG_PREFIX;
-  }
-  if (tag.startsWith(LIQUID_COLOR_TAG_PREFIX)) {
-    return LIQUID_COLOR_TAG_PREFIX;
-  }
-  return null;
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 气体范围不再维护第二套颜色 tag 协议与默认色。
+// Trigger: 所有流体颜色统一读取 ItemDefinition.fluidColors。
+// Evidence: shared/fluid-color.ts 已统一 body 与未知流体灰色语义。
+// Replacement: syncActiveGasRanges 中的 resolveFluidColor。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function resolveGasRangeColor(item: ItemDefinition | null): number {
+//   const colorTag = item?.tags.find((tag) =>
+//     tag.startsWith(GAS_COLOR_TAG_PREFIX)
+//     || tag.startsWith(FLUID_COLOR_TAG_PREFIX)
+//     || tag.startsWith(LIQUID_COLOR_TAG_PREFIX)
+//   );
+//   if (colorTag === undefined) {
+//     return DEFAULT_GAS_RANGE_COLOR;
+//   }
+//
+//   const prefix = resolveColorTagPrefix(colorTag);
+//   if (prefix === null) {
+//     return DEFAULT_GAS_RANGE_COLOR;
+//   }
+//
+//   const normalizedHex = colorTag
+//     .slice(prefix.length)
+//     .trim()
+//     .replace(/^#/, "");
+//
+//   if (!/^[0-9a-fA-F]{6}$/.test(normalizedHex)) {
+//     return DEFAULT_GAS_RANGE_COLOR;
+//   }
+//
+//   return Number.parseInt(normalizedHex, 16);
+// }
+//
+// function resolveColorTagPrefix(tag: string): string | null {
+//   if (tag.startsWith(GAS_COLOR_TAG_PREFIX)) {
+//     return GAS_COLOR_TAG_PREFIX;
+//   }
+//   if (tag.startsWith(FLUID_COLOR_TAG_PREFIX)) {
+//     return FLUID_COLOR_TAG_PREFIX;
+//   }
+//   if (tag.startsWith(LIQUID_COLOR_TAG_PREFIX)) {
+//     return LIQUID_COLOR_TAG_PREFIX;
+//   }
+//   return null;
+// }
 
 function visibleWorldRectToGridRect(visibleWorldRect: VisibleWorldRect): GridRect {
   return {

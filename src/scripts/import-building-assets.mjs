@@ -13,6 +13,7 @@ import { publishDeviceSprite, publishDeviceSpriteAnimations } from './sync-devic
 // Original code: import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
 import { publishLogisticsBaked } from './publish-logistics-baked.mjs';
 import { publishBuildingPortEffects } from './publish-building-port-effects.mjs';
+import { stageRegistryFluidColors, verifyRegistryFluidColors } from './sync-registry-fluid-colors.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const json = async (file) => JSON.parse(await readFile(file, 'utf8'));
@@ -57,6 +58,14 @@ async function filesIn(root, directory = '') {
   return result.sort();
 }
 
+async function filesInIfPresent(root) {
+  try { return await filesIn(root); }
+  catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 async function verifyOriginals(batch, plan) {
   const receipt = await json(path.join(batch, 'source-receipt.json'));
   const root = within(path.join(batch, 'stage'), plan.sourceSite.root);
@@ -98,6 +107,15 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   if (plan.deferredCategories?.includes('logistics') && ['all', 'logistics', 'effects'].includes(category)) {
     throw new Error('Deferred logistics batch is already assembled; validate/apply it, or prepare a new batch before republishing shared manifests');
   }
+  const registryFluidColors = includes('logistics') && plan.logistics
+    ? await stageRegistryFluidColors({
+      profileFile: path.join(root, 'buildings/logistics/fluid-profiles.json'),
+      profileSourcePath: `${plan.sourceSite.root}/buildings/logistics/fluid-profiles.json`,
+      registryFile: path.join(projectRoot, 'src/registry/item-definition.ts'),
+      outputFile: within(stage, 'src/registry/item-definition.ts'),
+    })
+    : null;
+  if (registryFluidColors) plan.registryFluidColors = registryFluidColors;
   const results = [];
   for (const target of targets) {
     const { outputDirectory, resolution } = target;
@@ -131,7 +149,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/`)),
         ...await retainWebsiteEffects(stage, outputDirectory, new Set(plan.views.map((view) => `${view.buildingId}/${view.view}`)))];
     }
-    results.push({ resolution, outputDirectory: path.relative(stage, outputDirectory), logistics,
+    results.push({ resolution, outputDirectory: path.relative(stage, outputDirectory), logistics, registryFluidColors,
       heightViews: heights && Object.keys(heights.views).length, sharedEffects: heights && Object.keys(heights.effects).length });
   }
   await save(path.join(batch, `publish-result.${category}.json`), results);
@@ -271,6 +289,17 @@ export async function validateWebsiteBatch(batch) {
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') });
   const definitions = await registry();
+  let registryFluidColors = null;
+  if (plan.logistics) {
+    if (!plan.registryFluidColors || await fileHash(path.join(projectRoot, 'src/registry/item-definition.ts')) !== plan.registryFluidColors.sourceSha256) {
+      throw new Error('Registry item definitions changed after fluid colors were staged');
+    }
+    registryFluidColors = await verifyRegistryFluidColors({
+      profileFile: path.join(within(stage, plan.sourceSite.root), 'buildings/logistics/fluid-profiles.json'),
+      profileSourcePath: `${plan.sourceSite.root}/buildings/logistics/fluid-profiles.json`,
+      registryFile: within(stage, 'src/registry/item-definition.ts'),
+    });
+  }
   for (const { outputDirectory: root, resolution } of targets) {
     for (const selected of plan.entries) {
       const entry = collection.entries.find((candidate) => candidate.entityId === selected.entityId);
@@ -334,10 +363,22 @@ export async function validateWebsiteBatch(batch) {
     products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
   }
   await save(within(stage, `${plan.sourceSite.root}/_import/publish-receipt.json`), {
-    schemaVersion: 1, sourceSite: plan.sourceSite, sources: receipt.files.map(({ path: file, sha256 }) => ({ path: file, sha256 })), products,
+    schemaVersion: 1, sourceSite: plan.sourceSite, sources: receipt.files.map(({ path: file, sha256 }) => ({ path: file, sha256 })),
+    products, registryFluidColors,
   });
+  const stagedFiles = await filesIn(stage);
   const application = [];
-  for (const file of await filesIn(stage)) application.push({ path: file, sha256: await fileHash(within(stage, file)), previousSha256: await fileHash(within(projectRoot, file)) });
+  for (const file of stagedFiles) application.push({ path: file, sha256: await fileHash(within(stage, file)), previousSha256: await fileHash(within(projectRoot, file)) });
+  if (plan.logistics) for (const { outputDirectory } of targets) {
+    for (const directory of ['logistics', 'animations/logistics-contract2']) {
+      const managedRoot = path.relative(stage, path.join(outputDirectory, directory));
+      for (const file of await filesInIfPresent(within(projectRoot, managedRoot))) {
+        const relative = `${managedRoot}/${file}`;
+        if (!stagedFiles.includes(relative)) application.push({ path: relative, sha256: null, previousSha256: await fileHash(within(projectRoot, relative)) });
+      }
+    }
+  }
+  application.sort((left, right) => left.path.localeCompare(right.path));
   await save(path.join(batch, 'application-plan.json'), application);
   console.log(`Validated ${receipt.files.length} source files, ${products.length} products, ${application.length} apply files`);
   return { sources: receipt.files.length, products: products.length, files: application.length };
@@ -372,8 +413,9 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
       const manifest = await json(path.join(batch, 'stage/public/3d-top-view/logistics/baked/manifest.json'));
       if (manifest.format !== 'logistics-spritesheet-v2') throw new Error('Website logistics requires baked playback');
     }
-    if (application.some((entry) => !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/'))) {
-      throw new Error('Application plan contains files outside building resource directories');
+    if (application.some((entry) => entry.path !== 'src/registry/item-definition.ts'
+      && !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/'))) {
+      throw new Error('Application plan contains files outside building resources or Registry fluid colors');
     }
     const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), 'resources/building-top-view-v15.json'));
     const definitions = await registry();
@@ -406,9 +448,12 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
       await mkdir(path.dirname(destination), { recursive: true });
       journal.entries.push(entry);
       await save(journalPath, journal);
-      const next = path.join(batch, 'apply-next');
-      await copyFile(within(path.join(batch, 'stage'), entry.path), next);
-      await rename(next, destination);
+      if (entry.sha256 === null) await rm(destination);
+      else {
+        const next = path.join(batch, 'apply-next');
+        await copyFile(within(path.join(batch, 'stage'), entry.path), next);
+        await rename(next, destination);
+      }
       if (await fileHash(destination) !== entry.sha256) throw new Error(`Applied file integrity differs: ${entry.path}`);
     }
     journal.status = 'applied';

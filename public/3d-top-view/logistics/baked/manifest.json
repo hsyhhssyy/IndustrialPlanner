@@ -23005,26 +23005,6 @@
     "pipesupport_1_03": {},
     "pipesupport_1_04": {}
   },
-  "fluidProfiles": {
-    "item_liquid_water": {
-      "phase": "liquid",
-      "colors": {
-        "body": "#5c9fe0",
-        "skin": "#52b1d1",
-        "skin2": "#07243a",
-        "splash": "#afe7ee"
-      }
-    },
-    "item_gas_xiranite": {
-      "phase": "gas",
-      "colors": {
-        "body": "#8bc048",
-        "skin": "#8fb56c",
-        "skin2": "#8fb56c",
-        "splash": "#8fb56c"
-      }
-    }
-  },
   "cycle": {
     "fillCellsPerSecond": 2,
     "drainDuration": 2,

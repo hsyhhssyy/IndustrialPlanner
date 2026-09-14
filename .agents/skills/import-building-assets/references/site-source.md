@@ -48,19 +48,19 @@
 
 2026-09-14 已保存的独立表使用 `schemaVersion=1`、`profile=endfield-pipe-fluid-colors-v1`，数据位于 `fluidProfiles`。根字段还包括 `profileCount`、`phaseCounts`、`itemIds` 与来源元数据。烘焙清单的 `fluidProfileMetadata` 指向独立表，`fluidProfileCoverage` 描述覆盖；配色值同时保存在 `logistics-baked.json.fluidProfiles`。未来未知格式按 schema 差异处理，不从网页预览提取颜色。
 
-下列为维护入口必须实现的验收契约；当前统一 `validate` 尚未自动覆盖字段与 Registry 对账，不得只凭其退出码勾选这些项：
+下列为统一 `publish-logistics / validate` 已实现的验收契约；任一项失败都必须停止批次：
 
 - [ ] 独立表的原始字节与根索引、物流分级索引均一致，下载前后锚点一致；保留 `release.json`、根清单、根/物流索引、锚点及来源收据。
 - [ ] `profileCount` 等于 `fluidProfiles` 的实际键数；`itemIds` 无重复且与键集合相等；`phaseCounts` 与实际相态统计相符。20 项及 11/9 只是历史实例，不写死为未来固定数量。
 - [ ] 按当前 Registry 物品 ID 与相态对账，报告缺失、多出与相态冲突；网站新增项依主 checklist 的未映射规则处理，不新增项目物品。这里核对 Registry，不读取或推断解包 raw table。
 - [ ] 液体有 `body / skin / skin2 / splash` 四层，气体有 `body / skin` 两层；各层保留来源 `hex / rgba8 / displayRgba8` 等字段，检查格式、四通道及整数范围 0–255。不能给气体伪造额外原始层，也不能用项目 tag 填补液体缺失层。
-- [ ] 发布范围含配色时，核对独立表与 baked 表中同一物品的 ID、相态及原始各层颜色；两份文件必须来自同一固定发布。运行时字段转换不得回写网站原件。
+- [ ] 发布范围含配色时，以独立表为输入更新暂存 `src/registry/item-definition.ts` 中既有物品的 `fluidColors`；只替换属性初始化值，不生成 shared/public 配色副本，不回写网站原件。`validate` 再次解析暂存 Registry 并逐项对账。
 
 仅留存请求适用 [当前入口与执行边界](project-import.md#已知能力缺口)；留存完成不代表发布或运行时接入。常见误判见 [原件留存与配色状态](lessons-learned.md#原件留存与配色状态)。
 
 ## 来源留存
 
-正式执行导入时，把本轮实际消费的 JSON/WebP 原件和根/分级索引快照保留在项目资源来源目录；继续使用已有 `resources/device-sprite-animation/`、`resources/device-sprite-original/`、`resources/building-port-effects/`、`resources/logistics-materials/` 的职责分工。目录重排后仍须记录每个文件的原网站相对路径，不能丢失引用依据。
+正式执行导入时，把本轮实际消费的 JSON/WebP 原件和根/分级索引快照保留在 `resources/building-assets-site/<releaseId>/`，按网站相对路径存放。`resources/device-sprite-animation/` 中的派生清单引用这份原件；已有 `resources/device-sprite-original/`、`resources/building-port-effects/`、`resources/logistics-materials/` 的历史来源不追溯改写，也不为满足旧目录假设复制新原件。来源布局与 [项目接入契约](project-import.md#动画来源清单)一致。
 
 来源记录至少包含：站点根 URL、`releaseId`、`sourceVersion`、根索引原字节 SHA-256、获取时间，以及实际导入文件的远端路径、本地路径、字节数和 SHA-256。每个发布产物另外关联原件哈希、实际发布比例及所在版本目录；正式导入整批保存原版与全部配置版本，不能用一条集合级摘要掩盖版本缺失。按文件和实体记录来源；未选中的文件保留原来源。这种记录粒度不代表 CLI 已支持任意单建筑导入，范围仍依主 checklist。
 

@@ -38,18 +38,14 @@ describe("GasDiffusionRangeDecoration", () => {
     graphicsTestState.instances.length = 0;
   });
 
-  it("reuses the item index and leaves Graphics untouched while ranges and viewport stay stable", () => {
-    let itemIdReads = 0;
-    const itemDefinition = {
-      get id() {
-        itemIdReads += 1;
-        return "item_gas_inert";
-      },
-      tags: ["gas_color:#123456"],
-    };
+  it("reads Registry body color only when ranges or viewport change", () => {
+    const findItemDefinition = vi.fn(() => ({
+      fluidColors: { body: "#00d5ff", skin: "#6bf7ff" },
+    }));
     let ranges = [createRange(0, 0)];
     const ctx = createContext({
-      itemDefinitions: [itemDefinition],
+      itemDefinitions: [],
+      findItemDefinition,
       getRanges: () => ranges.map((range) => ({
         ...range,
         gridRect: { ...range.gridRect },
@@ -61,24 +57,25 @@ describe("GasDiffusionRangeDecoration", () => {
     decoration.sync(ctx);
     expect(graphics.rect).toHaveBeenCalledTimes(1);
     expect(graphics.clear).not.toHaveBeenCalled();
-    expect(itemIdReads).toBe(1);
+    expect(graphics.fill).toHaveBeenLastCalledWith({ color: 0x00d5ff, alpha: 0.07 });
+    expect(findItemDefinition).toHaveBeenCalledTimes(1);
 
     decoration.sync(ctx);
     expect(graphics.rect).toHaveBeenCalledTimes(1);
     expect(graphics.clear).not.toHaveBeenCalled();
-    expect(itemIdReads).toBe(1);
+    expect(findItemDefinition).toHaveBeenCalledTimes(1);
 
     ctx.viewportState.centerX += 1;
     decoration.sync(ctx);
     expect(graphics.rect).toHaveBeenCalledTimes(2);
     expect(graphics.clear).toHaveBeenCalledTimes(1);
-    expect(itemIdReads).toBe(1);
+    expect(findItemDefinition).toHaveBeenCalledTimes(2);
 
     ranges = [createRange(1, 0)];
     decoration.sync(ctx);
     expect(graphics.rect).toHaveBeenCalledTimes(3);
     expect(graphics.clear).toHaveBeenCalledTimes(2);
-    expect(itemIdReads).toBe(1);
+    expect(findItemDefinition).toHaveBeenCalledTimes(3);
 
     ranges = [];
     decoration.sync(ctx);
@@ -86,7 +83,28 @@ describe("GasDiffusionRangeDecoration", () => {
     ctx.viewportState.centerX += 1;
     decoration.sync(ctx);
     expect(graphics.clear).toHaveBeenCalledTimes(3);
+    expect(findItemDefinition).toHaveBeenCalledTimes(3);
   });
+
+  // AI-REMOVED 2026-09-14:
+  // Reason: 气体范围不再扫描 ItemDefinition 列表或解析颜色 tag。
+  // Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+  // Evidence: RegistryQuery.findItemDefinition 已提供稳定的物品 ID 索引。
+  // Replacement: 上方 Registry body color 测试。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // it("reuses the item index and leaves Graphics untouched while ranges and viewport stay stable", () => {
+  //   let itemIdReads = 0;
+  //   const itemDefinition = {
+  //     get id() {
+  //       itemIdReads += 1;
+  //       return "item_gas_inert";
+  //     },
+  //     tags: ["gas_color:#123456"],
+  //   };
+  //   // 后续断言通过 itemIdReads 验证局部索引只构建一次。
+  // });
 
   it("compares cloned range read models by value", () => {
     const left = [createRange(0, 0)];
@@ -159,6 +177,7 @@ function createRange(x: number, y: number, sourceDeviceId = "device:vaporizer") 
 function createContext(options: {
   itemDefinitions: readonly unknown[];
   getRanges: () => ReturnType<typeof createRange>[];
+  findItemDefinition?: (itemId: string) => unknown;
   getMoveKind?: () => "ordinary" | "batch" | null;
   getGhostIds?: () => readonly string[];
   getPreviewIds?: () => readonly string[];
@@ -190,6 +209,9 @@ function createContext(options: {
         },
         registry: {
           itemDefinitions: options.itemDefinitions,
+          queries: {
+            findItemDefinition: options.findItemDefinition ?? (() => null),
+          },
         },
         simulation: {
           queries: {

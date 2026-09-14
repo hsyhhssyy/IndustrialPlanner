@@ -1055,9 +1055,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return false
     }
     const simulation = context.workspace.simulation
-    const seeking = simulation?.state.timeline?.isSeeking ?? false
-    const paused = simulation?.state.runningState === "pause" || seeking
-    const cursor = simulation?.state.timeline?.cursorTickNumber ?? null
+    const continuouslyAnimated = this.renderHost.workspace.registry.queries.isProtocolCore(this.definition.id)
+    // AI-CORRECTION 2026-09-14: 协议核心的动画是常驻场景表现，不读取仿真运行、暂停或时间线状态。
+    const seeking = !continuouslyAnimated && (simulation?.state.timeline?.isSeeking ?? false)
+    const paused = !continuouslyAnimated && (simulation?.state.runningState === "pause" || seeking)
+    const cursor = continuouslyAnimated ? null : simulation?.state.timeline?.cursorTickNumber ?? null
     const seekFinished = this.animationSeeking && !seeking
     const cursorRewound = cursor !== null && this.animationCursor !== null && cursor < this.animationCursor
     // 缓存命中的 seek 可能在两帧之间结束，暂停时的前向游标变化也代表新落点。
@@ -1066,7 +1068,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (paused !== this.animationPaused || seeking) {
       this.discardNextAnimationDelta = true
     }
-    const status = simulation?.state.runningState === "stop"
+    const status = continuouslyAnimated || simulation?.state.runningState === "stop"
       ? null
       : simulation?.queries.getDeviceRuntimeStatus(this.entityId) ?? null
     // AI-REMOVED 2026-09-05: 首次 Runtime 门槛已移除，正式非工作设备允许 close_idle。
@@ -1077,8 +1079,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // }
     // 普通暂停保留目标；seek 落点即使仍暂停，也需要读取新的工作状态。
     if (!paused || seekFinished || cursorRewound || pausedCursorChanged || this.animationState === null) {
-      this.animationDesiredWorking = status !== null && Object.values(status.channelRecipes)
-        .some((channel) => channel?.isProgressing === true)
+      this.animationDesiredWorking = continuouslyAnimated || (status !== null
+        && Object.values(status.channelRecipes).some((channel) => channel?.isProgressing === true))
     }
     this.animationPaused = paused
     this.animationSeeking = seeking

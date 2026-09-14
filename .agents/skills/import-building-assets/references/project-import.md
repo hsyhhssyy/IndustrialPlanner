@@ -9,10 +9,10 @@
 | 固定发布、下载及哈希校验 | `building-assets-site-source.py`；真实来源闭包通过，离线 HTTP 夹具覆盖缺文件、字节变化和发布切换 |
 | 原始 JSON 与动画来源转换 | 同一 Python 工具的 `--metadata-only`；保留原始字节与大整数，生成原件引用和阶段清单 |
 | 静态图、动画分页、首帧及遮罩 | `publishDeviceSprite`、`publishDeviceSpriteAnimations`；普通图与动画均接受显式比例，半尺寸和四分之一夹具覆盖 |
-| 物流材质及数值纹理 | `publish-logistics-baked.mjs`；颜色逐帧缩放重排，数值场最近邻采样为 gzip RGBA8，运行时共享纹理与路线 Mesh |
+| 物流材质、数值纹理及 Registry 配色 | `publish-logistics-baked.mjs`、`sync-registry-fluid-colors.mjs`；颜色逐帧缩放重排，数值场最近邻采样为 gzip RGBA8，独立配色表严格写入暂存 `ItemDefinition.fluidColors` |
 | 高度和裁切特效 | `publish-building-port-effects.mjs`、`building-asset-image.mjs`；已修复补边与缩放顺序，回归覆盖奇数边长及已发布特效逐帧像素 |
-| 来源关联和整批验收 | `import-building-assets.mjs validate`；检查原件、尺寸、页引用、数值字节，生成每个产物的来源关联与写入清单 |
-| 备份、应用及恢复 | `apply / restore` 入口；恢复夹具已运行，已实际应用 1794 个变化文件，正式目录逐项哈希对账通过 |
+| 来源关联和整批验收 | `import-building-assets.mjs validate`；检查原件、尺寸、页引用、数值字节与 Registry 配色，生成每个产物的来源关联与新增/替换/删除清单 |
+| 备份、应用及恢复 | `apply / restore` 入口；新增、替换及陈旧物流发布文件删除都先备份，删除恢复夹具覆盖 |
 
 当前发布入口支持已有建筑映射的完整集合、`--logistics-only` 物流集合，以及用户明确排除物流的建筑集合。完整集合直接发布烘焙物流；排除物流才执行 `defer-logistics`，将相关原件、材质、sprite/mask 移出本批。仅物流模式合并共享高度 manifest，未选建筑、特效和数值文件按原字节保留。发布收据使用 `retained=true` 区分它们与本轮新产物。下载器 `--entity` 仍仅用于限定来源核查，不能用于正式局部建筑导入，也不能手工拼接绕过范围检查。
 
@@ -48,6 +48,7 @@
 | `src/scripts/device-sprite-animation-publisher.mjs` | 分页、逐帧时间线、变换、静态帧和并集遮罩；单版本调用默认使用比例常量的第一项 |
 | `src/scripts/publish-building-port-effects.mjs` | 高度数值图发布、端口和环绑定、共享特效发布 |
 | `src/scripts/publish-logistics-baked.mjs` | 网站烘焙相位图集、数值场、端帽与静态回退发布 |
+| `src/scripts/sync-registry-fluid-colors.mjs` | 校验独立配色表，用 TypeScript AST 精确替换既有 `ItemDefinition.fluidColors` 初始化值 |
 | `src/scripts/publish-logistics-materials.mjs` | 仅保留共享像素合成与静态图集函数；旧发布器已归档 |
 | `src/shared/device-sprite-animation.ts` | 当前动画协议、分页限制和校验 |
 | `src/shared/logistics-material.ts`、`src/shared/logistics-baked.ts` | 线路拓扑、烘焙协议与纯流体状态机 |
@@ -134,7 +135,7 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 - [ ] 颜色帧恢复源逻辑画布后逐帧缩放，保留透明裁切偏移，再加挤出边重排；不能整体缩放旧图集。源中未消费的两张 256 像素 pattern/chevron 原图只归档，相位帧负责显示。
 - [ ] 数值场按配置比例最近邻复制 RGBA 后 gzip；保留透明像素中的数据。世界占地和规范采样坐标不随纹理密度改变。
 - [ ] 支架颜色层已在网站中装配，放置时只应用整节方向，不能再套旧发布器的局部 90° 旋转。
-- [ ] 静态回退图只生成空管，配色使用共享纹理的 Shader 参数，不按物品另烘焙。配色表原件留存、运行时发布与统一颜色来源改造按下节分别核对。
+- [ ] 静态回退图只生成空管，配色使用共享纹理的 Shader 参数，不按物品另烘焙。`public` 只保留 manifest 引用的共享页；旧按颜色管道图和已退役 `animations/logistics-contract2` 由应用删除计划清理。
 - [ ] 六个 sprite/mask 与 `logistics/static` 同批生成；源文件只保留一份，全部比例各自独立发布。
 - [ ] 端帽 composite/whitening 均有合法帧引用；运行时在每条非闭环管道的真实首尾放置，连接设备也保留，单格放两个，内部格缝不重复。
 - [ ] 高度来自 `logistics-height.json.components` 的真实引用；`stateMapping=null` 是无不透明遮挡。裸直管及流体不产生不透明高度，支架与弯段使用已装配高度图，禁止再次反射或局部旋转。
@@ -143,14 +144,17 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 
 ### 配色来源与接入状态
 
-2026-09-14 的确定状态：`v1.5-20260914-122929-cst` 的独立配色表已保存到 `resources/building-assets-site/<releaseId>/buildings/logistics/fluid-profiles.json`，含 20 项（11 液体、9 气体）。该次仅留存原件，收据为 `scope=fluid-profiles / sourceOnly=true / published=false`；当时 `public/3d-top-view/logistics/baked/manifest.json` 仍为旧的两项配色。这些数字是历史核验结果，后续以当前文件和本批索引为准。
+2026-09-14 的确定状态：`v1.5-20260914-122929-cst` 的独立配色表已保存到 `resources/building-assets-site/<releaseId>/buildings/logistics/fluid-profiles.json`，含 20 项（11 液体、9 气体）。该次原件获取收据仍如实记录为 `scope=fluid-profiles / sourceOnly=true / published=false`；这是来源留存批次的历史事实，不因后续业务接入而改写。
 
-用户已确定后续颜色应统一以美术为唯一来源，现有颜色 tag 为待替换数据；用户同时明确暂缓代码改造。当前运行时仍有 Registry 单色回退，这是尚未改造的实现现状，不是后续配色缺失时的验收策略。不能补造颜色、增加回退层，也不能在普通导入任务中顺手修改 Registry、蓝图或 Renderer。
+【用户明确要求】流体颜色的唯一运行时真源是 `ItemDefinition.fluidColors`：液体声明 `body / skin / skin2 / splash`，气体声明 `body / skin`。`liquid` / `gas` tag 继续负责物品域；`liquid_color:`、`gas_color:`、`fluid_color:` 已退出 Active Code。蓝图管道、烘焙管道与气体扩散范围均从 Registry 物品定义取色，未知物品或缺少对应分层时统一回退 `#808080`。
 
-- [ ] 按 [配色表协议](site-source.md#流体配色表)核对原件、物品 ID、相态和分层颜色；缺失或冲突时列出实际项，不以历史数量替代覆盖检查。
-- [ ] 仅留存原件时不写 `public` 和业务源码，也不将留存收据改成已发布。
-- [ ] 本次明确包含配色发布时，对账独立表与同一发布的 baked 配色数据；发布器当前从 `logistics-baked.json.fluidProfiles` 提取运行时配色。更新该 manifest 不代表项目各处已统一颜色来源。
-- [ ] 统一颜色来源的代码改造只有在该维护需求执行、验证完成后才更新技能状态；此前报告“原件已保存 / 运行时是否更新 / 统一来源改造暂缓”三个独立结果。
+独立美术表仍是上游权威原件和自动对账依据，但应用不生成或维护按物品 ID 的 shared/public 配色副本。物流 baked manifest 只承载纹理、相位与 Shader 协议，不再发布 `fluidProfiles`。`publish-logistics` 调用 `sync-registry-fluid-colors.mjs`，用 TypeScript AST 只替换暂存 `src/registry/item-definition.ts` 中现有物品的 `fluidColors` 初始化值；物品集合、相态、角色层、字节或 hex 不一致时失败，不新增物品、不修改 tag。
+
+- [x] 已按 [配色表协议](site-source.md#流体配色表)核对原件、物品 ID、相态和分层颜色；当前留存表与 Registry 均为 20 项，缺失、多出和相态冲突均为空。
+- [x] 已保持原件收据的 `sourceOnly / published=false` 历史状态，没有追溯改写为全量素材发布。
+- [x] Registry 配色对账测试校验来源 SHA-256、ID 集合、相态、逐层 hex 与颜色 tag 退役状态。
+- [x] baked 发布器和运行时 manifest 已退出 `fluidProfiles`，Renderer 统一消费 `ItemDefinition.fluidColors`。
+- [x] 正式物流发布入口会生成并验收暂存 Registry 配色；应用计划同时清理受管物流目录中没有新产物的陈旧 public 文件，并可从批次备份恢复。
 
 ## 应用与验证
 

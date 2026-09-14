@@ -69,6 +69,8 @@ export interface SurfacePlacement {
 export interface EffectPlacement {
   id: string;
   resourceId: string;
+  /** undefined 表示使用场景时钟；string/null 表示由相邻管道是否存在可见流体驱动或保持静态帧。 */
+  animationFluidEntityId?: string | null;
   x: number;
   y: number;
   rotation: number;

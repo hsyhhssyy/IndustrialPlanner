@@ -1,6 +1,7 @@
 import { Sprite, Texture } from "pixi.js"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
+import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color"
 import { DedicatedLogisticSprite } from "./dedicated-logistic-sprite"
 import type { RenderSpriteLayout, RenderSpriteSyncContext } from "./render-sprite"
 
@@ -17,9 +18,9 @@ export class PipeSprite extends DedicatedLogisticSprite {
 
   protected syncSpriteLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     super.syncSpriteLayout(layout, context)
-    const color = context.logisticsMaterials?.entities.get(this.entityId)?.color ?? "empty"
+    const fluidItemId = context.logisticsMaterials?.entities.get(this.entityId)?.fluidItemId ?? null
     const show = context.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages === true
-      && !this.isLogisticsSuppressed(context) && color !== "empty"
+      && !this.isLogisticsSuppressed(context) && fluidItemId !== null
     if (!show) {
       if (this.blueprintFluid) this.blueprintFluid.visible = false
       return
@@ -42,10 +43,26 @@ export class PipeSprite extends DedicatedLogisticSprite {
     sprite.width = quarterTurn ? layout.height : layout.width
     sprite.height = quarterTurn ? layout.width : layout.height
     sprite.rotation = layout.rotation * Math.PI / 180
-    sprite.tint = Number.parseInt(color, 16)
+    const colors = fluidItemId === null
+      ? null
+      : context.workspace.registry.queries.findItemDefinition(fluidItemId)?.fluidColors
+    sprite.tint = fluidColorToNumber(resolveFluidColor(colors))
     sprite.visible = this.blueprintFluidLoaded && this.isDeviceTextureReady()
   }
 }
+
+// AI-REMOVED 2026-09-14:
+// Reason: 蓝图管道不再接收场景状态中复制的 RGB 字符串。
+// Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+// Evidence: fluidItemId 可直接定位 Registry 物品定义，单色表现统一使用 body。
+// Replacement: syncSpriteLayout 中的 fluidItemId 与 resolveFluidColor。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const color = context.logisticsMaterials?.entities.get(this.entityId)?.color ?? "empty"
+// const show = context.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages === true
+//   && !this.isLogisticsSuppressed(context) && color !== "empty"
+// sprite.tint = Number.parseInt(color, 16)
 
 // AI-REMOVED 2026-09-10:
 // Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。

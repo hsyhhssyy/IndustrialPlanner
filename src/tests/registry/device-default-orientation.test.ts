@@ -115,6 +115,18 @@ const ORIENTATION_CASES: readonly OrientationCase[] = [
     ],
   },
   {
+    definitionId: "udpipe_unloader_2",
+    rotationOffset: 180,
+    oldPorts: [
+      port("fluid_output", "out_e_1", 0, 1, "WEST"),
+      port("fluid_output", "out_e_2", 0, 3, "WEST"),
+    ],
+    newPorts: [
+      port("fluid_output", "out_e_1", 2, 3, "EAST"),
+      port("fluid_output", "out_e_2", 2, 1, "EAST"),
+    ],
+  },
+  {
     definitionId: "liquid_cleaner_1",
     rotationOffset: 180,
     oldPorts: [port("fluid_input", "in_w_1", 2, 1, "EAST")],
@@ -222,7 +234,8 @@ describe("device default orientation", () => {
     },
   );
 
-  it("does not rotate the separately unpacked purifier gas variant or second dark-pipe outlet", () => {
+  // AI-CORRECTION 2026-09-14: 多口暗管出口已纳入当前方向迁移，本用例继续独立锚定其迁移后端口布局。
+  it("keeps the separately unpacked purifier gas variant and migrated second dark-pipe outlet ports", () => {
     expect(readPorts(requireDefinition("liquid_purifier_1_gas"))).toEqual([
       port("item_input", "in_s_0", 4, 0, "NORTH"),
       port("item_input", "in_s_1", 3, 0, "NORTH"),

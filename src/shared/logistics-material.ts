@@ -62,7 +62,16 @@ export interface LogisticsPipeFlowState {
 }
 
 export interface LogisticsMaterialEntityState extends LogisticsMaterialPlacement {
-  readonly color: string;
+  readonly fluidItemId: string | null;
+  // AI-REMOVED 2026-09-14:
+  // Reason: 颜色值不应作为物流状态复制，物品 ID 才是稳定身份。
+  // Trigger: 用户要求 Registry.fluidColors 成为唯一运行时颜色来源。
+  // Evidence: color 同时来自 Registry tag 与 baked manifest，已产生两套互相冲突的数据链。
+  // Replacement: fluidItemId；渲染边界通过 Registry 物品定义解析 fluidColors。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // readonly color: string;
   /** 虚影只取静态图集；实际管道共享所属运输组的时钟。 */
   readonly preview?: true;
   readonly pipeFlow?: LogisticsPipeFlowState;
@@ -96,15 +105,23 @@ export function resolveLogisticsMaterialSpec(spriteId: string): LogisticsMateria
   };
 }
 
-export function resolveLogisticsFluidColor(tags: readonly string[]): string {
-  const tag = tags.find((value) => /^(gas_color|fluid_color|liquid_color):/.test(value));
-  const color = tag?.slice(tag.indexOf(":") + 1).trim().replace(/^#/, "").toLowerCase();
-  return color !== undefined && /^[\da-f]{6}$/.test(color) ? color : "ffffff";
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 字符串 tag 解析无法表达液体四层与气体两层颜色，并与美术档案冲突。
+// Trigger: 用户要求退役 Registry 颜色 tag，所有流体颜色改读 ItemDefinition.fluidColors。
+// Evidence: 当前美术表覆盖 20 个 Registry 流体物品，且旧 tag 与 body 色存在实际差异。
+// Replacement: shared/fluid-color.ts 与 ItemDefinition.fluidColors。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// export function resolveLogisticsFluidColor(tags: readonly string[]): string {
+//   const tag = tags.find((value) => /^(gas_color|fluid_color|liquid_color):/.test(value));
+//   const color = tag?.slice(tag.indexOf(":") + 1).trim().replace(/^#/, "").toLowerCase();
+//   return color !== undefined && /^[\da-f]{6}$/.test(color) ? color : "ffffff";
+// }
 
 export function logisticsStaticFrameKey(state: LogisticsMaterialEntityState): string {
   if (state.kind === "belt") return `belt/${state.shape}`;
-  return `pipe/${state.color}/${state.shape}/${Number(state.support)}${Number(state.marker)}`;
+  return `pipe/empty/${state.shape}/${Number(state.support)}${Number(state.marker)}`;
 }
 
 export interface LogisticsMaterialPathEntry extends LogisticsMaterialSpec {

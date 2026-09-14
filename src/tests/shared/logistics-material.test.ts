@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
-  logisticsStaticFrameKey, resolveLogisticsFluidColor, resolveLogisticsMaterialPlacements,
+  logisticsStaticFrameKey, resolveLogisticsMaterialPlacements,
   resolveLogisticsMaterialSpec, type LogisticsMaterialPathEntry,
 } from "@/shared/logistics-material";
+
+// AI-REMOVED 2026-09-14:
+// Reason: shared/logistics-material 不再解析颜色 tag。
+// Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+// Evidence: 流体颜色解析已迁至 shared/fluid-color.ts。
+// Replacement: src/tests/shared/fluid-color.test.ts。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import {
+//   logisticsStaticFrameKey, resolveLogisticsFluidColor, resolveLogisticsMaterialPlacements,
+//   resolveLogisticsMaterialSpec, type LogisticsMaterialPathEntry,
+// } from "@/shared/logistics-material";
 
 function pipeRoute(length: number, corners: readonly number[] = [], connected = false): LogisticsMaterialPathEntry[] {
   return Array.from({ length }, (_, index) => ({
@@ -83,11 +96,24 @@ describe("物流材质协议", () => {
     expect([...resolveLogisticsMaterialPlacements(entries.toReversed())]).toEqual([...placements]);
   });
 
-  it("颜色标签正规化，未知颜色回落白色，空管与有色管使用独立完整帧", () => {
-    expect(resolveLogisticsFluidColor(["gas_color: #82D6FF"])).toBe("82d6ff");
-    expect(resolveLogisticsFluidColor(["liquid_color:invalid"])).toBe("ffffff");
-    expect(resolveLogisticsFluidColor([])).toBe("ffffff");
-    expect(logisticsStaticFrameKey({ kind: "pipe", shape: "straight", color: "empty", support: true, marker: false, start: 0, rotation: 270 }))
+  it("管道静态帧只描述空管结构，不编码物品颜色", () => {
+    expect(logisticsStaticFrameKey({ kind: "pipe", shape: "straight", fluidItemId: null, support: true, marker: false, start: 0, rotation: 270 }))
       .toBe("pipe/empty/straight/10");
   });
+
+  // AI-REMOVED 2026-09-14:
+  // Reason: 颜色 tag 和白色 fallback 均已退役。
+  // Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源，未知流体回退灰色。
+  // Evidence: 新共享测试直接验证结构化分层颜色解析。
+  // Replacement: 上方静态帧职责测试及 src/tests/shared/fluid-color.test.ts。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // it("颜色标签正规化，未知颜色回落白色，空管与有色管使用独立完整帧", () => {
+  //   expect(resolveLogisticsFluidColor(["gas_color: #82D6FF"])).toBe("82d6ff");
+  //   expect(resolveLogisticsFluidColor(["liquid_color:invalid"])).toBe("ffffff");
+  //   expect(resolveLogisticsFluidColor([])).toBe("ffffff");
+  //   expect(logisticsStaticFrameKey({ kind: "pipe", shape: "straight", color: "empty", support: true, marker: false, start: 0, rotation: 270 }))
+  //     .toBe("pipe/empty/straight/10");
+  // });
 });

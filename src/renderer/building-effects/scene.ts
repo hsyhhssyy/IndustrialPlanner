@@ -10,6 +10,7 @@ import { fieldBounds, tileKeys } from './height-field';
 import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
+  resolveEffectPlaybackTimeMs,
   selectRingEffectPlacements,
   type EffectScene,
 } from './placements';
@@ -24,7 +25,7 @@ export class BuildingEffectsScene {
   private version = '';
   private statusVersion = -1;
   private ringSignature = '';
-  private batches = new Map<string, { batch: BuildingEffectBatch; resourceId: string }>();
+  private batches = new Map<string, { batch: BuildingEffectBatch; resourceId: string; frame: number }>();
   private batchSignature = '';
   private readonly reported = new Set<string>();
   private readonly frames = new Map<string, number>();
@@ -78,13 +79,13 @@ export class BuildingEffectsScene {
     }
     const nextFrames = new Map<string, number>();
     for (const effect of this.activeEffects) {
-      if (!nextFrames.has(effect.resourceId)) nextFrames.set(effect.resourceId,
-        resolveEffectFrame(manifest.effects[effect.resourceId]!, options.nowMs));
+      const timeMs = resolveEffectPlaybackTimeMs(effect, options.materials, options.nowMs);
+      nextFrames.set(effect.id, resolveEffectFrame(manifest.effects[effect.resourceId]!, timeMs));
     }
     const syncSignature = `${version}:${this.ringSignature}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
     if (syncSignature === this.syncSignature) return;
     this.syncSignature = syncSignature;
-    const groups = new Map<string, { placements: EffectPlacement[]; tile: string; resourceId: string; page: number }>();
+    const groups = new Map<string, { placements: EffectPlacement[]; tile: string; resourceId: string; page: number; frame: number }>();
     const retainedHeights = new Set<string>(), retainedColors = new Set<string>(), retainedTiles = new Set<string>();
     this.frames.clear(); this.portKeys.clear();
     const visible = this.activeEffects.filter((effect) => {
@@ -94,8 +95,9 @@ export class BuildingEffectsScene {
     }).sort((a, b) => Number(a.ring) - Number(b.ring));
     for (const effect of visible) {
       const resource = manifest.effects[effect.resourceId]!;
-      if (!this.frames.has(effect.resourceId)) this.frames.set(effect.resourceId, nextFrames.get(effect.resourceId)!);
-      const frame = resource.frames[this.frames.get(effect.resourceId)!]!;
+      const frameIndex = nextFrames.get(effect.id)!;
+      this.frames.set(effect.id, frameIndex);
+      const frame = resource.frames[frameIndex]!;
       const page = resource.pages[frame.page]!;
       retainedHeights.add(resource.height.file); retainedColors.add(page.file);
       const template = assets.template(resource.height), color = assets.color(page.file);
@@ -104,9 +106,10 @@ export class BuildingEffectsScene {
         retainedTiles.add(tile);
         const scene = this.height.get(tile, assets, retainedHeights);
         if (!template || !color || !scene) { ready = false; continue; }
-        const key = `${effect.ring}:${effect.resourceId}:${frame.page}:${tile}`;
+        const key = `${effect.ring}:${effect.resourceId}:${frameIndex}:${tile}`;
         let group = groups.get(key);
-        if (!group) { group = { placements: [], tile, resourceId: effect.resourceId, page: frame.page }; groups.set(key, group); }
+        if (!group) { group = { placements: [], tile, resourceId: effect.resourceId,
+          page: frame.page, frame: frameIndex }; groups.set(key, group); }
         group.placements.push(effect);
       }
       const portKey = this.scene.portKeys.get(effect.id);
@@ -120,11 +123,11 @@ export class BuildingEffectsScene {
         const batch = new BuildingEffectBatch(this.container, group.placements, resource, group.tile,
           this.height.get(group.tile, assets, retainedHeights)!, assets.template(resource.height)!,
           assets.color(resource.pages[group.page]!.file)!, group.page, manifest.heightMin, manifest.heightMax);
-        this.batches.set(key, { batch, resourceId: group.resourceId });
+        this.batches.set(key, { batch, resourceId: group.resourceId, frame: group.frame });
       }
       this.batchSignature = signature;
     }
-    for (const { batch, resourceId } of this.batches.values()) batch.frame(this.frames.get(resourceId)!);
+    for (const { batch, frame } of this.batches.values()) batch.frame(frame);
     this.height.retain(retainedTiles);
     assets.retain(retainedHeights, retainedColors);
   }

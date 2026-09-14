@@ -26,10 +26,18 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     staticResources: Object.fromEntries(Object.entries(source.staticResources).map(([key, resource]) => [key, resource.frame])),
     parametersByResourceId: Object.fromEntries(Object.entries(source.parametersByResourceId)
       .map(([key, value]) => [key, Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'number'))])),
-    fluidProfiles: Object.fromEntries(Object.entries(source.fluidProfiles).map(([id, profile]) => [id, {
-      phase: profile.phase,
-      colors: Object.fromEntries(['body', 'skin', 'skin2', 'splash'].map((role) => [role, (profile.colors[role] ?? profile.colors.skin).hex])),
-    }])),
+    // AI-REMOVED 2026-09-14:
+    // Reason: baked 资源清单不再复制物品流体配色。
+    // Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+    // Evidence: 独立美术表覆盖 20 项，而当前 baked manifest 仅有 2 项，版本绑定已导致事实分裂。
+    // Replacement: Registry item-definition.ts 中的 fluidColors；本发布器只处理物流纹理协议。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // fluidProfiles: Object.fromEntries(Object.entries(source.fluidProfiles).map(([id, profile]) => [id, {
+    //   phase: profile.phase,
+    //   colors: Object.fromEntries(['body', 'skin', 'skin2', 'splash'].map((role) => [role, (profile.colors[role] ?? profile.colors.skin).hex])),
+    // }])),
     cycle: source.cycle,
     // 只提取播放器使用的协议，原始含大整数的来源元数据留在 resources 原件中。
     fluidPlayback: { referenceShader: source.fluidPlayback.referenceShader },

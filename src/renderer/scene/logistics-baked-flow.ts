@@ -1,5 +1,6 @@
 import { Container, Geometry, GlProgram, Mesh, Shader, Sprite, Texture, UniformGroup } from 'pixi.js';
 import type { LogisticsBakedManifest, LogisticsPipeRoute } from '@/shared/logistics-baked';
+import { fluidColorToNumber, resolveFluidColor, type FluidColorRole } from '@/shared/fluid-color';
 import type { LogisticsDynamicAssets, LogisticsDynamicSession } from '../texture';
 import { createLogisticsFlowGeometry, createLogisticsFlowIndices, resolveLogisticsEndpoint } from './logistics-baked-geometry';
 
@@ -92,12 +93,9 @@ export class LogisticsBakedFlowScene {
       bounds[3] = hasHead ? Math.min(1, playback.head * 2, (route.segments.length - playback.head) * 2) : 0;
       if (view.fluidId !== playback.itemId) {
         view.fluidId = playback.itemId;
-        const profile = playback.itemId === null ? undefined : this.assets.manifest.fluidProfiles[playback.itemId];
-        u.uGas = (profile ? profile.phase === 'gas' : route.gas) ? 1 : 0;
+        u.uGas = route.gas ? 1 : 0;
         for (const [uniform, role] of [['uBody', 'body'], ['uSkin', 'skin'], ['uSkin2', 'skin2'], ['uFoam', 'splash']] as const) {
-          // 未提供多层配色的物品沿用 Registry 单色，不凭空推断游戏颜色。
-          const hex = profile?.colors[role] ?? profile?.colors.skin ?? route.color;
-          const value = Number.parseInt(hex.replace('#', ''), 16);
+          const value = fluidColorToNumber(resolveFluidColor(route.fluidColors, role as FluidColorRole));
           (u[uniform] as Float32Array).set([(value >> 16 & 255) / 255, (value >> 8 & 255) / 255, (value & 255) / 255, 1]);
         }
       }
@@ -164,3 +162,20 @@ export class LogisticsBakedFlowScene {
     this.routes.clear(); this.session?.release(); this.container.destroy({ children: true }); this.endpoints.destroy({ children: true });
   }
 }
+
+// AI-REMOVED 2026-09-14:
+// Reason: baked manifest 不再复制流体配色，也不再回退到 Registry tag 单色。
+// Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+// Evidence: 路线状态已经携带当前物品定义的 fluidColors 引用。
+// Replacement: sync 中的 route.fluidColors + shared/fluid-color.ts。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const profile = playback.itemId === null ? undefined : this.assets.manifest.fluidProfiles[playback.itemId];
+// u.uGas = (profile ? profile.phase === 'gas' : route.gas) ? 1 : 0;
+// for (const [uniform, role] of [['uBody', 'body'], ['uSkin', 'skin'], ['uSkin2', 'skin2'], ['uFoam', 'splash']] as const) {
+//   // 未提供多层配色的物品沿用 Registry 单色，不凭空推断游戏颜色。
+//   const hex = profile?.colors[role] ?? profile?.colors.skin ?? route.color;
+//   const value = Number.parseInt(hex.replace('#', ''), 16);
+//   (u[uniform] as Float32Array).set([(value >> 16 & 255) / 255, (value >> 8 & 255) / 255, (value & 255) / 255, 1]);
+// }

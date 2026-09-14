@@ -4,6 +4,10 @@ import {
   ACTIVITY_LIMITED_FORMULA_2_TAG,
 } from "@/shared/registry/activity-availability";
 
+/** fluidColors 原值来自固定美术原件，并由 Registry 配色对账测试逐项校验。 */
+export const ITEM_FLUID_COLOR_SOURCE_PATH =
+  "resources/building-assets-site/v1.5-20260914-122929-cst/buildings/logistics/fluid-profiles.json";
+
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {
     id: "item_bottled_food_1",
@@ -296,49 +300,135 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_liquid_acid",
     nameKey: "registry.item.item_liquid_acid.name",
     iconId: "item_liquid_acid",
-    tags: ["liquid", "liquid_color:#d97a1f", "自然资源", "无限供应"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_acid.body=#ffeea0，旧 tag 为 #d97a1f。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#d97a1f",
+      "自然资源",
+      "无限供应",
+    ],
+    fluidColors: { body: "#ffeea0", skin: "#ffd200", skin2: "#89462d", splash: "#ffebbb" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_copper",
     nameKey: "registry.item.item_liquid_copper.name",
     iconId: "item_liquid_copper",
-    tags: ["liquid", "liquid_color:#8b2a2a"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_copper.body=#ff4800，旧 tag 为 #8b2a2a。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#8b2a2a",
+    ],
+    fluidColors: { body: "#ff4800", skin: "#ff5300", skin2: "#ff0000", splash: "#ffaaac" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_copper_enr",
     nameKey: "registry.item.item_liquid_copper_enr.name",
     iconId: "item_liquid_copper_enr",
-    tags: ["liquid", "liquid_color:#6b0f1a"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_copper_enr.body=#ff4800，旧 tag 为 #6b0f1a。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#6b0f1a",
+    ],
+    fluidColors: { body: "#ff4800", skin: "#ff7400", skin2: "#ff7400", splash: "#ffb6ac" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_sewage",
     nameKey: "registry.item.item_liquid_sewage.name",
     iconId: "item_liquid_sewage",
-    tags: ["liquid", "liquid_color:#808080"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_sewage.body=#290d05，旧 tag 为 #808080。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#808080",
+    ],
+    fluidColors: { body: "#290d05", skin: "#82516c", skin2: "#1d020c", splash: "#a290ba" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_xiranite_poly",
     nameKey: "registry.item.item_liquid_xiranite_poly.name",
     iconId: "item_liquid_xiranite_poly",
-    tags: ["liquid", "liquid_color:#111111"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_xiranite_poly.body=#11433b，旧 tag 为 #111111。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#111111",
+    ],
+    fluidColors: { body: "#11433b", skin: "#00ceff", skin2: "#0f3724", splash: "#89b5a8" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_xiranite_lowpoly",
     nameKey: "registry.item.item_liquid_xiranite_lowpoly.name",
     iconId: "item_liquid_xiranite_lowpoly",
-    tags: ["liquid", "liquid_color:#4a2f1f"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_xiranite_lowpoly.body=#062923，旧 tag 为 #4a2f1f。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#4a2f1f",
+    ],
+    fluidColors: { body: "#062923", skin: "#22879f", skin2: "#0f3724", splash: "#71a59e" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_xiranite_enr",
     nameKey: "registry.item.item_liquid_xiranite_enr.name",
     iconId: "item_liquid_xiranite_enr",
-    tags: ["liquid", "liquid_color:#0e6a47"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_xiranite_enr.body=#fff799，旧 tag 为 #0e6a47。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#0e6a47",
+    ],
+    fluidColors: { body: "#fff799", skin: "#e4e9c1", skin2: "#f1d200", splash: "#d1f3af" },
     displayOrder: 10000,
   },
   {
@@ -423,6 +513,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_activity_copper_poly_gas.name",
     iconId: "item_activity_copper_poly_gas",
     tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "gas"],
+    fluidColors: { body: "#ff0a0d", skin: "#5aa800" },
     displayOrder: 10000,
   },
   {
@@ -1010,42 +1101,118 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_liquid_plant_grass_1",
     nameKey: "registry.item.item_liquid_plant_grass_1.name",
     iconId: "item_liquid_plant_grass_1",
-    tags: ["liquid", "liquid_color:#35c8b6"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_plant_grass_1.body=#0c844b，旧 tag 为 #35c8b6。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#35c8b6",
+    ],
+    fluidColors: { body: "#0c844b", skin: "#26b938", skin2: "#14601e", splash: "#c0f5c2" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_plant_grass_2",
     nameKey: "registry.item.item_liquid_plant_grass_2.name",
     iconId: "item_liquid_plant_grass_2",
-    tags: ["liquid", "liquid_color:#9be870"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美工配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_plant_grass_2.body=#137669，旧 tag 为 #9be870。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#9be870",
+    ],
+    fluidColors: { body: "#137669", skin: "#2bd115", skin2: "#153c24", splash: "#9ad39a" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_water",
     nameKey: "registry.item.item_liquid_water.name",
     iconId: "item_liquid_water",
-    tags: ["liquid", "liquid_color:#82d6ff", "自然资源", "无限供应"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_water.body=#5c9fe0，旧 tag 为 #82d6ff。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#82d6ff",
+      "自然资源",
+      "无限供应",
+    ],
+    fluidColors: { body: "#5c9fe0", skin: "#52b1d1", skin2: "#07243a", splash: "#afe7ee" },
     displayOrder: 10000,
   },
   {
     id: "item_liquid_xiranite",
     nameKey: "registry.item.item_liquid_xiranite.name",
     iconId: "item_liquid_xiranite",
-    tags: ["liquid", "liquid_color:#1f7a3a"],
+    tags: [
+      "liquid",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_liquid_xiranite.body=#fff699，旧 tag 为 #1f7a3a。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "liquid_color:#1f7a3a",
+    ],
+    fluidColors: { body: "#fff699", skin: "#ffffcb", skin2: "#f8ec9b", splash: "#c5d7b6" },
     displayOrder: 10000,
   },
   {
     id: "item_gas_inert",
     nameKey: "registry.item.item_gas_inert.name",
     iconId: "item_gas_inert",
-    tags: ["gas", "gas_color:#3366cc", "自然资源"],
+    tags: [
+      "gas",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_gas_inert.body=#00d5ff，旧 tag 为 #3366cc。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "gas_color:#3366cc",
+      "自然资源",
+    ],
+    fluidColors: { body: "#00d5ff", skin: "#6bf7ff" },
     displayOrder: 10000,
   },
   {
     id: "item_gas_xiranite",
     nameKey: "registry.item.item_gas_xiranite.name",
     iconId: "item_gas_xiranite",
-    tags: ["gas", "gas_color:#62bf4b", "自然资源"],
+    tags: [
+      "gas",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_gas_xiranite.body=#8bc048，旧 tag 为 #62bf4b。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "gas_color:#62bf4b",
+      "自然资源",
+    ],
+    fluidColors: { body: "#8bc048", skin: "#8fb56c" },
     displayOrder: 10000,
   },
   {
@@ -1053,6 +1220,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_gas_xiranite_enr.name",
     iconId: "item_gas_xiranite_enr",
     tags: ["gas"],
+    fluidColors: { body: "#d3eebc", skin: "#8eff00" },
     displayOrder: 10000,
   },
   {
@@ -1060,6 +1228,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_gas_copper.name",
     iconId: "item_gas_copper",
     tags: ["gas"],
+    fluidColors: { body: "#b44c34", skin: "#d16f50" },
     displayOrder: 10000,
   },
   {
@@ -1067,6 +1236,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_gas_copper_enr.name",
     iconId: "item_gas_copper_enr",
     tags: ["gas"],
+    fluidColors: { body: "#c32d2d", skin: "#ff8e01" },
     displayOrder: 10000,
   },
   {
@@ -1074,6 +1244,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_gas_water.name",
     iconId: "item_gas_water",
     tags: ["gas"],
+    fluidColors: { body: "#ffffff", skin: "#51b4f8" },
     displayOrder: 10000,
   },
   {
@@ -1081,6 +1252,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     nameKey: "registry.item.item_gas_copper_enr2.name",
     iconId: "item_gas_copper_enr2",
     tags: ["gas"],
+    fluidColors: { body: "#fa911e", skin: "#ff9500" },
     displayOrder: 10000,
   },
   {
@@ -1472,7 +1644,19 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_gas_acid",
     nameKey: "registry.item.item_gas_acid.name",
     iconId: "item_gas_acid",
-    tags: ["gas", "gas_color:#f0b840"],
+    tags: [
+      "gas",
+      // AI-REMOVED 2026-09-14:
+      // Reason: 手写颜色与现有美术配色表不一致，颜色改由 fluidColors 结构化字段承载。
+      // Trigger: 用户要求 Registry 成为流体颜色的唯一运行时真源并退役颜色 tag。
+      // Evidence: 美术表 item_gas_acid.body=#e5c95e，旧 tag 为 #f0b840。
+      // Replacement: 本物品 fluidColors。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // "gas_color:#f0b840",
+    ],
+    fluidColors: { body: "#e5c95e", skin: "#c9aa1a" },
     displayOrder: 10000,
   },
 ];

@@ -2,7 +2,18 @@ import type { WorkspaceContract } from '@/domain/document/workspace-contract';
 import type { WorldEntity } from '@/domain/document/world-document';
 import type { EntityDefinition } from '@/domain/registry/types/entity-definition';
 import { EntityCollectionType } from '@/domain/editor/types/editor-types';
-import { LOGISTICS_STATIC_ARROW_PHASE, resolveLogisticsFluidColor,
+// AI-REMOVED 2026-09-14:
+// Reason: 场景状态不再从 Registry tag 解析并缓存颜色副本。
+// Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+// Evidence: resolveLogisticsFluidColor 只能提供单色，且旧 tag 与美术颜色不一致。
+// Replacement: 下方不含解析函数的 shared/logistics-material 导入；路线直接引用 ItemDefinition.fluidColors。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { LOGISTICS_STATIC_ARROW_PHASE, resolveLogisticsFluidColor,
+//   type LogisticsMaterialEntityState, type LogisticsMaterialFrameState,
+//   type LogisticsMaterialRoutePlacement } from '@/shared/logistics-material';
+import { LOGISTICS_STATIC_ARROW_PHASE,
   type LogisticsMaterialEntityState, type LogisticsMaterialFrameState,
   type LogisticsMaterialRoutePlacement } from '@/shared/logistics-material';
 import { PipeFluidPlayback, type LogisticsPipeRoute, type LogisticsBakedManifest, type PipeFluidInput } from '@/shared/logistics-baked';
@@ -16,7 +27,15 @@ export class LogisticsMaterialSceneState {
   private placements: ReadonlyMap<string, LogisticsMaterialRoutePlacement> = new Map();
   private previewIds: ReadonlySet<string> = new Set();
   private inputs = new Map<string, PipeFluidInput>();
-  private readonly colors = new Map<string, { color: string; gas: boolean }>();
+  // AI-REMOVED 2026-09-14:
+  // Reason: 该缓存复制了 Registry 的颜色事实，且依赖已退役的 tag 解析。
+  // Trigger: 流体分层颜色改为 ItemDefinition.fluidColors 唯一运行时真源。
+  // Evidence: 物品定义在会话内稳定，路线可直接保存对应 fluidColors 引用。
+  // Replacement: LogisticsPipeRoute.fluidColors。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // private readonly colors = new Map<string, { color: string; gas: boolean }>();
   private lastTick = -1;
   private wasSeeking = false;
   private wasStopped = true;
@@ -59,7 +78,17 @@ export class LogisticsMaterialSceneState {
         let route = routes.get(placement.routeId);
         if (!route) {
           route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
-            playback: new PipeFluidPlayback(), seconds: 0, flowing: false, color: 'ffffff', gas: false };
+            playback: new PipeFluidPlayback(), seconds: 0, flowing: false, fluidColors: null, gas: false };
+          // AI-REMOVED 2026-09-14:
+          // Reason: 新路线不再保存单色默认值。
+          // Trigger: Registry.fluidColors 成为唯一运行时颜色来源，未知颜色由共享解析器回退灰色。
+          // Evidence: route.color 的白色默认值只服务旧 tag fallback。
+          // Replacement: 上方 fluidColors: null。
+          // Risk: Low
+          // Human Review: Required
+          // Original code:
+          // route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
+          //   playback: new PipeFluidPlayback(), seconds: 0, flowing: false, color: 'ffffff', gas: false };
           routes.set(route.id, route);
         }
         const entity = entities.get(id)!;
@@ -101,14 +130,27 @@ export class LogisticsMaterialSceneState {
       if (route.flowing || route.playback.thickness > 0) route.seconds += delta;
       const fluidId = enabled ? route.playback.itemId : input.itemId;
       if (fluidId !== null) {
-        let color = this.colors.get(fluidId);
-        if (!color) {
-          const tags = workspace.registry.queries.findItemDefinition(fluidId)?.tags ?? [];
-          color = { color: resolveLogisticsFluidColor(tags), gas: tags.includes('gas') };
-          this.colors.set(fluidId, color);
-        }
-        route.color = color.color; route.gas = color.gas;
+        const definition = workspace.registry.queries.findItemDefinition(fluidId);
+        route.fluidColors = definition?.fluidColors ?? null;
+        route.gas = definition?.tags.includes('gas') === true;
       }
+      // AI-REMOVED 2026-09-14:
+      // Reason: 路线不再从颜色 tag 生成并缓存单色副本。
+      // Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源。
+      // Evidence: Registry 启动校验已保证所有已注册流体均具有合法分层配色。
+      // Replacement: 上方 definition.fluidColors 引用与独立 gas 相态判定。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // if (fluidId !== null) {
+      //   let color = this.colors.get(fluidId);
+      //   if (!color) {
+      //     const tags = workspace.registry.queries.findItemDefinition(fluidId)?.tags ?? [];
+      //     color = { color: resolveLogisticsFluidColor(tags), gas: tags.includes('gas') };
+      //     this.colors.set(fluidId, color);
+      //   }
+      //   route.color = color.color; route.gas = color.gas;
+      // }
     }
     // 对象仅在可见语义改变时替换，避免为每帧的粗细动画重做整场 Sprite 布局。
     if (entityStateChanged) {
@@ -119,13 +161,28 @@ export class LogisticsMaterialSceneState {
         const actual = this.inputs.get(placement.routeId)?.itemId ?? null;
         const filled = route && (enabled ? route.playback.itemId !== null : actual !== null)
           && (!exact || route.occupied.has(id));
-        const color = filled ? route.color : 'empty';
+        const fluidItemId = filled ? (enabled ? route.playback.itemId : actual) : null;
         const previous = this.frame.entities.get(id);
-        next.set(id, previous && previous.color === color && previous.start === placement.start
+        next.set(id, previous && previous.fluidItemId === fluidItemId && previous.start === placement.start
           && previous.support === placement.support && previous.marker === placement.marker
           && previous.shape === placement.shape && previous.rotation === placement.rotation
           && previous.preview === preview && previous.pipeFlow === route
-          ? previous : { ...placement, color, preview, pipeFlow: route });
+          ? previous : { ...placement, fluidItemId, preview, pipeFlow: route });
+        // AI-REMOVED 2026-09-14:
+        // Reason: 实体状态不再以 "empty" 或 RGB 字符串混合表达占用与颜色。
+        // Trigger: Registry.fluidColors 成为唯一运行时颜色来源。
+        // Evidence: fluidItemId 已完整表达空管和当前物品身份，颜色应在渲染边界查询。
+        // Replacement: 上方 fluidItemId。
+        // Risk: Low
+        // Human Review: Required
+        // Original code:
+        // const color = filled ? route.color : 'empty';
+        // const previous = this.frame.entities.get(id);
+        // next.set(id, previous && previous.color === color && previous.start === placement.start
+        //   && previous.support === placement.support && previous.marker === placement.marker
+        //   && previous.shape === placement.shape && previous.rotation === placement.rotation
+        //   && previous.preview === preview && previous.pipeFlow === route
+        //   ? previous : { ...placement, color, preview, pipeFlow: route });
       }
       this.frame.entities = next;
     }

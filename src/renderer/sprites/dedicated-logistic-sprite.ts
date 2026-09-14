@@ -103,7 +103,16 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     super(entityId, definition.id)
     this.spriteId = definition.spriteId
     this.materialSpec = resolveLogisticsMaterialSpec(this.spriteId)
-    this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, color: "empty" } : null
+    this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, fluidItemId: null } : null
+    // AI-REMOVED 2026-09-14:
+    // Reason: 物流状态不再用 "empty" 颜色哨兵表示空管。
+    // Trigger: 状态改为只传递 fluidItemId，颜色在渲染边界读取 Registry.fluidColors。
+    // Evidence: fluidItemId=null 已明确表达空管。
+    // Replacement: 上方 fluidItemId: null。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, color: "empty" } : null
 
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
@@ -157,7 +166,16 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.materialAnimationEnabled = context.logisticsMaterials?.animationEnabled === true
     if (this.materialSpec) {
       this.materialState = context.logisticsMaterials?.entities.get(this.entityId) ?? {
-        ...this.materialSpec, start: 0, support: true, marker: false, color: "empty",
+        ...this.materialSpec, start: 0, support: true, marker: false, fluidItemId: null,
+        // AI-REMOVED 2026-09-14:
+        // Reason: 预览物流状态不再用 "empty" 颜色哨兵表达空管。
+        // Trigger: LogisticsMaterialEntityState 改为 fluidItemId。
+        // Evidence: 预览没有运行态物品，null 是直接语义。
+        // Replacement: 上方 fluidItemId: null。
+        // Risk: Low
+        // Human Review: Required
+        // Original code:
+        // ...this.materialSpec, start: 0, support: true, marker: false, color: "empty",
       }
     }
     this.syncDynamicMaterial(context)

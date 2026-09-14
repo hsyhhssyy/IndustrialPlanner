@@ -19,6 +19,7 @@ describe('网站烘焙物流发布', () => {
     expect(manifest.clips).toEqual(source.clips);
     expect(manifest.fluidPlayback.referenceShader).toEqual(source.fluidPlayback.referenceShader);
     expect(manifest.cycle).toEqual(source.cycle);
+    expect(manifest).not.toHaveProperty('fluidProfiles');
     for (const key of [manifest.endpointConnector.composite, manifest.endpointConnector.whitening]) expect(manifest.frames[`static/${key}`]).toBeDefined();
     expect(Object.entries(manifest.pages).filter(([, value]) => value.data).map(([id]) => id).sort()).toEqual(['fluid-data', 'gas-field']);
     for (const [id, page] of Object.entries(manifest.pages)) {
@@ -53,6 +54,7 @@ describe('网站烘焙物流发布', () => {
       await publishLogisticsBaked({ sourceDirectory, outputDirectory: path.join(directory, 'logistics'),
         spriteDirectory: path.join(directory, 'sprites'), maskDirectory: path.join(directory, 'masks'), resolution, sourceSite: current.sourceSite });
       const manifest = JSON.parse(await readFile(path.join(directory, 'logistics/baked/manifest.json'), 'utf8')) as LogisticsBakedManifest;
+      expect(manifest).not.toHaveProperty('fluidProfiles');
       for (const key of ['static/pipe.endpoint.connector', 'static/pipe.straight.support-back', 'conveyor/left/highlight/17']) {
         const frame = source.frames[key];
         const crop = await sharp(path.join(sourceDirectory, source.pages[frame.page].file))

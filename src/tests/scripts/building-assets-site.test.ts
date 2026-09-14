@@ -202,6 +202,27 @@ describe("网站素材批次", () => {
     });
   });
 
+  it("应用删除计划后可从批次备份恢复陈旧发布文件", async () => {
+    await fixture(async (directory) => {
+      const batch = path.join(directory, "batch");
+      const destination = path.join(directory, "destination");
+      const relative = "public/3d-top-view/logistics/static/legacy.webp";
+      await mkdir(path.join(batch, "stage"), { recursive: true });
+      await mkdir(path.dirname(path.join(destination, relative)), { recursive: true });
+      await writeFile(path.join(destination, relative), "legacy");
+      await writeFile(path.join(batch, "application-plan.json"), JSON.stringify([
+        { path: relative, previousSha256: digest("legacy"), sha256: null },
+      ]));
+
+      await applyWebsiteBatch(batch, destination);
+      await expect(readFile(path.join(destination, relative))).rejects.toThrow();
+      expect(await readFile(path.join(batch, "backup", relative), "utf8")).toBe("legacy");
+
+      await restoreWebsiteBatch(batch, destination);
+      expect(await readFile(path.join(destination, relative), "utf8")).toBe("legacy");
+    });
+  });
+
   it("下载器拒绝目录逃逸、校验失败，并无损读取原始大整数", () => {
     const result = execFileSync("python3", ["-c", `
 import runpy,sys,json,hashlib
