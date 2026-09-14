@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260913-030300-pump-finalize-97c2d88b",
+  "version": "v1.5",
+  "building": "pump_1",
+  "tableBuildingId": "pump_1",
+  "displayName": "水泵",
+  "view": "top",
+  "mode": "liquid",
+  "rendererTemplate": "liquid__0",
+  "canvasCells": [
+    5,
+    3
+  ],
+  "footprintCells": [
+    3,
+    3
+  ],
+  "footprintOffsetCells": [
+    2,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    640,
+    384
+  ],
+  "fps": 30,
+  "animations": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "animationCount": 4,
+  "webpPageCount": 4,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "baseSelection": "nonLogisticBaseUnit",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [
+    "T_default_normal_N and T_default_mro_MRO are omitted Unity semantic-default payloads; the renderer uses neutral shader constants and records them in semanticDefaultTextures."
+  ],
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      151,
+      134,
+      770,
+      506
+    ],
+    "sourceFootprintRectPixels": [
+      384,
+      128,
+      768,
+      512
+    ],
+    "rawOverflowPixels": {
+      "left": 233,
+      "top": 0,
+      "right": 2,
+      "bottom": 0
+    },
+    "effectiveOverflowPixels": {
+      "left": 231,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 2,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": null,
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "beautyTaskId": "20260913-030300-pump-finalize-97c2d88b",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "lightingPreset": {
+    "base": "current-approved-factory-top-pbr",
+    "adjustment": "pump-specific exposure lift requested for dark output",
+    "exposure": 1.5,
+    "allOtherParameters": "current approved defaults"
+  },
+  "orientationAudit": {
+    "status": "passed",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "cameraPreflightStatus": "passed",
+    "expectedIntakeExtension": "left of the centered 3x3 logical footprint"
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

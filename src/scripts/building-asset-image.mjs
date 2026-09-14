@@ -24,10 +24,32 @@ export async function resizeAssetRgba(data, width, height, resolution, numeric =
   if (!numeric) {
     const right = size.width / resolution - width;
     const bottom = size.height / resolution - height;
+    // AI-REMOVED 2026-09-14:
+    // Reason: Sharp 在同一流水线中总是先 resize 后 extend，输出尺寸与声明不符。
+    // Trigger: 奇数宽端口特效发布后逐行错位，出现斜纹。
+    // Evidence: 165×74 的半尺寸输出实际为 84×37，而图集按 83×37 复制。
+    // Replacement: 下方先物化补边结果，再单独缩放并检查真实尺寸。
+    // Risk: Low；仅改变需要补边的颜色图，数值纹理采样保持不变。
+    // Human Review: Required
+    //
+    // Original code:
+    // let input = sharp(data, { raw: { width, height, channels: 4 } });
+    // if (right || bottom) input = input.extend({ right, bottom, left: 0, top: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } });
+    // return { data: await input
+    //   .resize(size.width, size.height, { kernel: 'lanczos3' }).raw().toBuffer(), ...size };
     let input = sharp(data, { raw: { width, height, channels: 4 } });
-    if (right || bottom) input = input.extend({ right, bottom, left: 0, top: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } });
-    return { data: await input
-      .resize(size.width, size.height, { kernel: 'lanczos3' }).raw().toBuffer(), ...size };
+    if (right || bottom) {
+      const padded = await input.extend({ right, bottom, left: 0, top: 0,
+        background: { r: 0, g: 0, b: 0, alpha: 0 } }).raw().toBuffer();
+      input = sharp(padded, { raw: { width: width + right, height: height + bottom, channels: 4 } });
+    }
+    const scaled = await input.resize(size.width, size.height, { kernel: 'lanczos3' })
+      .raw().toBuffer({ resolveWithObject: true });
+    if (scaled.info.width !== size.width || scaled.info.height !== size.height
+      || scaled.info.channels !== 4 || scaled.data.length !== size.width * size.height * 4) {
+      throw new Error(`Resized RGBA dimensions differ from declared ${size.width}x${size.height}`);
+    }
+    return { data: scaled.data, ...size };
   }
   const output = Buffer.alloc(size.width * size.height * 4);
   for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) {

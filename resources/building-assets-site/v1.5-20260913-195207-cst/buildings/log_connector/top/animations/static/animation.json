@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "sourcePackName": "A_connector+1_001_01_dynamic_lod0",
+  "static": true,
+  "identicalSceneFrameCopies": 0,
+  "vatTexture": null,
+  "vatLayout": null,
+  "trackCount": null,
+  "staticAuxiliaryVertexCount": 0,
+  "clip": null,
+  "stateMachine": null,
+  "fps": 30,
+  "frameStep": 1,
+  "width": 128,
+  "height": 128,
+  "projection": "orthographic",
+  "viewDirection": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "glassControl": "normal",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_connector+1_001_01_build_connecter+1_001_01_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_connector+1_001_01_build_connecter+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ],
+    "base": []
+  },
+  "frames": [
+    {
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1
+      }
+    }
+  ],
+  "sourceFrameCount": 1,
+  "retainedFrameCount": 1,
+  "canvasNormalization": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "none",
+    "resized": false
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      128,
+      128,
+      256,
+      256
+    ],
+    "resultFramePixels": [
+      128,
+      128
+    ],
+    "pixelsPerCell": 128,
+    "resized": false,
+    "edgeOverflowPolicy": {
+      "mode": "subtract-before-whole-cell-ceiling",
+      "maxPixelsPerSide": 2,
+      "inclusive": true,
+      "sourceAlphaUnionBoundsPixels": [
+        130,
+        131,
+        254,
+        253
+      ],
+      "sourceFootprintRectPixels": [
+        128,
+        128,
+        256,
+        256
+      ],
+      "rawOverflowPixels": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "effectiveOverflowPixels": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "ignoredByFinalCropPixels": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "minimumCanvasConstraint": null,
+      "evaluatedOn": "source PNG union alpha before WebP encoding"
+    }
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 1,
+    "playbackFrameCount": 1,
+    "durationMs": 33
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "sourceFrameCount": 1,
+    "retainedFrameCount": 1,
+    "sourceDurationMs": 33,
+    "retainedDurationMs": 33
+  },
+  "orientationAudit": {
+    "status": "passed",
+    "modelRotationDegrees": 0,
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "signature": "opposed yellow strips match the current-VFS four-way connector icon",
+    "evidence": [
+      "FactoryGridConnecterTable",
+      "item_log_connector",
+      "icon_log_connector",
+      "source_to_blender=(x,-z,y)"
+    ]
+  },
+  "staticTrack": {
+    "reason": "No serialized animation clips; VAT and UV animation disabled in assigned source materials",
+    "frameCount": 1
+  }
+}

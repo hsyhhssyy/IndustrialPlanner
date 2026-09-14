@@ -55,7 +55,7 @@ def verify(data, entry):
         raise ValueError(f"Integrity mismatch: {entry['path']}")
 
 
-def prepare_source(batch, selected_ids=None, base_url=SITE_URL):
+def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=False):
     batch = Path(batch).resolve()
     source = batch / "site"
     source.mkdir(parents=True, exist_ok=True)
@@ -111,6 +111,10 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL):
         raise ValueError("Building index coverage differs")
     mapping = json.loads(Path("resources/building-top-view-v15.json").read_text())
     entries = mapping["entries"]
+    if logistics_only:
+        if selected_ids:
+            raise ValueError("Logistics scope cannot be combined with entity selection")
+        entries = []
     if selected_ids:
         unknown = set(selected_ids) - {e["entityId"] for e in entries}
         if unknown:
@@ -150,10 +154,18 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL):
         if not name.endswith((".json", ".webp")) or "/preview/" in name:
             continue
         # 项目消费 contract2 分层交付；预览器的另一套烘焙图集不属于导入分支。
-        if name.startswith("buildings/logistics/baked/") or name in (
-            "buildings/logistics/logistics-baked.json", "buildings/logistics/logistics-files.json",
-        ):
-            continue
+        # AI-CORRECTION 2026-09-14: 用户已授权烘焙物流接入，JSON/WebP 闭包现在包含烘焙图集与协议。
+        # AI-REMOVED 2026-09-14:
+        # Reason: 排除烘焙文件会使新增播放器缺少原件。
+        # Trigger: 用户授权网站烘焙物流接入。
+        # Evidence: logistics-baked.json 声明 pages 与 fluidPlayback。
+        # Replacement: 下方按已选前缀完整收集。
+        # Risk: Low; Human Review: Required
+        # Original code:
+        # if name.startswith("buildings/logistics/baked/") or name in (
+        #     "buildings/logistics/logistics-baked.json", "buildings/logistics/logistics-files.json",
+        # ):
+        #     continue
         if any(name.startswith(prefix) for prefix in prefixes):
             names.add(name)
     for view in views:
@@ -184,6 +196,7 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL):
         "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "entries": [{k: e[k] for k in ("entityId", "spriteId", "sourcePath", "animated")} for e in entries],
         "logistics": "logistics" in selected_buildings,
+        "scope": "logistics" if logistics_only else "buildings",
         "unmappedBuildings": sorted(set(buildings) - selected_buildings),
         "files": [{**indexed[name], "localPath": f"site/{name}"} for name in sorted(names)],
     }
@@ -342,8 +355,10 @@ def prepare_metadata(batch):
             views.append({"buildingId": component["id"], "view": "top", "directory": f"{directory}/{view_dir}",
                           "spatial": f"{directory}/{component['spatial']}", "occlusion": f"{directory}/{component['occlusion']}", "ports": None, "effects": None})
     target_mapping = stage / "resources/building-top-view-v15.json"
-    target_mapping.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + "\n")
+    if receipt.get("scope") != "logistics":
+        target_mapping.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + "\n")
     plan = {"schemaVersion": 1, "sourceSite": provenance, "entries": receipt["entries"], "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
+    plan["scope"] = receipt.get("scope", "buildings")
     (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")
     print(f"Metadata prepared: {len(animations)} animations, {len(statics)} static sprites, {len(views)} height views", flush=True)
 
@@ -353,8 +368,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch", required=True)
     parser.add_argument("--entity", action="append", dest="entities")
     parser.add_argument("--metadata-only", action="store_true")
+    parser.add_argument("--logistics-only", action="store_true")
     args = parser.parse_args()
     if args.metadata_only:
         prepare_metadata(args.batch)
     else:
-        prepare_source(args.batch, args.entities)
+        prepare_source(args.batch, args.entities, logistics_only=args.logistics_only)

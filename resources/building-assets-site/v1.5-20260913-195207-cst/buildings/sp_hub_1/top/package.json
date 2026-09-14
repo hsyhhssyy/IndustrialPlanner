@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "building": "sp_hub_1",
+  "tableBuildingId": "sp_hub_1",
+  "displayName": "协议核心",
+  "version": "v1.5",
+  "view": "top",
+  "rendererTemplateKey": "normal__0",
+  "rendererTemplateCount": 1,
+  "machineLevel": 0,
+  "machineRenderId": "sp_hub_1",
+  "baseSelection": "logisticBaseUnit",
+  "baseId": "pedestal_hub+1_001_01",
+  "baseIncluded": true,
+  "portPresentation": "protocol-core",
+  "canvasCells": [
+    11,
+    9
+  ],
+  "footprintCells": [
+    9,
+    9
+  ],
+  "footprintOffsetCells": [
+    1,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    1408,
+    1152
+  ],
+  "fps": 30,
+  "animations": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "sourceFrameCount": 1085,
+  "retainedFrameCount": 1085,
+  "canvasVariant": "pixi-canvas-y-down",
+  "taskId": "20260911-building-port-delivery",
+  "beautyTaskId": "20260910-protocol-cores",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "directoryDelivery": {},
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

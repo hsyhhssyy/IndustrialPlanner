@@ -1,6 +1,16 @@
 # v1.5 建筑俯视图素材
 
-后续美术素材统一通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 导入。原 ZIP 导入、PNG 大图拆分和旧静态批量同步入口已退役；通用像素处理和发布器继续复用。本次迁移仅固化技能及清理入口，尚未导入网站素材。
+当前素材已于 2026-09-13 通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 实际导入，发布编号为 `v1.5-20260913-195207-cst`。覆盖 51 条实体映射、31 套动画及 20 套静态图；6 项 Registry 绘图范围已按用户授权同步。
+
+- 原件：`building-assets-site/v1.5-20260913-195207-cst/`，1457 个网站文件保持下载原字节，动画来源清单通过 `sourceSite` 引用同一份原件。
+- 发布：`public/3d-top-view/`，按 `BUILDING_ASSET_PUBLISH_RESOLUTIONS` 的当前值 `[0.5]` 生成 772 个新产物，静态首帧、遮罩、动画分页和高度特效使用同一配置。
+- 管道、传送带的新绘制已由用户明确暂缓；65 个现有物流材质文件保持不变。共享高度清单另保留 10 个既有高度文件，收据标记为 `retained`，不计入本次缩放数量。
+- 网站发布、逐文件哈希、产物来源及比例见原件目录 `_import/source-receipt.json` 和 `_import/publish-receipt.json`。旧来源事实保留在映射的 `historicalSource` 和 `_import/` 历史清单中。
+- ZIP 导入、PNG 大图拆分和旧静态批量同步入口已退役；原文仅保留在 `src/scripts/archived-building-imports/` 注释审计档。
+
+## 历史记录（2026-09-11）
+
+以下保留旧 ZIP 导入记录，目录、数量和限制仅代表当时状态；当前网站来源以上述记录及发布收据为准。
 
 既有资源的历史来源仍是 `动画素材包/buildings_frontend_v1.5.zip`，SHA-256 记录在 `building-top-view-v15.json`，不得改写为网站来源。以下为 2026-09-11 的导入记录：清单覆盖 51 条 Registry 映射，31 条动画、20 条静态，对应 46 个唯一普通视图；31 条动画共 532 个分页。原始普通资源共 463 个文件，已与 ZIP 逐字节核对。另有 6 个连续物流材质视图由 `logistics-materials/contract2/` 覆盖。ZIP 共 54 个视图，其中 2 个没有当时实体或确定的模式映射。
 

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "previewRenderer": "pixi-spritesheet-v1",
+  "spatialMetadata": "spatial.json",
+  "fps": 30,
+  "width": 1024,
+  "height": 896,
+  "order": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "phases": [
+    {
+      "clip": "close",
+      "animation": "animations/close/animation.json",
+      "startFrame": 0,
+      "frameCount": 186,
+      "sourceFrameCount": 187,
+      "repeatCount": 1,
+      "startMs": 0,
+      "durationMs": 6233,
+      "holdLastMs": 0,
+      "spritesheet": "animations/close/spritesheet.json"
+    },
+    {
+      "clip": "close_idle",
+      "animation": "animations/close_idle/animation.json",
+      "startFrame": 186,
+      "frameCount": 2,
+      "sourceFrameCount": 2,
+      "repeatCount": 1,
+      "startMs": 6233,
+      "durationMs": 67,
+      "holdLastMs": 0,
+      "spritesheet": "animations/close_idle/spritesheet.json"
+    },
+    {
+      "clip": "open",
+      "animation": "animations/open/animation.json",
+      "startFrame": 188,
+      "frameCount": 235,
+      "sourceFrameCount": 235,
+      "repeatCount": 1,
+      "startMs": 6300,
+      "durationMs": 7833,
+      "holdLastMs": 0,
+      "spritesheet": "animations/open/spritesheet.json"
+    },
+    {
+      "clip": "open_idle",
+      "animation": "animations/open_idle/animation.json",
+      "startFrame": 423,
+      "frameCount": 211,
+      "sourceFrameCount": 211,
+      "repeatCount": 1,
+      "startMs": 14133,
+      "durationMs": 7033,
+      "holdLastMs": 0,
+      "spritesheet": "animations/open_idle/spritesheet.json"
+    }
+  ],
+  "playback": "once",
+  "totalDurationMs": 21166,
+  "sourcePlaybackFrameCount": 635,
+  "retainedPlaybackFrameCount": 634
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "building": "xiranite_oven_1",
+  "displayName": "天有洪炉",
+  "taskId": "20260913-single-device-pages-all",
+  "defaultVariant": "top",
+  "variants": [
+    {
+      "key": "top",
+      "view": "top",
+      "label": "液体模式",
+      "root": "top/",
+      "package": "top/package.json",
+      "sequence": "top/sequence.json",
+      "spatial": "top/spatial.json",
+      "sheetSizes": "top/sheet-sizes.json"
+    },
+    {
+      "key": "top-gasliquid",
+      "view": "top-gasliquid",
+      "label": "气液模式",
+      "root": "top-gasliquid/",
+      "package": "top-gasliquid/package.json",
+      "sequence": "top-gasliquid/sequence.json",
+      "spatial": "top-gasliquid/spatial.json",
+      "sheetSizes": "top-gasliquid/sheet-sizes.json"
+    }
+  ],
+  "integrity": "integrity.json"
+}

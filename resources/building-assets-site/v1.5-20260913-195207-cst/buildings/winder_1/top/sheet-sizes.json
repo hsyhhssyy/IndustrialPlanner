@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "partCount": 6,
+  "totalBytes": 3358544,
+  "pages": [
+    {
+      "animation": "close",
+      "index": 0,
+      "image": "animations/close/spritesheet_000.webp",
+      "width": 3840,
+      "height": 3072,
+      "columns": 5,
+      "rows": 6,
+      "frameStart": 0,
+      "frameCount": 26,
+      "bytes": 684604,
+      "sha256": "6775f3d68e40c0c79a8c55e636f6c2222573c3fcfe961052e52afa3024fe44a5"
+    },
+    {
+      "animation": "close_idle",
+      "index": 0,
+      "image": "animations/close_idle/spritesheet_000.webp",
+      "width": 768,
+      "height": 512,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 27098,
+      "sha256": "c1b9c602f6df6d6ed53e8e3dd1faceadcf01c0269fe2bf2810df1d9fde2fe24c"
+    },
+    {
+      "animation": "open",
+      "index": 0,
+      "image": "animations/open/spritesheet_000.webp",
+      "width": 3840,
+      "height": 4096,
+      "columns": 5,
+      "rows": 8,
+      "frameStart": 0,
+      "frameCount": 40,
+      "bytes": 1079592,
+      "sha256": "b7b6aebd33c208190931d7b5a16136b8d9e46a432bb1310a2472bf0f0321e319"
+    },
+    {
+      "animation": "open",
+      "index": 1,
+      "image": "animations/open/spritesheet_001.webp",
+      "width": 3840,
+      "height": 1536,
+      "columns": 5,
+      "rows": 3,
+      "frameStart": 40,
+      "frameCount": 11,
+      "bytes": 282376,
+      "sha256": "22cda35c9693c23d19fa42954fde0f2732fa67c1645332f06f2215a72af6fb8a"
+    },
+    {
+      "animation": "open_idle",
+      "index": 0,
+      "image": "animations/open_idle/spritesheet_000.webp",
+      "width": 3840,
+      "height": 4096,
+      "columns": 5,
+      "rows": 8,
+      "frameStart": 0,
+      "frameCount": 40,
+      "bytes": 1077760,
+      "sha256": "aee25ad1633c4618688f0740cf7b84971935b911b1c21ffa5a793e0a9e151996"
+    },
+    {
+      "animation": "open_idle",
+      "index": 1,
+      "image": "animations/open_idle/spritesheet_001.webp",
+      "width": 3840,
+      "height": 1024,
+      "columns": 5,
+      "rows": 2,
+      "frameStart": 40,
+      "frameCount": 8,
+      "bytes": 207114,
+      "sha256": "e3b2e6e0b0760c337516fda3d286e2a649fa950e5e1b193d02b6f0450c54fd90"
+    }
+  ],
+  "animations": [
+    {
+      "animation": "close",
+      "partCount": 1,
+      "totalBytes": 684604
+    },
+    {
+      "animation": "close_idle",
+      "partCount": 1,
+      "totalBytes": 27098
+    },
+    {
+      "animation": "open",
+      "partCount": 2,
+      "totalBytes": 1361968
+    },
+    {
+      "animation": "open_idle",
+      "partCount": 2,
+      "totalBytes": 1284874
+    }
+  ]
+}

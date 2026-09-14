@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 1,
+    "height": 3
+  },
+  "framePixels": {
+    "width": 128,
+    "height": 384
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 1,
+    "width": 1,
+    "height": 1,
+    "source": "FactoryFluidValveTable.json.log_pipe_conditioner.range"
+  },
+  "pivotCells": {
+    "x": 0.5,
+    "y": 1.5
+  },
+  "pivotPixels": {
+    "x": 64.0,
+    "y": 192.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      384,
+      384
+    ],
+    "resultFramePixels": [
+      128,
+      384
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      128,
+      0,
+      256,
+      384
+    ]
+  },
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      139,
+      119,
+      245,
+      265
+    ],
+    "sourceFootprintRectPixels": [
+      128,
+      128,
+      256,
+      256
+    ],
+    "rawOverflowPixels": {
+      "left": 0,
+      "top": 9,
+      "right": 0,
+      "bottom": 9
+    },
+    "effectiveOverflowPixels": {
+      "left": 0,
+      "top": 7,
+      "right": 0,
+      "bottom": 7
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": null,
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "orientationAudit": {
+    "status": "passed",
+    "modelRotationDegrees": 0,
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "signature": "two-way pipe-valve axis matches current-VFS item and topology icons",
+    "evidence": [
+      "FactoryFluidValveTable.log_pipe_conditioner",
+      "item_log_pipe_conditioner",
+      "image_log_pipe_conditioner",
+      "source_to_blender=(x,-z,y)"
+    ]
+  },
+  "solidPorts": [],
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  }
+}

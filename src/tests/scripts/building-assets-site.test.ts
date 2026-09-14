@@ -11,7 +11,7 @@ import { publishedImageSize, publishEffectFrames, resizeAssetRgba } from "../../
 // @ts-expect-error Node 发布入口由真实文件测试验证。
 import { publishDeviceSprite } from "../../scripts/sync-device-sprites.mjs";
 // @ts-expect-error Node 批次入口由真实文件测试验证。
-import { applyWebsiteBatch, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
+import { applyWebsiteBatch, deferWebsiteLogistics, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
 // @ts-expect-error Node 端口发布器直接复用。
 import { resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
 
@@ -29,6 +29,54 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
+  it("暂缓物流时同时排除原件和发布图，并保留共享清单中的既有高度", async () => {
+    await fixture(async (directory) => {
+      const batch = path.join(directory, "batch");
+      const current = path.join(directory, "current");
+      const stage = path.join(batch, "stage");
+      const root = "resources/building-assets-site/fixture";
+      const index = JSON.stringify({ files: [] });
+      const sourceSite = { root, releaseId: "fixture", indexSha256: digest(index) };
+      const put = async (file: string, value: unknown) => {
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, typeof value === "string" ? value : JSON.stringify(value));
+      };
+      await put(path.join(stage, root, "integrity.json"), index);
+      await put(path.join(stage, root, "buildings/logistics/source.json"), "new source");
+      await put(path.join(batch, "source-receipt.json"), { ...sourceSite, files: [], logistics: true });
+      await put(path.join(batch, "import-plan.json"), { sourceSite, logistics: true, views: [
+        { buildingId: "device", view: "top", directory: "buildings/device/top" },
+        { buildingId: "pipe", view: "top", directory: "buildings/logistics/pipe/top" },
+      ] });
+      for (const folder of ["logistics", "animations/logistics-contract2"]) {
+        await put(path.join(current, "public/3d-top-view", folder, "material.webp"), "existing material");
+        await put(path.join(stage, "public/3d-top-view", folder, "material.webp"), "new material");
+      }
+      const effects = "public/3d-top-view/port-effects";
+      const oldView = { fields: { idle: { file: "old-height.rgba.bin", min: -2, max: 10 } } };
+      await put(path.join(current, effects, "manifest.json"), { heightMin: 0, heightMax: 8, views: { "pipe/top": oldView } });
+      await put(path.join(current, effects, "old-height.rgba.bin"), "old height");
+      await put(path.join(stage, effects, "manifest.json"), { heightMin: 0, heightMax: 8, effects: {}, views: {
+        "device/top": { fields: { idle: { file: "device-height.rgba.bin", min: 0, max: 8 } } },
+        "pipe/top": { fields: { idle: { file: "new-height.rgba.bin", min: 0, max: 8 } } },
+      } });
+      await put(path.join(stage, effects, "new-height.rgba.bin"), "new height");
+      await put(path.join(stage, effects, "device-height.rgba.bin"), "device height");
+      await deferWebsiteLogistics(batch, current);
+      const updated = JSON.parse(await readFile(path.join(stage, effects, "manifest.json"), "utf8"));
+      expect(updated.views["pipe/top"]).toEqual(oldView);
+      expect([updated.heightMin, updated.heightMax]).toEqual([-2, 10]);
+      expect(await readFile(path.join(stage, effects, "device-height.rgba.bin"), "utf8")).toBe("device height");
+      expect(await readFile(path.join(current, "public/3d-top-view/logistics/material.webp"), "utf8")).toBe("existing material");
+      await expect(readFile(path.join(stage, "public/3d-top-view/logistics/material.webp"))).rejects.toThrow();
+      await expect(readFile(path.join(stage, root, "buildings/logistics/source.json"))).rejects.toThrow();
+      await expect(readFile(path.join(stage, effects, "new-height.rgba.bin"))).rejects.toThrow();
+      const plan = JSON.parse(await readFile(path.join(batch, "import-plan.json"), "utf8"));
+      expect(plan.logistics).toBe(false);
+      expect(plan.views).toHaveLength(1);
+      expect(plan.retainedProducts).toEqual([{ path: `${effects}/old-height.rgba.bin`, sha256: digest("old height") }]);
+    });
+  });
   it("单视图交付按明确模式选择唯一模板，多个候选或模式冲突必须拒绝", () => {
     const variant = { rendererTemplateKey: "liquid__0", machineModeType: "liquid" };
     const ports = { deliveryVariantSelection: "single-view", deliveryMode: "liquid", deliveryVariantKeys: ["source-view-id"], variants: [variant] };
@@ -66,6 +114,29 @@ describe("网站素材批次", () => {
     expect(() => publishedImageSize(165, 74, 0.5)).toThrow();
     expect(() => publishedImageSize(2.5, 4, 0.5, true)).toThrow();
   });
+
+  it.each([0.5, 0.25].flatMap((resolution) => [[165, 74], [100, 29], [31, 29], [128, 128]]
+    .map(([width, height]) => ({ resolution, width: width!, height: height! }))))(
+    "颜色图 $width×$height 按 $resolution 先补透明边再缩放，实际行宽与声明一致", async ({ width, height, resolution }) => {
+      const pixels = Buffer.alloc(width * height * 4);
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        pixels.set([x % 256, y * 7 % 256, (x + y) * 3 % 256, 64 + (x * 5 + y * 11) % 192], (y * width + x) * 4);
+      }
+      const original = Buffer.from(pixels);
+      const targetWidth = Math.ceil(width * resolution), targetHeight = Math.ceil(height * resolution);
+      const paddedWidth = targetWidth / resolution, paddedHeight = targetHeight / resolution;
+      // 独立按行复制原像素构造期望输入，禁止复用发布器或 Sharp extend/resize 链。
+      const padded = Buffer.alloc(paddedWidth * paddedHeight * 4);
+      for (let y = 0; y < height; y++) pixels.copy(padded, y * paddedWidth * 4, y * width * 4, (y + 1) * width * 4);
+      const expected = await sharp(padded, { raw: { width: paddedWidth, height: paddedHeight, channels: 4 } })
+        .resize(targetWidth, targetHeight, { kernel: "lanczos3" }).raw().toBuffer({ resolveWithObject: true });
+      const actual = await resizeAssetRgba(pixels, width, height, resolution, false, true);
+      expect(expected.info).toMatchObject({ width: targetWidth, height: targetHeight, channels: 4 });
+      expect([actual.width, actual.height, actual.data.length]).toEqual([targetWidth, targetHeight, targetWidth * targetHeight * 4]);
+      expect(actual.data.equals(expected.data)).toBe(true);
+      expect(pixels.equals(original)).toBe(true);
+    },
+  );
 
   it("奇数宽特效逐帧缩放后重新排布，避免相邻帧颜色混入", async () => {
     await fixture(async (directory) => {

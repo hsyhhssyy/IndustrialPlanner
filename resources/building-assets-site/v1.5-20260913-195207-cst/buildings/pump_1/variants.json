@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "building": "pump_1",
+  "displayName": "水泵",
+  "taskId": "20260913-030300-pump-finalize-97c2d88b",
+  "defaultVariant": "top",
+  "variants": [
+    {
+      "key": "top",
+      "view": "top",
+      "label": "液体模式",
+      "root": "top/",
+      "package": "top/package.json",
+      "sequence": "top/sequence.json",
+      "spatial": "top/spatial.json",
+      "sheetSizes": "top/sheet-sizes.json"
+    }
+  ],
+  "integrity": "integrity.json"
+}

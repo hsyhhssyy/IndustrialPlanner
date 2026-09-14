@@ -1,12 +1,32 @@
 import path from 'node:path';
-import { publishLogisticsMaterials } from '../publish-logistics-materials.mjs';
+import { readFile } from 'node:fs/promises';
+import { publishLogisticsBaked } from '../publish-logistics-baked.mjs';
+import { resolveBuildingAssetPublishTargets } from '../building-asset-publish-config.mjs';
 
 // 此既有命令统一转交 contract2 发布器，防止通用资源重建覆盖离线合成结果。
-await publishLogisticsMaterials({
-  spriteDirectory: process.argv[2] && path.resolve(process.argv[2]),
-  maskDirectory: process.argv[3] && path.resolve(process.argv[3]),
-  outputDirectory: process.argv[2] && path.resolve(process.argv[2], '../logistics'),
-});
+// AI-CORRECTION 2026-09-14: 统一读取已导入网站原件并重发烘焙版本，不再读取历史 ZIP 素材。
+// AI-REMOVED 2026-09-14:
+// Reason: 通用生成命令不能覆盖已接入的烘焙物流。
+// Trigger: 网站烘焙物流接入。
+// Evidence: 原命令使用历史 contract2 默认目录。
+// Replacement: 下方 publishLogisticsBaked 调用。
+// Risk: Low; Human Review: Required
+// Original code:
+// import { publishLogisticsMaterials } from '../publish-logistics-materials.mjs';
+// await publishLogisticsMaterials({
+//   spriteDirectory: process.argv[2] && path.resolve(process.argv[2]),
+//   maskDirectory: process.argv[3] && path.resolve(process.argv[3]),
+//   outputDirectory: process.argv[2] && path.resolve(process.argv[2], '../logistics'),
+// });
+const manifest = JSON.parse(await readFile('public/3d-top-view/logistics/baked/manifest.json', 'utf8'));
+const outputRoot = path.resolve(process.argv[2] ? path.join(process.argv[2], '..') : 'public/3d-top-view');
+for (const target of resolveBuildingAssetPublishTargets(outputRoot)) {
+  await publishLogisticsBaked({ sourceDirectory: path.join(manifest.sourceSite.root, 'buildings/logistics'),
+    outputDirectory: path.join(target.outputDirectory, 'logistics'), spriteDirectory: path.join(target.outputDirectory, 'sprites'),
+    maskDirectory: process.argv[3] ? path.resolve(process.argv[3], path.relative(outputRoot, target.outputDirectory))
+      : path.join(target.outputDirectory, 'sprite-masks'),
+    resolution: target.resolution, sourceSite: manifest.sourceSite });
+}
 
 // AI-REMOVED 2026-09-10:
 // Reason: SVG 物流底图已被 contract2 素材替代。

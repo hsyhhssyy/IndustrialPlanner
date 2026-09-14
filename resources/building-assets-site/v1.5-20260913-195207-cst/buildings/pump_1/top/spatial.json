@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "canvasCells": {
+    "width": 5,
+    "height": 3
+  },
+  "framePixels": {
+    "width": 640,
+    "height": 384
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 2,
+    "top": 0,
+    "width": 3,
+    "height": 3,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 3.5,
+    "y": 1.5
+  },
+  "pivotPixels": {
+    "x": 448.0,
+    "y": 192.0
+  },
+  "anchorNormalized": {
+    "x": 0.7,
+    "y": 0.5
+  },
+  "placementRule": {
+    "spriteCanvasLeft": "gridX - footprintRectCells.left",
+    "spriteCanvasTop": "gridY - footprintRectCells.top"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      1152,
+      640
+    ],
+    "resultFramePixels": [
+      640,
+      384
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      128,
+      128,
+      768,
+      512
+    ]
+  },
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      151,
+      134,
+      770,
+      506
+    ],
+    "sourceFootprintRectPixels": [
+      384,
+      128,
+      768,
+      512
+    ],
+    "rawOverflowPixels": {
+      "left": 233,
+      "top": 0,
+      "right": 2,
+      "bottom": 0
+    },
+    "effectiveOverflowPixels": {
+      "left": 231,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 2,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": null,
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "orientationAudit": {
+    "status": "passed",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "cameraPreflightStatus": "passed",
+    "expectedIntakeExtension": "left of the centered 3x3 logical footprint"
+  },
+  "solidPorts": [],
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  }
+}

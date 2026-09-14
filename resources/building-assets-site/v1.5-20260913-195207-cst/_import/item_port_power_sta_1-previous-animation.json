@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "fps": 30,
+  "pageRows": 7,
+  "pageColumns": 5,
+  "sources": {
+    "close_000": {
+      "file": "close_000.webp",
+      "rows": 3,
+      "columns": 16,
+      "frameCount": 48,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        100,
+        34,
+        66,
+        34,
+        66
+      ],
+      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sha256": "a995b11477a7ef485635a428c9d85cd4976b7a3194ed6f49a88e0f0808029c56"
+    },
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        67
+      ],
+      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sha256": "993319bcce863f9ccf6a7573340d17059b43294088aa114de9cb16d5a24c85fd"
+    },
+    "open_000": {
+      "file": "open_000.webp",
+      "rows": 2,
+      "columns": 16,
+      "frameCount": 18,
+      "frameDurationsMs": [
+        33,
+        34,
+        100,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ],
+      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sha256": "bd04e7d59cf163d38f8b1f29c23db433d2b1badd5269f06eec7ab49041860cf4"
+    },
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 2,
+      "columns": 16,
+      "frameCount": 21,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sha256": "4b9d4ad6609dbfe166ef1157c8ebe50fbd0b8845f6fd926f9fcb523517b278ee"
+    }
+  },
+  "clips": {
+    "open": [
+      {
+        "source": "open_000",
+        "startFrame": 0,
+        "frameCount": 18
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 21
+      }
+    ],
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 48
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ]
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "clipSelection": "validated-existing-ranges"
+}

@@ -110,6 +110,7 @@ import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecora
 import { createConfiguredItemIconDecoration } from "./decorations/ConfiguredItemIconDecoration"
 
 import { LogisticsMaterialSceneState } from "./logistics-material-state"
+import { LogisticsBakedFlowScene } from "./logistics-baked-flow"
 import { BuildingEffectsScene, resolveBuildingEffectStatusKey } from "../building-effects"
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material"
 
@@ -331,6 +332,7 @@ export function createRenderSceneOrchestrator(
     renderHost.workspace.registry.recipeDefinitions,
   )
   const logisticsMaterialState = new LogisticsMaterialSceneState()
+  const logisticsBakedFlow = new LogisticsBakedFlowScene()
   const buildingEffects = new BuildingEffectsScene()
   const resolveBuildingEffectRingStatus = (entityId: string): number | undefined => {
     const status = renderHost.workspace.simulation?.queries.getDeviceOperatingStatus?.(entityId)
@@ -386,7 +388,7 @@ export function createRenderSceneOrchestrator(
     layers: {
       stage: app.stage,
       renderGroups: Object.values(renderGroupRoots),
-      pipeFlow: pipeSubEntity,
+      pipeFlow: layers.logisticsPipe,
       beltFlow: beltSubEntity,
       beltInsertion: beltInsertionLayer,
       beltCargo: beltCargoOverlayLayer,
@@ -673,6 +675,7 @@ export function createRenderSceneOrchestrator(
       }
       ctx.versions = frameVersions
     }
+    logisticsMaterialState.setTiming(logisticsBakedFlow.timing)
     const logisticsMaterials = logisticsMaterialState.sync({
       workspace: renderHost.workspace,
       entities,
@@ -711,6 +714,21 @@ export function createRenderSceneOrchestrator(
       }),
     )
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
+
+    logisticsBakedFlow.sync({
+      enabled: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
+        && renderHost.workspace.editor?.state.suppressPipes !== true
+        && renderHost.textureManager.supportsLogisticsAnimation(),
+      acquire: () => renderHost.textureManager.acquireLogisticsDynamic(),
+      routes: logisticsMaterials.routes ?? new Map(),
+      visibility: entitySpriteSyncCache.visibility,
+      hidden: new Set(editorCollections[EntityCollectionType.ghost]),
+      version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}`,
+      view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
+        y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
+        centerX: viewportState.centerX, centerY: viewportState.centerY,
+        scale: viewportState.gridCellPixelSize, rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },
+    })
 
     measureRenderStage(frameProfiler, "buildingEffects.sync", () => {
       // AI-REMOVED 2026-09-11:
@@ -876,7 +894,9 @@ export function createRenderSceneOrchestrator(
 
   // 物流管道层级（从底到顶）
   layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
+  layers.logisticsPipe.addChild(logisticsBakedFlow.container)
   layers.logisticsPipe.addChild(pipeSubEntity)
+  layers.logisticsPipe.addChild(logisticsBakedFlow.endpoints)
   // AI-REMOVED 2026-09-10:
   // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
   // Trigger: contract2 内部层序与静态低开销要求。
@@ -990,6 +1010,7 @@ export function createRenderSceneOrchestrator(
       portOverlayDecoration.destroy()
       pipePortGhostDecoration.destroy()
       buildingEffects.destroy()
+      logisticsBakedFlow.destroy()
       configuredItemIconDecoration.destroy()
 // AI-REMOVED 2026-09-10:
 // Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。

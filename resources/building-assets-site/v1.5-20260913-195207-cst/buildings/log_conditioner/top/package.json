@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260912-180620-helper-rotation-b0fc177c",
+  "version": "v1.5",
+  "building": "log_conditioner",
+  "tableBuildingId": "log_conditioner",
+  "displayName": "物品准入口",
+  "view": "top",
+  "mode": "normal",
+  "rendererTemplate": "normal__0",
+  "canvasCells": [
+    1,
+    1
+  ],
+  "footprintCells": [
+    1,
+    1
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    128,
+    128
+  ],
+  "fps": 30,
+  "animations": [
+    "static"
+  ],
+  "animationCount": 1,
+  "webpPageCount": 1,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "baseSelection": "none",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [],
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      128,
+      130,
+      256,
+      254
+    ],
+    "sourceFootprintRectPixels": [
+      128,
+      128,
+      256,
+      256
+    ],
+    "rawOverflowPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "effectiveOverflowPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": null,
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "beautyTaskId": "20260912-180620-helper-rotation-b0fc177c",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "assetKind": "logistics-top-view-static-pack",
+  "sourceModel": "A_logconditioner+1_001_01_dynamic_lod0",
+  "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+  "orientationAudit": {
+    "status": "passed",
+    "modelRotationDegrees": 0,
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "signature": "two-way opening axis matches the current-VFS item icon",
+    "evidence": [
+      "FactoryBoxValveTable",
+      "item_log_conditioner",
+      "source_to_blender=(x,-z,y)"
+    ]
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

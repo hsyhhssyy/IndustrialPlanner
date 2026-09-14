@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "spatialMetadata": "spatial.json",
+  "fps": 30,
+  "width": 640,
+  "height": 640,
+  "order": [
+    "close_idle",
+    "open_idle"
+  ],
+  "phases": [
+    {
+      "clip": "close_idle",
+      "animation": "animations/close_idle/animation.json",
+      "startFrame": 0,
+      "frameCount": 1,
+      "sourceFrameCount": 2,
+      "repeatCount": 1,
+      "startMs": 0,
+      "durationMs": 67,
+      "holdLastMs": 0,
+      "spritesheet": "animations/close_idle/spritesheet.json"
+    },
+    {
+      "clip": "open_idle",
+      "animation": "animations/open_idle/animation.json",
+      "startFrame": 1,
+      "frameCount": 755,
+      "sourceFrameCount": 1100,
+      "repeatCount": 1,
+      "startMs": 67,
+      "durationMs": 36667,
+      "holdLastMs": 0,
+      "spritesheet": "animations/open_idle/spritesheet.json"
+    }
+  ],
+  "playback": "once",
+  "totalDurationMs": 36734,
+  "sourcePlaybackFrameCount": 1102,
+  "retainedPlaybackFrameCount": 756,
+  "previewRenderer": "pixi-spritesheet-v1"
+}

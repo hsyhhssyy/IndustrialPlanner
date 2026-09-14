@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "gameVersion": "v1.5",
+  "taskId": "20260913-155015-logistics-baked-flow",
+  "building": "log_pipe_02_mid",
+  "requiresBaseContract": 2,
+  "resources": {
+    "dynamic/pipe.pattern": {
+      "file": "pipe-pattern.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fac_pipe_pattern_001",
+      "semantic": "pipe.pattern",
+      "namespace": "dynamic",
+      "sha256": "b5c69446d767ca5c50e1df8975753921593f531419f1d0e0b57957a9d0a273df"
+    },
+    "dynamic/pipe.chevron": {
+      "file": "pipe-chevron.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fac_pipe_arrow_001",
+      "semantic": "pipe.chevron",
+      "namespace": "dynamic",
+      "sha256": "a14fe2967ed2de4b0e324b932301f2d9421fa1916ecf3d2b93899a2be7d2a074"
+    },
+    "dynamic/pipe.fluid-motion": {
+      "file": "pipe-fluid-motion.webp",
+      "width": 256,
+      "height": 256,
+      "rect": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_pipe_water_normal_3",
+      "semantic": "pipe.fluid-motion",
+      "namespace": "dynamic",
+      "sha256": "4818428eeda970288028ef520876591695da1cb5b42ea59afe3478d37935b453"
+    },
+    "dynamic/pipe.splash-noise": {
+      "file": "pipe-splash-noise.webp",
+      "width": 512,
+      "height": 512,
+      "rect": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "linear",
+      "wrap": "repeat",
+      "uvOrigin": "bottom-left",
+      "sourceTexture": "T_fx_flow_300_D",
+      "semantic": "pipe.splash-noise",
+      "namespace": "dynamic",
+      "sha256": "94251ab71aa1b3fea75c47a0a1369189fe3c1648ffe96f5e8c08aa63108eabb4"
+    },
+    "dynamic/pipe.straight.mapping": {
+      "file": "pipe-straight-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-straight-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.straight.mapping",
+      "namespace": "dynamic",
+      "sha256": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e"
+    },
+    "dynamic/pipe.straight.fluid-mapping": {
+      "file": "pipe-straight-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-straight-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.straight.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "c9b4d76d1c2f2e009bb823918d2a14344e5c8a027fc3c1178f14e1c49c06eb9e"
+    },
+    "dynamic/pipe.left.mapping": {
+      "file": "pipe-left-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-left-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.left.mapping",
+      "namespace": "dynamic",
+      "sha256": "c84adb81a79b0016e22f80ed89ea8f362892dd5eed247087855d84e1e55bf694"
+    },
+    "dynamic/pipe.left.fluid-mapping": {
+      "file": "pipe-left-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-left-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.left.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "51f0d39fdd5c2eb0e5bc55d97bffe9dd3fb5842d4950d40d443354930871d71b"
+    },
+    "dynamic/pipe.right.mapping": {
+      "file": "pipe-right-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-right-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.right.mapping",
+      "namespace": "dynamic",
+      "sha256": "b56b5223ad5fc96b03c98f2bb3bfcedc8bc0a572ba0f2a0bbc8682fbc07d2577"
+    },
+    "dynamic/pipe.right.fluid-mapping": {
+      "file": "pipe-right-fluid-mapping.webp",
+      "width": 128,
+      "height": 128,
+      "rect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "colorSpace": "linear-data",
+      "alpha": "straight",
+      "filter": "nearest",
+      "wrap": "clamp",
+      "geometry": "pipe-right-fluid-mapping.json",
+      "encoding": "Decoded bytes: across=R/255; along=(G*256+B)/65535; coverage=A/255; no premultiplication or color conversion",
+      "semantic": "pipe.right.fluid-mapping",
+      "namespace": "dynamic",
+      "sha256": "46be5a54bfc2aa6441cd00da8ba970c5591040fe8b7478976de56b40d145919f"
+    }
+  },
+  "shapes": {
+    "straight": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0.5,
+        1
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": true,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.straight",
+        "sourceId": "pipesupport_1_03",
+        "count": 1,
+        "required": false,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 90,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 252,
+        "middlePixels": 48,
+        "backPixels": 1732
+      }
+    },
+    "left": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        0,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 90,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 119,
+        "middlePixels": 4,
+        "backPixels": 1650
+      }
+    },
+    "right": {
+      "pivotPixels": [
+        64,
+        64
+      ],
+      "canvasCells": [
+        1,
+        1
+      ],
+      "entry": [
+        0.5,
+        0
+      ],
+      "exit": [
+        1,
+        0.5
+      ],
+      "phaseSpan": 1,
+      "phaseSource": "Original UV.y + integer TubeIndex",
+      "staticTextEnabled": false,
+      "sourceId": "log_pipe_02_mid",
+      "layers": [
+        "support-back",
+        "fluid-body",
+        "fluid-motion",
+        "fluid-specular",
+        "support-middle",
+        "shell",
+        "pattern/chevron",
+        "support-front"
+      ],
+      "support": {
+        "asset": "static/support.corner",
+        "sourceId": "pipesupport_1_04",
+        "count": 1,
+        "required": true,
+        "sourceTranslation": [
+          0,
+          -2.8,
+          0
+        ],
+        "sourceRotationYDegrees": 0,
+        "placementStatus": "Explicit cradle-height fit checked in an oblique Blender render; not recovered runtime placement",
+        "liquidDepthStatus": "2D liquid surface clamped below glass for layering; runtime liquid vertex modifiers not recovered",
+        "frontPixels": 118,
+        "middlePixels": 3,
+        "backPixels": 1652
+      }
+    }
+  },
+  "parameters": {
+    "staticDensity": 0.11,
+    "flowDensity": 0.18,
+    "flowOffset": 1.97,
+    "flowSpeed": 1.23,
+    "staticWidth": 0.922,
+    "flowWidth": 0.88,
+    "waterDirection": 0,
+    "waterWaveSpeed": 0.8,
+    "waterSkinSpeed": 0.7,
+    "fluidProfiles": {
+      "item_liquid_water": {
+        "id": "item_liquid_water",
+        "name": "清水",
+        "phase": "liquid",
+        "phaseType": 2,
+        "subType": 4,
+        "atlasLayer": 4,
+        "material": "M_tube_art_liquid_water",
+        "colors": {
+          "body": {
+            "rgba8": [
+              92,
+              159,
+              224,
+              179
+            ],
+            "displayRgba8": [
+              92,
+              159,
+              224,
+              179
+            ],
+            "hex": "#5c9fe0",
+            "array": "T_WaterColorAtlas",
+            "layer": 4,
+            "format": "RGBA_BC7_SRGB",
+            "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+            "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+          },
+          "skin": {
+            "rgba8": [
+              82,
+              177,
+              209,
+              120
+            ],
+            "displayRgba8": [
+              82,
+              177,
+              209,
+              120
+            ],
+            "hex": "#52b1d1",
+            "array": "T_WaterSkinColorAtlas",
+            "layer": 4,
+            "format": "RGBA_BC7_SRGB",
+            "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+            "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+          },
+          "skin2": {
+            "rgba8": [
+              7,
+              36,
+              58,
+              255
+            ],
+            "displayRgba8": [
+              7,
+              36,
+              58,
+              255
+            ],
+            "hex": "#07243a",
+            "array": "T_WaterSkinColor2Atlas",
+            "layer": 4,
+            "format": "RGBA_BC7_SRGB",
+            "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+            "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+          },
+          "splash": {
+            "rgba8": [
+              110,
+              203,
+              219,
+              232
+            ],
+            "displayRgba8": [
+              175,
+              231,
+              238,
+              232
+            ],
+            "hex": "#afe7ee",
+            "array": "T_WaterSplashColorTextureArray",
+            "layer": 4,
+            "format": "RGBA_BC7_UNorm",
+            "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+            "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+          }
+        },
+        "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+        "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+      },
+      "item_gas_xiranite": {
+        "id": "item_gas_xiranite",
+        "name": "息壤气",
+        "phase": "gas",
+        "phaseType": 4,
+        "subType": 7,
+        "atlasLayer": 7,
+        "material": "M_fac_pipe_gas_xiranite",
+        "colors": {
+          "body": {
+            "rgba8": [
+              139,
+              192,
+              72,
+              38
+            ],
+            "displayRgba8": [
+              139,
+              192,
+              72,
+              38
+            ],
+            "hex": "#8bc048",
+            "array": "T_FogColorAtlas",
+            "layer": 7,
+            "format": "RGBA_BC7_SRGB",
+            "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+            "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+          },
+          "skin": {
+            "rgba8": [
+              143,
+              181,
+              108,
+              191
+            ],
+            "displayRgba8": [
+              143,
+              181,
+              108,
+              191
+            ],
+            "hex": "#8fb56c",
+            "array": "T_FogColor2Atlas",
+            "layer": 7,
+            "format": "RGBA_BC7_SRGB",
+            "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+            "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+          }
+        },
+        "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+        "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+      }
+    },
+    "appearanceRevision": "water-gas-flat-head-v4",
+    "evidence": "v1.5 recovered pipe pattern formula; wave shading uses original normal texture with approximate lighting",
+    "fluidStatus": "Source item colors; inset liquid with subtle continuous radius waves, a planar moving front with a filled white-to-blue cap gradient, whole-route thinning to disappearance and interrupted recovery; soft two-color gas turbulence. Screenshot-guided 2D reconstructions sharing the existing liquid interior map. Full game shader, gas mesh and SceneColor refraction are not reproduced.",
+    "fillController": "fluid-thickness-cycle-v2",
+    "fillCellsPerSecond": 2.0,
+    "fillEdgeWidth": 0.012,
+    "transportTiming": {
+      "table": "FactoryLiquidPipeTable",
+      "id": "log_pipe_01",
+      "msPerRound": 500,
+      "interpretation": "One cell per transport round, continuously interpolated; demonstration fill/drain scheduling is project-defined"
+    },
+    "drainDuration": 2.0,
+    "refillDuration": 2.0,
+    "holdDuration": 1.0,
+    "emptyDuration": 0.3
+  },
+  "endpointConnector": {
+    "resource": "static/pipe.endpoint.connector",
+    "state": "Static base resource shared by static and dynamic pipe modes"
+  },
+  "resourceNamespace": "dynamic",
+  "materialSpecification": "material-computation.json",
+  "migrationFromContract1": {
+    "pipe.pattern": "dynamic/pipe.pattern",
+    "pipe.chevron": "dynamic/pipe.chevron",
+    "pipe.fluid-motion": "dynamic/pipe.fluid-motion",
+    "pipe.splash-noise": "dynamic/pipe.splash-noise",
+    "pipe.straight.mapping": "dynamic/pipe.straight.mapping",
+    "pipe.straight.fluid-mapping": "dynamic/pipe.straight.fluid-mapping",
+    "pipe.left.mapping": "dynamic/pipe.left.mapping",
+    "pipe.left.fluid-mapping": "dynamic/pipe.left.fluid-mapping",
+    "pipe.right.mapping": "dynamic/pipe.right.mapping",
+    "pipe.right.fluid-mapping": "dynamic/pipe.right.fluid-mapping"
+  }
+}

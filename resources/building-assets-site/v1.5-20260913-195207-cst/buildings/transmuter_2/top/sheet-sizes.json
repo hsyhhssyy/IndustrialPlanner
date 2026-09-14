@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "partCount": 2,
+  "totalBytes": 91048,
+  "pages": [
+    {
+      "animation": "close_idle",
+      "index": 0,
+      "image": "animations/close_idle/spritesheet_000.webp",
+      "width": 1536,
+      "height": 640,
+      "columns": 2,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 2,
+      "bytes": 60636,
+      "sha256": "1e03493188912ce109cab1c74c25655568e8c4e37398f162b919e6f4c6d1d625"
+    },
+    {
+      "animation": "open_idle",
+      "index": 0,
+      "image": "animations/open_idle/spritesheet_000.webp",
+      "width": 768,
+      "height": 640,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 30412,
+      "sha256": "a3949ca2d026d164714914e4a3774a99b630b1df058b94ddf971a37808eaf4c4"
+    }
+  ],
+  "animations": [
+    {
+      "animation": "close_idle",
+      "partCount": 1,
+      "totalBytes": 60636
+    },
+    {
+      "animation": "open_idle",
+      "partCount": 1,
+      "totalBytes": 30412
+    }
+  ]
+}

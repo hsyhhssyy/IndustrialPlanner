@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "animation": "close_idle",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "origin": "top-left",
+  "order": "row-major",
+  "cellWidth": 256,
+  "cellHeight": 256,
+  "frameCount": 1,
+  "playbackFrameCount": 1,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "fps": 30,
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true,
+    "exactTransparentRgb": true,
+    "encoder": "cwebp 1.6.0",
+    "options": [
+      "-q",
+      "85",
+      "-alpha_q",
+      "100",
+      "-exact"
+    ]
+  },
+  "spatialMetadata": "../../spatial.json",
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 256,
+      "height": 256,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 8310,
+      "sha256": "8a5daf6767229c0fcf0d08f75b6a60a3d827b363e670d001fb153bb554c04c73",
+      "rgbComparison": {
+        "visiblePixelCount": 31466,
+        "meanAbsoluteError": 2.4664611538380052,
+        "rootMeanSquareError": 3.465252784995145,
+        "maxAbsoluteError": 53
+      }
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "pageIndex": 0,
+      "page": "spritesheet_000.webp",
+      "localIndex": 0,
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 70,
+      "playable": true,
+      "vatRow": 149,
+      "vatPhysicalRow": 305,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 1,
+        "count": 2,
+        "vatRows": {
+          "start": 149,
+          "endInclusive": 150,
+          "step": 1
+        }
+      }
+    }
+  ]
+}

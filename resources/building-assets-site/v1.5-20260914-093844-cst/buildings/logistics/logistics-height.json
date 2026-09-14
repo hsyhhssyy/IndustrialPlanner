@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "profile": "logistics-opaque-height-v1",
+  "pixelsPerCell": 128,
+  "components": [
+    {
+      "id": "grid_belt_01_mid",
+      "name": "传送带直段",
+      "spatial": "grid_belt_01_mid/top/spatial.json",
+      "occlusion": "grid_belt_01_mid/top/occlusion/occlusion.json"
+    },
+    {
+      "id": "grid_belt_01_left",
+      "name": "传送带左弯",
+      "spatial": "grid_belt_01_left/top/spatial.json",
+      "occlusion": "grid_belt_01_left/top/occlusion/occlusion.json"
+    },
+    {
+      "id": "grid_belt_01_right",
+      "name": "传送带右弯",
+      "spatial": "grid_belt_01_right/top/spatial.json",
+      "occlusion": "grid_belt_01_right/top/occlusion/occlusion.json"
+    },
+    {
+      "id": "log_pipe_02_mid",
+      "name": "管道与可染色流体",
+      "spatial": "log_pipe_02_mid/top/spatial.json",
+      "occlusion": "log_pipe_02_mid/top/occlusion/occlusion.json"
+    },
+    {
+      "id": "pipesupport_1_03",
+      "name": "管道直向支架",
+      "spatial": "pipesupport_1_03/top/spatial.json",
+      "occlusion": "pipesupport_1_03/top/occlusion/occlusion.json"
+    },
+    {
+      "id": "pipesupport_1_04",
+      "name": "管道转角支架",
+      "spatial": "pipesupport_1_04/top/spatial.json",
+      "occlusion": "pipesupport_1_04/top/occlusion/occlusion.json"
+    }
+  ],
+  "usage": {
+    "language": "zh-CN",
+    "load": "所有路径相对各自 JSON。components 列出空间元数据及高度元数据，occlusion.fields.file 为无损高度 WebP。",
+    "decode": "q = 256 * R + G; localY = heightMin + q / 65535 * (heightMax - heightMin)。R/G 为 0..255 字节；A=0 为空，A=255 为有效表面。",
+    "sampling": "线性数值数据，最近邻采样，不生成 mipmap，不做 sRGB 转换或有损重编码。",
+    "placement": "按 spatial 的 pivotPixels 与 pixelsPerCell 对齐颜色画布；世界高度为放置 baseY + localY，重叠实体取最大有效高度。",
+    "state": "按 stateMapping 选高度字段。裸直管为 null；带支架直管用 straightWithSupport，左右弯用 left/right。透明管壁及流体不写入实体高度。",
+    "assembly": "管道字段已烘焙 sourceAssembly 的支架平移和旋转，放置时只再应用整段变换。支架装配高度沿用现有近似值。"
+  }
+}

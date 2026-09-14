@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "sourcePackName": "A_pump+1_001_01_variant_dynamic_lod0",
+  "static": false,
+  "staticGeometry": false,
+  "materialAnimation": null,
+  "identicalSceneFrameCopies": 0,
+  "vatTexture": "T_pump+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 11,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "close_idle",
+    "animation": "A_interactive_pump+1_001_01_closeidle_01",
+    "startRow": 66,
+    "rowCount": 2,
+    "endRowInclusive": 67,
+    "loop": false
+  },
+  "stateMachine": {
+    "offset": 996,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_interactive_pump+1_001_01_close_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_interactive_pump+1_001_01_closeidle_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_interactive_pump+1_001_01_open_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_interactive_pump+1_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 640,
+  "height": 384,
+  "projection": "orthographic",
+  "viewDirection": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "glassControl": "normal",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 1.5,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_pump+1_001_01_variant_build_pump+1_001_01_vat",
+    "M_pump+1_001_01_variant_transparency+1_001_01_vat",
+    "M_pump+1_001_01_variant_com_alphatest+1_001_03_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_pump+1_001_01_variant_build_pump+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [],
+        "semanticDefaultTextures": []
+      },
+      {
+        "name": "M_pump+1_001_01_variant_transparency+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [],
+        "semanticDefaultTextures": [
+          {
+            "property": "_MROMap",
+            "texture": "T_default_mro_MRO",
+            "substitute": "neutral-mro"
+          }
+        ]
+      },
+      {
+        "name": "M_pump+1_001_01_variant_com_alphatest+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [],
+        "semanticDefaultTextures": [
+          {
+            "property": "_NormalMap",
+            "texture": "T_default_normal_N",
+            "substitute": "flat-tangent-normal"
+          }
+        ]
+      }
+    ],
+    "base": [
+      {
+        "name": "M_pedestal+1_001_03x03_04a_build_specialelectrictower+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [],
+        "semanticDefaultTextures": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 66,
+      "vatPhysicalRow": 127,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 66,
+          "endInclusive": 66,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 127,
+          "endInclusive": 127,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 67,
+      "vatPhysicalRow": 126,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 67,
+          "endInclusive": 67,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 126,
+          "endInclusive": 126,
+          "step": -1
+        }
+      }
+    }
+  ],
+  "sourceFrameCount": 2,
+  "retainedFrameCount": 2,
+  "canvasNormalization": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "none",
+    "resized": false
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      128,
+      128,
+      768,
+      512
+    ],
+    "resultFramePixels": [
+      640,
+      384
+    ],
+    "pixelsPerCell": 128,
+    "resized": false,
+    "edgeOverflowPolicy": {
+      "mode": "subtract-before-whole-cell-ceiling",
+      "maxPixelsPerSide": 2,
+      "inclusive": true,
+      "sourceAlphaUnionBoundsPixels": [
+        151,
+        134,
+        770,
+        506
+      ],
+      "sourceFootprintRectPixels": [
+        384,
+        128,
+        768,
+        512
+      ],
+      "rawOverflowPixels": {
+        "left": 233,
+        "top": 0,
+        "right": 2,
+        "bottom": 0
+      },
+      "effectiveOverflowPixels": {
+        "left": 231,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "ignoredByFinalCropPixels": {
+        "left": 0,
+        "top": 0,
+        "right": 2,
+        "bottom": 0
+      },
+      "minimumCanvasConstraint": null,
+      "evaluatedOn": "source PNG union alpha before WebP encoding"
+    }
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 2,
+    "playbackFrameCount": 2,
+    "durationMs": 67
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "sourceFrameCount": 2,
+    "retainedFrameCount": 2,
+    "sourceDurationMs": 67,
+    "retainedDurationMs": 67
+  },
+  "orientationAudit": {
+    "status": "passed",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "cameraPreflightStatus": "passed",
+    "expectedIntakeExtension": "left of the centered 3x3 logical footprint"
+  }
+}

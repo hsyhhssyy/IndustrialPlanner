@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "partCount": 7,
+  "totalBytes": 6465000,
+  "pages": [
+    {
+      "animation": "close",
+      "index": 0,
+      "image": "animations/close/spritesheet_000.webp",
+      "width": 3840,
+      "height": 4096,
+      "columns": 5,
+      "rows": 8,
+      "frameStart": 0,
+      "frameCount": 40,
+      "bytes": 1185216,
+      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
+    },
+    {
+      "animation": "close",
+      "index": 1,
+      "image": "animations/close/spritesheet_001.webp",
+      "width": 3840,
+      "height": 3584,
+      "columns": 5,
+      "rows": 7,
+      "frameStart": 40,
+      "frameCount": 32,
+      "bytes": 949912,
+      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
+    },
+    {
+      "animation": "close_idle",
+      "index": 0,
+      "image": "animations/close_idle/spritesheet_000.webp",
+      "width": 1536,
+      "height": 512,
+      "columns": 2,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 2,
+      "bytes": 59722,
+      "sha256": "525b12ebb447a6a596359eb90c39156cc9a5978fffab108e929d9a0345e9d488"
+    },
+    {
+      "animation": "open",
+      "index": 0,
+      "image": "animations/open/spritesheet_000.webp",
+      "width": 3840,
+      "height": 4096,
+      "columns": 5,
+      "rows": 8,
+      "frameStart": 0,
+      "frameCount": 40,
+      "bytes": 1185216,
+      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
+    },
+    {
+      "animation": "open",
+      "index": 1,
+      "image": "animations/open/spritesheet_001.webp",
+      "width": 3840,
+      "height": 3584,
+      "columns": 5,
+      "rows": 7,
+      "frameStart": 40,
+      "frameCount": 32,
+      "bytes": 949870,
+      "sha256": "f112b34de22f8cde70b2e8ee835bec29d391d88d0de44582cb6d304902c6daa6"
+    },
+    {
+      "animation": "open_idle",
+      "index": 0,
+      "image": "animations/open_idle/spritesheet_000.webp",
+      "width": 3840,
+      "height": 4096,
+      "columns": 5,
+      "rows": 8,
+      "frameStart": 0,
+      "frameCount": 40,
+      "bytes": 1185152,
+      "sha256": "0bf6cbb7fbb8b5c02cd55f866d93b52300300faed45d2f965b5428fa2028b764"
+    },
+    {
+      "animation": "open_idle",
+      "index": 1,
+      "image": "animations/open_idle/spritesheet_001.webp",
+      "width": 3840,
+      "height": 3584,
+      "columns": 5,
+      "rows": 7,
+      "frameStart": 40,
+      "frameCount": 32,
+      "bytes": 949912,
+      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
+    }
+  ],
+  "animations": [
+    {
+      "animation": "close",
+      "partCount": 2,
+      "totalBytes": 2135128
+    },
+    {
+      "animation": "close_idle",
+      "partCount": 1,
+      "totalBytes": 59722
+    },
+    {
+      "animation": "open",
+      "partCount": 2,
+      "totalBytes": 2135086
+    },
+    {
+      "animation": "open_idle",
+      "partCount": 2,
+      "totalBytes": 2135064
+    }
+  ]
+}

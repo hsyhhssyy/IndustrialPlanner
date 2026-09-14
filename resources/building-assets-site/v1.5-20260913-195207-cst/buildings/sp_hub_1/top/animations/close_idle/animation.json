@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "sourcePackName": "A_sphub+1_001_01_variant_dynamic_lod0",
+  "static": false,
+  "vatTexture": "T_sphub+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 20,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "close_idle",
+    "animation": "A_interactive_sphub+1_001_01_closeidle_01",
+    "startRow": 330,
+    "rowCount": 2,
+    "endRowInclusive": 331,
+    "loop": false
+  },
+  "stateMachine": {
+    "offset": 980,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_interactive_sphub+1_001_01_close_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_interactive_sphub+1_001_01_closeidle_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_interactive_sphub+1_001_01_open_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_interactive_sphub+1_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 1408,
+  "height": 1152,
+  "projection": "orthographic",
+  "viewDirection": [
+    -4.329779970841032e-17,
+    -4.329779970841032e-17,
+    -1.0
+  ],
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_sphub+1_001_01_variant_build_sphub+1_001_01_vat",
+    "M_sphub+1_001_01_variant_transparency+1_001_01_vat",
+    "M_sphub+1_001_01_variant_build_sphub+1_001_04_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_sphub+1_001_01_variant_build_sphub+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_sphub+1_001_01_variant_transparency+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [
+          {
+            "property": "_MROMap",
+            "texture": "T_default_mro_MRO"
+          }
+        ]
+      },
+      {
+        "name": "M_sphub+1_001_01_variant_build_sphub+1_001_04_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ],
+    "base": [
+      {
+        "name": "M_pedestalhub+1_001_01_build_sphub+1_001_02_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 330,
+      "vatPhysicalRow": 754,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 330,
+          "endInclusive": 330,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 331,
+      "vatPhysicalRow": 753,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 331,
+          "endInclusive": 331,
+          "step": 1
+        }
+      }
+    }
+  ],
+  "sourceFrameCount": 2,
+  "retainedFrameCount": 2,
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "transparentRgbIgnored": true,
+    "sourceFrameCount": 2,
+    "retainedFrameCount": 2,
+    "removedFrameCount": 0,
+    "sourceDurationMs": 70,
+    "retainedDurationMs": 70,
+    "explicitClosureFramesPreserved": 0
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      128,
+      256,
+      1536,
+      1408
+    ],
+    "resultFramePixels": [
+      1408,
+      1152
+    ],
+    "pixelsPerCell": 128,
+    "resized": false
+  },
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "verticalTransform": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "resized": false
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 2,
+    "playbackFrameCount": 2,
+    "durationMs": 70
+  }
+}

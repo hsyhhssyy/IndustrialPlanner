@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "building": "xiranite_oven_1",
+  "view": "top",
+  "spatial": "../spatial.json",
+  "fields": [
+    {
+      "name": "open_idle",
+      "file": "height_open_idle.webp",
+      "sourcePose": "open_idle",
+      "poseMetadata": {
+        "clip": "open_idle",
+        "vatRow": 2,
+        "vatPhysicalRow": 1099,
+        "static": false,
+        "vatLayout": "quaternion-translation",
+        "vatRowOrder": "reverse-single-stack"
+      },
+      "sourceIdentity": {
+        "model": "A_xiraniteoven+1_001_01_variant_dynamic_lod0",
+        "cab": "CAB-dcc1e65ec769fd93f4f478db27064bd0",
+        "pathId": 3463545489883919041,
+        "baseModel": "A_pedestal+1_001_05x05_01_variant_dynamic_lod0",
+        "baseCab": "CAB-dabba20686074219f2bc62d269730c93",
+        "basePathId": -2684407612663336400
+      },
+      "alphaTestAudit": {
+        "status": "passed-no-alpha-test-materials",
+        "source": "current-VFS exported material metadata",
+        "excludedGlass": "fully-transparent-glass"
+      },
+      "alphaTestProjection": {
+        "rulesApplied": 0,
+        "filteredPixels": 0,
+        "missingUVTriangles": 0
+      },
+      "cropCompatibility": null,
+      "geometryProjection": "frontmost opaque evaluated triangle; max sourceY per pixel",
+      "encoding": {
+        "format": "lossless-webp",
+        "channels": "RGBA",
+        "R": "uint16 height high byte",
+        "G": "uint16 height low byte",
+        "B": 0,
+        "A": "255 valid projected surface, 0 empty",
+        "sampling": "nearest",
+        "colorSpace": "linear-data"
+      },
+      "heightMin": 0.0015791004989296198,
+      "heightMax": 6.130175590515137,
+      "heightUnits": "source-world-units",
+      "coordinateSpace": "evaluated source-space scene Y; base included",
+      "worldToPixel": {
+        "x": "pixelX = pivotPixels.x + (sourceX - cameraCenterSource.x) * pixelsPerCell.x",
+        "y": "pixelY = pivotPixels.y + (sourceZ - cameraCenterSource.z) * pixelsPerCell.y",
+        "sample": "pixel-center; source top view +X right, +Z down",
+        "pivotPixels": {
+          "x": 320.0,
+          "y": 320.0
+        },
+        "cameraCenterSource": {
+          "x": 0.0,
+          "z": 0.0
+        },
+        "pixelsPerCell": {
+          "x": 128.0,
+          "y": 128.0
+        }
+      },
+      "validCoverage": {
+        "pixels": 401952,
+        "fraction": 0.981328125,
+        "boundsPixels": [
+          2,
+          4,
+          638,
+          636
+        ]
+      },
+      "triangleCount": 3747,
+      "clippedTriangles": 0,
+      "fullyOutsideTriangles": 0,
+      "excludedObjects": []
+    }
+  ],
+  "staticPose": "open_idle",
+  "stateMapping": {
+    "default": "open_idle"
+  },
+  "epsilon": {
+    "units": "source-world-units",
+    "value": 0.001,
+    "rule": "effectWorldY + epsilon < sceneWorldY rejects effect pixel"
+  }
+}

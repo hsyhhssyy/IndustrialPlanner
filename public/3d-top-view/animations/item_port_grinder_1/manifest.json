@@ -4,7 +4,14 @@
   "frameWidth": 384,
   "frameHeight": 384,
   "appliedSourceToPublishedTransform": "flip-top-bottom",
-  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260913-195207-cst",
+    "sourceVersion": "v1.5",
+    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
+    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
+    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+  },
   "maskFile": "mask.webp",
   "clips": {
     "open": {

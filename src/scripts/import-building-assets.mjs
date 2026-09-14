@@ -9,14 +9,18 @@ import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
 import { resolveBuildingAssetPublishTargets } from './building-asset-publish-config.mjs';
 import { publishDeviceSprite, publishDeviceSpriteAnimations } from './sync-device-sprites.mjs';
-import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
+// AI-REMOVED 2026-09-14: 旧实时物流发布入口退役；Trigger: 烘焙接入；Evidence: 新版 fluidPlayback 协议；Replacement: publishLogisticsBaked；Risk: Low；Human Review: Required。
+// Original code: import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
+import { publishLogisticsBaked } from './publish-logistics-baked.mjs';
 import { publishBuildingPortEffects } from './publish-building-port-effects.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const json = async (file) => JSON.parse(await readFile(file, 'utf8'));
 const save = async (file, value) => {
   await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, `${JSON.stringify(value, null, 2)}\n`);
+  // 日志以同目录 rename 替换，避免中断时留下被截断的恢复清单。
+  await writeFile(`${file}.next`, `${JSON.stringify(value, null, 2)}\n`);
+  await rename(`${file}.next`, file);
 };
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const registry = async () => (await tsImport('../registry/index.ts', {
@@ -76,9 +80,9 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   batch = path.resolve(batch);
   const stage = path.join(batch, 'stage');
   const plan = await json(path.join(batch, 'import-plan.json'));
-  const collection = await json(path.join(stage, 'resources/building-top-view-v15.json'));
-  if (!plan.logistics || plan.entries.length !== collection.entries.length
-    || collection.entries.some((entry) => !plan.entries.some((selected) => selected.entityId === entry.entityId))) {
+  const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : stage, 'resources/building-top-view-v15.json'));
+  if (plan.scope !== 'logistics' && ((!plan.logistics && !plan.deferredCategories?.includes('logistics')) || plan.entries.length !== collection.entries.length
+    || collection.entries.some((entry) => !plan.entries.some((selected) => selected.entityId === entry.entityId)))) {
     throw new Error('Publishing requires the complete approved mapping and logistics collection; partial import is not implemented');
   }
   await verifyOriginals(batch, plan);
@@ -91,6 +95,9 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   }
   const root = within(stage, plan.sourceSite.root);
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
+  if (plan.deferredCategories?.includes('logistics') && ['all', 'logistics', 'effects'].includes(category)) {
+    throw new Error('Deferred logistics batch is already assembled; validate/apply it, or prepare a new batch before republishing shared manifests');
+  }
   const results = [];
   for (const target of targets) {
     const { outputDirectory, resolution } = target;
@@ -113,20 +120,126 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       // 只清理本批暂存中由此类别独占的目录，避免失败重试留下未引用的旧编码文件。
       await rm(path.join(outputDirectory, 'logistics'), { recursive: true, force: true });
       await rm(path.join(outputDirectory, 'animations/logistics-contract2'), { recursive: true, force: true });
-      logistics = await publishLogisticsMaterials({ sourceDirectory: path.join(root, 'buildings/logistics'),
-      websiteCollection: await json(path.join(root, 'buildings/logistics/collection.json')),
-        outputDirectory: path.join(outputDirectory, 'logistics'), spriteDirectory, maskDirectory, registry: definitions, resolution });
+      logistics = await publishLogisticsBaked({ sourceDirectory: path.join(root, 'buildings/logistics'),
+        outputDirectory: path.join(outputDirectory, 'logistics'), spriteDirectory, maskDirectory, resolution, sourceSite: plan.sourceSite });
     }
     const heights = includes('effects') ? await publishBuildingPortEffects({ sourceDirectory: root, outputDirectory: path.join(outputDirectory, 'port-effects'),
       viewSources: plan.views, sourceVersion: plan.sourceSite.sourceVersion,
       collection: { entries: collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId)) }, resolution }) : null;
     if (heights?.issues.length) throw new Error(`Height/effect bindings unresolved: ${JSON.stringify(heights.issues)}`);
+    if (heights && plan.scope === 'logistics') {
+      plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/`)),
+        ...await retainWebsiteEffects(stage, outputDirectory, new Set(plan.views.map((view) => `${view.buildingId}/${view.view}`)))];
+    }
     results.push({ resolution, outputDirectory: path.relative(stage, outputDirectory), logistics,
       heightViews: heights && Object.keys(heights.views).length, sharedEffects: heights && Object.keys(heights.effects).length });
   }
   await save(path.join(batch, `publish-result.${category}.json`), results);
+  await save(path.join(batch, 'import-plan.json'), plan);
   if (category === 'all') return validateWebsiteBatch(batch);
   console.log(`Published category ${category}; run validate after all four categories finish`);
+}
+
+/** 局部物流导入只替换对应高度视图；其他建筑、特效及其来源字节按原样保留。 */
+async function retainWebsiteEffects(stage, outputDirectory, selectedViews) {
+  const prefix = `${path.relative(stage, outputDirectory)}/port-effects`;
+  const current = await json(within(projectRoot, `${prefix}/manifest.json`));
+  const next = await json(within(stage, `${prefix}/manifest.json`));
+  const retained = new Map();
+  const retain = async (file) => {
+    const relative = `${prefix}/${file}`;
+    await mkdir(path.dirname(within(stage, relative)), { recursive: true });
+    await copyFile(within(projectRoot, relative), within(stage, relative));
+    retained.set(relative, { path: relative, sha256: await fileHash(within(stage, relative)) });
+  };
+  for (const [key, view] of Object.entries(current.views)) if (!selectedViews.has(key)) {
+    next.views[key] = view;
+    for (const field of Object.values(view.fields)) await retain(field.file);
+  }
+  next.definitions = { ...current.definitions, ...next.definitions };
+  for (const [key, effect] of Object.entries(current.effects)) {
+    if (next.effects[key]) throw new Error(`Unexpected shared effect in logistics scope: ${key}`);
+    next.effects[key] = effect;
+    await retain(effect.height.file);
+    for (const page of effect.pages) await retain(page.file);
+  }
+  const fields = Object.values(next.views).flatMap((view) => Object.values(view.fields));
+  next.heightMin = Math.min(...fields.map((field) => field.min));
+  next.heightMax = Math.max(...fields.map((field) => field.max));
+  await save(within(stage, `${prefix}/manifest.json`), next);
+  return [...retained.values()];
+}
+
+/** 从已发布但尚未应用的批次中排除物流新交付，共享高度清单保留当前未导入的视图。 */
+export async function deferWebsiteLogistics(batch, destinationRoot = projectRoot) {
+  batch = path.resolve(batch);
+  if (await fileHash(path.join(batch, 'apply-journal.json'))) throw new Error('Cannot change scope after apply starts');
+  const plan = await json(path.join(batch, 'import-plan.json'));
+  if (plan.deferredCategories?.includes('logistics')) throw new Error('Logistics already deferred; continue with validate');
+  if (!plan.logistics) throw new Error('Batch has no logistics collection');
+  await verifyOriginals(batch, plan);
+  const stage = path.join(batch, 'stage');
+  const selectedViews = new Set(plan.views.filter((view) => !view.directory.startsWith('buildings/logistics/'))
+    .map((view) => `${view.buildingId}/${view.view}`));
+  const retained = [];
+  const deferred = [];
+  for (const { outputDirectory } of resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'))) {
+    const prefix = path.relative(stage, outputDirectory);
+    for (const directory of ['logistics', 'animations/logistics-contract2']) {
+      const current = within(destinationRoot, `${prefix}/${directory}`);
+      for (const file of await filesIn(current)) deferred.push({ path: `${prefix}/${directory}/${file}`, sha256: await fileHash(within(current, file)) });
+      await rm(path.join(outputDirectory, directory), { recursive: true, force: true });
+    }
+    for (const kind of ['belt', 'pipe']) for (const shape of ['straight', 'turn_cw', 'turn_ccw']) {
+      for (const directory of ['sprites', 'sprite-masks']) {
+        const file = `${prefix}/${directory}/${kind}_${shape}_1x1.webp`;
+        deferred.push({ path: file, sha256: await fileHash(within(destinationRoot, file)) });
+        await rm(within(stage, file), { force: true });
+      }
+    }
+    const relative = `${prefix}/port-effects`;
+    const current = await json(within(destinationRoot, `${relative}/manifest.json`));
+    const next = await json(within(stage, `${relative}/manifest.json`));
+    for (const [key, view] of Object.entries(current.views)) {
+      if (selectedViews.has(key)) continue;
+      next.views[key] = view;
+      for (const field of Object.values(view.fields)) {
+        const file = `${relative}/${field.file}`;
+        const sha256 = await fileHash(within(destinationRoot, file));
+        await mkdir(path.dirname(within(stage, file)), { recursive: true });
+        await copyFile(within(destinationRoot, file), within(stage, file));
+        retained.push({ path: file, sha256 });
+      }
+    }
+    // 每张图按自身 min/max 解码；全局范围用于运行时重编码，须涵盖合并后的全部视图。
+    const fields = Object.values(next.views).flatMap((view) => Object.values(view.fields));
+    next.heightMin = Math.min(...fields.map((field) => field.min));
+    next.heightMax = Math.max(...fields.map((field) => field.max));
+    const referenced = new Set(['manifest.json']);
+    for (const view of Object.values(next.views)) for (const field of Object.values(view.fields)) referenced.add(field.file);
+    for (const effect of Object.values(next.effects)) {
+      referenced.add(effect.height.file);
+      for (const page of effect.pages) referenced.add(page.file);
+    }
+    for (const file of await filesIn(within(stage, relative))) if (!referenced.has(file)) await rm(within(stage, `${relative}/${file}`));
+    await save(within(stage, `${relative}/manifest.json`), next);
+  }
+  const receipt = await json(path.join(batch, 'source-receipt.json'));
+  await save(path.join(batch, 'source-receipt.before-deferral.json'), receipt);
+  receipt.files = receipt.files.filter((file) => !file.path.startsWith('buildings/logistics/'));
+  receipt.logistics = false;
+  receipt.deferredCategories = ['logistics'];
+  plan.logistics = false;
+  plan.deferredCategories = ['logistics'];
+  plan.views = plan.views.filter((view) => !view.directory.startsWith('buildings/logistics/'));
+  plan.retainedProducts = [...new Map(retained.map((entry) => [entry.path, entry])).values()];
+  await rm(within(stage, `${plan.sourceSite.root}/buildings/logistics`), { recursive: true });
+  await save(path.join(batch, 'source-receipt.json'), receipt);
+  await save(within(stage, `${plan.sourceSite.root}/_import/source-receipt.json`), receipt);
+  await save(path.join(batch, 'import-plan.json'), plan);
+  await save(path.join(batch, 'deferred-logistics.json'), { categories: ['logistics'], unchangedFiles: deferred, retainedProducts: plan.retainedProducts });
+  await rm(path.join(batch, 'application-plan.json'), { force: true });
+  console.log(`Deferred logistics; preserved ${deferred.length} material files and ${plan.retainedProducts.length} height files. Run validate.`);
 }
 
 async function verifyImage(root, file, width, height, numeric = false) {
@@ -154,7 +267,7 @@ export async function validateWebsiteBatch(batch) {
   const stage = path.join(batch, 'stage');
   const plan = await json(path.join(batch, 'import-plan.json'));
   const receipt = await verifyOriginals(batch, plan);
-  const collection = await json(path.join(stage, 'resources/building-top-view-v15.json'));
+  const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : stage, 'resources/building-top-view-v15.json'));
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') });
   const definitions = await registry();
@@ -192,14 +305,29 @@ export async function validateWebsiteBatch(batch) {
       const material = await json(path.join(directory, 'manifest.json'));
       for (const page of Object.values(material.pages)) await verifyImage(directory, page.file, page.width, page.height);
       for (const frame of Object.values(material.frames)) verifyRect(frame.rect, material.pages[frame.page]);
-      const dynamicRoot = path.join(root, 'animations/logistics-contract2');
+      const dynamicRoot = path.join(root, 'logistics/baked');
       const dynamic = await json(path.join(dynamicRoot, 'manifest.json'));
-      for (const resource of Object.values(dynamic.resources)) await verifyImage(dynamicRoot, resource.file, resource.width, resource.height, resource.data ? 'rgba' : false);
+      if (dynamic.schemaVersion !== 2 || dynamic.format !== 'logistics-spritesheet-v2' || dynamic.resolution !== resolution) throw new Error('Invalid baked manifest');
+      for (const resource of Object.values(dynamic.pages)) {
+        await verifyImage(dynamicRoot, resource.file, resource.width, resource.height, resource.data ? 'rgba' : false);
+        if (await fileHash(path.join(dynamicRoot, resource.file)) !== resource.sha256) throw new Error(`Baked product hash differs: ${resource.file}`);
+      }
+      for (const frame of Object.values(dynamic.frames)) verifyRect(frame.rect, dynamic.pages[frame.page]);
+      for (const clip of Object.values(dynamic.clips)) if (clip.frames.length !== clip.phaseSamples || clip.frames.some((key) => !dynamic.frames[key])) throw new Error('Baked clip references missing frame');
     }
   }
   const products = [];
+  const retained = new Map((plan.retainedProducts ?? []).map((entry) => [entry.path, entry.sha256]));
   for (const file of await filesIn(path.join(stage, 'public'))) {
     const relative = `public/${file}`;
+    if (plan.deferredCategories?.includes('logistics') && /(?:\/logistics\/|\/animations\/logistics-contract2\/|\/(?:sprites|sprite-masks)\/(?:belt|pipe)_(?:straight|turn_cw|turn_ccw)_1x1\.webp$)/.test(relative)) {
+      throw new Error(`Deferred logistics product is staged: ${relative}`);
+    }
+    if (retained.has(relative)) {
+      if (await fileHash(within(stage, relative)) !== retained.get(relative)) throw new Error(`Retained height changed: ${relative}`);
+      products.push({ path: relative, sha256: retained.get(relative), retained: true });
+      continue;
+    }
     const target = [...targets].reverse().find((item) => within(stage, relative).startsWith(`${item.outputDirectory}/`));
     const spriteId = plan.entries.find((entry) => file.includes(`/${entry.spriteId}.`) || file.includes(`/${entry.spriteId}/`));
     const sourcePrefix = spriteId ? `buildings/${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
@@ -238,10 +366,16 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
   batch = path.resolve(batch);
   const application = await json(path.join(batch, 'application-plan.json'));
   if (destinationRoot === projectRoot) {
+    const plan = await json(path.join(batch, 'import-plan.json'));
+    // AI-CORRECTION 2026-09-14: 用户已授权烘焙运行时，只允许新版物流协议进入正式目录。
+    if (plan.logistics) {
+      const manifest = await json(path.join(batch, 'stage/public/3d-top-view/logistics/baked/manifest.json'));
+      if (manifest.format !== 'logistics-spritesheet-v2') throw new Error('Website logistics requires baked playback');
+    }
     if (application.some((entry) => !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/'))) {
       throw new Error('Application plan contains files outside building resource directories');
     }
-    const collection = await json(path.join(batch, 'stage/resources/building-top-view-v15.json'));
+    const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), 'resources/building-top-view-v15.json'));
     const definitions = await registry();
     const differences = collection.entries.filter((entry) => {
       const definition = definitions.entityDefinitions.find((candidate) => candidate.id === entry.entityId);
@@ -289,8 +423,8 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, batch] = process.argv.slice(2);
-  const commands = { publish: publishWebsiteBatch, validate: validateWebsiteBatch, apply: applyWebsiteBatch, restore: restoreWebsiteBatch,
+  const commands = { publish: publishWebsiteBatch, 'defer-logistics': deferWebsiteLogistics, validate: validateWebsiteBatch, apply: applyWebsiteBatch, restore: restoreWebsiteBatch,
     ...Object.fromEntries(['static', 'animations', 'logistics', 'effects'].map((category) => [`publish-${category}`, (directory) => publishWebsiteBatch(directory, category)])) };
-  if (!commands[command] || !batch || process.argv.length !== 4) throw new Error('Usage: node src/scripts/import-building-assets.mjs <publish[-static|-animations|-logistics|-effects]|validate|apply|restore> <batch-directory>');
+  if (!commands[command] || !batch || process.argv.length !== 4) throw new Error('Usage: node src/scripts/import-building-assets.mjs <publish[-static|-animations|-logistics|-effects]|defer-logistics|validate|apply|restore> <batch-directory>');
   await commands[command](batch);
 }

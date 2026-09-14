@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "spatialMetadata": "../../spatial.json",
+  "cellWidth": 1408,
+  "cellHeight": 1152,
+  "frameCount": 2,
+  "playbackFrameCount": 2,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 2816,
+      "height": 1152,
+      "columns": 2,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 2
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 1408,
+      "height": 1152,
+      "durationMs": 30,
+      "vatRow": 330,
+      "vatPhysicalRow": 754,
+      "playable": true
+    },
+    {
+      "index": 1,
+      "page": 0,
+      "localIndex": 1,
+      "x": 1408,
+      "y": 0,
+      "width": 1408,
+      "height": 1152,
+      "durationMs": 40,
+      "vatRow": 331,
+      "vatPhysicalRow": 753,
+      "playable": true
+    }
+  ],
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "exactTransparentRgb": true,
+    "encoder": "Pillow libwebp"
+  }
+}

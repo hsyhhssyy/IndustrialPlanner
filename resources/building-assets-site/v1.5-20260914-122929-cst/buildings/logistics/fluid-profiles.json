@@ -1,0 +1,1582 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "v1.5",
+  "profile": "endfield-pipe-fluid-colors-v1",
+  "profileCount": 20,
+  "phaseCounts": {
+    "liquid": 11,
+    "gas": 9
+  },
+  "itemIds": [
+    "item_liquid_acid",
+    "item_liquid_plant_grass_1",
+    "item_liquid_sewage",
+    "item_liquid_water",
+    "item_liquid_xiranite",
+    "item_liquid_xiranite_enr",
+    "item_liquid_xiranite_poly",
+    "item_liquid_xiranite_lowpoly",
+    "item_liquid_copper",
+    "item_liquid_copper_enr",
+    "item_liquid_plant_grass_2",
+    "item_gas_acid",
+    "item_activity_copper_poly_gas",
+    "item_gas_water",
+    "item_gas_xiranite",
+    "item_gas_xiranite_enr",
+    "item_gas_copper",
+    "item_gas_copper_enr",
+    "item_gas_copper_enr2",
+    "item_gas_inert"
+  ],
+  "source": {
+    "table": "FactoryItemTable",
+    "sha256": "65c21c3b3bcfb70aaf4850c9c4fd62a9826b38a45b4dddd9ad2c302471711de1",
+    "eligiblePhaseTypes": {
+      "2": "liquid",
+      "4": "gas"
+    }
+  },
+  "fluidProfiles": {
+    "item_liquid_acid": {
+      "id": "item_liquid_acid",
+      "name": "沉积酸",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 0,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 0,
+      "material": "M_tube_art_liquid_acid",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            238,
+            160,
+            150
+          ],
+          "displayRgba8": [
+            255,
+            238,
+            160,
+            150
+          ],
+          "hex": "#ffeea0",
+          "array": "T_WaterColorAtlas",
+          "layer": 0,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            210,
+            0,
+            77
+          ],
+          "displayRgba8": [
+            255,
+            210,
+            0,
+            77
+          ],
+          "hex": "#ffd200",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 0,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            137,
+            70,
+            45,
+            128
+          ],
+          "displayRgba8": [
+            137,
+            70,
+            45,
+            128
+          ],
+          "hex": "#89462d",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 0,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            255,
+            212,
+            126,
+            219
+          ],
+          "displayRgba8": [
+            255,
+            235,
+            187,
+            219
+          ],
+          "hex": "#ffebbb",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 0,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_plant_grass_1": {
+      "id": "item_liquid_plant_grass_1",
+      "name": "锦草溶液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 2,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 2,
+      "material": "M_tube_art_liquid_plant",
+      "colors": {
+        "body": {
+          "rgba8": [
+            12,
+            132,
+            75,
+            218
+          ],
+          "displayRgba8": [
+            12,
+            132,
+            75,
+            218
+          ],
+          "hex": "#0c844b",
+          "array": "T_WaterColorAtlas",
+          "layer": 2,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            38,
+            185,
+            56,
+            102
+          ],
+          "displayRgba8": [
+            38,
+            185,
+            56,
+            102
+          ],
+          "hex": "#26b938",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 2,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            20,
+            96,
+            30,
+            201
+          ],
+          "displayRgba8": [
+            20,
+            96,
+            30,
+            201
+          ],
+          "hex": "#14601e",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 2,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            135,
+            233,
+            137,
+            204
+          ],
+          "displayRgba8": [
+            192,
+            245,
+            194,
+            204
+          ],
+          "hex": "#c0f5c2",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 2,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_sewage": {
+      "id": "item_liquid_sewage",
+      "name": "污水",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 3,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 3,
+      "material": "M_tube_art_liquid_wastewater",
+      "colors": {
+        "body": {
+          "rgba8": [
+            41,
+            13,
+            5,
+            242
+          ],
+          "displayRgba8": [
+            41,
+            13,
+            5,
+            242
+          ],
+          "hex": "#290d05",
+          "array": "T_WaterColorAtlas",
+          "layer": 3,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            130,
+            81,
+            108,
+            128
+          ],
+          "displayRgba8": [
+            130,
+            81,
+            108,
+            128
+          ],
+          "hex": "#82516c",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 3,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            29,
+            2,
+            12,
+            77
+          ],
+          "displayRgba8": [
+            29,
+            2,
+            12,
+            77
+          ],
+          "hex": "#1d020c",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 3,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            92,
+            71,
+            125,
+            166
+          ],
+          "displayRgba8": [
+            162,
+            144,
+            186,
+            166
+          ],
+          "hex": "#a290ba",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 3,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_water": {
+      "id": "item_liquid_water",
+      "name": "清水",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 4,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 4,
+      "material": "M_tube_art_liquid_water",
+      "colors": {
+        "body": {
+          "rgba8": [
+            92,
+            159,
+            224,
+            179
+          ],
+          "displayRgba8": [
+            92,
+            159,
+            224,
+            179
+          ],
+          "hex": "#5c9fe0",
+          "array": "T_WaterColorAtlas",
+          "layer": 4,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            82,
+            177,
+            209,
+            120
+          ],
+          "displayRgba8": [
+            82,
+            177,
+            209,
+            120
+          ],
+          "hex": "#52b1d1",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 4,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            7,
+            36,
+            58,
+            255
+          ],
+          "displayRgba8": [
+            7,
+            36,
+            58,
+            255
+          ],
+          "hex": "#07243a",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 4,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            110,
+            203,
+            219,
+            232
+          ],
+          "displayRgba8": [
+            175,
+            231,
+            238,
+            232
+          ],
+          "hex": "#afe7ee",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 4,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_xiranite": {
+      "id": "item_liquid_xiranite",
+      "name": "液化息壤",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 7,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 7,
+      "material": "M_tube_art_liquid_xiranite",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            246,
+            153,
+            200
+          ],
+          "displayRgba8": [
+            255,
+            246,
+            153,
+            200
+          ],
+          "hex": "#fff699",
+          "array": "T_WaterColorAtlas",
+          "layer": 7,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            255,
+            203,
+            102
+          ],
+          "displayRgba8": [
+            255,
+            255,
+            203,
+            102
+          ],
+          "hex": "#ffffcb",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 7,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            248,
+            236,
+            155,
+            194
+          ],
+          "displayRgba8": [
+            248,
+            236,
+            155,
+            194
+          ],
+          "hex": "#f8ec9b",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 7,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            143,
+            173,
+            120,
+            244
+          ],
+          "displayRgba8": [
+            197,
+            215,
+            182,
+            244
+          ],
+          "hex": "#c5d7b6",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 7,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_xiranite_enr": {
+      "id": "item_liquid_xiranite_enr",
+      "name": "液化重息壤",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 8,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 8,
+      "material": "M_tube_art_liquid_hyperxiranite",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            247,
+            153,
+            215
+          ],
+          "displayRgba8": [
+            255,
+            247,
+            153,
+            215
+          ],
+          "hex": "#fff799",
+          "array": "T_WaterColorAtlas",
+          "layer": 8,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            228,
+            233,
+            193,
+            102
+          ],
+          "displayRgba8": [
+            228,
+            233,
+            193,
+            102
+          ],
+          "hex": "#e4e9c1",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 8,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            241,
+            210,
+            0,
+            194
+          ],
+          "displayRgba8": [
+            241,
+            210,
+            0,
+            194
+          ],
+          "hex": "#f1d200",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 8,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            162,
+            229,
+            109,
+            255
+          ],
+          "displayRgba8": [
+            209,
+            243,
+            175,
+            255
+          ],
+          "hex": "#d1f3af",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 8,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_xiranite_poly": {
+      "id": "item_liquid_xiranite_poly",
+      "name": "壤晶废液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 9,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 9,
+      "material": "M_tube_art_liquid_gel",
+      "colors": {
+        "body": {
+          "rgba8": [
+            17,
+            67,
+            59,
+            95
+          ],
+          "displayRgba8": [
+            17,
+            67,
+            59,
+            95
+          ],
+          "hex": "#11433b",
+          "array": "T_WaterColorAtlas",
+          "layer": 9,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            0,
+            206,
+            255,
+            26
+          ],
+          "displayRgba8": [
+            0,
+            206,
+            255,
+            26
+          ],
+          "hex": "#00ceff",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 9,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            15,
+            55,
+            36,
+            171
+          ],
+          "displayRgba8": [
+            15,
+            55,
+            36,
+            171
+          ],
+          "hex": "#0f3724",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 9,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            64,
+            118,
+            100,
+            255
+          ],
+          "displayRgba8": [
+            137,
+            181,
+            168,
+            255
+          ],
+          "hex": "#89b5a8",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 9,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_xiranite_lowpoly": {
+      "id": "item_liquid_xiranite_lowpoly",
+      "name": "惰性壤晶废液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 10,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 10,
+      "material": "M_tube_art_liquid_hypogel",
+      "colors": {
+        "body": {
+          "rgba8": [
+            6,
+            41,
+            35,
+            95
+          ],
+          "displayRgba8": [
+            6,
+            41,
+            35,
+            95
+          ],
+          "hex": "#062923",
+          "array": "T_WaterColorAtlas",
+          "layer": 10,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            34,
+            135,
+            159,
+            26
+          ],
+          "displayRgba8": [
+            34,
+            135,
+            159,
+            26
+          ],
+          "hex": "#22879f",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 10,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            15,
+            55,
+            36,
+            171
+          ],
+          "displayRgba8": [
+            15,
+            55,
+            36,
+            171
+          ],
+          "hex": "#0f3724",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 10,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            42,
+            96,
+            87,
+            255
+          ],
+          "displayRgba8": [
+            113,
+            165,
+            158,
+            255
+          ],
+          "hex": "#71a59e",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 10,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_copper": {
+      "id": "item_liquid_copper",
+      "name": "赤铜溶液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 11,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 11,
+      "material": "M_tube_art_liquid_copper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            72,
+            0,
+            255
+          ],
+          "displayRgba8": [
+            255,
+            72,
+            0,
+            255
+          ],
+          "hex": "#ff4800",
+          "array": "T_WaterColorAtlas",
+          "layer": 11,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            83,
+            0,
+            10
+          ],
+          "displayRgba8": [
+            255,
+            83,
+            0,
+            10
+          ],
+          "hex": "#ff5300",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 11,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            255,
+            0,
+            0,
+            69
+          ],
+          "displayRgba8": [
+            255,
+            0,
+            0,
+            69
+          ],
+          "hex": "#ff0000",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 11,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            255,
+            102,
+            105,
+            215
+          ],
+          "displayRgba8": [
+            255,
+            170,
+            172,
+            215
+          ],
+          "hex": "#ffaaac",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 11,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_copper_enr": {
+      "id": "item_liquid_copper_enr",
+      "name": "赫铜溶液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 12,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 12,
+      "material": "M_tube_art_liquid_hypercopper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            72,
+            0,
+            255
+          ],
+          "displayRgba8": [
+            255,
+            72,
+            0,
+            255
+          ],
+          "hex": "#ff4800",
+          "array": "T_WaterColorAtlas",
+          "layer": 12,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            116,
+            0,
+            128
+          ],
+          "displayRgba8": [
+            255,
+            116,
+            0,
+            128
+          ],
+          "hex": "#ff7400",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 12,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            255,
+            116,
+            0,
+            69
+          ],
+          "displayRgba8": [
+            255,
+            116,
+            0,
+            69
+          ],
+          "hex": "#ff7400",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 12,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            255,
+            119,
+            105,
+            240
+          ],
+          "displayRgba8": [
+            255,
+            182,
+            172,
+            240
+          ],
+          "hex": "#ffb6ac",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 12,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_liquid_plant_grass_2": {
+      "id": "item_liquid_plant_grass_2",
+      "name": "芽针溶液",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "liquid",
+      "phaseType": 2,
+      "subType": 13,
+      "atlasData": "PipeLiquidAtlasData",
+      "atlasLayer": 13,
+      "material": "M_tube_art_liquid_plant2",
+      "colors": {
+        "body": {
+          "rgba8": [
+            19,
+            118,
+            105,
+            255
+          ],
+          "displayRgba8": [
+            19,
+            118,
+            105,
+            255
+          ],
+          "hex": "#137669",
+          "array": "T_WaterColorAtlas",
+          "layer": 13,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-db830311100ea6af0afab52162029165_7622698014684465723_Texture2DArray",
+          "streamSha256": "b519c917a3356a18c69785d47633fd703e371ff3eecb64b8672b0645b321a270"
+        },
+        "skin": {
+          "rgba8": [
+            43,
+            209,
+            21,
+            255
+          ],
+          "displayRgba8": [
+            43,
+            209,
+            21,
+            255
+          ],
+          "hex": "#2bd115",
+          "array": "T_WaterSkinColorAtlas",
+          "layer": 13,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-9d2b46cc7274bce1f7aa154a238f4812_5988561676508966199_Texture2DArray",
+          "streamSha256": "b3e38c44101483f49603380f6958ecd60fc55c59ad41a0716c23d166df00e33e"
+        },
+        "skin2": {
+          "rgba8": [
+            21,
+            60,
+            36,
+            179
+          ],
+          "displayRgba8": [
+            21,
+            60,
+            36,
+            179
+          ],
+          "hex": "#153c24",
+          "array": "T_WaterSkinColor2Atlas",
+          "layer": 13,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-55da487244add3ff79adcca818a7d23d_-8933220189111898049_Texture2DArray",
+          "streamSha256": "48806486ac45881d7c9e0cae71ea2591340d8695a9ee3b3888854fe5aa516a3d"
+        },
+        "splash": {
+          "rgba8": [
+            82,
+            166,
+            82,
+            204
+          ],
+          "displayRgba8": [
+            154,
+            211,
+            154,
+            204
+          ],
+          "hex": "#9ad39a",
+          "array": "T_WaterSplashColorTextureArray",
+          "layer": 13,
+          "format": "RGBA_BC7_UNorm",
+          "object": "CAB-cd9e7a378dce0d3b692d7858d2129eae_2673383687997878308_Texture2DArray",
+          "streamSha256": "e20d29aec1d99538d2a199ef2696db904987165e601c4488fff6bc4963f7c486"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_acid": {
+      "id": "item_gas_acid",
+      "name": "酸气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 0,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 0,
+      "material": "M_fac_pipe_gas_acid",
+      "colors": {
+        "body": {
+          "rgba8": [
+            229,
+            201,
+            94,
+            36
+          ],
+          "displayRgba8": [
+            229,
+            201,
+            94,
+            36
+          ],
+          "hex": "#e5c95e",
+          "array": "T_FogColorAtlas",
+          "layer": 0,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            201,
+            170,
+            26,
+            128
+          ],
+          "displayRgba8": [
+            201,
+            170,
+            26,
+            128
+          ],
+          "hex": "#c9aa1a",
+          "array": "T_FogColor2Atlas",
+          "layer": 0,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_activity_copper_poly_gas": {
+      "id": "item_activity_copper_poly_gas",
+      "name": "实验息壤铜气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 1,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 1,
+      "material": "M_fac_pipe_gas_XiraniteCopper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            10,
+            13,
+            41
+          ],
+          "displayRgba8": [
+            255,
+            10,
+            13,
+            41
+          ],
+          "hex": "#ff0a0d",
+          "array": "T_FogColorAtlas",
+          "layer": 1,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            90,
+            168,
+            0,
+            153
+          ],
+          "displayRgba8": [
+            90,
+            168,
+            0,
+            153
+          ],
+          "hex": "#5aa800",
+          "array": "T_FogColor2Atlas",
+          "layer": 1,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_water": {
+      "id": "item_gas_water",
+      "name": "水蒸气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 4,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 4,
+      "material": "M_fac_pipe_gas_water",
+      "colors": {
+        "body": {
+          "rgba8": [
+            255,
+            255,
+            255,
+            33
+          ],
+          "displayRgba8": [
+            255,
+            255,
+            255,
+            33
+          ],
+          "hex": "#ffffff",
+          "array": "T_FogColorAtlas",
+          "layer": 4,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            81,
+            180,
+            248,
+            46
+          ],
+          "displayRgba8": [
+            81,
+            180,
+            248,
+            46
+          ],
+          "hex": "#51b4f8",
+          "array": "T_FogColor2Atlas",
+          "layer": 4,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_xiranite": {
+      "id": "item_gas_xiranite",
+      "name": "息壤气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 7,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 7,
+      "material": "M_fac_pipe_gas_xiranite",
+      "colors": {
+        "body": {
+          "rgba8": [
+            139,
+            192,
+            72,
+            38
+          ],
+          "displayRgba8": [
+            139,
+            192,
+            72,
+            38
+          ],
+          "hex": "#8bc048",
+          "array": "T_FogColorAtlas",
+          "layer": 7,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            143,
+            181,
+            108,
+            191
+          ],
+          "displayRgba8": [
+            143,
+            181,
+            108,
+            191
+          ],
+          "hex": "#8fb56c",
+          "array": "T_FogColor2Atlas",
+          "layer": 7,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_xiranite_enr": {
+      "id": "item_gas_xiranite_enr",
+      "name": "重息壤气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 8,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 8,
+      "material": "M_fac_pipe_gas_hyperxiranite",
+      "colors": {
+        "body": {
+          "rgba8": [
+            211,
+            238,
+            188,
+            36
+          ],
+          "displayRgba8": [
+            211,
+            238,
+            188,
+            36
+          ],
+          "hex": "#d3eebc",
+          "array": "T_FogColorAtlas",
+          "layer": 8,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            142,
+            255,
+            0,
+            250
+          ],
+          "displayRgba8": [
+            142,
+            255,
+            0,
+            250
+          ],
+          "hex": "#8eff00",
+          "array": "T_FogColor2Atlas",
+          "layer": 8,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_copper": {
+      "id": "item_gas_copper",
+      "name": "气态赤铜",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 11,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 11,
+      "material": "M_fac_pipe_gas_copper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            180,
+            76,
+            52,
+            38
+          ],
+          "displayRgba8": [
+            180,
+            76,
+            52,
+            38
+          ],
+          "hex": "#b44c34",
+          "array": "T_FogColorAtlas",
+          "layer": 11,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            209,
+            111,
+            80,
+            211
+          ],
+          "displayRgba8": [
+            209,
+            111,
+            80,
+            211
+          ],
+          "hex": "#d16f50",
+          "array": "T_FogColor2Atlas",
+          "layer": 11,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_copper_enr": {
+      "id": "item_gas_copper_enr",
+      "name": "气态赫铜",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 12,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 12,
+      "material": "M_fac_pipe_gas_hypercopper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            195,
+            45,
+            45,
+            41
+          ],
+          "displayRgba8": [
+            195,
+            45,
+            45,
+            41
+          ],
+          "hex": "#c32d2d",
+          "array": "T_FogColorAtlas",
+          "layer": 12,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            142,
+            1,
+            153
+          ],
+          "displayRgba8": [
+            255,
+            142,
+            1,
+            153
+          ],
+          "hex": "#ff8e01",
+          "array": "T_FogColor2Atlas",
+          "layer": 12,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_copper_enr2": {
+      "id": "item_gas_copper_enr2",
+      "name": "气态灼铜",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 14,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 14,
+      "material": "M_fac_pipe_gas_alloycopper",
+      "colors": {
+        "body": {
+          "rgba8": [
+            250,
+            145,
+            30,
+            43
+          ],
+          "displayRgba8": [
+            250,
+            145,
+            30,
+            43
+          ],
+          "hex": "#fa911e",
+          "array": "T_FogColorAtlas",
+          "layer": 14,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            255,
+            149,
+            0,
+            247
+          ],
+          "displayRgba8": [
+            255,
+            149,
+            0,
+            247
+          ],
+          "hex": "#ff9500",
+          "array": "T_FogColor2Atlas",
+          "layer": 14,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    },
+    "item_gas_inert": {
+      "id": "item_gas_inert",
+      "name": "惰气",
+      "nameSource": "ItemTable.name.id+I18nTextTable",
+      "phase": "gas",
+      "phaseType": 4,
+      "subType": 15,
+      "atlasData": "PipeGasAtlasData",
+      "atlasLayer": 15,
+      "material": "M_fac_pipe_gas_helium",
+      "colors": {
+        "body": {
+          "rgba8": [
+            0,
+            213,
+            255,
+            36
+          ],
+          "displayRgba8": [
+            0,
+            213,
+            255,
+            36
+          ],
+          "hex": "#00d5ff",
+          "array": "T_FogColorAtlas",
+          "layer": 15,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-cbd2c7cf53fb582fd33c859aedf95ea1_-3576973267196530123_Texture2DArray",
+          "streamSha256": "5d2c0cb81a306a034a84e4337fdd952431c8542531613a25945d82ab6fe97b73"
+        },
+        "skin": {
+          "rgba8": [
+            107,
+            247,
+            255,
+            76
+          ],
+          "displayRgba8": [
+            107,
+            247,
+            255,
+            76
+          ],
+          "hex": "#6bf7ff",
+          "array": "T_FogColor2Atlas",
+          "layer": 15,
+          "format": "RGBA_BC7_SRGB",
+          "object": "CAB-8ce51f7192cbaeca364f03c1ff16c123_-7920922050920825574_Texture2DArray",
+          "streamSha256": "fdd9b071dac4b8cc49362c4555e2a17be9c09986c213edbdea28136bdcc1cc3f"
+        }
+      },
+      "colorSpace": "rgba8 = decoded BC7 bytes; displayRgba8/hex = sRGB (UNorm color RGB converted from linear, alpha unchanged)",
+      "appearance": "2D reconstruction; shared pipe interior, phase-specific shading and moving boundaries"
+    }
+  }
+}

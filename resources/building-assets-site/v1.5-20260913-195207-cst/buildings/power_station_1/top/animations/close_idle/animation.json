@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "sourcePackName": "A_powerstation+1_001_01_variant_dynamic_lod0",
+  "static": false,
+  "vatTexture": "T_powerstation+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 2,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "close_idle",
+    "animation": "A_interactive_powerstation+1_001_01_closeidle_01",
+    "startRow": 72,
+    "rowCount": 2,
+    "endRowInclusive": 73,
+    "loop": false
+  },
+  "stateMachine": {
+    "offset": 1004,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_interactive_powerstation+1_001_01_close_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_interactive_powerstation+1_001_01_open_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_interactive_powerstation+1_001_01_closeidle_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_interactive_powerstation+1_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 256,
+  "height": 256,
+  "projection": "orthographic",
+  "viewDirection": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "glassControl": "normal",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_powerstation+1_001_01_variant_build_powerstation+1_001_01_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_powerstation+1_001_01_variant_build_powerstation+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ],
+    "base": [
+      {
+        "name": "pedestal+1_001_02x02_02_snow_coverage",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": true,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 72,
+      "vatPhysicalRow": 22,
+      "durationMs": 67,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 1,
+        "count": 2,
+        "vatRows": {
+          "start": 72,
+          "endInclusive": 73,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 22,
+          "endInclusive": 21,
+          "step": -1
+        }
+      }
+    }
+  ],
+  "sourceFrameCount": 2,
+  "retainedFrameCount": 1,
+  "canvasNormalization": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "none",
+    "resized": false
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      128,
+      128,
+      384,
+      384
+    ],
+    "resultFramePixels": [
+      256,
+      256
+    ],
+    "pixelsPerCell": 128,
+    "resized": false
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 1,
+    "playbackFrameCount": 1,
+    "durationMs": 67
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "sourceFrameCount": 2,
+    "retainedFrameCount": 1,
+    "sourceDurationMs": 67,
+    "retainedDurationMs": 67
+  }
+}

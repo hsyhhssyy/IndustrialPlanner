@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260912-151053-scale-fix-83a04cef",
+  "version": "v1.5",
+  "building": "log_hongs_bus_source",
+  "tableBuildingId": "log_hongs_bus_source",
+  "displayName": "仓库存取线源桩",
+  "view": "top",
+  "mode": "normal",
+  "rendererTemplate": "normal__0",
+  "canvasCells": [
+    5,
+    5
+  ],
+  "footprintCells": [
+    4,
+    4
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    640,
+    640
+  ],
+  "fps": 30,
+  "animations": [
+    "static"
+  ],
+  "animationCount": 1,
+  "webpPageCount": 1,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "baseSelection": "none",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [],
+  "rendererVariants": [
+    {
+      "key": "normal__0",
+      "machineModeType": "normal",
+      "machineRenderId": "log_hongs_bus_source",
+      "logisticBaseUnit": "",
+      "nonLogisticBaseUnit": "",
+      "activeSolidPorts": {}
+    }
+  ],
+  "rendererTemplateCount": 1,
+  "selectedBase": {
+    "field": "none",
+    "value": ""
+  },
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  },
+  "beautyTaskId": "20260912-151053-scale-fix-83a04cef",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      128,
+      128,
+      642,
+      642
+    ],
+    "sourceFootprintRectPixels": [
+      128,
+      128,
+      640,
+      640
+    ],
+    "rawOverflowPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 2,
+      "bottom": 2
+    },
+    "effectiveOverflowPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": {
+      "canvasCells": [
+        5,
+        5
+      ],
+      "footprintOffsetCells": [
+        0,
+        0
+      ]
+    },
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

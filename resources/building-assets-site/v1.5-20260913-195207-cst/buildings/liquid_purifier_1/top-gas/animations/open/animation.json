@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 1,
+  "sourcePackName": "A_liquidpurifier+2_001_01_dynamic_lod0",
+  "static": false,
+  "identicalSceneFrameCopies": 0,
+  "vatTexture": "T_liquidpurifier+2_001_01_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 3,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "open",
+    "animation": "A_fac_build_liquidpurifier+2_001_01_open_01",
+    "startRow": 118,
+    "rowCount": 11,
+    "endRowInclusive": 128,
+    "loop": false
+  },
+  "stateMachine": {
+    "offset": 1104,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_fac_build_liquidpurifier+2_001_01_close_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_fac_build_liquidpurifier+2_001_01_closeidle_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_fac_build_liquidpurifier+2_001_01_open_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_fac_build_liquidpurifier+2_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 640,
+  "height": 640,
+  "projection": "orthographic",
+  "viewDirection": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "glassControl": "excluded",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_04_vat",
+    "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_02_vat",
+    "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_03_vat",
+    "M_liquidpurifier+2_001_01_build_gas_02_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_04_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_02_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": true,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_liquidpurifier+2_001_01_build_liquidpurifier+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_liquidpurifier+2_001_01_build_gas_02_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ],
+    "base": [
+      {
+        "name": "pedestal+1_001_05x05_07_snow_coverage",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": true,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 118,
+      "vatPhysicalRow": 197,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 118,
+          "endInclusive": 118,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 197,
+          "endInclusive": 197,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 119,
+      "vatPhysicalRow": 196,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 119,
+          "endInclusive": 119,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 196,
+          "endInclusive": 196,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 120,
+      "vatPhysicalRow": 195,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 2,
+        "endIndexInclusive": 2,
+        "count": 1,
+        "vatRows": {
+          "start": 120,
+          "endInclusive": 120,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 195,
+          "endInclusive": 195,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 121,
+      "vatPhysicalRow": 194,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 3,
+        "endIndexInclusive": 3,
+        "count": 1,
+        "vatRows": {
+          "start": 121,
+          "endInclusive": 121,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 194,
+          "endInclusive": 194,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 122,
+      "vatPhysicalRow": 193,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 4,
+        "endIndexInclusive": 4,
+        "count": 1,
+        "vatRows": {
+          "start": 122,
+          "endInclusive": 122,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 193,
+          "endInclusive": 193,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 123,
+      "vatPhysicalRow": 192,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 5,
+        "endIndexInclusive": 5,
+        "count": 1,
+        "vatRows": {
+          "start": 123,
+          "endInclusive": 123,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 192,
+          "endInclusive": 192,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 124,
+      "vatPhysicalRow": 191,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 6,
+        "endIndexInclusive": 6,
+        "count": 1,
+        "vatRows": {
+          "start": 124,
+          "endInclusive": 124,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 191,
+          "endInclusive": 191,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 125,
+      "vatPhysicalRow": 190,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 7,
+        "endIndexInclusive": 7,
+        "count": 1,
+        "vatRows": {
+          "start": 125,
+          "endInclusive": 125,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 190,
+          "endInclusive": 190,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 126,
+      "vatPhysicalRow": 189,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 8,
+        "endIndexInclusive": 8,
+        "count": 1,
+        "vatRows": {
+          "start": 126,
+          "endInclusive": 126,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 189,
+          "endInclusive": 189,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 127,
+      "vatPhysicalRow": 188,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 9,
+        "endIndexInclusive": 9,
+        "count": 1,
+        "vatRows": {
+          "start": 127,
+          "endInclusive": 127,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 188,
+          "endInclusive": 188,
+          "step": -1
+        }
+      }
+    },
+    {
+      "vatRow": 128,
+      "vatPhysicalRow": 187,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 10,
+        "endIndexInclusive": 10,
+        "count": 1,
+        "vatRows": {
+          "start": 128,
+          "endInclusive": 128,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 187,
+          "endInclusive": 187,
+          "step": -1
+        }
+      }
+    }
+  ],
+  "sourceFrameCount": 11,
+  "retainedFrameCount": 11,
+  "canvasNormalization": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "none",
+    "resized": false
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      128,
+      128,
+      768,
+      768
+    ],
+    "resultFramePixels": [
+      640,
+      640
+    ],
+    "pixelsPerCell": 128,
+    "resized": false
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "playback": {
+    "mode": "once",
+    "frameCount": 11,
+    "playbackFrameCount": 11,
+    "durationMs": 367
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "sourceFrameCount": 11,
+    "retainedFrameCount": 11,
+    "sourceDurationMs": 367,
+    "retainedDurationMs": 367
+  }
+}

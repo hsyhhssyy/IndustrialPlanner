@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "mode": "dynamic",
+  "scope": "Normative reference for this exported 2D approximation, NOT the original complete game shader.",
+  "resourceIdentity": {
+    "format": "mode/semantic",
+    "examples": [
+      "static/pipe.pattern",
+      "dynamic/pipe.pattern"
+    ],
+    "merge": "Use the full resources key, never semantic alone. Duplicate full keys may be deduplicated only when sha256, dimensions, colorSpace, alpha, filter and wrap all agree. Keep different game/contract versions in separate registries.",
+    "migration": "Contract 1 bare key K becomes static/K or dynamic/K according to its originating manifest. Resource file paths stay relative to their own manifest, not the aggregate root."
+  },
+  "coordinates": {
+    "canvas": "128x128 pixels per 1x1 cell; pivot=(64,64); image origin top-left; +x right, +y down.",
+    "endpoints": "Canonical entry=(.5,0), exits straight=(.5,1), left=(0,.5), right=(1,.5). Rotate images and maps together about pivot.",
+    "map": "Read nearest decoded RGBA bytes. across=R/255; along=(256*G+B)/65535; coverage=A/255. Do not premultiply, apply sRGB decoding or use bilinear/mipmap filtering on maps.",
+    "geometry": "The accompanying JSON preserves source UV0/geometry for provenance; conveyor source UV0 is NOT the normalized polar mapping. Use the mapping WebP as authoritative for this 2D implementation.",
+    "conveyorMap": "Pixel center x=(column+.5)/128, y=(row+.5)/128. straight: across=(x-.1)/.8, along=y. left: dx=x, dy=y; right: dx=1-x,dy=y. corners: along=atan2(dy,dx)/(pi/2); radial=(sqrt(dx*dx+dy*dy)-.1)/.8; across=radial for left, 1-radial for right. Clamp to [0,1], use original mesh coverage.",
+    "pipeMap": "Barycentrically interpolated original UV0 of the nearest top surface, after recovered tube bend. Glass and liquid use their own mapping. Decode as above.",
+    "path": "s=routeOrigin+segmentStart+along. Each piece spans 1 path unit, including corners. segmentStart increments by 1; routeOrigin=5 in the demo is a configurable preview phase, not a game constant. Shared clocks and origin; never reset s per tile.",
+    "fillInterval": "Liquid occupancy is one continuous half-open path interval [fillStart,fillEnd], evaluated against the separate fluid mapping along coordinate. The preview pads fixed route boundaries by 1 cell; moving boundaries vary across the tube and with time (water-gas-v1)."
+  },
+  "sampling": {
+    "fract": "fract(x)=x-floor(x), including negative x.",
+    "source": "src(texture,u,v) = bilinearRepeat(decodedBytes/255, fract(u), 1-fract(v)). Input uses game bottom-left UV; decoded images use top-left rows. No color conversion, premultiplication or mipmaps for dynamic data.",
+    "texelCenters": "For W,H: px=fract(u)*W-.5; py=fract(1-v)*H-.5. Bilinear weights from fractional px,py, integer texels modulo W,H.",
+    "atlas": "Conveyor atlas: eight equal horizontal cells. Select cell 0 only: u=clamp(across/8, .5/W, 1/8-.5/W); v uses full height. For current 2048x256 source, rectangle [0,0,256,256], centers u in [.000244140625,.124755859375]. Never sample other cells or use source alpha as arrow opacity.",
+    "channelTable": {
+      "dynamic/conveyor.arrow": "R=gray arrow and halo intensity; G/B/A unused by reference. Threshold removes halo. Cell 0 only.",
+      "dynamic/conveyor.highlight": "R=flow intensity; G/B/A unused. Full texture with u=across, preserving transverse texture detail. gold-glow-20260910 appearance approximation.",
+      "dynamic/pipe.pattern": "Use R only with continuous patternU=fract(.5+across*(2*waterDirection-1)). G is an oppositely oriented authored label, retained as source data but not used by this 2D top-view adapter. Do not fold text U or splice G/R across the tube. B/A unused. Text disabled on both elbows. Revision: pipe-text-uv-v1.",
+      "dynamic/pipe.chevron": "R=double-V intensity in this 2D approximation. Original RGB retained; G/B/A not used by this reference.",
+      "dynamic/pipe.splash-noise": "Original T_fx_flow_300_D R modulates reconstructed water foam. No alpha-based masking.",
+      "static/pipe.{shape}.gas-body": "Frozen two-color mist preset for gas; replaces fluid-body and fluid-specular in static gas mode.",
+      "dynamic/pipe.fluid-motion": "RG sampled as nx=2R-1, ny=2G-1 for approximate shimmer only. B/A retained but unused. This is not a complete reconstruction of game normal decoding/lighting.",
+      "static/pipe.pattern": "RGB fixed pale tint; A is original source R. It is a ready color sprite, NOT the RG data map. Whole-image standalone swatch; placed pipe markers are prewarped static-marker assets.",
+      "static/pipe.chevron": "RGB fixed pale tint; A is original source R. Use placed static-marker assets for canonical pipe shapes.",
+      "static/pipe.{shape}.fluid-body": "Neutral RGB shading; A=interior coverage/opacity. Static mode uses ordinary Sprite tint; dynamic mode binds it as uBase layer 2, multiplies RGB by uTint and clips by occupied.",
+      "static/pipe.{shape}.fluid-specular": "Independent white specular RGB with coverage A. Static mode uses a Sprite; dynamic mode binds it as uBase layer 3 and clips by occupied. Do not multiply by liquid tint.",
+      "static/pipe.endpoint.connector-base": "Source com_fluidrepeater albedo/mesh/UV with approximate fixed top lighting; A is alpha-tested source mesh coverage.",
+      "static/pipe.endpoint.connector-highlight": "Restrained pale-blue display glint derived from the authored bright albedo inset, including a small baked bloom; straight alpha. The enabled emissive atlas samples black on this mesh UV island in v1.5.",
+      "static/pipe.endpoint.connector": "Normal source-over composite of connector-highlight above connector-base for simple Sprite consumers.",
+      "static/pipe.endpoint.whitening": "Low-alpha pale-blue falloff shaped by the real straight-pipe glass silhouette. Canonical pipe-outward direction is image down and the falloff points inward toward image top.",
+      "dynamic/*mapping": "R=8-bit across, GB=big-endian 16-bit along, A=coverage. Hidden RGB must survive alpha=0."
+    }
+  },
+  "parameters": {
+    "arrowSpeed": 1,
+    "timeOffset": 1,
+    "flowSpeed": 1.25,
+    "arrowSpace": 1,
+    "flowSpace": 0.27,
+    "source": "ECS initialization/material values; not live runtime capture",
+    "clock": "Shared route elapsed time; both independent effects continue across segment boundaries"
+  },
+  "uniforms": {
+    "uTime": "Shared accumulated belt seconds or water seconds; freeze water and fill-cycle clocks when fluid selection is none; pause preserves all clocks. No animation-off clock/ticker work.",
+    "uStart": "routeOrigin+segmentStart",
+    "uKind": "0 conveyor; 1 pipe",
+    "uCorner": "0 straight; 1 elbow",
+    "uFilled": "Route-wide thickness in [0,1]; 0 hides fluid, 1 preserves the accepted full-width preset. Intermediate values scale the liquid radius everywhere, independently of front position. This supersedes the former boolean-only interpretation.",
+    "uDirection": "waterDirection, default 0; only 0/1 supported",
+    "uLayer": "pipe: 0 marks ABOVE shell; 1 liquid shimmer; 2 tintable fluid body; 3 untinted fluid specular. Liquid layers are BELOW middle support and shell.",
+    "uFillBounds": "[fillStart,fillEnd,meniscusEdgeWidth,boundaryShape] in global path units. All fluid layers use the same shaped interval and fluid mapping. boundaryShape=min(1,progress*L*2,(1-progress)*L*2), tapering deformation at route ends.",
+    "uTint": "Source body color in display sRGB; layer 2. Neutral base remains reusable with alternate profiles.",
+    "uFluidType": "0 liquid; 1 gas. Gas uses fog opacity and suppresses liquid specular.",
+    "uSkin": "Source secondary color in display sRGB",
+    "uSkin2": "Source water dark-skin color; gas fallback uses uSkin",
+    "uFoam": "Source water splash color converted from linear BC7 UNorm to display sRGB; gas fallback uses uSkin",
+    "uAtlasHalfTexel": ".5 / arrow atlas width in decoded pixels; used to clamp the selected cell horizontally",
+    "uParams": "[arrowSpeed, flowSpeed, timeOffset, arrowSpace]",
+    "uPipe": "[staticDensity, flowDensity, flowOffset, flowSpeed]",
+    "uWidths": "[staticWidth, flowWidth, waterWaveSpeed, flowSpace]",
+    "uColor": "Premultiplied object tint/opacity from Pixi; [1,1,1,1] by default. Dynamic liquid body color is supplied separately through uTint.",
+    "unused": "waterSkinSpeed is preserved source provenance and has no effect in this 2D reference.",
+    "supported": "Finite values; arrowSpeed>=0, arrowSpace>0, flowSpace>0, densities>0; 0<pipe widths<1. Negative belt speed and width≈1 original branches are outside this reference."
+  },
+  "formulas": {
+    "conveyor": [
+      "phase=fract(s-t*arrowSpeed); A=clamp((src(arrow,atlasU,phase*arrowSpace).r-.55)*3,0,1).",
+      "F=src(highlight,across,fract((s-t*flowSpeed+timeOffset)*flowSpace)).r; H=clamp(max(F,0)^1.15*.78,0,1). This replaces the previous dark F^2*.34 treatment.",
+      "a=.9*A; overlayAlpha=(a+H*(1-a))*coverage. overlayRGB=([1,.78,.30]*a+[1,.59,.12]*H*(1-a))/max(a+H*(1-a),.000001). Arrow over independent gold light; normal premultiplied source-over onto static/conveyor.{shape}.base. Light color never depends on arrow presence.",
+      "Static preset: A=clamp((src(arrow,atlasU,fract(along-staticArrowPhase)).r-.55)*3,0,1)*coverage. arrowRGB=[1,.70,.25], alpha=.9*A; normal over base. All shapes use one common phase: staticArrowPhase=.5-sourceGlyphCenterV. Compute sourceGlyphCenterV as the intensity-weighted mean bottom-left V in original atlas cell 0, weights=clamp((R-.55)*3,0,1). Current v1.5 phase=-.0029871862169272845. Thus each glyph is at along=.5, NOT necessarily pixel (64,64) in corners. Do not offset individual corners to point toward the final exit. This selects the arrow from a shared animation phase; the static base/highlight remain a simplified baked preset, not a full captured frame.",
+      "Base is edge-core over edge-glow over surface, using ordinary source-over. Surface RGB=[.78,.35,.035], alpha=.09*coverage. d=distance to either belt edge in 128-pixel tile coordinates. Glow RGB=[1,.52,.08], alpha=.50*exp(-(d/3.2)^2)+.15*exp(-(d/7)^2). Core RGB=[1,.88,.46], alpha=.98*exp(-(d/.95)^4). Glow extends outside the belt silhouette within the existing 1-cell canvas. Do not mask it with the dynamic map.",
+      "Optional static/conveyor.{shape}.surface, .edge-glow, .edge-core replace .base, allowing separate frontend opacity controls. .arrow-static over .base replaces .static. Do NOT layer .base on .static or add glow/core over the already-composited .base/.static. Static preset has uniform warm surface and edge glow, no repeated bright hotspot in every tile."
+    ],
+    "pipe": [
+      "q=s*(2*waterDirection-1)-flowOffset; u=min(abs(across-.5),1).",
+      "remap(q,d,w)=(fract(q*d)*w-.5)/(w-1). av=remap(q+flowSpeed*t,flowDensity,flowWidth). C=(0<av<1) ? src(chevron,u,av).r : 0.",
+      "patternU=fract(.5+across*(2*waterDirection-1)); pv=remap(q,staticDensity,staticWidth). P=0 for corners or pv outside (0,1); otherwise src(pattern,patternU,pv).r. This continuous top-seam unwrap is a 2D readability adaptation, not the recovered original 3D R/G side selector. Keep the folded u for chevrons only. Do not flip images, mapping maps or geometry.",
+      "M=clamp(.9*max(C,P),0,1). Marks RGB=[.72,.91,1], alpha=M*glassCoverage.",
+      "fluid-thickness-cycle-v2 reconstructs observed behavior, not a recovered complete game state machine. For route length L: fillDuration=L/fillCellsPerSecond. A new head fills the route, then holding lasts holdDuration=1 second. During draining, the full path interval stays fixed and thickness=1-phaseTime/drainDuration, where drainDuration=2 seconds independently of L. At zero thickness, emptyDuration=.3 seconds precedes a new head. uFillBounds.w=0 outside filling, so no moving cap appears during drainage/recovery.",
+      "earlyRefill cuts drainage at drainDuration/2. Recovering starts from the CURRENT thickness, increases by elapsed/refillDuration (default 2 seconds for a full 0-to-1 change), then returns to holding. It does not restart the front. Switching the option on late in drainage preserves thickness; switching it off during recovery completes recovery and fully drains on the next stop. One controller and thickness value are shared by all segments. Only 2 cells/second is from the source transport table; hold/drain/recovery timing follows the visual demo requirements.",
+      "Read fluid mapping U,V separately; fluidS=routeOrigin+segmentStart+V. transverse=2*(fract(U+.5)-.5) unwraps the visible top seam. crossSection=sin(transverse*pi/2) projects the cylindrical angle across the visible tube. Liquid radius=.78+.028*wave, using two continuous path/time sine components in referenceShader.fragment; edge coverage uses a .025-radius smooth transition. These visual values approximate the recovered thickness-driven inset, not captured runtime thickness or wave amplitude. Gas uses a wider, softer radial falloff.",
+      "Water uses a planar front: head=fillEnd and tail=fillStart, without transverse offsets. The front antialias width is fillEdgeWidth=.012 cells. Radius waves remain on the longitudinal sides. This supersedes the rounded-cap approximation after in-game screenshot review. Gas retains .18-cell soft transitions with multi-scale procedural noise. Full formulas are in referenceShader.fragment.",
+      "uFillBounds provides the global interval and deformation taper. occupied=interior*smoothstep(tail-edge,tail+edge,fluidS)*(1-smoothstep(head-edge,head+edge,fluidS)) when enabled and fluid coverage>.5, else zero. The same inset, wave and shaped occupancy clip body, shimmer/foam and specular. Dynamic liquid reflection follows its inset moving edge; the original static reflection remains a weak additional term.",
+      "Water: source normal RG drives shimmer and mixes source body/skin colors. Source T_fx_flow_300_D R modulates foam. A filled white cap, independent of fluid tint, covers the planar cross-section and fades backward: whiteCap=1-smoothstep(.10,1.20,max(head-fluidS,0)); cap alpha=.96*occupied*whiteCap*boundaryShape. It disappears during in-place recovery. The screenshot shows a broad white-to-blue transition, not a thin outlined rim. Gas keeps two-color three-octave value noise, softer density and no white water cap.",
+      "Static water uses a neutral body Sprite tinted with its source body hex plus a separate untinted specular Sprite. Static gas uses the precomputed gas-body Sprite: a periodic two-frequency density preset mixed from the two source fog colors. Static images perform no per-frame work.",
+      "Static marked preset: chevron uses q=-(sourceV-.5)-.5/flowDensity, no clock; text uses s=5+sourceV, zero water time and the same continuous patternU/R sampling. Prebaked images are authoritative. Static layout places static-marker every 6 segments at index%6==3; configurable product choice, not recovered dynamic periodicity.",
+      "Full-texture periods at direction 0: text 1/staticDensity (~9.09), double-V 1/flowDensity (~5.56) path units, not an integer spacing of distinct pipe meshes."
+    ],
+    "endpointConnector": [
+      "Use static/pipe.endpoint.connector directly, or source-over static/pipe.endpoint.connector-highlight above static/pipe.endpoint.connector-base. Do not draw the composite and its component layers together.",
+      "Place exactly two per continuous route: one centered on the first segment entry boundary and one on the last segment exit boundary. For each endpoint, rotate the canonical image down-axis toward the route-outward tangent. Draw optional static/pipe.endpoint.whitening below the connector; it then fades toward the route interior. Never place either at internal tile seams.",
+      "Connected and unconnected route endpoints use the same com_fluidrepeater mesh/material. Native collection changes adjusted endpoint positions by connection state but does not select a different visual. The connector material enables a static emissive atlas, but this mesh UV island samples only black in v1.5. The visible glint and adjacent whitening are screenshot-calibrated static layers, not evidence of an unconnected-only animation."
+    ],
+    "tint": "Read decoded static RGB as display-referred sRGB numbers. SpriteRGB=RGB*(hexTintRGB/255); alpha unchanged. Specular, shell, supports and marks retain their own colors.",
+    "over": "Use normal premultiplied source-over, NOT additive: CoutPremul=Cs*As + CdPremul*(1-As); Aout=As+Ad*(1-As). Procedural GLSL layers emit vec4(RGB*alpha,alpha); bound fluid-body/specular uBase textures use Pixi upload premultiplication and are multiplied directly by occupied. WebPs store straight alpha; static image upload premultiplies once, dynamic data upload never does.",
+    "colorPipeline": "Reference computes color constants, tint and blending in encoded display/sRGB numeric space with no sRGB framebuffer linearization, matching this Pixi WebGL demo. It is not physically linear lighting. Data samplers return decoded bytes/255 untouched. Other engines must choose the same conversions to match.",
+    "bake": "Static color images are precomputed; use delivered pixels. Q85 RGB compression and antialiasing mean mathematical bake reconstruction is not bit-identical. Data WebP and alpha are lossless. Pipe color layers use 3x supersampling and premultiplied area reduction."
+  },
+  "drawOrder": {
+    "conveyor": [
+      "static/conveyor.{shape}.base",
+      "dynamic conveyor overlay"
+    ],
+    "pipe": [
+      "support-back",
+      "fluid-body tinted and clipped to continuous fill interval",
+      "dynamic fluid shimmer clipped to the same interval",
+      "fluid-specular clipped to the same interval",
+      "support-middle",
+      "shell",
+      "dynamic marks OR static-marker",
+      "support-front",
+      "route endpoint connector at first/last boundaries"
+    ],
+    "staticConveyor": [
+      "static/conveyor.{shape}.static"
+    ],
+    "supports": "Every elbow: 1 required. Straight spacing is configurable. Rotate support.straight 90 degrees around source Y relative to the canonical pipe direction before splitting/placing layers; left corner uses 90 degrees and right corner uses 0. Skip nonexistent empty split layers; standalone support.straight/corner are full pieces, do not overlay them in addition to split layers."
+  },
+  "loading": {
+    "static": "Load only static manifest resources, ordinary Sprites. No import of dynamic.js, no dynamic maps/textures, no ticker. Specification JSON is documentation, not an eager resource dependency.",
+    "dynamic": "Add compatible contract-2 dynamic resources on demand; keep static bases and bind fluid-body/specular textures as shader inputs for interval clipping. On disable cancel pending loads, switch to static assets, stop RAF and release unused dynamic GPU textures/bitmaps.",
+    "reference": "The vertex/fragment strings below are the exact code exported by dynamic.js in the full example. Bind sampler roles as described; GLSL is for PixiJS 8.17.0 / WebGL2, not automatic WebGPU support."
+  },
+  "shaderBindings": {
+    "conveyor": {
+      "uMap": "dynamic/conveyor.{shape}.mapping",
+      "uGlyph": "dynamic/conveyor.arrow",
+      "uFlow": "dynamic/conveyor.highlight",
+      "uPattern": "dynamic/conveyor.arrow (unused)",
+      "uFluidMap": "dynamic/conveyor.{shape}.mapping (unused)",
+      "uBase": "dynamic/conveyor.{shape}.mapping (unused fallback)",
+      "uSplash": "dynamic/conveyor.highlight (unused)"
+    },
+    "pipe": {
+      "uMap": "dynamic/pipe.{shape}.mapping",
+      "uGlyph": "dynamic/pipe.chevron",
+      "uFlow": "dynamic/pipe.fluid-motion",
+      "uPattern": "dynamic/pipe.pattern",
+      "uFluidMap": "dynamic/pipe.{shape}.fluid-mapping",
+      "uSplash": "dynamic/pipe.splash-noise",
+      "uBase": "static/pipe.{shape}.fluid-body for layer 2; static/pipe.{shape}.fluid-specular for layer 3; mapping fallback for other layers"
+    }
+  },
+  "referenceShader": {
+    "backend": "PixiJS 8.17.0 WebGL2; Pixi injects GLSL version and matrix/color bindings. Quad uses top-left UV origin.",
+    "vertex": "precision highp float;\nin vec2 aPosition;in vec2 aUV;out vec2 vUV;\nuniform mat3 uProjectionMatrix;uniform mat3 uWorldTransformMatrix;uniform mat3 uTransformMatrix;\nvoid main(){vUV=aUV;vec3 p=uProjectionMatrix*uWorldTransformMatrix*uTransformMatrix*vec3(aPosition,1.);gl_Position=vec4(p.xy,0.,1.);}",
+    "fragment": "precision highp float;\nin vec2 vUV;out vec4 finalColor;\nuniform sampler2D uMap;uniform sampler2D uGlyph;uniform sampler2D uFlow;uniform sampler2D uPattern;uniform sampler2D uFluidMap;\nuniform float uTime;uniform float uStart;uniform float uKind;uniform float uCorner;uniform float uFilled;uniform float uDirection;uniform float uLayer;\nuniform float uAtlasHalfTexel;\nuniform sampler2D uBase;\nuniform sampler2D uSplash;\nuniform float uFluidType;\nuniform vec4 uSkin;uniform vec4 uSkin2;uniform vec4 uFoam;\nuniform vec4 uParams;uniform vec4 uPipe;uniform vec4 uWidths;uniform vec4 uFillBounds;uniform vec4 uTint;uniform vec4 uColor;\nvec4 src(sampler2D tex,vec2 uv){return texture(tex,vec2(fract(uv.x),1.-fract(uv.y)));}\nfloat remap(float q,float density,float width){return (fract(q*density)*width-.5)/(width-1.);}\nfloat hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+1.),f.x),f.y);}\nfloat fog(vec2 p){return .57*noise(p)+.28*noise(p*2.03+7.)+.15*noise(p*4.01+19.);}\n// Authored top-view radius, radius variation, spatial frequency and time rate.\n// The game's thickness-driven inset is recovered; these viewing values are not.\nconst vec4 WATER_SURFACE=vec4(.78,.028,.65,.8);\nvoid main(){vec4 map=texture(uMap,vUV);if(map.a<.5){finalColor=vec4(0.);return;}\n float across=map.r;float along=(map.g*255.*256.+map.b*255.)/65535.;float s=uStart+along;\n vec3 rgb=vec3(0.);float alpha=0.;\n if(uKind<.5){\n  float phase=fract(s-uTime*uParams.x);float atlasU=clamp(across/8.,uAtlasHalfTexel,1./8.-uAtlasHalfTexel);float arrow=clamp((src(uGlyph,vec2(atlasU,phase*uParams.w)).r-.55)*3.,0.,1.);\n  float flow=src(uFlow,vec2(across,fract((s-uTime*uParams.y+uParams.z)*uWidths.w))).r;\n  float light=clamp(pow(max(flow,0.),1.15)*.78,0.,1.);float arrowAlpha=arrow*.9;\n  alpha=arrowAlpha+light*(1.-arrowAlpha);\n  rgb=(vec3(1.,.78,.30)*arrowAlpha+vec3(1.,.59,.12)*light*(1.-arrowAlpha))/max(alpha,.000001);\n }else{\n  float q=s*(2.*uDirection-1.)-uPipe.z;float u=min(abs(across-.5),1.);float av=remap(q+uPipe.w*uTime,uPipe.y,uWidths.y);\n  float glyph=(av>0.&&av<1.)?src(uGlyph,vec2(u,av)).r:0.;\n  // Unwrap the top seam continuously. Folding U and mixing R/G splices\n  // oppositely oriented halves of the label. Keep the chevron UV above.\n  float patternU=fract(.5+across*(2.*uDirection-1.));\n  float pv=remap(q,uPipe.x,uWidths.x);vec4 pattern=src(uPattern,vec2(patternU,clamp(pv,0.,1.)));\n float pat=(uCorner<.5&&pv>0.&&pv<1.)?pattern.r:0.;\n float marks=clamp(max(glyph,pat)*.9,0.,1.);\n  if(uLayer<.5){finalColor=vec4(vec3(.72,.91,1.)*marks,marks)*map.a*uColor;return;}\n  if(uFilled<=0.){finalColor=vec4(0.);return;}\n  vec4 fm=texture(uFluidMap,vUV);float fv=(fm.g*255.*256.+fm.b*255.)/65535.;float fluidS=uStart+fv;\n  // Unwrap around the visible top seam before transverse deformation/noise.\n  float transverse=(fract(fm.r+.5)-.5)*2.;\n  // Original cylindrical UV measures angle, not distance across the tube.\n  // Project it before shrinking the fluid so straight and bent pieces share\n  // the same inset, with a continuous wave across their common path coordinate.\n  float crossSection=sin(transverse*1.570796327);float radial=abs(crossSection);\n  float wave=.72*sin(6.283185307*(fluidS*WATER_SURFACE.z-uTime*WATER_SURFACE.w))\n             +.28*sin(6.283185307*(fluidS*WATER_SURFACE.z*2.17-uTime*WATER_SURFACE.w*.63)+1.4);\n  float thickness=clamp(uFilled,0.,1.);\n  float radius=(WATER_SURFACE.x+WATER_SURFACE.y*wave)*thickness;\n  // About one source-map pixel of coverage; also works on WebGL1 contexts\n  // where the optional derivatives extension is not enabled by Pixi.\n  float aa=.025;\n  float interior=1.-smoothstep(radius-aa,radius+aa,radial);\n  if(uFluidType>.5){radius=(.88+.018*wave)*thickness;interior=1.-smoothstep(radius-.16*thickness,radius+.025,radial);}\n  interior*=smoothstep(0.,.07,thickness);\n  float surfaceAcross=crossSection/max(radius,.1);float surfaceRadial=abs(surfaceAcross);\n  vec2 normal=src(uFlow,vec2(fm.r*2.,fluidS-uTime*uWidths.z)).rg*2.-1.;\n  float turbulence=fog(vec2(transverse*2.6,fluidS*1.65-uTime*.85));\n  float shape=uFillBounds.w;float edge=max(uFillBounds.z*shape,.0001);\n  // The in-game screenshot shows a planar cross-section, with a broad white\n  // cap fading BACK into the water. Radius waves affect the sides, not the cut.\n  float head=uFillBounds.y;\n  float tail=uFillBounds.x;\n  if(uFluidType>.5){edge=max(.18*shape,.0001);head=uFillBounds.y-shape*(.25*radial+.26*turbulence);tail=uFillBounds.x+shape*(.18*radial+.20*turbulence);}\n  float occupied=0.;\n  if(fm.a>.5){occupied=interior*smoothstep(tail-edge,tail+edge,fluidS)*(1.-smoothstep(head-edge,head+edge,fluidS));}\n  float splash=src(uSplash,vec2(fm.r*2.,fluidS*2.-uTime*1.7)).r;\n  float frontBand=exp(-pow((fluidS-head+.065)/.14,2.))*shape;\n  float tailBand=exp(-pow((fluidS-tail-.04)/.1,2.))*shape;\n  float shimmer=pow(abs(normal.x*.7+normal.y*.3),2.)*.10*occupied;\n  if(uFluidType>.5){\n   // Two fog colors and a soft turbulent plume, without a liquid specular rim.\n   if(uLayer<1.5){alpha=occupied*smoothstep(.48,.78,turbulence)*.18;rgb=uSkin.rgb;}\n   else if(uLayer<2.5){alpha=texture(uBase,vUV).a*occupied*(.20+.72*smoothstep(.18,.78,turbulence));rgb=mix(uTint.rgb*.72,uSkin.rgb,clamp(turbulence*1.2,0.,1.));}\n   else{alpha=0.;}\n  }\n  else if(uLayer<1.5){\n   float foamAlpha=shimmer+occupied*(frontBand*(.16+.30*splash)+tailBand*.09);\n   // A filled, pale cross-section with a longitudinal gradient, not a rim.\n   // It disappears during in-place recovery, which has no new leading front.\n   float whiteCap=(1.-smoothstep(.10,1.20,max(head-fluidS,0.)))*shape;\n   float whiteAlpha=occupied*whiteCap*.96;\n   alpha=whiteAlpha+foamAlpha*(1.-whiteAlpha);\n   rgb=(vec3(1.)*whiteAlpha+uFoam.rgb*foamAlpha*(1.-whiteAlpha))/max(alpha,.000001);\n  }\n  else if(uLayer<2.5){\n   vec4 base=texture(uBase,vUV);\n   base.rgb*=mix(uTint.rgb,uSkin.rgb,.22+.10*normal.x);\n   base.rgb=mix(base.rgb,uSkin2.rgb*base.a,.09*surfaceRadial*surfaceRadial);\n   finalColor=base*occupied*uColor;return;\n  }else{\n   // Surface reflection follows the moving inset edge; the old baked\n   // reflection alone lies at the undeformed mesh boundary.\n   float rim=exp(-pow((surfaceRadial-.91)/.065,2.));\n   float lighting=.65+.35*clamp(-surfaceAcross,0.,1.);\n   alpha=occupied*(texture(uBase,vUV).a*.35+rim*.17*lighting);\n   rgb=vec3(.82,.94,1.);\n  }\n }\n alpha*=map.a;finalColor=vec4(rgb*alpha,alpha)*uColor;\n}"
+  },
+  "referenceController": {
+    "language": "JavaScript",
+    "source": "export function createFluidCycle(config,total,origin=5,earlyRefill=false){\n const fillDuration=total/config.fillCellsPerSecond;\n const drainDuration=config.drainDuration??2;\n const holdDuration=config.holdDuration??1;\n const emptyDuration=config.emptyDuration??.3;\n const refillDuration=config.refillDuration??2;\n let state='filling',phaseTime=0,elapsed=0,cycle=0,recoveryFrom=.5;\n const level=()=>state==='empty'?0:state==='draining'?Math.max(0,1-phaseTime/drainDuration)\n  :state==='recovering'?Math.min(1,recoveryFrom+phaseTime/refillDuration):1;\n const duration=()=>({filling:fillDuration,holding:holdDuration,draining:drainDuration*(earlyRefill?.5:1),\n  recovering:(1-recoveryFrom)*refillDuration,empty:emptyDuration}[state]);\n const snapshot=()=>{\n  const progress=Math.min(1,phaseTime/duration()),thickness=level(),hasHead=state==='filling';\n  return {state,supply:['filling','holding','recovering'].includes(state),thickness,hasHead,\n   occupancy:hasHead?progress:thickness>0?1:0,start:origin-1,end:hasHead?origin+total*progress:origin+total+1,\n   total,cycle,progress,phaseTime,elapsed,fillDuration,drainDuration,holdDuration,emptyDuration,\n   recoveryDuration:(1-recoveryFrom)*refillDuration,earlyRefill};\n };\n const advance=delta=>{\n  let remaining=Math.max(0,Number(delta)||0);\n  do{\n   const step=Math.min(remaining,Math.max(0,duration()-phaseTime));\n   phaseTime+=step;elapsed+=step;remaining-=step;\n   if(phaseTime+1e-9<duration())break;\n   if(state==='filling')state='holding';\n   else if(state==='holding')state='draining';\n   else if(state==='draining'){\n    recoveryFrom=level();\n    if(earlyRefill&&recoveryFrom>0){state='recovering';cycle++;}else state='empty';\n   }else if(state==='recovering')state='holding';\n   else{state='filling';cycle++;}\n   phaseTime=0;\n  }while(remaining>1e-9);\n  return snapshot();\n };\n return {total,snapshot,advance,setEarlyRefill(value){earlyRefill=Boolean(value);return advance(0);},\n  seek(time){state='filling';phaseTime=0;elapsed=0;cycle=0;recoveryFrom=.5;return advance(time);}};\n}"
+  },
+  "fidelity": {
+    "recovered": [
+      "Source meshes/textures/material parameter provenance",
+      "Water/gas item phase, material subtype-to-atlas-layer mapping and decoded BC7 colors; 500 ms transport step",
+      "Pipe horizontal bend and original UV",
+      "Belt time/space expressions and pipe phase/density",
+      "Continuous-route endpoints use com_fluidrepeater in both connection states; its configured emissive atlas is non-animated and samples black on this mesh UV island"
+    ],
+    "approximate": [
+      "Conveyor polar corner phase, colors/alpha and fixed marker placement",
+      "Pipe glass opacity/color, water head/tail ripples and foam, gas two-color procedural turbulence sharing the liquid interior geometry",
+      "Observed whole-route drainage and interrupted recovery in fluid-thickness-cycle-v2; demo timing and white head highlight are not captured game runtime parameters",
+      "Continuous R-channel top-view pipe text unwrap replaces original 3D side-channel selection (pipe-text-uv-v1)",
+      "Endpoint connector top lighting, albedo glint and adjacent whitening falloff",
+      "Support center-height fit and layered fluid depth clamp"
+    ],
+    "unsupported": [
+      "Complete original gas mesh/shader and 3D splash behavior",
+      "SceneColor refraction",
+      "Original runtime fill/drain timing, placement/height/spacing and instance state"
+    ],
+    "completeness": "These are fidelity/scope gaps, not missing ZIP files. Contract completeness does not mean complete reproduction of the original game renderer."
+  }
+}

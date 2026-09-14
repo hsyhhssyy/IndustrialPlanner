@@ -77,7 +77,7 @@ class TextureActionsImpl implements TextureActions {
   private readonly app: AppContract | null
   private readonly syncTextureConfigState: (textureConfig: RenderTextureConfig) => void
   private readonly deviceAnimations: DeviceAnimationTextureCache
-  private readonly logisticsMaterials = new LogisticsMaterialTextureCache()
+  private readonly logisticsMaterials = new LogisticsMaterialTextureCache((texture) => this.renderer.texture.initSource(texture.source))
   private destroyed = false
 
   public constructor(options: {

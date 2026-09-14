@@ -1,0 +1,68 @@
+{
+  "cellWidth": 640,
+  "cellHeight": 640,
+  "frameCount": 1,
+  "playbackFrameCount": 1,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pageCapacity": 36,
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 640,
+      "height": 640,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 29380,
+      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
+    }
+  ],
+  "frames": [
+    {
+      "vatRow": 4,
+      "vatPhysicalRow": 4,
+      "durationMs": 70,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 1,
+        "count": 2,
+        "vatRows": {
+          "start": 4,
+          "endInclusive": 5,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 4,
+          "endInclusive": 5,
+          "step": 1
+        }
+      },
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 640,
+      "height": 640,
+      "playable": true
+    }
+  ],
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true,
+    "transparentRgb": [
+      0,
+      0,
+      0
+    ],
+    "encoder": "Pillow bundled libwebp",
+    "method": 6
+  }
+}

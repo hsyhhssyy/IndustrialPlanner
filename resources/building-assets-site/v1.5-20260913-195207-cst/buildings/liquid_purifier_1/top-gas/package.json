@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260911-building-port-delivery",
+  "version": "v1.5",
+  "building": "liquid_purifier_1",
+  "tableBuildingId": "liquid_purifier_1",
+  "displayName": "提纯机",
+  "view": "top-gas",
+  "mode": "gas",
+  "rendererTemplate": "gas__0",
+  "canvasCells": [
+    5,
+    5
+  ],
+  "footprintCells": [
+    5,
+    5
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    640,
+    640
+  ],
+  "fps": 30,
+  "animations": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "animationCount": 4,
+  "webpPageCount": 12,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "baseSelection": "logisticBaseUnit",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [],
+  "rendererVariants": [
+    {
+      "key": "gas__0",
+      "machineModeType": "gas",
+      "machineRenderId": "liquid_purifier_2",
+      "logisticBaseUnit": "pedestal+1_001_05x05_07",
+      "nonLogisticBaseUnit": "pedestal+1_001_05x05_03",
+      "activeSolidPorts": {
+        "input": [
+          {
+            "index": 3,
+            "isOutput": 0,
+            "isPipe": false,
+            "trans": {
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 4
+              },
+              "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+              }
+            }
+          },
+          {
+            "index": 4,
+            "isOutput": 0,
+            "isPipe": false,
+            "trans": {
+              "position": {
+                "x": 1,
+                "y": 0,
+                "z": 4
+              },
+              "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+              }
+            }
+          },
+          {
+            "index": 5,
+            "isOutput": 0,
+            "isPipe": false,
+            "trans": {
+              "position": {
+                "x": 2,
+                "y": 0,
+                "z": 4
+              },
+              "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+              }
+            }
+          },
+          {
+            "index": 6,
+            "isOutput": 0,
+            "isPipe": false,
+            "trans": {
+              "position": {
+                "x": 3,
+                "y": 0,
+                "z": 4
+              },
+              "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+              }
+            }
+          },
+          {
+            "index": 7,
+            "isOutput": 0,
+            "isPipe": false,
+            "trans": {
+              "position": {
+                "x": 4,
+                "y": 0,
+                "z": 4
+              },
+              "rotation": {
+                "x": 0,
+                "y": 180,
+                "z": 0
+              }
+            }
+          }
+        ],
+        "output": []
+      }
+    },
+    {
+      "key": "liquid__0",
+      "machineModeType": "liquid",
+      "machineRenderId": "liquid_purifier_1",
+      "logisticBaseUnit": "pedestal+1_001_05x05_03",
+      "nonLogisticBaseUnit": "pedestal+1_001_05x05_03",
+      "activeSolidPorts": {
+        "input": [],
+        "output": []
+      }
+    }
+  ],
+  "rendererTemplateCount": 2,
+  "selectedBase": {
+    "field": "logisticBaseUnit",
+    "value": "pedestal+1_001_05x05_07"
+  },
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  },
+  "beautyTaskId": "20260910-building-ports-rebuild",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

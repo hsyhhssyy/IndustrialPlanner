@@ -1116,7 +1116,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus_source",
     iconPath: "device-icons/item_port_log_hongs_bus_source.webp",
     footprint: { width: 4, height: 4 },
-    spriteOffset: { topView: { x: 0, y: 0, width: 5, height: 5 } },
+    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+    spriteOffset: { topView: { x: 0, y: -1, width: 5, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 406,
     tags: ["武陵", "bus"],
@@ -2405,7 +2406,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，西侧扩展改到东侧。
     // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 3 } },
+    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 407,
     // AI-REMOVED 2026-06-06:
@@ -2537,7 +2539,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
     // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 3 } },
+    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+    spriteOffset: { topView: { x: -1, y: 0, width: 5, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 408,
     // AI-REMOVED 2026-06-06:
@@ -4314,7 +4317,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: {
       // AI-CORRECTION 2026-08-20: 顶视图随解包默认朝向旋转 180°，扩展区域由西侧改到东侧。
       // AI-CORRECTION 2026-09-10: v1.5 素材按 spatial.json 占地矩形定位，替代旧素材扩展区域。
-      topView: { x: 0, y: 0, width: 3, height: 3 },
+      // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+      topView: { x: -2, y: 0, width: 5, height: 3 },
     },
     uiGroup: "resourcePower",
     displayOrder: 301,
@@ -4407,7 +4411,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_udpipe_loader_2",
     iconPath: "device-icons/item_port_udpipe_loader_2.webp",
     footprint: { width: 3, height: 5 },
-    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 5 } },
+    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 409,
     tags: ["武陵", "OuterRingAllowed"],
@@ -5078,6 +5083,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_pipe_admission",
     iconPath: "device-icons/item_pipe_admission.webp",
     footprint: { width: 1, height: 1 },
+    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
+    spriteOffset: { topView: { x: 0, y: -1, width: 1, height: 3 } },
     uiGroup: "pipeLogistics",
     displayOrder: 204,
     tags: ["武陵", "OuterRingAllowed"],

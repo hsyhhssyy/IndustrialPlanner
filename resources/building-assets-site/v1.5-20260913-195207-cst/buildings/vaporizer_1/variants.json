@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "building": "vaporizer_1",
+  "displayName": "气体散布机",
+  "taskId": "20260913-endpoint-port-regeneration",
+  "defaultVariant": "top",
+  "variants": [
+    {
+      "key": "top",
+      "view": "top",
+      "label": "液体模式",
+      "root": "top/",
+      "package": "top/package.json",
+      "sequence": "top/sequence.json",
+      "spatial": "top/spatial.json"
+    }
+  ],
+  "integrity": "integrity.json"
+}

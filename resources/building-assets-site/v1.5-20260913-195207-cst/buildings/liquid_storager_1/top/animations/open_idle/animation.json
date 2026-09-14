@@ -1,0 +1,797 @@
+{
+  "schemaVersion": 1,
+  "static": false,
+  "vatTexture": "T_liquidstorager+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 17,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "open_idle",
+    "animation": "A_interactive_liquidstorager+1_001_01_openidle_01",
+    "startRow": 250,
+    "rowCount": 42,
+    "endRowInclusive": 291,
+    "loop": true
+  },
+  "stateMachine": {
+    "offset": 1088,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_interactive_liquidstorager+1_001_01_close_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_interactive_liquidstorager+1_001_01_closeidle_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_interactive_liquidstorager+1_001_01_open_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_interactive_liquidstorager+1_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 384,
+  "height": 384,
+  "projection": "orthographic",
+  "viewDirection": [
+    -0.0032550364267081022,
+    -0.016692783683538437,
+    -0.9998553991317749
+  ],
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_liquidstorager+1_001_01_variant_build_liquidstorager+1_001_01_vat",
+    "M_liquidstorager+1_001_01_variant_build_liquidstorager+1_001_02_vat",
+    "M_liquidstorager+1_001_01_variant_com_alphatest+1_001_03_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_liquidstorager+1_001_01_variant_build_liquidstorager+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_liquidstorager+1_001_01_variant_build_liquidstorager+1_001_02_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": true,
+        "liquidEnabled": true,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_liquidstorager+1_001_01_variant_com_alphatest+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [
+          {
+            "property": "_NormalMap",
+            "texture": "T_default_normal_N"
+          }
+        ]
+      }
+    ],
+    "base": [
+      {
+        "name": "M_pedestal+1_001_03x03_04_variant_build_pedestal+1_001_04_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 250,
+      "vatPhysicalRow": 41,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 250,
+          "endInclusive": 250,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 251,
+      "vatPhysicalRow": 40,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 251,
+          "endInclusive": 251,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 252,
+      "vatPhysicalRow": 39,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 2,
+        "endIndexInclusive": 2,
+        "count": 1,
+        "vatRows": {
+          "start": 252,
+          "endInclusive": 252,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 253,
+      "vatPhysicalRow": 38,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 3,
+        "endIndexInclusive": 3,
+        "count": 1,
+        "vatRows": {
+          "start": 253,
+          "endInclusive": 253,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 254,
+      "vatPhysicalRow": 37,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 4,
+        "endIndexInclusive": 4,
+        "count": 1,
+        "vatRows": {
+          "start": 254,
+          "endInclusive": 254,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 255,
+      "vatPhysicalRow": 36,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 5,
+        "endIndexInclusive": 5,
+        "count": 1,
+        "vatRows": {
+          "start": 255,
+          "endInclusive": 255,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 256,
+      "vatPhysicalRow": 35,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 6,
+        "endIndexInclusive": 6,
+        "count": 1,
+        "vatRows": {
+          "start": 256,
+          "endInclusive": 256,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 257,
+      "vatPhysicalRow": 34,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 7,
+        "endIndexInclusive": 7,
+        "count": 1,
+        "vatRows": {
+          "start": 257,
+          "endInclusive": 257,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 258,
+      "vatPhysicalRow": 33,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 8,
+        "endIndexInclusive": 8,
+        "count": 1,
+        "vatRows": {
+          "start": 258,
+          "endInclusive": 258,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 259,
+      "vatPhysicalRow": 32,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 9,
+        "endIndexInclusive": 9,
+        "count": 1,
+        "vatRows": {
+          "start": 259,
+          "endInclusive": 259,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 260,
+      "vatPhysicalRow": 31,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 10,
+        "endIndexInclusive": 10,
+        "count": 1,
+        "vatRows": {
+          "start": 260,
+          "endInclusive": 260,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 261,
+      "vatPhysicalRow": 30,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 11,
+        "endIndexInclusive": 11,
+        "count": 1,
+        "vatRows": {
+          "start": 261,
+          "endInclusive": 261,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 262,
+      "vatPhysicalRow": 29,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 12,
+        "endIndexInclusive": 12,
+        "count": 1,
+        "vatRows": {
+          "start": 262,
+          "endInclusive": 262,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 263,
+      "vatPhysicalRow": 28,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 13,
+        "endIndexInclusive": 13,
+        "count": 1,
+        "vatRows": {
+          "start": 263,
+          "endInclusive": 263,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 264,
+      "vatPhysicalRow": 27,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 14,
+        "endIndexInclusive": 14,
+        "count": 1,
+        "vatRows": {
+          "start": 264,
+          "endInclusive": 264,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 265,
+      "vatPhysicalRow": 26,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 15,
+        "endIndexInclusive": 15,
+        "count": 1,
+        "vatRows": {
+          "start": 265,
+          "endInclusive": 265,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 266,
+      "vatPhysicalRow": 25,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 16,
+        "endIndexInclusive": 16,
+        "count": 1,
+        "vatRows": {
+          "start": 266,
+          "endInclusive": 266,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 267,
+      "vatPhysicalRow": 24,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 17,
+        "endIndexInclusive": 17,
+        "count": 1,
+        "vatRows": {
+          "start": 267,
+          "endInclusive": 267,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 268,
+      "vatPhysicalRow": 23,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 18,
+        "endIndexInclusive": 18,
+        "count": 1,
+        "vatRows": {
+          "start": 268,
+          "endInclusive": 268,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 269,
+      "vatPhysicalRow": 22,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 19,
+        "endIndexInclusive": 19,
+        "count": 1,
+        "vatRows": {
+          "start": 269,
+          "endInclusive": 269,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 270,
+      "vatPhysicalRow": 21,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 20,
+        "endIndexInclusive": 20,
+        "count": 1,
+        "vatRows": {
+          "start": 270,
+          "endInclusive": 270,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 271,
+      "vatPhysicalRow": 20,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 21,
+        "endIndexInclusive": 21,
+        "count": 1,
+        "vatRows": {
+          "start": 271,
+          "endInclusive": 271,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 272,
+      "vatPhysicalRow": 19,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 22,
+        "endIndexInclusive": 22,
+        "count": 1,
+        "vatRows": {
+          "start": 272,
+          "endInclusive": 272,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 273,
+      "vatPhysicalRow": 18,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 23,
+        "endIndexInclusive": 23,
+        "count": 1,
+        "vatRows": {
+          "start": 273,
+          "endInclusive": 273,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 274,
+      "vatPhysicalRow": 17,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 24,
+        "endIndexInclusive": 24,
+        "count": 1,
+        "vatRows": {
+          "start": 274,
+          "endInclusive": 274,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 275,
+      "vatPhysicalRow": 16,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 25,
+        "endIndexInclusive": 25,
+        "count": 1,
+        "vatRows": {
+          "start": 275,
+          "endInclusive": 275,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 276,
+      "vatPhysicalRow": 15,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 26,
+        "endIndexInclusive": 26,
+        "count": 1,
+        "vatRows": {
+          "start": 276,
+          "endInclusive": 276,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 277,
+      "vatPhysicalRow": 14,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 27,
+        "endIndexInclusive": 27,
+        "count": 1,
+        "vatRows": {
+          "start": 277,
+          "endInclusive": 277,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 278,
+      "vatPhysicalRow": 13,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 28,
+        "endIndexInclusive": 28,
+        "count": 1,
+        "vatRows": {
+          "start": 278,
+          "endInclusive": 278,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 279,
+      "vatPhysicalRow": 12,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 29,
+        "endIndexInclusive": 29,
+        "count": 1,
+        "vatRows": {
+          "start": 279,
+          "endInclusive": 279,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 280,
+      "vatPhysicalRow": 11,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 30,
+        "endIndexInclusive": 30,
+        "count": 1,
+        "vatRows": {
+          "start": 280,
+          "endInclusive": 280,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 281,
+      "vatPhysicalRow": 10,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 31,
+        "endIndexInclusive": 31,
+        "count": 1,
+        "vatRows": {
+          "start": 281,
+          "endInclusive": 281,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 282,
+      "vatPhysicalRow": 9,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 32,
+        "endIndexInclusive": 32,
+        "count": 1,
+        "vatRows": {
+          "start": 282,
+          "endInclusive": 282,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 283,
+      "vatPhysicalRow": 8,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 33,
+        "endIndexInclusive": 33,
+        "count": 1,
+        "vatRows": {
+          "start": 283,
+          "endInclusive": 283,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 284,
+      "vatPhysicalRow": 7,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 34,
+        "endIndexInclusive": 34,
+        "count": 1,
+        "vatRows": {
+          "start": 284,
+          "endInclusive": 284,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 285,
+      "vatPhysicalRow": 6,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 35,
+        "endIndexInclusive": 35,
+        "count": 1,
+        "vatRows": {
+          "start": 285,
+          "endInclusive": 285,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 286,
+      "vatPhysicalRow": 5,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 36,
+        "endIndexInclusive": 36,
+        "count": 1,
+        "vatRows": {
+          "start": 286,
+          "endInclusive": 286,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 287,
+      "vatPhysicalRow": 4,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 37,
+        "endIndexInclusive": 37,
+        "count": 1,
+        "vatRows": {
+          "start": 287,
+          "endInclusive": 287,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 288,
+      "vatPhysicalRow": 3,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 38,
+        "endIndexInclusive": 38,
+        "count": 1,
+        "vatRows": {
+          "start": 288,
+          "endInclusive": 288,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 289,
+      "vatPhysicalRow": 2,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 39,
+        "endIndexInclusive": 39,
+        "count": 1,
+        "vatRows": {
+          "start": 289,
+          "endInclusive": 289,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 290,
+      "vatPhysicalRow": 1,
+      "durationMs": 70,
+      "sourceSpan": {
+        "startIndex": 40,
+        "endIndexInclusive": 41,
+        "count": 2,
+        "vatRows": {
+          "start": 290,
+          "endInclusive": 291,
+          "step": 1
+        }
+      }
+    }
+  ],
+  "sourcePackName": "A_liquidstorager+1_001_01_variant_dynamic_lod0",
+  "canvasNormalization": {
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "operation": "flip-top-bottom",
+    "resized": false
+  },
+  "postProcessCrop": {
+    "rectPixels": [
+      0,
+      0,
+      384,
+      384
+    ],
+    "resultFramePixels": [
+      384,
+      384
+    ],
+    "pixelsPerCell": 128,
+    "resized": false
+  },
+  "sourceFrameCount": 42,
+  "retainedFrameCount": 41,
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "transparentRgbIgnored": true,
+    "sourceFrameCount": 42,
+    "retainedFrameCount": 41,
+    "removedFrameCount": 1,
+    "sourceDurationMs": 1400,
+    "retainedDurationMs": 1400,
+    "explicitClosureFramesPreserved": 0
+  },
+  "spritesheetMetadata": "spritesheet.json",
+  "spatialMetadata": "../../spatial.json",
+  "playback": {
+    "mode": "loop",
+    "frameCount": 41,
+    "playbackFrameCount": 41,
+    "durationMs": 1400
+  }
+}

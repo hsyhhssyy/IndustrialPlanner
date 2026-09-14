@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "building": "gas_reactor_1",
+  "tableBuildingId": "gas_reactor_1",
+  "displayName": "气体反应炉",
+  "version": "v1.5",
+  "view": "top",
+  "mode": "gas__0",
+  "canvasCells": [
+    5,
+    5
+  ],
+  "footprintCells": [
+    5,
+    5
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    640,
+    640
+  ],
+  "fps": 30,
+  "animations": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "animationCount": 4,
+  "webpPageCount": 6,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / alpha quality 100",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "rendererTemplate": "gas__0",
+  "baseSelection": "nonLogisticBaseUnit",
+  "periodicSubranges": {},
+  "taskId": "20260911-building-port-delivery",
+  "maintenanceTaskId": "20260909-building-path-contract",
+  "beautyTaskId": "20260909-building-path-contract",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "animations": {
+    "bind_pose": {
+      "partCount": 1,
+      "totalBytes": 4838,
+      "mib": 0.0046138763427734375
+    }
+  },
+  "partCount": 1,
+  "totalBytes": 4838,
+  "totalMiB": 0.0046138763427734375,
+  "pages": [
+    {
+      "animation": "bind_pose",
+      "index": 0,
+      "image": "animations/bind_pose/spritesheet_000.webp",
+      "width": 384,
+      "height": 256,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 4838,
+      "sha256": "ce8597c1e94561ea8859a81354e79e92be131874761b3c71be827572cfeff9b6"
+    }
+  ]
+}

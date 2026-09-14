@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "building": "logistics",
+  "displayName": "管道和传送带",
+  "taskId": "20260913-logistics-height-publication",
+  "defaultVariant": "collection",
+  "variants": [
+    {
+      "key": "collection",
+      "view": "collection",
+      "label": "完整物流套件",
+      "root": "./",
+      "package": "package.json",
+      "collection": "collection.json"
+    }
+  ],
+  "integrity": "integrity.json"
+}

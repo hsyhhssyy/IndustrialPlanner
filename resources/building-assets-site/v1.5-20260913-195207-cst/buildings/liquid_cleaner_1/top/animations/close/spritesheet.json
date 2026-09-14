@@ -1,0 +1,481 @@
+{
+  "cellWidth": 384,
+  "cellHeight": 384,
+  "frameCount": 16,
+  "playbackFrameCount": 16,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pageCapacity": 100,
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 3840,
+      "height": 768,
+      "columns": 10,
+      "rows": 2,
+      "frameStart": 0,
+      "frameCount": 16,
+      "bytes": 181478,
+      "sha256": "e8a8f4e7c8688b575ac9eee7efb1926a7973af91fb1cd32e27a6aa4f7592990d"
+    }
+  ],
+  "frames": [
+    {
+      "vatRow": 0,
+      "vatPhysicalRow": 105,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 0,
+          "endInclusive": 0,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 105,
+          "endInclusive": 105,
+          "step": -1
+        }
+      },
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 1,
+      "vatPhysicalRow": 104,
+      "durationMs": 67,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 2,
+        "count": 2,
+        "vatRows": {
+          "start": 1,
+          "endInclusive": 2,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 104,
+          "endInclusive": 103,
+          "step": -1
+        }
+      },
+      "index": 1,
+      "page": 0,
+      "localIndex": 1,
+      "x": 384,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 3,
+      "vatPhysicalRow": 102,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 3,
+        "endIndexInclusive": 3,
+        "count": 1,
+        "vatRows": {
+          "start": 3,
+          "endInclusive": 3,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 102,
+          "endInclusive": 102,
+          "step": -1
+        }
+      },
+      "index": 2,
+      "page": 0,
+      "localIndex": 2,
+      "x": 768,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 4,
+      "vatPhysicalRow": 101,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 4,
+        "endIndexInclusive": 4,
+        "count": 1,
+        "vatRows": {
+          "start": 4,
+          "endInclusive": 4,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 101,
+          "endInclusive": 101,
+          "step": -1
+        }
+      },
+      "index": 3,
+      "page": 0,
+      "localIndex": 3,
+      "x": 1152,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 5,
+      "vatPhysicalRow": 100,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 5,
+        "endIndexInclusive": 5,
+        "count": 1,
+        "vatRows": {
+          "start": 5,
+          "endInclusive": 5,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 100,
+          "endInclusive": 100,
+          "step": -1
+        }
+      },
+      "index": 4,
+      "page": 0,
+      "localIndex": 4,
+      "x": 1536,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 6,
+      "vatPhysicalRow": 99,
+      "durationMs": 1133,
+      "sourceSpan": {
+        "startIndex": 6,
+        "endIndexInclusive": 39,
+        "count": 34,
+        "vatRows": {
+          "start": 6,
+          "endInclusive": 39,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 99,
+          "endInclusive": 66,
+          "step": -1
+        }
+      },
+      "index": 5,
+      "page": 0,
+      "localIndex": 5,
+      "x": 1920,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 40,
+      "vatPhysicalRow": 65,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 40,
+        "endIndexInclusive": 40,
+        "count": 1,
+        "vatRows": {
+          "start": 40,
+          "endInclusive": 40,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 65,
+          "endInclusive": 65,
+          "step": -1
+        }
+      },
+      "index": 6,
+      "page": 0,
+      "localIndex": 6,
+      "x": 2304,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 41,
+      "vatPhysicalRow": 64,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 41,
+        "endIndexInclusive": 41,
+        "count": 1,
+        "vatRows": {
+          "start": 41,
+          "endInclusive": 41,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 64,
+          "endInclusive": 64,
+          "step": -1
+        }
+      },
+      "index": 7,
+      "page": 0,
+      "localIndex": 7,
+      "x": 2688,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 42,
+      "vatPhysicalRow": 63,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 42,
+        "endIndexInclusive": 42,
+        "count": 1,
+        "vatRows": {
+          "start": 42,
+          "endInclusive": 42,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 63,
+          "endInclusive": 63,
+          "step": -1
+        }
+      },
+      "index": 8,
+      "page": 0,
+      "localIndex": 8,
+      "x": 3072,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 43,
+      "vatPhysicalRow": 62,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 43,
+        "endIndexInclusive": 43,
+        "count": 1,
+        "vatRows": {
+          "start": 43,
+          "endInclusive": 43,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 62,
+          "endInclusive": 62,
+          "step": -1
+        }
+      },
+      "index": 9,
+      "page": 0,
+      "localIndex": 9,
+      "x": 3456,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 44,
+      "vatPhysicalRow": 61,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 44,
+        "endIndexInclusive": 44,
+        "count": 1,
+        "vatRows": {
+          "start": 44,
+          "endInclusive": 44,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 61,
+          "endInclusive": 61,
+          "step": -1
+        }
+      },
+      "index": 10,
+      "page": 0,
+      "localIndex": 10,
+      "x": 0,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 45,
+      "vatPhysicalRow": 60,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 45,
+        "endIndexInclusive": 45,
+        "count": 1,
+        "vatRows": {
+          "start": 45,
+          "endInclusive": 45,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 60,
+          "endInclusive": 60,
+          "step": -1
+        }
+      },
+      "index": 11,
+      "page": 0,
+      "localIndex": 11,
+      "x": 384,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 46,
+      "vatPhysicalRow": 59,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 46,
+        "endIndexInclusive": 46,
+        "count": 1,
+        "vatRows": {
+          "start": 46,
+          "endInclusive": 46,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 59,
+          "endInclusive": 59,
+          "step": -1
+        }
+      },
+      "index": 12,
+      "page": 0,
+      "localIndex": 12,
+      "x": 768,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 47,
+      "vatPhysicalRow": 58,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 47,
+        "endIndexInclusive": 47,
+        "count": 1,
+        "vatRows": {
+          "start": 47,
+          "endInclusive": 47,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 58,
+          "endInclusive": 58,
+          "step": -1
+        }
+      },
+      "index": 13,
+      "page": 0,
+      "localIndex": 13,
+      "x": 1152,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 48,
+      "vatPhysicalRow": 57,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 48,
+        "endIndexInclusive": 48,
+        "count": 1,
+        "vatRows": {
+          "start": 48,
+          "endInclusive": 48,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 57,
+          "endInclusive": 57,
+          "step": -1
+        }
+      },
+      "index": 14,
+      "page": 0,
+      "localIndex": 14,
+      "x": 1536,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    },
+    {
+      "vatRow": 49,
+      "vatPhysicalRow": 56,
+      "durationMs": 67,
+      "sourceSpan": {
+        "startIndex": 49,
+        "endIndexInclusive": 50,
+        "count": 2,
+        "vatRows": {
+          "start": 49,
+          "endInclusive": 50,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 56,
+          "endInclusive": 55,
+          "step": -1
+        }
+      },
+      "index": 15,
+      "page": 0,
+      "localIndex": 15,
+      "x": 1920,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "playable": true
+    }
+  ],
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true
+  }
+}

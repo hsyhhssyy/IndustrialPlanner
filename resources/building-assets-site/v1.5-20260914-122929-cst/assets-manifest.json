@@ -1,0 +1,804 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "v1.5-20260914-122929-cst",
+  "sourceVersion": "v1.5",
+  "generatedAt": "2026-09-14T04:29:29Z",
+  "buildingCount": 46,
+  "buildings": [
+    {
+      "id": "unloader_1",
+      "displayName": "仓库取货口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "55116dcad39bd89b5dc3a5f7d6d16aa3ca67effec843b8d45d32ac0193c0394e",
+      "integrity": "buildings/unloader_1/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/unloader_1/audio.json"
+    },
+    {
+      "id": "loader_1",
+      "displayName": "仓库存货口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "c0ae8ec3de749d3d9255f1f480b8329cf8601a6577bacab463e48797da6dc31e",
+      "integrity": "buildings/loader_1/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/loader_1/audio.json"
+    },
+    {
+      "id": "power_diffuser_1",
+      "displayName": "供电桩",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "5f48cd458421435a87ec8fad10455076b3d75566536fd950564f0f7971353b8e",
+      "integrity": "buildings/power_diffuser_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/power_diffuser_1/audio.json"
+    },
+    {
+      "id": "gas_storager_1",
+      "displayName": "储气罐",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "气体模式"
+        }
+      ],
+      "contentHash": "92f2c41dc4d1af7178d7144a33d93611c4ba09ccbc3e2a925487395b433c7968",
+      "integrity": "buildings/gas_storager_1/integrity.json",
+      "copiedFiles": 35,
+      "audio": "audio/buildings/gas_storager_1/audio.json"
+    },
+    {
+      "id": "liquid_storager_1",
+      "displayName": "储液罐",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "ca0d82c58c160a8c751cf23fd6cf452634f25bc4e593d3d23d07cbe2aa79485a",
+      "integrity": "buildings/liquid_storager_1/integrity.json",
+      "copiedFiles": 46,
+      "audio": "audio/buildings/liquid_storager_1/audio.json"
+    },
+    {
+      "id": "log_splitter",
+      "displayName": "分流器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "4bb9d57bf369043a27ca4acc2c79a4138feb4889656ffb1ecd059701fb529519",
+      "integrity": "buildings/log_splitter/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_splitter/audio.json"
+    },
+    {
+      "id": "storager_1",
+      "displayName": "协议储存箱",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "6864ea0b7ed9dc4759ae756ffc01b9e312c4bb7c3fe7b669d27400decf070ce0",
+      "integrity": "buildings/storager_1/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/storager_1/audio.json"
+    },
+    {
+      "id": "sp_hub_1",
+      "displayName": "协议核心",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "8b9a7f053dc4cd24d1198d6ddcb7f7de6246329d8aca4d521ddfa8b6c7fd936c",
+      "integrity": "buildings/sp_hub_1/integrity.json",
+      "copiedFiles": 207,
+      "audio": "audio/buildings/sp_hub_1/audio.json"
+    },
+    {
+      "id": "mix_pool_1",
+      "displayName": "反应池",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "6224532c85bef9eeb180054950d3f0d712b7c0a43bbd77eb2934e18eabbb115b",
+      "integrity": "buildings/mix_pool_1/integrity.json",
+      "copiedFiles": 78,
+      "audio": "audio/buildings/mix_pool_1/audio.json"
+    },
+    {
+      "id": "transmuter_2",
+      "displayName": "固气转化机",
+      "defaultVariant": "top",
+      "variantCount": 2,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "气体转化模式"
+        },
+        {
+          "key": "top-solidtrans",
+          "view": "top-solidtrans",
+          "label": "固体转化模式"
+        }
+      ],
+      "contentHash": "2dae95f48139195274005df2bafe6ac9bc165c5f367331c22609f6e609c7408e",
+      "integrity": "buildings/transmuter_2/integrity.json",
+      "copiedFiles": 93,
+      "audio": "audio/buildings/transmuter_2/audio.json"
+    },
+    {
+      "id": "shaper_1",
+      "displayName": "塑形机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "092f79c353d251bf92b61b303bbaeb2d70138a713af9b7d6333be4d1ac557d8a",
+      "integrity": "buildings/shaper_1/integrity.json",
+      "copiedFiles": 32,
+      "audio": "audio/buildings/shaper_1/audio.json"
+    },
+    {
+      "id": "udpipe_loader_2",
+      "displayName": "多口暗管入口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "f488c446f8d29467c9dd6c321683e272df78cb9277cc93dcf6859951c3eff586",
+      "integrity": "buildings/udpipe_loader_2/integrity.json",
+      "copiedFiles": 30,
+      "audio": "audio/buildings/udpipe_loader_2/audio.json"
+    },
+    {
+      "id": "udpipe_unloader_2",
+      "displayName": "多口暗管出口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "efc5b1e6614f8b1274423942b6ed2188a6429cd949cd3446d6155328c4b465d7",
+      "integrity": "buildings/udpipe_unloader_2/integrity.json",
+      "copiedFiles": 30,
+      "audio": "audio/buildings/udpipe_unloader_2/audio.json"
+    },
+    {
+      "id": "xiranite_oven_1",
+      "displayName": "天有洪炉",
+      "defaultVariant": "top",
+      "variantCount": 2,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        },
+        {
+          "key": "top-gasliquid",
+          "view": "top-gasliquid",
+          "label": "气液模式"
+        }
+      ],
+      "contentHash": "9dc1e0a5e6ef8123dda0a056fbf8802a119001f3a741ff6cee610e8f44f40fc3",
+      "integrity": "buildings/xiranite_oven_1/integrity.json",
+      "copiedFiles": 109,
+      "audio": "audio/buildings/xiranite_oven_1/audio.json"
+    },
+    {
+      "id": "log_hongs_bus",
+      "displayName": "存取线基段",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "683f1522c1a5d379d4475dd7d702c34b8fdf29f4d1a9fb1bbd6c9cdd74c9d32d",
+      "integrity": "buildings/log_hongs_bus/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_hongs_bus/audio.json"
+    },
+    {
+      "id": "log_hongs_bus_source",
+      "displayName": "存取线源桩",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "617448bbe02602381692221fc8a357a99c2502702544564da4c426bff86ad121",
+      "integrity": "buildings/log_hongs_bus_source/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_hongs_bus_source/audio.json"
+    },
+    {
+      "id": "tools_assebling_mc_1",
+      "displayName": "封装机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "33d79387fafaa510d041f676d8cd3a815e129f1f20cd3735da47a814b10cffdf",
+      "integrity": "buildings/tools_assebling_mc_1/integrity.json",
+      "copiedFiles": 32,
+      "audio": "audio/buildings/tools_assebling_mc_1/audio.json"
+    },
+    {
+      "id": "liquid_cleaner_1",
+      "displayName": "废水处理机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "d4754531e5830f75f97bd0adb5d7eed4593f0b1a5204d66ff809e16be7947f12",
+      "integrity": "buildings/liquid_cleaner_1/integrity.json",
+      "copiedFiles": 36,
+      "audio": "audio/buildings/liquid_cleaner_1/audio.json"
+    },
+    {
+      "id": "mix_pool_2",
+      "displayName": "扩容反应池",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "6a33e5f2cbe3ce0dd18f39b8a2316e3110210a54248ad6b30727f1eb333fd9fe",
+      "integrity": "buildings/mix_pool_2/integrity.json",
+      "copiedFiles": 91,
+      "audio": "audio/buildings/mix_pool_2/audio.json"
+    },
+    {
+      "id": "dismantler_1",
+      "displayName": "拆解机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "8efc2623fbbbb8438f9f813a9e8c7809d3d14b9c6eccc8afbc36161f25bc9383",
+      "integrity": "buildings/dismantler_1/integrity.json",
+      "copiedFiles": 36,
+      "audio": "audio/buildings/dismantler_1/audio.json"
+    },
+    {
+      "id": "liquid_purifier_1",
+      "displayName": "提纯机",
+      "defaultVariant": "top",
+      "variantCount": 2,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        },
+        {
+          "key": "top-gas",
+          "view": "top-gas",
+          "label": "气体模式"
+        }
+      ],
+      "contentHash": "ba1c7caf2aadbfc8729671644a0440f28039bdda2f3c3a645b60ffc4f400f3ff",
+      "integrity": "buildings/liquid_purifier_1/integrity.json",
+      "copiedFiles": 115,
+      "audio": "audio/buildings/liquid_purifier_1/audio.json"
+    },
+    {
+      "id": "udpipe_loader_1",
+      "displayName": "暗管入口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "b80dbc4bbce58d14c270ce4f25517ae151c4461ca493e7230353a3e2f02421f8",
+      "integrity": "buildings/udpipe_loader_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/udpipe_loader_1/audio.json"
+    },
+    {
+      "id": "udpipe_unloader_1",
+      "displayName": "暗管出口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "be95b62c42a5e040ccfcc15c6668359c8171bc0233578837c0ffe759ffa9e959",
+      "integrity": "buildings/udpipe_unloader_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/udpipe_unloader_1/audio.json"
+    },
+    {
+      "id": "log_connector",
+      "displayName": "桥接器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "44ad0fd52a15fb63ed3c541f4211330894f03513ac25089f1547f5f3b4591983",
+      "integrity": "buildings/log_connector/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_connector/audio.json"
+    },
+    {
+      "id": "sp_sub_hub_1",
+      "displayName": "次级协议核心（四级）",
+      "defaultVariant": "top-level4",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top-level4",
+          "view": "top-level4",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "fe1d9598172c4010259ec7d579e3f3c3e09f8cd607e4e1a945def8e850de38a6",
+      "integrity": "buildings/sp_sub_hub_1/integrity.json",
+      "copiedFiles": 161,
+      "audio": "audio/buildings/sp_sub_hub_1/audio.json"
+    },
+    {
+      "id": "gas_reactor_1",
+      "displayName": "气体反应炉",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "气体模式"
+        }
+      ],
+      "contentHash": "e75abe7dd7343e45de84ab423996dcc40650b37ff4e81bf32aa964019b28d9aa",
+      "integrity": "buildings/gas_reactor_1/integrity.json",
+      "copiedFiles": 47,
+      "audio": "audio/buildings/gas_reactor_1/audio.json"
+    },
+    {
+      "id": "gas_pump_1",
+      "displayName": "气体收集泵",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "气体模式"
+        }
+      ],
+      "contentHash": "703542f307cd111149b441806dd10e11d481b3c03773b9675cf2f03a4b80ec72",
+      "integrity": "buildings/gas_pump_1/integrity.json",
+      "copiedFiles": 27,
+      "audio": "audio/buildings/gas_pump_1/audio.json"
+    },
+    {
+      "id": "vaporizer_1",
+      "displayName": "气体散布机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "11b3629d42d9e11874c6291e65ee9b2e935accc50f823c5a1c0147fcec40fa33",
+      "integrity": "buildings/vaporizer_1/integrity.json",
+      "copiedFiles": 39,
+      "audio": "audio/buildings/vaporizer_1/audio.json"
+    },
+    {
+      "id": "pump_1",
+      "displayName": "水泵",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "bd4500d9f1d4f80777d01c3a73ac0ec253c483a6f019b99338c6031b52bbf4ee",
+      "integrity": "buildings/pump_1/integrity.json",
+      "copiedFiles": 37,
+      "audio": "audio/buildings/pump_1/audio.json"
+    },
+    {
+      "id": "log_converger",
+      "displayName": "汇流器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "c1717f56c7c7d98b0ce6f774fe3109ac37445fab5ebfd4d33c7b05f396dbaf39",
+      "integrity": "buildings/log_converger/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_converger/audio.json"
+    },
+    {
+      "id": "transmuter_1",
+      "displayName": "液气转化机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "气体转化/液体转化模式"
+        }
+      ],
+      "contentHash": "c2b093a543f1ee7a7a4e5fca53e9a633fa11e21ebbd2d0147ab738b4a6de531d",
+      "integrity": "buildings/transmuter_1/integrity.json",
+      "copiedFiles": 51,
+      "audio": "audio/buildings/transmuter_1/audio.json"
+    },
+    {
+      "id": "filling_powder_mc_1",
+      "displayName": "灌装机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "d90824da663b1f3ee472b9b202522ffb40c59060b79d18b0d3dce02c3cbd4b77",
+      "integrity": "buildings/filling_powder_mc_1/integrity.json",
+      "copiedFiles": 39,
+      "audio": "audio/buildings/filling_powder_mc_1/audio.json"
+    },
+    {
+      "id": "power_station_1",
+      "displayName": "热能池",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "6656b195c3147e1d84b5859834e329ed956e274aaca348ebf844eedf92d03653",
+      "integrity": "buildings/power_station_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/power_station_1/audio.json"
+    },
+    {
+      "id": "log_conditioner",
+      "displayName": "物品准入口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "facb2f25dd595c1aac2c46495ddf139c0acdc20991d3563e0b64cb0965bd7264",
+      "integrity": "buildings/log_conditioner/integrity.json",
+      "copiedFiles": 20,
+      "audio": "audio/buildings/log_conditioner/audio.json"
+    },
+    {
+      "id": "thickener_1",
+      "displayName": "研磨机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "e8a16338156e857dae9f78468513a18bdee882939f2c955f706043336ca847ae",
+      "integrity": "buildings/thickener_1/integrity.json",
+      "copiedFiles": 36,
+      "audio": "audio/buildings/thickener_1/audio.json"
+    },
+    {
+      "id": "planter_1",
+      "displayName": "种植机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "dc031a91313a1f33cee52e88483ea3dbbfa0c367809f0e1de5096805cbd0d102",
+      "integrity": "buildings/planter_1/integrity.json",
+      "copiedFiles": 39,
+      "audio": "audio/buildings/planter_1/audio.json"
+    },
+    {
+      "id": "pipe_conditioner",
+      "displayName": "管道准入口",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "60575cb6f1f0abd8241dea5e9eddc0011e5d283c797a6fcfecc08c400557864b",
+      "integrity": "buildings/pipe_conditioner/integrity.json",
+      "copiedFiles": 20
+    },
+    {
+      "id": "pipe_splitter",
+      "displayName": "管道分流器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "2565e228942d31128106a83a6c7d08c3672652a0ad162ef9ceb3da212d5efcf7",
+      "integrity": "buildings/pipe_splitter/integrity.json",
+      "copiedFiles": 20
+    },
+    {
+      "id": "logistics",
+      "displayName": "管道和传送带",
+      "defaultVariant": "collection",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "collection",
+          "view": "collection",
+          "label": "完整物流套件"
+        }
+      ],
+      "contentHash": "b52b7b89bd9b77aa43d8438b7083798143e0280e5b1a98ff8e0e5ad4080c338f",
+      "integrity": "buildings/logistics/integrity.json",
+      "copiedFiles": 156,
+      "fluidProfileMetadata": "buildings/logistics/fluid-profiles.json",
+      "fluidProfileCount": 20
+    },
+    {
+      "id": "pipe_connector",
+      "displayName": "管道桥接器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "37374709f50c1ba120354294170109477de9361dd1c09a97db49818b3417dc67",
+      "integrity": "buildings/pipe_connector/integrity.json",
+      "copiedFiles": 20
+    },
+    {
+      "id": "pipe_converger",
+      "displayName": "管道汇流器",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "液体模式"
+        }
+      ],
+      "contentHash": "897cff086be236df4fe99d07ebfafd58ac99fe6ac3398e2601d6078b90b1f82e",
+      "integrity": "buildings/pipe_converger/integrity.json",
+      "copiedFiles": 20
+    },
+    {
+      "id": "grinder_1",
+      "displayName": "粉碎机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "a386baec1f0463cdfebdfe8c037d4461207aa9682874ba7f00163422b1526330",
+      "integrity": "buildings/grinder_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/grinder_1/audio.json"
+    },
+    {
+      "id": "furnance_1",
+      "displayName": "精炼炉",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "578e5ab4445ec5d3989cedb96df251255a9962ab8ce32a920e0ffca9c46020d8",
+      "integrity": "buildings/furnance_1/integrity.json",
+      "copiedFiles": 29,
+      "audio": "audio/buildings/furnance_1/audio.json"
+    },
+    {
+      "id": "winder_1",
+      "displayName": "装备原件机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "4311a7ffbc11eafcd32b9cd76ff072c25d6d9b894b2cf96f18aaf5989ab49c97",
+      "integrity": "buildings/winder_1/integrity.json",
+      "copiedFiles": 31,
+      "audio": "audio/buildings/winder_1/audio.json"
+    },
+    {
+      "id": "component_mc_1",
+      "displayName": "配件机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "45d910f934a76482623c4c6a73c30a0790b2e04aa09b2e683bbe8061d61f18f6",
+      "integrity": "buildings/component_mc_1/integrity.json",
+      "copiedFiles": 23,
+      "audio": "audio/buildings/component_mc_1/audio.json"
+    },
+    {
+      "id": "seedcollector_1",
+      "displayName": "采种机",
+      "defaultVariant": "top",
+      "variantCount": 1,
+      "variants": [
+        {
+          "key": "top",
+          "view": "top",
+          "label": "默认模式"
+        }
+      ],
+      "contentHash": "0edc660c22f4b650269d52af5355ca6ebd4abb06b9a2a7da514398ce3633d949",
+      "integrity": "buildings/seedcollector_1/integrity.json",
+      "copiedFiles": 40,
+      "audio": "audio/buildings/seedcollector_1/audio.json"
+    }
+  ],
+  "audio": "audio/manifest.json"
+}

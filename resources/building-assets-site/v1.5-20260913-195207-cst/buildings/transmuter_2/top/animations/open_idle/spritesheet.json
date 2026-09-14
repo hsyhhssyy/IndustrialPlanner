@@ -1,0 +1,61 @@
+{
+  "cellWidth": 768,
+  "cellHeight": 640,
+  "frameCount": 1,
+  "playbackFrameCount": 1,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pageCapacity": 30,
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 768,
+      "height": 640,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 30412,
+      "sha256": "a3949ca2d026d164714914e4a3774a99b630b1df058b94ddf971a37808eaf4c4"
+    }
+  ],
+  "frames": [
+    {
+      "vatRow": 2,
+      "vatPhysicalRow": 1,
+      "durationMs": 67,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 1,
+        "count": 2,
+        "vatRows": {
+          "start": 2,
+          "endInclusive": 3,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 1,
+          "endInclusive": 0,
+          "step": -1
+        }
+      },
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 768,
+      "height": 640,
+      "playable": true
+    }
+  ],
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "partCount": 2,
+  "totalBytes": 1252032,
+  "pages": [
+    {
+      "animation": "emissive_belt",
+      "index": 0,
+      "image": "animations/emissive_belt/spritesheet_000.webp",
+      "width": 4096,
+      "height": 3840,
+      "columns": 8,
+      "rows": 10,
+      "frameStart": 0,
+      "frameCount": 80,
+      "bytes": 833058,
+      "sha256": "696eb190314990f15dc416b3e1d89b73c9662843b141c2a261141fbdf5af03df"
+    },
+    {
+      "animation": "emissive_belt",
+      "index": 1,
+      "image": "animations/emissive_belt/spritesheet_001.webp",
+      "width": 4096,
+      "height": 1920,
+      "columns": 8,
+      "rows": 5,
+      "frameStart": 80,
+      "frameCount": 40,
+      "bytes": 418974,
+      "sha256": "ee6b9fb3860acdf130c87f0dec7880abe0d2c87c1e6252132d782265095b247e"
+    }
+  ]
+}

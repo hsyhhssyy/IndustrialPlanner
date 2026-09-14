@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true,
+    "pageLimit": [
+      4096,
+      4096
+    ]
+  },
+  "animations": {
+    "close": {
+      "partCount": 1,
+      "totalBytes": 1005372,
+      "mib": 0.9587974548339844
+    },
+    "close_idle": {
+      "partCount": 1,
+      "totalBytes": 8310,
+      "mib": 0.007925033569335938
+    },
+    "open": {
+      "partCount": 1,
+      "totalBytes": 999920,
+      "mib": 0.9535980224609375
+    },
+    "open_idle": {
+      "partCount": 1,
+      "totalBytes": 1079432,
+      "mib": 1.0294265747070312
+    }
+  },
+  "partCount": 4,
+  "totalBytes": 3093034,
+  "totalMiB": 2.949747085571289,
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 4096,
+      "height": 2304,
+      "columns": 16,
+      "rows": 9,
+      "frameStart": 0,
+      "frameCount": 142,
+      "bytes": 1005372,
+      "sha256": "afa091e398dd7a4edf3852d50df8f628ec883ada983be0f2fa762aac5cd0280a",
+      "rgbComparison": {
+        "visiblePixelCount": 4554357,
+        "meanAbsoluteError": 2.4926811110035216,
+        "rootMeanSquareError": 3.500366801156701,
+        "maxAbsoluteError": 69
+      },
+      "animation": "close"
+    },
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 256,
+      "height": 256,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 8310,
+      "sha256": "8a5daf6767229c0fcf0d08f75b6a60a3d827b363e670d001fb153bb554c04c73",
+      "rgbComparison": {
+        "visiblePixelCount": 31466,
+        "meanAbsoluteError": 2.4664611538380052,
+        "rootMeanSquareError": 3.465252784995145,
+        "maxAbsoluteError": 53
+      },
+      "animation": "close_idle"
+    },
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 4096,
+      "height": 2304,
+      "columns": 16,
+      "rows": 9,
+      "frameStart": 0,
+      "frameCount": 142,
+      "bytes": 999920,
+      "sha256": "c65239aef4c7bf1de923d64a01e0cd20125d7ee758ee9d4650cfffb331cde9c9",
+      "rgbComparison": {
+        "visiblePixelCount": 4553393,
+        "meanAbsoluteError": 2.4943457183101336,
+        "rootMeanSquareError": 3.502126101629119,
+        "maxAbsoluteError": 69
+      },
+      "animation": "open"
+    },
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 4096,
+      "height": 2560,
+      "columns": 16,
+      "rows": 10,
+      "frameStart": 0,
+      "frameCount": 152,
+      "bytes": 1079432,
+      "sha256": "6548a8a052c4fd4cd19cd6c3b92141d6e98251a4f51df354d929ef37fbd69e1b",
+      "rgbComparison": {
+        "visiblePixelCount": 4886275,
+        "meanAbsoluteError": 2.5532980303673725,
+        "rootMeanSquareError": 3.5710549561658262,
+        "maxAbsoluteError": 65
+      },
+      "animation": "open_idle"
+    }
+  ]
+}

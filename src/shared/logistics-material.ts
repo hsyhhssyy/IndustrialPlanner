@@ -1,3 +1,5 @@
+import type { LogisticsPipeRoute } from './logistics-baked';
+
 /** 物流素材协议；这里的 shape 和 spriteId 仅描述绘图资源，不承担 Registry 分类。 */
 export type LogisticsMaterialShape = "straight" | "left" | "right";
 export type LogisticsMaterialKind = "belt" | "pipe";
@@ -24,6 +26,7 @@ export interface LogisticsStaticManifest {
 
 export interface LogisticsDynamicResource {
   /** data=true 使用 gzip 压缩的 RGBA8 字节（.rgba.bin），颜色图使用 WebP。 */
+  // AI-CORRECTION 2026-09-13: 用户暂缓网站物流绘制接入；当前运行时仍读取正式 WebP，gzip 协议仅保留在未启用的网站发布器中。
   readonly file: string;
   readonly width: number;
   readonly height: number;
@@ -50,6 +53,7 @@ export interface LogisticsMaterialPlacement extends LogisticsMaterialSpec {
 
 export interface LogisticsMaterialRoutePlacement extends LogisticsMaterialPlacement {
   readonly routeId: string;
+  readonly closed?: boolean;
 }
 
 export interface LogisticsPipeFlowState {
@@ -66,6 +70,7 @@ export interface LogisticsMaterialEntityState extends LogisticsMaterialPlacement
 
 export interface LogisticsMaterialFrameState {
   readonly entities: ReadonlyMap<string, LogisticsMaterialEntityState>;
+  readonly routes?: ReadonlyMap<string, LogisticsPipeRoute>;
   readonly beltSeconds: number;
   // AI-REMOVED 2026-09-10:
   // Reason: 全场管道时钟会让空运输组跟随其他组流动。
@@ -151,7 +156,7 @@ export function resolveLogisticsMaterialPlacements(
     const closed = entry?.id === first.id;
     const supports = resolveLogisticsPipeSupports(route, closed);
     route.forEach((segment, start) => result.set(segment.id, {
-      kind: segment.kind, shape: segment.shape, rotation: segment.rotation, start, routeId: first.id,
+      kind: segment.kind, shape: segment.shape, rotation: segment.rotation, start, routeId: first.id, closed,
       support: supports.has(start),
       marker: start % 6 === 3,
     }));

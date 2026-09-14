@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "building": "gas_storager_1",
+  "requestedAlias": "gas_storager_1",
+  "tableBuildingId": "gas_storager_1",
+  "displayName": "储气罐",
+  "version": "v1.5",
+  "view": "top",
+  "mode": "gas__0",
+  "canvasCells": [
+    3,
+    3
+  ],
+  "footprintCells": [
+    3,
+    3
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    384,
+    384
+  ],
+  "fps": 30,
+  "animations": [
+    "static"
+  ],
+  "animationCount": 1,
+  "webpPageCount": 1,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / alpha quality 100 / lossless alpha",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "rendererTemplate": "gas__0",
+  "baseSelection": "FactoryBuildingTable logistic/non-logistic base mapping",
+  "glassValidation": {
+    "mode": "transparent",
+    "representativeApproximateControl": "passed visual comparison for glass-bearing storage assets"
+  },
+  "taskId": "20260913-endpoint-port-regeneration",
+  "beautyTaskId": "20260910-163029-building-e52e2a8c",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

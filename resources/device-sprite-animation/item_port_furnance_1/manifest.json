@@ -41,19 +41,8 @@
         33,
         67
       ],
-      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top/animations/close/spritesheet_000.webp",
       "sha256": "5f9c84137343bb1a8614e5b3968e896a2a83a5bace26e7e958836b9dd2d9ebdb"
-    },
-    "close_idle_000": {
-      "file": "close_idle_000.webp",
-      "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
-      "frameDurationsMs": [
-        67
-      ],
-      "sourcePath": "animations/close_idle/spritesheet_000.webp",
-      "sha256": "244a9fb0c9f0afda4312548e6d507f2237edb9c6ccc938f1f2b8d4f3fe29244a"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -99,8 +88,19 @@
         33,
         33
       ],
-      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top/animations/open/spritesheet_000.webp",
       "sha256": "52e96f11c7df2f4405b0ba8113622d8b2d920e75675895db44c4e2c2b96415e4"
+    },
+    "close_idle_000": {
+      "file": "close_idle_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        67
+      ],
+      "sourcePath": "buildings/furnance_1/top/animations/close_idle/spritesheet_000.webp",
+      "sha256": "244a9fb0c9f0afda4312548e6d507f2237edb9c6ccc938f1f2b8d4f3fe29244a"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -181,7 +181,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top/animations/open_idle/spritesheet_000.webp",
       "sha256": "49bccb8f127beb9f1ca827c1f4ec7375d6b3c3d6ae3166a40c39567594ce2561"
     }
   },
@@ -217,6 +217,13 @@
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
-  "clipSelection": "validated-existing-ranges"
+  "clipSelection": "website-explicit-phases",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260913-195207-cst",
+    "sourceVersion": "v1.5",
+    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
+    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
+    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+  }
 }

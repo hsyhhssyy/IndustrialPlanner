@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "building": "seedcollector_1",
+  "version": "v1.5",
+  "assetKind": "building-top-view-animation-pack",
+  "canvasVariant": "5x5-grid-canvas-128px-cell",
+  "canvasCells": {
+    "width": 5,
+    "height": 5
+  },
+  "pixelsPerCell": 128,
+  "framePixels": {
+    "width": 640,
+    "height": 640
+  },
+  "animationCount": 4,
+  "animations": [
+    "open",
+    "open_idle",
+    "close",
+    "close_idle"
+  ],
+  "sheetPageLimit": {
+    "width": 4096,
+    "height": 4096
+  },
+  "webpEncoding": {
+    "quality": 85,
+    "alphaQuality": 100,
+    "alphaLossless": true,
+    "exact": true,
+    "encoder": "cwebp"
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false,
+  "sourcePackName": "seedcollector_1_top_v15_r2",
+  "beautyTaskId": null,
+  "taskId": "20260912-planter-seed-orientation-variants",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "directoryDelivery": {},
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "orientationRepair": {
+    "taskId": "20260912-planter-seed-orientation-variants",
+    "operation": "undo-double-flip",
+    "sourceEvidence": "original renderer output and FactoryBuildingTable port roles"
+  },
+  "view": "top"
+}

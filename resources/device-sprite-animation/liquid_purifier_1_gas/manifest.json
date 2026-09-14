@@ -49,7 +49,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/close/spritesheet_000.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/close/spritesheet_000.webp",
       "sha256": "aa3731d40c0db68d63be00ccf221d716353c37b0fa5816c71a4cf2456dc699e0"
     },
     "close_001": {
@@ -95,7 +95,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/close/spritesheet_001.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/close/spritesheet_001.webp",
       "sha256": "4fa7a29d964b46093931203d68a662511044c56f2c5d3310d9122da9d142b548"
     },
     "close_002": {
@@ -141,7 +141,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/close/spritesheet_002.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/close/spritesheet_002.webp",
       "sha256": "23426f3ad5ebf78cb947ecf5067431906dbda4e62a0db475fe9ac60056bb1649"
     },
     "close_003": {
@@ -159,7 +159,7 @@
         33,
         34
       ],
-      "sourcePath": "animations/close/spritesheet_003.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/close/spritesheet_003.webp",
       "sha256": "71ce20353c9500249f0d4379dc0a15621a7ec443d172684ea6bc11ecb55e90e5"
     },
     "close_idle_000": {
@@ -170,7 +170,7 @@
       "frameDurationsMs": [
         67
       ],
-      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/close_idle/spritesheet_000.webp",
       "sha256": "0f4a86e1e59274df5cdd42e40f30286b1bfee5e88f8e09a00793fbfea95959ff"
     },
     "open_000": {
@@ -191,7 +191,7 @@
         33,
         34
       ],
-      "sourcePath": "animations/open/spritesheet_000.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open/spritesheet_000.webp",
       "sha256": "2feb43efd0c42b994951ce01f31daf328a943f824ed416fb72e9ae0008cac195"
     },
     "open_idle_000": {
@@ -237,7 +237,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_000.webp",
       "sha256": "f9ec59c4aa70d0730514e2b9c40c20c80c1c6b70af4aaf444403186ef5a4e692"
     },
     "open_idle_001": {
@@ -283,7 +283,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_001.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_001.webp",
       "sha256": "7c6096bc33663b939fa54afeaaa0ec92d4044b812f3e9b3ebacc5ca66b31546d"
     },
     "open_idle_002": {
@@ -329,7 +329,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_002.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_002.webp",
       "sha256": "b925c5053be34ce43500fa6ac90683fe0cadccffdf80c60b25a552f82dc8cff1"
     },
     "open_idle_003": {
@@ -375,7 +375,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_003.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_003.webp",
       "sha256": "ff174844810bb421103e7a745e016e4221973b59460defd69bf35e76422ca27a"
     },
     "open_idle_004": {
@@ -421,7 +421,7 @@
         34,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_004.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_004.webp",
       "sha256": "e4034cfc0c9a32c5ee7b59db53ce69b95ab5e1887e32c56985559f738c332af3"
     },
     "open_idle_005": {
@@ -438,7 +438,7 @@
         33,
         33
       ],
-      "sourcePath": "animations/open_idle/spritesheet_005.webp",
+      "sourcePath": "buildings/liquid_purifier_1/top-gas/animations/open_idle/spritesheet_005.webp",
       "sha256": "8d41fe553e57eb59432b8d71ba1b917c3c4def88d0836204907b22bd914553b1"
     }
   },
@@ -514,6 +514,13 @@
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
-  "clipSelection": "validated-existing-ranges"
+  "clipSelection": "website-explicit-phases",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260913-195207-cst",
+    "sourceVersion": "v1.5",
+    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
+    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
+    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+  }
 }

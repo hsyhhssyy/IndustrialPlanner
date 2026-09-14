@@ -15,7 +15,7 @@
         30,
         40
       ],
-      "sourcePath": "animations/close_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/transmuter_1/top/animations/close_idle/spritesheet_000.webp",
       "sha256": "8189c036ad51b78c9dc08231d0b2d86be09f81215a0565b41d208c5fdfe6fbfb"
     },
     "open_idle_000": {
@@ -26,7 +26,7 @@
       "frameDurationsMs": [
         70
       ],
-      "sourcePath": "animations/open_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/transmuter_1/top/animations/open_idle/spritesheet_000.webp",
       "sha256": "74b896157cc929f127d60bbba482bb70ec2b6e306f2a495e9e201724c354d7d4"
     }
   },
@@ -67,6 +67,13 @@
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3",
-  "clipSelection": "validated-existing-ranges"
+  "clipSelection": "validated-existing-ranges",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260913-195207-cst",
+    "sourceVersion": "v1.5",
+    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
+    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
+    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+  }
 }

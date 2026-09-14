@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+  "releaseId": "v1.5-20260914-122929-cst",
+  "sourceVersion": "v1.5",
+  "indexSha256": "138b4232d15cf289db091337c8aabfe81cf61621d9a4a612b7fa053f6eff4585",
+  "fetchedAt": "2026-09-14T05:43:14Z",
+  "scope": "fluid-profiles",
+  "sourceOnly": true,
+  "published": false,
+  "root": "resources/building-assets-site/v1.5-20260914-122929-cst",
+  "profilePath": "buildings/logistics/fluid-profiles.json",
+  "profileCount": 20,
+  "phaseCounts": {
+    "liquid": 11,
+    "gas": 9
+  },
+  "registryCoverage": {
+    "missing": [],
+    "extra": [],
+    "phaseMismatches": []
+  },
+  "files": [
+    {
+      "path": "assets-manifest.json",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/assets-manifest.json",
+      "bytes": 24284,
+      "sha256": "c48709bc6d911eb43b68e1a12d6a4f1eb6d56ca2cd4a28b823f1e69455e3c0d9"
+    },
+    {
+      "path": "buildings/logistics/fluid-profiles.json",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/buildings/logistics/fluid-profiles.json",
+      "bytes": 47326,
+      "sha256": "ca46fb916b6e4e91c869b0b8d4a0ec83070e6276c83f475b668dd6c39f7b95c5"
+    },
+    {
+      "path": "buildings/logistics/integrity.json",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/buildings/logistics/integrity.json",
+      "bytes": 29272,
+      "sha256": "dc44734f2fe2f7397d567b272c6cf235e178273ddc259262066fd68a5b9d3569"
+    },
+    {
+      "path": "integrity.json",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/integrity.json",
+      "bytes": 503658,
+      "sha256": "138b4232d15cf289db091337c8aabfe81cf61621d9a4a612b7fa053f6eff4585"
+    },
+    {
+      "path": "integrity.json.sha256",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/integrity.json.sha256",
+      "bytes": 82,
+      "sha256": "ca90505f9ecd45893b021783cc19f181e7a32e83a0b21f1a1190d8688fbcd4a6"
+    },
+    {
+      "path": "release.json",
+      "localPath": "resources/building-assets-site/v1.5-20260914-122929-cst/release.json",
+      "bytes": 706,
+      "sha256": "20e33db24543ed39cbe3e1e8542861185b4c48d385c55fb94aae9f7d42b52f46"
+    }
+  ]
+}

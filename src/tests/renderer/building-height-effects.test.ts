@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
@@ -164,6 +165,9 @@ describe('建筑高度与端口特效', () => {
   it('发布高度字节按坐标契约逐行转换，所有数值文件及颜色页存在', async () => {
     const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
     const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
+    const receipt = JSON.parse(await readFile(path.join(collection.sourceSite.root, '_import/publish-receipt.json'), 'utf8')) as {
+      products: { path: string; sha256: string; retained?: boolean }[];
+    };
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
     for (const view of Object.values(manifest.views)) for (const field of Object.values(view.fields)) {
       fields.set(field.file, { field, reflected: view.coordinateSpace === 'project-reflected-source' });
@@ -173,6 +177,13 @@ describe('建筑高度与端口特效', () => {
       for (const page of resource.pages) expect((await readFile(`public/3d-top-view/port-effects/${page.file}`)).length).toBeGreaterThan(0);
     }
     for (const { field, reflected } of fields.values()) {
+      const retained = receipt.products.find((product) => product.retained && product.path === `public/3d-top-view/port-effects/${field.file}`);
+      if (retained) {
+        const bytes = await readFile(retained.path);
+        expect(createHash('sha256').update(bytes).digest('hex'), field.file).toBe(retained.sha256);
+        expect(gunzipSync(bytes).length).toBe(field.width * field.height * 4);
+        continue;
+      }
       const delivered = gunzipSync(await readFile(`public/3d-top-view/port-effects/${field.file}`));
       const { data: original, info } = await sharp(path.join(collection.sourceSite.root, field.file.replace(/\.rgba\.bin$/, '')))
         .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -193,10 +204,19 @@ describe('建筑高度与端口特效', () => {
     }
   });
 
-  it('发布特效逐帧补边缩放并重新排布，保持帧序、时长与采样位置', async () => {
+  it.each(Object.keys(manifest.effects))('发布特效 %s 逐帧补边缩放并重新排布，保持帧序、时长与采样位置', async (resourceId) => {
     const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
     const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
-    const resourceId = 'v1.5/fx/P_interactive_large_pipeoff_out_01';
+    // AI-REMOVED 2026-09-14:
+    // Reason: 单个资源覆盖不足；奇数高度和其他端口、状态环同样需要验证。
+    // Trigger: 共享缩放函数导致多组烘焙素材错位。
+    // Evidence: 当前 manifest 中 8 组资源需要透明补边。
+    // Replacement: 上方 it.each 遍历所有已发布特效。
+    // Risk: Low；扩大原有逐帧验证范围。
+    // Human Review: Required
+    //
+    // Original code:
+    // const resourceId = 'v1.5/fx/P_interactive_large_pipeoff_out_01';
     const resource = manifest.effects[resourceId]!;
     const reflected = resource.coordinateSpace === 'project-reflected-source';
     const sourceDirectory = path.join(collection.sourceSite.root, path.dirname(resource.height.file));
@@ -223,10 +243,29 @@ describe('建筑高度与端口特效', () => {
           .extract({ left: original.x, top: original.y, width: original.width, height: original.height });
         if (reflected) extract = extract.flip();
         const pixels = await extract.ensureAlpha().raw().toBuffer();
-        const source = await sharp(pixels, { raw: { width: original.width, height: original.height, channels: 4 } })
-          .extend({ left: 0, top: 0, right: frame.width / resolution - original.width,
-            bottom: frame.height / resolution - original.height, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-          .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer();
+        // AI-REMOVED 2026-09-14:
+        // Reason: 测试与发布器复用了错误的 Sharp 操作顺序，掩盖了真实行宽错误。
+        // Trigger: 修复奇数尺寸补边后产生的斜纹，必须独立验证像素位置。
+        // Evidence: 同一流水线中 extend 在 resize 后执行；旧期望同样输出多余列。
+        // Replacement: 下方在 CPU 上独立补透明边，只调用 Sharp 执行缩放。
+        // Risk: Low；保持原有帧序、时长、采样位置断言目标。
+        // Human Review: Required
+        //
+        // Original code:
+        // const source = await sharp(pixels, { raw: { width: original.width, height: original.height, channels: 4 } })
+        //   .extend({ left: 0, top: 0, right: frame.width / resolution - original.width,
+        //     bottom: frame.height / resolution - original.height, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        //   .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer();
+        const paddedWidth = frame.width / resolution, paddedHeight = frame.height / resolution;
+        const padded = Buffer.alloc(paddedWidth * paddedHeight * 4);
+        for (let row = 0; row < original.height; row++) {
+          pixels.copy(padded, row * paddedWidth * 4, row * original.width * 4, (row + 1) * original.width * 4);
+        }
+        const resized = await sharp(padded, { raw: { width: paddedWidth, height: paddedHeight, channels: 4 } })
+          .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer({ resolveWithObject: true });
+        expect(resized.info).toMatchObject({ width: frame.width, height: frame.height, channels: 4 });
+        expect(resized.data.length).toBe(frame.width * frame.height * 4);
+        const source = resized.data;
         for (let row = 0; row < frame.height; row++) {
           const sourceRow = row;
           const deliveredRow = frame.y + row;

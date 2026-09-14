@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "partCount": 1,
+  "totalBytes": 2968,
+  "pages": [
+    {
+      "animation": "static",
+      "index": 0,
+      "image": "animations/static/spritesheet_000.webp",
+      "width": 128,
+      "height": 128,
+      "columns": 1,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 1,
+      "bytes": 2968,
+      "sha256": "04cdbb5d7b6ffdb73416edcdd25c07015de6460b663d8ebc94bb88d6141ecae9"
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260912-195720-udpipe-correct-reexport-b4309baf",
+  "version": "v1.5",
+  "building": "udpipe_unloader_2",
+  "tableBuildingId": "udpipe_unloader_2",
+  "displayName": "多口暗管出口",
+  "view": "top",
+  "mode": "liquid",
+  "rendererTemplate": "udpipe_unloader_2_liquid_0",
+  "canvasCells": [
+    4,
+    5
+  ],
+  "footprintCells": [
+    3,
+    5
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    512,
+    640
+  ],
+  "fps": 30,
+  "animations": [
+    "emissive_belt"
+  ],
+  "animationCount": 1,
+  "webpPageCount": 3,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "baseSelection": "nonLogisticBaseUnit",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [
+    "Runtime liquid fill/refraction is not baked into beauty; pipe states are separate shared resources."
+  ],
+  "edgeOverflowPolicy": {
+    "mode": "subtract-before-whole-cell-ceiling",
+    "maxPixelsPerSide": 2,
+    "inclusive": true,
+    "sourceAlphaUnionBoundsPixels": [
+      127,
+      174,
+      460,
+      722
+    ],
+    "sourceFootprintRectPixels": [
+      128,
+      128,
+      512,
+      768
+    ],
+    "rawOverflowPixels": {
+      "left": 1,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "effectiveOverflowPixels": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "ignoredByFinalCropPixels": {
+      "left": 1,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "minimumCanvasConstraint": {
+      "canvasCells": [
+        4,
+        5
+      ],
+      "footprintOffsetCells": [
+        0,
+        0
+      ]
+    },
+    "evaluatedOn": "source PNG union alpha before WebP encoding"
+  },
+  "beautyTaskId": "20260912-195720-udpipe-correct-reexport-b4309baf",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "assetKind": "factory-static-geometry-with-material-animation",
+  "sourceModel": "A_udpipeunloader+2_001_01_variant_dynamic_lod0",
+  "sourceMaterial": "M_udpipeunloader+2_001_01_variant_build_udpipeloader+1_001_02_vat",
+  "lightingPreset": "factory-top-pbr-fourfold-v1.5",
+  "orientationAudit": {
+    "status": "passed",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    },
+    "postRenderFlip": "none",
+    "evidence": "Outlet black hoods extend to image-left and the arrow faceplates remain on their image-right, matching the supplied gameplay screenshot."
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "sourcePackName": "A_shaper+1_001_01_variant_dynamic_lod0",
+  "static": false,
+  "vatTexture": "T_shaper+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 16,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "close_idle",
+    "startRow": 0,
+    "endRowInclusive": 1,
+    "rowCount": 2,
+    "loop": false
+  },
+  "stateMachine": null,
+  "fps": 30,
+  "frameStep": 1,
+  "width": 384,
+  "height": 384,
+  "projection": "orthographic",
+  "viewDirection": [
+    -4.329780301713277e-17,
+    -4.329780301713277e-17,
+    -1.0
+  ],
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128,
+    "preset": "fixed30-fourfold-pbr-2300-v1"
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_shaper+1_001_01_variant_build_shaper+1_001_01_vat",
+    "M_shaper+1_001_01_variant_com_alphatest+1_001_03_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_shaper+1_001_01_variant_build_shaper+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_shaper+1_001_01_variant_com_alphatest+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [
+          {
+            "property": "_NormalMap",
+            "texture": "T_default_normal_N"
+          }
+        ]
+      }
+    ],
+    "base": [
+      {
+        "name": "M_pedestal+1_001_03x03_01_build_pedestal+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": true,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 0,
+      "vatPhysicalRow": 108,
+      "sourceFrame": 0,
+      "playable": true,
+      "durationMs": 70,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 1,
+        "count": 2,
+        "vatRows": {
+          "start": 0,
+          "endInclusive": 1,
+          "step": 1
+        },
+        "animationFrames": {
+          "start": 0,
+          "endInclusive": 1,
+          "step": 1
+        }
+      }
+    }
+  ],
+  "building": "shaper_1",
+  "version": "v1.5",
+  "sourceFrameCount": 2,
+  "retainedFrameCount": 1,
+  "coordinateSystem": {
+    "source": "Unity factory source coordinates (x, y, z)",
+    "blender": "(x, -z, y)",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    }
+  },
+  "postProcessCrop": {
+    "sourceFramePixels": [
+      640,
+      640
+    ],
+    "cropRectSourcePixels": [
+      128,
+      128,
+      512,
+      512
+    ],
+    "resultFramePixels": [
+      384,
+      384
+    ],
+    "operation": "crop one whole-cell band on every side, then flip vertically once",
+    "resized": false
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "spritesheet": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 1,
+    "playbackFrameCount": 1,
+    "durationMs": 70
+  },
+  "visualValidation": {
+    "alphaUnionBBoxPixels": [
+      3,
+      3,
+      381,
+      381
+    ],
+    "finalCanvasEdgeContactFrames": 0,
+    "note": "Filled after all requested clips are composed; visible pixels outside the logical footprint remain valid only inside the declared canvas."
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "transparentRgbIgnored": true,
+    "sourceFrameCount": 2,
+    "retainedFrameCount": 1,
+    "removedFrameCount": 1,
+    "sourceDurationMs": 70,
+    "retainedDurationMs": 70,
+    "explicitClosureFramesPreserved": 0
+  }
+}

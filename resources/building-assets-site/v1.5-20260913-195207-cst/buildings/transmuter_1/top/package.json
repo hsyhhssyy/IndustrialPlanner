@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "building": "transmuter_1",
+  "tableBuildingId": "transmuter_1",
+  "displayName": "液气转化机",
+  "version": "v1.5",
+  "view": "top",
+  "mode": "gastrans__0+liquidtrans__0",
+  "canvasCells": [
+    5,
+    5
+  ],
+  "footprintCells": [
+    5,
+    5
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    640,
+    640
+  ],
+  "fps": 30,
+  "animations": [
+    "close_idle",
+    "open_idle"
+  ],
+  "animationCount": 2,
+  "webpPageCount": 2,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / alpha quality 100",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "rendererTemplate": "gastrans__0",
+  "baseSelection": "nonLogisticBaseUnit",
+  "periodicSubranges": {},
+  "taskId": "20260911-building-port-delivery",
+  "maintenanceTaskId": "20260909-building-path-contract",
+  "beautyTaskId": "20260909-building-path-contract",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

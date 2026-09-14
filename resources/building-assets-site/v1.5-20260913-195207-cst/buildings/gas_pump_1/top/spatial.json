@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "unit": "factory-grid-cell",
+  "imageOrigin": "top-left",
+  "imageAxes": {
+    "x": "+sourceX",
+    "y": "+sourceZ"
+  },
+  "coordinateSystem": "PixiJS-style 2D canvas; origin top-left; x right; y down",
+  "canvasCells": {
+    "width": 3,
+    "height": 3
+  },
+  "framePixels": {
+    "width": 384,
+    "height": 384
+  },
+  "pixelsPerCell": {
+    "x": 128,
+    "y": 128
+  },
+  "footprintRectCells": {
+    "left": 0,
+    "top": 0,
+    "width": 3,
+    "height": 3,
+    "source": "FactoryBuildingTable.range"
+  },
+  "pivotCells": {
+    "x": 1.5,
+    "y": 1.5
+  },
+  "pivotPixels": {
+    "x": 192.0,
+    "y": 192.0
+  },
+  "anchorNormalized": {
+    "x": 0.5,
+    "y": 0.5
+  },
+  "placementRule": {
+    "description": "Place the sprite canvas at the logical footprint top-left.",
+    "spriteCanvasLeft": "gridX",
+    "spriteCanvasTop": "gridY"
+  },
+  "verticalTransform": {
+    "operation": "flip-top-bottom",
+    "sourceImageAxisY": "-sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "sourceFramePixels": [
+      384,
+      384
+    ],
+    "resultFramePixels": [
+      384,
+      384
+    ],
+    "resized": false,
+    "cropRectPixels": [
+      0,
+      0,
+      384,
+      384
+    ]
+  }
+}

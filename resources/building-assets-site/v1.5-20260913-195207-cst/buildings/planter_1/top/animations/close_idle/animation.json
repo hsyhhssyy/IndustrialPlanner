@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 2,
+  "sourcePackName": "A_planter+1_001_01_variant_dynamic_lod0",
+  "static": false,
+  "vatTexture": "T_planter+1_001_01_variant_VAT",
+  "vatLayout": "rigid-track-quaternion-translation",
+  "trackCount": 3,
+  "staticAuxiliaryVertexCount": 24,
+  "clip": {
+    "name": "close_idle",
+    "startRow": 2,
+    "endRowInclusive": 3,
+    "rowCount": 2,
+    "loop": false
+  },
+  "stateMachine": {
+    "offset": 1152,
+    "initialState": "close",
+    "states": [
+      {
+        "name": "close",
+        "animation": "A_interactive_planter+1_001_01_close_01"
+      },
+      {
+        "name": "close_idle",
+        "animation": "A_interactive_planter+1_001_01_closeidle_01"
+      },
+      {
+        "name": "open",
+        "animation": "A_interactive_planter+1_001_01_open_01"
+      },
+      {
+        "name": "open_idle",
+        "animation": "A_interactive_planter+1_001_01_openidle_01"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "close",
+        "to": "close_idle"
+      },
+      {
+        "from": "open",
+        "to": "open_idle"
+      }
+    ]
+  },
+  "fps": 30,
+  "frameStep": 1,
+  "width": 640,
+  "height": 640,
+  "projection": "orthographic",
+  "viewDirection": [
+    0.0,
+    0.0,
+    -1.0
+  ],
+  "transparentBackground": true,
+  "renderPass": "scene",
+  "lighting": {
+    "directionlessAmbientStrength": 0.03,
+    "shadingMode": "pbr",
+    "mroOcclusionStrength": 0.45,
+    "localOcclusionStrength": 0.3,
+    "localOcclusionDistance": 0.35,
+    "localOcclusionMethod": "eevee-ambient-occlusion-node",
+    "normalGreenFlip": true,
+    "roughnessFloor": 0.4,
+    "specularScale": 0.4,
+    "exposure": 0.8,
+    "keyLight": "area",
+    "lightRig": "fourfold",
+    "keyEnergyPerLight": 2300.0,
+    "keyElevationDegrees": 62.0,
+    "keyAzimuthDegrees": 0.0,
+    "sunAngleDegrees": null,
+    "lightDistance": 30.0,
+    "lightDistanceMode": "fixed",
+    "areaSize": 25.0,
+    "areaSizeScale": null,
+    "keyShadows": true,
+    "lightSpecularFactor": 0.4,
+    "worldStrength": 0.5,
+    "viewLook": "AgX - Medium High Contrast",
+    "viewTransform": "AgX",
+    "samples": 128,
+    "preset": "fixed30-fourfold-pbr-2300-v1"
+  },
+  "loopClosure": null,
+  "materials": [
+    "M_planter+1_001_01_variant_build_planter+1_001_01_vat",
+    "M_planter+1_001_01_variant_build_planter+1_001_02_vat",
+    "M_planter+1_001_01_variant_build_planter+1_001_03_vat",
+    "M_planter+1_001_01_variant_com_alphatest+1_001_05_vat"
+  ],
+  "materialAudit": {
+    "main": [
+      {
+        "name": "M_planter+1_001_01_variant_build_planter+1_001_01_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_planter+1_001_01_variant_build_planter+1_001_02_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": true,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_planter+1_001_01_variant_build_planter+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": true,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": []
+      },
+      {
+        "name": "M_planter+1_001_01_variant_com_alphatest+1_001_05_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": false,
+        "missingTextureReferences": [
+          {
+            "property": "_NormalMap",
+            "texture": "T_default_normal_N"
+          }
+        ]
+      }
+    ],
+    "base": [
+      {
+        "name": "M_pedestal+1_001_05x05_01_build_pedestal+1_001_03_vat",
+        "shaderNameRecovered": false,
+        "glassEnabled": false,
+        "liquidEnabled": false,
+        "emissiveLutEnabled": true,
+        "missingTextureReferences": []
+      }
+    ]
+  },
+  "frames": [
+    {
+      "vatRow": 2,
+      "vatPhysicalRow": 405,
+      "sourceFrame": 2,
+      "playable": true,
+      "durationMs": 30,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 2,
+          "endInclusive": 2,
+          "step": 1
+        },
+        "animationFrames": {
+          "start": 2,
+          "endInclusive": 2,
+          "step": 1
+        }
+      }
+    },
+    {
+      "vatRow": 3,
+      "vatPhysicalRow": 404,
+      "sourceFrame": 3,
+      "playable": true,
+      "durationMs": 40,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 3,
+          "endInclusive": 3,
+          "step": 1
+        },
+        "animationFrames": {
+          "start": 3,
+          "endInclusive": 3,
+          "step": 1
+        }
+      }
+    }
+  ],
+  "building": "planter_1",
+  "version": "v1.5",
+  "sourceFrameCount": 2,
+  "retainedFrameCount": 2,
+  "coordinateSystem": {
+    "source": "Unity factory source coordinates (x, y, z)",
+    "blender": "(x, -z, y)",
+    "imageAxes": {
+      "x": "+sourceX",
+      "y": "+sourceZ"
+    }
+  },
+  "postProcessCrop": {
+    "metadataScope": "source-render-before-crop",
+    "sourceFramePixels": [
+      896,
+      896
+    ],
+    "cropRectSourcePixels": [
+      128,
+      128,
+      768,
+      768
+    ],
+    "resultFramePixels": [
+      640,
+      640
+    ],
+    "operation": "crop central whole-cell 1-cell bands",
+    "resized": false
+  },
+  "spatialMetadata": "../../spatial.json",
+  "spritesheetMetadata": "spritesheet.json",
+  "spritesheet": "spritesheet.json",
+  "playback": {
+    "mode": "hold-final",
+    "frameCount": 2,
+    "playbackFrameCount": 2,
+    "durationMs": 70
+  },
+  "visualValidation": {
+    "alphaUnionBBoxPixels": null,
+    "finalCanvasEdgeContactFrames": 0,
+    "note": "Visible pixels outside the logical footprint are permitted only when inside the declared canvas; this delivery has no footprint overflow."
+  },
+  "frameDeduplication": {
+    "method": "consecutive-visible-rgba-byte-equality",
+    "transparentRgbIgnored": true,
+    "sourceFrameCount": 2,
+    "retainedFrameCount": 2,
+    "removedFrameCount": 0,
+    "sourceDurationMs": 70,
+    "retainedDurationMs": 70,
+    "explicitClosureFramesPreserved": 0
+  },
+  "canvasNormalization": {
+    "operation": "none",
+    "sourceImageAxisY": "+sourceZ",
+    "resultImageAxisY": "+sourceZ",
+    "resized": false,
+    "correction": "removed erroneous second top-bottom flip from an already-normalized source render"
+  },
+  "orientationRepair": {
+    "taskId": "20260912-planter-seed-orientation-variants",
+    "operation": "flip-top-bottom",
+    "reason": "undo erroneous second vertical normalization",
+    "pixelPreserving": true
+  }
+}

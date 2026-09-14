@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "materialContractVersion": 2,
+  "previewRenderer": "pixi-logistics-material-v2",
+  "version": "v1.5",
+  "gameVersion": "v1.5",
+  "taskId": "20260913-logistics-height-publication",
+  "building": "grid_belt_01_mid",
+  "displayName": "传送带直段",
+  "view": "top",
+  "variantDisplayName": "传送带直段",
+  "pixelsPerCell": 128,
+  "canvasCells": {
+    "width": 1,
+    "height": 1
+  },
+  "staticManifest": "static/manifest.json",
+  "dynamicManifest": "dynamic/manifest.json",
+  "reconstructionStatus": "Original geometry/textures; approximate 2D materials and fluid appearance",
+  "sourceTaskId": "20260913-114414-logistics-water-gas",
+  "logisticsKind": "conveyor",
+  "logisticsShape": "straight",
+  "spatialMetadata": "spatial.json",
+  "occlusionMetadata": "occlusion/occlusion.json"
+}

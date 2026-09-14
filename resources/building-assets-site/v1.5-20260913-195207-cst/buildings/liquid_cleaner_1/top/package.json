@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "taskId": "20260913-endpoint-port-regeneration",
+  "version": "v1.5",
+  "building": "liquid_cleaner_1",
+  "tableBuildingId": "liquid_cleaner_1",
+  "displayName": "废水处理机",
+  "view": "top",
+  "mode": "liquid",
+  "rendererTemplate": "liquid__0",
+  "canvasCells": [
+    3,
+    3
+  ],
+  "footprintCells": [
+    3,
+    3
+  ],
+  "footprintOffsetCells": [
+    0,
+    0
+  ],
+  "pixelsPerCell": 128,
+  "framePixels": [
+    384,
+    384
+  ],
+  "fps": 30,
+  "animations": [
+    "close",
+    "close_idle",
+    "open",
+    "open_idle"
+  ],
+  "animationCount": 4,
+  "webpPageCount": 4,
+  "webpPageLimit": [
+    4096,
+    4096
+  ],
+  "webpEncoding": "quality 85 / lossless alpha",
+  "baseSelection": "logisticBaseUnit",
+  "directoryDelivery": {
+    "individualPngFrames": true
+  },
+  "materialLimitations": [],
+  "rendererVariants": [
+    {
+      "key": "liquid__0",
+      "machineModeType": "liquid",
+      "machineRenderId": "liquid_cleaner_1",
+      "logisticBaseUnit": "pedestal+1_001_03x03_04a",
+      "nonLogisticBaseUnit": "pedestal+1_001_03x03_04a",
+      "activeSolidPorts": {
+        "input": [],
+        "output": []
+      }
+    }
+  ],
+  "rendererTemplateCount": 1,
+  "selectedBase": {
+    "field": "logisticBaseUnit",
+    "value": "pedestal+1_001_03x03_04a"
+  },
+  "portConvention": {
+    "inputStrip": "white",
+    "outputStrip": "yellow",
+    "flow": "input toward machine; output away from machine",
+    "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+  },
+  "revision": "fix3",
+  "observedSolidPortCount": 0,
+  "baseMatchStatus": "exact current serialized mesh/material slots; zero active solid ports",
+  "beautyTaskId": "20260910-building-variant-fix3",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false
+}

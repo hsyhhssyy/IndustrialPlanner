@@ -2,25 +2,38 @@
 
 ## 执行前就绪检查
 
-当前已有网站入口，固定命令见主 checklist。2026-09-13 首次实跑已完成来源下载和暂存验收：1597 个源文件、31 个动画、20 个静态精灵、52 个高度视图、14 个共享特效，默认比例生成 846 个发布文件。正式应用仍等待 6 项 Registry 绘图范围的跨模块授权，不能据此声称端到端导入已经完成。
+当前已有网站入口，固定命令见主 checklist。2026-09-13 首次实跑已完成来源下载和暂存验收：1597 个源文件、31 个动画、20 个静态精灵、52 个高度视图、14 个共享特效，默认比例生成 846 个发布文件。6 项 Registry 绘图范围已获用户授权；该历史批次排除了物流。2026-09-14 的新版烘焙物流已另行接入并实跑：149 个原件、29 个新发布文件、76 个 retained 文件，整批应用 183 个变化文件。正式完成状态以应用记录及应用后验证为准。
 
 | 能力 | 实现与已取得的证据 |
 | --- | --- |
 | 固定发布、下载及哈希校验 | `building-assets-site-source.py`；真实来源闭包通过，离线 HTTP 夹具覆盖缺文件、字节变化和发布切换 |
 | 原始 JSON 与动画来源转换 | 同一 Python 工具的 `--metadata-only`；保留原始字节与大整数，生成原件引用和阶段清单 |
 | 静态图、动画分页、首帧及遮罩 | `publishDeviceSprite`、`publishDeviceSpriteAnimations`；普通图与动画均接受显式比例，半尺寸和四分之一夹具覆盖 |
-| 物流材质及数值纹理 | `publish-logistics-materials.mjs`；颜色图按比例发布，数值图最近邻采样为 gzip RGBA8，避免 WebP 清零透明像素 RGB |
-| 高度和裁切特效 | `publish-building-port-effects.mjs`、`building-asset-image.mjs`；高度与特效均已实际生成并验收 |
+| 物流材质及数值纹理 | `publish-logistics-baked.mjs`；颜色逐帧缩放重排，数值场最近邻采样为 gzip RGBA8，运行时共享纹理与路线 Mesh |
+| 高度和裁切特效 | `publish-building-port-effects.mjs`、`building-asset-image.mjs`；已修复补边与缩放顺序，回归覆盖奇数边长及已发布特效逐帧像素 |
 | 来源关联和整批验收 | `import-building-assets.mjs validate`；检查原件、尺寸、页引用、数值字节，生成每个产物的来源关联与写入清单 |
-| 备份、应用及恢复 | `apply / restore` 入口；恢复夹具已运行，正式批次尚未应用 |
+| 备份、应用及恢复 | `apply / restore` 入口；恢复夹具已运行，已实际应用 1794 个变化文件，正式目录逐项哈希对账通过 |
 
-当前发布入口只支持已有映射的完整集合及物流集合。下载器的 `--entity` 仅支持限定来源核查；**不能用于正式局部导入**。局部发布需要合并共享 manifest，当前入口会明确拒绝，执行者不能通过手工拼接绕过。
+当前发布入口支持已有建筑映射的完整集合、`--logistics-only` 物流集合，以及用户明确排除物流的建筑集合。完整集合直接发布烘焙物流；排除物流才执行 `defer-logistics`，将相关原件、材质、sprite/mask 移出本批。仅物流模式合并共享高度 manifest，未选建筑、特效和数值文件按原字节保留。发布收据使用 `retained=true` 区分它们与本轮新产物。下载器 `--entity` 仍仅用于限定来源核查，不能用于正式局部建筑导入，也不能手工拼接绕过范围检查。
 
-日常执行只运行已有入口，不能修脚本或重新设计协议。Registry 绘图范围不一致时，提交脚本给出的实际差异；需要跨模块修改时遵守项目授权规则。首次试运行后尚未完成的正式应用、应用后基础检查与完整场景验证，应保持未完成状态。
+日常执行只运行已有入口，不能修脚本或重新设计协议。Registry 绘图范围不一致时，提交脚本给出的实际差异；需要跨模块修改时遵守项目授权规则。2026-09-13 正式批次已排除物流新交付并应用：1457 个原件、772 个新产物及 10 个保留高度文件。检查结果须以该次报告为准，未执行或失败项不得标记通过。
+
+### 已知能力缺口
+
+2026-09-14 技能复核：下面列的是尚未固化的执行能力，不能因本轮已有人工实跑证据而勾选“入口就绪”。只核对本次范围需要的能力，维护任务完成后再据实际命令和验证结果更新此表。
+
+| 能力 | 当前状态与执行边界 |
+| --- | --- |
+| 仅留存配色表原件 | 已留存一批原件，但使用了临时编排；正式下载器只有完整范围与 `--logistics-only`，不存在 `source-only` 命令。日常执行停在范围检查，不能扩大导入范围 |
+| 本批全部比例的独立像素验收 | 独立像素回归已在 `src/tests/scripts/building-assets-site.test.ts` 和 `src/tests/renderer/building-height-effects.test.ts`；后者读取正式目录及当前来源配置。`validate` 仍为结构、尺寸、引用和编码校验，尚无接受本批暂存目录及全部比例的独立像素入口 |
+| 可重复的真实浏览器场景 | 本轮三档验收已完成，脚本只作为历史文本归档；尚无随技能提供的固定场景入口。需要此项而无已验证入口时，报告验证能力缺口，不把临时 `.mjs.txt` 改回脚本运行 |
+| 检查基线自动比较、应用后对账与归档 | 已有检查报告、收据、`apply / restore` 和状态表；尚无统一比较或归档命令。按 [错题本](lessons-learned.md)核对已知字段并保留证据，无法完成的项如实报告，不虚构命令 |
+
+以上缺口的完善属于维护任务。日常执行者可以读字段、比哈希、按状态表选择已有命令；不承担新增发布器、像素算法、浏览器夹具或业务测试修复。
 
 ## Search-First 和处理边界
 
-本流程选择 **Extend / Compose**：网站清单负责交付发现和来源锁定，项目已有素材清单负责实体映射，现有发布器负责像素处理和运行时协议。无需另建播放器、纹理协议、爬虫服务或版本绑定的导入命令。
+本流程选择 **Extend / Compose**：网站清单负责交付发现和来源锁定，项目已有素材清单负责实体映射，现有发布器负责像素处理和运行时协议。采用网站烘焙协议和参考 Shader，复用项目拓扑、仿真查询、Pixi Mesh 与数值上传；无需爬虫服务或版本绑定的导入命令。
 
 素材任务的主模块为 Renderer，通常只需修改配套 `src/scripts`、`src/tests` 和资源目录。新增函数、类型或 import 前阅读 `.docs/common/项目模块隔离开原则发规范.md`；需要修改 Registry 或业务模块时遵守其中的授权边界。
 
@@ -34,9 +47,10 @@
 | `src/scripts/sync-device-sprites.mjs` | `publishDeviceSprite`、`publishDeviceSpriteAnimations` 通用发布函数；CLI 仅保留动画和蓝图遮罩重发 |
 | `src/scripts/device-sprite-animation-publisher.mjs` | 分页、逐帧时间线、变换、静态帧和并集遮罩；单版本调用默认使用比例常量的第一项 |
 | `src/scripts/publish-building-port-effects.mjs` | 高度数值图发布、端口和环绑定、共享特效发布 |
-| `src/scripts/publish-logistics-materials.mjs` | `materialContractVersion: 2` 物流材质合成与发布 |
+| `src/scripts/publish-logistics-baked.mjs` | 网站烘焙相位图集、数值场、端帽与静态回退发布 |
+| `src/scripts/publish-logistics-materials.mjs` | 仅保留共享像素合成与静态图集函数；旧发布器已归档 |
 | `src/shared/device-sprite-animation.ts` | 当前动画协议、分页限制和校验 |
-| `src/shared/logistics-material.ts` | 当前物流材质协议 |
+| `src/shared/logistics-material.ts`、`src/shared/logistics-baked.ts` | 线路拓扑、烘焙协议与纯流体状态机 |
 
 上表中的既有发布器负责像素处理；网站统一入口是 `import-building-assets.mjs`。其 CLI 默认路径可能指向已导入的历史来源，不能当作网站导入命令直接运行。需要组织数据时使用已验证的显式输入/输出参数；若接口仍强制依赖旧包总清单，归入首次接入维护，不由日常执行者临时扩展。维护时让处理器消费新清单解析后的视图/资源，不能伪造 ZIP、空 `ports.json` 或旧目录兼容层绕过校验。沿用相同的像素处理函数和测试，不重写已有算法。
 
@@ -108,18 +122,35 @@ localY = heightMin + q / 65535 * (heightMax - heightMin)
 A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 ```
 
-逐图核对哈希、宽高、有效像素数/范围和字段引用。高度数据不做 sRGB 转换、插值、有损重编码或 mipmap。按像素中心取最近样本并完整复制 RGBA，再 gzip 发布。物流 UV/流场等 `linear-data` 纹理也使用 `.rgba.bin`，运行时解压后通过 `BufferImageSource` 上传 GPU；不得转回 WebP。
+逐图核对哈希、宽高、有效像素数/范围和字段引用。高度数据不做 sRGB 转换、插值、有损重编码或 mipmap。按像素中心取最近样本并完整复制 RGBA，再 gzip 发布。网站发布器的物流 UV/流场等 `linear-data` 纹理使用 `.rgba.bin`；该编码由 `LogisticsMaterialTextureCache` 解压并上传 RGBA8，禁预乘、mipmap 和颜色空间转换。Shader 对打包 mapping 取目标像素中心，其他场允许双线性采样；不能用 WebP 重编码替代数值协议。
 
 普通建筑高度和特效需要同步反射像素、pivot、origin、端口/环位置及图集 frame rect。物流 `sourceAssembly.canonicalSourceZReflection` 所声明的 canonical 画布走既有物流契约，不套用普通建筑的逐帧反射规则。
 
 ## 物流交付
 
-- `collection.json.deliveries` 是当前集合入口，静态、动态、空间和遮挡分支各用自己的路径；不能把 `collection` 当普通建筑 `top` 视图。
-- 原始分层材质继续使用 `materialContractVersion: 2`；网站的 `logistics-baked.json` 是另一种烘焙布局，不是项目运行时 manifest 的直接替代品。日常导入沿用已验证的分层交付转换；网站仅提供另一种布局时停止并报告，不能自行选择格式、更换项目播放器。
-- 从 `heightMetadata` / `logistics-height.json.components` 解析空间和遮挡引用，再以各 `occlusion.fields[].file` 找到高度图。跟随 `stateMapping` 选择命名高度字段；`null` 明确表示无不透明遮挡，不能视为漏文件。
-- 裸直管的透明管壁及流体不写入不透明高度；带支架直段使用 `straightWithSupport`，弯段使用 `left / right`，以本轮实际清单为准。
-- 高度图已经烘焙 `sourceAssembly` 的局部旋转和平移，放置时只应用整段变换。2026-09-13 交付的直段支架高度图已含局部 90° 旋转，不能再次应用。当前颜色发布器另有分层旋转规则，应按颜色来源契约分别核查，不能把高度规则机械套给颜色。
-- 物流新交付没有普通建筑的端口/环特效描述，不应要求美术补旧流程中的空占位文件；以物流集合契约发布其材质和遮挡。
+当前入口为 `collection.json.bakedManifest` 指向的 `logistics-baked.json`，要求 `schemaVersion=2`、`format=logistics-spritesheet-v2`、`fluidPlayback.kind=baked-spatial-field-v2`。原始分层 contract 2 JSON 仍作为原件留存，运行时不再消费旧动态 manifest。协议变化时停止并报告，不让日常执行者改 Shader。
+
+- [ ] 下载闭包包含相位页、`fluid-data` / `gas-field`、所有静态组件、端帽，以及 `heightMetadata` 的空间/遮挡分支。
+- [ ] 颜色帧恢复源逻辑画布后逐帧缩放，保留透明裁切偏移，再加挤出边重排；不能整体缩放旧图集。源中未消费的两张 256 像素 pattern/chevron 原图只归档，相位帧负责显示。
+- [ ] 数值场按配置比例最近邻复制 RGBA 后 gzip；保留透明像素中的数据。世界占地和规范采样坐标不随纹理密度改变。
+- [ ] 支架颜色层已在网站中装配，放置时只应用整节方向，不能再套旧发布器的局部 90° 旋转。
+- [ ] 静态回退图只生成空管，配色使用共享纹理的 Shader 参数，不按物品另烘焙。配色表原件留存、运行时发布与统一颜色来源改造按下节分别核对。
+- [ ] 六个 sprite/mask 与 `logistics/static` 同批生成；源文件只保留一份，全部比例各自独立发布。
+- [ ] 端帽 composite/whitening 均有合法帧引用；运行时在每条非闭环管道的真实首尾放置，连接设备也保留，单格放两个，内部格缝不重复。
+- [ ] 高度来自 `logistics-height.json.components` 的真实引用；`stateMapping=null` 是无不透明遮挡。裸直管及流体不产生不透明高度，支架与弯段使用已装配高度图，禁止再次反射或局部旋转。
+
+物流公共纹理由 Renderer 提前上传并常驻至销毁，不受设备动画开关控制。流体是每条连续管道一个 Mesh；普通模式由真实占用驱动水头、退场、反向恢复及换液，精确模式按真实有液格输出索引、禁水头与粗细过渡，内部流动仍播放。颜色参数不产生独立纹理，因此没有每颜色 20 秒卸载计时器。
+
+### 配色来源与接入状态
+
+2026-09-14 的确定状态：`v1.5-20260914-122929-cst` 的独立配色表已保存到 `resources/building-assets-site/<releaseId>/buildings/logistics/fluid-profiles.json`，含 20 项（11 液体、9 气体）。该次仅留存原件，收据为 `scope=fluid-profiles / sourceOnly=true / published=false`；当时 `public/3d-top-view/logistics/baked/manifest.json` 仍为旧的两项配色。这些数字是历史核验结果，后续以当前文件和本批索引为准。
+
+用户已确定后续颜色应统一以美术为唯一来源，现有颜色 tag 为待替换数据；用户同时明确暂缓代码改造。当前运行时仍有 Registry 单色回退，这是尚未改造的实现现状，不是后续配色缺失时的验收策略。不能补造颜色、增加回退层，也不能在普通导入任务中顺手修改 Registry、蓝图或 Renderer。
+
+- [ ] 按 [配色表协议](site-source.md#流体配色表)核对原件、物品 ID、相态和分层颜色；缺失或冲突时列出实际项，不以历史数量替代覆盖检查。
+- [ ] 仅留存原件时不写 `public` 和业务源码，也不将留存收据改成已发布。
+- [ ] 本次明确包含配色发布时，对账独立表与同一发布的 baked 配色数据；发布器当前从 `logistics-baked.json.fluidProfiles` 提取运行时配色。更新该 manifest 不代表项目各处已统一颜色来源。
+- [ ] 统一颜色来源的代码改造只有在该维护需求执行、验证完成后才更新技能状态；此前报告“原件已保存 / 运行时是否更新 / 统一来源改造暂缓”三个独立结果。
 
 ## 应用与验证
 
@@ -137,4 +168,4 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 - 页面 `rows` 有时表示使用行数，图片仍保留透明尾行。按图片像素尺寸与帧尺寸计算物理网格，并校验使用行数不越界、未使用格透明。
 - FPS 从各阶段 `animation.json` 核对；不能要求每份 package 都重复提供。
 - 四阶段均明确交付时直接采用来源；缺少阶段时只复用已确认的帧范围，并核验帧数和显式时长。
-- 发布失败后可重跑失败类别；暂存验收仍必须覆盖所有类别，任何缺项都不能应用。
+- 发布失败后的重跑条件见 [批次恢复与归档](lessons-learned.md#批次恢复与归档)；重跑后仍完整验收全部类别和比例，不能沿用过期应用清单。

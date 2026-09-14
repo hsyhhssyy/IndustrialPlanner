@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "building": "shaper_1",
+  "version": "v1.5",
+  "view": "top",
+  "assetKind": "building-top-view-animation-pack",
+  "canvasCells": {
+    "width": 3,
+    "height": 3
+  },
+  "footprintCells": {
+    "width": 3,
+    "height": 3
+  },
+  "footprintOffsetCells": {
+    "left": 0,
+    "top": 0
+  },
+  "pixelsPerCell": 128,
+  "framePixels": {
+    "width": 384,
+    "height": 384
+  },
+  "fps": 30,
+  "animations": [
+    "close_idle",
+    "open_idle"
+  ],
+  "animationCount": 2,
+  "sheetPageLimit": {
+    "width": 4096,
+    "height": 4096
+  },
+  "webpEncoding": {
+    "quality": 85,
+    "alphaQuality": 100,
+    "alphaLossless": true,
+    "exactTransparentRgb": true,
+    "encoder": "cwebp 1.6.0"
+  },
+  "containsIndividualFrames": false,
+  "individualFramesIncludedInZip": false,
+  "baseSelection": "logisticBaseUnit",
+  "rendererTemplate": "normal__0",
+  "sourcePackName": "A_shaper+1_001_01_variant_dynamic_lod0",
+  "lightingPreset": "fixed30-fourfold-pbr-2300-v1",
+  "beautyTaskId": null,
+  "taskId": "20260911-building-port-delivery",
+  "portEffectsProfile": "top-sprite-height-v1",
+  "portMetadata": "ports.json",
+  "occlusionMetadata": "occlusion/occlusion.json",
+  "effectResources": "effects/resources.json",
+  "occlusionApproximation": "static opaque building height and representative effect surface",
+  "liquidEffectsInBuildingBeauty": false,
+  "omittedRingChild": "sanjiao: user-approved omission",
+  "previewRenderer": "pixi-spritesheet-v1",
+  "directoryDelivery": {}
+}

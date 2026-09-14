@@ -15,6 +15,8 @@
 | `buildings/<id>/integrity.json` | 单建筑文件清单；文件路径相对该建筑目录 |
 | `buildings/<id>/variants.json` | 建筑可交付视图；与根清单的 `variants` 对照 |
 | `buildings/logistics/collection.json` | 物流集合，`deliveries` 指向静态、动态、空间及遮挡元数据 |
+| `buildings/logistics/logistics-baked.json` | 烘焙相位页、共享流体数值场、参考 Shader、端帽与时间参数 |
+| `buildings/logistics/fluid-profiles.json` | 独立物品配色表、相态、分层颜色和来源元数据；路径是否存在仍以本批索引为准 |
 | `buildings/logistics/logistics-height.json` | 物流高度入口、组件引用、解码和装配契约 |
 
 不要解析首页 HTML 来发现文件，不依赖私有仓库或 GitHub API，也不下载网站预览运行时、vendor、CSS 和草地背景作为建筑依赖。`preview/` 中的草地不构成项目草地替换授权。
@@ -42,11 +44,25 @@
 
 物流：从 `collection.json.deliveries` 的 `base / extension / spatial / occlusion` 及集合的 `heightMetadata / bakedManifest` 读取对应分支。静态图层、动态数据纹理、材质参数和高度图需要分别闭合引用。不要假设旧 ZIP 根目录的 `assets/manifest.json` 仍存在。
 
+## 流体配色表
+
+2026-09-14 已保存的独立表使用 `schemaVersion=1`、`profile=endfield-pipe-fluid-colors-v1`，数据位于 `fluidProfiles`。根字段还包括 `profileCount`、`phaseCounts`、`itemIds` 与来源元数据。烘焙清单的 `fluidProfileMetadata` 指向独立表，`fluidProfileCoverage` 描述覆盖；配色值同时保存在 `logistics-baked.json.fluidProfiles`。未来未知格式按 schema 差异处理，不从网页预览提取颜色。
+
+下列为维护入口必须实现的验收契约；当前统一 `validate` 尚未自动覆盖字段与 Registry 对账，不得只凭其退出码勾选这些项：
+
+- [ ] 独立表的原始字节与根索引、物流分级索引均一致，下载前后锚点一致；保留 `release.json`、根清单、根/物流索引、锚点及来源收据。
+- [ ] `profileCount` 等于 `fluidProfiles` 的实际键数；`itemIds` 无重复且与键集合相等；`phaseCounts` 与实际相态统计相符。20 项及 11/9 只是历史实例，不写死为未来固定数量。
+- [ ] 按当前 Registry 物品 ID 与相态对账，报告缺失、多出与相态冲突；网站新增项依主 checklist 的未映射规则处理，不新增项目物品。这里核对 Registry，不读取或推断解包 raw table。
+- [ ] 液体有 `body / skin / skin2 / splash` 四层，气体有 `body / skin` 两层；各层保留来源 `hex / rgba8 / displayRgba8` 等字段，检查格式、四通道及整数范围 0–255。不能给气体伪造额外原始层，也不能用项目 tag 填补液体缺失层。
+- [ ] 发布范围含配色时，核对独立表与 baked 表中同一物品的 ID、相态及原始各层颜色；两份文件必须来自同一固定发布。运行时字段转换不得回写网站原件。
+
+仅留存请求适用 [当前入口与执行边界](project-import.md#已知能力缺口)；留存完成不代表发布或运行时接入。常见误判见 [原件留存与配色状态](lessons-learned.md#原件留存与配色状态)。
+
 ## 来源留存
 
 正式执行导入时，把本轮实际消费的 JSON/WebP 原件和根/分级索引快照保留在项目资源来源目录；继续使用已有 `resources/device-sprite-animation/`、`resources/device-sprite-original/`、`resources/building-port-effects/`、`resources/logistics-materials/` 的职责分工。目录重排后仍须记录每个文件的原网站相对路径，不能丢失引用依据。
 
-来源记录至少包含：站点根 URL、`releaseId`、`sourceVersion`、根索引原字节 SHA-256、获取时间，以及实际导入文件的远端路径、本地路径、字节数和 SHA-256。每个发布产物另外关联原件哈希、实际发布比例及所在版本目录；整批保存原版与全部配置版本，不能用一条集合级摘要掩盖版本缺失。按文件和实体记录来源，支持仅更新一个建筑；未选中的文件保留原来源。
+来源记录至少包含：站点根 URL、`releaseId`、`sourceVersion`、根索引原字节 SHA-256、获取时间，以及实际导入文件的远端路径、本地路径、字节数和 SHA-256。每个发布产物另外关联原件哈希、实际发布比例及所在版本目录；正式导入整批保存原版与全部配置版本，不能用一条集合级摘要掩盖版本缺失。按文件和实体记录来源；未选中的文件保留原来源。这种记录粒度不代表 CLI 已支持任意单建筑导入，范围仍依主 checklist。
 
 `sourceArchiveSha256` 只表示已经存在的历史 ZIP 来源。不得把网站索引哈希写进它，也不得为网站虚构 ZIP 名称。网站来源记录和发布器的来源透传字段必须在首次接入维护阶段一起完成；日常执行者只按已实现协议填写。本技能创建或维护期间不提前修改既有来源事实。
 

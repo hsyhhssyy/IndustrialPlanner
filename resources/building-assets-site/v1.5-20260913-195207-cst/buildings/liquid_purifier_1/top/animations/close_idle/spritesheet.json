@@ -1,0 +1,89 @@
+{
+  "cellWidth": 640,
+  "cellHeight": 640,
+  "frameCount": 2,
+  "playbackFrameCount": 2,
+  "maximumPartPixels": [
+    4096,
+    4096
+  ],
+  "pageCapacity": 36,
+  "pages": [
+    {
+      "index": 0,
+      "image": "spritesheet_000.webp",
+      "width": 1280,
+      "height": 640,
+      "columns": 2,
+      "rows": 1,
+      "frameStart": 0,
+      "frameCount": 2,
+      "bytes": 51098,
+      "sha256": "cfe78aa53900eb91c83ecbf518a6f7deeae9548a59a830b4d5a55484fd19498b"
+    }
+  ],
+  "frames": [
+    {
+      "vatRow": 187,
+      "vatPhysicalRow": 258,
+      "durationMs": 33,
+      "sourceSpan": {
+        "startIndex": 0,
+        "endIndexInclusive": 0,
+        "count": 1,
+        "vatRows": {
+          "start": 187,
+          "endInclusive": 187,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 258,
+          "endInclusive": 258,
+          "step": -1
+        }
+      },
+      "index": 0,
+      "page": 0,
+      "localIndex": 0,
+      "x": 0,
+      "y": 0,
+      "width": 640,
+      "height": 640,
+      "playable": true
+    },
+    {
+      "vatRow": 188,
+      "vatPhysicalRow": 257,
+      "durationMs": 34,
+      "sourceSpan": {
+        "startIndex": 1,
+        "endIndexInclusive": 1,
+        "count": 1,
+        "vatRows": {
+          "start": 188,
+          "endInclusive": 188,
+          "step": 1
+        },
+        "vatPhysicalRows": {
+          "start": 257,
+          "endInclusive": 257,
+          "step": -1
+        }
+      },
+      "index": 1,
+      "page": 0,
+      "localIndex": 1,
+      "x": 640,
+      "y": 0,
+      "width": 640,
+      "height": 640,
+      "playable": true
+    }
+  ],
+  "encoding": {
+    "format": "WebP",
+    "quality": 85,
+    "alphaQuality": 100,
+    "losslessAlpha": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "building": "udpipe_unloader_2",
+  "displayName": "多口暗管出口",
+  "taskId": "20260913-single-device-pages-all",
+  "defaultVariant": "top",
+  "variants": [
+    {
+      "key": "top",
+      "view": "top",
+      "label": "液体模式",
+      "root": "top/",
+      "package": "top/package.json",
+      "sequence": "top/sequence.json",
+      "spatial": "top/spatial.json",
+      "sheetSizes": "top/sheet-sizes.json"
+    }
+  ],
+  "integrity": "integrity.json"
+}
