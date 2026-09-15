@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "blueprintId": "f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
   "version": "v1.3.0",
   "name": "一键去世机7.1",
@@ -43,7 +43,7 @@
         "x": 1,
         "y": 3
       },
-      "rotation": 270,
+      "rotation": 180,
       "config": {
         "portGroups[0].ports[0].acceptRule": {
           "base": {
@@ -406,7 +406,7 @@
         "x": 1,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -439,7 +439,7 @@
         "x": 2,
         "y": 9
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -450,7 +450,7 @@
         "x": 5,
         "y": 8
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -565,7 +565,7 @@
         "x": 7,
         "y": 7
       },
-      "rotation": 180,
+      "rotation": 90,
       "config": {
         "portGroups[0].ports[0].acceptRule": {
           "base": {
@@ -621,7 +621,7 @@
         "x": 9,
         "y": 8
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -643,7 +643,7 @@
         "x": 8,
         "y": 8
       },
-      "rotation": 90,
+      "rotation": 0,
       "config": {
         "portGroups[0].ports[0].acceptRule": {
           "base": {
@@ -1199,7 +1199,7 @@
         "x": 17,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 90,
       "config": {
         "portGroups[0].ports[0].acceptRule": {
           "base": {
@@ -1222,7 +1222,7 @@
         "x": 18,
         "y": 3
       },
-      "rotation": 90,
+      "rotation": 0,
       "config": {
         "portGroups[0].ports[0].acceptRule": {
           "base": {
@@ -1245,7 +1245,7 @@
         "x": 19,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1586,7 +1586,7 @@
         "x": 16,
         "y": 8
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1608,7 +1608,7 @@
         "x": 19,
         "y": 10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1619,7 +1619,7 @@
         "x": 20,
         "y": 8
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2383,6 +2383,7 @@
       }
     }
   ],
+  "regions": [],
   "createdAt": "2026-03-11T12:35:01.999Z",
   "updatedAt": "2026-03-11T12:35:01.999Z"
 }

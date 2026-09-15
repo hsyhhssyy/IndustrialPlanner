@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it, vi } from "vitest";
 
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
@@ -170,13 +171,49 @@ describe("createHypergryphMarqueeGestureModule", () => {
   // ]);
 
   it("toggles the whole strict logistics segment when tapping a belt in marquee mode", () => {
-    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
     const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
-    const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
-    const pipe = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 1 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const pipe = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 1 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [beltA, beltB, beltC, pipe]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities([beltA, beltB, beltC, pipe]),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-01-variant-1.schema6.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -193,13 +230,49 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("toggles the whole strict logistics segment when tapping a pipe in marquee mode", () => {
-    const pipeA = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const pipeA = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 0 });
     const pipeB = entity("pipe-b", "pipe_straight_1x1", { x: 1, y: 0 });
-    const pipeC = entity("pipe-c", "pipe_straight_1x1", { x: 2, y: 0 });
-    const belt = entity("belt-a", "belt_straight_1x1", { x: 0, y: 1 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const pipeC = entity("pipe-c", "pipe_straight_1x1", { x: 2, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const belt = entity("belt-a", "belt_straight_1x1", { x: 0, y: 1 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [pipeA, pipeB, pipeC, belt]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities([pipeA, pipeB, pipeC, belt]),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-02-variant-1.schema6.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -213,13 +286,49 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("toggles the whole strict logistics segment from the overlap entity menu in marquee mode", () => {
-    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
-    const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
-    const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
     const pipe = entity("pipe-a", "pipe_straight_1x1", { x: 1, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [beltA, beltB, beltC, pipe]
     const { context, appHost, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities([beltA, beltB, beltC, pipe]),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-03-variant-1.schema6.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -242,11 +351,38 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("keeps marquee drag selection delegated to applyMarquee without expanding strict logistics segments", () => {
-    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
-    const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/marquee-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [beltA, beltB]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities([beltA, beltB]),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-04-variant-1.schema6.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 

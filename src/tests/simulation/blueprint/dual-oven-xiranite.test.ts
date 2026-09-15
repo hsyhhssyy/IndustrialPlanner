@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -5,13 +6,29 @@ import {
   BLUEPRINT_SIMULATION_ENGINE_KINDS,
   runBlueprintSimulation,
 } from "../blueprint-runner";
-import {
-  createEntity,
-  createWarehouseSlotLink,
-  loadBlueprintWithExtras,
-} from "../blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dual-oven-xiranite/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createEntity,
+//   createWarehouseSlotLink,
+//   loadBlueprintWithExtras,
+// } from "../blueprint-test-helpers";
 
-const BLUEPRINT_PATH = "public/blueprints/dual-oven-xiranite.json";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dual-oven-xiranite/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const BLUEPRINT_PATH = "public/blueprints/dual-oven-xiranite.json";
 
 // 息壤粉 item 标识
 const XIRANITE_POWDER_ITEM = "item_xiranite_powder";
@@ -30,21 +47,30 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
   "双烘炉息壤产线 - 息壤粉稳态产量验证 [%s]",
   (engineKind) => {
   it("2 分钟预热后，1 分钟滑动窗口产出 >= 60 个息壤粉，持续 2 分钟", { timeout: 600_000 }, async () => {
-    const blueprint = loadBlueprintWithExtras(BLUEPRINT_PATH, [
-      // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
-      // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
-      createEntity("extra-top", "udpipe_unloader_1", 8, -3, 270, {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
-      }),
-      // 下方暗管出口 → 接入右侧水管网末端 pipe_straight_1x1 @ (20,24) rot=270
-      // rot=270: 出水口位于 (x+1, y+0) = (20, 25) 朝北，向 (20, 24) 输出清水
-      createEntity("extra-bottom", "udpipe_unloader_1", 19, 25, 90, {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
-      }),
-    ], [
-      createWarehouseSlotLink("extra-top", "item_liquid_water"),
-      createWarehouseSlotLink("extra-bottom", "item_liquid_water"),
-    ]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema6.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // loadBlueprintWithExtras(BLUEPRINT_PATH, [
+    //       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
+    //       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
+    //       createEntity("extra-top", "udpipe_unloader_1", 8, -3, 270, {
+    //         "storageSlotGroups[0].slots[0].ignoreStock": true
+    //       }),
+    //       // 下方暗管出口 → 接入右侧水管网末端 pipe_straight_1x1 @ (20,24) rot=270
+    //       // rot=270: 出水口位于 (x+1, y+0) = (20, 25) 朝北，向 (20, 24) 输出清水
+    //       createEntity("extra-bottom", "udpipe_unloader_1", 19, 25, 90, {
+    //         "storageSlotGroups[0].slots[0].ignoreStock": true
+    //       }),
+    //     ], [
+    //       createWarehouseSlotLink("extra-top", "item_liquid_water"),
+    //       createWarehouseSlotLink("extra-bottom", "item_liquid_water"),
+    //     ])
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema6.json");
 
     // 收集蓝图中所有息壤烘炉实体 ID
     const ovenIds = Object.values(blueprint.entities)

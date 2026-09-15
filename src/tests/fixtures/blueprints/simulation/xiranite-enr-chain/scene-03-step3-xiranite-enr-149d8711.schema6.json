@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-step3-xiranite-enr",
+  "version": "fixture-v1",
+  "name": "step3-xiranite-enr",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "oven": {
+      "id": "oven",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
+        "storageSlotGroups[0].slots[0].initialCount": 10,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_xiranite_poly",
+        "storageSlotGroups[1].slots[0].initialCount": 5
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "oven",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

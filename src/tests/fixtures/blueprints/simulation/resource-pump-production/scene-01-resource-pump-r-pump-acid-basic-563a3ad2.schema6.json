@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-resource-pump-r_pump_acid_basic",
+  "version": "fixture-v1",
+  "name": "resource-pump-r_pump_acid_basic",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "pump": {
+      "id": "pump",
+      "definitionId": "water_pump_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_pump_acid_basic"
+        }
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pump",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

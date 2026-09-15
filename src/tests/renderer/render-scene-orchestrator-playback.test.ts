@@ -103,6 +103,11 @@ const orchestratorTestState = vi.hoisted(() => {
 vi.mock("pixi.js", () => {
   class MockContainer {
     public readonly children: unknown[] = []
+    public readonly position = { set: vi.fn() }
+    public readonly pivot = { set: vi.fn() }
+    public readonly scale = { set: vi.fn() }
+    public rotation = 0
+    public visible = true
     public readonly addChild = vi.fn((...children: unknown[]) => {
       this.children.push(...children)
       return children[0]
@@ -314,6 +319,35 @@ import { createRenderSceneOrchestrator } from "@/renderer/scene/render-scene-orc
 import type { RenderHost } from "@/renderer/renderer-host"
 import { AYU_LIGHT_THEME } from "@/app/theme"
 
+function createOrchestratorTestHost(seed: {
+  readonly dom: RenderHost["dom"],
+  readonly app: unknown,
+  readonly internalState: Record<string, unknown>,
+  readonly workspace: unknown,
+}): RenderHost {
+  const textureManager = {
+    supportsLogisticsAnimation: vi.fn(() => false),
+    acquireLogisticsDynamic: vi.fn(() => {
+      throw new Error("Disabled logistics animation must not acquire dynamic assets")
+    }),
+  } as unknown as RenderHost["textureManager"]
+
+  return {
+    container: document.createElement("div"),
+    queries: {} as RenderHost["queries"],
+    actions: {} as RenderHost["actions"],
+    destroy: vi.fn(),
+    dom: seed.dom,
+    app: seed.app as RenderHost["app"],
+    internalState: {
+      ...seed.internalState,
+      textureConfig: null,
+    },
+    workspace: seed.workspace as RenderHost["workspace"],
+    textureManager,
+  }
+}
+
 describe("createRenderSceneOrchestrator", () => {
   beforeEach(() => {
     orchestratorTestState.reset()
@@ -331,7 +365,7 @@ describe("createRenderSceneOrchestrator", () => {
       }),
       remove: vi.fn(),
     }
-    const renderHost = {
+    const renderHost = createOrchestratorTestHost({
       dom: {
         placementGlowOverlay: document.createElement("div"),
         blueprintGlowOverlay: document.createElement("div"),
@@ -420,7 +454,7 @@ describe("createRenderSceneOrchestrator", () => {
           },
         },
       },
-    } as unknown as RenderHost
+    })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
     const tickHandler = orchestratorTestState.getTickHandler()
@@ -460,7 +494,7 @@ describe("createRenderSceneOrchestrator", () => {
       }),
       remove: vi.fn(),
     }
-    const renderHost = {
+    const renderHost = createOrchestratorTestHost({
       dom: {
         placementGlowOverlay: document.createElement("div"),
         blueprintGlowOverlay: document.createElement("div"),
@@ -562,7 +596,7 @@ describe("createRenderSceneOrchestrator", () => {
           },
         },
       },
-    } as unknown as RenderHost
+    })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
     const tickHandler = orchestratorTestState.getTickHandler()
@@ -607,7 +641,7 @@ describe("createRenderSceneOrchestrator", () => {
       }),
       remove: vi.fn(),
     }
-    const renderHost = {
+    const renderHost = createOrchestratorTestHost({
       dom: {
         placementGlowOverlay: document.createElement("div"),
         blueprintGlowOverlay: document.createElement("div"),
@@ -691,7 +725,7 @@ describe("createRenderSceneOrchestrator", () => {
         render: null,
         simulation: null,
       },
-    } as unknown as RenderHost
+    })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
     const tickHandler = orchestratorTestState.getTickHandler()
@@ -751,7 +785,7 @@ describe("createRenderSceneOrchestrator", () => {
       addChild: vi.fn(),
       addChildAt: vi.fn(),
     }
-    const renderHost = {
+    const renderHost = createOrchestratorTestHost({
       dom: {
         placementGlowOverlay: document.createElement("div"),
         blueprintGlowOverlay: document.createElement("div"),
@@ -831,7 +865,7 @@ describe("createRenderSceneOrchestrator", () => {
         render: null,
         simulation: null,
       },
-    } as unknown as RenderHost
+    })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
     const tickHandler = orchestratorTestState.getTickHandler()

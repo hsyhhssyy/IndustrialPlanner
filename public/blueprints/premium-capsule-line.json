@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "blueprintId": "429609a4-61cb-4083-98fa-b8de1268bec4",
   "version": "v1.3.0",
   "name": "精选荞愈胶囊产线",
@@ -121,7 +121,7 @@
         "x": 0,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -132,7 +132,7 @@
         "x": 3,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -143,7 +143,7 @@
         "x": 6,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -154,7 +154,7 @@
         "x": 9,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -165,7 +165,7 @@
         "x": 12,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -176,7 +176,7 @@
         "x": 15,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -187,7 +187,7 @@
         "x": 18,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -198,7 +198,7 @@
         "x": 21,
         "y": 2
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -297,7 +297,7 @@
         "x": 0,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -308,7 +308,7 @@
         "x": 6,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -319,7 +319,7 @@
         "x": 9,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -330,7 +330,7 @@
         "x": 12,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -341,7 +341,7 @@
         "x": 15,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -352,7 +352,7 @@
         "x": 21,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -363,7 +363,7 @@
         "x": 3,
         "y": 10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -374,7 +374,7 @@
         "x": 18,
         "y": 10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -561,7 +561,7 @@
         "x": 6,
         "y": 10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -572,7 +572,7 @@
         "x": 12,
         "y": 10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -583,7 +583,7 @@
         "x": 2,
         "y": 14
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -594,7 +594,7 @@
         "x": 16,
         "y": 14
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -737,7 +737,7 @@
         "x": 9,
         "y": 15
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -748,7 +748,7 @@
         "x": 12,
         "y": 15
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -759,7 +759,7 @@
         "x": 15,
         "y": 18
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -770,7 +770,7 @@
         "x": 6,
         "y": 18
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -781,7 +781,7 @@
         "x": 9,
         "y": 19
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -792,7 +792,7 @@
         "x": 12,
         "y": 19
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -803,7 +803,7 @@
         "x": 0,
         "y": 19
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -814,7 +814,7 @@
         "x": 21,
         "y": 19
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1441,7 +1441,7 @@
         "x": 5,
         "y": 21
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1452,7 +1452,7 @@
         "x": 15,
         "y": 21
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1463,7 +1463,7 @@
         "x": 9,
         "y": 23
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1628,7 +1628,7 @@
         "x": 2,
         "y": 24
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1639,7 +1639,7 @@
         "x": 19,
         "y": 24
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1738,7 +1738,7 @@
         "x": 5,
         "y": 27
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1749,7 +1749,7 @@
         "x": 14,
         "y": 27
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1760,7 +1760,7 @@
         "x": 10,
         "y": 28
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -1797,7 +1797,7 @@
         "x": 0,
         "y": 28
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1808,7 +1808,7 @@
         "x": 19,
         "y": 28
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1907,7 +1907,7 @@
         "x": 6,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -1921,7 +1921,7 @@
         "x": 13,
         "y": 32
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_1",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -1935,7 +1935,7 @@
         "x": 1,
         "y": 33
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1946,7 +1946,7 @@
         "x": 18,
         "y": 33
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1957,7 +1957,7 @@
         "x": 2,
         "y": 38
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -1971,7 +1971,7 @@
         "x": 17,
         "y": 38
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_1",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -1985,7 +1985,7 @@
         "x": 7,
         "y": 37
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1996,7 +1996,7 @@
         "x": 12,
         "y": 37
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2883,6 +2883,7 @@
       }
     }
   ],
+  "regions": [],
   "createdAt": "2026-03-04T09:13:42.276Z",
   "updatedAt": "2026-03-04T09:13:42.276Z"
 }

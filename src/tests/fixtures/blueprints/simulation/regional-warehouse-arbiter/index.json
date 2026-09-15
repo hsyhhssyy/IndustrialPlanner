@@ -1,0 +1,134 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/regional-warehouse-arbiter.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-regional-outlet-legal-1739201e.schema6.json",
+        "blueprintId": "req-076-regional-outlet-legal",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "_label": "传送带分流器",
+          "itemId": "item_copper_ore",
+          "sourceDefinitionId": "unloader_1",
+          "targetDefinitionId": "log_splitter",
+          "targetRotation": 270,
+          "targetX": 52,
+          "targetY": 35
+        },
+        "file": "scene-02-regional-outlet-log-splitter-4a9bd9f0.schema6.json",
+        "blueprintId": "req-076-regional-outlet-log_splitter",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "传送带汇流器",
+          "itemId": "item_copper_ore",
+          "sourceDefinitionId": "unloader_1",
+          "targetDefinitionId": "log_converger",
+          "targetRotation": 0,
+          "targetX": 52,
+          "targetY": 35
+        },
+        "file": "scene-02-regional-outlet-log-converger-faf2f4ce.schema6.json",
+        "blueprintId": "req-076-regional-outlet-log_converger",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "传送带桥接器",
+          "itemId": "item_copper_ore",
+          "sourceDefinitionId": "unloader_1",
+          "targetDefinitionId": "log_connector",
+          "targetRotation": 0,
+          "targetX": 52,
+          "targetY": 35
+        },
+        "file": "scene-02-regional-outlet-log-connector-2a3b8d87.schema6.json",
+        "blueprintId": "req-076-regional-outlet-log_connector",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "物品准入口",
+          "itemId": "item_copper_ore",
+          "sourceDefinitionId": "unloader_1",
+          "targetDefinitionId": "log_admission",
+          "targetRotation": 0,
+          "targetX": 52,
+          "targetY": 35
+        },
+        "file": "scene-02-regional-outlet-log-admission-2f4b1dae.schema6.json",
+        "blueprintId": "req-076-regional-outlet-log_admission",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "管道分流器",
+          "itemId": "item_liquid_water",
+          "sourceDefinitionId": "udpipe_unloader_1",
+          "targetDefinitionId": "pipe_splitter",
+          "targetRotation": 270,
+          "targetX": 3,
+          "targetY": 1
+        },
+        "file": "scene-02-regional-outlet-pipe-splitter-c3ca5bcf.schema6.json",
+        "blueprintId": "req-076-regional-outlet-pipe_splitter",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "管道汇流器",
+          "itemId": "item_liquid_water",
+          "sourceDefinitionId": "udpipe_unloader_1",
+          "targetDefinitionId": "pipe_converger",
+          "targetRotation": 0,
+          "targetX": 3,
+          "targetY": 1
+        },
+        "file": "scene-02-regional-outlet-pipe-converger-8bf806a4.schema6.json",
+        "blueprintId": "req-076-regional-outlet-pipe_converger",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "管道桥接器",
+          "itemId": "item_liquid_water",
+          "sourceDefinitionId": "udpipe_unloader_1",
+          "targetDefinitionId": "pipe_connector",
+          "targetRotation": 0,
+          "targetX": 3,
+          "targetY": 1
+        },
+        "file": "scene-02-regional-outlet-pipe-connector-ce24750a.schema6.json",
+        "blueprintId": "req-076-regional-outlet-pipe_connector",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "_label": "管道准入口",
+          "itemId": "item_liquid_water",
+          "sourceDefinitionId": "udpipe_unloader_1",
+          "targetDefinitionId": "pipe_admission",
+          "targetRotation": 0,
+          "targetX": 3,
+          "targetY": 1
+        },
+        "file": "scene-02-regional-outlet-pipe-admission-bb7761cd.schema6.json",
+        "blueprintId": "req-076-regional-outlet-pipe_admission",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

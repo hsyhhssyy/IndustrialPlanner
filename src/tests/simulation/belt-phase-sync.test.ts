@@ -1,12 +1,22 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  resolveSimulationMillisecondsAtFirstTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   resolveSimulationMillisecondsAtFirstTick,
+// } from "./blueprint-test-helpers";
+import { resolveSimulationMillisecondsAtFirstTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 /**
@@ -48,15 +58,23 @@ const GROUP_B = [
 const ALL_BELT_IDS_FOR_PHASE = [...BELT_IDS, START_BELT_ID];
 
 /** 传送带在蓝图中的坐标（y 从北向南递增） */
-const BELT_POSITIONS: Record<string, { x: number; y: number }> = {
-  "logistics-draft:belt:3:0": { x: 52, y: 24 },
-  "logistics-draft:belt:17:0": { x: 51, y: 20 },
-  "logistics-draft:belt:18:1": { x: 51, y: 19 },
-  "logistics-draft:belt:22:0:1": { x: 52, y: 20 },
-  "logistics-draft:belt:24:0": { x: 52, y: 19 },
-  "logistics-draft:belt:28:0": { x: 53, y: 20 },
-  "logistics-draft:belt:29:1": { x: 53, y: 19 },
-};
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const BELT_POSITIONS: Record<string, { x: number; y: number }> = {
+//   "logistics-draft:belt:3:0": { x: 52, y: 24 },
+//   "logistics-draft:belt:17:0": { x: 51, y: 20 },
+//   "logistics-draft:belt:18:1": { x: 51, y: 19 },
+//   "logistics-draft:belt:22:0:1": { x: 52, y: 20 },
+//   "logistics-draft:belt:24:0": { x: 52, y: 19 },
+//   "logistics-draft:belt:28:0": { x: 53, y: 20 },
+//   "logistics-draft:belt:29:1": { x: 53, y: 19 },
+// };
 
 // AI-REMOVED 2026-09-08:
 // Reason: 传送带同步和部分死路恢复是生产求解器共同的 Host 行为。
@@ -70,29 +88,38 @@ const BELT_POSITIONS: Record<string, { x: number; y: number }> = {
 // describe("传送带同步相位", () => {
 describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKind) => {
   it("分组内传送带状态一致，所有有货传送带相位一致（含起点 belt:3:0）", async () => {
-    const blueprint = createBlueprint("belt-phase-sync", [
-      // 取货口 — 作为物品源（warehouse link 在 headless 模式无效，改由 initialItem + ignoreStock 驱动）
-      createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
-        "storageSlotGroups[0].slots[0].initialCount": 100,
-        "storageSlotGroups[0].slots[0].ignoreStock": true
-      }),
-      // 存取线源桩（空壳，仅保持拓扑完整）
-      createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
-      // 粉碎机
-      createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
-      // 仓储（末端接收）
-      createEntity("item_port_storager_1:7", "storager_1", 51, 16, 0),
-      // 供电扩散器
-      createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 54, 23, 0),
-      // 分组测试的六条传送带
-      ...BELT_IDS.map((id) => {
-        const pos = BELT_POSITIONS[id]!;
-        return createEntity(id, "belt_straight_1x1", pos.x, pos.y, 270);
-      }),
-      // 起点传送带（取货口→设备），不参与分组，仅参与相位校验
-      createEntity(START_BELT_ID, "belt_straight_1x1", BELT_POSITIONS[START_BELT_ID]!.x, BELT_POSITIONS[START_BELT_ID]!.y, 270),
-    ]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("belt-phase-sync", [
+    //       // 取货口 — 作为物品源（warehouse link 在 headless 模式无效，改由 initialItem + ignoreStock 驱动）
+    //       createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
+    //         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+    //         "storageSlotGroups[0].slots[0].initialCount": 100,
+    //         "storageSlotGroups[0].slots[0].ignoreStock": true
+    //       }),
+    //       // 存取线源桩（空壳，仅保持拓扑完整）
+    //       createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
+    //       // 粉碎机
+    //       createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
+    //       // 仓储（末端接收）
+    //       createEntity("item_port_storager_1:7", "storager_1", 51, 16, 0),
+    //       // 供电扩散器
+    //       createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 54, 23, 0),
+    //       // 分组测试的六条传送带
+    //       ...BELT_IDS.map((id) => {
+    //         const pos = BELT_POSITIONS[id]!;
+    //         return createEntity(id, "belt_straight_1x1", pos.x, pos.y, 270);
+    //       }),
+    //       // 起点传送带（取货口→设备），不参与分组，仅参与相位校验
+    //       createEntity(START_BELT_ID, "belt_straight_1x1", BELT_POSITIONS[START_BELT_ID]!.x, BELT_POSITIONS[START_BELT_ID]!.y, 270),
+    //     ])
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-01-belt-phase-sync-1567dd17.schema6.json");
 
     const report = await runBlueprintSimulation({
       blueprint,
@@ -183,24 +210,33 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
    *   粉碎机 → belt:28:0(53,20) → 断头 [死路]
    */
   it("粉碎机部分下游断头时仍能向存活下游稳定出货", async () => {
-    const blueprint = createBlueprint("belt-partial-dead-end", [
-      createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
-        "storageSlotGroups[0].slots[0].initialCount": 100,
-        "storageSlotGroups[0].slots[0].ignoreStock": true
-      }),
-      createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
-      createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
-      // 仓储偏移到左侧，只有 belt:17:0(51,20) 的出口能对其南侧输入端口 x=51
-      createEntity("item_port_storager_1:7", "storager_1", 49, 17, 0),
-      createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 55, 22, 0),
-      // 起点传送带
-      createEntity("logistics-draft:belt:3:0", "belt_straight_1x1", 52, 24, 270),
-      // 三条平行传送带（y=20）：只有 belt:17:0 连接 storager
-      createEntity("logistics-draft:belt:17:0", "belt_straight_1x1", 51, 20, 270),
-      createEntity("logistics-draft:belt:22:0:1", "belt_straight_1x1", 52, 20, 270),
-      createEntity("logistics-draft:belt:28:0", "belt_straight_1x1", 53, 20, 270),
-    ]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("belt-partial-dead-end", [
+    //       createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
+    //         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+    //         "storageSlotGroups[0].slots[0].initialCount": 100,
+    //         "storageSlotGroups[0].slots[0].ignoreStock": true
+    //       }),
+    //       createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
+    //       createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
+    //       // 仓储偏移到左侧，只有 belt:17:0(51,20) 的出口能对其南侧输入端口 x=51
+    //       createEntity("item_port_storager_1:7", "storager_1", 49, 17, 0),
+    //       createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 55, 22, 0),
+    //       // 起点传送带
+    //       createEntity("logistics-draft:belt:3:0", "belt_straight_1x1", 52, 24, 270),
+    //       // 三条平行传送带（y=20）：只有 belt:17:0 连接 storager
+    //       createEntity("logistics-draft:belt:17:0", "belt_straight_1x1", 51, 20, 270),
+    //       createEntity("logistics-draft:belt:22:0:1", "belt_straight_1x1", 52, 20, 270),
+    //       createEntity("logistics-draft:belt:28:0", "belt_straight_1x1", 53, 20, 270),
+    //     ])
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-02-belt-partial-dead-end-da2af98d.schema6.json");
 
     const report = await runBlueprintSimulation({
       blueprint,

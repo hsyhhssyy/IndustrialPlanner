@@ -1,0 +1,44 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/water-purifier-node.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-water-purifier-node-input-derived-2dfe453b.schema6.json",
+        "blueprintId": "req-076-water-purifier-node-input-derived",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-water-purifier-node-byproduct-9df3881d.schema6.json",
+        "blueprintId": "req-076-water-purifier-node-byproduct",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-water-purifier-node-manual-output-c36647a8.schema6.json",
+        "blueprintId": "req-076-water-purifier-node-manual-output",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-water-purifier-node-manual-disables-input-293b656a.schema6.json",
+        "blueprintId": "req-076-water-purifier-node-manual-disables-input",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

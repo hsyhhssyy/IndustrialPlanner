@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "37c8e4e6-c720-4480-95bf-f584d2d257aa-without-overlapping-belt",
+  "version": "v1.3.0",
+  "name": "未命名蓝图-20260722212625",
+  "description": "",
+  "baseId": "wuling_tianwangping_aid",
+  "initialGridPoint": {
+    "x": 9,
+    "y": 6
+  },
+  "entities": {
+    "pipe_admission:2": {
+      "id": "pipe_admission:2",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 7,
+        "y": 6
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:571:2": {
+      "id": "logistics-draft:belt:571:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:573:4": {
+      "id": "logistics-draft:belt:573:4",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:584:3": {
+      "id": "logistics-draft:pipe:584:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pipe_admission:2",
+    "logistics-draft:belt:571:2",
+    "logistics-draft:belt:573:4",
+    "logistics-draft:pipe:584:3"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-07-22T13:26:26.853Z",
+  "updatedAt": "2026-07-22T13:26:26.853Z"
+}
+

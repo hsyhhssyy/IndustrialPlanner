@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/simulation/activity-filtering.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "activity-filtering scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "machine": {
+      "id": "machine",
+      "definitionId": "test_activity_machine",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic"
+        }
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "machine"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

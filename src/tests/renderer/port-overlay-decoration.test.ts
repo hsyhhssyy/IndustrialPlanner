@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray, loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -24,10 +25,28 @@ const OVERLAPPING_PORT_DEVICE_CASES = [
 
 describe("PortOverlayDecoration 端口语义", () => {
   it("空地出口可合法引出时显示箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-01-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -43,11 +62,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向正确的既有传送带已连接时隐藏对应出口", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 4, 270);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 4, 270);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, connectedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, connectedBelt],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-02-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -61,13 +107,58 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口正前方横跨已连接传送带时允许创建桥接器并保留箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const left = createEntity("left", "belt_straight_1x1", 4, 4, 0);
-    const crossing = createEntity("crossing", "belt_straight_1x1", 5, 4, 0);
-    const right = createEntity("right", "belt_straight_1x1", 6, 4, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const left = createEntity("left", "belt_straight_1x1", 4, 4, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const crossing = createEntity("crossing", "belt_straight_1x1", 5, 4, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const right = createEntity("right", "belt_straight_1x1", 6, 4, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, left, crossing, right]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, left, crossing, right],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-03-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -78,11 +169,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口正前方是同轴但方向错误的传送带时隐藏箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const reversedBelt = createEntity("reversed", "belt_straight_1x1", 5, 4, 90);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const reversedBelt = createEntity("reversed", "belt_straight_1x1", 5, 4, 90);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, reversedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, reversedBelt],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-04-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -93,11 +211,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("出口紧贴另一台设备足印时隐藏箭头", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const wall = createEntity("wall", "storager_1", 5, 2, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const wall = createEntity("wall", "storager_1", 5, 2, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, wall],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-05-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -108,10 +253,28 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("传送带模式将液体端口和输入端口绘制为红叉", () => {
-    const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-06-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -127,11 +290,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口已经合法连接时不显示叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 8, 270);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 8, 270);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, connectedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, connectedBelt],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-07-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -145,11 +335,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口被设备足印堵塞时不显示叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const wall = createEntity("wall", "storager_1", 5, 8, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const wall = createEntity("wall", "storager_1", 5, 8, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, wall],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-08-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -160,13 +377,58 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("方向不匹配的输入端口可正交桥接时保留叉号", () => {
-    const device = createEntity("device", "storager_1", 5, 5, 180);
-    const left = createEntity("left", "belt_straight_1x1", 4, 8, 0);
-    const crossing = createEntity("crossing", "belt_straight_1x1", 5, 8, 0);
-    const right = createEntity("right", "belt_straight_1x1", 6, 8, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const left = createEntity("left", "belt_straight_1x1", 4, 8, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const crossing = createEntity("crossing", "belt_straight_1x1", 5, 8, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const right = createEntity("right", "belt_straight_1x1", 6, 8, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, left, crossing, right]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, left, crossing, right],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-09-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -177,11 +439,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("类型不匹配的液体端口被设备堵塞时不显示叉号", () => {
-    const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
-    const wall = createEntity("wall", "storager_1", 11, 6, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "filling_pd_mc_1_liquid", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const wall = createEntity("wall", "storager_1", 11, 6, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device, wall],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-10-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -196,11 +485,38 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("管道铺设模式同时展示液体端口和气体端口", () => {
-    const liquid = createEntity("liquid", "liquid_storager_1", 5, 5, 180);
-    const gas = createEntity("gas", "gas_storager_1", 12, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const liquid = createEntity("liquid", "liquid_storager_1", 5, 5, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const gas = createEntity("gas", "gas_storager_1", 12, 5, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [liquid, gas]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [liquid, gas],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-11-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "pipe",
@@ -225,8 +541,17 @@ describe("PortOverlayDecoration 端口语义", () => {
     it(`${deviceCase.definitionId} 在匹配物流模式下将同位置输入叉号和输出箭头聚合为一个箭头`, () => {
       const device = createEntity("device", deviceCase.definitionId, 5, 5, 180);
 
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // [device]
       const entries = resolveLogisticsPortOverlayEntries({
-        entities: [device],
+        entities: getBlueprintEntityArray(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json", "scene-12", { deviceCase })),
         entityDefinitionMap,
         queries: registry.queries,
         kind: deviceCase.kind,
@@ -246,10 +571,28 @@ describe("PortOverlayDecoration 端口语义", () => {
   }
 
   it("起笔后将同位置输出叉号和输入箭头聚合为一个输入箭头", () => {
-    const device = createEntity("device", "log_connector", 5, 5, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "log_connector", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-13-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -263,10 +606,28 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("物流种类不匹配且端口位置可用时每个物理端口只显示一个叉号", () => {
-    const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-14-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "pipe",
@@ -278,10 +639,28 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 
   it("草稿占用任一重叠逻辑 Port 时隐藏整个物理端口组", () => {
-    const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/port-overlay-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-15-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -322,8 +701,17 @@ describe("PortOverlayDecoration 端口语义", () => {
     const first = createEntity("first", "cheat_infinite_solid", 5, 5, 0);
     const second = createEntity("second", "cheat_infinite_solid", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [first, second]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: [first, second],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-16-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -338,8 +726,17 @@ describe("PortOverlayDecoration 端口语义", () => {
   it("单设备 selection 和 preview 语义下展示全部端口箭头", () => {
     const device = createEntity("device", "storager_1", 5, 5, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-17-variant-1.schema6.json")),
       selectedEntityIds: new Set([device.id]),
       entityDefinitionMap,
     });
@@ -352,8 +749,17 @@ describe("PortOverlayDecoration 端口语义", () => {
     const first = createEntity("first", "storager_1", 5, 5, 180);
     const second = createEntity("second", "storager_1", 10, 5, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [first, second]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: [first, second],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-18-variant-1.schema6.json")),
       selectedEntityIds: new Set([first.id, second.id]),
       entityDefinitionMap,
     });
@@ -364,8 +770,17 @@ describe("PortOverlayDecoration 端口语义", () => {
   it("ChevronHidden 设备在单选和 preview 语义下仍不展示端口箭头", () => {
     const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-19-variant-1.schema6.json")),
       selectedEntityIds: new Set([device.id]),
       entityDefinitionMap,
     });

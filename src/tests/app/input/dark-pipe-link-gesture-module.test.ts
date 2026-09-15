@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it } from "vitest";
 import { runInAction } from "mobx";
 
@@ -29,10 +30,19 @@ describe("createHypergryphDarkPipeLinkGestureModule", () => {
     const { appHost, context, editorHost } = createContext();
     const module = createHypergryphDarkPipeLinkGestureModule();
 
-    editorHost.internalDocument.setSnapshot(createDocument([
-      entity("inlet", "udpipe_loader_1"),
-      entity("outlet", "udpipe_unloader_1"),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       entity("inlet", "udpipe_loader_1"),
+    //       entity("outlet", "udpipe_unloader_1"),
+    //     ]
+    editorHost.internalDocument.setSnapshot(createDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema6.json"))));
     enterDarkPipeLinkTool(appHost);
 
     const result = module.handle({

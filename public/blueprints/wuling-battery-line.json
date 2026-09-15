@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "blueprintId": "2dec8da2-1c38-47f3-a574-a586bd4efad5",
   "version": "v1.3.0",
   "name": "中容武陵电池产线",
@@ -95,7 +95,7 @@
         "x": 29,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -106,7 +106,7 @@
         "x": 26,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -161,7 +161,7 @@
         "x": 25,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -194,7 +194,7 @@
         "x": 18,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -205,7 +205,7 @@
         "x": 21,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -216,7 +216,7 @@
         "x": 18,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -282,7 +282,7 @@
         "x": 15,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -304,7 +304,7 @@
         "x": 15,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -348,7 +348,7 @@
         "x": 29,
         "y": 14
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -557,7 +557,7 @@
         "x": 26,
         "y": 13
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -568,7 +568,7 @@
         "x": 27,
         "y": 7
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
@@ -802,7 +802,7 @@
         "x": 20,
         "y": 11
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "ch1": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
@@ -1249,7 +1249,7 @@
         "x": 20,
         "y": 7
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -1284,7 +1284,7 @@
         "x": 14,
         "y": 6
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1548,7 +1548,7 @@
         "x": 14,
         "y": 12
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "ch1": "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic"
@@ -1749,7 +1749,7 @@
         "x": 28,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1760,7 +1760,7 @@
         "x": 18,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1771,7 +1771,7 @@
         "x": 23,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -1884,7 +1884,7 @@
         "x": 15,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -1997,7 +1997,7 @@
         "x": 12,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2008,7 +2008,7 @@
         "x": 9,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2052,7 +2052,7 @@
         "x": 4,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2063,7 +2063,7 @@
         "x": 1,
         "y": 23
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2118,7 +2118,7 @@
         "x": 9,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2129,7 +2129,7 @@
         "x": 2,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2184,7 +2184,7 @@
         "x": 1,
         "y": 14
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2272,7 +2272,7 @@
         "x": 1,
         "y": 7
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "channelRecipes": {
           "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
@@ -2308,7 +2308,7 @@
         "x": 0,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2319,7 +2319,7 @@
         "x": 5,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50
@@ -2333,7 +2333,7 @@
         "x": 10,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2575,7 +2575,7 @@
         "x": 4,
         "y": 13
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -2786,7 +2786,7 @@
         "x": 8,
         "y": 11
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "channelRecipes": {
           "ch1": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
@@ -3563,7 +3563,7 @@
         "x": 10,
         "y": 7
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4400,6 +4400,7 @@
       }
     }
   ],
+  "regions": [],
   "createdAt": "2026-04-16T15:17:06.369Z",
   "updatedAt": "2026-04-16T15:17:06.369Z"
 }

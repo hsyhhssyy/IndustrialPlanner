@@ -1,14 +1,40 @@
+import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
-import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dark-pipe-premium-needle-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import {
   BLUEPRINT_SIMULATION_ENGINE_KINDS,
   runBlueprintSimulation,
 } from "../blueprint-runner";
-import {
-  createEntity,
-  loadBlueprintWithExtras,
-} from "../blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dark-pipe-premium-needle-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createEntity,
+//   loadBlueprintWithExtras,
+// } from "../blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dark-pipe-premium-needle-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createEntity } from "../blueprint-test-helpers";
 
 // ============================================================
 // 暗管芽针针剂 — 完整产线产出验证
@@ -68,46 +94,62 @@ const TARGET_PER_WINDOW = 6;
 //   "storageSlotGroups[0].slots[0].initialCount": 1,
 //   "storageSlotGroups[0].slots[0].ignoreStock": true,
 // }
-const WATER_PUMP_RECIPE_CONFIG = {
-  channelRecipes: { default: "r_pump_water_basic" },
-};
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dark-pipe-premium-needle-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const WATER_PUMP_RECIPE_CONFIG = {
+//   channelRecipes: { default: "r_pump_water_basic" },
+// };
 
 /** 22 个辅助设备，提取自 .temp/testcase.json */
-const EXTRA_ENTITIES = [
-  // ---- 供水 & 物流总线 ----
-  createEntity("bus", "log_hongs_bus", 0, 0),
-  createEntity("pump1", "water_pump_1", -10, -7, 0, WATER_PUMP_RECIPE_CONFIG),
-  createEntity("bus_source", "log_hongs_bus_source", 0, 8),
-  createEntity("pump2", "water_pump_1", -10, -4, 0, WATER_PUMP_RECIPE_CONFIG),
-
-  // ---- 暗管端点（3 个新增） ----
-  createEntity("dpipe_loader_a", "udpipe_loader_1", -6, -4),
-  createEntity("dpipe_loader_b", "udpipe_loader_1", -6, -7),
-  createEntity("dpipe_unloader_a", "udpipe_unloader_1", 0, 20, 0),
-
-  // ---- 液体净化器 ×4 ----
-  createEntity("cleaner1", "liquid_cleaner_1", 2, 17, 270),
-  createEntity("cleaner2", "liquid_cleaner_1", 5, 17, 270),
-  createEntity("cleaner3", "liquid_cleaner_1", 2, 23, 90),
-  createEntity("cleaner4", "liquid_cleaner_1", 5, 23, 90),
-
-  // ---- 管道路由 ----
-  createEntity("pipe_a", "pipe_straight_1x1", -7, -6),
-  createEntity("pipe_b", "pipe_straight_1x1", -7, -3),
-  createEntity("pipe_c", "pipe_straight_1x1", 4, 21),
-  createEntity("pipe_d", "pipe_straight_1x1", 5, 21),
-  createEntity("pipe_e", "pipe_straight_1x1", 6, 20, 270),
-  createEntity("pipe_f", "pipe_straight_1x1", 6, 22, 90),
-  createEntity("pipe_g", "pipe_straight_1x1", 3, 20, 270),
-  createEntity("pipe_h", "pipe_straight_1x1", 3, 22, 90),
-
-  // ---- 管道分流器 ×2 ----
-  createEntity("splitter_a", "pipe_splitter", 6, 21, 270),
-  createEntity("splitter_b", "pipe_splitter", 3, 21, 270),
-
-  // ---- 供电 ----
-  createEntity("power_aux", "power_diffuser_1", 8, 21),
-];
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dark-pipe-premium-needle-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const EXTRA_ENTITIES = [
+//   // ---- 供水 & 物流总线 ----
+//   createEntity("bus", "log_hongs_bus", 0, 0),
+//   createEntity("pump1", "water_pump_1", -10, -7, 0, WATER_PUMP_RECIPE_CONFIG),
+//   createEntity("bus_source", "log_hongs_bus_source", 0, 8),
+//   createEntity("pump2", "water_pump_1", -10, -4, 0, WATER_PUMP_RECIPE_CONFIG),
+//
+//   // ---- 暗管端点（3 个新增） ----
+//   createEntity("dpipe_loader_a", "udpipe_loader_1", -6, -4),
+//   createEntity("dpipe_loader_b", "udpipe_loader_1", -6, -7),
+//   createEntity("dpipe_unloader_a", "udpipe_unloader_1", 0, 20, 0),
+//
+//   // ---- 液体净化器 ×4 ----
+//   createEntity("cleaner1", "liquid_cleaner_1", 2, 17, 270),
+//   createEntity("cleaner2", "liquid_cleaner_1", 5, 17, 270),
+//   createEntity("cleaner3", "liquid_cleaner_1", 2, 23, 90),
+//   createEntity("cleaner4", "liquid_cleaner_1", 5, 23, 90),
+//
+//   // ---- 管道路由 ----
+//   createEntity("pipe_a", "pipe_straight_1x1", -7, -6),
+//   createEntity("pipe_b", "pipe_straight_1x1", -7, -3),
+//   createEntity("pipe_c", "pipe_straight_1x1", 4, 21),
+//   createEntity("pipe_d", "pipe_straight_1x1", 5, 21),
+//   createEntity("pipe_e", "pipe_straight_1x1", 6, 20, 270),
+//   createEntity("pipe_f", "pipe_straight_1x1", 6, 22, 90),
+//   createEntity("pipe_g", "pipe_straight_1x1", 3, 20, 270),
+//   createEntity("pipe_h", "pipe_straight_1x1", 3, 22, 90),
+//
+//   // ---- 管道分流器 ×2 ----
+//   createEntity("splitter_a", "pipe_splitter", 6, 21, 270),
+//   createEntity("splitter_b", "pipe_splitter", 3, 21, 270),
+//
+//   // ---- 供电 ----
+//   createEntity("power_aux", "power_diffuser_1", 8, 21),
+// ];
 
 describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)("暗管芽针针剂完整产线 [%s]", (engineKind) => {
   it(
@@ -115,17 +157,34 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)("暗管芽针针剂完整产线
     { timeout: 600_000 },
     async () => {
       // 1. 加载系统蓝图 + 注入辅助设备
-      const blueprint = loadBlueprintWithExtras(
-        "public/blueprints/dark-pipe-premium-needle-line.json",
-        EXTRA_ENTITIES,
-      );
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema6.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // loadBlueprintWithExtras(
+      //         "public/blueprints/dark-pipe-premium-needle-line.json",
+      //         EXTRA_ENTITIES,
+      //       )
+      const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema6.json");
 
       // 2. 建立暗管链接
-      blueprint.slotLinks.push(
-        createDarkPipeSlotLink({ outletEntityId: "test-extra-13", inletEntityId: "legacy_d8591492_0057" }),
-        createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0009", inletEntityId: "test-extra-6" }),
-        createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0103", inletEntityId: "test-extra-3" }),
-      );
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema6.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // blueprint.slotLinks.push(
+      //         createDarkPipeSlotLink({ outletEntityId: "test-extra-13", inletEntityId: "legacy_d8591492_0057" }),
+      //         createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0009", inletEntityId: "test-extra-6" }),
+      //         createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0103", inletEntityId: "test-extra-3" }),
+      //       );
 
       // 3. 运行仿真
       const report = await runBlueprintSimulation({

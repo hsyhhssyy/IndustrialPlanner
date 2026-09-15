@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-regional-snapshot-retention",
+  "version": "fixture-v1",
+  "name": "regional-snapshot-retention",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "belt": {
+      "id": "belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

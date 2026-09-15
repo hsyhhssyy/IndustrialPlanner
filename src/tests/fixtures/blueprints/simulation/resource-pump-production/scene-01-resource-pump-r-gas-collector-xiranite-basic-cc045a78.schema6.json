@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-resource-pump-r_gas_collector_xiranite_basic",
+  "version": "fixture-v1",
+  "name": "resource-pump-r_gas_collector_xiranite_basic",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "pump": {
+      "id": "pump",
+      "definitionId": "gas_pump_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_gas_collector_xiranite_basic"
+        }
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pump"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

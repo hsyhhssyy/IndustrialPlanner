@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-protocol-storage-full-throughput",
+  "version": "fixture-v1",
+  "name": "protocol-storage-full-throughput",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source": {
+      "id": "source",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 14,
+        "y": 25
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "input-belt-1": {
+      "id": "input-belt-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "output-belt-1": {
+      "id": "output-belt-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "input-belt-2": {
+      "id": "input-belt-2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 15,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "output-belt-2": {
+      "id": "output-belt-2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 15,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "input-belt-3": {
+      "id": "input-belt-3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "output-belt-3": {
+      "id": "output-belt-3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink": {
+      "id": "sink",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 14,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "storage": {
+      "id": "storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 14,
+        "y": 20
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "input-meter-1": {
+      "id": "input-meter-1",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 14,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "input-meter-2": {
+      "id": "input-meter-2",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 15,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "input-meter-3": {
+      "id": "input-meter-3",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 16,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "output-meter-1": {
+      "id": "output-meter-1",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 14,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "output-meter-2": {
+      "id": "output-meter-2",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 15,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "output-meter-3": {
+      "id": "output-meter-3",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 16,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_xiranite_powder",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source",
+    "input-belt-1",
+    "output-belt-1",
+    "input-belt-2",
+    "output-belt-2",
+    "input-belt-3",
+    "output-belt-3",
+    "sink",
+    "storage",
+    "input-meter-1",
+    "input-meter-2",
+    "input-meter-3",
+    "output-meter-1",
+    "output-meter-2",
+    "output-meter-3"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,3 +1,6 @@
+import { getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
+import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
@@ -19,16 +22,25 @@ import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
-import {
-  createBlueprint,
-  createEntity,
-  createWorldDocumentFromBlueprint,
-  findSlot,
-  getFirstTickAtSimulationMilliseconds,
-  getDevice,
-  getTick,
-  resolveFirstTickNumberAtSimulationMilliseconds,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWorldDocumentFromBlueprint,
+//   findSlot,
+//   getFirstTickAtSimulationMilliseconds,
+//   getDevice,
+//   getTick,
+//   resolveFirstTickNumberAtSimulationMilliseconds,
+// } from "./blueprint-test-helpers";
+import { createEntity, createWorldDocumentFromBlueprint, findSlot, getFirstTickAtSimulationMilliseconds, getDevice, getTick, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 // AI-REMOVED 2026-09-08:
@@ -157,9 +169,18 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       // 2. 在同一文档中新增供电桩（不替换整个文档，模拟用户放置行为）
       const currentDoc = documentStore.getSnapshot();
       const powerEntity = createEntity("power", "power_diffuser_1", 4, 0);
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/collections/simulation/power-system/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // { ...currentDoc.entities, [powerEntity.id]: powerEntity }
       const nextDoc: WorldDocument = {
         ...currentDoc,
-        entities: { ...currentDoc.entities, [powerEntity.id]: powerEntity },
+        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/power-system/scene-01-variant-1.schema6.json").entities,
         entityOrder: [...currentDoc.entityOrder, powerEntity.id],
       };
       documentStore.setSnapshot(nextDoc);
@@ -269,12 +290,29 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
     }, { interval: 5 });
 
     // 1. 设置只有研磨机（需要供电）的文档
-    const grinder = createTestEntity("grinder", "grinder_1", 0, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-      "storageSlotGroups[0].slots[0].initialCount": 1,
-    });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const grinder = createTestEntity("grinder", "grinder_1", 0, 0, {
+    //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+    //       "storageSlotGroups[0].slots[0].initialCount": 1,
+    //     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/simulation/power-system/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [grinder]
     editorHost.internalDocument.setSnapshot(
-      createTestDocument([grinder]),
+      createTestDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/power-system/scene-01-variant-1.schema6.json"))),
     );
 
     // 2. 创建仿真 host（workerMode: runtime 用于同步测试）
@@ -589,15 +627,23 @@ function createEditorTestWorkspace(): WorkspaceContract {
   };
 }
 
-function createTestEntity(
-  id: string,
-  definitionId: string,
-  x: number,
-  y: number,
-  config: WorldEntity["config"] = {},
-): WorldEntity {
-  return { id, definitionId, position: { x, y }, rotation: 0, config, tags: [] };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createTestEntity(
+//   id: string,
+//   definitionId: string,
+//   x: number,
+//   y: number,
+//   config: WorldEntity["config"] = {},
+// ): WorldEntity {
+//   return { id, definitionId, position: { x, y }, rotation: 0, config, tags: [] };
+// }
 
 function createTestDocument(entities: readonly WorldEntity[]): WorldDocument {
   return {
@@ -612,13 +658,22 @@ function createGrinderBlueprint(
   powerX: number,
   initialInputCount = 1,
 ): BlueprintDocument {
-  return createBlueprint(name, [
-    createEntity("grinder", "grinder_1", 0, 0, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-      "storageSlotGroups[0].slots[0].initialCount": initialInputCount,
-    }),
-    createEntity("power", "power_diffuser_1", powerX, 0),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(name, [
+  //     createEntity("grinder", "grinder_1", 0, 0, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+  //       "storageSlotGroups[0].slots[0].initialCount": initialInputCount,
+  //     }),
+  //     createEntity("power", "power_diffuser_1", powerX, 0),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/power-system/index.json", "scene-01", { initialInputCount, name, powerX });
 }
 
 function readHostStandardTickRate(
@@ -632,12 +687,21 @@ function readHostStandardTickRate(
 }
 
 function createGrinderOnlyBlueprint(name: string): BlueprintDocument {
-  return createBlueprint(name, [
-    createEntity("grinder", "grinder_1", 0, 0, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-      "storageSlotGroups[0].slots[0].initialCount": 1,
-    }),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(name, [
+  //     createEntity("grinder", "grinder_1", 0, 0, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+  //       "storageSlotGroups[0].slots[0].initialCount": 1,
+  //     }),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/power-system/index.json", "scene-02", { name });
 }
 
 function createHeadlessWorkspace(

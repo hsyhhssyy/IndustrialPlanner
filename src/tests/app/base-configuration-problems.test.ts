@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -19,11 +20,20 @@ const registry = createRegistryContract();
 
 describe("base configuration problems", () => {
   it("为每个作弊设备生成一条问题", () => {
-    const entities = [
-      createEntity("cheat-solid", "cheat_infinite_solid"),
-      createEntity("cheat-liquid", "cheat_infinite_liquid"),
-      createEntity("cheat-gas", "cheat_infinite_gas"),
-    ];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/base-configuration-problems/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createEntity("cheat-solid", "cheat_infinite_solid"),
+    //       createEntity("cheat-liquid", "cheat_infinite_liquid"),
+    //       createEntity("cheat-gas", "cheat_infinite_gas"),
+    //     ]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/base-configuration-problems/scene-01-variant-1.schema6.json"));
 
     expect(collectProblems({ entities })).toEqual([
       createExpectedProblem("使用了作弊物品", "cheat-solid"),
@@ -125,10 +135,19 @@ describe("base configuration problems", () => {
   });
 
   it("编辑配置或运行时状态中的普通槽位无限均按设备报错", () => {
-    const configuredEntity = createEntity("configured-storage", "storager_1", {
-      "storageSlotGroups[0].slots[0].ignoreStock": true,
-      "storageSlotGroups[1].slots[0].ignoreStock": true,
-    });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/base-configuration-problems/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/app/base-configuration-problems/index.json、src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const configuredEntity = createEntity("configured-storage", "storager_1", {
+    //       "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //       "storageSlotGroups[1].slots[0].ignoreStock": true,
+    //     });
     const runtimeEntity = createEntity("runtime-storage", "storager_1");
     const finiteEntity = createEntity("finite-storage", "storager_1");
     const waterPump = createEntity("runtime-water-pump", "water_pump_1");
@@ -137,7 +156,16 @@ describe("base configuration problems", () => {
       [finiteEntity.id, [createRuntimeSlotItem("storager_1", false)]],
       [waterPump.id, [createRuntimeSlotItem("water_pump_1", true)]],
     ]);
-    const entities = [configuredEntity, runtimeEntity, finiteEntity, waterPump];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [configuredEntity, runtimeEntity, finiteEntity, waterPump]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/scene-01-variant-1.schema6.json"));
     const runtimeInfiniteStorageEntityIds = collectRuntimeInfiniteStorageEntityIds({
       entities,
       entityDefinitions: registry.entityDefinitions,

@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/power-system.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "initialInputCount": 1,
+          "name": "powered-grinder",
+          "powerX": 4
+        },
+        "file": "scene-01-powered-grinder-23092c57.schema6.json",
+        "blueprintId": "req-076-powered-grinder",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialInputCount": 1,
+          "name": "unpowered-grinder",
+          "powerX": 40
+        },
+        "file": "scene-01-unpowered-grinder-f14e6ab7.schema6.json",
+        "blueprintId": "req-076-unpowered-grinder",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialInputCount": 1,
+          "name": "migration-power-on",
+          "powerX": 4
+        },
+        "file": "scene-01-migration-power-on-c6a40227.schema6.json",
+        "blueprintId": "req-076-migration-power-on",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialInputCount": 1,
+          "name": "migration-power-off",
+          "powerX": 40
+        },
+        "file": "scene-01-migration-power-off-f4d1f775.schema6.json",
+        "blueprintId": "req-076-migration-power-off",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialInputCount": 1,
+          "name": "migration-power-restored",
+          "powerX": 4
+        },
+        "file": "scene-01-migration-power-restored-35cdbc82.schema6.json",
+        "blueprintId": "req-076-migration-power-restored",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialInputCount": 20,
+          "name": "power-mode-recovery",
+          "powerX": 4
+        },
+        "file": "scene-01-power-mode-recovery-35888df1.schema6.json",
+        "blueprintId": "req-076-power-mode-recovery",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "name": "add-pole-late"
+        },
+        "file": "scene-02-add-pole-late-05271b2e.schema6.json",
+        "blueprintId": "req-076-add-pole-late",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

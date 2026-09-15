@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/editor/editor-host.test.ts:scene-27:1",
+  "version": "fixture-v1",
+  "name": "editor-host scene-27",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "preview-belt": {
+      "id": "preview-belt",
+      "originalEntityId": "preview-belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": -2,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "preview-belt"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

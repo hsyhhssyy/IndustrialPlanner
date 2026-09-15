@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/simulation/dense-host-regressions.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "dense-host-regressions scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "transmuter_2:1": {
+      "id": "transmuter_2:1",
+      "definitionId": "transmuter_2",
+      "position": {
+        "x": 3,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "transmuter_2:1"
+  ],
+  "slotLinks": [
+    {
+      "id": "stale-warehouse-link",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "transmuter_2:1",
+        "storageSlotGroupId": "output",
+        "slotId": "slot"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -1,0 +1,36 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/production.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-grinder-production-435fad2a.schema6.json",
+        "blueprintId": "req-076-grinder-production",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-furnace-production-8321f8a2.schema6.json",
+        "blueprintId": "req-076-furnace-production",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-infinite-gas-purifier-inputs-afaf693e.schema6.json",
+        "blueprintId": "req-076-infinite-gas-purifier-inputs",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

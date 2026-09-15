@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/registry/device-default-orientation.test.ts:scene-01:42",
+  "version": "fixture-v1",
+  "name": "device-default-orientation scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "entity": {
+      "id": "entity",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 10,
+        "y": 20
+      },
+      "rotation": 90,
+      "config": {
+        "retained": true
+      },
+      "tags": [
+        "retained"
+      ]
+    }
+  },
+  "entityOrder": [
+    "entity"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

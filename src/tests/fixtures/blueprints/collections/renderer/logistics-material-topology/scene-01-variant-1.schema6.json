@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/renderer/logistics-material-topology.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "logistics-material-topology scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "p0": {
+      "id": "p0",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "p1": {
+      "id": "p1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "p2": {
+      "id": "p2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "source": {
+      "id": "source",
+      "definitionId": "material-input",
+      "position": {
+        "x": -2,
+        "y": -1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "target": {
+      "id": "target",
+      "definitionId": "material-input",
+      "position": {
+        "x": 3,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "p0",
+    "p1",
+    "p2",
+    "source",
+    "target"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

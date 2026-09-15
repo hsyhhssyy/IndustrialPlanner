@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/simulation/port-priority-groups.test.ts:scene-02:4",
+  "version": "fixture-v1",
+  "name": "port-priority-groups scene-02",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "splitter": {
+      "id": "splitter",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "portGroups[1].ports[0].priorityGroup": 0
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "splitter"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -5,14 +6,23 @@ import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehou
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import type { RegionalResourceSupplySetting } from "@/simulation/contracts/types";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  createWarehouseSlotLink,
-  createWorldDocumentFromBlueprint,
-  getFirstTickAtSimulationMilliseconds,
-  getTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWarehouseSlotLink,
+//   createWorldDocumentFromBlueprint,
+//   getFirstTickAtSimulationMilliseconds,
+//   getTick,
+// } from "./blueprint-test-helpers";
+import { createWorldDocumentFromBlueprint, getFirstTickAtSimulationMilliseconds, getTick } from "./blueprint-test-helpers";
 import { runRegionalBlueprintSimulation } from "./regional-blueprint-runner";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
@@ -44,8 +54,17 @@ const FINITE_SOURCE_ORE: readonly RegionalResourceSupplySetting[] = [{
 describe("地区资源供给", () => {
   describe.each(SIMULATION_ENGINE_MATRIX)("单基地运行行为 [%s]", (engineKind) => {
     it("每 10000ms 提交有限资源，并为固定及可配置无限资源投影独立状态", async () => {
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint("regional-resource-single", [])
       const report = await runBlueprintSimulation({
-        blueprint: createBlueprint("regional-resource-single", []),
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-01-regional-resource-single-7396c6c1.schema6.json"),
         maxDurationSeconds: 10.5,
         registry: createRegistryContract(),
         engineKind,
@@ -91,16 +110,25 @@ describe("地区资源供给", () => {
 
   it("有限地区 Profile 覆盖设备文档中的旧自然资源 ignoreStock", () => {
     const registry = createRegistryContract();
-    const document = createWorldDocumentFromBlueprint(createBlueprint(
-      "regional-resource-policy-precedence",
-      [
-        createEntity("unloader", "unloader_1", 51, 34, 270, {
-          "storageSlotGroups[0].slots[0].ignoreStock": true,
-        }),
-        createEntity("belt", "belt_straight_1x1", 52, 35),
-      ],
-      [createWarehouseSlotLink("unloader", "item_originium_ore")],
-    ));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint(
+    //       "regional-resource-policy-precedence",
+    //       [
+    //         createEntity("unloader", "unloader_1", 51, 34, 270, {
+    //           "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //         }),
+    //         createEntity("belt", "belt_straight_1x1", 52, 35),
+    //       ],
+    //       [createWarehouseSlotLink("unloader", "item_originium_ore")],
+    //     )
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-02-regional-resource-policy-precedence-234650c4.schema6.json"));
     const topology = compileSimulationTopology({
       document,
       registry,

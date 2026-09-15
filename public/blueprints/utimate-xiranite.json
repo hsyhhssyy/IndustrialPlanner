@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "blueprintId": "4c076c6f-56d3-4c42-a382-13deb3dcfec9",
   "version": "v1.3.0",
   "name": "天王坪小基地7核息壤",
@@ -28,7 +28,7 @@
         "x": 44,
         "y": 44
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -38,12 +38,12 @@
     },
     "item_port_hydro_planter_1:1": {
       "id": "item_port_hydro_planter_1:1",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 44,
         "y": 39
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -54,7 +54,7 @@
         "x": 41,
         "y": 46
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -120,7 +120,7 @@
         "x": 41,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -131,7 +131,7 @@
         "x": 38,
         "y": 40
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -175,7 +175,7 @@
         "x": 38,
         "y": 35
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -252,7 +252,7 @@
         "x": 40,
         "y": 31
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -263,7 +263,7 @@
         "x": 44,
         "y": 33
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -274,7 +274,7 @@
         "x": 6,
         "y": 30
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -285,7 +285,7 @@
         "x": 31,
         "y": 28
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -296,7 +296,7 @@
         "x": 36,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -307,7 +307,7 @@
         "x": 35,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -318,7 +318,7 @@
         "x": 32,
         "y": 35
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -329,7 +329,7 @@
         "x": 26,
         "y": 35
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -340,7 +340,7 @@
         "x": 36,
         "y": 44
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -351,7 +351,7 @@
         "x": 31,
         "y": 44
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -366,7 +366,7 @@
         "x": 26,
         "y": 44
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -377,7 +377,7 @@
         "x": 29,
         "y": 41
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -399,7 +399,7 @@
         "x": 27,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1472,12 +1472,12 @@
     },
     "item_port_hydro_planter_1:2": {
       "id": "item_port_hydro_planter_1:2",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 20,
         "y": 44
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1488,7 +1488,7 @@
         "x": 26,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1499,7 +1499,7 @@
         "x": 22,
         "y": 38
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1510,7 +1510,7 @@
         "x": 22,
         "y": 41
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1521,7 +1521,7 @@
         "x": 22,
         "y": 31
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1532,7 +1532,7 @@
         "x": 19,
         "y": 34
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1543,7 +1543,7 @@
         "x": 13,
         "y": 35
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1554,7 +1554,7 @@
         "x": 15,
         "y": 44
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -1701,7 +1701,7 @@
         "x": 14,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1712,7 +1712,7 @@
         "x": 11,
         "y": 40
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1723,7 +1723,7 @@
         "x": 17,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1734,7 +1734,7 @@
         "x": 14,
         "y": 32
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1745,7 +1745,7 @@
         "x": 11,
         "y": 31
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1767,7 +1767,7 @@
         "x": 19,
         "y": 30
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1877,7 +1877,7 @@
         "x": 7,
         "y": 35
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1965,7 +1965,7 @@
         "x": 10,
         "y": 44
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2317,7 +2317,7 @@
         "x": 5,
         "y": 44
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -2332,7 +2332,7 @@
         "x": 0,
         "y": 44
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2343,7 +2343,7 @@
         "x": 6,
         "y": 40
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2354,7 +2354,7 @@
         "x": 1,
         "y": 33
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -2364,12 +2364,12 @@
     },
     "item_port_hydro_planter_1:3": {
       "id": "item_port_hydro_planter_1:3",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 1,
         "y": 38
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2380,7 +2380,7 @@
         "x": 1,
         "y": 30
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -2879,7 +2879,7 @@
         "x": 1,
         "y": 11
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -2889,12 +2889,12 @@
     },
     "item_port_hydro_planter_1:4": {
       "id": "item_port_hydro_planter_1:4",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 1,
         "y": 16
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2905,7 +2905,7 @@
         "x": 6,
         "y": 11
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2971,7 +2971,7 @@
         "x": 6,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2982,7 +2982,7 @@
         "x": 9,
         "y": 17
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -3026,7 +3026,7 @@
         "x": 6,
         "y": 21
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3081,7 +3081,7 @@
         "x": 7,
         "y": 26
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -3092,7 +3092,7 @@
         "x": 1,
         "y": 22
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -3103,7 +3103,7 @@
         "x": 39,
         "y": 25
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -3114,7 +3114,7 @@
         "x": 14,
         "y": 27
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -3125,7 +3125,7 @@
         "x": 11,
         "y": 25
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -3136,7 +3136,7 @@
         "x": 12,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3147,7 +3147,7 @@
         "x": 12,
         "y": 21
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3158,7 +3158,7 @@
         "x": 18,
         "y": 21
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3169,7 +3169,7 @@
         "x": 9,
         "y": 11
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3180,7 +3180,7 @@
         "x": 14,
         "y": 11
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -3195,7 +3195,7 @@
         "x": 19,
         "y": 11
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -3206,7 +3206,7 @@
         "x": 18,
         "y": 16
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -3228,7 +3228,7 @@
         "x": 20,
         "y": 25
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -4301,12 +4301,12 @@
     },
     "item_port_hydro_planter_1:5": {
       "id": "item_port_hydro_planter_1:5",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 25,
         "y": 11
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4317,7 +4317,7 @@
         "x": 21,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4328,7 +4328,7 @@
         "x": 25,
         "y": 19
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -4339,7 +4339,7 @@
         "x": 25,
         "y": 16
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -4350,7 +4350,7 @@
         "x": 25,
         "y": 26
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -4361,7 +4361,7 @@
         "x": 25,
         "y": 22
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4372,7 +4372,7 @@
         "x": 31,
         "y": 21
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4383,7 +4383,7 @@
         "x": 30,
         "y": 11
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -4530,7 +4530,7 @@
         "x": 33,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4541,7 +4541,7 @@
         "x": 36,
         "y": 17
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -4552,7 +4552,7 @@
         "x": 30,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4563,7 +4563,7 @@
         "x": 33,
         "y": 25
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -4574,7 +4574,7 @@
         "x": 36,
         "y": 26
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4596,7 +4596,7 @@
         "x": 28,
         "y": 27
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4706,7 +4706,7 @@
         "x": 37,
         "y": 21
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -4794,7 +4794,7 @@
         "x": 35,
         "y": 11
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -5146,7 +5146,7 @@
         "x": 40,
         "y": 11
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -5161,7 +5161,7 @@
         "x": 45,
         "y": 11
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -5172,7 +5172,7 @@
         "x": 41,
         "y": 17
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -5183,7 +5183,7 @@
         "x": 44,
         "y": 22
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -5193,12 +5193,12 @@
     },
     "item_port_hydro_planter_1:6": {
       "id": "item_port_hydro_planter_1:6",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 44,
         "y": 17
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -5209,7 +5209,7 @@
         "x": 46,
         "y": 27
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -5708,7 +5708,7 @@
         "x": 57,
         "y": -5
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5734,7 +5734,7 @@
         "x": 57,
         "y": -10
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5749,7 +5749,7 @@
         "x": 53,
         "y": -10
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -5826,7 +5826,7 @@
         "x": 57,
         "y": 5
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5852,7 +5852,7 @@
         "x": 57,
         "y": 0
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5867,7 +5867,7 @@
         "x": 53,
         "y": 0
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -5944,7 +5944,7 @@
         "x": 50,
         "y": -10
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5959,7 +5959,7 @@
         "x": 45,
         "y": -10
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5974,7 +5974,7 @@
         "x": 40,
         "y": -10
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "default": "r_pump_water_basic"
@@ -5989,7 +5989,7 @@
         "x": 50,
         "y": -6
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6011,7 +6011,7 @@
         "x": 45,
         "y": -6
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6022,7 +6022,7 @@
         "x": 40,
         "y": -6
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6275,7 +6275,7 @@
         "x": 44,
         "y": 5
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -6286,7 +6286,7 @@
         "x": 44,
         "y": 0
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -6345,7 +6345,7 @@
         "x": 38,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -6356,7 +6356,7 @@
         "x": 33,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -6366,12 +6366,12 @@
     },
     "item_port_hydro_planter_1:7": {
       "id": "item_port_hydro_planter_1:7",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 28,
         "y": 1
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -6382,7 +6382,7 @@
         "x": 33,
         "y": 7
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6426,7 +6426,7 @@
         "x": 28,
         "y": 6
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6602,7 +6602,7 @@
         "x": 40,
         "y": 6
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -6910,7 +6910,7 @@
         "x": 24,
         "y": 1
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6965,7 +6965,7 @@
         "x": 24,
         "y": 7
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6976,7 +6976,7 @@
         "x": 24,
         "y": 4
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -6998,7 +6998,7 @@
         "x": 19,
         "y": 4
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -7009,7 +7009,7 @@
         "x": 15,
         "y": 1
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -7240,7 +7240,7 @@
         "x": 9,
         "y": 1
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -7284,7 +7284,7 @@
         "x": 15,
         "y": 7
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -7295,7 +7295,7 @@
         "x": 10,
         "y": 6
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -8305,6 +8305,7 @@
       }
     }
   ],
+  "regions": [],
   "createdAt": "2026-06-19T14:06:06.817Z",
   "updatedAt": "2026-06-19T14:06:06.817Z"
 }

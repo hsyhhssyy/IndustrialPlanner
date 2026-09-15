@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,14 +13,23 @@ import { createRegistryContract } from "@/registry";
 // Original code:
 // import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findFirstTick,
-  findSlot,
-  getDevice,
-  getLastTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/cheat-infinite-device/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findFirstTick,
+//   findSlot,
+//   getDevice,
+//   getLastTick,
+// } from "./blueprint-test-helpers";
+import { findFirstTick, findSlot, getDevice, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 const DEVICE_CASES = [
@@ -55,22 +65,31 @@ describe.each(SIMULATION_ENGINE_MATRIX)("cheat infinite device simulation [%s]",
     //
     // Original code:
     // const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/cheat-infinite-device/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint(
+    //         "cheat-infinite-device",
+    //         DEVICE_CASES.map((deviceCase, index) => createEntity(
+    //           deviceCase.entityId,
+    //           deviceCase.definitionId,
+    //           index * 3,
+    //           0,
+    //           0,
+    //           {
+    //             "storageSlotGroups[0].slots[0].initialItemType": deviceCase.itemId,
+    //             "storageSlotGroups[0].slots[0].initialCount": 8,
+    //             "storageSlotGroups[1].slots[0].initialItemType": deviceCase.itemId,
+    //           },
+    //         )),
+    //       )
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint(
-        "cheat-infinite-device",
-        DEVICE_CASES.map((deviceCase, index) => createEntity(
-          deviceCase.entityId,
-          deviceCase.definitionId,
-          index * 3,
-          0,
-          0,
-          {
-            "storageSlotGroups[0].slots[0].initialItemType": deviceCase.itemId,
-            "storageSlotGroups[0].slots[0].initialCount": 8,
-            "storageSlotGroups[1].slots[0].initialItemType": deviceCase.itemId,
-          },
-        )),
-      ),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/cheat-infinite-device/scene-01-cheat-infinite-device-34fe6490.schema6.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry: createRegistryContract(),

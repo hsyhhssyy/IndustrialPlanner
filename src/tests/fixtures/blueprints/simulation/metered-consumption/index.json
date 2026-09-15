@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/metered-consumption.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "engineKind": "legacy"
+        },
+        "file": "scene-01-empty-consumption-legacy-6bfde71d.schema6.json",
+        "blueprintId": "req-076-empty-consumption-legacy",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2"
+        },
+        "file": "scene-01-empty-consumption-dense-v2-928596dd.schema6.json",
+        "blueprintId": "req-076-empty-consumption-dense-v2",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "definitionId": "transmuter_1_gastrans"
+        },
+        "file": "scene-02-synthetic-transmuter-1-gastrans-ab9f58c3.schema6.json",
+        "blueprintId": "req-076-synthetic-transmuter_1_gastrans",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "transmuter_1_liquidtrans"
+        },
+        "file": "scene-02-synthetic-transmuter-1-liquidtrans-afef549d.schema6.json",
+        "blueprintId": "req-076-synthetic-transmuter_1_liquidtrans",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "transmuter_2_gastrans"
+        },
+        "file": "scene-02-synthetic-transmuter-2-gastrans-e0a660b4.schema6.json",
+        "blueprintId": "req-076-synthetic-transmuter_2_gastrans",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "transmuter_2_solidtrans"
+        },
+        "file": "scene-02-synthetic-transmuter-2-solidtrans-b1bab2a3.schema6.json",
+        "blueprintId": "req-076-synthetic-transmuter_2_solidtrans",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "vaporizer_1"
+        },
+        "file": "scene-02-synthetic-vaporizer-1-b4bd4bfc.schema6.json",
+        "blueprintId": "req-076-synthetic-vaporizer_1",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-one-consumption-item-62849b3a.schema6.json",
+        "blueprintId": "req-076-one-consumption-item",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-five-consumption-items-d13b6eff.schema6.json",
+        "blueprintId": "req-076-five-consumption-items",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-05": [
+      {
+        "parameters": {},
+        "file": "scene-05-out-of-range-consumption-cd40b977.schema6.json",
+        "blueprintId": "req-076-out-of-range-consumption",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-06": [
+      {
+        "parameters": {},
+        "file": "scene-06-staggered-consumption-5134c1df.schema6.json",
+        "blueprintId": "req-076-staggered-consumption",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-07": [
+      {
+        "parameters": {},
+        "file": "scene-07-consumption-gated-transmuter-db40639e.schema6.json",
+        "blueprintId": "req-076-consumption-gated-transmuter",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-08": [
+      {
+        "parameters": {},
+        "file": "scene-08-powerless-consumption-67b7fae1.schema6.json",
+        "blueprintId": "req-076-powerless-consumption",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

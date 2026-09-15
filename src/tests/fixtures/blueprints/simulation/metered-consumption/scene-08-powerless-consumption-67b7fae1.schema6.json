@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-powerless-consumption",
+  "version": "fixture-v1",
+  "name": "powerless-consumption",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "transmuter": {
+      "id": "transmuter",
+      "definitionId": "transmuter_1_gastrans",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "liquid_transmuter_1_gas_gas_water_1"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_water",
+        "storageSlotGroups[1].slots[0].initialCount": 50
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "transmuter"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

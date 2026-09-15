@@ -1,0 +1,54 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/regional-base-runtime.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "inletDefinitionId": "udpipe_loader_1"
+        },
+        "file": "scene-01-regional-unlinked-udpipe-loader-1-e8d3eb61.schema6.json",
+        "blueprintId": "req-076-regional-unlinked-udpipe_loader_1",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "inletDefinitionId": "udpipe_loader_2"
+        },
+        "file": "scene-01-regional-unlinked-udpipe-loader-2-e5b4bd3a.schema6.json",
+        "blueprintId": "req-076-regional-unlinked-udpipe_loader_2",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-regional-linked-dark-pipe-266c8d9b.schema6.json",
+        "blueprintId": "req-076-regional-linked-dark-pipe",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-regional-runtime-belt-0af9999d.schema6.json",
+        "blueprintId": "req-076-regional-runtime-belt",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-regional-snapshot-retention-78c359e0.schema6.json",
+        "blueprintId": "req-076-regional-snapshot-retention",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

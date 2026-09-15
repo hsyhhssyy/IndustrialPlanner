@@ -1,0 +1,61 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/renderer/pipe-port-ghost-decoration.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "definitionId": "transmuter_1_gastrans"
+        },
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "transmuter_1_liquidtrans"
+        },
+        "file": "scene-01-variant-2.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-05": [
+      {
+        "parameters": {},
+        "file": "scene-05-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-06": [
+      {
+        "parameters": {},
+        "file": "scene-06-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

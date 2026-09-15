@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it } from "vitest";
 
@@ -19,13 +20,22 @@ import {
 } from "@/simulation/dense/dense-topology";
 import { DenseRuntimeState } from "@/simulation/dense/dense-runtime-state";
 
-import {
-  createBlueprint,
-  createEntity,
-  getDevice,
-  getTick,
-  createWorldDocumentFromBlueprint,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dense-projection/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   getDevice,
+//   getTick,
+//   createWorldDocumentFromBlueprint,
+// } from "./blueprint-test-helpers";
+import { getDevice, getTick, createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import {
   createHeadlessWorkspace,
   runBlueprintSimulation,
@@ -39,25 +49,43 @@ const DENSE_TEST_SESSION = {
 } as const;
 
 function createDenseProjectionBlueprint(): BlueprintDocument {
-  return createBlueprint("dense-projection", [
-    createEntity("source-storage", "storager_1", 0, 0, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-      "storageSlotGroups[0].slots[0].initialCount": 20,
-    }),
-    createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-    createEntity("sink-storage", "storager_1", 0, -4),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/dense-projection/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("dense-projection", [
+  //     createEntity("source-storage", "storager_1", 0, 0, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+  //       "storageSlotGroups[0].slots[0].initialCount": 20,
+  //     }),
+  //     createEntity("belt", "belt_straight_1x1", 0, -1, 270),
+  //     createEntity("sink-storage", "storager_1", 0, -4),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-01-dense-projection-a109aa22.schema6.json");
 }
 
 describe("ST2-RQ-023 dense projection", () => {
   it("runs a real blueprint through the explicitly selected dense-v2 host", async () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/dense-projection/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("dense-v2-host", [
+    //         createEntity("storage", "storager_1", 0, 0, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+    //           "storageSlotGroups[0].slots[0].initialCount": 20,
+    //         }),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("dense-v2-host", [
-        createEntity("storage", "storager_1", 0, 0, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-          "storageSlotGroups[0].slots[0].initialCount": 20,
-        }),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-02-dense-v2-host-3c40013b.schema6.json"),
       registry: createRegistryContract(),
       maxTickNumber: 1,
       engineKind: "dense-v2",
@@ -101,12 +129,21 @@ describe("ST2-RQ-023 dense projection", () => {
   });
 
   it("matches legacy warehouse production statistics after the first full minute", async () => {
-    const blueprint = createBlueprint("dense-v2-warehouse-stats", [
-      createEntity("pump", "water_pump_1", 0, 0, 0, {
-        channelRecipes: { default: "r_pump_water_basic" },
-      }),
-      createEntity("power", "power_diffuser_1", 4, 0),
-    ]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/dense-projection/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("dense-v2-warehouse-stats", [
+    //       createEntity("pump", "water_pump_1", 0, 0, 0, {
+    //         channelRecipes: { default: "r_pump_water_basic" },
+    //       }),
+    //       createEntity("power", "power_diffuser_1", 4, 0),
+    //     ])
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-03-dense-v2-warehouse-stats-c45d5354.schema6.json");
     const maxTickNumber = 60 * STANDARD_TICK_RATE_PER_SECOND;
     const registry = createRegistryContract();
     const [legacy, dense] = await Promise.all([

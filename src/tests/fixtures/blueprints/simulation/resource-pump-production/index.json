@@ -1,0 +1,102 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/resource-pump-production.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "deviceCase": {
+            "definitionId": "water_pump_1",
+            "recipeId": "r_pump_water_basic",
+            "itemId": "item_liquid_water",
+            "storageGroupId": "fluid_output_buffer",
+            "slotId": "output_fluid_slot_1",
+            "durationSeconds": 1,
+            "requiresPower": true
+          }
+        },
+        "file": "scene-01-resource-pump-r-pump-water-basic-f983c1b3.schema6.json",
+        "blueprintId": "req-076-resource-pump-r_pump_water_basic",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "deviceCase": {
+            "definitionId": "water_pump_1",
+            "recipeId": "r_pump_acid_basic",
+            "itemId": "item_liquid_acid",
+            "storageGroupId": "fluid_output_buffer",
+            "slotId": "output_fluid_slot_1",
+            "durationSeconds": 1,
+            "requiresPower": true
+          }
+        },
+        "file": "scene-01-resource-pump-r-pump-acid-basic-563a3ad2.schema6.json",
+        "blueprintId": "req-076-resource-pump-r_pump_acid_basic",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "deviceCase": {
+            "definitionId": "gas_pump_1",
+            "recipeId": "r_gas_collector_inert_basic",
+            "itemId": "item_gas_inert",
+            "storageGroupId": "gas_output_buffer",
+            "slotId": "output_gas_slot_1",
+            "durationSeconds": 3,
+            "requiresPower": false
+          }
+        },
+        "file": "scene-01-resource-pump-r-gas-collector-inert-basic-8933c2d3.schema6.json",
+        "blueprintId": "req-076-resource-pump-r_gas_collector_inert_basic",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "deviceCase": {
+            "definitionId": "gas_pump_1",
+            "recipeId": "r_gas_collector_xiranite_basic",
+            "itemId": "item_gas_xiranite",
+            "storageGroupId": "gas_output_buffer",
+            "slotId": "output_gas_slot_1",
+            "durationSeconds": 3,
+            "requiresPower": false
+          }
+        },
+        "file": "scene-01-resource-pump-r-gas-collector-xiranite-basic-cc045a78.schema6.json",
+        "blueprintId": "req-076-resource-pump-r_gas_collector_xiranite_basic",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "definitionId": "water_pump_1",
+          "requiresPower": true,
+          "slotId": "output_fluid_slot_1",
+          "storageGroupId": "fluid_output_buffer"
+        },
+        "file": "scene-02-unconfigured-water-pump-1-a21b2065.schema6.json",
+        "blueprintId": "req-076-unconfigured-water_pump_1",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_pump_1",
+          "requiresPower": false,
+          "slotId": "output_gas_slot_1",
+          "storageGroupId": "gas_output_buffer"
+        },
+        "file": "scene-02-unconfigured-gas-pump-1-858eca28.schema6.json",
+        "blueprintId": "req-076-unconfigured-gas_pump_1",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

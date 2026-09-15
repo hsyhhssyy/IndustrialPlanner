@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-mix_pool_1-dual-fluid-output-routing",
+  "version": "fixture-v1",
+  "name": "mix_pool_1-dual-fluid-output-routing",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "pool": {
+      "id": "pool",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
+        "storageSlotGroups[0].slots[0].initialCount": 10,
+        "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[1].initialCount": 10,
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
+        }
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 16,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe-a-1": {
+      "id": "pipe-a-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 11
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "pipe-a-turn": {
+      "id": "pipe-a-turn",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 8,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe-a-2": {
+      "id": "pipe-a-2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 10
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink-a": {
+      "id": "sink-a",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 7,
+        "y": 7
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe-b-1": {
+      "id": "pipe-b-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "pipe-b-turn": {
+      "id": "pipe-b-turn",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 8,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-b-2": {
+      "id": "pipe-b-2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "sink-b": {
+      "id": "sink-b",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 7,
+        "y": 15
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pool",
+    "power",
+    "pipe-a-1",
+    "pipe-a-turn",
+    "pipe-a-2",
+    "sink-a",
+    "pipe-b-1",
+    "pipe-b-turn",
+    "pipe-b-2",
+    "sink-b"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

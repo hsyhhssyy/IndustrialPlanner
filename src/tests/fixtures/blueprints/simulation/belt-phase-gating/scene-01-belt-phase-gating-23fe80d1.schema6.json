@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-belt-phase-gating",
+  "version": "fixture-v1",
+  "name": "belt-phase-gating",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "storage": {
+      "id": "storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "belt1": {
+      "id": "belt1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink1": {
+      "id": "sink1",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": -4
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "belt2": {
+      "id": "belt2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink2": {
+      "id": "sink2",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 1,
+        "y": -4
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "storage",
+    "belt1",
+    "sink1",
+    "belt2",
+    "sink2"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

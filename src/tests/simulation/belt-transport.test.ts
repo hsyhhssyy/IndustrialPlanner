@@ -1,14 +1,24 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  getFirstTickAtSimulationMilliseconds,
-  getDevice,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/belt-transport/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   getFirstTickAtSimulationMilliseconds,
+//   getDevice,
+// } from "./blueprint-test-helpers";
+import { getFirstTickAtSimulationMilliseconds, getDevice } from "./blueprint-test-helpers";
 // AI-REMOVED 2026-09-08:
 // Reason: 门禁相位改由整数毫秒定位，不再直接按引擎 tick 编号读取。
 // Trigger: belt-transport 接入 Host 行为矩阵。
@@ -22,14 +32,23 @@ import {
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 function createBeltTransportBlueprint(): BlueprintDocument {
-  return createBlueprint("belt-transport", [
-    createEntity("source-storage", "storager_1", 0, 0, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-      "storageSlotGroups[0].slots[0].initialCount": 20,
-    }),
-    createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-    createEntity("sink-storage", "storager_1", 0, -4),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/belt-transport/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("belt-transport", [
+  //     createEntity("source-storage", "storager_1", 0, 0, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+  //       "storageSlotGroups[0].slots[0].initialCount": 20,
+  //     }),
+  //     createEntity("belt", "belt_straight_1x1", 0, -1, 270),
+  //     createEntity("sink-storage", "storager_1", 0, -4),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema6.json");
 }
 
 // AI-REMOVED 2026-09-08:

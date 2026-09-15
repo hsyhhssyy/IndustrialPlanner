@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
@@ -769,10 +770,19 @@ describe("createBeltCargoDecoration", () => {
   it("keeps cargo visible when a device-port belt continues into another belt", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [createEntity("next-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0)]
     const ctx = createContext({
       getTexture,
       includeOutputSource: true,
-      extraEntities: [createEntity("next-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0)],
+      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-01-variant-1.schema6.json")),
       entries: [{
         beltShape: "straight",
         position: { x: 0, y: 0 },
@@ -794,13 +804,22 @@ describe("createBeltCargoDecoration", () => {
   it("builds the shared bitmap mask from all visible belt cells", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //         createEntity("right-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0),
+    //         createEntity("bottom-belt", "belt_straight_1x1", { x: 0, y: 1 }, 0),
+    //         createEntity("diagonal-belt", "belt_straight_1x1", { x: 1, y: 1 }, 0),
+    //       ]
     const ctx = createContext({
       getTexture,
-      extraEntities: [
-        createEntity("right-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0),
-        createEntity("bottom-belt", "belt_straight_1x1", { x: 0, y: 1 }, 0),
-        createEntity("diagonal-belt", "belt_straight_1x1", { x: 1, y: 1 }, 0),
-      ],
+      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-02-variant-1.schema6.json")),
     })
 
     decoration.sync(ctx as never)
@@ -1092,21 +1111,30 @@ function createContext(options: {
   }
 }
 
-function createEntity(
-  id: string,
-  definitionId: string,
-  position: { x: number; y: number },
-  rotation: 0 | 90 | 180 | 270,
-) {
-  return {
-    id,
-    definitionId,
-    position,
-    rotation,
-    config: {},
-    tags: [],
-  }
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/belt-cargo-decoration/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createEntity(
+//   id: string,
+//   definitionId: string,
+//   position: { x: number; y: number },
+//   rotation: 0 | 90 | 180 | 270,
+// ) {
+//   return {
+//     id,
+//     definitionId,
+//     position,
+//     rotation,
+//     config: {},
+//     tags: [],
+//   }
+// }
 
 function resolveBeltDefinitionId(beltShape: "straight" | "turn-cw" | "turn-ccw"): string {
   switch (beltShape) {

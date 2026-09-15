@@ -1,0 +1,97 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "upgradedAt": "2026-09-14",
+  "blueprints": [
+    {
+      "file": "scene-1.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "7d8dd13e-274d-47c3-9000-799df527c807"
+    },
+    {
+      "file": "scene-2.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SCENE2",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "41bf5dc4-f741-45af-850a-0e81b583e219"
+    },
+    {
+      "file": "scene-3.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SCENE3",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "1041aaaf-437b-435d-ad2b-2241bb520fbe"
+    },
+    {
+      "file": "scene-4.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SCENE4",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "37c8e4e6-c720-4480-95bf-f584d2d257aa"
+    },
+    {
+      "file": "scene-4-without-overlapping-belt.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SCENE4（移除重叠传送带变体）",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "37c8e4e6-c720-4480-95bf-f584d2d257aa-without-overlapping-belt"
+    },
+    {
+      "file": "scene-4-belt-on-top.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SCENE4（传送带置顶变体）",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "37c8e4e6-c720-4480-95bf-f584d2d257aa-belt-on-top"
+    },
+    {
+      "file": "pipe-deadend.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_PIPE_DEADEND",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "833b49ea-c832-470f-be0b-043b16890b8f"
+    },
+    {
+      "file": "pipe-branch.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_PIPE_BRANCH",
+      "sourceSchemaVersion": 3,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "pipe-branch-test-001"
+    },
+    {
+      "file": "pipe-continuous-crossing.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING",
+      "sourceSchemaVersion": 5,
+      "sourceVersion": "",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "blueprintId": "16247ed5-4276-4419-a608-9856720b46e4"
+    },
+    {
+      "file": "suppression-overlap.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP",
+      "sourceSchemaVersion": 4,
+      "sourceVersion": "v1.3.0",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "dea0569d-2e5d-44d3-913a-ab30dd84fca4"
+    }
+  ]
+}

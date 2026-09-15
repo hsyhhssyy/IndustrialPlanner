@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "blueprintId": "e88f7150-4c25-4285-8c0f-4709362a3fe8",
   "version": "v1.3.0",
   "name": "1.4 满速4核息壤",
@@ -116,7 +116,7 @@
         "x": 14,
         "y": 27
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -127,7 +127,7 @@
         "x": 19,
         "y": 32
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -138,7 +138,7 @@
         "x": 21,
         "y": 27
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -149,7 +149,7 @@
         "x": 15,
         "y": 35
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -160,7 +160,7 @@
         "x": 21,
         "y": 35
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -171,7 +171,7 @@
         "x": 6,
         "y": 26
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -228,7 +228,7 @@
         "x": 27,
         "y": 38
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -287,7 +287,7 @@
         "x": 15,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -298,7 +298,7 @@
         "x": 9,
         "y": 26
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "warehouse_submit": "r_warehouse_submit"
@@ -313,7 +313,7 @@
         "x": 23,
         "y": 32
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -363,12 +363,12 @@
     },
     "hydro_planter_1:1": {
       "id": "hydro_planter_1:1",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 7,
         "y": 35
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -379,7 +379,7 @@
         "x": 29,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -405,7 +405,7 @@
         "x": 7,
         "y": 30
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
         "storageSlotGroups[0].slots[0].initialCount": 50,
@@ -459,12 +459,12 @@
     },
     "planter_1:1": {
       "id": "planter_1:1",
-      "definitionId": "hydro_planter_1",
+      "definitionId": "planter_1_liquid",
       "position": {
         "x": 29,
         "y": 27
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -607,7 +607,7 @@
         "x": 30,
         "y": 38
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -2007,6 +2007,7 @@
       }
     }
   ],
+  "regions": [],
   "createdAt": "2026-07-21T14:30:04.341Z",
   "updatedAt": "2026-07-21T14:30:04.341Z"
 }

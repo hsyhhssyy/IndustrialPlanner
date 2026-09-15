@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/renderer/port-overlay-decoration.test.ts:scene-05:1",
+  "version": "fixture-v1",
+  "name": "port-overlay-decoration scene-05",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "device": {
+      "id": "device",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "wall": {
+      "id": "wall",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 5,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "device",
+    "wall"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

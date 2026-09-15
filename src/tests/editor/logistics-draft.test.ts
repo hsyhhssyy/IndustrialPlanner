@@ -19,6 +19,7 @@ import {
 } from "@/editor/logistics/logistics-utils";
 import { createRegistryContract } from "@/registry";
 import { rotateGridRotation } from "@/shared/geometry/grid";
+import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 const LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS = new Set([
   "furnance_1",
@@ -137,6 +138,65 @@ afterEach(() => {
 });
 
 describe("物流绘制模式", () => {
+  it.each([
+    { kind: "belt", routeType: "single-bend", scene: "scene-1", y: 5, converger: "log_converger", connector: "log_connector" },
+    { kind: "belt", routeType: "freehand", scene: "scene-1", y: 5, converger: "log_converger", connector: "log_connector" },
+    { kind: "pipe", routeType: "single-bend", scene: "pipe-continuous-crossing", y: 3, converger: "pipe_converger", connector: "pipe_connector" },
+    { kind: "pipe", routeType: "freehand", scene: "pipe-continuous-crossing", y: 3, converger: "pipe_converger", connector: "pipe_connector" },
+  ] as const)("$kind / $routeType 根据当前交叉拓扑切换汇流器与桥接器，结果不依赖中间预览", ({ kind, routeType, scene, y, converger, connector }) => {
+    const editorHost = createEditorHost(createWorkspace());
+    try {
+      const blueprint = loadBlueprintFromFile(`src/tests/fixtures/blueprints/logistics-placement-complete/${scene}.schema6.json`);
+      editorHost.internalDocument.setSnapshot({
+        ...createDummyWorldDocument(),
+        baseId: blueprint.baseId,
+        entities: blueprint.entities,
+        entityOrder: blueprint.entityOrder,
+        slotLinks: blueprint.slotLinks,
+      });
+      const routeMode = routeType === "freehand"
+        ? { type: "freehand" } as const
+        : { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true } as const;
+      editorHost.actions.createLogisticsDraftStart({
+        kind,
+        source: { type: "empty-cell", gridPoint: { x: 3, y } },
+      });
+      const directCrossing = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint: { x: 1, y },
+        autoCreateSplittersAndConvergers: true,
+        routeMode,
+      });
+      expect(directCrossing.canApply).toBe(true);
+      const directCells = editorHost.queries.resolveLogisticsDraftState()?.cells;
+      expect(findPreviewDraftAt(editorHost, 2, y)?.definitionId).toBe(connector);
+
+      // 同一文档、起点和线序下往返交叉点；每次只由当前终点决定预览及可提交性。
+      for (let pass = 0; pass < 2; pass += 1) {
+        const onCrossing = editorHost.actions.moveLogisticEnd({
+          pointerGridPoint: { x: 2, y },
+          autoCreateSplittersAndConvergers: true,
+          routeMode,
+        });
+        expect(onCrossing.canApply).toBe(true);
+        expect(findPreviewDraftAt(editorHost, 2, y)?.definitionId).toBe(converger);
+
+        const beyondCrossing = editorHost.actions.moveLogisticEnd({
+          pointerGridPoint: { x: 1, y },
+          autoCreateSplittersAndConvergers: true,
+          routeMode,
+        });
+        expect(beyondCrossing).toMatchObject({ canApply: true, invalidReason: null });
+        expect(editorHost.queries.resolveLogisticsDraftState()?.cells).toEqual(directCells);
+        expect(findPreviewDraftAt(editorHost, 2, y)?.definitionId).toBe(connector);
+      }
+
+      expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+      expect(findDocumentEntityAt(editorHost.document.getSnapshot(), 2, y)?.definitionId).toBe(connector);
+    } finally {
+      editorHost.dispose();
+    }
+  });
+
   it("rejects empty-cell logistics starts when empty starts are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

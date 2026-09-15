@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "16247ed5-4276-4419-a608-9856720b46e4",
+  "version": "fixture-v1",
+  "name": "未命名蓝图-20260913230402",
+  "description": "",
+  "baseId": "wuling_tianwangping_aid",
+  "initialGridPoint": {
+    "x": 3,
+    "y": 3
+  },
+  "entities": {
+    "pipe_splitter:5": {
+      "id": "pipe_splitter:5",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 2,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:5": {
+      "id": "pipe_straight_1x1:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 2
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:6": {
+      "id": "pipe_straight_1x1:6",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 3
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:7": {
+      "id": "pipe_straight_1x1:7",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 4
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pipe_splitter:5",
+    "pipe_straight_1x1:5",
+    "pipe_straight_1x1:6",
+    "pipe_straight_1x1:7"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-09-13T15:04:03.139Z",
+  "updatedAt": "2026-09-13T15:04:03.139Z"
+}
+

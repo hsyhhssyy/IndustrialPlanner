@@ -1,0 +1,54 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/reactor-dual-fluid-output-routing.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "definitionId": "mix_pool_1",
+          "powerX": 16,
+          "recipeId": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+        },
+        "file": "scene-01-mix-pool-1-dual-fluid-output-routing-70092e0f.schema6.json",
+        "blueprintId": "req-076-mix_pool_1-dual-fluid-output-routing",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "mix_pool_2",
+          "powerX": 17,
+          "recipeId": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large"
+        },
+        "file": "scene-01-mix-pool-2-dual-fluid-output-routing-6ace70e5.schema6.json",
+        "blueprintId": "req-076-mix_pool_2-dual-fluid-output-routing",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "definitionId": "mix_pool_1",
+          "powerX": 16
+        },
+        "file": "scene-02-mix-pool-1-parallel-fluid-output-routing-728049e5.schema6.json",
+        "blueprintId": "req-076-mix_pool_1-parallel-fluid-output-routing",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "mix_pool_2",
+          "powerX": 17
+        },
+        "file": "scene-02-mix-pool-2-parallel-fluid-output-routing-6c13cdfe.schema6.json",
+        "blueprintId": "req-076-mix_pool_2-parallel-fluid-output-routing",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

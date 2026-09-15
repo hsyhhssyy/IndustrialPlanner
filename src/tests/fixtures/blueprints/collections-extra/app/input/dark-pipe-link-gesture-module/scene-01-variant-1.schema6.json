@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/app/input/dark-pipe-link-gesture-module.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "dark-pipe-link-gesture-module scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "inlet",
+    "outlet"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

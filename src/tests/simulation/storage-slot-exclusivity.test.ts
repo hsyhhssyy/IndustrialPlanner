@@ -1,8 +1,18 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+import { getDevice } from "./blueprint-test-helpers";
 
 /**
  * 回归测试：槽位组内互斥规则（§3.4）
@@ -20,25 +30,34 @@ describe("存储槽位组内互斥规则", () => {
   it("扩容反应池 — 同一液体满容时配方产出不会溢出到其他空槽", async () => {
     const registry = createRegistryContract();
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("slot-exclusivity-overflow", [
+    //         createEntity("reactor", "mix_pool_2", 0, 0, 0, {
+    //           channelRecipes: {
+    //             // 息壤粉末 + 水 → 液化息壤（immediate-consume, 2s = 40 ticks）
+    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+    //           },
+    //           // 槽位 0: 液化息壤满容 50/50 — 模拟"产物占用槽位已满"的场景
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+    //           "storageSlotGroups[0].slots[0].initialCount": 50,
+    //           // 槽位 1: 息壤粉末 × 10 — 足够多轮配方尝试
+    //           "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
+    //           "storageSlotGroups[0].slots[1].initialCount": 10,
+    //           // 槽位 2: 水 × 10 — 足够多轮配方尝试
+    //           "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[2].initialCount": 10,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("slot-exclusivity-overflow", [
-        createEntity("reactor", "mix_pool_2", 0, 0, 0, {
-          channelRecipes: {
-            // 息壤粉末 + 水 → 液化息壤（immediate-consume, 2s = 40 ticks）
-            ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
-          },
-          // 槽位 0: 液化息壤满容 50/50 — 模拟"产物占用槽位已满"的场景
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
-          "storageSlotGroups[0].slots[0].initialCount": 50,
-          // 槽位 1: 息壤粉末 × 10 — 足够多轮配方尝试
-          "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
-          "storageSlotGroups[0].slots[1].initialCount": 10,
-          // 槽位 2: 水 × 10 — 足够多轮配方尝试
-          "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[2].initialCount": 10,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-01-slot-exclusivity-overflow-7fbac9a2.schema6.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -68,23 +87,32 @@ describe("存储槽位组内互斥规则", () => {
   it("扩容反应池 — 配方输入完成、产物满容阻塞", async () => {
     const registry = createRegistryContract();
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("slot-exclusivity-block", [
+    //         createEntity("reactor", "mix_pool_2", 0, 0, 0, {
+    //           channelRecipes: {
+    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+    //           },
+    //           // 液化息壤满容
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+    //           "storageSlotGroups[0].slots[0].initialCount": 50,
+    //           // 原料
+    //           "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
+    //           "storageSlotGroups[0].slots[1].initialCount": 10,
+    //           "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[2].initialCount": 10,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("slot-exclusivity-block", [
-        createEntity("reactor", "mix_pool_2", 0, 0, 0, {
-          channelRecipes: {
-            ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
-          },
-          // 液化息壤满容
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
-          "storageSlotGroups[0].slots[0].initialCount": 50,
-          // 原料
-          "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
-          "storageSlotGroups[0].slots[1].initialCount": 10,
-          "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[2].initialCount": 10,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-02-slot-exclusivity-block-74fbe269.schema6.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -103,23 +131,32 @@ describe("存储槽位组内互斥规则", () => {
   it("扩容反应池 — 有空余容量时正常追加到已有槽位（不退化为空槽）", async () => {
     const registry = createRegistryContract();
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("slot-exclusivity-normal", [
+    //         createEntity("reactor", "mix_pool_2", 0, 0, 0, {
+    //           channelRecipes: {
+    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+    //           },
+    //           // 液化息壤 10/50 — 有 40 空余容量
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+    //           "storageSlotGroups[0].slots[0].initialCount": 10,
+    //           // 原料充足（2s 配方在 100 tick 最多完成 2 轮）
+    //           "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
+    //           "storageSlotGroups[0].slots[1].initialCount": 5,
+    //           "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[2].initialCount": 5,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("slot-exclusivity-normal", [
-        createEntity("reactor", "mix_pool_2", 0, 0, 0, {
-          channelRecipes: {
-            ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
-          },
-          // 液化息壤 10/50 — 有 40 空余容量
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
-          "storageSlotGroups[0].slots[0].initialCount": 10,
-          // 原料充足（2s 配方在 100 tick 最多完成 2 轮）
-          "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
-          "storageSlotGroups[0].slots[1].initialCount": 5,
-          "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[2].initialCount": 5,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-03-slot-exclusivity-normal-96579b85.schema6.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -148,23 +185,32 @@ describe("存储槽位组内互斥规则", () => {
   it("普通反应池 — 同一液体满容时不会溢出到其他空槽", async () => {
     const registry = createRegistryContract();
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("slot-exclusivity-mix-pool-1", [
+    //         createEntity("pool", "mix_pool_1", 0, 0, 0, {
+    //           channelRecipes: {
+    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+    //           },
+    //           // 液化息壤满容 50/50
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+    //           "storageSlotGroups[0].slots[0].initialCount": 50,
+    //           // 原料
+    //           "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
+    //           "storageSlotGroups[0].slots[1].initialCount": 3,
+    //           "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[2].initialCount": 3,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("slot-exclusivity-mix-pool-1", [
-        createEntity("pool", "mix_pool_1", 0, 0, 0, {
-          channelRecipes: {
-            ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
-          },
-          // 液化息壤满容 50/50
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
-          "storageSlotGroups[0].slots[0].initialCount": 50,
-          // 原料
-          "storageSlotGroups[0].slots[1].initialItemType": "item_xiranite_powder",
-          "storageSlotGroups[0].slots[1].initialCount": 3,
-          "storageSlotGroups[0].slots[2].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[2].initialCount": 3,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-04-slot-exclusivity-mix-pool-1-d293e525.schema6.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });

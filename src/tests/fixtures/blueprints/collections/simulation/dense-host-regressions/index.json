@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/dense-host-regressions.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "engineKind": "legacy"
+        },
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2"
+        },
+        "file": "scene-01-variant-2.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {
+          "engineKind": "legacy"
+        },
+        "file": "scene-02-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2"
+        },
+        "file": "scene-02-variant-2.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {
+          "engineKind": "legacy"
+        },
+        "file": "scene-03-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2"
+        },
+        "file": "scene-03-variant-2.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

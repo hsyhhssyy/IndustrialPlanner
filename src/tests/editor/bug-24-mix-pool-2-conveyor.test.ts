@@ -1,9 +1,19 @@
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createEditorHost } from "@/editor/editor-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import type { WorldDocument } from "@/domain/document/world-document";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/bug-24-mix-pool-2-conveyor/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import type { WorldDocument } from "@/domain/document/world-document";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createRegistryContract } from "@/registry";
 
@@ -19,22 +29,31 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
-function createTestEntity(
-  id: string,
-  definitionId: string,
-  x: number,
-  y: number,
-  rotation: 0 | 90 | 180 | 270 = 0,
-): WorldDocument["entities"][string] {
-  return {
-    id,
-    definitionId,
-    position: { x, y },
-    rotation,
-    config: {},
-    tags: [],
-  };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/bug-24-mix-pool-2-conveyor/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createTestEntity(
+//   id: string,
+//   definitionId: string,
+//   x: number,
+//   y: number,
+//   rotation: 0 | 90 | 180 | 270 = 0,
+// ): WorldDocument["entities"][string] {
+//   return {
+//     id,
+//     definitionId,
+//     position: { x, y },
+//     rotation,
+//     config: {},
+//     tags: [],
+//   };
+// }
 
 describe("Bug #24 - mix_pool_2 传送带预览", () => {
   /**
@@ -52,11 +71,20 @@ describe("Bug #24 - mix_pool_2 传送带预览", () => {
     const editorHost = createEditorHost(workspace);
 
     // 放置 mix_pool_2 在 (10,10)
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //         "mix-pool": createTestEntity("mix-pool", "mix_pool_2", 10, 10, 0),
+    //       }
     editorHost.internalDocument.setSnapshot({
       ...createDummyWorldDocument(),
-      entities: {
-        "mix-pool": createTestEntity("mix-pool", "mix_pool_2", 10, 10, 0),
-      },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-01-variant-1.schema6.json").entities,
       entityOrder: ["mix-pool"],
     });
 
@@ -88,11 +116,20 @@ describe("Bug #24 - mix_pool_2 传送带预览", () => {
     const editorHost = createEditorHost(workspace);
 
     // 放置 mix_pool_2 在 (10,10)
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //         "mix-pool": createTestEntity("mix-pool", "mix_pool_2", 10, 10, 0),
+    //       }
     editorHost.internalDocument.setSnapshot({
       ...createDummyWorldDocument(),
-      entities: {
-        "mix-pool": createTestEntity("mix-pool", "mix_pool_2", 10, 10, 0),
-      },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-02-variant-1.schema6.json").entities,
       entityOrder: ["mix-pool"],
     });
 

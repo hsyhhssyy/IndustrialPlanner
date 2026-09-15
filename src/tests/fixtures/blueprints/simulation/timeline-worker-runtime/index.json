@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/timeline-worker-runtime.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-timeline-consumption-gas-5740c606.schema6.json",
+        "blueprintId": "req-076-timeline-consumption-gas",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-timeline-admission-snapshot-981329ef.schema6.json",
+        "blueprintId": "req-076-timeline-admission-snapshot",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

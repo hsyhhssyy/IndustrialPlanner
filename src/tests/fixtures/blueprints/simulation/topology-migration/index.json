@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/topology-migration.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "initialCount": 1,
+          "initialItemType": "item_iron_nugget",
+          "name": "migration-original",
+          "position": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "file": "scene-01-migration-original-4be8d38b.schema6.json",
+        "blueprintId": "req-076-migration-original",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialCount": 1,
+          "initialItemType": "item_iron_nugget",
+          "name": "migration-moved",
+          "position": {
+            "x": 1,
+            "y": 0
+          }
+        },
+        "file": "scene-01-migration-moved-1bea6d04.schema6.json",
+        "blueprintId": "req-076-migration-moved",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "initialCount": 2,
+          "initialItemType": "item_copper_ore",
+          "name": "migration-config-changed",
+          "position": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "file": "scene-01-migration-config-changed-42e0e69d.schema6.json",
+        "blueprintId": "req-076-migration-config-changed",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-linked-grinder-aa285dd5.schema6.json",
+        "blueprintId": "req-076-linked-grinder",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-migration-power-restored",
+  "version": "fixture-v1",
+  "name": "migration-power-restored",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "grinder": {
+      "id": "grinder",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "grinder",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/app/app-host.test.ts:scene-06:1",
+  "version": "fixture-v1",
+  "name": "app-host scene-06",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source": {
+      "id": "source",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 9,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "target": {
+      "id": "target",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 12,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source",
+    "target"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

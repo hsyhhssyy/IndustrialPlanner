@@ -1,0 +1,36 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/protocol-core-warehouse-loop.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-protocol-core-all-outputs-b5fb41b2.schema6.json",
+        "blueprintId": "req-076-protocol-core-all-outputs",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-protocol-core-e8-loop-to-s8-345041b5.schema6.json",
+        "blueprintId": "req-076-protocol-core-e8-loop-to-s8",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-warehouse-loader-sink-6fadc0f9.schema6.json",
+        "blueprintId": "req-076-warehouse-loader-sink",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

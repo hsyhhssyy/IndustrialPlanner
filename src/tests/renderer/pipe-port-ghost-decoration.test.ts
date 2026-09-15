@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile, getBlueprintEntityArray, loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -18,10 +19,28 @@ describe("生产设备管口虚影语义", () => {
     "transmuter_1_gastrans",
     "transmuter_1_liquidtrans",
   ])("%s 显示四个普通管口和一个运行消耗管口", (definitionId) => {
-    const device = createEntity("device", definitionId, 10, 10, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", definitionId, 10, 10, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json", "scene-01", { definitionId })),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -38,10 +57,28 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("管道物流设备不显示管口虚影", () => {
-    const pipeSplitter = createEntity("splitter", "pipe_splitter", 5, 5, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const pipeSplitter = createEntity("splitter", "pipe_splitter", 5, 5, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [pipeSplitter]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [pipeSplitter],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-02-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -50,11 +87,38 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("方向正确的真实管道连接后隐藏对应生产设备管口", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
-    const connectedPipe = createEntity("pipe", "pipe_straight_1x1", 15, 11, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const connectedPipe = createEntity("pipe", "pipe_straight_1x1", 15, 11, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, connectedPipe]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [device, connectedPipe],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-03-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -67,11 +131,38 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("外侧格与传送带族重叠时保留生产设备管口虚影", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
-    const overlappingBelt = createEntity("belt", "belt_straight_1x1", 15, 11, 0);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const overlappingBelt = createEntity("belt", "belt_straight_1x1", 15, 11, 0);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, overlappingBelt]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [device, overlappingBelt],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-04-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -84,11 +175,38 @@ describe("生产设备管口虚影语义", () => {
   });
 
   it("外侧格被普通设备足印阻挡时隐藏生产设备管口虚影", () => {
-    const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
-    const blocker = createEntity("blocker", "storager_1", 15, 10, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-port-ghost-decoration/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const blocker = createEntity("blocker", "storager_1", 15, 10, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device, blocker]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [device, blocker],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-05-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -102,8 +220,17 @@ describe("生产设备管口虚影语义", () => {
   it("强端口提示对应的生产设备可从虚影结果中排除", () => {
     const device = createEntity("device", "transmuter_1_gastrans", 10, 10, 180);
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [device]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: [device],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-06-variant-1.schema6.json")),
       entityDefinitionMap,
       queries: registry.queries,
       hiddenEntityIds: new Set([device.id]),

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-five-gases",
+  "version": "fixture-v1",
+  "name": "five-gases",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "gas-diffuser": {
+      "id": "gas-diffuser",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[0].slots[0].initialCount": 5
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "gas-diffuser",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -23,13 +24,22 @@ describe("resolveGasInteractionVisualState", () => {
     activeTool,
     moveKind,
   }) => {
-    const entities = [
-      createPreviewEntity("vaporizer-preview", "vaporizer_1", 0, 0),
-      createEntity("fully-contained-oven", "xiranite_oven_1", 3, 0),
-      createEntity("fully-contained-reactor", "gas_reactor_1", 3, 3),
-      createEntity("partially-covered-oven", "xiranite_oven_1", 4, 0),
-      createEntity("unrelated-storage", "storager_1", 3, 0),
-    ];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createPreviewEntity("vaporizer-preview", "vaporizer_1", 0, 0),
+    //       createEntity("fully-contained-oven", "xiranite_oven_1", 3, 0),
+    //       createEntity("fully-contained-reactor", "gas_reactor_1", 3, 3),
+    //       createEntity("partially-covered-oven", "xiranite_oven_1", 4, 0),
+    //       createEntity("unrelated-storage", "storager_1", 3, 0),
+    //     ]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-01-variant-1.schema6.json"));
 
     const state = resolveState({
       activeTool,
@@ -52,12 +62,21 @@ describe("resolveGasInteractionVisualState", () => {
     activeTool,
     moveKind,
   }) => {
-    const entities = [
-      createEntity("vaporizer-a", "vaporizer_1", 0, 0),
-      createEntity("vaporizer-b", "vaporizer_1", 2, 0),
-      createEntity("partially-covering-vaporizer", "vaporizer_1", 9, 0),
-      createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
-    ];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createEntity("vaporizer-a", "vaporizer_1", 0, 0),
+    //       createEntity("vaporizer-b", "vaporizer_1", 2, 0),
+    //       createEntity("partially-covering-vaporizer", "vaporizer_1", 9, 0),
+    //       createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
+    //     ]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-02-variant-1.schema6.json"));
 
     const state = resolveState({
       activeTool,
@@ -74,10 +93,19 @@ describe("resolveGasInteractionVisualState", () => {
   });
 
   it("does not activate the interaction during a batch move", () => {
-    const entities = [
-      createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
-    ];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createEntity("vaporizer", "vaporizer_1", 0, 0),
+    //       createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
+    //     ]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-03-variant-1.schema6.json"));
 
     const state = resolveState({
       activeTool: "move",
@@ -91,11 +119,20 @@ describe("resolveGasInteractionVisualState", () => {
   });
 
   it("does not activate the interaction for multiple preview entities", () => {
-    const entities = [
-      createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createPreviewEntity("oven-preview-a", "xiranite_oven_1", 3, 0),
-      createPreviewEntity("oven-preview-b", "xiranite_oven_1", 3, 1),
-    ];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createEntity("vaporizer", "vaporizer_1", 0, 0),
+    //       createPreviewEntity("oven-preview-a", "xiranite_oven_1", 3, 0),
+    //       createPreviewEntity("oven-preview-b", "xiranite_oven_1", 3, 1),
+    //     ]
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-04-variant-1.schema6.json"));
 
     const state = resolveState({
       activeTool: "single-placement",
@@ -126,30 +163,48 @@ function resolveState(options: {
   });
 }
 
-function createEntity(
-  id: string,
-  definitionId: string,
-  x: number,
-  y: number,
-): WorldEntity {
-  return {
-    id,
-    definitionId,
-    position: { x, y },
-    rotation: 0,
-    config: {},
-    tags: [],
-  };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/gas-interaction-visual-state/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createEntity(
+//   id: string,
+//   definitionId: string,
+//   x: number,
+//   y: number,
+// ): WorldEntity {
+//   return {
+//     id,
+//     definitionId,
+//     position: { x, y },
+//     rotation: 0,
+//     config: {},
+//     tags: [],
+//   };
+// }
 
-function createPreviewEntity(
-  id: string,
-  definitionId: string,
-  x: number,
-  y: number,
-): WorldEntity & { readonly originalEntityId: string } {
-  return {
-    ...createEntity(id, definitionId, x, y),
-    originalEntityId: id,
-  };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/gas-interaction-visual-state/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createPreviewEntity(
+//   id: string,
+//   definitionId: string,
+//   x: number,
+//   y: number,
+// ): WorldEntity & { readonly originalEntityId: string } {
+//   return {
+//     ...createEntity(id, definitionId, x, y),
+//     originalEntityId: id,
+//   };
+// }

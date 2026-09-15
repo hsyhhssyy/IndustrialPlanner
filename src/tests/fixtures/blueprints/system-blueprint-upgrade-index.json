@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "upgradedAt": "2026-09-14",
+  "blueprints": [
+    {
+      "file": "public/blueprints/dark-pipe-premium-needle-line.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "d8591492-55a4-4ce5-b1ac-8fcc6a1ea226"
+    },
+    {
+      "file": "public/blueprints/dual-oven-xiranite.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "c96944de-0608-4abf-901a-8b3d27a476d1"
+    },
+    {
+      "file": "public/blueprints/getting-started-tutorial.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "8f3c2b2e-1554-48a9-8b5e-5f2a3fd7a901"
+    },
+    {
+      "file": "public/blueprints/premium-capsule-line.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "429609a4-61cb-4083-98fa-b8de1268bec4"
+    },
+    {
+      "file": "public/blueprints/resurrection-machine-7.1.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "f00abb80-6b5e-45ab-ae01-32bd1e3e1771"
+    },
+    {
+      "file": "public/blueprints/utimate-xiranite.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "4c076c6f-56d3-4c42-a382-13deb3dcfec9"
+    },
+    {
+      "file": "public/blueprints/v1.4-4-core-xiranite.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "e88f7150-4c25-4285-8c0f-4709362a3fe8"
+    },
+    {
+      "file": "public/blueprints/wuling-battery-line.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "2dec8da2-1c38-47f3-a574-a586bd4efad5"
+    }
+  ]
+}
+

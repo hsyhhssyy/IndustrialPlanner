@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/simulation/dense-host-regressions.test.ts:scene-03:2",
+  "version": "fixture-v1",
+  "name": "dense-host-regressions scene-03",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source-storage": {
+      "id": "source-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 20
+      },
+      "tags": []
+    },
+    "belt": {
+      "id": "belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink-storage": {
+      "id": "sink-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": -4
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "added-storage": {
+      "id": "added-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source-storage",
+    "belt",
+    "sink-storage",
+    "added-storage"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

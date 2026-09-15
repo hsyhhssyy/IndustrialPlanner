@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/renderer/belt-flow-decoration.test.ts:scene-05:1",
+  "version": "fixture-v1",
+  "name": "belt-flow-decoration scene-05",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "belt-a": {
+      "id": "belt-a",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "target-storager": {
+      "id": "target-storager",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 1,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt-a",
+    "target-storager"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-water-purifier-node-input-derived",
+  "version": "fixture-v1",
+  "name": "water-purifier-node-input-derived",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "water-node": {
+      "id": "water-node",
+      "definitionId": "water_purifier_node_1",
+      "position": {
+        "x": 0,
+        "y": -5
+      },
+      "rotation": 0,
+      "config": {
+        "waterPurifierOutputMode": "input-derived",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[1].slots[0].initialCount": 2,
+        "storageSlotGroups[2].slots[0].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[2].slots[0].initialCount": 2
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 28,
+        "y": -5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "water-node",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

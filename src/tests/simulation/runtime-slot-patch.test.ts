@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { expect, it } from "vitest";
 // AI-REMOVED 2026-09-08:
 // Reason: describe 已由统一仿真引擎矩阵入口封装，保留本地导入会触发 ESLint unused-vars。
@@ -20,18 +21,35 @@ import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
-import {
-  createBlueprint,
-  createEntity,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/runtime-slot-patch/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+// } from "./blueprint-test-helpers";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
 describeSimulationEngineMatrix("runtime slot patch", (engineKind) => {
   it("patches current simulation slot state without persisting to initial config", async () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/runtime-slot-patch/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("runtime-slot-patch", [
+    //         createEntity("storage", "storager_1", 20, 20, 0),
+    //       ])
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
-      createBlueprint("runtime-slot-patch", [
-        createEntity("storage", "storager_1", 20, 20, 0),
-      ]),
+      loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/runtime-slot-patch/scene-01-runtime-slot-patch-45d43076.schema6.json"),
     ));
     const workspace = createWorkspace(documentStore);
     const simulationHost = createSimulationHost(workspace, {

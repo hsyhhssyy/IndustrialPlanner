@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-storage-fill-observe",
+  "version": "fixture-v1",
+  "name": "storage-fill-observe",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "originium-source": {
+      "id": "originium-source",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 32,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "iron-source": {
+      "id": "iron-source",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 35,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "observe-storage": {
+      "id": "observe-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 33,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[1].slots[0].initialCount": 1,
+        "storageSlotGroups[2].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[2].slots[0].initialCount": 1,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[3].slots[0].initialCount": 1,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[4].slots[0].initialCount": 1,
+        "storageSlotGroups[5].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[5].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "converger": {
+      "id": "converger",
+      "definitionId": "log_converger",
+      "position": {
+        "x": 34,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "left-entry": {
+      "id": "left-entry",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 33,
+        "y": 25
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "left-turn": {
+      "id": "left-turn",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 33,
+        "y": 24
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "right-entry": {
+      "id": "right-entry",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 36,
+        "y": 25
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "right-turn": {
+      "id": "right-turn",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 36,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "right-feed": {
+      "id": "right-feed",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 35,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "splitter": {
+      "id": "splitter",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 34,
+        "y": 21
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "splitter-input-1": {
+      "id": "splitter-input-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "splitter-input-2": {
+      "id": "splitter-input-2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "splitter-output": {
+      "id": "splitter-output",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 35,
+        "y": 21
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "other-storage": {
+      "id": "other-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 36,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "originium-source",
+    "iron-source",
+    "observe-storage",
+    "converger",
+    "left-entry",
+    "left-turn",
+    "right-entry",
+    "right-turn",
+    "right-feed",
+    "splitter",
+    "splitter-input-1",
+    "splitter-input-2",
+    "splitter-output",
+    "other-storage"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:originium-source:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "originium-source",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_originium_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:iron-source:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "iron-source",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_iron_ore"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

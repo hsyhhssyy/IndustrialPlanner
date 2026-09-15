@@ -1,13 +1,23 @@
+import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  getFirstTickAtSimulationMilliseconds,
-  getTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/admission-rule/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   getFirstTickAtSimulationMilliseconds,
+//   getTick,
+// } from "./blueprint-test-helpers";
+import { getFirstTickAtSimulationMilliseconds, getTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 // AI-REMOVED 2026-09-08:
@@ -304,24 +314,33 @@ function createAdmissionBlueprint(options: {
   readonly limit: number | null;
   readonly perMinuteLimit?: number | null;
 }) {
-  return createBlueprint("admission-rule", [
-    createEntity("source", "storager_1", 0, 0, 90, {
-      "storageSlotGroups[0].slots[0].initialItemType": options.sourceItemId,
-      "storageSlotGroups[0].slots[0].initialCount": 5,
-      "storageSlotGroups[0].slots[0].ignoreStock": true,
-    }),
-    createEntity("admission", "log_admission", 3, 1, 0, {
-      "portGroups[0].ports[0].acceptRule": {
-        base: { kind: "item", itemId: options.admissionItemId },
-        exclude: [],
-      },
-      "portGroups[0].ports[0].admissionRule": {
-        itemId: options.admissionItemId,
-        limit: options.limit,
-        perMinuteLimit: options.perMinuteLimit ?? null,
-      },
-    }),
-    createEntity("belt", "belt_straight_1x1", 4, 1, 0),
-    createEntity("sink", "loader_1", 5, 0, 270),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/admission-rule/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("admission-rule", [
+  //     createEntity("source", "storager_1", 0, 0, 90, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": options.sourceItemId,
+  //       "storageSlotGroups[0].slots[0].initialCount": 5,
+  //       "storageSlotGroups[0].slots[0].ignoreStock": true,
+  //     }),
+  //     createEntity("admission", "log_admission", 3, 1, 0, {
+  //       "portGroups[0].ports[0].acceptRule": {
+  //         base: { kind: "item", itemId: options.admissionItemId },
+  //         exclude: [],
+  //       },
+  //       "portGroups[0].ports[0].admissionRule": {
+  //         itemId: options.admissionItemId,
+  //         limit: options.limit,
+  //         perMinuteLimit: options.perMinuteLimit ?? null,
+  //       },
+  //     }),
+  //     createEntity("belt", "belt_straight_1x1", 4, 1, 0),
+  //     createEntity("sink", "loader_1", 5, 0, 270),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/admission-rule/index.json", "scene-01", { options });
 }

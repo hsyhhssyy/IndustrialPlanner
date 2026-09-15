@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
+  "version": "fixture-v1",
+  "name": "liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "left-only-purifier": {
+      "id": "left-only-purifier",
+      "definitionId": "liquid_purifier_1",
+      "position": {
+        "x": 0,
+        "y": 8
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite_lowpoly",
+        "storageSlotGroups[0].slots[0].initialCount": 4
+      },
+      "tags": []
+    },
+    "left-only-power": {
+      "id": "left-only-power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "left-only-pipe": {
+      "id": "left-only-pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 7
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "left-only-sink": {
+      "id": "left-only-sink",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 0,
+        "y": 4
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "right-only-purifier": {
+      "id": "right-only-purifier",
+      "definitionId": "liquid_purifier_1",
+      "position": {
+        "x": 20,
+        "y": 8
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite_lowpoly",
+        "storageSlotGroups[0].slots[0].initialCount": 4
+      },
+      "tags": []
+    },
+    "right-only-power": {
+      "id": "right-only-power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 26,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "right-only-pipe": {
+      "id": "right-only-pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 7
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "right-only-sink": {
+      "id": "right-only-sink",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 22,
+        "y": 4
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "left-only-purifier",
+    "left-only-power",
+    "left-only-pipe",
+    "left-only-sink",
+    "right-only-purifier",
+    "right-only-power",
+    "right-only-pipe",
+    "right-only-sink"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

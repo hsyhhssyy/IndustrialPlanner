@@ -1,0 +1,220 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/editor/editor-host.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-05": [
+      {
+        "parameters": {},
+        "file": "scene-05-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-06": [
+      {
+        "parameters": {},
+        "file": "scene-06-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-07": [
+      {
+        "parameters": {},
+        "file": "scene-07-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-08": [
+      {
+        "parameters": {},
+        "file": "scene-08-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-09": [
+      {
+        "parameters": {},
+        "file": "scene-09-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-10": [
+      {
+        "parameters": {},
+        "file": "scene-10-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-11": [
+      {
+        "parameters": {},
+        "file": "scene-11-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-12": [
+      {
+        "parameters": {},
+        "file": "scene-12-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-13": [
+      {
+        "parameters": {},
+        "file": "scene-13-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-14": [
+      {
+        "parameters": {},
+        "file": "scene-14-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-15": [
+      {
+        "parameters": {},
+        "file": "scene-15-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-16": [
+      {
+        "parameters": {},
+        "file": "scene-16-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-17": [
+      {
+        "parameters": {},
+        "file": "scene-17-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-18": [
+      {
+        "parameters": {},
+        "file": "scene-18-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-19": [
+      {
+        "parameters": {},
+        "file": "scene-19-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-20": [
+      {
+        "parameters": {},
+        "file": "scene-20-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-21": [
+      {
+        "parameters": {},
+        "file": "scene-21-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-22": [
+      {
+        "parameters": {},
+        "file": "scene-22-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-23": [
+      {
+        "parameters": {},
+        "file": "scene-23-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-24": [
+      {
+        "parameters": {},
+        "file": "scene-24-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-25": [
+      {
+        "parameters": {},
+        "file": "scene-25-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-26": [
+      {
+        "parameters": {},
+        "file": "scene-26-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-27": [
+      {
+        "parameters": {},
+        "file": "scene-27-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-28": [
+      {
+        "parameters": {},
+        "file": "scene-28-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-29": [
+      {
+        "parameters": {},
+        "file": "scene-29-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-30": [
+      {
+        "parameters": {},
+        "file": "scene-30-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

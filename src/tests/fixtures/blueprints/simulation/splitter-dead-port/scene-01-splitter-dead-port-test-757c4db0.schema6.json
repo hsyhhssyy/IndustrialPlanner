@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-splitter-dead-port-test",
+  "version": "fixture-v1",
+  "name": "splitter-dead-port-test",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "water-source": {
+      "id": "water-source",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 8,
+        "y": 2
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "pipe-1": {
+      "id": "pipe-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-2": {
+      "id": "pipe-2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "splitter": {
+      "id": "splitter",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 9,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "storager-a": {
+      "id": "storager-a",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 6,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "pipe-3": {
+      "id": "pipe-3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-4": {
+      "id": "pipe-4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-5": {
+      "id": "pipe-5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 10
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-6": {
+      "id": "pipe-6",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 11
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe-7": {
+      "id": "pipe-7",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "storager-b": {
+      "id": "storager-b",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 8,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "water-source",
+    "pipe-1",
+    "pipe-2",
+    "splitter",
+    "storager-a",
+    "pipe-3",
+    "pipe-4",
+    "pipe-5",
+    "pipe-6",
+    "pipe-7",
+    "storager-b"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:water-source:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "water-source",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

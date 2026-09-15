@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, expect, it, vi } from "vitest";
 // AI-REMOVED 2026-09-08:
 // Reason: describe 已由统一仿真引擎矩阵入口封装，保留本地导入会触发 ESLint unused-vars。
@@ -42,21 +43,30 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
-function createEntity(
-  id: string,
-  definitionId: string,
-  x: number,
-  y: number,
-): WorldEntity {
-  return {
-    id,
-    definitionId,
-    position: { x, y },
-    rotation: 0,
-    config: {},
-    tags: [],
-  };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/invalid-placement-compile/index.json
+// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json。
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createEntity(
+//   id: string,
+//   definitionId: string,
+//   x: number,
+//   y: number,
+// ): WorldEntity {
+//   return {
+//     id,
+//     definitionId,
+//     position: { x, y },
+//     rotation: 0,
+//     config: {},
+//     tags: [],
+//   };
+// }
 
 function createDocumentWithEntities(
   entities: readonly WorldEntity[],
@@ -96,10 +106,19 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
   it("treats invalid placement entities as absent when compiling topology", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
-    const document = createDocumentWithEntities([
-      createEntity("outside-belt", "belt_straight_1x1", -1, 0),
-      createEntity("valid-pipe", "pipe_straight_1x1", 4, 0),
-    ]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //       createEntity("outside-belt", "belt_straight_1x1", -1, 0),
+    //       createEntity("valid-pipe", "pipe_straight_1x1", 4, 0),
+    //     ]
+    const document = createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-01-variant-1.schema6.json")));
 
     editorHost.internalDocument.setSnapshot(document);
 
@@ -139,10 +158,19 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
       },
     ]);
     const editorHost = createEditorHost(workspace);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //         createEntity("document-storage", "storager_1", 10, 0),
+    //       ]
     const document = {
-      ...createDocumentWithEntities([
-        createEntity("document-storage", "storager_1", 10, 0),
-      ], TEST_BUILTIN_BASE_ID),
+      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-02-variant-1.schema6.json")), TEST_BUILTIN_BASE_ID),
       slotLinks: [
         {
           id: "builtin-storage-link",
@@ -186,10 +214,19 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
   it("keeps warehouse ports connected to valley4 non-core builtin bus seeds in simulation topology", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //         createEntity("unloader", "unloader_1", 2, 0),
+    //       ]
     const document = {
-      ...createDocumentWithEntities([
-        createEntity("unloader", "unloader_1", 2, 0),
-      ], "valley4_infra_outpost"),
+      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-03-variant-1.schema6.json")), "valley4_infra_outpost"),
       slotLinks: [
         createWarehouseSlotLink("unloader", "item_plant_moss_3"),
       ],

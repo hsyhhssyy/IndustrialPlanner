@@ -1,0 +1,2196 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/registry/device-default-orientation.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "definitionId": "log_admission",
+          "newPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "log_admission",
+          "newPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-2.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "log_admission",
+          "newPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-3.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "log_admission",
+          "newPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "item_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "item_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-4.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "pipe_admission",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-5.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "pipe_admission",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-6.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "pipe_admission",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-7.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "pipe_admission",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "NORTH"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "SOUTH"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e",
+              "localCellX": 0,
+              "localCellY": 0,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 270
+        },
+        "file": "scene-01-variant-8.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-9.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-10.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-11.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-12.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-13.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-14.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-15.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-16.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_purifier_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-17.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_purifier_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-18.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_purifier_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-19.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_purifier_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_s_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_n_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-20.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_reactor_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-21.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_reactor_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-22.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_reactor_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-23.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_reactor_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 4,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_input",
+              "id": "in_w_3",
+              "localCellX": 4,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_3",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-24.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "water_pump_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-25.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "water_pump_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-26.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "water_pump_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-27.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "water_pump_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-28.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-29.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-30.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-31.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_loader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-32.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-33.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-34.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-35.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "udpipe_unloader_2",
+          "newPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 3,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_2",
+              "localCellX": 0,
+              "localCellY": 3,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-36.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_cleaner_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-37.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_cleaner_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-38.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_cleaner_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-39.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_cleaner_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-40.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_storager_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-41.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_storager_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-42.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_storager_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-43.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "liquid_storager_1",
+          "newPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "fluid_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "fluid_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-44.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_storager_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-45.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_storager_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-46.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_storager_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-47.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_storager_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            },
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-48.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "vaporizer_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-49.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "vaporizer_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-50.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "vaporizer_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-51.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "vaporizer_1",
+          "newPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_input",
+              "id": "in_w_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-52.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_pump_1",
+          "newPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 0,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-53.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_pump_1",
+          "newPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 90,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-54.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_pump_1",
+          "newPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 180,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-55.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "gas_pump_1",
+          "newPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 2,
+              "localCellY": 1,
+              "edge": "EAST"
+            }
+          ],
+          "oldPorts": [
+            {
+              "groupId": "gas_output",
+              "id": "out_e_1",
+              "localCellX": 0,
+              "localCellY": 1,
+              "edge": "WEST"
+            }
+          ],
+          "rotation": 270,
+          "rotationOffset": 180
+        },
+        "file": "scene-01-variant-56.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { applicationState, textureManagerState } = vi.hoisted(() => ({
@@ -213,20 +214,29 @@ describe("createBlueprintPreviewManager", () => {
       simulation: null,
     } as unknown as WorkspaceContract
     const manager = createBlueprintPreviewManager({ workspace })
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //         "entity-1": {
+    //           id: "entity-1",
+    //           definitionId: "test-definition",
+    //           position: { x: 5, y: 5 },
+    //           rotation: 0,
+    //           config: {},
+    //           tags: [],
+    //         },
+    //       }
     const blueprint = createBlueprintDocument({
       name: "Preview Background Test",
       baseId: "preview-background-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: {
-        "entity-1": {
-          id: "entity-1",
-          definitionId: "test-definition",
-          position: { x: 5, y: 5 },
-          rotation: 0,
-          config: {},
-          tags: [],
-        },
-      },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema6.json").entities,
       entityOrder: ["entity-1"],
       slotLinks: [],
     })
@@ -294,20 +304,29 @@ describe("createBlueprintPreviewManager", () => {
       simulation: null,
     } as unknown as WorkspaceContract
     const manager = createBlueprintPreviewManager({ workspace })
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //         selected: {
+    //           id: "selected",
+    //           definitionId: "test-definition",
+    //           position: { x: 5, y: 5 },
+    //           rotation: 0,
+    //           config: {},
+    //           tags: [],
+    //         },
+    //       }
     const blueprint = createBlueprintDocument({
       name: "Preview Highlight Test",
       baseId: "preview-highlight-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: {
-        selected: {
-          id: "selected",
-          definitionId: "test-definition",
-          position: { x: 5, y: 5 },
-          rotation: 0,
-          config: {},
-          tags: [],
-        },
-      },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json").entities,
       entityOrder: ["selected"],
       slotLinks: [],
     })

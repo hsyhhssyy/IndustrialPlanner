@@ -1,13 +1,23 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  getFirstTickAtSimulationMilliseconds,
-  getDevice,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   getFirstTickAtSimulationMilliseconds,
+//   getDevice,
+// } from "./blueprint-test-helpers";
+import { getFirstTickAtSimulationMilliseconds, getDevice } from "./blueprint-test-helpers";
 // AI-REMOVED 2026-09-08:
 // Reason: 准入门禁改由整数毫秒定位，不再直接按引擎 tick 编号读取。
 // Trigger: pipe-admission-rate-recipe-selection 接入 Host 行为矩阵。
@@ -37,25 +47,34 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
   // 准入计数在物品离开准入口时递增，而非进入时。
   // 时序：tick 1 入 → tick 11 出（第一个配方完成）→ tick 21 出（第二个）...
   it("counts only released items and does not prefetch beyond a one-item window allowance", async () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("pipe-admission-one-item-window", [
+    //         createEntity("source", "liquid_storager_1", 0, 0, 180, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[0].initialCount": 4,
+    //         }),
+    //         createEntity("admission", "pipe_admission", 3, 1, 0, {
+    //           "portGroups[0].ports[0].acceptRule": {
+    //             base: { kind: "item", itemId: "item_liquid_water" },
+    //             exclude: [],
+    //           },
+    //           "portGroups[0].ports[0].admissionRule": {
+    //             itemId: "item_liquid_water",
+    //             limit: null,
+    //             perMinuteLimit: 6,
+    //           },
+    //         }),
+    //         createEntity("sink", "liquid_storager_1", 4, 0, 180),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("pipe-admission-one-item-window", [
-        createEntity("source", "liquid_storager_1", 0, 0, 180, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[0].initialCount": 4,
-        }),
-        createEntity("admission", "pipe_admission", 3, 1, 0, {
-          "portGroups[0].ports[0].acceptRule": {
-            base: { kind: "item", itemId: "item_liquid_water" },
-            exclude: [],
-          },
-          "portGroups[0].ports[0].admissionRule": {
-            itemId: "item_liquid_water",
-            limit: null,
-            perMinuteLimit: 6,
-          },
-        }),
-        createEntity("sink", "liquid_storager_1", 4, 0, 180),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-01-pipe-admission-one-item-window-e8225a8a.schema6.json"),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 1.5,
@@ -122,25 +141,34 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
   // AI-CORRECTION 2026-07-30: 回滚 — 单配方下速率窗口按每 0.5s 搬运 1 件累进。
   // 每 10 tick（0.5s）出 1 件，同时入 1 件。18/min → 每窗口 3 件额度。
   it("transfers exactly one item per 0.5s tick within the rate allowance", async () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("pipe-admission-rate-recipe-selection", [
+    //         createEntity("source", "liquid_storager_1", 0, 0, 180, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[0].initialCount": 4,
+    //         }),
+    //         createEntity("admission", "pipe_admission", 3, 1, 0, {
+    //           "portGroups[0].ports[0].acceptRule": {
+    //             base: { kind: "item", itemId: "item_liquid_water" },
+    //             exclude: [],
+    //           },
+    //           "portGroups[0].ports[0].admissionRule": {
+    //             itemId: "item_liquid_water",
+    //             limit: null,
+    //             perMinuteLimit: 18,
+    //           },
+    //         }),
+    //         createEntity("sink", "liquid_storager_1", 4, 0, 180),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("pipe-admission-rate-recipe-selection", [
-        createEntity("source", "liquid_storager_1", 0, 0, 180, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[0].initialCount": 4,
-        }),
-        createEntity("admission", "pipe_admission", 3, 1, 0, {
-          "portGroups[0].ports[0].acceptRule": {
-            base: { kind: "item", itemId: "item_liquid_water" },
-            exclude: [],
-          },
-          "portGroups[0].ports[0].admissionRule": {
-            itemId: "item_liquid_water",
-            limit: null,
-            perMinuteLimit: 18,
-          },
-        }),
-        createEntity("sink", "liquid_storager_1", 4, 0, 180),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-02-pipe-admission-rate-recipe-selection-e63e1fd2.schema6.json"),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 2.5,

@@ -1,0 +1,3293 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "updatedAt": "2026-09-14",
+  "entries": [
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/app/base-configuration-problems/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-09-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-10-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-11-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-13-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-14-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-15-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-16-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-17-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-18-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-19-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-20-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-21-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-22-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-23-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-24-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-25-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-26-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-27-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-28-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-29-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-30-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/power-range-query/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-10.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-11.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-12.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-13.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-14.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-15.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-16.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-17.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-18.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-19.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-20.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-21.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-22.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-23.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-24.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-25.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-26.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-27.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-28.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-29.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-30.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-31.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-32.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-33.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-34.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-35.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-36.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-37.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-38.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-39.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-40.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-41.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-42.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-43.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-44.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-45.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-46.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-47.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-48.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-49.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-50.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-51.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-52.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-53.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-54.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-55.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-56.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-8.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/scene-01-variant-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-09-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test-definition"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test-definition"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/logistics-material-topology/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "material-input"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/pipe-flow-decoration/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "tall-after-rotation",
+        "wide"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/activity-filtering/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test_activity_machine"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-01-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-02-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/scene-03-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-02-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-02-variant-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-02-variant-4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/power-system/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test_channel_role_input_only"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/scene-01-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test_channel_role_output_only"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/scene-01-variant-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "test_channel_role_bidirectional"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "not-strict-device"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "selected-definition"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "one-by-one",
+        "partial",
+        "selected-definition"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-10.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-11.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-12.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-13.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-14.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-15.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-16.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-17.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-18.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-19.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-20.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-21.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-22.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-23.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-24.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-25.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-26.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-27.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-28.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-29.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-30.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-31.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-32.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-33.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-34.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-35.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-36.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-37.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-38.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-39.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-40.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-41.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-42.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-43.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-44.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-45.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-46.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-47.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-48.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-49.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-50.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-51.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-52.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-53.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-54.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-55.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-56.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-57.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-58.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-59.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-60.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-61.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-62.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-63.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-64.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-65.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-8.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-09-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-01-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-03-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-04-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-05-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-06-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-07-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-08-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-09-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-10-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-11-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-12-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-12-variant-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-12-variant-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-12-variant-4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-12-variant-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-13-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-14-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-15-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-16-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-17-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-18-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-19-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "known-definition",
+        "missing-definition"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/simulation/power-system/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/common/dummy-world.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "transmuter_2"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-02-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": [
+        "transmuter_2"
+      ]
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/scene-01-variant-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/e2e/natural-resource-warehouse-link.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-deadend.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-belt-on-top.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-without-overlapping-belt.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/suppression-overlap.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/schema-v3-admission-rate.json",
+      "role": "migration-input",
+      "schemaVersion": 3,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/admission-rule/scene-01-admission-rule-16b266cb.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/admission-rule/scene-01-admission-rule-1cdc04dc.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/admission-rule/scene-01-admission-rule-33b054d3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/admission-rule/scene-01-admission-rule-477df905.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/admission-rule/scene-01-admission-rule-49123123.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-phase-gating/scene-01-belt-phase-gating-23fe80d1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-01-belt-phase-sync-1567dd17.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-02-belt-partial-dead-end-da2af98d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/scene-01-issue-26-e2e-c429d9a9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/bridge-direction/scene-02-pipe-bridge-direction-verify-72c18fbb.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/cheat-infinite-device/scene-01-cheat-infinite-device-34fe6490.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/config-override/scene-01-config-overrides-a6643d0e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-01-single-dark-pipe-linked-throughput-c7499722.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-02-multi-dark-pipe-linked-throughput-31358255.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-01-single-dark-pipe-inlet-warehouse-e12525bf.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-02-multi-dark-pipe-inlet-warehouse-60217eb6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-03-dark-pipe-outlet-default-empty-faa7ebc1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-05-linked-dark-pipe-inlet-warehouse-source-853d73d7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/debug-fanout/scene-01-blocked-fanout-64edc15f.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/definition-slot-link/scene-01-cleared-definition-slot-link-d0afa449.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-01-topology-add-dense-v2-6795f3c6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-01-topology-add-legacy-4b6fffb4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-02-topology-local-reset-dense-v2-0382d199.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-02-topology-local-reset-legacy-e4d06974.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-03-topology-reservation-dense-v2-e5e8b5f7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-03-topology-reservation-legacy-3e673a2a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-04-checkpoint-current-tick-7502b69e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-04-checkpoint-empty-tick-8ca0cc57.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-04-checkpoint-future-tick-5e7a0abe.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-04-checkpoint-retained-tick-753d2730.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-projection/scene-01-dense-projection-a109aa22.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-projection/scene-02-dense-v2-host-3c40013b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/dense-projection/scene-03-dense-v2-warehouse-stats-c45d5354.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-01-engine-boundary-storage-9bf3f855.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-02-engine-boundary-topology-9097583b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-04-dense-lazy-snapshot-8752f8a6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/fanout-routing/scene-01-blocked-fanout-652e2252.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-01-five-gases-0a1face4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-01-one-gas-ten-seconds-7607686b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-02-gas-liquid-converger-lock-cd7b20bb.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-01-empty-consumption-dense-v2-928596dd.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-01-empty-consumption-legacy-6bfde71d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-02-synthetic-transmuter-1-gastrans-ab9f58c3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-02-synthetic-transmuter-1-liquidtrans-afef549d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-02-synthetic-transmuter-2-gastrans-e0a660b4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-02-synthetic-transmuter-2-solidtrans-b1bab2a3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-02-synthetic-vaporizer-1-b4bd4bfc.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-03-one-consumption-item-62849b3a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-05-out-of-range-consumption-cd40b977.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-06-staggered-consumption-5134c1df.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-07-consumption-gated-transmuter-db40639e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-08-powerless-consumption-67b7fae1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-01-pipe-admission-one-item-window-e8225a8a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-02-pipe-admission-rate-recipe-selection-e63e1fd2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-fluid-query/scene-01-pipe-fluid-query-f1fc4156.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-phase-gating/scene-01-pipe-phase-gating-c9ec427f.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-transport/scene-01-pipe-transport-0b364cc6.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-transport/scene-01-pipe-transport-c70d91fa.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-migration-power-off-f4d1f775.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-migration-power-on-c6a40227.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-migration-power-restored-35cdbc82.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-power-mode-recovery-35888df1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-powered-grinder-23092c57.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-01-unpowered-grinder-f14e6ab7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/power-system/scene-02-add-pole-late-05271b2e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/production/scene-01-grinder-production-435fad2a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/production/scene-02-furnace-production-8321f8a2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/production/scene-03-infinite-gas-purifier-inputs-afaf693e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-01-protocol-core-all-outputs-b5fb41b2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-02-protocol-core-e8-loop-to-s8-345041b5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-03-warehouse-loader-sink-6fadc0f9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/scene-01-protocol-storage-full-throughput-3ef8c713.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-dual-fluid-output-routing/scene-01-mix-pool-1-dual-fluid-output-routing-70092e0f.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-dual-fluid-output-routing/scene-01-mix-pool-2-dual-fluid-output-routing-6ace70e5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-dual-fluid-output-routing/scene-02-mix-pool-1-parallel-fluid-output-routing-728049e5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-dual-fluid-output-routing/scene-02-mix-pool-2-parallel-fluid-output-routing-6c13cdfe.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-none-accept-rule/scene-01-reactor-none-blocks-output-3a071dc4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-01-legacy-reactor-manual-mode-82b00369.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-02-reactor-automatic-distinct-recipes-980d786d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-03-reactor-automatic-no-duplicate-recipe-95b28f14.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-01-regional-unlinked-udpipe-loader-1-e8d3eb61.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-01-regional-unlinked-udpipe-loader-2-e5b4bd3a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-02-regional-linked-dark-pipe-266c8d9b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-03-regional-runtime-belt-0af9999d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-04-regional-snapshot-retention-78c359e0.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-long-run/scene-02-region-long-producer-9372c5d2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-01-regional-resource-single-7396c6c1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-02-regional-resource-policy-precedence-234650c4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-session/scene-01-region-consumer-f2aaaac3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-session/scene-02-region-producer-fa4031d0.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-01-regional-outlet-legal-1739201e.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-log-admission-2f4b1dae.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-log-connector-2a3b8d87.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-log-converger-faf2f4ce.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-log-splitter-4a9bd9f0.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-pipe-admission-bb7761cd.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-pipe-connector-ce24750a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-pipe-converger-8bf806a4.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-02-regional-outlet-pipe-splitter-c3ca5bcf.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-01-resource-pump-r-gas-collector-inert-basic-8933c2d3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-01-resource-pump-r-gas-collector-xiranite-basic-cc045a78.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-01-resource-pump-r-pump-acid-basic-563a3ad2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-01-resource-pump-r-pump-water-basic-f983c1b3.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-02-unconfigured-gas-pump-1-858eca28.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/resource-pump-production/scene-02-unconfigured-water-pump-1-a21b2065.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/runtime-slot-patch/scene-01-runtime-slot-patch-45d43076.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/splitter-dead-port/scene-01-splitter-dead-port-test-757c4db0.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-01-storage-multi-slot-belt-straight-1x1-74203c6f.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-01-storage-multi-slot-log-splitter-c5e0001d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-02-storage-fill-observe-6fec1489.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-01-slot-exclusivity-overflow-7fbac9a2.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-02-slot-exclusivity-block-74fbe269.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-03-slot-exclusivity-normal-96579b85.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-04-slot-exclusivity-mix-pool-1-d293e525.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-01-timeline-consumption-gas-5740c606.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-02-timeline-admission-snapshot-981329ef.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/topology-migration/scene-01-migration-config-changed-42e0e69d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/topology-migration/scene-01-migration-moved-1bea6d04.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/topology-migration/scene-01-migration-original-4be8d38b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/topology-migration/scene-02-linked-grinder-aa285dd5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-01-wh-submit-9ea2b8b7.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-02-wh-off-1f553461.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-01-water-purifier-node-input-derived-2dfe453b.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-02-water-purifier-node-byproduct-9df3881d.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-03-water-purifier-node-manual-output-c36647a8.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-04-water-purifier-node-manual-disables-input-293b656a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-01-step1-xiranite-liquid-b9e91d12.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-02-step2-waste-liquid-dfe9142a.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-03-step3-xiranite-enr-149d8711.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/dark-pipe-premium-needle-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/dual-oven-xiranite.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/getting-started-tutorial.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/premium-capsule-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/resurrection-machine-7.1.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/utimate-xiranite.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/v1.4-4-core-xiranite.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/wuling-battery-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    }
+  ],
+  "catalogs": [
+    "src/tests/fixtures/blueprints/collections/app/app-host/index.json",
+    "src/tests/fixtures/blueprints/collections/app/base-configuration-problems/index.json",
+    "src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/index.json",
+    "src/tests/fixtures/blueprints/collections/editor/editor-host/index.json",
+    "src/tests/fixtures/blueprints/collections/editor/power-range-query/index.json",
+    "src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/index.json",
+    "src/tests/fixtures/blueprints/collections/registry/device-default-orientation/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/logistics-material-topology/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/pipe-flow-decoration/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/index.json",
+    "src/tests/fixtures/blueprints/collections/shared/geometry/entity-grid-geometry/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/activity-filtering/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/power-system/index.json",
+    "src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/shared/geometry/entity-grid-geometry/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/index.json",
+    "src/tests/fixtures/blueprints/collections-extra/simulation/power-system/index.json",
+    "src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/index.json",
+    "src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/index.json",
+    "src/tests/fixtures/blueprints/simulation/admission-rule/index.json",
+    "src/tests/fixtures/blueprints/simulation/belt-phase-gating/index.json",
+    "src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json",
+    "src/tests/fixtures/blueprints/simulation/belt-transport/index.json",
+    "src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/index.json",
+    "src/tests/fixtures/blueprints/simulation/bridge-direction/index.json",
+    "src/tests/fixtures/blueprints/simulation/cheat-infinite-device/index.json",
+    "src/tests/fixtures/blueprints/simulation/config-override/index.json",
+    "src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/index.json",
+    "src/tests/fixtures/blueprints/simulation/dark-pipe-void/index.json",
+    "src/tests/fixtures/blueprints/simulation/debug-fanout/index.json",
+    "src/tests/fixtures/blueprints/simulation/definition-slot-link/index.json",
+    "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/index.json",
+    "src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json",
+    "src/tests/fixtures/blueprints/simulation/dense-projection/index.json",
+    "src/tests/fixtures/blueprints/simulation/engine-boundary/index.json",
+    "src/tests/fixtures/blueprints/simulation/fanout-routing/index.json",
+    "src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json",
+    "src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json",
+    "src/tests/fixtures/blueprints/simulation/metered-consumption/index.json",
+    "src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/index.json",
+    "src/tests/fixtures/blueprints/simulation/pipe-fluid-query/index.json",
+    "src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json",
+    "src/tests/fixtures/blueprints/simulation/pipe-transport/index.json",
+    "src/tests/fixtures/blueprints/simulation/power-system/index.json",
+    "src/tests/fixtures/blueprints/simulation/production/index.json",
+    "src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/index.json",
+    "src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json",
+    "src/tests/fixtures/blueprints/simulation/reactor-dual-fluid-output-routing/index.json",
+    "src/tests/fixtures/blueprints/simulation/reactor-none-accept-rule/index.json",
+    "src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/index.json",
+    "src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json",
+    "src/tests/fixtures/blueprints/simulation/regional-long-run/index.json",
+    "src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json",
+    "src/tests/fixtures/blueprints/simulation/regional-session/index.json",
+    "src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json",
+    "src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json",
+    "src/tests/fixtures/blueprints/simulation/runtime-slot-patch/index.json",
+    "src/tests/fixtures/blueprints/simulation/splitter-dead-port/index.json",
+    "src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json",
+    "src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/index.json",
+    "src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/index.json",
+    "src/tests/fixtures/blueprints/simulation/topology-migration/index.json",
+    "src/tests/fixtures/blueprints/simulation/warehouse-submit/index.json",
+    "src/tests/fixtures/blueprints/simulation/water-purifier-node/index.json",
+    "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json"
+  ]
+}
+

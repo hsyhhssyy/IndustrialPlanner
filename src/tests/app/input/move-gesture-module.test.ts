@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it, vi } from "vitest";
 
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
@@ -24,11 +25,29 @@ import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helpe
 describe("createHypergryphMoveGestureModule", () => {
   it("opens the overlap entity menu before entering move from a stacked long-press cell", () => {
     const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
-    const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
     const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [bottomEntity, topEntity]
     const { context, editor, appHost } = createContext({
       overlapEntityMenu,
-      listedEntities: [bottomEntity, topEntity],
+      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-01-variant-1.schema6.json")),
     });
     const module = createHypergryphMoveGestureModule();
 
@@ -61,11 +80,38 @@ describe("createHypergryphMoveGestureModule", () => {
 
   it("resolves immediate-drag overlap candidates from the drag start position", () => {
     const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
-    const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
-    const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [bottomEntity, topEntity]
     const { context, editor } = createContext({
       overlapEntityMenu,
-      listedEntities: [bottomEntity, topEntity],
+      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-02-variant-1.schema6.json")),
     });
     const module = createHypergryphMoveGestureModule();
 

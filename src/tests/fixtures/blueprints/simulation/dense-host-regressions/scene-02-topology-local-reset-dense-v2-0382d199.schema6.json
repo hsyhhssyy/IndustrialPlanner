@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-topology-local-reset-dense-v2",
+  "version": "fixture-v1",
+  "name": "topology-local-reset-dense-v2",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "stable-storage": {
+      "id": "stable-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "changed-storage": {
+      "id": "changed-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 4
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "stable-storage",
+    "changed-storage"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

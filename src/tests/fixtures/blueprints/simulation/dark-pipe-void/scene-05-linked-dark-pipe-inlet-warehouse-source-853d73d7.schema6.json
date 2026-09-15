@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-linked-dark-pipe-inlet-warehouse-source",
+  "version": "fixture-v1",
+  "name": "linked-dark-pipe-inlet-warehouse-source",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": -6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe": {
+      "id": "pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink": {
+      "id": "sink",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "inlet",
+    "outlet",
+    "pipe",
+    "sink"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:inlet:loader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "inlet",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_sewage"
+      }
+    },
+    {
+      "id": "dark-pipe-link:outlet:inlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "outlet",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "inlet",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/gas-diffusion.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "gasCount": 5,
+          "includeCoveredOven": false,
+          "name": "five-gases"
+        },
+        "file": "scene-01-five-gases-0a1face4.schema6.json",
+        "blueprintId": "req-076-five-gases",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "gasCount": 1,
+          "includeCoveredOven": true,
+          "name": "one-gas-ten-seconds"
+        },
+        "file": "scene-01-one-gas-ten-seconds-7607686b.schema6.json",
+        "blueprintId": "req-076-one-gas-ten-seconds",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-gas-liquid-converger-lock-cd7b20bb.schema6.json",
+        "blueprintId": "req-076-gas-liquid-converger-lock",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

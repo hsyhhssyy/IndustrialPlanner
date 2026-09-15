@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/editor/editor-host.test.ts:scene-08:18",
+  "version": "fixture-v1",
+  "name": "editor-host scene-08",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "preview-pipe_splitter": {
+      "id": "preview-pipe_splitter",
+      "originalEntityId": "preview-pipe_splitter",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "preview-pipe_splitter"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

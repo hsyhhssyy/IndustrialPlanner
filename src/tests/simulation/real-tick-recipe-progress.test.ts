@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
@@ -176,7 +177,16 @@ describe("ST2-RQ-024 real tick recipe progress", () => {
       config: {},
       tags: [],
     };
-    document.entities = { grinder };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // { grinder }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/scene-01-variant-1.schema6.json").entities;
     document.entityOrder = [grinder.id];
 
     const topology = compileSimulationTopology({

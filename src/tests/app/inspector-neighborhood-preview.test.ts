@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { resolveInspectorPortOutputCallouts } from "@/app/shell/inspector/inspector-neighborhood-preview";
@@ -99,8 +100,17 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       y: 20,
       rotation: 90,
     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [selectedEntity]
     const model = resolveInspectorNeighborhoodPreviewModel({
-      document: createWorldDocument([selectedEntity]),
+      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-01-variant-1.schema6.json"))),
       entityDefinitionMap,
       selectedEntityId: selectedEntity.id,
     });
@@ -130,31 +140,67 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       y: 20,
       rotation: 90,
     });
-    const partialEntity = createEntity({
-      id: "partial-left",
-      definitionId: partialDefinition.id,
-      x: 5,
-      y: 18,
-    });
-    const insideEntity = createEntity({
-      id: "inside-bottom-right",
-      definitionId: oneByOneDefinition.id,
-      x: 16,
-      y: 25,
-    });
-    const outsideEntity = createEntity({
-      id: "outside-right-border",
-      definitionId: oneByOneDefinition.id,
-      x: 17,
-      y: 25,
-    });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/inspector-neighborhood-preview/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const partialEntity = createEntity({
+    //       id: "partial-left",
+    //       definitionId: partialDefinition.id,
+    //       x: 5,
+    //       y: 18,
+    //     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/inspector-neighborhood-preview/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const insideEntity = createEntity({
+    //       id: "inside-bottom-right",
+    //       definitionId: oneByOneDefinition.id,
+    //       x: 16,
+    //       y: 25,
+    //     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/inspector-neighborhood-preview/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const outsideEntity = createEntity({
+    //       id: "outside-right-border",
+    //       definitionId: oneByOneDefinition.id,
+    //       x: 17,
+    //       y: 25,
+    //     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [
+    //         selectedEntity,
+    //         partialEntity,
+    //         insideEntity,
+    //         outsideEntity,
+    //       ]
     const model = resolveInspectorNeighborhoodPreviewModel({
-      document: createWorldDocument([
-        selectedEntity,
-        partialEntity,
-        insideEntity,
-        outsideEntity,
-      ]),
+      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-02-variant-1.schema6.json"))),
       entityDefinitionMap,
       selectedEntityId: selectedEntity.id,
     });
@@ -182,7 +228,16 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       y: 20,
       rotation: 180,
     });
-    const document = createWorldDocument([selectedEntity]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [selectedEntity]
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-03-variant-1.schema6.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -240,7 +295,16 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       x: 10,
       y: 20,
     });
-    const document = createWorldDocument([selectedEntity]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [selectedEntity]
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-04-variant-1.schema6.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -305,7 +369,16 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
         },
       },
     };
-    const document = createWorldDocument([selectedEntity]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [selectedEntity]
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-05-variant-1.schema6.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -357,7 +430,16 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       x: 10,
       y: 20,
     });
-    const document = createWorldDocument([selectedEntity]);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [selectedEntity]
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-06-variant-1.schema6.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);

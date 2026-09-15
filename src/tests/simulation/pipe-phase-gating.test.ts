@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it } from "vitest";
 
@@ -11,12 +12,21 @@ import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate"
 import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
-import {
-  createBlueprint,
-  createEntity,
-  createWorldDocumentFromBlueprint,
-  resolveFirstTickNumberAtSimulationMilliseconds,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWorldDocumentFromBlueprint,
+//   resolveFirstTickNumberAtSimulationMilliseconds,
+// } from "./blueprint-test-helpers";
+import { createWorldDocumentFromBlueprint, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
 const STANDARD_SPEED = 1;
@@ -187,11 +197,20 @@ function createLiquidPhaseGatingTopology(registry: RegistryContract): CompiledSi
 }
 
 function createLiquidPhaseGatingBlueprint() {
-  return createBlueprint("pipe-phase-gating", [
-    createEntity("source", "liquid_storager_1", 0, 0, 180),
-    createEntity("pipe", "pipe_straight_1x1", 3, 1),
-    createEntity("sink", "liquid_storager_1", 4, 0, 180),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("pipe-phase-gating", [
+  //     createEntity("source", "liquid_storager_1", 0, 0, 180),
+  //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
+  //     createEntity("sink", "liquid_storager_1", 4, 0, 180),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-phase-gating/scene-01-pipe-phase-gating-c9ec427f.schema6.json");
 }
 
 function resolveLegacyFirstTick(elapsedMilliseconds: number): number {

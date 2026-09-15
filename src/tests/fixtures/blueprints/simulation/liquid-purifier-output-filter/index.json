@@ -1,0 +1,74 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/liquid-purifier-output-filter.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "engineKind": "legacy",
+          "recipeCase": {
+            "name": "惰性壤晶废液提纯",
+            "recipeId": "r_liquid_purifier_water_and_xiranite_poly_from_xiranite_lowpoly_basic",
+            "inputItemId": "item_liquid_xiranite_lowpoly",
+            "leftOutputItemId": "item_liquid_water",
+            "rightOutputItemId": "item_liquid_xiranite_poly"
+          }
+        },
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema6.json",
+        "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "legacy",
+          "recipeCase": {
+            "name": "赤铜溶液提纯",
+            "recipeId": "r_liquid_purifier_acid_and_copper_enr_from_copper_basic",
+            "inputItemId": "item_liquid_copper",
+            "leftOutputItemId": "item_liquid_acid",
+            "rightOutputItemId": "item_liquid_copper_enr"
+          }
+        },
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema6.json",
+        "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_copper",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2",
+          "recipeCase": {
+            "name": "惰性壤晶废液提纯",
+            "recipeId": "r_liquid_purifier_water_and_xiranite_poly_from_xiranite_lowpoly_basic",
+            "inputItemId": "item_liquid_xiranite_lowpoly",
+            "leftOutputItemId": "item_liquid_water",
+            "rightOutputItemId": "item_liquid_xiranite_poly"
+          }
+        },
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema6.json",
+        "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "engineKind": "dense-v2",
+          "recipeCase": {
+            "name": "赤铜溶液提纯",
+            "recipeId": "r_liquid_purifier_acid_and_copper_enr_from_copper_basic",
+            "inputItemId": "item_liquid_copper",
+            "leftOutputItemId": "item_liquid_acid",
+            "rightOutputItemId": "item_liquid_copper_enr"
+          }
+        },
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema6.json",
+        "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_copper",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

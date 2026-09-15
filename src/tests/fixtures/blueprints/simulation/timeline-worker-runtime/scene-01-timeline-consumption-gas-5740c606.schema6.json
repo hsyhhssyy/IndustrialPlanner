@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-timeline-consumption-gas",
+  "version": "fixture-v1",
+  "name": "timeline-consumption-gas",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "xiranite-oven": {
+      "id": "xiranite-oven",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "xiranite_oven_xiranite_powder_2"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_carbon_mtl",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[1].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "gas-source": {
+      "id": "gas-source",
+      "definitionId": "gas_storager_1",
+      "position": {
+        "x": -4,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[0].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "gas-pipe": {
+      "id": "gas-pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "gas-diffuser": {
+      "id": "gas-diffuser",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "xiranite-oven",
+    "gas-source",
+    "gas-pipe",
+    "gas-diffuser",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

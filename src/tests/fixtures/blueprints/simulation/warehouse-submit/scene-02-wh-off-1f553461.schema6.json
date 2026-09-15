@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-wh-off",
+  "version": "fixture-v1",
+  "name": "wh-off",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "belt_0": {
+      "id": "belt_0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 52,
+        "y": 35
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bus_src": {
+      "id": "bus_src",
+      "definitionId": "log_hongs_bus_source",
+      "position": {
+        "x": 47,
+        "y": 34
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "storager": {
+      "id": "storager",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 53,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "unloader": {
+      "id": "unloader",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 51,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 51,
+        "y": 37
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt_0",
+    "bus_src",
+    "storager",
+    "unloader",
+    "power"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:unloader:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "unloader",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_plant_moss_3"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

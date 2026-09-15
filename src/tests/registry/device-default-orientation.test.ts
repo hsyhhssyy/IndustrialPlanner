@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -199,16 +200,25 @@ describe("device default orientation", () => {
       const definition = requireDefinition(definitionId);
 
       for (const rotation of GRID_ROTATIONS) {
-        const migrated = migrateBlueprintEntityDeviceIds({
-          entity: {
-            id: "entity",
-            definitionId,
-            position: { x: 10, y: 20 },
-            rotation,
-            config: { retained: true },
-            tags: ["retained"],
-          },
-        }, 5, 6);
+        // AI-REMOVED 2026-09-14:
+        // Reason: 场景构造已批量固化为带版本的蓝图文件。
+        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+        // Replacement: src/tests/fixtures/blueprints/collections/registry/device-default-orientation/index.json
+        // Risk: Low；断言与被测动作不变。
+        // Human Review: Required
+        // Original code:
+        // {
+        //           entity: {
+        //             id: "entity",
+        //             definitionId,
+        //             position: { x: 10, y: 20 },
+        //             rotation,
+        //             config: { retained: true },
+        //             tags: ["retained"],
+        //           },
+        //         }
+        const migrated = migrateBlueprintEntityDeviceIds(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/registry/device-default-orientation/index.json", "scene-01", { definitionId, newPorts, oldPorts, rotation, rotationOffset }).entities, 5, 6);
 
         expect(migrated?.entities.entity).toMatchObject({
           definitionId,

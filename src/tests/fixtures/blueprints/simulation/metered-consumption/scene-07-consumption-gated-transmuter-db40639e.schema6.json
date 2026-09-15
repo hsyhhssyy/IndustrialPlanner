@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-consumption-gated-transmuter",
+  "version": "fixture-v1",
+  "name": "consumption-gated-transmuter",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "transmuter": {
+      "id": "transmuter",
+      "definitionId": "transmuter_1_gastrans",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "liquid_transmuter_1_gas_gas_xiranite_enr_1"
+        }
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "transmuter"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

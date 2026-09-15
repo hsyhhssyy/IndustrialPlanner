@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-bridge-direction-verify",
+  "version": "fixture-v1",
+  "name": "bridge-direction-verify",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source-ns": {
+      "id": "source-ns",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 20
+      },
+      "tags": []
+    },
+    "belt_ns_in": {
+      "id": "belt_ns_in",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "bridge": {
+      "id": "bridge",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt_ns_out": {
+      "id": "belt_ns_out",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink-ns": {
+      "id": "sink-ns",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": -3
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "source-ew": {
+      "id": "source-ew",
+      "definitionId": "storager_1",
+      "position": {
+        "x": -4,
+        "y": 1
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 20
+      },
+      "tags": []
+    },
+    "belt_ew_in": {
+      "id": "belt_ew_in",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt_ew_out": {
+      "id": "belt_ew_out",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink-ew": {
+      "id": "sink-ew",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 2,
+        "y": 1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source-ns",
+    "belt_ns_in",
+    "bridge",
+    "belt_ns_out",
+    "sink-ns",
+    "source-ew",
+    "belt_ew_in",
+    "belt_ew_out",
+    "sink-ew"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -100,7 +100,16 @@ function resetDocumentRuntimeState(state: EditorStateReadWrite): void {
   state.internalTransientState.logisticsDraft = null;
   state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
   state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
-  state.internalTransientState.convergerEntityGridKey = null;
+  // AI-REMOVED 2026-09-15:
+  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
+  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
+  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
+  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
+  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
+  // Human Review: Required
+  //
+  // Original code:
+  // state.internalTransientState.convergerEntityGridKey = null;
   state.internalTransientState.placementDraftSlotLinks = null;
   state.internalTransientState.placementDraftEntityIdMap = null;
   state.internalTransientState.placementHistoryAction = null;

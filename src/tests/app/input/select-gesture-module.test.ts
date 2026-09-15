@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it, vi } from "vitest";
 import { makeAutoObservable } from "mobx";
 
@@ -716,12 +717,21 @@ describe("createHypergryphSelectGestureModule", () => {
   });
 
   it("clears any floating toolbar when another tool returns to select with a preserved selection", () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [entity("entity-1")]
     const {
       appHost,
       hideCanvasFloatingToolbar,
     } = createToolbarFallbackContext({
       activeTool: "move",
-      selectedEntities: [entity("entity-1")],
+      selectedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-01-variant-1.schema6.json")),
     });
     const module = createHypergryphSelectGestureModule();
 
@@ -929,9 +939,36 @@ function createOverlapSelectContext(): {
 } {
   const registry = createRegistryContract();
   const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
-  const bottomEntity = entity("bottom-entity", "belt_straight_1x1");
-  const topEntity = entity("top-entity", "pipe_straight_1x1");
-  const entities = [bottomEntity, topEntity];
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/select-gesture-module/index.json
+  // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json。
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // const bottomEntity = entity("bottom-entity", "belt_straight_1x1");
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/select-gesture-module/index.json
+  // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json。
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // const topEntity = entity("top-entity", "pipe_straight_1x1");
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // [bottomEntity, topEntity]
+  const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema6.json"));
   const addToCollection = vi.fn();
   const clearCollection = vi.fn();
   const selection = createSelectionCollection([]);

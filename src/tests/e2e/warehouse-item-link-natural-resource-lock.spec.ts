@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import type { BlueprintDocument } from "../../domain/document/blueprint-document";
 import { expect, test, type Page } from "./canvas-lock-audit";
 
 const TOOLTIP_TEXT = "自然资源现在由基地面板的地区资源卡片控制";
@@ -141,59 +143,96 @@ test("natural-resource warehouse links keep a locked infinity control with hover
   }
 });
 
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/e2e/natural-resource-warehouse-link.schema6.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// async function installNaturalResourceWarehouseLink(page: Page): Promise<void> {
+//   await page.evaluate(() => {
+//     const appHost = window.__industrialPlannerAppHost;
+//     const editor = appHost?.workspace.editor;
+//     if (appHost === undefined || editor === null || editor === undefined) {
+//       throw new Error("AppHost/editor unavailable");
+//     }
+//
+//     const entityId = "e2e-natural-resource-unloader";
+//     const currentDocument = editor.document.getSnapshot();
+//     editor.actions.applySynchronizedDocument({
+//       ...currentDocument,
+//       entities: {
+//         ...currentDocument.entities,
+//         [entityId]: {
+//           id: entityId,
+//           definitionId: "unloader_1",
+//           position: { x: 51, y: 34 },
+//           rotation: 270,
+//           config: {
+//             "storageSlotGroups[0].slots[0].ignoreStock": false,
+//           },
+//           tags: [],
+//         },
+//       },
+//       entityOrder: [
+//         ...currentDocument.entityOrder.filter((id) => id !== entityId),
+//         entityId,
+//       ],
+//       slotLinks: [
+//         ...currentDocument.slotLinks.filter((link) => link.source.entityId !== entityId),
+//         {
+//           id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
+//           linkType: "share-all",
+//           source: {
+//             entityId,
+//             storageSlotGroupId: "unloader_buffer",
+//             slotId: "slot_1",
+//           },
+//           target: {
+//             entityId: "warehouse",
+//             storageSlotGroupId: "warehouse",
+//             slotId: "item_copper_ore",
+//           },
+//         },
+//       ],
+//     });
+//     editor.actions.clearCollection("selection");
+//     editor.actions.addToCollection({
+//       collectionType: "selection",
+//       entityId,
+//     });
+//   });
+// }
 async function installNaturalResourceWarehouseLink(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  const payload = JSON.parse(readFileSync("src/tests/fixtures/blueprints/e2e/natural-resource-warehouse-link.schema6.json", "utf8")) as BlueprintDocument;
+  await page.evaluate(async (input) => {
+    const codecModuleUrl = "/src/shared/blueprints/blueprint-document-codec.ts";
+    const { normalizeBlueprintDocument } = await import(/* @vite-ignore */ codecModuleUrl);
+    const blueprint = normalizeBlueprintDocument(input) as BlueprintDocument | null;
+    if (blueprint === null) throw new Error("Invalid natural-resource warehouse link fixture");
     const appHost = window.__industrialPlannerAppHost;
     const editor = appHost?.workspace.editor;
     if (appHost === undefined || editor === null || editor === undefined) {
       throw new Error("AppHost/editor unavailable");
     }
-
-    const entityId = "e2e-natural-resource-unloader";
     const currentDocument = editor.document.getSnapshot();
     editor.actions.applySynchronizedDocument({
       ...currentDocument,
-      entities: {
-        ...currentDocument.entities,
-        [entityId]: {
-          id: entityId,
-          definitionId: "unloader_1",
-          position: { x: 51, y: 34 },
-          rotation: 270,
-          config: {
-            "storageSlotGroups[0].slots[0].ignoreStock": false,
-          },
-          tags: [],
-        },
-      },
+      entities: { ...currentDocument.entities, ...blueprint.entities },
       entityOrder: [
-        ...currentDocument.entityOrder.filter((id) => id !== entityId),
-        entityId,
+        ...currentDocument.entityOrder.filter((id) => !blueprint.entityOrder.includes(id)),
+        ...blueprint.entityOrder,
       ],
       slotLinks: [
-        ...currentDocument.slotLinks.filter((link) => link.source.entityId !== entityId),
-        {
-          id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
-          linkType: "share-all",
-          source: {
-            entityId,
-            storageSlotGroupId: "unloader_buffer",
-            slotId: "slot_1",
-          },
-          target: {
-            entityId: "warehouse",
-            storageSlotGroupId: "warehouse",
-            slotId: "item_copper_ore",
-          },
-        },
+        ...currentDocument.slotLinks.filter((entry) => !blueprint.entityOrder.includes(entry.source.entityId)),
+        ...blueprint.slotLinks,
       ],
     });
     editor.actions.clearCollection("selection");
-    editor.actions.addToCollection({
-      collectionType: "selection",
-      entityId,
-    });
-  });
+    editor.actions.addToCollection({ collectionType: "selection", entityId: blueprint.entityOrder[0]! });
+  }, payload);
 }
 
 async function readNaturalResourceIgnoreStock(page: Page): Promise<unknown> {

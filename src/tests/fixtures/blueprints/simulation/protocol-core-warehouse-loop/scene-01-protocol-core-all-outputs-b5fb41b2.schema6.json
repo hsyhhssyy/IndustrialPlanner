@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-protocol-core-all-outputs",
+  "version": "fixture-v1",
+  "name": "protocol-core-all-outputs",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "core": {
+      "id": "core",
+      "definitionId": "sp_hub_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "storageSlotGroups[1].slots[0].ignoreStock": true,
+        "storageSlotGroups[2].slots[0].ignoreStock": true,
+        "storageSlotGroups[3].slots[0].ignoreStock": true,
+        "storageSlotGroups[4].slots[0].ignoreStock": true,
+        "storageSlotGroups[5].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "recv_w2": {
+      "id": "recv_w2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "recv_w5": {
+      "id": "recv_w5",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 4
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "recv_w8": {
+      "id": "recv_w8",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "recv_e2": {
+      "id": "recv_e2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "recv_e5": {
+      "id": "recv_e5",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "recv_e8": {
+      "id": "recv_e8",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "core",
+    "recv_w2",
+    "recv_w5",
+    "recv_w8",
+    "recv_e2",
+    "recv_e5",
+    "recv_e8"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:core:unbuffer_w2:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_w2",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:core:unbuffer_w5:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_w5",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_iron_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:core:unbuffer_w8:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_w8",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_originium_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:core:unbuffer_e2:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_e2",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_plant_moss_3"
+      }
+    },
+    {
+      "id": "warehouse-link:core:unbuffer_e5:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_e5",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_crystal_powder"
+      }
+    },
+    {
+      "id": "warehouse-link:core:unbuffer_e8:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "core",
+        "storageSlotGroupId": "unbuffer_e8",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_proc_battery_4"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

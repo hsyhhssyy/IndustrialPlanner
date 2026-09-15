@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,14 +13,23 @@ import { createRegistryContract } from "@/registry";
 // Original code:
 // import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findFirstTick,
-  findSlot,
-  getDevice,
-  getLastTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findFirstTick,
+//   findSlot,
+//   getDevice,
+//   getLastTick,
+// } from "./blueprint-test-helpers";
+import { findFirstTick, findSlot, getDevice, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 const RESOURCE_PUMP_CASES = [
@@ -76,15 +86,24 @@ describe.each(SIMULATION_ENGINE_MATRIX)("resource pump production [%s]", (engine
       // Original code:
       // const durationTicks = deviceCase.durationSeconds * STANDARD_TICK_RATE_PER_SECOND;
       // const maxTickNumber = durationTicks * 2 + 1;
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint(`resource-pump-${deviceCase.recipeId}`, [
+      //           createEntity("pump", deviceCase.definitionId, 0, 0, 0, {
+      //             channelRecipes: { default: deviceCase.recipeId },
+      //           }),
+      //           ...(deviceCase.requiresPower
+      //             ? [createEntity("power", "power_diffuser_1", 4, 0)]
+      //             : []),
+      //         ])
       const report = await runBlueprintSimulation({
-        blueprint: createBlueprint(`resource-pump-${deviceCase.recipeId}`, [
-          createEntity("pump", deviceCase.definitionId, 0, 0, 0, {
-            channelRecipes: { default: deviceCase.recipeId },
-          }),
-          ...(deviceCase.requiresPower
-            ? [createEntity("power", "power_diffuser_1", 4, 0)]
-            : []),
-        ]),
+        blueprint: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json", "scene-01", { deviceCase }),
         maxDurationSeconds: deviceCase.durationSeconds * 2 + 1,
         engineKind,
         registry: createRegistryContract(),
@@ -137,13 +156,22 @@ describe.each(SIMULATION_ENGINE_MATRIX)("resource pump production [%s]", (engine
       //
       // Original code:
       // const maxTickNumber = 4 * STANDARD_TICK_RATE_PER_SECOND;
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint(`unconfigured-${definitionId}`, [
+      //           createEntity("pump", definitionId, 0, 0),
+      //           ...(requiresPower
+      //             ? [createEntity("power", "power_diffuser_1", 4, 0)]
+      //             : []),
+      //         ])
       const report = await runBlueprintSimulation({
-        blueprint: createBlueprint(`unconfigured-${definitionId}`, [
-          createEntity("pump", definitionId, 0, 0),
-          ...(requiresPower
-            ? [createEntity("power", "power_diffuser_1", 4, 0)]
-            : []),
-        ]),
+        blueprint: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/resource-pump-production/index.json", "scene-02", { definitionId, requiresPower, slotId, storageGroupId }),
         maxDurationSeconds: 4,
         engineKind,
         registry: createRegistryContract(),

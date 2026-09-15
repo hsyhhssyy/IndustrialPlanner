@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/dark-pipe-void.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-single-dark-pipe-inlet-warehouse-e12525bf.schema6.json",
+        "blueprintId": "req-076-single-dark-pipe-inlet-warehouse",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-multi-dark-pipe-inlet-warehouse-60217eb6.schema6.json",
+        "blueprintId": "req-076-multi-dark-pipe-inlet-warehouse",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-dark-pipe-outlet-default-empty-faa7ebc1.schema6.json",
+        "blueprintId": "req-076-dark-pipe-outlet-default-empty",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema6.json",
+        "blueprintId": "req-076-linked-dark-pipe-inlet-manual-void",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-05": [
+      {
+        "parameters": {},
+        "file": "scene-05-linked-dark-pipe-inlet-warehouse-source-853d73d7.schema6.json",
+        "blueprintId": "req-076-linked-dark-pipe-inlet-warehouse-source",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

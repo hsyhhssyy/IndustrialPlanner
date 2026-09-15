@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import {
   describe,
   expect,
@@ -12,23 +13,41 @@ import { readSimulationSnapshot } from "@/simulation/testkit";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 import { createHeadlessWorkspace } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  createWorldDocumentFromBlueprint,
-  resolveFirstTickNumberAtSimulationMilliseconds,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/engine-boundary/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWorldDocumentFromBlueprint,
+//   resolveFirstTickNumberAtSimulationMilliseconds,
+// } from "./blueprint-test-helpers";
+import { createEntity, createWorldDocumentFromBlueprint, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
 describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
   it("keeps public state free of snapshots while queries follow runtime edits and restart", async () => {
-    const document = createWorldDocumentFromBlueprint(createBlueprint("engine-boundary-storage", [
-      createEntity("storage", "storager_1", 0, 0, 0, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
-        "storageSlotGroups[0].slots[0].initialCount": 7,
-      }),
-      createEntity("power", "power_diffuser_1", 4, 0),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/engine-boundary/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("engine-boundary-storage", [
+    //       createEntity("storage", "storager_1", 0, 0, 0, {
+    //         "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+    //         "storageSlotGroups[0].slots[0].initialCount": 7,
+    //       }),
+    //       createEntity("power", "power_diffuser_1", 4, 0),
+    //     ])
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-01-engine-boundary-storage-9bf3f855.schema6.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
     try {
@@ -83,10 +102,19 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
   });
 
   it("refreshes query topology and removes stale device results", async () => {
-    const document = createWorldDocumentFromBlueprint(createBlueprint("engine-boundary-topology", [
-      createEntity("storage", "storager_1", 0, 0),
-      createEntity("power", "power_diffuser_1", 4, 0),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/engine-boundary/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("engine-boundary-topology", [
+    //       createEntity("storage", "storager_1", 0, 0),
+    //       createEntity("power", "power_diffuser_1", 4, 0),
+    //     ])
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-02-engine-boundary-topology-9097583b.schema6.json"));
     const documentStore = createSnapshotStore(document);
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     if (workspace.editor === null) throw new Error("Expected headless editor");
@@ -97,17 +125,26 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       host.actions.pause();
       expect(host.queries.getDeviceOperatingStatus("storage")).toBe("idle");
       expect(host.queries.getDeviceRuntimeStatus("storage")).not.toBeNull();
-      const replacement = createEntity("replacement", "storager_1", 4, 0, 0, {
+      const replacement = createEntity("replacement", "storager_1", 4, 0, 180, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
         "storageSlotGroups[0].slots[0].initialCount": 3,
       });
       const replacementPower = createEntity("replacement-power", "power_diffuser_1", 8, 0);
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // {
+      //           [replacement.id]: replacement,
+      //           [replacementPower.id]: replacementPower,
+      //         }
       documentStore.setSnapshot({
         ...document,
-        entities: {
-          [replacement.id]: replacement,
-          [replacementPower.id]: replacementPower,
-        },
+        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/scene-01-variant-1.schema6.json").entities,
         entityOrder: [replacement.id, replacementPower.id],
       });
       expect((await host.internalActions.refreshFromCurrentDocument()).status).toBe("started");
@@ -123,15 +160,24 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
   });
 
   it("projects progressing and waiting-output recipes as normal and blocked", async () => {
-    const document = createWorldDocumentFromBlueprint(createBlueprint("engine-boundary-operating-status", [
-      createEntity("grinder", "grinder_1", 0, 0, 0, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-        "storageSlotGroups[0].slots[0].initialCount": 1,
-        "storageSlotGroups[1].slots[0].initialItemType": "item_iron_powder",
-        "storageSlotGroups[1].slots[0].initialCount": 50,
-      }),
-      createEntity("power", "power_diffuser_1", 4, 0),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/engine-boundary/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("engine-boundary-operating-status", [
+    //       createEntity("grinder", "grinder_1", 0, 0, 0, {
+    //         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+    //         "storageSlotGroups[0].slots[0].initialCount": 1,
+    //         "storageSlotGroups[1].slots[0].initialItemType": "item_iron_powder",
+    //         "storageSlotGroups[1].slots[0].initialCount": 50,
+    //       }),
+    //       createEntity("power", "power_diffuser_1", 4, 0),
+    //     ])
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema6.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
     try {
@@ -159,9 +205,18 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
 describe("dense projection observation", () => {
   it("materializes full snapshots only when testkit explicitly reads them", async () => {
     const materialize = vi.spyOn(DenseProjectionStore.prototype, "materializeSnapshot");
-    const document = createWorldDocumentFromBlueprint(createBlueprint("dense-lazy-snapshot", [
-      createEntity("storage", "storager_1", 0, 0),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/engine-boundary/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("dense-lazy-snapshot", [
+    //       createEntity("storage", "storager_1", 0, 0),
+    //     ])
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-04-dense-lazy-snapshot-8752f8a6.schema6.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime" });
     try {

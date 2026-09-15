@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,12 +13,30 @@ import { createRegistryContract } from "@/registry";
 // Original code:
 // import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findSlotWithItem,
-  getLastTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findSlotWithItem,
+//   getLastTick,
+// } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createEntity, findSlotWithItem, getLastTick } from "./blueprint-test-helpers";
+import { findSlotWithItem, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 type LiquidPurifierRecipeCase = {
@@ -78,23 +97,32 @@ describe("提纯机输出端口物品级过滤", () => {
     "$engineKind: $recipeCase.name 的两个输出端口只输出各自允许的液体",
     async ({ engineKind, recipeCase }) => {
     const registry = createRegistryContract();
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint(`liquid-purifier-output-filter-${recipeCase.inputItemId}`, [
+    //         ...createSingleConnectedPortEntities({
+    //           idPrefix: "left-only",
+    //           purifierX: 0,
+    //           purifierY: 8,
+    //           connectedPortLocalX: 1,
+    //           inputItemId: recipeCase.inputItemId,
+    //         }),
+    //         ...createSingleConnectedPortEntities({
+    //           idPrefix: "right-only",
+    //           purifierX: 20,
+    //           purifierY: 8,
+    //           connectedPortLocalX: 3,
+    //           inputItemId: recipeCase.inputItemId,
+    //         }),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint(`liquid-purifier-output-filter-${recipeCase.inputItemId}`, [
-        ...createSingleConnectedPortEntities({
-          idPrefix: "left-only",
-          purifierX: 0,
-          purifierY: 8,
-          connectedPortLocalX: 1,
-          inputItemId: recipeCase.inputItemId,
-        }),
-        ...createSingleConnectedPortEntities({
-          idPrefix: "right-only",
-          purifierX: 20,
-          purifierY: 8,
-          connectedPortLocalX: 3,
-          inputItemId: recipeCase.inputItemId,
-        }),
-      ]),
+      blueprint: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json", "scene-01", { engineKind, recipeCase }),
       maxDurationSeconds: FINAL_DURATION_SECONDS,
       engineKind,
       registry,
@@ -117,32 +145,40 @@ describe("提纯机输出端口物品级过滤", () => {
   );
 });
 
-function createSingleConnectedPortEntities(options: {
-  readonly idPrefix: string;
-  readonly purifierX: number;
-  readonly purifierY: number;
-  readonly connectedPortLocalX: 1 | 3;
-  readonly inputItemId: string;
-}) {
-  const portWorldX = options.purifierX + options.connectedPortLocalX;
-  const portWorldY = options.purifierY;
-  return [
-    createEntity(
-      `${options.idPrefix}-purifier`,
-      LIQUID_PURIFIER_ENTITY_ID,
-      options.purifierX,
-      options.purifierY,
-      90,
-      {
-        "storageSlotGroups[0].slots[0].initialItemType": options.inputItemId,
-        "storageSlotGroups[0].slots[0].initialCount": 4,
-      },
-    ),
-    createEntity(`${options.idPrefix}-power`, "power_diffuser_1", options.purifierX + 6, options.purifierY),
-    createEntity(`${options.idPrefix}-pipe`, "pipe_straight_1x1", portWorldX, portWorldY - 1, 270),
-    createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 90),
-  ];
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createSingleConnectedPortEntities(options: {
+//   readonly idPrefix: string;
+//   readonly purifierX: number;
+//   readonly purifierY: number;
+//   readonly connectedPortLocalX: 1 | 3;
+//   readonly inputItemId: string;
+// }) {
+//   const portWorldX = options.purifierX + options.connectedPortLocalX;
+//   const portWorldY = options.purifierY;
+//   return [
+//     createEntity(
+//       `${options.idPrefix}-purifier`,
+//       LIQUID_PURIFIER_ENTITY_ID,
+//       options.purifierX,
+//       options.purifierY,
+//       90,
+//       {
+//         "storageSlotGroups[0].slots[0].initialItemType": options.inputItemId,
+//         "storageSlotGroups[0].slots[0].initialCount": 4,
+//       },
+//     ),
+//     createEntity(`${options.idPrefix}-power`, "power_diffuser_1", options.purifierX + 6, options.purifierY),
+//     createEntity(`${options.idPrefix}-pipe`, "pipe_straight_1x1", portWorldX, portWorldY - 1, 270),
+//     createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 90),
+//   ];
+// }
 
 function collectTransferredItemsFromDevice(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,

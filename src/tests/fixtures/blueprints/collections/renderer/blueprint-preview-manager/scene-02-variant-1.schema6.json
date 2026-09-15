@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/renderer/blueprint-preview-manager.test.ts:scene-02:1",
+  "version": "fixture-v1",
+  "name": "blueprint-preview-manager scene-02",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "selected": {
+      "id": "selected",
+      "definitionId": "test-definition",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "selected"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

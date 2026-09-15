@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "pipe-branch-test-001",
+  "version": "v1.3.0",
+  "name": "管道分叉测试",
+  "description": "(50,0)液燃炉rotation=0, (50/51/52,3)三格管道",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 51,
+    "y": 3
+  },
+  "entities": {
+    "liquid-furnance": {
+      "id": "liquid-furnance",
+      "definitionId": "furnance_1_liquid",
+      "position": {
+        "x": 50,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "pipe-50-3": {
+      "id": "pipe-50-3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 50,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe-51-3": {
+      "id": "pipe-51-3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 51,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe-52-3": {
+      "id": "pipe-52-3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 52,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "liquid-furnance",
+    "pipe-50-3",
+    "pipe-51-3",
+    "pipe-52-3"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-07-23T10:00:00.000Z",
+  "updatedAt": "2026-07-23T10:00:00.000Z"
+}
+

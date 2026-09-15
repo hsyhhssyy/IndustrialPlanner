@@ -204,6 +204,17 @@ export default defineConfig({
         test: {
           name: "normal",
           include: ["src/tests/**/*.test.ts", "src/tests/**/*.test.tsx"],
+          // AI-REMOVED 2026-09-15:
+          // Reason: 用户要求分析慢测试，不修改 Vitest 并发限制。
+          // Trigger: 用户明确要求不要修改并发限制。
+          // Evidence: maxWorkers=4 仅用于验证资源争用假设，不能作为最终修复方案。
+          // Replacement: None；本次 profiling 保持 Vitest 默认并发策略。
+          // Risk: Low；恢复默认并发后，原有资源争用超时会继续暴露。
+          // Human Review: Required
+          //
+          // Original code:
+          // // 常规测试包含 Sharp 素材解码与长耗时仿真，限制 worker 数避免资源争用触发默认超时。
+          // maxWorkers: 4,
           exclude: [
             "src/tests/e2e/**",
             "src/tests/simulation/blueprint/**",

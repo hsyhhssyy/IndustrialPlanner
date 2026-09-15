@@ -1,15 +1,25 @@
+import { loadBlueprintVariantFromFile, loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  createWarehouseSlotLink,
-  findSlot,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWarehouseSlotLink,
+//   findSlot,
+// } from "./blueprint-test-helpers";
+import { findSlot } from "./blueprint-test-helpers";
 
 const FINAL_TICK = 260;
 const SINK_STORAGE_ID = "sink-storage";
@@ -84,94 +94,128 @@ function createTwoItemSinkBlueprint(options: {
   readonly finalHopDefinitionId: "belt_straight_1x1" | "log_splitter";
   readonly finalHopRotation: WorldEntity["rotation"];
 }): BlueprintDocument {
-  return createBlueprint(`storage-multi-slot-${options.finalHopDefinitionId}`, [
-    createEntity(
-      "originium-source",
-      "unloader_1",
-      41,
-      25,
-      180,
-      createUnloaderWarehouseLinkConfig(),
-    ),
-    createEntity(
-      "iron-source",
-      "unloader_1",
-      45,
-      25,
-      180,
-      createUnloaderWarehouseLinkConfig(),
-    ),
-    createEntity("converger", "log_converger", 44, 23, 180),
-    createEntity("right-entry", "belt_straight_1x1", 46, 24, 270),
-    createEntity("right-turn", "belt_turn_ccw_1x1", 46, 23, 180),
-    createEntity("right-feed", "belt_straight_1x1", 45, 23, 180),
-    createEntity("left-entry", "belt_straight_1x1", 42, 24, 270),
-    createEntity("left-turn", "belt_turn_cw_1x1", 42, 23, 90),
-    createEntity("left-feed", "belt_straight_1x1", 43, 23, 0),
-    createEntity("final-hop", options.finalHopDefinitionId, 44, 22, options.finalHopRotation),
-    createEntity(SINK_STORAGE_ID, "storager_1", 43, 19, 0),
-  ], [
-    createWarehouseSlotLink("originium-source", "item_originium_ore"),
-    createWarehouseSlotLink("iron-source", "item_iron_ore"),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(`storage-multi-slot-${options.finalHopDefinitionId}`, [
+  //     createEntity(
+  //       "originium-source",
+  //       "unloader_1",
+  //       41,
+  //       25,
+  //       180,
+  //       createUnloaderWarehouseLinkConfig(),
+  //     ),
+  //     createEntity(
+  //       "iron-source",
+  //       "unloader_1",
+  //       45,
+  //       25,
+  //       180,
+  //       createUnloaderWarehouseLinkConfig(),
+  //     ),
+  //     createEntity("converger", "log_converger", 44, 23, 180),
+  //     createEntity("right-entry", "belt_straight_1x1", 46, 24, 270),
+  //     createEntity("right-turn", "belt_turn_ccw_1x1", 46, 23, 180),
+  //     createEntity("right-feed", "belt_straight_1x1", 45, 23, 180),
+  //     createEntity("left-entry", "belt_straight_1x1", 42, 24, 270),
+  //     createEntity("left-turn", "belt_turn_cw_1x1", 42, 23, 90),
+  //     createEntity("left-feed", "belt_straight_1x1", 43, 23, 0),
+  //     createEntity("final-hop", options.finalHopDefinitionId, 44, 22, options.finalHopRotation),
+  //     createEntity(SINK_STORAGE_ID, "storager_1", 43, 19, 0),
+  //   ], [
+  //     createWarehouseSlotLink("originium-source", "item_originium_ore"),
+  //     createWarehouseSlotLink("iron-source", "item_iron_ore"),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json", "scene-01", { options });
 }
 
 function createStorageFillObserveBlueprint(): BlueprintDocument {
-  return createBlueprint("storage-fill-observe", [
-    createEntity(
-      "originium-source",
-      "unloader_1",
-      32,
-      26,
-      180,
-      createUnloaderWarehouseLinkConfig(),
-    ),
-    createEntity(
-      "iron-source",
-      "unloader_1",
-      35,
-      26,
-      180,
-      createUnloaderWarehouseLinkConfig(),
-    ),
-    createEntity(OBSERVE_STORAGE_ID, "storager_1", 33, 18, 0, createObserveStorageInitialConfig()),
-    createEntity("converger", "log_converger", 34, 24, 180),
-    createEntity("left-entry", "belt_straight_1x1", 33, 25, 270),
-    createEntity("left-turn", "belt_turn_cw_1x1", 33, 24, 90),
-    createEntity("right-entry", "belt_straight_1x1", 36, 25, 270),
-    createEntity("right-turn", "belt_turn_ccw_1x1", 36, 24, 180),
-    createEntity("right-feed", "belt_straight_1x1", 35, 24, 180),
-    createEntity("splitter", "log_splitter", 34, 21, 180),
-    createEntity("splitter-input-1", "belt_straight_1x1", 34, 23, 270),
-    createEntity("splitter-input-2", "belt_straight_1x1", 34, 22, 270),
-    createEntity("splitter-output", "belt_straight_1x1", 35, 21, 0),
-    createEntity(OTHER_STORAGE_ID, "storager_1", 36, 19, 90),
-  ], [
-    createWarehouseSlotLink("originium-source", "item_originium_ore"),
-    createWarehouseSlotLink("iron-source", "item_iron_ore"),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("storage-fill-observe", [
+  //     createEntity(
+  //       "originium-source",
+  //       "unloader_1",
+  //       32,
+  //       26,
+  //       180,
+  //       createUnloaderWarehouseLinkConfig(),
+  //     ),
+  //     createEntity(
+  //       "iron-source",
+  //       "unloader_1",
+  //       35,
+  //       26,
+  //       180,
+  //       createUnloaderWarehouseLinkConfig(),
+  //     ),
+  //     createEntity(OBSERVE_STORAGE_ID, "storager_1", 33, 18, 0, createObserveStorageInitialConfig()),
+  //     createEntity("converger", "log_converger", 34, 24, 180),
+  //     createEntity("left-entry", "belt_straight_1x1", 33, 25, 270),
+  //     createEntity("left-turn", "belt_turn_cw_1x1", 33, 24, 90),
+  //     createEntity("right-entry", "belt_straight_1x1", 36, 25, 270),
+  //     createEntity("right-turn", "belt_turn_ccw_1x1", 36, 24, 180),
+  //     createEntity("right-feed", "belt_straight_1x1", 35, 24, 180),
+  //     createEntity("splitter", "log_splitter", 34, 21, 180),
+  //     createEntity("splitter-input-1", "belt_straight_1x1", 34, 23, 270),
+  //     createEntity("splitter-input-2", "belt_straight_1x1", 34, 22, 270),
+  //     createEntity("splitter-output", "belt_straight_1x1", 35, 21, 0),
+  //     createEntity(OTHER_STORAGE_ID, "storager_1", 36, 19, 90),
+  //   ], [
+  //     createWarehouseSlotLink("originium-source", "item_originium_ore"),
+  //     createWarehouseSlotLink("iron-source", "item_iron_ore"),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-02-storage-fill-observe-6fec1489.schema6.json");
 }
 
-function createUnloaderWarehouseLinkConfig(): WorldEntity["config"] {
-  return {
-    "storageSlotGroups[0].slots[0].ignoreStock": true,
-  };
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createUnloaderWarehouseLinkConfig(): WorldEntity["config"] {
+//   return {
+//     "storageSlotGroups[0].slots[0].ignoreStock": true,
+//   };
+// }
 
-function createObserveStorageInitialConfig(): WorldEntity["config"] {
-  return Object.fromEntries(
-    Array.from({ length: 6 }, (_, index) => [
-      [
-        `storageSlotGroups[${index}].slots[0].initialItemType`,
-        "item_originium_ore",
-      ],
-      [
-        `storageSlotGroups[${index}].slots[0].initialCount`,
-        1,
-      ],
-    ]).flat(),
-  );
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createObserveStorageInitialConfig(): WorldEntity["config"] {
+//   return Object.fromEntries(
+//     Array.from({ length: 6 }, (_, index) => [
+//       [
+//         `storageSlotGroups[${index}].slots[0].initialItemType`,
+//         "item_originium_ore",
+//       ],
+//       [
+//         `storageSlotGroups[${index}].slots[0].initialCount`,
+//         1,
+//       ],
+//     ]).flat(),
+//   );
+// }
 
 function expectFirstTwoSlotsToContainBothItems(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,

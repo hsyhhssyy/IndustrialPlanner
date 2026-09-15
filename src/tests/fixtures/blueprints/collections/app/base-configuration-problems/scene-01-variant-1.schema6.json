@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/app/base-configuration-problems.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "base-configuration-problems scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "cheat-solid": {
+      "id": "cheat-solid",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "cheat-liquid": {
+      "id": "cheat-liquid",
+      "definitionId": "cheat_infinite_liquid",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "cheat-gas": {
+      "id": "cheat-gas",
+      "definitionId": "cheat_infinite_gas",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "cheat-solid",
+    "cheat-liquid",
+    "cheat-gas"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

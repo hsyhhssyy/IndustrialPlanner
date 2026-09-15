@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,11 +13,20 @@ import { type DenseWorkerResponse } from "@/simulation/dense/dense-worker-protoc
 import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
-import {
-  createBlueprint,
-  createEntity,
-  createWorldDocumentFromBlueprint,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWorldDocumentFromBlueprint,
+// } from "./blueprint-test-helpers";
+import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 
 const SESSION = {
   protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
@@ -27,17 +37,26 @@ const SESSION = {
 describe("Dense checkpoint 的传输缓冲区所有权", () => {
   it("返回帧的 buffer 转移后，同 tick 展示与历史恢复仍保留完整传输事件", () => {
     const registry = createRegistryContract();
-    const document = createWorldDocumentFromBlueprint(createBlueprint(
-      "dense-checkpoint-transfer",
-      [
-        createEntity("source-storage", "storager_1", 0, 0, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-          "storageSlotGroups[0].slots[0].initialCount": 20,
-        }),
-        createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-        createEntity("sink-storage", "storager_1", 0, -4),
-      ],
-    ));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint(
+    //       "dense-checkpoint-transfer",
+    //       [
+    //         createEntity("source-storage", "storager_1", 0, 0, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+    //           "storageSlotGroups[0].slots[0].initialCount": 20,
+    //         }),
+    //         createEntity("belt", "belt_straight_1x1", 0, -1, 270),
+    //         createEntity("sink-storage", "storager_1", 0, -4),
+    //       ],
+    //     )
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json"));
     const topology = compileSimulationTopology({
       document,
       registry,

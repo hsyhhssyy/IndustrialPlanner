@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-belt-phase-sync",
+  "version": "fixture-v1",
+  "name": "belt-phase-sync",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "item_port_unloader_1:5": {
+      "id": "item_port_unloader_1:5",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 51,
+        "y": 25
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 100,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "item_port_log_hongs_bus_source:2": {
+      "id": "item_port_log_hongs_bus_source:2",
+      "definitionId": "log_hongs_bus_source",
+      "position": {
+        "x": 51,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "item_port_grinder_1:6": {
+      "id": "item_port_grinder_1:6",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 51,
+        "y": 21
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "item_port_storager_1:7": {
+      "id": "item_port_storager_1:7",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 51,
+        "y": 16
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "item_port_power_diffuser_1:8": {
+      "id": "item_port_power_diffuser_1:8",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 54,
+        "y": 23
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:17:0": {
+      "id": "logistics-draft:belt:17:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 51,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:18:1": {
+      "id": "logistics-draft:belt:18:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 51,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:22:0:1": {
+      "id": "logistics-draft:belt:22:0:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 52,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:24:0": {
+      "id": "logistics-draft:belt:24:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 52,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:28:0": {
+      "id": "logistics-draft:belt:28:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 53,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:29:1": {
+      "id": "logistics-draft:belt:29:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 53,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:3:0": {
+      "id": "logistics-draft:belt:3:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 52,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "item_port_unloader_1:5",
+    "item_port_log_hongs_bus_source:2",
+    "item_port_grinder_1:6",
+    "item_port_storager_1:7",
+    "item_port_power_diffuser_1:8",
+    "logistics-draft:belt:17:0",
+    "logistics-draft:belt:18:1",
+    "logistics-draft:belt:22:0:1",
+    "logistics-draft:belt:24:0",
+    "logistics-draft:belt:28:0",
+    "logistics-draft:belt:29:1",
+    "logistics-draft:belt:3:0"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

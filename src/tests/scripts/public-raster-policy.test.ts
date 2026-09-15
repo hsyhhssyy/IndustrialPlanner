@@ -1,7 +1,16 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import sharp from "sharp";
+// AI-REMOVED 2026-09-14:
+// Reason: 公共位图策略测试只校验文件扩展名，不再读取全部 WebP 的元数据。
+// Trigger: 用户要求避免打开图片文件，并测量仅检查扩展名后的耗时。
+// Evidence: 独立运行元数据扫描需 23.23 秒，全量并行检查中超过 30 秒超时。
+// Replacement: 下方 publishes raster assets only as WebP 用例中的扩展名检查。
+// Risk: 文件扩展名正确但内容损坏或并非 WebP 时，本测试不再发现该问题。
+// Human Review: Required
+//
+// Original code:
+// import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
 const PROJECT_ROOT = process.cwd();
@@ -21,7 +30,7 @@ const FORBIDDEN_RASTER_EXTENSIONS = new Set([
 const MISSING_TUTORIAL_SENTINEL = path.join(PUBLIC_ROOT, "help", "__missing-tutorial-image__.webp");
 
 describe("public raster policy", () => {
-  it("publishes only decodable WebP raster assets", async () => {
+  it("publishes raster assets only as WebP", async () => {
     const files = await collectFiles(PUBLIC_ROOT);
     const forbiddenFiles = files.filter((filePath) =>
       FORBIDDEN_RASTER_EXTENSIONS.has(path.extname(filePath).toLowerCase()),
@@ -31,20 +40,29 @@ describe("public raster policy", () => {
     expect(forbiddenFiles).toEqual([]);
     expect(webpFiles.length).toBeGreaterThan(0);
 
-    const invalidWebpFiles: string[] = [];
-    for (const filePath of webpFiles) {
-      try {
-        const metadata = await sharp(filePath, { animated: true }).metadata();
-        if (metadata.format !== "webp" || metadata.width === undefined || metadata.height === undefined) {
-          invalidWebpFiles.push(path.relative(PROJECT_ROOT, filePath));
-        }
-      } catch {
-        invalidWebpFiles.push(path.relative(PROJECT_ROOT, filePath));
-      }
-    }
-
-    expect(invalidWebpFiles).toEqual([]);
-  }, 30_000);
+    // AI-REMOVED 2026-09-14:
+    // Reason: 扩展名策略不应逐个打开全部 WebP；该读取使普通测试受磁盘缓存与 libvips 并发竞争影响。
+    // Trigger: 用户要求仅验证图片格式扩展名，并对比测试耗时。
+    // Evidence: 独立元数据扫描测试体耗时 23.23 秒；全量并行执行时超过 30 秒。
+    // Replacement: forbiddenFiles 与 webpFiles 扩展名断言。
+    // Risk: High；损坏文件或伪装成 .webp 的其他内容不会在此测试中暴露。
+    // Human Review: Required
+    //
+    // Original code:
+    // const invalidWebpFiles: string[] = [];
+    // for (const filePath of webpFiles) {
+    //   try {
+    //     const metadata = await sharp(filePath, { animated: true }).metadata();
+    //     if (metadata.format !== "webp" || metadata.width === undefined || metadata.height === undefined) {
+    //       invalidWebpFiles.push(path.relative(PROJECT_ROOT, filePath));
+    //     }
+    //   } catch {
+    //     invalidWebpFiles.push(path.relative(PROJECT_ROOT, filePath));
+    //   }
+    // }
+    //
+    // expect(invalidWebpFiles).toEqual([]);
+  });
 
   it("keeps every local Markdown image reference on an existing WebP or SVG asset", async () => {
     const files = await collectFiles(PUBLIC_ROOT);

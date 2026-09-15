@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:natural-resource-warehouse-link",
+  "version": "fixture-v1",
+  "name": "natural-resource-warehouse-link",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "e2e-natural-resource-unloader": {
+      "id": "e2e-natural-resource-unloader",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 51,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": false
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "e2e-natural-resource-unloader"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:e2e-natural-resource-unloader:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "e2e-natural-resource-unloader",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-regional-outlet-log_connector",
+  "version": "fixture-v1",
+  "name": "regional-outlet-log_connector",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "unloader": {
+      "id": "unloader",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 51,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "target": {
+      "id": "target",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 52,
+        "y": 35
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "unloader",
+    "target"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:unloader:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "unloader",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

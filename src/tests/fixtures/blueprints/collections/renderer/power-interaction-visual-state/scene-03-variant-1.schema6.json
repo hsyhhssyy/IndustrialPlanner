@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/renderer/power-interaction-visual-state.test.ts:scene-03:1",
+  "version": "fixture-v1",
+  "name": "power-interaction-visual-state scene-03",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "storage-preview": {
+      "id": "storage-preview",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": [],
+      "originalEntityId": "storage-preview"
+    }
+  },
+  "entityOrder": [
+    "power",
+    "storage-preview"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

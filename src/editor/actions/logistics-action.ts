@@ -847,9 +847,18 @@ function rebuildLogisticsDraft(options: {
     autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
   });
 
-  const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
-  let invalidatedByExtendingConverger = false;
-  let effectiveInvalidReason = resolveInvalidReason({
+  // AI-REMOVED 2026-09-15:
+  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
+  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
+  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
+  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
+  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
+  // Human Review: Required
+  //
+  // Original code:
+  // const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
+  // let invalidatedByExtendingConverger = false;
+  const effectiveInvalidReason = resolveInvalidReason({
     context: options.context,
     kind: options.kind,
     cells,
@@ -859,45 +868,57 @@ function rebuildLogisticsDraft(options: {
     allowEmptyTarget: options.allowEmptyTarget,
   }) ?? autoDraftPlan.invalidReason;
 
-  // 2026-05-23: 之前 rebuild 在终点处已形成汇流器虚影（替换了原物流段），
-  // 本次延伸使得该 cell 不再是终点 → 禁止，防止汇流器被悄悄改写为桥接器。
-  if (
-    prevConvergerGridKey !== null
-    && effectiveInvalidReason === null
-  ) {
-    const prevConvergerCellIndex = cells.findIndex(
-      (cell) => gridPointKey(cell.gridPoint) === prevConvergerGridKey,
-    );
-    if (prevConvergerCellIndex >= 0 && prevConvergerCellIndex < cells.length - 1) {
-      effectiveInvalidReason = "unknown";
-      invalidatedByExtendingConverger = true;
-    }
-  }
+  // AI-REMOVED 2026-09-15:
+  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
+  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
+  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
+  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
+  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
+  // Human Review: Required
+  //
+  // Original code:
+  // // 2026-05-23: 之前 rebuild 在终点处已形成汇流器虚影（替换了原物流段），
+  // // 本次延伸使得该 cell 不再是终点 → 禁止，防止汇流器被悄悄改写为桥接器。
+  // if (
+  //   prevConvergerGridKey !== null
+  //   && effectiveInvalidReason === null
+  // ) {
+  //   const prevConvergerCellIndex = cells.findIndex(
+  //     (cell) => gridPointKey(cell.gridPoint) === prevConvergerGridKey,
+  //   );
+  //   if (prevConvergerCellIndex >= 0 && prevConvergerCellIndex < cells.length - 1) {
+  //     effectiveInvalidReason = "unknown";
+  //     invalidatedByExtendingConverger = true;
+  //   }
+  // }
+  //
+  // const canApply = effectiveInvalidReason === null;
+  // // AI-CORRECTION 2026-06-19:
+  // // 从既有汇流器终点继续延伸而被拦截时，不得保留本轮重新规划出的汇流器虚影。
+  // const effectiveCellOverridesByGridKey = invalidatedByExtendingConverger
+  //   ? new Map<string, AutoDraftCellOverride>()
+  //   : autoDraftPlan.cellOverridesByGridKey;
+  //
+  // // 记录本次自动创建的汇流器（含实体替换）所在 cell，供下一帧检测延伸。
+  // let nextConvergerGridKey: string | null = null;
+  // for (const [key, override] of effectiveCellOverridesByGridKey) {
+  //   if (
+  //     override.definitionId.endsWith("_converger")
+  //     && autoDraftPlan.replacingEntityIds.length > 0
+  //   ) {
+  //     nextConvergerGridKey = key;
+  //     break;
+  //   }
+  // }
+  // options.context.state.internalTransientState.convergerEntityGridKey = nextConvergerGridKey;
 
+  // AI-CORRECTION 2026-09-15: 上述历史拦截已删除；每次预览直接采用当前拓扑与路径的校验、设备替换结果。
   const canApply = effectiveInvalidReason === null;
-  // AI-CORRECTION 2026-06-19:
-  // 从既有汇流器终点继续延伸而被拦截时，不得保留本轮重新规划出的汇流器虚影。
-  const effectiveCellOverridesByGridKey = invalidatedByExtendingConverger
-    ? new Map<string, AutoDraftCellOverride>()
-    : autoDraftPlan.cellOverridesByGridKey;
-
-  // 记录本次自动创建的汇流器（含实体替换）所在 cell，供下一帧检测延伸。
-  let nextConvergerGridKey: string | null = null;
-  for (const [key, override] of effectiveCellOverridesByGridKey) {
-    if (
-      override.definitionId.endsWith("_converger")
-      && autoDraftPlan.replacingEntityIds.length > 0
-    ) {
-      nextConvergerGridKey = key;
-      break;
-    }
-  }
-  options.context.state.internalTransientState.convergerEntityGridKey = nextConvergerGridKey;
   const draftBuildResult = createDraftEntities({
     context: options.context,
     kind: options.kind,
     cells,
-    cellOverridesByGridKey: effectiveCellOverridesByGridKey,
+    cellOverridesByGridKey: autoDraftPlan.cellOverridesByGridKey,
     currentDocument,
     previousPreviewDrafts,
     previousPreviewDraftIds,
@@ -1333,7 +1354,16 @@ function clearLogisticsDraftState(context: LogisticsActionContext | EditorAction
   context.state.internalTransientState.logisticsDraft = null;
   context.state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
   context.state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
-  context.state.internalTransientState.convergerEntityGridKey = null;
+  // AI-REMOVED 2026-09-15:
+  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
+  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
+  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
+  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
+  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
+  // Human Review: Required
+  //
+  // Original code:
+  // context.state.internalTransientState.convergerEntityGridKey = null;
   syncPlacementValidationState({
     document: context.document.getSnapshot(),
     state: context.state,

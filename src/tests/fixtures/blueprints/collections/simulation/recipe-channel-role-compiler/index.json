@@ -1,0 +1,265 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/recipe-channel-role-compiler.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {
+          "definition": {
+            "id": "test_channel_role_input_only",
+            "nameKey": "test_channel_role_input_only.name",
+            "spriteId": "test_channel_role_input_only",
+            "iconPath": "device-icons/test_channel_role_input_only.webp",
+            "footprint": {
+              "width": 1,
+              "height": 1
+            },
+            "uiGroup": "hidden",
+            "displayOrder": 10000,
+            "tags": [],
+            "requiresPower": false,
+            "powerDemand": 0,
+            "inspectors": [],
+            "placementBehaviors": [],
+            "portGroups": [
+              {
+                "id": "item_port",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "port_1",
+                    "localCellX": 0,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              }
+            ],
+            "storageSlotGroups": [
+              {
+                "id": "buffer",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 10,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ]
+              }
+            ],
+            "recipeChannels": [
+              {
+                "id": "default",
+                "ingredientStorageGroupIds": [
+                  "buffer"
+                ],
+                "productStorageGroupIds": [
+                  "buffer"
+                ]
+              }
+            ],
+            "portStorageBindings": [
+              {
+                "id": "bind_item_port",
+                "portGroupId": "item_port",
+                "storageSlotGroupId": "buffer"
+              }
+            ]
+          }
+        },
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definition": {
+            "id": "test_channel_role_output_only",
+            "nameKey": "test_channel_role_output_only.name",
+            "spriteId": "test_channel_role_output_only",
+            "iconPath": "device-icons/test_channel_role_output_only.webp",
+            "footprint": {
+              "width": 1,
+              "height": 1
+            },
+            "uiGroup": "hidden",
+            "displayOrder": 10000,
+            "tags": [],
+            "requiresPower": false,
+            "powerDemand": 0,
+            "inspectors": [],
+            "placementBehaviors": [],
+            "portGroups": [
+              {
+                "id": "item_port",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "port_1",
+                    "localCellX": 0,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              }
+            ],
+            "storageSlotGroups": [
+              {
+                "id": "buffer",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 10,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ]
+              }
+            ],
+            "recipeChannels": [
+              {
+                "id": "default",
+                "ingredientStorageGroupIds": [
+                  "buffer"
+                ],
+                "productStorageGroupIds": [
+                  "buffer"
+                ]
+              }
+            ],
+            "portStorageBindings": [
+              {
+                "id": "bind_item_port",
+                "portGroupId": "item_port",
+                "storageSlotGroupId": "buffer"
+              }
+            ]
+          }
+        },
+        "file": "scene-01-variant-2.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definition": {
+            "id": "test_channel_role_bidirectional",
+            "nameKey": "test_channel_role_bidirectional.name",
+            "spriteId": "test_channel_role_bidirectional",
+            "iconPath": "device-icons/test_channel_role_bidirectional.webp",
+            "footprint": {
+              "width": 1,
+              "height": 1
+            },
+            "uiGroup": "hidden",
+            "displayOrder": 10000,
+            "tags": [],
+            "requiresPower": false,
+            "powerDemand": 0,
+            "inspectors": [],
+            "placementBehaviors": [],
+            "portGroups": [
+              {
+                "id": "item_port",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "bidirectional",
+                "ports": [
+                  {
+                    "id": "port_1",
+                    "localCellX": 0,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              }
+            ],
+            "storageSlotGroups": [
+              {
+                "id": "buffer",
+                "kind": 1,
+                "splitLinkType": "share-cap",
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 10,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ]
+              }
+            ],
+            "recipeChannels": [
+              {
+                "id": "default",
+                "ingredientStorageGroupIds": [
+                  "buffer"
+                ],
+                "productStorageGroupIds": [
+                  "buffer"
+                ]
+              }
+            ],
+            "portStorageBindings": [
+              {
+                "id": "bind_item_port",
+                "portGroupId": "item_port",
+                "storageSlotGroupId": "buffer"
+              }
+            ]
+          }
+        },
+        "file": "scene-01-variant-3.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

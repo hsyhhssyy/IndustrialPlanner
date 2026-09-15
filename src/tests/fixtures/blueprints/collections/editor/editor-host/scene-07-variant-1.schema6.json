@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/editor/editor-host.test.ts:scene-07:1",
+  "version": "fixture-v1",
+  "name": "editor-host scene-07",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "draft-only": {
+      "id": "draft-only",
+      "originalEntityId": "draft-only",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dummy-entity-1": {
+      "id": "dummy-entity-1",
+      "originalEntityId": "dummy-entity-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": [
+        "draft-shadow"
+      ]
+    }
+  },
+  "entityOrder": [
+    "draft-only",
+    "dummy-entity-1"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,18 +1,45 @@
+import { loadBlueprintVariantFromFile, loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findSlot,
-  getDevice,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findSlot,
+//   getDevice,
+// } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createEntity, findSlot, getDevice } from "./blueprint-test-helpers";
+import { findSlot, getDevice } from "./blueprint-test-helpers";
 
-const XIRANITE_IN_INERT_GAS_RECIPE_ID =
-  "xiranite_oven_xiranite_powder_2";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const XIRANITE_IN_INERT_GAS_RECIPE_ID =
+//   "xiranite_oven_xiranite_powder_2";
 
 describe("gas diffusion simulation", () => {
   it("starts all five gas recipes from a full buffer and blocks a sixth gas", async () => {
@@ -124,37 +151,63 @@ function createPrefilledGasDiffusionBlueprint(
   gasCount: number,
   includeCoveredOven: boolean,
 ): BlueprintDocument {
-  const coveredOven = createEntity("xiranite-oven", "xiranite_oven_1", 2, 0, 0, {
-      channelRecipes: {
-        default: XIRANITE_IN_INERT_GAS_RECIPE_ID,
-      },
-      "storageSlotGroups[0].slots[0].initialItemType": "item_carbon_mtl",
-      "storageSlotGroups[0].slots[0].initialCount": 20,
-      "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[1].slots[0].initialCount": 20,
-    });
-  return createBlueprint(name, [
-    ...(includeCoveredOven ? [coveredOven] : []),
-    createEntity("gas-diffuser", "vaporizer_1", 0, 0, 180, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
-      "storageSlotGroups[0].slots[0].initialCount": gasCount,
-    }),
-    createEntity("power", "power_diffuser_1", 3, 5),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // const coveredOven = createEntity("xiranite-oven", "xiranite_oven_1", 2, 0, 0, {
+  //       channelRecipes: {
+  //         default: XIRANITE_IN_INERT_GAS_RECIPE_ID,
+  //       },
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_carbon_mtl",
+  //       "storageSlotGroups[0].slots[0].initialCount": 20,
+  //       "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
+  //       "storageSlotGroups[1].slots[0].initialCount": 20,
+  //     });
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(name, [
+  //     ...(includeCoveredOven ? [coveredOven] : []),
+  //     createEntity("gas-diffuser", "vaporizer_1", 0, 0, 180, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+  //       "storageSlotGroups[0].slots[0].initialCount": gasCount,
+  //     }),
+  //     createEntity("power", "power_diffuser_1", 3, 5),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json", "scene-01", { gasCount, includeCoveredOven, name });
 }
 
 function createConvergerLockBlueprint(): BlueprintDocument {
-  return createBlueprint("gas-liquid-converger-lock", [
-    createEntity("gas-source", "gas_storager_1", 1, -1, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
-      "storageSlotGroups[0].slots[0].initialCount": 2,
-    }),
-    createEntity("liquid-source", "liquid_storager_1", -4, -1, 180, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[0].slots[0].initialCount": 2,
-    }),
-    createEntity("liquid-delay-pipe", "pipe_straight_1x1", -1, 0),
-    createEntity("converger", "pipe_converger", 0, 0),
-    createEntity("locked-pipe", "pipe_straight_1x1", 0, 1, 90),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("gas-liquid-converger-lock", [
+  //     createEntity("gas-source", "gas_storager_1", 1, -1, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+  //       "storageSlotGroups[0].slots[0].initialCount": 2,
+  //     }),
+  //     createEntity("liquid-source", "liquid_storager_1", -4, -1, 180, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+  //       "storageSlotGroups[0].slots[0].initialCount": 2,
+  //     }),
+  //     createEntity("liquid-delay-pipe", "pipe_straight_1x1", -1, 0),
+  //     createEntity("converger", "pipe_converger", 0, 0),
+  //     createEntity("locked-pipe", "pipe_straight_1x1", 0, 1, 90),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-02-gas-liquid-converger-lock-cd7b20bb.schema6.json");
 }

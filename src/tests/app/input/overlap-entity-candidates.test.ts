@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -6,8 +7,26 @@ import { resolveOverlappingEntityCandidatesAtClientPoint } from "@/app/input/ges
 
 describe("overlap entity candidates logistics suppression", () => {
   it("skips a suppressed pipe admission and exposes the overlapping belt", () => {
-    const belt = createEntity("belt", "belt_straight_1x1");
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/overlap-entity-candidates/index.json
+    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/index.json。
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const belt = createEntity("belt", "belt_straight_1x1");
     const pipeAdmission = createEntity("pipe-admission", "pipe_admission");
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // [belt, pipeAdmission]
     const editor = {
       state: {
         suppressBelts: false,
@@ -15,7 +34,7 @@ describe("overlap entity candidates logistics suppression", () => {
       },
       queries: {
         findGridCellForClientPixelPoint: () => ({ x: 5, y: 5 }),
-        listEntities: () => [belt, pipeAdmission],
+        listEntities: () => getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/scene-01-variant-1.schema6.json")),
       },
     };
     const appHost = {

@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-blocked-fanout",
+  "version": "fixture-v1",
+  "name": "blocked-fanout",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source-storage": {
+      "id": "source-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "belt-source": {
+      "id": "belt-source",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "splitter": {
+      "id": "splitter",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 0,
+        "y": -1
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "belt-blocked": {
+      "id": "belt-blocked",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -2
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "blocked-storage": {
+      "id": "blocked-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": -5
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[2].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[2].slots[0].initialCount": 50,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[3].slots[0].initialCount": 50,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[4].slots[0].initialCount": 50,
+        "storageSlotGroups[5].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[5].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "belt-open": {
+      "id": "belt-open",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": -1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "open-storage": {
+      "id": "open-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 2,
+        "y": -1
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source-storage",
+    "belt-source",
+    "splitter",
+    "belt-blocked",
+    "blocked-storage",
+    "belt-open",
+    "open-storage"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

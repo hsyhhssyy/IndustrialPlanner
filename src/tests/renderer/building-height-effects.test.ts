@@ -217,11 +217,36 @@ describe('建筑高度与端口特效', () => {
   });
 
   it('发布高度字节按坐标契约逐行转换，所有数值文件及颜色页存在', async () => {
-    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
-    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
-    const receipt = JSON.parse(await readFile(path.join(collection.sourceSite.root, '_import/publish-receipt.json'), 'utf8')) as {
-      products: { path: string; sha256: string; retained?: boolean }[];
+    interface SourceSiteReference {
+      readonly root: string;
+    }
+    interface PublishReceiptProduct {
+      readonly path: string;
+      readonly sha256: string;
+      readonly retained?: boolean;
+    }
+    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8')) as {
+      readonly sourceSite: SourceSiteReference;
+      readonly entries: readonly {
+        readonly sourceMetadata: { readonly sourceSite: SourceSiteReference };
+      }[];
     };
+    const logisticsManifest = JSON.parse(
+      await readFile('public/3d-top-view/logistics/baked/manifest.json', 'utf8'),
+    ) as { readonly sourceSite: SourceSiteReference };
+    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
+    const declaredSourceSites = [...new Map([
+      collection.sourceSite,
+      ...collection.entries.map((entry) => entry.sourceMetadata.sourceSite),
+      logisticsManifest.sourceSite,
+    ].map((sourceSite) => [sourceSite.root, sourceSite])).values()];
+    const publications = await Promise.all(declaredSourceSites.map(async (sourceSite) => ({
+      sourceSite,
+      products: (JSON.parse(await readFile(
+        path.join(sourceSite.root, '_import/publish-receipt.json'),
+        'utf8',
+      )) as { readonly products: readonly PublishReceiptProduct[] }).products,
+    })));
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
     for (const view of Object.values(manifest.views)) for (const field of Object.values(view.fields)) {
       fields.set(field.file, { field, reflected: view.coordinateSpace === 'project-reflected-source' });
@@ -231,15 +256,31 @@ describe('建筑高度与端口特效', () => {
       for (const page of resource.pages) expect((await readFile(`public/3d-top-view/port-effects/${page.file}`)).length).toBeGreaterThan(0);
     }
     for (const { field, reflected } of fields.values()) {
-      const retained = receipt.products.find((product) => product.retained && product.path === `public/3d-top-view/port-effects/${field.file}`);
-      if (retained) {
-        const bytes = await readFile(retained.path);
-        expect(createHash('sha256').update(bytes).digest('hex'), field.file).toBe(retained.sha256);
-        expect(gunzipSync(bytes).length).toBe(field.width * field.height * 4);
+      const productPath = `public/3d-top-view/port-effects/${field.file}`;
+      const matchingPublications = publications.flatMap(({ sourceSite, products }) =>
+        products
+          .filter((product) => product.path === productPath)
+          .map((product) => ({ sourceSite, product })),
+      );
+      const authoredPublications = matchingPublications.filter(({ product }) => product.retained !== true);
+      const compressed = await readFile(productPath);
+      const publishedSha256 = createHash('sha256').update(compressed).digest('hex');
+      if (authoredPublications.length === 0) {
+        expect(matchingPublications.length, `${field.file} has no declared publication receipt`)
+          .toBeGreaterThan(0);
+        expect(matchingPublications.every(({ product }) =>
+          product.retained === true && product.sha256 === publishedSha256), field.file).toBe(true);
+        expect(gunzipSync(compressed).length).toBe(field.width * field.height * 4);
         continue;
       }
-      const delivered = gunzipSync(await readFile(`public/3d-top-view/port-effects/${field.file}`));
-      const { data: original, info } = await sharp(path.join(collection.sourceSite.root, field.file.replace(/\.rgba\.bin$/, '')))
+      expect(authoredPublications, `${field.file} must have exactly one authoring source`).toHaveLength(1);
+      const authoredPublication = authoredPublications[0]!;
+      expect(publishedSha256, field.file).toBe(authoredPublication.product.sha256);
+      const delivered = gunzipSync(compressed);
+      const { data: original, info } = await sharp(path.join(
+        authoredPublication.sourceSite.root,
+        field.file.replace(/\.rgba\.bin$/, ''),
+      ))
         .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const expected = Buffer.alloc(field.width * field.height * 4);
       const rowBytes = field.width * 4;

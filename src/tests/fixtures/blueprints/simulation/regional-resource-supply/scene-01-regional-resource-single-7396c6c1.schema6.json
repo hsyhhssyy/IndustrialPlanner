@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-regional-resource-single",
+  "version": "fixture-v1",
+  "name": "regional-resource-single",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {},
+  "entityOrder": [],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

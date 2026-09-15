@@ -1,12 +1,21 @@
+import { loadBlueprintFromFile, loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
-import {
-  createBlueprint,
-  createEntity,
-  createWarehouseSlotLink,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWarehouseSlotLink,
+// } from "./blueprint-test-helpers";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
@@ -22,12 +31,21 @@ import type {
 describe("区域仓库出口表与仲裁器", () => {
   it("识别合法 unloader → belt 仓库出口", () => {
     const registry = createRegistryContract();
-    const document = createWorldDocumentFromBlueprint(createBlueprint("regional-outlet-legal", [
-      createEntity("unloader", "unloader_1", 51, 34, 270),
-      createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
-    ], [
-      createWarehouseSlotLink("unloader", "item_copper_ore"),
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("regional-outlet-legal", [
+    //       createEntity("unloader", "unloader_1", 51, 34, 270),
+    //       createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
+    //     ], [
+    //       createWarehouseSlotLink("unloader", "item_copper_ore"),
+    //     ])
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-01-regional-outlet-legal-1739201e.schema6.json"));
     const topology = compileSimulationTopology({
       document,
       registry,
@@ -65,15 +83,32 @@ describe("区域仓库出口表与仲裁器", () => {
     itemId,
   ) => {
     const registry = createRegistryContract();
-    const isPipe = sourceDefinitionId === "udpipe_unloader_1";
-    const document = createWorldDocumentFromBlueprint(createBlueprint(
-      `regional-outlet-${targetDefinitionId}`,
-      [
-        createEntity("unloader", sourceDefinitionId, isPipe ? 0 : 51, isPipe ? 0 : 34, isPipe ? 180 : 270),
-        createEntity("target", targetDefinitionId, targetX, targetY, targetRotation),
-      ],
-      [createWarehouseSlotLink("unloader", itemId)],
-    ));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const isPipe = sourceDefinitionId === "udpipe_unloader_1";
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint(
+    //       `regional-outlet-${targetDefinitionId}`,
+    //       [
+    //         createEntity("unloader", sourceDefinitionId, isPipe ? 0 : 51, isPipe ? 0 : 34, isPipe ? 180 : 270),
+    //         createEntity("target", targetDefinitionId, targetX, targetY, targetRotation),
+    //       ],
+    //       [createWarehouseSlotLink("unloader", itemId)],
+    //     )
+    const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/index.json", "scene-02", { _label, itemId, sourceDefinitionId, targetDefinitionId, targetRotation, targetX, targetY }));
     const topology = compileSimulationTopology({
       document,
       registry,

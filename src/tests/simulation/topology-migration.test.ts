@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile, loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
@@ -11,11 +12,20 @@ import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { createSimulationTopologyMigration } from "@/simulation/topology/migration";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createRegistryContract } from "@/registry";
-import {
-  createBlueprint,
-  createEntity,
-  findSlot,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/topology-migration/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findSlot,
+// } from "./blueprint-test-helpers";
+import { findSlot } from "./blueprint-test-helpers";
 
 function createGrinderBlueprint(
   name: string,
@@ -23,39 +33,57 @@ function createGrinderBlueprint(
   initialItemType: string,
   initialCount: number,
 ): BlueprintDocument {
-  return createBlueprint(name, [
-    createEntity("grinder", "grinder_1", position.x, position.y, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": initialItemType,
-      "storageSlotGroups[0].slots[0].initialCount": initialCount,
-    }),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/topology-migration/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(name, [
+  //     createEntity("grinder", "grinder_1", position.x, position.y, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": initialItemType,
+  //       "storageSlotGroups[0].slots[0].initialCount": initialCount,
+  //     }),
+  //   ])
+  return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/topology-migration/index.json", "scene-01", { initialCount, initialItemType, name, position });
 }
 
 function createLinkedGrinderBlueprint(): BlueprintDocument {
-  return createBlueprint(
-    "linked-grinder",
-    [
-      createEntity("grinder", "grinder_1", 0, 0, 0, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-        "storageSlotGroups[0].slots[0].initialCount": 1,
-      }),
-      createEntity("storage", "storager_1", 5, 0),
-    ],
-    [{
-      id: "storage-to-grinder",
-      linkType: "share-cap",
-      source: {
-        entityId: "storage",
-        storageSlotGroupId: "storage_slot_1",
-        slotId: "slot_1",
-      },
-      target: {
-        entityId: "grinder",
-        storageSlotGroupId: "item_input_buffer",
-        slotId: "input_slot_1",
-      },
-    }],
-  );
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/topology-migration/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(
+  //     "linked-grinder",
+  //     [
+  //       createEntity("grinder", "grinder_1", 0, 0, 0, {
+  //         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+  //         "storageSlotGroups[0].slots[0].initialCount": 1,
+  //       }),
+  //       createEntity("storage", "storager_1", 5, 0),
+  //     ],
+  //     [{
+  //       id: "storage-to-grinder",
+  //       linkType: "share-cap",
+  //       source: {
+  //         entityId: "storage",
+  //         storageSlotGroupId: "storage_slot_1",
+  //         slotId: "slot_1",
+  //       },
+  //       target: {
+  //         entityId: "grinder",
+  //         storageSlotGroupId: "item_input_buffer",
+  //         slotId: "input_slot_1",
+  //       },
+  //     }],
+  //   )
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/topology-migration/scene-02-linked-grinder-aa285dd5.schema6.json");
 }
 
 describe("REQ-076: topology migration", () => {

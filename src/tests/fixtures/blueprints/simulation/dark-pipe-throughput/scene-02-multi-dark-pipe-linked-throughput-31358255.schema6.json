@@ -1,0 +1,404 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-multi-dark-pipe-linked-throughput",
+  "version": "fixture-v1",
+  "name": "multi-dark-pipe-linked-throughput",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_2",
+      "position": {
+        "x": 7,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_2",
+      "position": {
+        "x": 7,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "source-1": {
+      "id": "source-1",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 9,
+        "y": 28
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 500
+      },
+      "tags": []
+    },
+    "source-2": {
+      "id": "source-2",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 6,
+        "y": 28
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 500
+      },
+      "tags": []
+    },
+    "sink-1": {
+      "id": "sink-1",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 0,
+        "y": 16
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "sink-2": {
+      "id": "sink-2",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 0,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-turn-1": {
+      "id": "output-turn-1",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 8,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-1a": {
+      "id": "output-pipe-1a",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-1b": {
+      "id": "output-pipe-1b",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-1c": {
+      "id": "output-pipe-1c",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-1d": {
+      "id": "output-pipe-1d",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-turn-2": {
+      "id": "output-turn-2",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-1e": {
+      "id": "output-pipe-1e",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 19
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "output-turn-3": {
+      "id": "output-turn-3",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 3,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2a": {
+      "id": "output-pipe-2a",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "output-turn-4": {
+      "id": "output-turn-4",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 10,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2b": {
+      "id": "output-pipe-2b",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2c": {
+      "id": "output-pipe-2c",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2d": {
+      "id": "output-pipe-2d",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2e": {
+      "id": "output-pipe-2e",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2f": {
+      "id": "output-pipe-2f",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2g": {
+      "id": "output-pipe-2g",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe-2h": {
+      "id": "output-pipe-2h",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 17
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "input-pipe-1": {
+      "id": "input-pipe-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "input-turn-1": {
+      "id": "input-turn-1",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 7,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "input-turn-2": {
+      "id": "input-turn-2",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 8,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "input-meter-1": {
+      "id": "input-meter-1",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 8,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_liquid_xiranite",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "input-meter-2": {
+      "id": "input-meter-2",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 10,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_liquid_xiranite",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "outlet",
+    "inlet",
+    "source-1",
+    "source-2",
+    "sink-1",
+    "sink-2",
+    "output-turn-1",
+    "output-pipe-1a",
+    "output-pipe-1b",
+    "output-pipe-1c",
+    "output-pipe-1d",
+    "output-turn-2",
+    "output-pipe-1e",
+    "output-turn-3",
+    "output-pipe-2a",
+    "output-turn-4",
+    "output-pipe-2b",
+    "output-pipe-2c",
+    "output-pipe-2d",
+    "output-pipe-2e",
+    "output-pipe-2f",
+    "output-pipe-2g",
+    "output-pipe-2h",
+    "input-pipe-1",
+    "input-turn-1",
+    "input-turn-2",
+    "input-meter-1",
+    "input-meter-2"
+  ],
+  "slotLinks": [
+    {
+      "id": "dark-pipe-link:outlet:inlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "outlet",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "inlet",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

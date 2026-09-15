@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/regional-long-run.test.ts",
+  "migratedAt": "2026-09-14",
+  "sourceSchemaVersion": 5,
+  "sourceNote": "旧动态夹具使用校准前世界布局；统一按生产 schema 5→6 规则迁移，取代局部旋转补偿。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-region-long-consumer-2d13761d.schema6.json",
+        "blueprintId": "req-076-region-long-consumer",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-region-long-producer-9372c5d2.schema6.json",
+        "blueprintId": "req-076-region-long-producer",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-synthetic-transmuter_1_gastrans",
+  "version": "fixture-v1",
+  "name": "synthetic-transmuter_1_gastrans",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "device": {
+      "id": "device",
+      "definitionId": "transmuter_1_gastrans",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "device"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "41bf5dc4-f741-45af-850a-0e81b583e219",
+  "version": "v1.3.0",
+  "name": "场景2",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 7,
+    "y": 4
+  },
+  "entities": {
+    "item_port_cmpt_mc_1:12": {
+      "id": "item_port_cmpt_mc_1:12",
+      "definitionId": "cmpt_mc_1",
+      "position": {
+        "x": 8,
+        "y": 3
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "item_port_liquid_furnance_1:9": {
+      "id": "item_port_liquid_furnance_1:9",
+      "definitionId": "furnance_1_liquid",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:414:0": {
+      "id": "logistics-draft:belt:414:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 3
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:415:1": {
+      "id": "logistics-draft:belt:415:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 3
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:416:2": {
+      "id": "logistics-draft:belt:416:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 3
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:426:0": {
+      "id": "logistics-draft:belt:426:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 4
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:427:1": {
+      "id": "logistics-draft:belt:427:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:428:2": {
+      "id": "logistics-draft:belt:428:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:445:0": {
+      "id": "logistics-draft:belt:445:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:446:1": {
+      "id": "logistics-draft:belt:446:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:447:2": {
+      "id": "logistics-draft:belt:447:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "item_port_cmpt_mc_1:12",
+    "item_port_liquid_furnance_1:9",
+    "logistics-draft:belt:414:0",
+    "logistics-draft:belt:415:1",
+    "logistics-draft:belt:416:2",
+    "logistics-draft:belt:426:0",
+    "logistics-draft:belt:427:1",
+    "logistics-draft:belt:428:2",
+    "logistics-draft:belt:445:0",
+    "logistics-draft:belt:446:1",
+    "logistics-draft:belt:447:2"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-06-19T13:28:08.212Z",
+  "updatedAt": "2026-06-19T13:28:08.212Z"
+}
+

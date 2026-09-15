@@ -1,15 +1,25 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findSlot,
-  getFirstTickAtSimulationMilliseconds,
-  getDevice,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findSlot,
+//   getFirstTickAtSimulationMilliseconds,
+//   getDevice,
+// } from "./blueprint-test-helpers";
+import { findSlot, getFirstTickAtSimulationMilliseconds, getDevice } from "./blueprint-test-helpers";
 // AI-REMOVED 2026-09-08:
 // Reason: 桥接运输事件改由整数毫秒定位，不再直接按引擎 tick 编号读取。
 // Trigger: bridge-direction 接入 Host 行为矩阵。
@@ -50,32 +60,41 @@ import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 // =============================================================================
 
 function createBridgeDirectionBlueprint(): BlueprintDocument {
-  return createBlueprint("bridge-direction-verify", [
-    // === NS 通道：铁矿石 S→N ===
-    createEntity("source-ns", "storager_1", 0, 3, 0, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-      "storageSlotGroups[0].slots[0].initialCount": 20,
-    }),
-    // belt rot 270: W→E 旋转为 S→N，源在上 belt 在下
-    createEntity("belt_ns_in", "belt_straight_1x1", 0, 2, 270),
-    createEntity("bridge", "log_connector", 0, 1, 0),
-    createEntity("belt_ns_out", "belt_straight_1x1", 0, 0, 270),
-    // sink 在 belt 下方：belt 输出 N 在 (0,-1)，sink 输入 S 在 (0,-1+2)=(0,1)
-    // 修正：sink 需在 (0,-3) 使 in_s 的 inside=(0,-1)
-    createEntity("sink-ns", "storager_1", 0, -3, 0),
-
-    // === EW 通道：铜矿石 W→E ===
-    // source rot 90: out_n→E, 输出在 outside(-1,1)
-    createEntity("source-ew", "storager_1", -4, 1, 90, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
-      "storageSlotGroups[0].slots[0].initialCount": 20,
-    }),
-    createEntity("belt_ew_in", "belt_straight_1x1", -1, 1, 0),
-    // bridge 同上 (0,1)
-    createEntity("belt_ew_out", "belt_straight_1x1", 1, 1, 0),
-    // sink rot 90: in_s→W, 接收 belt 的 E 输出
-    createEntity("sink-ew", "storager_1", 2, 1, 90),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("bridge-direction-verify", [
+  //     // === NS 通道：铁矿石 S→N ===
+  //     createEntity("source-ns", "storager_1", 0, 3, 0, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+  //       "storageSlotGroups[0].slots[0].initialCount": 20,
+  //     }),
+  //     // belt rot 270: W→E 旋转为 S→N，源在上 belt 在下
+  //     createEntity("belt_ns_in", "belt_straight_1x1", 0, 2, 270),
+  //     createEntity("bridge", "log_connector", 0, 1, 0),
+  //     createEntity("belt_ns_out", "belt_straight_1x1", 0, 0, 270),
+  //     // sink 在 belt 下方：belt 输出 N 在 (0,-1)，sink 输入 S 在 (0,-1+2)=(0,1)
+  //     // 修正：sink 需在 (0,-3) 使 in_s 的 inside=(0,-1)
+  //     createEntity("sink-ns", "storager_1", 0, -3, 0),
+  //
+  //     // === EW 通道：铜矿石 W→E ===
+  //     // source rot 90: out_n→E, 输出在 outside(-1,1)
+  //     createEntity("source-ew", "storager_1", -4, 1, 90, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+  //       "storageSlotGroups[0].slots[0].initialCount": 20,
+  //     }),
+  //     createEntity("belt_ew_in", "belt_straight_1x1", -1, 1, 0),
+  //     // bridge 同上 (0,1)
+  //     createEntity("belt_ew_out", "belt_straight_1x1", 1, 1, 0),
+  //     // sink rot 90: in_s→W, 接收 belt 的 E 输出
+  //     createEntity("sink-ew", "storager_1", 2, 1, 90),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema6.json");
 }
 
 // AI-REMOVED 2026-09-08:
@@ -257,16 +276,25 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
 // =============================================================================
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
-  return createBlueprint("pipe-bridge-direction-verify", [
-    createEntity("liquid-source-ew", "liquid_storager_1", -4, 0, 180, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[0].slots[0].initialCount": 2,
-    }),
-    createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
-    createEntity("pipe-bridge", "pipe_connector", 0, 1, 0),
-    createEntity("pipe_ew_out", "pipe_straight_1x1", 1, 1, 0),
-    createEntity("liquid-sink-ew", "liquid_storager_1", 2, 0, 180),
-  ]);
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint("pipe-bridge-direction-verify", [
+  //     createEntity("liquid-source-ew", "liquid_storager_1", -4, 0, 180, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+  //       "storageSlotGroups[0].slots[0].initialCount": 2,
+  //     }),
+  //     createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
+  //     createEntity("pipe-bridge", "pipe_connector", 0, 1, 0),
+  //     createEntity("pipe_ew_out", "pipe_straight_1x1", 1, 1, 0),
+  //     createEntity("liquid-sink-ew", "liquid_storager_1", 2, 0, 180),
+  //   ])
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-02-pipe-bridge-direction-verify-72c18fbb.schema6.json");
 }
 
 // AI-REMOVED 2026-09-08:

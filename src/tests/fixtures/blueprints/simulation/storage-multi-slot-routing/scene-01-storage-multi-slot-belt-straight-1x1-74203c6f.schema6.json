@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-storage-multi-slot-belt_straight_1x1",
+  "version": "fixture-v1",
+  "name": "storage-multi-slot-belt_straight_1x1",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "originium-source": {
+      "id": "originium-source",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 41,
+        "y": 25
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "iron-source": {
+      "id": "iron-source",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 45,
+        "y": 25
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "converger": {
+      "id": "converger",
+      "definitionId": "log_converger",
+      "position": {
+        "x": 44,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "right-entry": {
+      "id": "right-entry",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 46,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "right-turn": {
+      "id": "right-turn",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 46,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "right-feed": {
+      "id": "right-feed",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 45,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "left-entry": {
+      "id": "left-entry",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 42,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "left-turn": {
+      "id": "left-turn",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 42,
+        "y": 23
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "left-feed": {
+      "id": "left-feed",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 43,
+        "y": 23
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "final-hop": {
+      "id": "final-hop",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 44,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "sink-storage": {
+      "id": "sink-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 43,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "originium-source",
+    "iron-source",
+    "converger",
+    "right-entry",
+    "right-turn",
+    "right-feed",
+    "left-entry",
+    "left-turn",
+    "left-feed",
+    "final-hop",
+    "sink-storage"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:originium-source:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "originium-source",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_originium_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:iron-source:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "iron-source",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_iron_ore"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

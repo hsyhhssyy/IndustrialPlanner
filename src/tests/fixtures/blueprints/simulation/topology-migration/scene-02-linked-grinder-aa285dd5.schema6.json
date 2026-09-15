@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-linked-grinder",
+  "version": "fixture-v1",
+  "name": "linked-grinder",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "grinder": {
+      "id": "grinder",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "storage": {
+      "id": "storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "grinder",
+    "storage"
+  ],
+  "slotLinks": [
+    {
+      "id": "storage-to-grinder",
+      "linkType": "share-cap",
+      "source": {
+        "entityId": "storage",
+        "storageSlotGroupId": "storage_slot_1",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "grinder",
+        "storageSlotGroupId": "item_input_buffer",
+        "slotId": "input_slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

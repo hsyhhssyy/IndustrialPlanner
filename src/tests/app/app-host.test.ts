@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
@@ -2969,24 +2970,33 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
-    document.entities = {
-      target: {
-        id: "target",
-        definitionId: "belt_straight_1x1",
-        position: { x: 12, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-      successor: {
-        id: "successor",
-        definitionId: "belt_straight_1x1",
-        position: { x: 13, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-    };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //       target: {
+    //         id: "target",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 12, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //       successor: {
+    //         id: "successor",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 13, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //     }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json").entities;
     document.entityOrder = ["target", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3099,24 +3109,33 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
-    document.entities = {
-      source: {
-        id: "source",
-        definitionId: "belt_straight_1x1",
-        position: { x: 12, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-      successor: {
-        id: "successor",
-        definitionId: "belt_straight_1x1",
-        position: { x: 13, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-    };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //       source: {
+    //         id: "source",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 12, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //       successor: {
+    //         id: "successor",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 13, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //     }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema6.json").entities;
     document.entityOrder = ["source", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3169,32 +3188,41 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
-    document.entities = {
-      predecessor: {
-        id: "predecessor",
-        definitionId: "belt_straight_1x1",
-        position: { x: 11, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-      crossing: {
-        id: "crossing",
-        definitionId: "belt_straight_1x1",
-        position: { x: 12, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-      successor: {
-        id: "successor",
-        definitionId: "belt_straight_1x1",
-        position: { x: 13, y: 8 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-    };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //       predecessor: {
+    //         id: "predecessor",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 11, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //       crossing: {
+    //         id: "crossing",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 12, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //       successor: {
+    //         id: "successor",
+    //         definitionId: "belt_straight_1x1",
+    //         position: { x: 13, y: 8 },
+    //         rotation: 0,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //     }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema6.json").entities;
     document.entityOrder = ["predecessor", "crossing", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3589,18 +3617,27 @@ describe("createAppHost", () => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
     const document = createDummyWorldDocument();
-    document.entities = {
-      storage: {
-        id: "storage",
-        definitionId: "storager_1",
-        position: { x: 6, y: 6 },
-        // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
-        // output used by this fixed world-coordinate gesture fixture.
-        rotation: 180,
-        config: {},
-        tags: [],
-      },
-    };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //       storage: {
+    //         id: "storage",
+    //         definitionId: "storager_1",
+    //         position: { x: 6, y: 6 },
+    //         // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
+    //         // output used by this fixed world-coordinate gesture fixture.
+    //         rotation: 180,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //     }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-04-variant-1.schema6.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
 
@@ -3657,18 +3694,27 @@ describe("createAppHost", () => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
     const document = createDummyWorldDocument();
-    document.entities = {
-      storage: {
-        id: "storage",
-        definitionId: "storager_1",
-        position: { x: 6, y: 6 },
-        // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
-        // output used by this fixed world-coordinate gesture fixture.
-        rotation: 180,
-        config: {},
-        tags: [],
-      },
-    };
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //       storage: {
+    //         id: "storage",
+    //         definitionId: "storager_1",
+    //         position: { x: 6, y: 6 },
+    //         // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
+    //         // output used by this fixed world-coordinate gesture fixture.
+    //         rotation: 180,
+    //         config: {},
+    //         tags: [],
+    //       },
+    //     }
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-05-variant-1.schema6.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
 
@@ -4310,30 +4356,39 @@ function resolveClientPixelPointForGridCell(
 }
 
 function createTestBlueprintRecord() {
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // {
+  //         source: {
+  //           id: "source",
+  //           definitionId: "storager_1",
+  //           position: { x: 9, y: 9 },
+  //           rotation: 0,
+  //           config: {},
+  //           tags: [],
+  //         },
+  //         target: {
+  //           id: "target",
+  //           definitionId: "storager_1",
+  //           position: { x: 12, y: 9 },
+  //           rotation: 90,
+  //           config: {},
+  //           tags: [],
+  //         },
+  //       }
   return {
     ...createBlueprintDocument({
       name: "测试蓝图",
       description: "蓝图放置测试",
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 10, y: 10 },
-      entities: {
-        source: {
-          id: "source",
-          definitionId: "storager_1",
-          position: { x: 9, y: 9 },
-          rotation: 0,
-          config: {},
-          tags: [],
-        },
-        target: {
-          id: "target",
-          definitionId: "storager_1",
-          position: { x: 12, y: 9 },
-          rotation: 90,
-          config: {},
-          tags: [],
-        },
-      },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-06-variant-1.schema6.json").entities,
       entityOrder: ["source", "target"],
       slotLinks: [{
         id: "source-target-link",

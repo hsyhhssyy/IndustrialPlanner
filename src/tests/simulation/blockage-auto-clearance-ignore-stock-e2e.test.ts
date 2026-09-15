@@ -1,8 +1,18 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
+import { getDevice } from "./blueprint-test-helpers";
 
 /**
  * 端到端回归测试：扩容反应池自动清堵不应清除 ignoreStock=true 的槽位
@@ -24,8 +34,24 @@ import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpe
 describe("扩容反应池自动清堵 - ignoreStock 保护 (端到端复现 #26)", () => {
   const TICK_COUNT = 600;
 
-  const REACTOR_ID = "reactor";
-  const _SHARED_BUFFER = "shared_input_buffer";
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // const REACTOR_ID = "reactor";
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // const _SHARED_BUFFER = "shared_input_buffer";
   const REACTOR_DEVICE_KEY = "reactor";
 
   /** 用户设为无限的 4 种原料 */
@@ -47,45 +73,54 @@ describe("扩容反应池自动清堵 - ignoreStock 保护 (端到端复现 #26)
   it("不清除 ignoreStock=true 的槽位，产物不继承无限标记", async () => {
     const registry = createRegistryContract();
 
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("issue-26-e2e", [
+    //         createEntity(REACTOR_ID, "mix_pool_2", 0, 0, 0, {
+    //           // 手动指定 3 个频道的配方
+    //           channelRecipes: {
+    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+    //             ch2: "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large",
+    //             ch3: "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic_large",
+    //           },
+    //           // ──── 槽位 0: 水（无限）────
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+    //           "storageSlotGroups[0].slots[0].initialCount": 50,
+    //           "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //           // ──── 槽位 1: 污水（无限）────
+    //           "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_sewage",
+    //           "storageSlotGroups[0].slots[1].initialCount": 50,
+    //           "storageSlotGroups[0].slots[1].ignoreStock": true,
+    //           // ──── 槽位 2: 息壤粉末（无限）────
+    //           "storageSlotGroups[0].slots[2].initialItemType": "item_xiranite_powder",
+    //           "storageSlotGroups[0].slots[2].initialCount": 50,
+    //           "storageSlotGroups[0].slots[2].ignoreStock": true,
+    //           // ──── 槽位 3: 蓝铁粉末（无限）────
+    //           "storageSlotGroups[0].slots[3].initialItemType": "item_iron_powder",
+    //           "storageSlotGroups[0].slots[3].initialCount": 50,
+    //           "storageSlotGroups[0].slots[3].ignoreStock": true,
+    //           // ──── 槽位 4: 液化息壤（占位，让 ch2 可立即启动）────
+    //           "storageSlotGroups[0].slots[4].initialItemType": "item_liquid_xiranite",
+    //           "storageSlotGroups[0].slots[4].initialCount": 50,
+    //           // ──── 槽位 5: 壤晶废液（占位，让 ch3 可立即启动）────
+    //           "storageSlotGroups[0].slots[5].initialItemType": "item_liquid_xiranite_poly",
+    //           "storageSlotGroups[0].slots[5].initialCount": 50,
+    //           // ──── 槽位 6-7: 惰性壤晶废液（占位填满缓冲）────
+    //           "storageSlotGroups[0].slots[6].initialItemType": "item_liquid_xiranite_lowpoly",
+    //           "storageSlotGroups[0].slots[6].initialCount": 50,
+    //           "storageSlotGroups[0].slots[7].initialItemType": "item_liquid_xiranite_lowpoly",
+    //           "storageSlotGroups[0].slots[7].initialCount": 50,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("issue-26-e2e", [
-        createEntity(REACTOR_ID, "mix_pool_2", 0, 0, 0, {
-          // 手动指定 3 个频道的配方
-          channelRecipes: {
-            ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
-            ch2: "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large",
-            ch3: "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic_large",
-          },
-          // ──── 槽位 0: 水（无限）────
-          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-          "storageSlotGroups[0].slots[0].initialCount": 50,
-          "storageSlotGroups[0].slots[0].ignoreStock": true,
-          // ──── 槽位 1: 污水（无限）────
-          "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_sewage",
-          "storageSlotGroups[0].slots[1].initialCount": 50,
-          "storageSlotGroups[0].slots[1].ignoreStock": true,
-          // ──── 槽位 2: 息壤粉末（无限）────
-          "storageSlotGroups[0].slots[2].initialItemType": "item_xiranite_powder",
-          "storageSlotGroups[0].slots[2].initialCount": 50,
-          "storageSlotGroups[0].slots[2].ignoreStock": true,
-          // ──── 槽位 3: 蓝铁粉末（无限）────
-          "storageSlotGroups[0].slots[3].initialItemType": "item_iron_powder",
-          "storageSlotGroups[0].slots[3].initialCount": 50,
-          "storageSlotGroups[0].slots[3].ignoreStock": true,
-          // ──── 槽位 4: 液化息壤（占位，让 ch2 可立即启动）────
-          "storageSlotGroups[0].slots[4].initialItemType": "item_liquid_xiranite",
-          "storageSlotGroups[0].slots[4].initialCount": 50,
-          // ──── 槽位 5: 壤晶废液（占位，让 ch3 可立即启动）────
-          "storageSlotGroups[0].slots[5].initialItemType": "item_liquid_xiranite_poly",
-          "storageSlotGroups[0].slots[5].initialCount": 50,
-          // ──── 槽位 6-7: 惰性壤晶废液（占位填满缓冲）────
-          "storageSlotGroups[0].slots[6].initialItemType": "item_liquid_xiranite_lowpoly",
-          "storageSlotGroups[0].slots[6].initialCount": 50,
-          "storageSlotGroups[0].slots[7].initialItemType": "item_liquid_xiranite_lowpoly",
-          "storageSlotGroups[0].slots[7].initialCount": 50,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/scene-01-issue-26-e2e-c429d9a9.schema6.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-topology-add-dense-v2",
+  "version": "fixture-v1",
+  "name": "topology-add-dense-v2",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "pump": {
+      "id": "pump",
+      "definitionId": "water_pump_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "stable-storage": {
+      "id": "stable-storage",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pump",
+    "power",
+    "stable-storage"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

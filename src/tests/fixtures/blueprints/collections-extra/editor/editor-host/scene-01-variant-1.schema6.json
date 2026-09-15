@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/editor/editor-host.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "editor-host scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "preview-mix-pool": {
+      "id": "preview-mix-pool",
+      "originalEntityId": "preview-mix-pool",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 20,
+        "y": 20
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "preview-furnace": {
+      "id": "preview-furnace",
+      "originalEntityId": "preview-furnace",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 30,
+        "y": 21
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "preview-belt": {
+      "id": "preview-belt",
+      "originalEntityId": "preview-belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 27,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "preview-hydro": {
+      "id": "preview-hydro",
+      "originalEntityId": "preview-hydro",
+      "definitionId": "planter_1_liquid",
+      "position": {
+        "x": 36,
+        "y": 25
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "preview-large-pool": {
+      "id": "preview-large-pool",
+      "originalEntityId": "preview-large-pool",
+      "definitionId": "mix_pool_2",
+      "position": {
+        "x": 42,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "preview-planter": {
+      "id": "preview-planter",
+      "originalEntityId": "preview-planter",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 20,
+        "y": 30
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "preview-mix-pool",
+    "preview-furnace",
+    "preview-belt",
+    "preview-hydro",
+    "preview-large-pool",
+    "preview-planter"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

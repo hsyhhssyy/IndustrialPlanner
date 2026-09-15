@@ -1,3 +1,5 @@
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
+import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,11 +18,20 @@ import {
   RECIPE_PHASE_DURATION_SECONDS,
 } from "@/simulation/contracts";
 
-import {
-  createBlueprint,
-  createEntity,
-  createWorldDocumentFromBlueprint,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   createWorldDocumentFromBlueprint,
+// } from "./blueprint-test-helpers";
+import { createEntity, createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import {
   describeSimulationEngineMatrix,
   SIMULATION_ENGINE_MATRIX,
@@ -75,16 +86,25 @@ describe("ST2-RQ-023 dense host regressions", () => {
 
   describeSimulationEngineMatrix("topology refresh contract", (engineKind) => {
     it("preserves existing inventory and recipe progress when adding an unrelated building", async () => {
-      const document = createWorldDocumentFromBlueprint(createBlueprint(
-        `topology-add-${engineKind}`,
-        [
-          createEntity("pump", "water_pump_1", 0, 0, 0, {
-            channelRecipes: { default: "r_pump_water_basic" },
-          }),
-          createEntity("power", "power_diffuser_1", 4, 0),
-          createEntity("stable-storage", "storager_1", 10, 0),
-        ],
-      ));
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint(
+      //         `topology-add-${engineKind}`,
+      //         [
+      //           createEntity("pump", "water_pump_1", 0, 0, 0, {
+      //             channelRecipes: { default: "r_pump_water_basic" },
+      //           }),
+      //           createEntity("power", "power_diffuser_1", 4, 0),
+      //           createEntity("stable-storage", "storager_1", 10, 0),
+      //         ],
+      //       )
+      const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json", "scene-01", { engineKind }));
       const documentStore = createSnapshotStore(document);
       const workspace = createDenseTestWorkspace({
         currentDocument: document,
@@ -122,16 +142,25 @@ describe("ST2-RQ-023 dense host regressions", () => {
           count: 11,
         }));
 
-        const addedStorage = createEntity("added-storage", "storager_1", 14, 0, 0, {
+        const addedStorage = createEntity("added-storage", "storager_1", 14, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
           "storageSlotGroups[0].slots[0].initialCount": 3,
         });
+        // AI-REMOVED 2026-09-14:
+        // Reason: 场景构造已批量固化为带版本的蓝图文件。
+        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+        // Replacement: src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json
+        // Risk: Low；断言与被测动作不变。
+        // Human Review: Required
+        // Original code:
+        // {
+        //             ...document.entities,
+        //             [addedStorage.id]: addedStorage,
+        //           }
         documentStore.setSnapshot({
           ...document,
-          entities: {
-            ...document.entities,
-            [addedStorage.id]: addedStorage,
-          },
+          entities: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json", "scene-01", { engineKind }).entities,
           entityOrder: [...document.entityOrder, addedStorage.id],
         });
         const refreshPromise = host.internalActions.refreshFromCurrentDocument();
@@ -167,16 +196,25 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     it("resets only the device whose runtime shape became incompatible", async () => {
-      const document = createWorldDocumentFromBlueprint(createBlueprint(
-        `topology-local-reset-${engineKind}`,
-        [
-          createEntity("stable-storage", "storager_1", 0, 0),
-          createEntity("changed-storage", "storager_1", 5, 0, 0, {
-            "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-            "storageSlotGroups[0].slots[0].initialCount": 4,
-          }),
-        ],
-      ));
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint(
+      //         `topology-local-reset-${engineKind}`,
+      //         [
+      //           createEntity("stable-storage", "storager_1", 0, 0),
+      //           createEntity("changed-storage", "storager_1", 5, 0, 0, {
+      //             "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+      //             "storageSlotGroups[0].slots[0].initialCount": 4,
+      //           }),
+      //         ],
+      //       )
+      const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json", "scene-02", { engineKind }));
       const documentStore = createSnapshotStore(document);
       const workspace = createDenseTestWorkspace({
         currentDocument: document,
@@ -211,19 +249,36 @@ describe("ST2-RQ-023 dense host regressions", () => {
         host.actions.pause();
         const beforeTickNumber = readSimulationSnapshot(host)?.tickNumber ?? 0;
 
-        const changedEntity = document.entities["changed-storage"]!;
+        // AI-REMOVED 2026-09-14:
+        // Reason: 场景构造已批量固化为带版本的蓝图文件。
+        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+        // Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+        // Risk: Low；断言与被测动作不变。
+        // Human Review: Required
+        // Original code:
+        // const changedEntity = document.entities["changed-storage"]!;
+        // AI-REMOVED 2026-09-14:
+        // Reason: 场景构造已批量固化为带版本的蓝图文件。
+        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+        // Replacement: src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json
+        // Risk: Low；断言与被测动作不变。
+        // Human Review: Required
+        // Original code:
+        // {
+        //             ...document.entities,
+        //             "changed-storage": {
+        //               ...changedEntity,
+        //               config: {
+        //                 ...changedEntity.config,
+        //                 "storageSlotGroups[0].slots[0].initialCount": 2,
+        //               },
+        //             },
+        //           }
         documentStore.setSnapshot({
           ...document,
-          entities: {
-            ...document.entities,
-            "changed-storage": {
-              ...changedEntity,
-              config: {
-                ...changedEntity.config,
-                "storageSlotGroups[0].slots[0].initialCount": 2,
-              },
-            },
-          },
+          entities: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json", "scene-02", { engineKind }).entities,
         });
         const refresh = await host.internalActions.refreshFromCurrentDocument();
 
@@ -247,17 +302,26 @@ describe("ST2-RQ-023 dense host regressions", () => {
     it.runIf(engineKind === "dense-v2")(
       "preserves reserved transport recipes when an unrelated building is added",
       async () => {
-      const document = createWorldDocumentFromBlueprint(createBlueprint(
-        `topology-reservation-${engineKind}`,
-        [
-          createEntity("source-storage", "storager_1", 0, 0, 0, {
-            "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-            "storageSlotGroups[0].slots[0].initialCount": 20,
-          }),
-          createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-          createEntity("sink-storage", "storager_1", 0, -4),
-        ],
-      ));
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint(
+      //         `topology-reservation-${engineKind}`,
+      //         [
+      //           createEntity("source-storage", "storager_1", 0, 0, 0, {
+      //             "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+      //             "storageSlotGroups[0].slots[0].initialCount": 20,
+      //           }),
+      //           createEntity("belt", "belt_straight_1x1", 0, -1, 270),
+      //           createEntity("sink-storage", "storager_1", 0, -4),
+      //         ],
+      //       )
+      const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json", "scene-03", { engineKind }));
       const documentStore = createSnapshotStore(document);
       const workspace = createDenseTestWorkspace({
         currentDocument: document,
@@ -282,13 +346,22 @@ describe("ST2-RQ-023 dense host regressions", () => {
         });
         expect(beforeBelt?.slotItems.some((slot) => slot.reserved > 0)).toBe(true);
 
-        const addedStorage = createEntity("added-storage", "storager_1", 10, 0);
+        const addedStorage = createEntity("added-storage", "storager_1", 10, 0, 180);
+        // AI-REMOVED 2026-09-14:
+        // Reason: 场景构造已批量固化为带版本的蓝图文件。
+        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+        // Replacement: src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json
+        // Risk: Low；断言与被测动作不变。
+        // Human Review: Required
+        // Original code:
+        // {
+        //             ...document.entities,
+        //             [addedStorage.id]: addedStorage,
+        //           }
         documentStore.setSnapshot({
           ...document,
-          entities: {
-            ...document.entities,
-            [addedStorage.id]: addedStorage,
-          },
+          entities: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/simulation/dense-host-regressions/index.json", "scene-03", { engineKind }).entities,
           entityOrder: [...document.entityOrder, addedStorage.id],
         });
         const refresh = await host.internalActions.refreshFromCurrentDocument();
@@ -490,24 +563,43 @@ describe("ST2-RQ-023 dense host regressions", () => {
   it("starts dense regional simulation after excluding unknown entities from a background base", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_tianwangping_aid" });
-    const staleEntity = createEntity("transmuter_2:1", "transmuter_2", 3, 4);
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-01-variant-1.schema6.json");
+    const staleEntity = blueprint.entities["transmuter_2:1"]!;
     const protocolCoreDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
-    protocolCoreDocument.entities = { [staleEntity.id]: staleEntity };
-    protocolCoreDocument.entityOrder = [staleEntity.id];
-    protocolCoreDocument.slotLinks = [{
-      id: "stale-warehouse-link",
-      linkType: "share-all",
-      source: {
-        entityId: staleEntity.id,
-        storageSlotGroupId: "output",
-        slotId: "slot",
-      },
-      target: {
-        entityId: "warehouse",
-        storageSlotGroupId: "warehouse",
-        slotId: "item_copper_ore",
-      },
-    }];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // { [staleEntity.id]: staleEntity }
+    protocolCoreDocument.entities = blueprint.entities;
+    protocolCoreDocument.entityOrder = blueprint.entityOrder;
+    // AI-REMOVED 2026-09-14:
+    // Reason: 关联链接也属于完整场景，不能在加载后另行拼装。
+    // Trigger: 用户要求场景整体文件化；引用相等断言要求变量引用蓝图中的同一实体。
+    // Evidence: 原链接与实体引用已原样写入 scene-01 蓝图。
+    // Replacement: blueprint.slotLinks。
+    // Risk: Low；保留 toBe 身份断言，不改业务预期。
+    // Human Review: Required
+    // Original code:
+    // protocolCoreDocument.slotLinks = [{
+    //   id: "stale-warehouse-link",
+    //   linkType: "share-all",
+    //   source: {
+    //     entityId: staleEntity.id,
+    //     storageSlotGroupId: "output",
+    //     slotId: "slot",
+    //   },
+    //   target: {
+    //     entityId: "warehouse",
+    //     storageSlotGroupId: "warehouse",
+    //     slotId: "item_copper_ore",
+    //   },
+    // }];
+    protocolCoreDocument.slotLinks = blueprint.slotLinks;
     const workspace = createDenseTestWorkspace({
       currentDocument,
       registry,
@@ -555,10 +647,20 @@ describe("ST2-RQ-023 dense host regressions", () => {
   });
 
   it("starts dense single-base simulation with an unknown entity admission warning", async () => {
-    const staleEntity = createEntity("transmuter_2:1", "transmuter_2", 3, 4);
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-02-variant-1.schema6.json");
+    const staleEntity = blueprint.entities["transmuter_2:1"]!;
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
-    currentDocument.entities = { [staleEntity.id]: staleEntity };
-    currentDocument.entityOrder = [staleEntity.id];
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // { [staleEntity.id]: staleEntity }
+    currentDocument.entities = blueprint.entities;
+    currentDocument.entityOrder = blueprint.entityOrder;
     const workspace = createDenseTestWorkspace({
       currentDocument,
       readLatestBaseDocuments: async (baseIds) =>
@@ -720,14 +822,23 @@ function createDenseTransferCheckpointHost(name: string): ReturnType<typeof crea
   // 两端普通设备不会直接建立运输边；复用 pipe-transport 的真实管道布局。
   // Dense 的 0.5 秒管道周期对应 1 tick：tick 1 入管，tick 2 出管，tick 3 为空。
   // AI-CORRECTION 2026-09-11: 上述 2 TPS 时序已失效；当前 4 TPS 下半秒周期为 2 tick，传输检查点由文件顶部时间常量推导。
-  const document = createWorldDocumentFromBlueprint(createBlueprint(name, [
-    createEntity("source-storage", "liquid_storager_1", 0, 0, 180, {
-      "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[0].slots[0].initialCount": 1,
-    }),
-    createEntity("pipe", "pipe_straight_1x1", 3, 1),
-    createEntity("sink-storage", "liquid_storager_1", 4, 0, 180),
-  ]));
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // createBlueprint(name, [
+  //     createEntity("source-storage", "liquid_storager_1", 0, 0, 180, {
+  //       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+  //       "storageSlotGroups[0].slots[0].initialCount": 1,
+  //     }),
+  //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
+  //     createEntity("sink-storage", "liquid_storager_1", 4, 0, 180),
+  //   ])
+  const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json", "scene-04", { name }));
   const workspace = createDenseTestWorkspace({
     currentDocument: document,
     readLatestBaseDocuments: async (baseIds) =>

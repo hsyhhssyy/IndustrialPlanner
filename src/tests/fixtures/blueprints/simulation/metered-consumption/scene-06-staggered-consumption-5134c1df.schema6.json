@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-staggered-consumption",
+  "version": "fixture-v1",
+  "name": "staggered-consumption",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "vaporizer": {
+      "id": "vaporizer",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "vaporizer"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

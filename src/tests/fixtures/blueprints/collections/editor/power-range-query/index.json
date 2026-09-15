@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 6,
+  "source": "src/tests/editor/power-range-query.test.ts",
+  "createdAt": "2026-09-14",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-variant-1.schema6.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}
+

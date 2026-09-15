@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "fixture:src/tests/editor/bug-24-mix-pool-2-conveyor.test.ts:scene-01:1",
+  "version": "fixture-v1",
+  "name": "bug-24-mix-pool-2-conveyor scene-01",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "mix-pool": {
+      "id": "mix-pool",
+      "definitionId": "mix_pool_2",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "mix-pool"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

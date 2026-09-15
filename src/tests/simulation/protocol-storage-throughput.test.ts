@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,13 +13,31 @@ import { createRegistryContract } from "@/registry";
 // Original code:
 // import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  getDevice,
-  getLastTick,
-  resolveSimulationMillisecondsAtFirstTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   getDevice,
+//   getLastTick,
+//   resolveSimulationMillisecondsAtFirstTick,
+// } from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import { createEntity, getDevice, getLastTick, resolveSimulationMillisecondsAtFirstTick } from "./blueprint-test-helpers";
+import { getDevice, getLastTick, resolveSimulationMillisecondsAtFirstTick } from "./blueprint-test-helpers";
 // AI-REMOVED 2026-09-08:
 // Reason: Dense 当前没有在协议储存箱首槽留下该用例要求观察到的库存状态，属于待后续修复的行为差异。
 // Trigger: 用户要求先只修复累计秒数精度，其余问题稍后修复。
@@ -32,7 +51,15 @@ import {
 // AI-CORRECTION 2026-09-08: 用户明确要求应矩阵化的用例即使失败也必须保留在矩阵中，现重新启用该导入。
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-const ITEM_ID = "item_xiranite_powder";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// const ITEM_ID = "item_xiranite_powder";
 const ADMISSION_COUNTER_ID = "item_input:in_w";
 const FINAL_DURATION_SECONDS = 70;
 // AI-REMOVED 2026-09-08:
@@ -74,34 +101,43 @@ describe.each(SIMULATION_ENGINE_MATRIX)("协议储存箱持续吞吐 [%s]", (eng
   it.runIf(engineKind === "dense-v2")(
     "三路传送带应在同一 1000ms 门禁 tick 穿透第一槽并保持每路 30/min",
     async () => {
+      // AI-REMOVED 2026-09-14:
+      // Reason: 场景构造已批量固化为带版本的蓝图文件。
+      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+      // Replacement: src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json
+      // Risk: Low；断言与被测动作不变。
+      // Human Review: Required
+      // Original code:
+      // createBlueprint("protocol-storage-full-throughput", [
+      //           // 保持用户蓝图的设备顺序，覆盖输入、输出同时持续工作的调度路径。
+      //           createEntity("source", "storager_1", 14, 25, 0, {
+      //             channelRecipes: { warehouse_submit: "r_warehouse_submit" },
+      //             "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
+      //             "storageSlotGroups[0].slots[0].initialCount": 50,
+      //             "storageSlotGroups[0].slots[0].ignoreStock": true,
+      //           }),
+      //           createEntity("input-belt-1", "belt_straight_1x1", 14, 24, 270),
+      //           createEntity("output-belt-1", "belt_straight_1x1", 14, 18, 270),
+      //           createEntity("input-belt-2", "belt_straight_1x1", 15, 24, 270),
+      //           createEntity("output-belt-2", "belt_straight_1x1", 15, 18, 270),
+      //           createEntity("input-belt-3", "belt_straight_1x1", 16, 24, 270),
+      //           createEntity("output-belt-3", "belt_straight_1x1", 16, 18, 270),
+      //           createEntity("sink", "storager_1", 14, 15, 0, {
+      //             channelRecipes: { warehouse_submit: "r_warehouse_submit" },
+      //           }),
+      //           createEntity("storage", "storager_1", 14, 20, 0, {
+      //             channelRecipes: { warehouse_submit: "r_warehouse_submit" },
+      //           }),
+      //           createMeteredBeltAdmission("input-meter-1", 14, 23),
+      //           createMeteredBeltAdmission("input-meter-2", 15, 23),
+      //           createMeteredBeltAdmission("input-meter-3", 16, 23),
+      //           createMeteredBeltAdmission("output-meter-1", 14, 19),
+      //           createMeteredBeltAdmission("output-meter-2", 15, 19),
+      //           createMeteredBeltAdmission("output-meter-3", 16, 19),
+      //         ])
       const report = await runBlueprintSimulation({
-        blueprint: createBlueprint("protocol-storage-full-throughput", [
-          // 保持用户蓝图的设备顺序，覆盖输入、输出同时持续工作的调度路径。
-          createEntity("source", "storager_1", 14, 25, 0, {
-            channelRecipes: { warehouse_submit: "r_warehouse_submit" },
-            "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
-            "storageSlotGroups[0].slots[0].initialCount": 50,
-            "storageSlotGroups[0].slots[0].ignoreStock": true,
-          }),
-          createEntity("input-belt-1", "belt_straight_1x1", 14, 24, 270),
-          createEntity("output-belt-1", "belt_straight_1x1", 14, 18, 270),
-          createEntity("input-belt-2", "belt_straight_1x1", 15, 24, 270),
-          createEntity("output-belt-2", "belt_straight_1x1", 15, 18, 270),
-          createEntity("input-belt-3", "belt_straight_1x1", 16, 24, 270),
-          createEntity("output-belt-3", "belt_straight_1x1", 16, 18, 270),
-          createEntity("sink", "storager_1", 14, 15, 0, {
-            channelRecipes: { warehouse_submit: "r_warehouse_submit" },
-          }),
-          createEntity("storage", "storager_1", 14, 20, 0, {
-            channelRecipes: { warehouse_submit: "r_warehouse_submit" },
-          }),
-          createMeteredBeltAdmission("input-meter-1", 14, 23),
-          createMeteredBeltAdmission("input-meter-2", 15, 23),
-          createMeteredBeltAdmission("input-meter-3", 16, 23),
-          createMeteredBeltAdmission("output-meter-1", 14, 19),
-          createMeteredBeltAdmission("output-meter-2", 15, 19),
-          createMeteredBeltAdmission("output-meter-3", 16, 19),
-        ]),
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/scene-01-protocol-storage-full-throughput-3ef8c713.schema6.json"),
         maxDurationSeconds: FINAL_DURATION_SECONDS,
         // AI-REMOVED 2026-09-08:
         // Reason: 本用例暂时使用 Blueprint runner 的 Legacy 默认引擎。
@@ -156,19 +192,27 @@ describe.each(SIMULATION_ENGINE_MATRIX)("协议储存箱持续吞吐 [%s]", (eng
   );
 });
 
-function createMeteredBeltAdmission(id: string, x: number, y: number) {
-  return createEntity(id, "log_admission", x, y, 270, {
-    "portGroups[0].ports[0].acceptRule": {
-      base: { kind: "item", itemId: ITEM_ID },
-      exclude: [],
-    },
-    "portGroups[0].ports[0].admissionRule": {
-      itemId: ITEM_ID,
-      limit: null,
-      perMinuteLimit: null,
-    },
-  });
-}
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// function createMeteredBeltAdmission(id: string, x: number, y: number) {
+//   return createEntity(id, "log_admission", x, y, 270, {
+//     "portGroups[0].ports[0].acceptRule": {
+//       base: { kind: "item", itemId: ITEM_ID },
+//       exclude: [],
+//     },
+//     "portGroups[0].ports[0].admissionRule": {
+//       itemId: ITEM_ID,
+//       limit: null,
+//       perMinuteLimit: null,
+//     },
+//   });
+// }
 
 function readOneMinuteCounts(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,

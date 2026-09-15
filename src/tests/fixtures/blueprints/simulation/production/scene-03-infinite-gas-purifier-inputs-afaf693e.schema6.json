@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-infinite-gas-purifier-inputs",
+  "version": "fixture-v1",
+  "name": "infinite-gas-purifier-inputs",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "purifier": {
+      "id": "purifier",
+      "definitionId": "liquid_purifier_1_gas",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_copper",
+        "storageSlotGroups[0].slots[0].initialCount": 0,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "storageSlotGroups[2].slots[0].initialItemType": "item_filter_core",
+        "storageSlotGroups[2].slots[0].initialCount": 0,
+        "storageSlotGroups[2].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "purifier",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

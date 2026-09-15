@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-checkpoint-retained-tick",
+  "version": "fixture-v1",
+  "name": "checkpoint-retained-tick",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source-storage": {
+      "id": "source-storage",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "pipe": {
+      "id": "pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink-storage": {
+      "id": "sink-storage",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source-storage",
+    "pipe",
+    "sink-storage"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

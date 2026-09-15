@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-migration-original",
+  "version": "fixture-v1",
+  "name": "migration-original",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "grinder": {
+      "id": "grinder",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "grinder"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-pipe-bridge-direction-verify",
+  "version": "fixture-v1",
+  "name": "pipe-bridge-direction-verify",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "liquid-source-ew": {
+      "id": "liquid-source-ew",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": -4,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 2
+      },
+      "tags": []
+    },
+    "pipe_ew_in": {
+      "id": "pipe_ew_in",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe-bridge": {
+      "id": "pipe-bridge",
+      "definitionId": "pipe_connector",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_ew_out": {
+      "id": "pipe_ew_out",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "liquid-sink-ew": {
+      "id": "liquid-sink-ew",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "liquid-source-ew",
+    "pipe_ew_in",
+    "pipe-bridge",
+    "pipe_ew_out",
+    "liquid-sink-ew"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

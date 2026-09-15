@@ -1,3 +1,4 @@
+import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -94,18 +95,27 @@ function compileTestEntity(definition: EntityDefinition) {
   const registry = createRegistryContract();
   registry.entityDefinitions = [...registry.entityDefinitions, definition];
 
+  // AI-REMOVED 2026-09-14:
+  // Reason: 场景构造已批量固化为带版本的蓝图文件。
+  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+  // Replacement: src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/index.json
+  // Risk: Low；断言与被测动作不变。
+  // Human Review: Required
+  // Original code:
+  // {
+  //       machine: {
+  //         id: "machine",
+  //         definitionId: definition.id,
+  //         position: { x: 0, y: 0 },
+  //         rotation: 0,
+  //         config: {},
+  //         tags: [],
+  //       },
+  //     }
   const document: WorldDocument = {
     ...createWorldDocument(),
-    entities: {
-      machine: {
-        id: "machine",
-        definitionId: definition.id,
-        position: { x: 0, y: 0 },
-        rotation: 0,
-        config: {},
-        tags: [],
-      },
-    },
+    entities: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/index.json", "scene-01", { definition }).entities,
     entityOrder: ["machine"],
   };
 

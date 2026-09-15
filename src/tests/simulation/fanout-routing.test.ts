@@ -1,13 +1,23 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import {
-  createBlueprint,
-  createEntity,
-  findSlotWithItem,
-  getTick,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/fanout-routing/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findSlotWithItem,
+//   getTick,
+// } from "./blueprint-test-helpers";
+import { findSlotWithItem, getTick } from "./blueprint-test-helpers";
 
 describe("REQ-076: fanout routing", () => {
   it("routes around blocked fan-out inputs instead of starving open downstream capacity", async () => {
@@ -19,23 +29,40 @@ describe("REQ-076: fanout routing", () => {
     // 时序：每段 belt/splitter 各 40 tick，共 3 段 = 120 tick。
     // AI-CORRECTION 2026-05-18: 分流器端口默认方向变更 (input E→N)，rot 90→180。
     // 端口排列 E/W/S 使 belt-open 的 W 端口(index=1)优先于 belt-blocked 的 S 端口(index=2)。
-    const blockedConfig = Object.fromEntries([0, 1, 2, 3, 4, 5].flatMap((index) => [
-      [`storageSlotGroups[${index}].slots[0].initialItemType`, "item_copper_ore"],
-      [`storageSlotGroups[${index}].slots[0].initialCount`, 50],
-    ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/fanout-routing/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // const blockedConfig = Object.fromEntries([0, 1, 2, 3, 4, 5].flatMap((index) => [
+    //       [`storageSlotGroups[${index}].slots[0].initialItemType`, "item_copper_ore"],
+    //       [`storageSlotGroups[${index}].slots[0].initialCount`, 50],
+    //     ]));
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/fanout-routing/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("blocked-fanout", [
+    //         createEntity("source-storage", "storager_1", 0, 1, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+    //           "storageSlotGroups[0].slots[0].initialCount": 1,
+    //         }),
+    //         createEntity("belt-source", "belt_straight_1x1", 0, 0, 270),
+    //         createEntity("splitter", "log_splitter", 0, -1, 180),
+    //         createEntity("belt-blocked", "belt_straight_1x1", 0, -2, 270),
+    //         createEntity("blocked-storage", "storager_1", 0, -5, 0, blockedConfig),
+    //         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
+    //         createEntity("open-storage", "storager_1", 2, -1, 90),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("blocked-fanout", [
-        createEntity("source-storage", "storager_1", 0, 1, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-          "storageSlotGroups[0].slots[0].initialCount": 1,
-        }),
-        createEntity("belt-source", "belt_straight_1x1", 0, 0, 270),
-        createEntity("splitter", "log_splitter", 0, -1, 180),
-        createEntity("belt-blocked", "belt_straight_1x1", 0, -2, 270),
-        createEntity("blocked-storage", "storager_1", 0, -5, 0, blockedConfig),
-        createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
-        createEntity("open-storage", "storager_1", 2, -1, 90),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/fanout-routing/scene-01-blocked-fanout-652e2252.schema6.json"),
       registry: createRegistryContract(),
       maxTickNumber: 150,
     });

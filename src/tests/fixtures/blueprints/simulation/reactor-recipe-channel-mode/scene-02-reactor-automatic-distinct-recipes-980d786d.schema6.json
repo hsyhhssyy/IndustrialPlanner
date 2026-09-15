@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-reactor-automatic-distinct-recipes",
+  "version": "fixture-v1",
+  "name": "reactor-automatic-distinct-recipes",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "reactor": {
+      "id": "reactor",
+      "definitionId": "mix_pool_2",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "recipeChannelAutomaticModeEnabled": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[0].slots[1].initialCount": 2,
+        "storageSlotGroups[0].slots[2].initialItemType": "item_xiranite_powder",
+        "storageSlotGroups[0].slots[2].initialCount": 2,
+        "storageSlotGroups[0].slots[3].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[3].initialCount": 2
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "reactor",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
+

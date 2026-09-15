@@ -1,3 +1,4 @@
+import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
@@ -12,13 +13,22 @@ import { runBlueprintSimulation } from "./blueprint-runner";
 //
 // Original code:
 // import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import {
-  createBlueprint,
-  createEntity,
-  findFirstTick,
-  findSlot,
-  getDevice,
-} from "./blueprint-test-helpers";
+// AI-REMOVED 2026-09-14:
+// Reason: 场景构造已批量固化为带版本的蓝图文件。
+// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+// Replacement: src/tests/fixtures/blueprints/simulation/production/index.json
+// Risk: Low；断言与被测动作不变。
+// Human Review: Required
+// Original code:
+// import {
+//   createBlueprint,
+//   createEntity,
+//   findFirstTick,
+//   findSlot,
+//   getDevice,
+// } from "./blueprint-test-helpers";
+import { findFirstTick, findSlot, getDevice } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind) => {
@@ -34,26 +44,44 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind)
     // Original code:
     // const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const registry = createRegistryContract();
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/production/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("grinder-production", [
+    //         createEntity("grinder", "grinder_1", 0, 0, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
+    //           "storageSlotGroups[0].slots[0].initialCount": 1,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 4, 0),
+    //       ])
     const grinderReport = await runBlueprintSimulation({
-      blueprint: createBlueprint("grinder-production", [
-        createEntity("grinder", "grinder_1", 0, 0, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-          "storageSlotGroups[0].slots[0].initialCount": 1,
-        }),
-        createEntity("power", "power_diffuser_1", 4, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-01-grinder-production-435fad2a.schema6.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry,
     });
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/production/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("furnace-production", [
+    //         createEntity("furnace", "furnance_1", 0, 0, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+    //           "storageSlotGroups[0].slots[0].initialCount": 1,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 4, 0),
+    //       ])
     const furnaceReport = await runBlueprintSimulation({
-      blueprint: createBlueprint("furnace-production", [
-        createEntity("furnace", "furnance_1", 0, 0, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-          "storageSlotGroups[0].slots[0].initialCount": 1,
-        }),
-        createEntity("power", "power_diffuser_1", 4, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-02-furnace-production-8321f8a2.schema6.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry,
@@ -111,18 +139,27 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind)
   });
 
   it("treats ignoreStock recipe inputs as infinite even when their actual count is zero", async () => {
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/simulation/production/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // createBlueprint("infinite-gas-purifier-inputs", [
+    //         createEntity("purifier", "liquid_purifier_1_gas", 0, 0, 0, {
+    //           "storageSlotGroups[0].slots[0].initialItemType": "item_gas_copper",
+    //           "storageSlotGroups[0].slots[0].initialCount": 0,
+    //           "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //           "storageSlotGroups[2].slots[0].initialItemType": "item_filter_core",
+    //           "storageSlotGroups[2].slots[0].initialCount": 0,
+    //           "storageSlotGroups[2].slots[0].ignoreStock": true,
+    //         }),
+    //         createEntity("power", "power_diffuser_1", 6, 0),
+    //       ])
     const report = await runBlueprintSimulation({
-      blueprint: createBlueprint("infinite-gas-purifier-inputs", [
-        createEntity("purifier", "liquid_purifier_1_gas", 0, 0, 0, {
-          "storageSlotGroups[0].slots[0].initialItemType": "item_gas_copper",
-          "storageSlotGroups[0].slots[0].initialCount": 0,
-          "storageSlotGroups[0].slots[0].ignoreStock": true,
-          "storageSlotGroups[2].slots[0].initialItemType": "item_filter_core",
-          "storageSlotGroups[2].slots[0].initialCount": 0,
-          "storageSlotGroups[2].slots[0].ignoreStock": true,
-        }),
-        createEntity("power", "power_diffuser_1", 6, 0),
-      ]),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-03-infinite-gas-purifier-inputs-afaf693e.schema6.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry: createRegistryContract(),
