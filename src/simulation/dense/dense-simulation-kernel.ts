@@ -173,6 +173,7 @@ export class DenseSimulationKernel {
   private readonly edgePhysicalConnectionIndexes: Uint32Array;
   private readonly physicalConnectionCount: number;
   private readonly usedPhysicalConnectionFlags: Uint8Array;
+  private readonly higherPriorityPhysicalIndexesByEdgeIndex: readonly Uint32Array[];
   private readonly movedRoutingPortFlags: Uint8Array;
   private readonly routingBucketHeads: Int32Array;
   private readonly routingEdgeNextIndexes: Int32Array;
@@ -257,6 +258,8 @@ export class DenseSimulationKernel {
     }
     this.physicalConnectionCount = physicalConnectionIndexById.size;
     this.usedPhysicalConnectionFlags = new Uint8Array(this.physicalConnectionCount);
+    this.higherPriorityPhysicalIndexesByEdgeIndex =
+      this.compileHigherPriorityPhysicalIndexesByEdgeIndex();
     this.movedRoutingPortFlags = new Uint8Array(
       layout.routingGroupConnectedFlags.length,
     );
@@ -1175,9 +1178,9 @@ export class DenseSimulationKernel {
     this.usedPhysicalConnectionFlags.fill(0);
     this.movedRoutingPortFlags.fill(0);
     this.prepareRoutingBuckets();
-    let movedInPass: boolean;
-    do {
-      movedInPass = false;
+    let allowPriorityFallback = false;
+    while (true) {
+      let movedInPass = false;
       for (
         let sourceRank = 0;
         sourceRank < this.maxRoutingGroupPortCount;
@@ -1200,6 +1203,8 @@ export class DenseSimulationKernel {
             const physicalIndex = this.edgePhysicalConnectionIndexes[edgeIndex]!;
             if (
               this.usedPhysicalConnectionFlags[physicalIndex] !== 0
+              || (!allowPriorityFallback
+                && this.hasUnspentHigherPriorityPhysicalConnection(edgeIndex))
               || !this.canEdgeTransferAtCurrentPhase(edgeIndex)
             ) {
               continue;
@@ -1247,7 +1252,16 @@ export class DenseSimulationKernel {
           }
         }
       }
-    } while (movedInPass);
+      if (movedInPass) {
+        allowPriorityFallback = false;
+        continue;
+      }
+      if (!allowPriorityFallback) {
+        allowPriorityFallback = true;
+        continue;
+      }
+      break;
+    }
     this.rotateRoutingCursors();
 
     // AI-REMOVED 2026-09-03:
@@ -1301,6 +1315,59 @@ export class DenseSimulationKernel {
       - this.layout.routingGroupPortOffsets[groupIndex]!;
     const cursor = this.state.routingCursors[groupIndex]! % portCount;
     return (portIndex - cursor + portCount) % portCount;
+  }
+
+  private compileHigherPriorityPhysicalIndexesByEdgeIndex(): readonly Uint32Array[] {
+    const physicalIndexesByRoutingLaneAndPriority = new Map<
+      string,
+      Map<number, Set<number>>
+    >();
+    for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
+      const edgeId = this.layout.dictionary.edgeIds[edgeIndex]!;
+      const edge = this.topology.transferEdges[edgeId];
+      const port = edge === undefined ? undefined : this.topology.ports[edge.sourcePortId];
+      if (port === undefined) {
+        continue;
+      }
+      const sourceNodeIndex = this.layout.edgeSourceNodeIndexes[edgeIndex]!;
+      const laneKey = `${sourceNodeIndex}\u0000${port.kind}\u0000${port.isPipe ? 1 : 0}`;
+      const physicalIndexesByPriority =
+        physicalIndexesByRoutingLaneAndPriority.get(laneKey) ?? new Map();
+      const physicalIndexes = physicalIndexesByPriority.get(port.priorityGroup) ?? new Set();
+      physicalIndexes.add(this.edgePhysicalConnectionIndexes[edgeIndex]!);
+      physicalIndexesByPriority.set(port.priorityGroup, physicalIndexes);
+      physicalIndexesByRoutingLaneAndPriority.set(laneKey, physicalIndexesByPriority);
+    }
+
+    return this.layout.dictionary.edgeIds.map((edgeId, edgeIndex) => {
+      const edge = this.topology.transferEdges[edgeId];
+      const port = edge === undefined ? undefined : this.topology.ports[edge.sourcePortId];
+      if (edge === undefined || port === undefined) {
+        return new Uint32Array(0);
+      }
+
+      const physicalIndexes = new Set<number>();
+      const sourceNodeIndex = this.layout.edgeSourceNodeIndexes[edgeIndex]!;
+      const laneKey = `${sourceNodeIndex}\u0000${port.kind}\u0000${port.isPipe ? 1 : 0}`;
+      const physicalIndexesByPriority =
+        physicalIndexesByRoutingLaneAndPriority.get(laneKey);
+      for (const [priorityGroup, candidatePhysicalIndexes] of
+        physicalIndexesByPriority ?? []) {
+        if (priorityGroup >= port.priorityGroup) {
+          continue;
+        }
+        for (const physicalIndex of candidatePhysicalIndexes) {
+          physicalIndexes.add(physicalIndex);
+        }
+      }
+      return Uint32Array.from(physicalIndexes);
+    });
+  }
+
+  private hasUnspentHigherPriorityPhysicalConnection(edgeIndex: number): boolean {
+    return this.higherPriorityPhysicalIndexesByEdgeIndex[edgeIndex]?.some(
+      (physicalIndex) => this.usedPhysicalConnectionFlags[physicalIndex] === 0,
+    ) === true;
   }
 
   private markRoutingPortsMoved(edgeIndex: number): void {

@@ -215,6 +215,8 @@ export default defineConfig({
           // Original code:
           // // 常规测试包含 Sharp 素材解码与长耗时仿真，限制 worker 数避免资源争用触发默认超时。
           // maxWorkers: 4,
+          // AI-CORRECTION 2026-09-16: 用户确认将 normal project 正式限制为 4 个 worker，避免资源争用触发批量超时。
+          maxWorkers: 4,
           exclude: [
             "src/tests/e2e/**",
             "src/tests/simulation/blueprint/**",

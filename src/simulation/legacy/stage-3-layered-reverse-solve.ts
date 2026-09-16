@@ -43,6 +43,7 @@ interface SourceSelection {
 interface OutputSolveResult {
   readonly movedAny: boolean;
   readonly drainedStorageSlotIds: ReadonlySet<string>;
+  readonly deferredByPriority: boolean;
 }
 
 const inputViewNodeIdsByStorageSlotIdByTopology = new WeakMap<
@@ -67,6 +68,8 @@ export interface SolveTransferGraphPerf {
  * 穿透处理，非严格物流设备则等待其 output-view 的所有下游 input-view 已遍历。
  * 订正（2026-05-08）：非严格 output-view 等待的是所有下游 input-view 已求解完成；
  * 无容量的 input-view 会标记为 blocked-resolved，不再误阻塞同 output-view 的其他出口。
+ * AI-CORRECTION 2026-09-16: 低优先级出口先延迟到当前分层释放完成；只有高级出口
+ * 本 tick 仍未使用时才进入回退求解，避免设备顺序和传送带长度改变端口优先结果。
  */
 export function solveTransferGraph(
   registry: RegistryContract,
@@ -76,25 +79,52 @@ export function solveTransferGraph(
   regionalOptions?: RegionalWarehouseStage3Options,
 ): void {
   let currentLayer = collectFirstLayerAnchors(registry, topology, state);
+  const priorityDeferredOutputNodes = new Map<string, CompiledSimulationNode>();
 
-  while (currentLayer.length > 0) {
-    if (perf !== undefined) perf.layerCount += 1;
+  while (currentLayer.length > 0 || priorityDeferredOutputNodes.size > 0) {
+    if (currentLayer.length > 0) {
+      if (perf !== undefined) perf.layerCount += 1;
 
-    const nextAnchors = new Map<string, CompiledSimulationNode>();
+      const nextAnchors = new Map<string, CompiledSimulationNode>();
 
-    for (const node of currentLayer) {
-      if (perf !== undefined) perf.anchorCount += 1;
-      processInputAnchor({
+      for (const node of currentLayer) {
+        if (perf !== undefined) perf.anchorCount += 1;
+        processInputAnchor({
+          registry,
+          topology,
+          state,
+          node,
+          nextAnchors,
+          priorityDeferredOutputNodes,
+          perf,
+          regionalOptions,
+        });
+      }
+
+      currentLayer = collectAvailableInputAnchors(
         registry,
         topology,
         state,
-        node,
-        nextAnchors,
-        perf,
-        regionalOptions,
-      });
+        [...nextAnchors.values()],
+      );
+      continue;
     }
 
+    const deferredOutputNode = priorityDeferredOutputNodes.values().next().value;
+    if (deferredOutputNode === undefined) {
+      break;
+    }
+    priorityDeferredOutputNodes.delete(deferredOutputNode.id);
+    const nextAnchors = new Map<string, CompiledSimulationNode>();
+    processPriorityFallbackOutputNode({
+      registry,
+      topology,
+      state,
+      outputNode: deferredOutputNode,
+      nextAnchors,
+      perf,
+      regionalOptions,
+    });
     currentLayer = collectAvailableInputAnchors(
       registry,
       topology,
@@ -160,6 +190,7 @@ function processInputAnchor(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly node: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
+  readonly priorityDeferredOutputNodes: Map<string, CompiledSimulationNode>;
   readonly perf?: SolveTransferGraphPerf;
   readonly regionalOptions?: RegionalWarehouseStage3Options;
 }): void {
@@ -190,6 +221,7 @@ function processInputAnchor(options: {
       state: options.state,
       outputNode: sourceNode,
       nextAnchors: options.nextAnchors,
+      priorityDeferredOutputNodes: options.priorityDeferredOutputNodes,
       perf: options.perf,
       regionalOptions: options.regionalOptions,
     });
@@ -202,6 +234,7 @@ function searchUpstreamFromOutputNode(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly outputNode: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
+  readonly priorityDeferredOutputNodes: Map<string, CompiledSimulationNode>;
   readonly perf?: SolveTransferGraphPerf;
   readonly regionalOptions?: RegionalWarehouseStage3Options;
 }): void {
@@ -220,7 +253,9 @@ function searchUpstreamFromOutputNode(options: {
     }
 
     const outputResult = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf, options.regionalOptions);
-    if (outputResult.movedAny) {
+    if (outputResult.deferredByPriority) {
+      options.priorityDeferredOutputNodes.set(options.outputNode.id, options.outputNode);
+    } else if (outputResult.movedAny) {
       markNodeVisited(options.state, options.outputNode);
     }
 
@@ -247,6 +282,7 @@ function searchUpstreamFromOutputNode(options: {
           state: options.state,
           outputNode: sourceNode,
           nextAnchors: options.nextAnchors,
+          priorityDeferredOutputNodes: options.priorityDeferredOutputNodes,
           perf: options.perf,
           regionalOptions: options.regionalOptions,
         });
@@ -275,7 +311,11 @@ function searchUpstreamFromOutputNode(options: {
     options.perf,
     options.regionalOptions,
   );
-  markNodeVisited(options.state, options.outputNode);
+  if (outputResult.deferredByPriority) {
+    options.priorityDeferredOutputNodes.set(options.outputNode.id, options.outputNode);
+  } else {
+    markNodeVisited(options.state, options.outputNode);
+  }
 
   for (const inputNode of getStorageCoupledInputViewNodes(
     options.topology,
@@ -297,6 +337,73 @@ function searchUpstreamFromOutputNode(options: {
   }
 }
 
+function processPriorityFallbackOutputNode(options: {
+  readonly registry: RegistryContract;
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly outputNode: CompiledSimulationNode;
+  readonly nextAnchors: Map<string, CompiledSimulationNode>;
+  readonly perf?: SolveTransferGraphPerf;
+  readonly regionalOptions?: RegionalWarehouseStage3Options;
+}): void {
+  const device = options.topology.devices[options.outputNode.deviceId];
+  if (
+    device === undefined
+    || !canDeviceTransferAtCurrentPhase(
+      options.registry,
+      options.topology,
+      options.state,
+      device,
+    )
+    || !allDownstreamInputNodesResolved(
+      options.topology,
+      options.state,
+      options.outputNode,
+      options.regionalOptions?.excludedEdgeIds,
+    )
+  ) {
+    return;
+  }
+
+  const outputResult = solveOutputNode(
+    options.registry,
+    options.topology,
+    options.state,
+    options.outputNode,
+    options.nextAnchors,
+    options.perf,
+    options.regionalOptions,
+    true,
+  );
+  if (!isStrictLogisticsDevice(device) || outputResult.movedAny) {
+    markNodeVisited(options.state, options.outputNode);
+  }
+
+  for (const inputNode of getStorageCoupledInputViewNodes(
+    options.topology,
+    options.state,
+    device,
+    options.outputNode,
+  )) {
+    refreshStorageCoupledInputNodeAfterDrain({
+      registry: options.registry,
+      topology: options.topology,
+      state: options.state,
+      inputNode,
+      drainedStorageSlotIds: outputResult.drainedStorageSlotIds,
+      nextAnchors: options.nextAnchors,
+    });
+    if (prepareInputNodeForAnchor(
+      options.registry,
+      options.topology,
+      options.state,
+      inputNode,
+    )) {
+      options.nextAnchors.set(inputNode.id, inputNode);
+    }
+  }
+}
+
 function solveOutputNode(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
@@ -305,10 +412,12 @@ function solveOutputNode(
   nextAnchors: Map<string, CompiledSimulationNode>,
   perf?: SolveTransferGraphPerf,
   regionalOptions?: RegionalWarehouseStage3Options,
+  allowPriorityFallback = false,
 ): OutputSolveResult {
   if (perf !== undefined) perf.outputNodeCount += 1;
 
   let movedAny = false;
+  let deferredByPriority = false;
   const drainedStorageSlotIds = new Set<string>();
   let moved = true;
   while (moved) {
@@ -344,6 +453,19 @@ function solveOutputNode(
         continue;
       }
       if (!canReleaseItemThroughSourcePort(topology, state, edge.sourcePortId, edgeState.itemType)) {
+        continue;
+      }
+      if (
+        !allowPriorityFallback
+        && hasUnspentHigherPriorityOutputConnection(
+          topology,
+          state,
+          node,
+          edgeId,
+          regionalOptions?.excludedEdgeIds,
+        )
+      ) {
+        deferredByPriority = true;
         continue;
       }
 
@@ -408,7 +530,69 @@ function solveOutputNode(
       moved = true;
     }
   }
-  return { movedAny, drainedStorageSlotIds };
+  return { movedAny, drainedStorageSlotIds, deferredByPriority };
+}
+
+function hasUnspentHigherPriorityOutputConnection(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+  edgeId: string,
+  excludedEdgeIds?: ReadonlySet<string>,
+): boolean {
+  const edge = topology.transferEdges[edgeId];
+  const port = edge === undefined ? undefined : topology.ports[edge.sourcePortId];
+  if (edge === undefined || port === undefined) {
+    return false;
+  }
+
+  for (const candidateEdgeId of getRawOutputEdgeIds(topology, state, node)) {
+    if (excludedEdgeIds?.has(candidateEdgeId) === true) {
+      continue;
+    }
+    const candidateEdge = topology.transferEdges[candidateEdgeId];
+    const candidatePort = candidateEdge === undefined
+      ? undefined
+      : topology.ports[candidateEdge.sourcePortId];
+    if (
+      candidateEdge === undefined
+      || candidatePort === undefined
+      || candidatePort.priorityGroup >= port.priorityGroup
+      || candidatePort.kind !== port.kind
+      || candidatePort.isPipe !== port.isPipe
+    ) {
+      continue;
+    }
+    if (!hasPhysicalConnectionMoved(
+      topology,
+      state,
+      candidatePort.id,
+      candidateEdge.physicalConnectionId,
+    )) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasPhysicalConnectionMoved(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  sourcePortId: string,
+  physicalConnectionId: string,
+): boolean {
+  for (const edgeId of getPortOutputEdgeIds(topology, state, sourcePortId)) {
+    const edge = topology.transferEdges[edgeId];
+    const edgeState = state.transient.edges[edgeId];
+    if (
+      edge?.physicalConnectionId === physicalConnectionId
+      && edgeState?.shadowPull === "moved"
+      && edgeState.shadowPush === "moved"
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function solveInputNode(
