@@ -401,7 +401,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_activity_xiranite_lung",
     nameKey: "registry.item.item_activity_xiranite_lung.name",
     iconId: "item_activity_xiranite_lung",
-    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "调度券地区:武陵", "调度券价值:100"],
     displayOrder: 10000,
   },
   {
@@ -450,7 +450,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_activity_xiranite_enr_lung",
     nameKey: "registry.item.item_activity_xiranite_enr_lung.name",
     iconId: "item_activity_xiranite_enr_lung",
-    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_2_TAG, "调度券地区:武陵", "调度券价值:200"],
     displayOrder: 10000,
   },
   {
