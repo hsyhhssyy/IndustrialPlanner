@@ -7,9 +7,18 @@ import {
 } from "@/shared/geometry/viewport-transform";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
-import {
-  persistWorldDocumentViewportSettings,
-} from "../document-viewport";
+// AI-REMOVED 2026-09-15:
+// Reason: 视口写回改为发布前每 1000ms 合并。
+// Trigger: REQ-032 拖拽时整份文档通知放大。
+// Evidence: viewport-actions 每次移动同步发布。
+// Replacement: document-viewport.ts createViewportPersistence
+// Risk: 最后一次写入由切换、隐藏及 dispose 刷新。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   persistWorldDocumentViewportSettings,
+// } from "../document-viewport";
 import type { EditorStateReadWrite } from "../state-impl";
 import {
   clampViewportCenterToBaseWarningBounds,
@@ -30,17 +39,26 @@ type EditorViewportActions = Pick<
 
 export function createEditorViewportActions({
   document,
-  documentWriter,
+  persistViewportSettings,
   state,
   workspace,
 }: EditorActionsContext): EditorViewportActions {
-  const persistViewportSettings = (): void => {
-    persistWorldDocumentViewportSettings({
-      document,
-      documentWriter,
-      state,
-    });
-  };
+// AI-REMOVED 2026-09-15:
+// Reason: 视口写回改为发布前每 1000ms 合并。
+// Trigger: REQ-032 拖拽时整份文档通知放大。
+// Evidence: viewport-actions 每次移动同步发布。
+// Replacement: EditorActionsContext.persistViewportSettings
+// Risk: 最后一次写入由切换、隐藏及 dispose 刷新。
+// Human Review: Required
+//
+// Original code:
+//   const persistViewportSettings = (): void => {
+//     persistWorldDocumentViewportSettings({
+//       document,
+//       documentWriter,
+//       state,
+//     });
+//   };
 
   const clampViewportCenter = (): void => {
     const baseDefinition = workspace.registry.baseDefinitions.find(

@@ -1,3 +1,4 @@
+import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import {
   useEffect,
   useRef,
@@ -17,7 +18,7 @@ import {
 } from "@/app/blueprint/blueprint-transfer";
 import type { AppHost } from "@/app/host/app-host";
 import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blueprint-preview-dialog-state";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
@@ -246,7 +247,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   // const locale = appHost.state.settings.locale;
   const editor = appHost.workspace.editor;
   // 订阅 document 变化使蓝图放置按钮在切换基地后正确更新
-  useEditorDocumentSnapshot(editor);
+  useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
   const renderHost = appHost.workspace.render;
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
   const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);

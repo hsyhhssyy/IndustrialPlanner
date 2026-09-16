@@ -1,3 +1,5 @@
+import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentSimulation } from "@/shared/snapshot/world-document-selection";
 import { createLegacySimulationState } from "./state";
 import { createSimulationQueries } from "@/simulation/projection";
 import { registerSimulationSnapshotReader } from "../testkit";
@@ -149,7 +151,7 @@ export function createLegacySimulationHost(
 
   const document = workspace.editor?.document;
   if (document !== undefined) {
-    disposers.push(document.subscribe(() => {
+    disposers.push(createSnapshotSelector(document, selectDocumentSimulation, shallowSnapshotEqual).subscribe(() => {
       if (internalState.hasStarted) {
         void internalActions.refreshFromCurrentDocument();
       }

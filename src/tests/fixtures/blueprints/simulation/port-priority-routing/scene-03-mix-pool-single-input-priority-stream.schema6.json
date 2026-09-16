@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-mix-pool-one-belt-priority-stream",
+  "version": "fixture-v1",
+  "name": "mix-pool-one-belt-priority-stream",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source": {
+      "id": "source",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 1,
+        "y": -4
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_poly",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "input-belt": {
+      "id": "input-belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": -1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pool": {
+      "id": "pool",
+      "definitionId": "mix_pool_2",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "customPortPriorityGroups": true,
+        "portPriorityGroups": {
+          "item_output:out_n_3": 9,
+          "item_output:out_n_4": 1
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        }
+      },
+      "tags": []
+    },
+    "belt-g1-turn": {
+      "id": "belt-g1-turn",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "belt-g9-turn": {
+      "id": "belt-g9-turn",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink-g1": {
+      "id": "sink-g1",
+      "definitionId": "storager_1",
+      "position": {
+        "x": -2,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "sink-g9": {
+      "id": "sink-g9",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "output-power": {
+      "id": "output-power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 1,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source",
+    "input-belt",
+    "pool",
+    "belt-g1-turn",
+    "belt-g9-turn",
+    "sink-g1",
+    "sink-g9",
+    "power",
+    "output-power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -1,9 +1,11 @@
+import { retainRecentMapEntries, touchMapEntry } from "@/shared/retain-recent-map-entries";
 import type { Texture } from 'pixi.js';
 import type { SurfacePlacement } from './types';
 import { fieldBounds, tileKeys, rasterizeHeightTile, HEIGHT_TILE_PIXELS } from './height-field';
 import { BuildingEffectAssets, heightTexture } from './assets';
 
 /** 索引只随几何变化更新；驻留范围只覆盖可见特效，动画与相机变换不会使既有区域失效。 */
+// AI-CORRECTION 2026-09-16: 离屏区域在 16 MiB 预算内保留，几何变化仍立即失效；可见区域优先驻留。
 export class SceneHeightCache {
   private surfaces = new Map<string, SurfacePlacement>();
   private readonly index = new Map<string, Set<string>>();
@@ -44,7 +46,7 @@ export class SceneHeightCache {
       if (!assets.height(surface.field)) ready = false;
     }
     if (!ready || !assets.manifest) return undefined;
-    let texture = this.tiles.get(key);
+    let texture = touchMapEntry(this.tiles, key);
     if (!texture) {
       const bytes = rasterizeHeightTile(key, surfaces, assets.heights, assets.manifest.heightMin, assets.manifest.heightMax);
       texture = heightTexture(bytes, HEIGHT_TILE_PIXELS, HEIGHT_TILE_PIXELS);
@@ -54,7 +56,17 @@ export class SceneHeightCache {
   }
 
   public retain(keys: ReadonlySet<string>): void {
-    for (const key of this.tiles.keys()) if (!keys.has(key)) this.invalidate(key);
+    // AI-REMOVED 2026-09-16:
+    // Reason: 回到刚离开的区域不应重新栅格化高度贴图。
+    // Trigger: 手机拖动与虚影移动性能优化。
+    // Evidence: Trace 中重复资源请求及全场候选查询。
+    // Replacement: retainRecentMapEntries
+    // Risk: 保留可见资源与原判定规则，需回归编辑后刷新。
+    // Human Review: Required
+    // Original code:
+    //     for (const key of this.tiles.keys()) if (!keys.has(key)) this.invalidate(key);
+    retainRecentMapEntries(this.tiles, keys, 16 * 1024 * 1024,
+      () => HEIGHT_TILE_PIXELS * HEIGHT_TILE_PIXELS * 4, (texture) => texture.destroy(true));
   }
 
   public destroy(): void {

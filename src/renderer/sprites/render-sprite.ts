@@ -73,6 +73,8 @@ export interface RenderSpriteSyncContext {
 export interface RenderSprite {
   attach(layers: RenderLayerMap): void;
   syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
+  /** 尺寸、朝向与内容未变时，仅更新屏幕平移；由场景验证失效条件。 */
+  syncPosition?(layout: RenderSpriteLayout): void;
   /** 异步视觉资源变化后，是否需要由 renderer 使用最新 context 重放完整布局同步。 */
   isVisualSyncInvalidated(): boolean;
   /** 仿真展示快照变化时同步运行时视觉，不重新计算静态布局。 */

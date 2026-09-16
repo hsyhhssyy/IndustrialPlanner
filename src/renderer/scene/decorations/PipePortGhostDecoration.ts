@@ -1,4 +1,6 @@
 import { Container, Graphics } from "pixi.js";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -54,6 +56,12 @@ export function createPipePortGhostDecoration(): DecorationLayer {
   let lastCollectionVersion = -1;
   let lastPresentationVersion = -1;
   let lastVisibilityKey = "";
+  let cachedEntities: readonly WorldEntity[] | null = null;
+  let cachedDefinitions: readonly EntityDefinition[] | null = null;
+  let cachedHiddenKey = "";
+  let cachedDocumentVersion = -1;
+  let entries: ProductionPipePortGhostEntry[] = [];
+  const drawnGeometry = new WeakMap<Graphics, string>();
 
   container.eventMode = "none";
   container.interactiveChildren = false;
@@ -140,18 +148,36 @@ export function createPipePortGhostDecoration(): DecorationLayer {
       }
 
       const entities = editor.queries.listEntities();
-      const entityDefinitionMap = new Map(
-        ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
-          definition.id,
-          definition,
-        ]),
-      );
-      const entries = resolveProductionPipePortGhostEntries({
-        entities,
-        entityDefinitionMap,
-        queries: ctx.renderHost.workspace.registry.queries,
-        hiddenEntityIds: strongOverlayEntityIds,
-      });
+      // AI-REMOVED 2026-09-16:
+      // Reason: 端口合法性仅随内容变化重算，视口变化复用世界坐标结果。
+      // Trigger: 用户要求优化视口拖动与虚影移动。
+      // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
+      // Replacement: 下方 entries 缓存
+      // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
+      // Human Review: Required
+      // Original code:
+      //       const entityDefinitionMap = new Map(
+      //         ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+      //           definition.id,
+      //           definition,
+      //         ]),
+      //       );
+      //       const entries = resolveProductionPipePortGhostEntries({
+      //         entities,
+      //         entityDefinitionMap,
+      //         queries: ctx.renderHost.workspace.registry.queries,
+      //         hiddenEntityIds: strongOverlayEntityIds,
+      //       });
+      const definitions = ctx.renderHost.workspace.registry.entityDefinitions;
+      const hiddenKey = [...strongOverlayEntityIds].sort().join(",");
+      if (cachedEntities !== entities || cachedDefinitions !== definitions || cachedHiddenKey !== hiddenKey
+        || cachedDocumentVersion !== versions?.document) {
+        entries = resolveProductionPipePortGhostEntries({ entities,
+          entityDefinitionMap: new Map(definitions.map((definition) => [definition.id, definition])),
+          queries: ctx.renderHost.workspace.registry.queries, hiddenEntityIds: strongOverlayEntityIds });
+        cachedEntities = entities; cachedDefinitions = definitions; cachedHiddenKey = hiddenKey;
+        cachedDocumentVersion = versions?.document ?? -1;
+      }
 
       container.visible = entries.length > 0;
       container.alpha = zoomAlpha;
@@ -177,6 +203,8 @@ export function createPipePortGhostDecoration(): DecorationLayer {
         graphics.y = boundary.y;
         graphics.rotation = resolveEdgeAngleRadians(entry.edge)
           + resolveDisplayRotationRadians(ctx.viewportState.displayRotation);
+        const geometryKey = `${ctx.viewportState.gridCellPixelSize}:${entry.variant}`;
+        if (drawnGeometry.get(graphics) !== geometryKey) {
         drawPipePortGhost({
           graphics,
           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
@@ -184,6 +212,8 @@ export function createPipePortGhostDecoration(): DecorationLayer {
             ? CONSUMPTION_PIPE_PORT_GHOST_COLOR
             : ORDINARY_PIPE_PORT_GHOST_COLOR,
         });
+          drawnGeometry.set(graphics, geometryKey);
+        }
       }
 
       for (let index = visibleIndex; index < graphicsPool.length; index += 1) {

@@ -14,4 +14,5 @@ export interface EditorActionsContext {
   history: EditorHistoryRuntime;
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
+  persistViewportSettings(): void;
 }

@@ -1,10 +1,20 @@
+import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
+import { useEditorDocumentSnapshot } from "../hooks";
 import {
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
+  // AI-REMOVED 2026-09-15:
+  // Reason: React 原始订阅由共享 hook 接管。
+  // Trigger: REQ-032 视口写回触发无关预览重建。
+  // Evidence: 本文件原先以整份文档根作为 getSnapshot 返回值。
+  // Replacement: useEditorDocumentSnapshot
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // useSyncExternalStore,
   type CSSProperties,
 } from "react";
 import { observer } from "mobx-react-lite";
@@ -32,7 +42,15 @@ import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-const EMPTY_DOCUMENT_SUBSCRIPTION = () => undefined;
+// AI-REMOVED 2026-09-15:
+// Reason: 空订阅改由共享 hook 管理。
+// Trigger: REQ-032 内容订阅隔离。
+// Evidence: 此常量只有原 useSyncExternalStore 使用。
+// Replacement: useEditorDocumentSnapshot
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const EMPTY_DOCUMENT_SUBSCRIPTION = () => undefined;
 
 interface InspectorNeighborhoodPreviewHostSize {
   width: number;
@@ -72,11 +90,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
   const selectedEntityId = editor?.state.collections.selection.length === 1
     ? editor.state.collections.selection[0] ?? null
     : null;
-  const documentSnapshot = useSyncExternalStore(
-    (listener) => editor?.document.subscribe(listener) ?? EMPTY_DOCUMENT_SUBSCRIPTION,
-    () => editor?.document.getSnapshot() ?? null,
-    () => editor?.document.getSnapshot() ?? null,
-  );
+  const documentSnapshot = useEditorDocumentSnapshot(editor, selectDocumentContent, sameDocumentContent);
   const entityDefinitionMap = useMemo(
     () => new Map(appHost.workspace.registry.entityDefinitions.map((definition) => [definition.id, definition])),
     [appHost.workspace.registry.entityDefinitions],

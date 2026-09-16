@@ -20,8 +20,12 @@ import { PipeFluidPlayback, type LogisticsPipeRoute, type LogisticsBakedManifest
 import { resolveLogisticsMaterialTopology } from './logistics-material-topology';
 
 /** 文档变化重建路线，仿真快照变化查询占用；逐帧只推进路线状态和共享时间。 */
+// AI-CORRECTION 2026-09-15: 仅正式实体输入变化重建正式路线；草稿变化只求解预览拓扑。
 export class LogisticsMaterialSceneState {
   private documentVersion = -1;
+  private committedEntities: readonly WorldEntity[] = [];
+  private committedDefinitions: ReadonlyMap<string, EntityDefinition> | null = null;
+  private committed: ReadonlyMap<string, LogisticsMaterialRoutePlacement> | undefined;
   private simulationVersion = -1;
   private presentationVersion = -1;
   private placements: ReadonlyMap<string, LogisticsMaterialRoutePlacement> = new Map();
@@ -65,46 +69,58 @@ export class LogisticsMaterialSceneState {
     const topologyChanged = this.documentVersion !== options.documentVersion;
     const changed = topologyChanged || reset || this.simulationVersion !== options.simulationVersion
       || this.presentationVersion !== options.presentationVersion;
+    let committedTopologyChanged = false;
     if (topologyChanged) {
+      const actual = options.entities.filter((entity) => !("originalEntityId" in entity));
+      committedTopologyChanged = this.committedDefinitions !== options.definitions
+        || actual.length !== this.committedEntities.length
+        || actual.some((entity, index) => entity !== this.committedEntities[index]);
       const topology = resolveLogisticsMaterialTopology({
         entities: options.entities, definitions: options.definitions, registry: workspace.registry.queries,
+        committed: committedTopologyChanged ? undefined : this.committed,
         hiddenEntityIds: new Set(workspace.editor?.state.collections[EntityCollectionType.ghost] ?? []),
         replacingEntityId: workspace.editor?.queries.resolveLogisticsDraftState?.()?.replacingEntityId,
       });
-      const entities = new Map(options.entities.map((entity) => [entity.id, entity]));
-      const routes = new Map<string, LogisticsPipeRoute>();
-      for (const [id, placement] of topology.committed) {
-        if (placement.kind !== 'pipe') continue;
-        let route = routes.get(placement.routeId);
-        if (!route) {
-          route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
-            playback: new PipeFluidPlayback(), seconds: 0, flowing: false, fluidColors: null, gas: false };
-          // AI-REMOVED 2026-09-14:
-          // Reason: 新路线不再保存单色默认值。
-          // Trigger: Registry.fluidColors 成为唯一运行时颜色来源，未知颜色由共享解析器回退灰色。
-          // Evidence: route.color 的白色默认值只服务旧 tag fallback。
-          // Replacement: 上方 fluidColors: null。
-          // Risk: Low
-          // Human Review: Required
-          // Original code:
-          // route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
-          //   playback: new PipeFluidPlayback(), seconds: 0, flowing: false, color: 'ffffff', gas: false };
-          routes.set(route.id, route);
+      if (committedTopologyChanged) {
+        const entities = new Map(options.entities.map((entity) => [entity.id, entity]));
+        const routes = new Map<string, LogisticsPipeRoute>();
+        for (const [id, placement] of topology.committed) {
+          if (placement.kind !== 'pipe') continue;
+          let route = routes.get(placement.routeId);
+          if (!route) {
+            route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
+              playback: new PipeFluidPlayback(), seconds: 0, flowing: false, fluidColors: null, gas: false };
+            // AI-REMOVED 2026-09-14:
+            // Reason: 新路线不再保存单色默认值。
+            // Trigger: Registry.fluidColors 成为唯一运行时颜色来源，未知颜色由共享解析器回退灰色。
+            // Evidence: route.color 的白色默认值只服务旧 tag fallback。
+            // Replacement: 上方 fluidColors: null。
+            // Risk: Low
+            // Human Review: Required
+            // Original code:
+            // route = { id: placement.routeId, segments: [], closed: placement.closed === true, occupied: new Set(), exact,
+            //   playback: new PipeFluidPlayback(), seconds: 0, flowing: false, color: 'ffffff', gas: false };
+            routes.set(route.id, route);
+          }
+          const entity = entities.get(id)!;
+          route.segments.push({ id, x: entity.position.x + .5, y: entity.position.y + .5,
+            rotation: entity.rotation + placement.rotation, shape: placement.shape, start: placement.start, support: placement.support });
         }
-        const entity = entities.get(id)!;
-        route.segments.push({ id, x: entity.position.x + .5, y: entity.position.y + .5,
-          rotation: entity.rotation + placement.rotation, shape: placement.shape, start: placement.start, support: placement.support });
+        for (const [id, route] of routes) {
+          const previous = this.frame.routes.get(id);
+          // 编辑无关建筑时保留播放进度；路线本身改变则依据当前快照重建，不制造首格进液事件。
+          if (previous && previous.closed === route.closed && JSON.stringify(previous.segments) === JSON.stringify(route.segments)) routes.set(id, previous);
+        }
+        this.frame.routes = routes;
       }
-      for (const [id, route] of routes) {
-        const previous = this.frame.routes.get(id);
-        // 编辑无关建筑时保留播放进度；路线本身改变则依据当前快照重建，不制造首格进液事件。
-        if (previous && previous.closed === route.closed && JSON.stringify(previous.segments) === JSON.stringify(route.segments)) routes.set(id, previous);
-      }
-      this.frame.routes = routes;
+      this.committed = topology.committed;
+      this.committedEntities = actual;
+      this.committedDefinitions = options.definitions;
       this.placements = topology.placements;
       this.previewIds = topology.previewIds;
     }
-    if (changed) {
+    if (committedTopologyChanged || reset || this.simulationVersion !== options.simulationVersion
+      || this.presentationVersion !== options.presentationVersion) {
       this.inputs = new Map();
       for (const [id, route] of this.frame.routes) {
         const occupied = new Set(route.segments.filter((segment) => simulation?.queries.isPipeDeviceSlotOccupied(segment.id) === true).map((segment) => segment.id));

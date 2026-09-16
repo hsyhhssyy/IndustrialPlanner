@@ -1,3 +1,6 @@
+import type { WorldDocument } from "@/domain/document/world-document";
+import { selectDocumentEntities } from "@/shared/snapshot/world-document-selection";
+import { shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import type {
   GridFloatPoint,
   GridPoint,
@@ -154,7 +157,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
   let itemIconIdByItemId: Map<string, string> | null = null
 
   // 缓存：文档稳定数据
-  let cachedDocumentSnapshot: unknown = null
+  let cachedDocumentSnapshot: WorldDocument | null = null
   let cachedDefinitionMap: Map<string, EntityDefinition> | null = null
   // 端口连通性 — 文档变更或 gameUseBlueprintStyleDeviceImages 变更时失效
   let cachedPortConnectivity: ReturnType<typeof resolveBeltPortConnectivityEntries> | null = null
@@ -268,7 +271,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const editor = ctx.renderHost.workspace.editor
       const documentSnapshot = editor?.document?.getSnapshot() ?? null
       // 文档版本不变时缓存命中；snapshot 不可用时始终失效（如测试 mock 缺少 document）
-      const documentStable = documentSnapshot !== null && cachedDocumentSnapshot === documentSnapshot
+      // AI-CORRECTION 2026-09-15: 缓存由实体内容决定，viewport 写回不使路线失效。
+      const documentStable = documentSnapshot !== null && cachedDocumentSnapshot !== null
+        && shallowSnapshotEqual(selectDocumentEntities(cachedDocumentSnapshot), selectDocumentEntities(documentSnapshot))
       const simplifiedDeviceIcons = ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true
 
       // 定义映射（会话级稳定，只算一次）

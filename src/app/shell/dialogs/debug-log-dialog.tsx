@@ -1,3 +1,4 @@
+import { RenderDiagnosticPanel, RenderDiagnosticProgress } from "./render-diagnostic-panel";
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, useState } from "react";
 import { observer } from "mobx-react-lite";
 
@@ -180,6 +181,8 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
   );
 
   return (
+    <>
+    <RenderDiagnosticProgress workspace={appHost.workspace} translate={t} onResults={() => appHost.internalActions.openDialog("debug-log")} />
     <DialogShell
       bodyClassName="debug-log-dialog-body"
       className="debug-log-dialog"
@@ -206,6 +209,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       title={t("debugLogDialog.title")}
       titleId="debug-log-dialog-title"
     >
+      <RenderDiagnosticPanel workspace={appHost.workspace} translate={t} onStarted={() => appHost.internalActions.closeDialog("debug-log")} />
       <div className={cm(styles, "debug-log-dialog-guidance")}>
         <p>{t("debugLogDialog.guidance")}</p>
         {hasLogs ? (
@@ -226,6 +230,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
         value={snapshotText}
       />
     </DialogShell>
+    </>
   );
 });
 

@@ -1125,11 +1125,11 @@ function resolveInvalidReason(options: {
         continue;
       }
 
-      if (!isOrdinaryLogisticsDefinitionId(
-        entity.definitionId,
-        options.kind,
-        options.context.workspace.registry.queries,
-      )) {
+      const registryQueries = options.context.workspace.registry.queries;
+      const isSameKindLogistics = options.kind === LOGISTICS_KIND.belt
+        ? registryQueries.isBeltFamily(entity.definitionId)
+        : registryQueries.isPipeFamily(entity.definitionId);
+      if (!isSameKindLogistics) {
         continue;
       }
 

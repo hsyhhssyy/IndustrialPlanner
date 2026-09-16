@@ -1,3 +1,4 @@
+import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
@@ -13,7 +14,7 @@ import {
 } from "react";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { EntityVariantDefinition } from "@/domain/registry/types/entity-variant-definition";
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
@@ -738,7 +739,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
   const t = appHost.actions.translate;
   const editor = appHost.workspace.editor;
   // 订阅 document 变化以在切换基地后重新过滤设备列表
-  useEditorDocumentSnapshot(editor);
+  useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
   const screenProfile = appHost.state.screenProfile;
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;

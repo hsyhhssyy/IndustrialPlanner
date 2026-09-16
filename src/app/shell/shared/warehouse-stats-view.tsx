@@ -30,14 +30,17 @@ type WarehouseStatsEntry = {
 
 type WarehouseStatsViewMode = "compact" | "dialog";
 
-export function useWarehouseStats(appHost: AppHost) {
+export function useWarehouseStats(appHost: AppHost, active = true) {
   const [stats, setStats] = useState<WarehouseStatsReadModel | null>(() => (
-    appHost.workspace.simulation?.queries.getWarehouseStats() ?? null
+    active ? appHost.workspace.simulation?.queries.getWarehouseStats() ?? null : null
   ));
 
   useEffect(() => {
+    if (!active) return;
     const tick = () => {
-      setStats(appHost.workspace.simulation?.queries.getWarehouseStats() ?? null);
+      const next = appHost.workspace.simulation?.queries.getWarehouseStats() ?? null;
+      // 暂停时 Query 仍返回副本；相同数值保留引用，避免整个面板重新创建 JSX。
+      setStats((previous) => sameWarehouseStats(previous, next) ? previous : next);
     };
 
     tick();
@@ -46,9 +49,22 @@ export function useWarehouseStats(appHost: AppHost) {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [appHost]);
+  }, [active, appHost]);
 
   return stats;
+}
+
+function sameWarehouseStats(left: WarehouseStatsReadModel | null, right: WarehouseStatsReadModel | null): boolean {
+  if (left === right) return true;
+  if (left === null || right === null || left.statsWindowReady !== right.statsWindowReady) return false;
+  const keys = Object.keys(left.items);
+  return keys.length === Object.keys(right.items).length && keys.every((key) => {
+    const a = left.items[key]!;
+    const b = right.items[key];
+    return b !== undefined && a.producedPerMinute === b.producedPerMinute
+      && a.consumedPerMinute === b.consumedPerMinute && a.warehouseCount === b.warehouseCount
+      && a.infinite === b.infinite && a.lastChangedTick === b.lastChangedTick;
+  });
 }
 
 export function useWarehousePinnedItems(appHost: AppHost) {

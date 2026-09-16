@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "updatedAt": "2026-09-14",
+  "fixtureRevision": 2,
+  "updatedAt": "2026-09-16",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json",
@@ -2087,6 +2087,13 @@
       "unknownDefinitionIds": []
     },
     {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/bridge-crossing.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
       "file": "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema6.json",
       "role": "test-scene",
       "schemaVersion": 6,
@@ -2634,6 +2641,34 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/simulation/pipe-transport/scene-01-pipe-transport-c70d91fa.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-01-mix-pool-solid-output-priority-routing.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-02-mix-pool-solid-output-priority-scarce.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-03-mix-pool-single-input-priority-stream.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-04-mix-pool-four-belt-priority-stream.schema6.json",
       "role": "test-scene",
       "schemaVersion": 6,
       "version": "fixture-v1",
@@ -3266,6 +3301,7 @@
     "src/tests/fixtures/blueprints/simulation/pipe-fluid-query/index.json",
     "src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json",
     "src/tests/fixtures/blueprints/simulation/pipe-transport/index.json",
+    "src/tests/fixtures/blueprints/simulation/port-priority-routing/index.json",
     "src/tests/fixtures/blueprints/simulation/power-system/index.json",
     "src/tests/fixtures/blueprints/simulation/production/index.json",
     "src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/index.json",
@@ -3290,4 +3326,3 @@
     "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json"
   ]
 }
-

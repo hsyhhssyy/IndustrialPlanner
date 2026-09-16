@@ -1,0 +1,41 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 3,
+  "schemaVersion": 6,
+  "source": "src/tests/simulation/port-priority-routing.test.ts",
+  "createdAt": "2026-09-16",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-mix-pool-solid-output-priority-routing.schema6.json",
+        "blueprintId": "req-076-mix-pool-solid-output-priority-routing",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-02": [
+      {
+        "parameters": {},
+        "file": "scene-02-mix-pool-solid-output-priority-scarce.schema6.json",
+        "blueprintId": "req-076-mix-pool-solid-output-priority-scarce",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-03": [
+      {
+        "parameters": {},
+        "file": "scene-03-mix-pool-single-input-priority-stream.schema6.json",
+        "blueprintId": "req-076-mix-pool-one-belt-priority-stream",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-04": [
+      {
+        "parameters": {},
+        "file": "scene-04-mix-pool-four-belt-priority-stream.schema6.json",
+        "blueprintId": "req-076-mix-pool-four-belt-priority-stream",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

@@ -198,6 +198,40 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("从物流桥 A 拉到物流桥 B 时绕开中间物流桥 M 且不产生堆叠", async () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING);
+    enterBeltLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 11, y: 8 }, nextPointerId++);
+    expect(editorHost.queries.resolveLogisticsDraftState()?.source).toMatchObject({
+      type: "device-port",
+      entityId: "bridge-a",
+      portGroupId: "item_output_ew",
+      portId: "out_e",
+      outsideGridPoint: { x: 12, y: 8 },
+    });
+
+    await moveToCell(appHost, editorHost, { x: 11, y: 10 }, nextPointerId++);
+    await waitForGestureFrame();
+
+    const draftBeforeApply = editorHost.queries.resolveLogisticsDraftState();
+    expect(draftBeforeApply?.cells.some((cell) =>
+      cell.gridPoint.x === 11 && cell.gridPoint.y === 9
+    )).toBe(false);
+    expect(draftBeforeApply).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+
+    clickCell(appHost, editorHost, { x: 11, y: 10 }, nextPointerId++);
+    const entitiesAtMiddleBridge = Object.values(
+      editorHost.document.getSnapshot().entities,
+    ).filter((entity) => entity.position.x === 11 && entity.position.y === 9);
+    expect(entitiesAtMiddleBridge).toEqual([
+      expect.objectContaining({ id: "bridge-m", definitionId: "log_connector" }),
+    ]);
+  });
+
   it("从已有传送带端点续接时切换线序生成弯道", async () => {
     // 第一段：从 (2,4) 到 (4,3)
     clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
@@ -971,6 +1005,10 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = loadBlueprintFromFile(
 // };
 const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema6.json",
+);
+
+const USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING: BlueprintDocument = loadBlueprintFromFile(
+  "src/tests/fixtures/blueprints/logistics-placement-complete/bridge-crossing.schema6.json",
 );
 
 // AI-REMOVED 2026-09-14:

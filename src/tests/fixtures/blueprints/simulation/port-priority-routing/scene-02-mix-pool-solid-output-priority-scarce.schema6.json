@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req-076-mix-pool-solid-output-priority-scarce",
+  "version": "fixture-v1",
+  "name": "mix-pool-solid-output-priority-scarce",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "pool": {
+      "id": "pool",
+      "definitionId": "mix_pool_2",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "customPortPriorityGroups": true,
+        "portPriorityGroups": {
+          "item_output:out_n_3": 9,
+          "item_output:out_n_4": 1
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_poly",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        }
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt-g1": {
+      "id": "belt-g1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "belt-g9": {
+      "id": "belt-g9",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "pool",
+    "power",
+    "belt-g1",
+    "belt-g9"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -381,6 +381,7 @@ function createStorageToFactorySlotLink(): WorldDocument["slotLinks"][number] {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   localStorage.clear();
   vi.unstubAllGlobals();
 });
@@ -642,6 +643,77 @@ describe("createEditorHost", () => {
     expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
   });
 
+  it("连续拖动每秒只发布一次，等待期间的设置更新不会被覆盖", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const editor = createEditorHost(createWorkspace());
+    await flushMicrotasks();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const listener = vi.fn();
+    const unsubscribe = editor.document.subscribe(listener);
+    try {
+      for (let index = 0; index < 10; index += 1) {
+        editor.actions.moveViewportByClientPixelVector({
+          startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 1, y: 1 },
+        });
+        await vi.advanceTimersByTimeAsync(90);
+      }
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(editor.state.viewport.center.x).not.toBe(0);
+      editor.actions.writeDocumentSettings({ powerConsumptionOverride: 123 });
+      expect(listener).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(listener).toHaveBeenCalledTimes(3);
+      expect(editor.document.getSnapshot().documentSettings.powerConsumptionOverride).toBe(123);
+      expect(editor.document.getSnapshot().documentSettings.viewport.center).toEqual({
+        x: editor.state.viewport.center.x, y: editor.state.viewport.center.y,
+      });
+      expect(editor.state.history.undoDepth).toBe(0);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(listener).toHaveBeenCalledTimes(3);
+      expect(Object.isFrozen(editor.document.getSnapshot().documentSettings.viewport.center)).toBe(true);
+      expect("setSnapshot" in editor.document).toBe(false);
+    } finally {
+      unsubscribe();
+      editor.dispose();
+    }
+  });
+
+  it("切换文档及关闭编辑器前补写待保存视口", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const editor = createEditorHost(createWorkspace());
+    await flushMicrotasks();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const oldKey = editor.document.getSnapshot().documentKey;
+    editor.actions.setViewportDisplayRotation(90);
+    const next = { ...editor.document.getSnapshot(), documentKey: `${oldKey}:next` };
+    editor.internalDocument.setSnapshot(next);
+    await flushMicrotasks(100);
+    expect((await readStoredWorldDocument(oldKey))?.documentSettings.viewport.displayRotation).toBe(90);
+    expect(editor.state.viewport.displayRotation).toBe(0);
+    editor.actions.setViewportDisplayRotation(270);
+    editor.dispose();
+    await flushMicrotasks(100);
+    expect((await readStoredWorldDocument(next.documentKey))?.documentSettings.viewport.displayRotation).toBe(270);
+    // AI-REMOVED 2026-09-15:
+    // Reason: 一次性定时器归属诊断已完成。
+    // Trigger: 清理断言发现 2 个额外的定时器。
+    // Evidence: 两个 delay=0 均由 jsdom StorageImpl.setItem 派发 storage 事件产生。
+    // Replacement: 下方仅推进 0ms 事件，然后继续断言无剩余定时器。
+    // Risk: Low；1000ms 视口定时器若泄漏仍会被断言发现。
+    // Human Review: Required
+    // Original code:
+    // const timeout = globalThis.setTimeout;
+    // const timeoutStacks: unknown[] = [];
+    // const timeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((...args: Parameters<typeof setTimeout>) => {
+    // timeoutStacks.push({ delay: args[1], stack: new Error().stack });
+    // return timeout(...args);
+    // }) as typeof setTimeout);
+    // console.info("REQ032 timer diagnosis", JSON.stringify(timeoutStacks));
+    // timeoutSpy.mockRestore();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("persists viewport center and grid size without recording history", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
@@ -649,6 +721,7 @@ describe("createEditorHost", () => {
 
     await flushMicrotasks();
 
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const documentKey = editorHost.document.getSnapshot().documentKey;
 
     editorHost.actions.moveViewportByClientPixelVector({
@@ -663,6 +736,8 @@ describe("createEditorHost", () => {
     });
     editorHost.actions.zoom(2);
 
+    // REQ-032: 实时视口即时更新，持久化快照每 1000ms 合并发布。
+    await vi.advanceTimersByTimeAsync(1000);
     await flushMicrotasks(100);
 
     const storedDocument = await readStoredWorldDocument(documentKey);
@@ -677,6 +752,7 @@ describe("createEditorHost", () => {
     });
     expect(editorHost.state.history.records).toHaveLength(0);
     expect(editorHost.state.history.undoDepth).toBe(0);
+    editorHost.dispose();
   });
 
   it("sets and persists viewport display rotation without recording history", async () => {
@@ -686,6 +762,7 @@ describe("createEditorHost", () => {
 
     await flushMicrotasks();
 
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const documentKey = editorHost.document.getSnapshot().documentKey;
     const initialViewportCenter = {
       ...editorHost.state.viewport.center,
@@ -704,6 +781,8 @@ describe("createEditorHost", () => {
 
     editorHost.actions.setViewportDisplayRotation(270);
 
+    // REQ-032: 实时视口即时更新，持久化快照每 1000ms 合并发布。
+    await vi.advanceTimersByTimeAsync(1000);
     await flushMicrotasks(100);
 
     const storedDocument = await readStoredWorldDocument(documentKey);
@@ -718,6 +797,7 @@ describe("createEditorHost", () => {
     });
     expect(editorHost.state.history.records).toHaveLength(0);
     expect(editorHost.state.history.undoDepth).toBe(0);
+    editorHost.dispose();
   });
 
   it("compensates viewport center after later rect changes to preserve screen position", () => {

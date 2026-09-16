@@ -1,3 +1,7 @@
+import type { RenderDiagnosticFrame } from "@/shared/render-diagnostics";
+import { createRenderDiagnosticSession } from "./render-diagnostic-session";
+import { createSnapshotSelector } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
 import type {
   WorldEntity,
 } from "@/domain/document/world-document"
@@ -206,12 +210,15 @@ interface EntitySpriteSyncStats {
   destroyedSprites: number;
   recreatedSprites: number;
   syncLayoutCalls: number;
+  syncPositionCalls: number;
   syncRuntimeCalls: number;
   syncAnimationCalls: number;
 }
 
 interface EntitySpriteSyncCache {
   documentVersion: number;
+  committedDocumentVersion: number;
+  readonly inputs: Map<string, { entity: WorldEntity; material: unknown; highlighted: boolean }>;
   viewportVersion: number;
   collectionVersion: number;
   presentationVersion: number;
@@ -345,6 +352,8 @@ export function createRenderSceneOrchestrator(
   const entityGeometryStamps = new Map<string, EntityGeometryStamp>()
   const entitySpriteSyncCache: EntitySpriteSyncCache = {
     documentVersion: -1,
+    committedDocumentVersion: -1,
+    inputs: new Map(),
     viewportVersion: -1,
     collectionVersion: -1,
     presentationVersion: -1,
@@ -402,13 +411,38 @@ export function createRenderSceneOrchestrator(
       ],
     },
   })
+  const diagnosticSession = createRenderDiagnosticSession({
+    host: renderHost,
+    documentVersion: () => committedDocumentVersion,
+    layers: {
+      "without-belt-cargo": beltCargoOverlayLayer,
+      "without-pipe-fluid": logisticsBakedFlow.fluid,
+      "without-building-effects": buildingEffects.container,
+    },
+    beginProfile: () => {
+      pixiRenderDiagnostics.syncDebugState(true);
+      const info = pixiRenderDiagnostics.readSnapshot();
+      pixiRenderDiagnostics.setLayerProfile("full");
+      return {
+        restore: () => pixiRenderDiagnostics.setLayerProfile(info.layerProfile),
+        environment: {
+          backend: info.backend, resolution: info.resolution,
+          framebufferWidth: info.framebufferWidth, framebufferHeight: info.framebufferHeight,
+          antialias: info.antialias, msaaSamples: info.msaaSamples, gpuTimerMode: info.gpuTimerMode,
+          renderGroups: info.renderGroups.mode,
+        },
+      };
+    },
+  })
   const renderPerfDiagnostics = createRenderPerfDiagnostics(
     renderHost,
     () => pixiRenderDiagnostics.readSnapshot(),
     pixiRenderDiagnostics.measureSceneStage,
+    () => diagnosticSession.collecting ? diagnosticSession.record : null,
   )
   let activeFrameProfiler: RenderFrameProfiler | null = null
   let documentVersion = 0
+  let committedDocumentVersion = 0
   let viewportVersion = 0
   let collectionVersion = 0
   let presentationVersion = 0
@@ -417,9 +451,12 @@ export function createRenderSceneOrchestrator(
   let lastPresentationSignature: string | null = null
   let lastSimulationSignature: string | null = null
   const collectionSnapshots = new Map<string, readonly string[]>()
-  const disposeDocumentVersionSubscription = renderHost.workspace.editor?.document?.subscribe?.(() => {
-    documentVersion += 1
-  }) ?? (() => undefined)
+  const editorDocument = renderHost.workspace.editor?.document
+  const disposeDocumentVersionSubscription = editorDocument === undefined ? () => undefined
+    : createSnapshotSelector(editorDocument, selectDocumentContent, sameDocumentContent).subscribe(() => {
+      documentVersion += 1
+      committedDocumentVersion += 1
+    })
   const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
     app,
     (snap) => {
@@ -510,6 +547,7 @@ export function createRenderSceneOrchestrator(
 
   const flushViewport = (): void => {
     const frameStartedAtMs = performance.now()
+    diagnosticSession.beforeFrame(frameStartedAtMs)
     const frameProfiler = renderPerfDiagnostics.startFrame({
       startedAtMs: frameStartedAtMs,
       tickerDeltaMs: renderHost.app.ticker.deltaMS,
@@ -710,6 +748,7 @@ export function createRenderSceneOrchestrator(
         gasInteractionVisualState,
         powerInteractionVisualState,
         versions: frameVersions,
+        committedDocumentVersion,
         cache: entitySpriteSyncCache,
       }),
     )
@@ -976,6 +1015,7 @@ export function createRenderSceneOrchestrator(
 
   const host: RenderSceneOrchestrator = {
     destroy: () => {
+      diagnosticSession.destroy()
       app.ticker.remove(flushViewport)
       app.ticker.remove(startPixiRenderMeasurement)
       app.ticker.remove(finishPixiRenderMeasurement)
@@ -1501,6 +1541,7 @@ function syncWorldEntitySprites(options: {
   powerInteractionVisualState: PowerInteractionVisualState;
   profiler: DecorationProfiler | null;
   versions: RenderSpriteSyncVersions;
+  committedDocumentVersion: number;
   cache: EntitySpriteSyncCache;
 }): EntitySpriteSyncStats | null {
   const stats: EntitySpriteSyncStats | null = options.profiler === null
@@ -1513,6 +1554,7 @@ function syncWorldEntitySprites(options: {
         destroyedSprites: 0,
         recreatedSprites: 0,
         syncLayoutCalls: 0,
+        syncPositionCalls: 0,
         syncRuntimeCalls: 0,
         syncAnimationCalls: 0,
       }
@@ -1594,6 +1636,37 @@ function syncWorldEntitySprites(options: {
     }
 
     let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
+    const highlighted = options.gasInteractionVisualState.highlightedEntityIds.has(entity.id)
+      || options.powerInteractionVisualState.highlightedEntityIds.has(entity.id)
+    const material = options.logisticsMaterials.entities.get(entity.id)
+    const previous = options.cache.inputs.get(entity.id)
+    const previousLayout = options.cache.layouts.get(entity.id)
+    if (sprite !== null && previousLayout !== undefined
+      && previous?.entity === entity && previous.material === material && previous.highlighted === highlighted
+      && options.cache.committedDocumentVersion === options.committedDocumentVersion
+      && options.cache.viewportVersion === options.versions.viewport
+      && options.cache.collectionVersion === options.versions.collections
+      && options.cache.presentationVersion === options.versions.presentation
+      && !sprite.isVisualSyncInvalidated()) {
+      const visible = options.cache.visibility.get(entity.id) === true
+      if (stats !== null) {
+        if (visible) stats.visibleEntities += 1
+        else stats.hiddenEntities += 1
+      }
+      if (visible) {
+        if (simulationInvalidated && sprite.syncRuntime !== undefined) {
+          sprite.syncRuntime(previousLayout, spriteContext)
+          if (stats !== null) stats.syncRuntimeCalls += 1
+        }
+        if (sprite.syncAnimation !== undefined) {
+          sprite.syncAnimation(spriteContext)
+          if (stats !== null) stats.syncAnimationCalls += 1
+        }
+      }
+      nextEntityIds.add(entity.id)
+      continue
+    }
+    options.cache.inputs.set(entity.id, { entity, material, highlighted })
     if (
       sprite !== null
       && options.entitySpriteDefinitionIds.get(entity.id) !== entity.definitionId
@@ -1686,9 +1759,17 @@ function syncWorldEntitySprites(options: {
     }
 
     sprite.setVisible(true)
-    if (stats !== null) {
-      stats.syncLayoutCalls += 1
-    }
+    // AI-REMOVED 2026-09-16:
+    // Reason: 完整同步计数移到实际完整同步分支。
+    // Trigger: 用户要求优化视口拖动与虚影移动。
+    // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
+    // Replacement: 下方 syncPosition / syncLayout 分支
+    // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
+    // Human Review: Required
+    // Original code:
+    // if (stats !== null) {
+    //       stats.syncLayoutCalls += 1
+    //     }
     const layout = resolveWorldEntitySpriteLayout({
       entity,
       footprint: definition.footprint,
@@ -1702,7 +1783,24 @@ function syncWorldEntitySprites(options: {
       displayRotation: options.viewportState.displayRotation,
     })
     options.cache.layouts.set(entity.id, layout)
-    sprite.syncLayout(layout, spriteContext)
+    if (sprite.syncPosition !== undefined && previousLayout !== undefined
+      && previous?.entity === entity && previous.material === material && previous.highlighted === highlighted
+      && previousLayout.width === layout.width && previousLayout.height === layout.height
+      && previousLayout.rotation === layout.rotation
+      && options.cache.committedDocumentVersion === options.committedDocumentVersion
+      && options.cache.collectionVersion === options.versions.collections
+      && options.cache.presentationVersion === options.versions.presentation
+      && !sprite.isVisualSyncInvalidated()) {
+      sprite.syncPosition(layout)
+      if (stats !== null) stats.syncPositionCalls += 1
+      if (simulationInvalidated && sprite.syncRuntime !== undefined) {
+        sprite.syncRuntime(layout, spriteContext)
+        if (stats !== null) stats.syncRuntimeCalls += 1
+      }
+    } else {
+      sprite.syncLayout(layout, spriteContext)
+      if (stats !== null) stats.syncLayoutCalls += 1
+    }
     if (sprite.syncAnimation !== undefined) {
       sprite.syncAnimation(spriteContext)
       if (stats !== null) {
@@ -1723,11 +1821,13 @@ function syncWorldEntitySprites(options: {
     options.entitySpriteLayerKeys.delete(entityId)
     options.cache.layouts.delete(entityId)
     options.cache.visibility.delete(entityId)
+    options.cache.inputs.delete(entityId)
     if (stats !== null) {
       stats.destroyedSprites += 1
     }
   }
 
+  options.cache.committedDocumentVersion = options.committedDocumentVersion
   options.cache.documentVersion = options.versions.document
   options.cache.viewportVersion = options.versions.viewport
   options.cache.collectionVersion = options.versions.collections
@@ -1839,6 +1939,7 @@ function recordEntitySpriteSyncStats(
   profiler.count("entitySprites.destroyedSprites", stats.destroyedSprites)
   profiler.count("entitySprites.recreatedSprites", stats.recreatedSprites)
   profiler.count("entitySprites.syncLayoutCalls", stats.syncLayoutCalls)
+  profiler.count("entitySprites.syncPositionCalls", stats.syncPositionCalls)
   profiler.count("entitySprites.syncRuntimeCalls", stats.syncRuntimeCalls)
   profiler.count("entitySprites.syncAnimationCalls", stats.syncAnimationCalls)
 }
@@ -1847,6 +1948,7 @@ function createRenderPerfDiagnostics(
   renderHost: RenderHost,
   readPixiDiagnostics: () => PixiRenderDiagnosticsSnapshot,
   measureSceneStage: DecorationProfiler["measure"],
+  readFrameObserver: () => ((frame: RenderDiagnosticFrame) => void) | null,
 ): {
   startFrame(options: {
     startedAtMs: number;
@@ -1910,19 +2012,25 @@ function createRenderPerfDiagnostics(
         windowStartedAtMs = options.startedAtMs
       }
 
+      const observer = readFrameObserver()
+      const frameCounts: Record<string, number> = {}
+      const frameStages: Record<string, number> = {}
       let sceneSyncFinishedAtMs: number | null = null
       let pixiRenderStartedAtMs: number | null = null
       let pixiRenderFinishedAtMs: number | null = null
       const profiler: RenderFrameProfiler = {
         count(name, value = 1): void {
           addPerfSample(countAggregates, name, value)
+          if (observer) frameCounts[name] = (frameCounts[name] ?? 0) + value
         },
         measure(stage, callback) {
           const stageStartedAtMs = performance.now()
           try {
             return measureSceneStage(stage, callback)
           } finally {
-            addPerfSample(stageAggregates, stage, performance.now() - stageStartedAtMs)
+            const elapsed = performance.now() - stageStartedAtMs
+            addPerfSample(stageAggregates, stage, elapsed)
+            if (observer) frameStages[stage] = (frameStages[stage] ?? 0) + elapsed
           }
         },
         finishSceneSync(): void {
@@ -1976,6 +2084,9 @@ function createRenderPerfDiagnostics(
               longFrameCount += 1
             }
           }
+
+          observer?.({ startedAtMs: options.startedAtMs, finishedAtMs, sceneSyncMs: renderSelfMs,
+            pixiRenderMs, counts: frameCounts, stages: frameStages })
 
           const windowMs = finishedAtMs - windowStartedAtMs
           if (windowMs < RENDER_PERF_LOG_WINDOW_MS) {

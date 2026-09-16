@@ -84,6 +84,38 @@ export function persistWorldDocumentViewportSettings(options: {
   });
 }
 
+export function createViewportPersistence(
+  options: Parameters<typeof persistWorldDocumentViewportSettings>[0],
+): { schedule(): void; flush(): void; dispose(): void } {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let disposed = false;
+  const flush = (): void => {
+    if (timer === null) return;
+    clearTimeout(timer);
+    timer = null;
+    // 发布时读取最新文档和实时视口，避免覆盖等待期间的设备编辑。
+    persistWorldDocumentViewportSettings(options);
+  };
+  const onVisibilityChange = (): void => {
+    if (globalThis.document?.visibilityState === "hidden") flush();
+  };
+  globalThis.addEventListener?.("pagehide", flush);
+  globalThis.document?.addEventListener("visibilitychange", onVisibilityChange);
+  return {
+    schedule: () => {
+      if (disposed || timer !== null) return;
+      timer = setTimeout(flush, 1000);
+    },
+    flush,
+    dispose: () => {
+      flush();
+      disposed = true;
+      globalThis.removeEventListener?.("pagehide", flush);
+      globalThis.document?.removeEventListener("visibilitychange", onVisibilityChange);
+    },
+  };
+}
+
 function withWorldDocumentViewportSettings(
   document: WorldDocument,
   viewport: EditorViewportStateReadWrite,

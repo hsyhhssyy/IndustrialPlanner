@@ -215,7 +215,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   public syncRuntime(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     if (context.logisticsMaterials?.entities.get(this.entityId) === this.materialState
       && (context.logisticsMaterials?.animationEnabled === true) === this.materialAnimationEnabled) return
-    this.syncSpriteLayout(layout, context)
+    // 材质变化需要完整同步，以同时更新根节点平移和依赖材质的遮罩。
+    this.syncLayout(layout, context)
   }
 
   public setVisible(visible: boolean): void {

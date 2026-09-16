@@ -63,6 +63,7 @@ export interface PixiRenderDiagnosticsSnapshot {
 }
 
 export interface PixiRenderDiagnostics {
+  setLayerProfile(profile: PixiRenderLayerProfile): void;
   syncDebugState(enabled: boolean): void;
   measureSceneStage<T>(stage: string, callback: () => T): T;
   beforeRender(profiler: PixiDiagnosticProfiler | null): void;
@@ -487,6 +488,11 @@ export function createPixiRenderDiagnostics(options: {
           }
         }
       }
+    },
+
+    setLayerProfile(profile): void {
+      restoreHiddenTargets(hiddenTargets);
+      layerProfile = profile;
     },
 
     syncDebugState(nextEnabled): void {

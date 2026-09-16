@@ -67,14 +67,18 @@ function formatWarehouseStatsJson(appHost: AppHost): string {
   return JSON.stringify(stats, null, 2);
 }
 
-export function SimulationPanel({ appHost }: { appHost: AppHost }) {
+export function SimulationPanel({ appHost, active = true }: { appHost: AppHost; active?: boolean }) {
   const t = appHost.actions.translate;
-  const [simulationReadModel, setSimulationReadModel] = useState(() => formatSimulationReadModel(appHost));
-  const [warehouseJson, setWarehouseJson] = useState(() => formatWarehouseStatsJson(appHost));
+  const [simulationReadModel, setSimulationReadModel] = useState(() => active
+    ? formatSimulationReadModel(appHost) : { runtimeJson: "null", tickDebugData: "null" });
+  const [warehouseJson, setWarehouseJson] = useState(() => active ? formatWarehouseStatsJson(appHost) : "null");
 
   useEffect(() => {
+    if (!active) return;
     const tick = () => {
-      setSimulationReadModel(formatSimulationReadModel(appHost));
+      const next = formatSimulationReadModel(appHost);
+      setSimulationReadModel((previous) => previous.runtimeJson === next.runtimeJson
+        && previous.tickDebugData === next.tickDebugData ? previous : next);
       setWarehouseJson(formatWarehouseStatsJson(appHost));
     };
 
@@ -84,7 +88,7 @@ export function SimulationPanel({ appHost }: { appHost: AppHost }) {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [appHost]);
+  }, [active, appHost]);
 
   return (
     <article className={cm(styles, "definition-card")} data-simulation-panel>

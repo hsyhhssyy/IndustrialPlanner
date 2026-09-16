@@ -197,7 +197,7 @@ export function createEditorSelectionActions({
 
     const currentDocument = document.getSnapshot();
     const targetEntityIds = new Set(collection);
-    const nextEntities = { ...currentDocument.entities };
+    let nextEntities = currentDocument.entities;
     const baseDefinition = workspace.registry.baseDefinitions.find((definition) =>
       definition.id === currentDocument.baseId,
     ) ?? null;
@@ -210,6 +210,7 @@ export function createEditorSelectionActions({
         continue;
       }
 
+      if (!didUpdateDocument) nextEntities = { ...currentDocument.entities };
       nextEntities[entityId] = moveEntityByGridVector(entity, gridVector);
       didUpdateDocument = true;
     }

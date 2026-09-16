@@ -169,7 +169,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
     });
 
     return configuredItemIconEntityCache.resolve({
-      documentSnapshot: editor.document.getSnapshot(),
+      documentSnapshot: editor.document.getSnapshot().entities,
       entities: options.entities,
       previewEntities,
       isConfiguredItemIconDefinition: (definitionId) => (

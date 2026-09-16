@@ -5,7 +5,7 @@ import { FluidDomain } from "@/domain/shared/item-domain-flags";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import {
   resolveLogisticsMaterialPlacements, resolveLogisticsMaterialSpec,
-  type LogisticsMaterialPathEntry,
+  type LogisticsMaterialPathEntry, type LogisticsMaterialRoutePlacement,
 } from "@/shared/logistics-material";
 
 /** 将设备真实端口与材质线路关联；虚影替换重叠节后接续线路，仿真分组仍使用正式实体。 */
@@ -15,6 +15,7 @@ export function resolveLogisticsMaterialTopology(options: {
   registry: Pick<RegistryQuery, "isPipe" | "isBelt">;
   hiddenEntityIds?: ReadonlySet<string>;
   replacingEntityId?: string | null;
+  committed?: ReadonlyMap<string, LogisticsMaterialRoutePlacement>;
 }) {
   const actual = options.entities.filter((entity) => !("originalEntityId" in entity));
   const drafts = options.entities.filter((entity) => "originalEntityId" in entity);
@@ -66,7 +67,7 @@ export function resolveLogisticsMaterialTopology(options: {
       outputConnectedToDevice: entry.kind === "pipe" && deviceInputs.has(entry.output),
     })));
   };
-  const committed = collect(actual);
+  const committed = options.committed ?? collect(actual);
   const placements = drafts.length === 0 ? committed : new Map([
     ...committed,
     ...collect([

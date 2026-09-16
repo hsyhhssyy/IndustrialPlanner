@@ -8,7 +8,10 @@ import {
   SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createEditorActions } from "./actions";
-import { applyWorldDocumentViewportSettings } from "./document-viewport";
+import { applyWorldDocumentViewportSettings, createViewportPersistence } from "./document-viewport";
+import { freezeSnapshot } from "@/shared/snapshot/freeze-snapshot";
+import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentEntities } from "@/shared/snapshot/world-document-selection";
 import { hookDocumentStorage } from "./document-storage";
 import {
   createEditorDocumentWriter,
@@ -35,12 +38,24 @@ export function createEditorHost(
   workspace: WorkspaceContract,
 ): EditorHost {
   const disposers: Array<() => void> = [];
-  const internalDocument = createSnapshotStore(createWorldDocument());
+  let publishedDocument: WorldDocument | null = null;
+  const internalDocument = createSnapshotStore(createWorldDocument(), (nextDocument) => {
+    if (publishedDocument !== null && publishedDocument.documentKey !== nextDocument.documentKey) {
+      viewportPersistence?.flush();
+    }
+    publishedDocument = freezeSnapshot(nextDocument);
+    return publishedDocument;
+  });
   const editorState = createEditorStateReadWrite();
   const internalHistory = new EditorHistoryRuntime(editorState.history);
   const internalDocumentWriter = createEditorDocumentWriter({
     document: internalDocument,
     history: internalHistory,
+  });
+  const viewportPersistence = createViewportPersistence({
+    document: internalDocument,
+    documentWriter: internalDocumentWriter,
+    state: editorState,
   });
   const actions: EditorContract["actions"] = createEditorActions({
     document: internalDocument,
@@ -48,6 +63,7 @@ export function createEditorHost(
     history: internalHistory,
     state: editorState,
     workspace,
+    persistViewportSettings: viewportPersistence.schedule,
   });
   const queries: EditorContract["queries"] = createEditorQueries({
     document: internalDocument,
@@ -75,13 +91,17 @@ export function createEditorHost(
   };
 
   const host: EditorHost = {
-    document: internalDocument,
+    document: {
+      getSnapshot: internalDocument.getSnapshot,
+      subscribe: internalDocument.subscribe,
+    },
     state: publicState,
     internalDocument,
     internalDocumentWriter,
     internalHistory,
     workspace,
     dispose: () => {
+      viewportPersistence?.dispose();
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
@@ -103,7 +123,8 @@ export function createEditorHost(
 }
 
 function hookPlacementValidation(editorHost: EditorHost): () => void {
-  return editorHost.internalDocument.subscribe((document) => {
+  return createSnapshotSelector(editorHost.internalDocument, selectDocumentEntities, shallowSnapshotEqual).subscribe(() => {
+    const document = editorHost.internalDocument.getSnapshot();
     runInAction(() => {
       syncPlacementValidationState({
         document,
@@ -115,7 +136,8 @@ function hookPlacementValidation(editorHost: EditorHost): () => void {
 }
 
 function hookPoweredCollection(editorHost: EditorHost): () => void {
-  return editorHost.internalDocument.subscribe((document) => {
+  return createSnapshotSelector(editorHost.internalDocument, selectDocumentEntities, shallowSnapshotEqual).subscribe(() => {
+    const document = editorHost.internalDocument.getSnapshot();
     runInAction(() => {
       syncPoweredEntityCollection({
         document,

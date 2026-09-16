@@ -3485,7 +3485,8 @@ describe("createAppHost", () => {
     // AI-CORRECTION 2026-09-11: keep this historical interaction fixture's
     // north-facing ports while the corrected default registry faces south.
     {
-      const snapshot = editorHost.document.getSnapshot();
+      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
+      const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
       editorHost.internalDocument.setSnapshot(snapshot);
@@ -3758,7 +3759,8 @@ describe("createAppHost", () => {
     // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
     {
-      const snapshot = editorHost.document.getSnapshot();
+      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
+      const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
       editorHost.internalDocument.setSnapshot(snapshot);
@@ -3817,7 +3819,8 @@ describe("createAppHost", () => {
     // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
     {
-      const snapshot = editorHost.document.getSnapshot();
+      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
+      const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
       editorHost.internalDocument.setSnapshot(snapshot);

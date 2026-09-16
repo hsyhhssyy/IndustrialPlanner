@@ -1,3 +1,4 @@
+import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
@@ -64,8 +65,35 @@ export function syncPlacementValidationState(options: {
       .filter(([, validation]) => !validation.canPlace)
       .map(([entityId]) => entityId);
 
-    options.state.internalTransientState.placementValidationByEntityId = validationByEntityId;
-    options.state.collections[EntityCollectionType.invalidPlacement].replace(invalidEntityIds);
+    // AI-REMOVED 2026-09-15:
+    // Reason: 整表替换唤醒未变化设备的校验订阅。
+    // Trigger: REQ-032 虚影移动传播到内容面板。
+    // Evidence: resolveCachedPlacementValidation 读取整表引用与单个实体键。
+    // Replacement: 下方逐键比较，在同一个 action 内发布变化结果。
+    // Risk: 保留规则和结果顺序；已消失实体键仍清除。
+    // Human Review: Required
+    //
+    // Original code:
+    // options.state.internalTransientState.placementValidationByEntityId = validationByEntityId;
+    // options.state.collections[EntityCollectionType.invalidPlacement].replace(invalidEntityIds);
+    const current = options.state.internalTransientState.placementValidationByEntityId;
+    for (const entityId of Object.keys(current)) {
+      if (!(entityId in validationByEntityId)) delete current[entityId];
+    }
+    for (const [entityId, next] of Object.entries(validationByEntityId)) {
+      const previous = current[entityId];
+      if (previous?.canPlace !== next.canPlace
+        || previous.reasons.length !== next.reasons.length
+        || previous.reasons.some((reason, index) => reason.code !== next.reasons[index]?.code
+          || reason.message !== next.reasons[index]?.message)) {
+        current[entityId] = next;
+      }
+    }
+    const invalid = options.state.collections[EntityCollectionType.invalidPlacement];
+    if (invalid.length !== invalidEntityIds.length
+      || invalidEntityIds.some((id, index) => invalid[index] !== id)) {
+      invalid.replace(invalidEntityIds);
+    }
   });
 }
 
@@ -153,11 +181,20 @@ export function resolvePlacementValidations(options: {
     registry: options.workspace.registry,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
-  applyOverlapReasons({
-    entries,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
+  // AI-REMOVED 2026-09-16:
+  // Reason: 正式基地的碰撞结果不应随虚影移动重复计算。
+  // Trigger: 用户要求同时优化视口与虚影移动。
+  // Evidence: 原全场调用在每次 drafts 更新时执行。
+  // Replacement: applyCachedOverlapReasons；原规则函数保留用于静态重建与候选对判定。
+  // Risk: 文档、Registry、ghost 改变必须失效，已有回归覆盖。
+  // Human Review: Required
+  // Original code:
+  // applyOverlapReasons({
+  //   entries,
+  //   registry: options.workspace.registry,
+  //   reasonsByEntityId: mutableReasonsByEntityId,
+  // });
+  applyCachedOverlapReasons({ ...options, entries, reasonsByEntityId: mutableReasonsByEntityId });
   applyWarehouseConnectionReasons({
     entries,
     reasonsByEntityId: mutableReasonsByEntityId,
@@ -399,19 +436,110 @@ function applyInsideBaseForbiddenReasons(options: {
   }
 }
 
+// AI-REMOVED 2026-09-16:
+// Reason: 每次为全体校验对象建桶并逐项查询，比已有扫描更慢。
+// Trigger: 本轮同场景对照 0.85 ms -> 1.36 ms，拒绝性能回退。
+// Evidence: interaction-performance-20260916/mobile/summary.json。
+// Replacement: 原扫描用于缓存静态碰撞；applyCachedOverlapReasons 只查询变化虚影。
+// Risk: 缓存按文档实体、基地、Registry、ghost 集合失效。
+// Human Review: Required
+// Original code:
+// function applyOverlapReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   registry: WorkspaceContract["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   // 沿 x 轴扫描候选，跳过不可能相交的设备；所有碰撞与替换规则保持原样。
+//   // AI-CORRECTION 2026-09-16: 在 x 排序上增加二维桶过滤，避免纵向长产线产生大量无关候选。
+//   const entries = [...options.entries].sort((left, right) => left.gridRect.x - right.gridRect.x);
+//   const occupancy = new GridRectIndex(entries, (entry) => entry.gridRect);
+//   const order = new Map(entries.map((entry, index) => [entry, index]));
+//   for (let leftIndex = 0; leftIndex < entries.length; leftIndex += 1) {
+//     const left = entries[leftIndex];
+//     if (left === undefined) {
+//       continue;
+//     }
+//
+//     // AI-REMOVED 2026-09-16:
+//     // Reason: 按二维桶缩小重叠候选，保留原 x 排序和成对判定顺序。
+//     // Trigger: 手机拖动与虚影移动性能优化。
+//     // Evidence: Trace 中重复资源请求及全场候选查询。
+//     // Replacement: occupancy.intersecting
+//     // Risk: 保留可见资源与原判定规则，需回归编辑后刷新。
+//     // Human Review: Required
+//     // Original code:
+//     //     for (let rightIndex = leftIndex + 1; rightIndex < entries.length; rightIndex += 1) {
+//     //       const right = entries[rightIndex];
+//     for (const right of occupancy.intersecting(left.gridRect)) {
+//       if (order.get(right)! <= leftIndex) continue;
+//       if (right !== undefined && right.gridRect.x >= left.gridRect.x + left.gridRect.width) break;
+//       if (right === undefined || !areGridRectsIntersecting(left.gridRect, right.gridRect)) {
+//         continue;
+//       }
+//
+//       const leftIsBaseBuiltin = isBaseBuiltinEntityId(left.entity.id);
+//       const rightIsBaseBuiltin = isBaseBuiltinEntityId(right.entity.id);
+//       if (leftIsBaseBuiltin || rightIsBaseBuiltin) {
+//         if (!leftIsBaseBuiltin) {
+//           appendReason(options.reasonsByEntityId, left.entity.id, "overlap");
+//         }
+//         if (!rightIsBaseBuiltin) {
+//           appendReason(options.reasonsByEntityId, right.entity.id, "overlap");
+//         }
+//         continue;
+//       }
+//
+//       if (isAllowedPipeOverlapPair({
+//         left,
+//         right,
+//       })) {
+//         continue;
+//       }
+//
+//       if (isAllowedLogisticsPlacementReplacement({
+//         left,
+//         right,
+//         registryQueries: options.registry.queries,
+//       })) {
+//         continue;
+//       }
+//
+//       // 拖拽中 draft 与文档实体 overlap 时，仅标记 draft 为 invalid，
+//       // 文档中正式 entity 不显示 invalid。draft 放下后（变为普通 entity）
+//       // 再触发 validation 时双方都会正常标记。
+//       const leftIsDraft = isDraftEntity(left.entity);
+//       const rightIsDraft = isDraftEntity(right.entity);
+//       if (leftIsDraft && !rightIsDraft) {
+//         appendReason(options.reasonsByEntityId, left.entity.id, "overlap");
+//         continue;
+//       }
+//       if (!leftIsDraft && rightIsDraft) {
+//         appendReason(options.reasonsByEntityId, right.entity.id, "overlap");
+//         continue;
+//       }
+//
+//       appendReason(options.reasonsByEntityId, left.entity.id, "overlap");
+//       appendReason(options.reasonsByEntityId, right.entity.id, "overlap");
+//     }
+//   }
+// }
+
 function applyOverlapReasons(options: {
   entries: readonly PlacementValidationEntry[];
   registry: WorkspaceContract["registry"];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
 }): void {
-  for (let leftIndex = 0; leftIndex < options.entries.length; leftIndex += 1) {
-    const left = options.entries[leftIndex];
+  // 沿 x 轴扫描候选，跳过不可能相交的设备；所有碰撞与替换规则保持原样。
+  const entries = [...options.entries].sort((left, right) => left.gridRect.x - right.gridRect.x);
+  for (let leftIndex = 0; leftIndex < entries.length; leftIndex += 1) {
+    const left = entries[leftIndex];
     if (left === undefined) {
       continue;
     }
 
-    for (let rightIndex = leftIndex + 1; rightIndex < options.entries.length; rightIndex += 1) {
-      const right = options.entries[rightIndex];
+    for (let rightIndex = leftIndex + 1; rightIndex < entries.length; rightIndex += 1) {
+      const right = entries[rightIndex];
+      if (right !== undefined && right.gridRect.x >= left.gridRect.x + left.gridRect.width) break;
       if (right === undefined || !areGridRectsIntersecting(left.gridRect, right.gridRect)) {
         continue;
       }
@@ -542,6 +670,14 @@ function applyNearSameEntityReasons(options: {
   entries: readonly PlacementValidationEntry[];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
 }): void {
+  const groups = new Map<string, PlacementValidationEntry[]>();
+  for (const entry of options.entries) {
+    if (!entry.definition.placementBehaviors.some((b) => b.type === PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity)) continue;
+    const group = groups.get(entry.definition.id) ?? [];
+    group.push(entry); groups.set(entry.definition.id, group);
+  }
+  const indexes = new Map([...groups].map(([id, entries]) => [id, new GridRectIndex(entries, (entry) => entry.gridRect)]));
+  const order = new Map(options.entries.map((entry, index) => [entry, index]));
   for (let leftIndex = 0; leftIndex < options.entries.length; leftIndex += 1) {
     const left = options.entries[leftIndex];
     if (left === undefined) {
@@ -557,8 +693,22 @@ function applyNearSameEntityReasons(options: {
 
     const range = behavior.range;
 
-    for (let rightIndex = leftIndex + 1; rightIndex < options.entries.length; rightIndex += 1) {
-      const right = options.entries[rightIndex];
+    // AI-REMOVED 2026-09-16:
+    // Reason: 同类邻近规则只查询相同定义及规定范围内的设备。
+    // Trigger: 手机拖动与虚影移动性能优化。
+    // Evidence: Trace 中重复资源请求及全场候选查询。
+    // Replacement: indexes / candidates
+    // Risk: 保留可见资源与原判定规则，需回归编辑后刷新。
+    // Human Review: Required
+    // Original code:
+    //     for (let rightIndex = leftIndex + 1; rightIndex < options.entries.length; rightIndex += 1) {
+    //       const right = options.entries[rightIndex];
+    const candidates = indexes.get(left.definition.id)!.intersecting({
+      x: left.gridRect.x - range, y: left.gridRect.y - range,
+      width: left.gridRect.width + 2 * range, height: left.gridRect.height + 2 * range,
+    });
+    for (const right of candidates) {
+      if (order.get(right)! <= leftIndex) continue;
       if (right === undefined || right.definition.id !== left.definition.id) {
         continue;
       }
@@ -912,4 +1062,56 @@ function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
     && left.width === right.width
     && left.height === right.height
   );
+}
+
+interface PlacementOverlapCache {
+  entities: WorldDocument["entities"];
+  entityOrder: WorldDocument["entityOrder"];
+  baseId: string;
+  definitions: WorkspaceContract["registry"]["entityDefinitions"];
+  bases: WorkspaceContract["registry"]["baseDefinitions"];
+  ghostKey: string;
+  ids: ReadonlySet<string>;
+  index: GridRectIndex<PlacementValidationEntry>;
+  reasons: Map<string, EntityPlacementValidationReason[]>;
+}
+
+const placementOverlapCaches = new WeakMap<EditorStateReadWrite, PlacementOverlapCache>();
+
+/** 正式基地的碰撞结果复用；虚影仍使用同一套碰撞/替换规则，连接类全局规则继续正常运行。 */
+function applyCachedOverlapReasons(options: {
+  document: WorldDocument; state: EditorStateReadWrite; workspace: WorkspaceContract;
+  entries: readonly PlacementValidationEntry[];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const { document, state, workspace } = options;
+  const registry = workspace.registry;
+  const ghostKey = JSON.stringify(state.collections[EntityCollectionType.ghost]);
+  let cached = placementOverlapCaches.get(state);
+  if (!cached || cached.entities !== document.entities || cached.entityOrder !== document.entityOrder
+    || cached.baseId !== document.baseId || cached.definitions !== registry.entityDefinitions
+    || cached.bases !== registry.baseDefinitions || cached.ghostKey !== ghostKey) {
+    const entries = resolveValidationEntries({ document, state, registry, drafts: [],
+      definitionMap: new Map(registry.entityDefinitions.map((definition) => [definition.id, definition])) });
+    const reasons = new Map<string, EntityPlacementValidationReason[]>(entries.map((entry) => [entry.entity.id, []]));
+    applyOverlapReasons({ entries, registry, reasonsByEntityId: reasons });
+    cached = { entities: document.entities, entityOrder: document.entityOrder, baseId: document.baseId,
+      definitions: registry.entityDefinitions, bases: registry.baseDefinitions, ghostKey,
+      ids: new Set(entries.map((entry) => entry.entity.id)), index: new GridRectIndex(entries, (entry) => entry.gridRect), reasons };
+    placementOverlapCaches.set(state, cached);
+  }
+  for (const [id, reasons] of cached.reasons) {
+    for (const reason of reasons) appendReason(options.reasonsByEntityId, id, reason.code);
+  }
+  const drafts = options.entries.filter((entry) => !cached.ids.has(entry.entity.id));
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i]!;
+    const candidates = cached.index.intersecting(draft.gridRect);
+    for (let j = 0; j < i; j++) {
+      if (areGridRectsIntersecting(drafts[j]!.gridRect, draft.gridRect)) candidates.push(drafts[j]!);
+    }
+    for (const other of candidates) {
+      applyOverlapReasons({ entries: [other, draft], registry, reasonsByEntityId: options.reasonsByEntityId });
+    }
+  }
 }

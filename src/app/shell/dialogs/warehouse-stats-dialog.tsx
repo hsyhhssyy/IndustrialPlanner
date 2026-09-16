@@ -29,7 +29,7 @@ export const WarehouseStatsDialog = observer(function WarehouseStatsDialog({
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const [query, setQuery] = useState("");
-  const stats = useWarehouseStats(appHost);
+  const stats = useWarehouseStats(appHost, dialogState.visible);
   const pinnedItems = useWarehousePinnedItems(appHost);
   const entries = useMemo(() => buildWarehouseStatsEntries({
     appHost,

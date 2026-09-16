@@ -1,8 +1,17 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "upgradedAt": "2026-09-14",
+  "fixtureRevision": 2,
+  "upgradedAt": "2026-09-16",
   "blueprints": [
+    {
+      "file": "bridge-crossing.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING",
+      "sourceSchemaVersion": 6,
+      "sourceVersion": "fixture-v1",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "blueprintId": "bridge-crossing-test-20260916"
+    },
     {
       "file": "scene-1.schema6.json",
       "sourceConstant": "USER_PROVIDED_BLUEPRINT",

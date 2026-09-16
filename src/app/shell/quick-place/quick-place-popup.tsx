@@ -1,3 +1,4 @@
+import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import {
   useEffect,
   useId,
@@ -36,7 +37,7 @@ import {
 // Original code:
 // import { resolveQuickPlaceSlotIndexFromKey } from "@/app/quick-place";
 import type { AppHost } from "@/app/host/app-host";
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -56,7 +57,7 @@ type QuickPlaceDragPayload =
 
 export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { appHost: AppHost }) {
   const editor = appHost.workspace.editor;
-  const documentSnapshot = useEditorDocumentSnapshot(editor);
+  const documentBaseId = useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const favoritesRef = useRef<HTMLElement | null>(null);
@@ -84,7 +85,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const activeResultId = runtime.activeResultId;
   const anchor = runtime.anchor;
   const visible = runtime.visible && anchor !== null;
-  const currentBaseId = documentSnapshot?.baseId ?? null;
+  const currentBaseId = documentBaseId ?? null;
   const entries = useMemo(() =>
     buildQuickPlaceDeviceEntries({
       definitions: appHost.workspace.registry.entityDefinitions,

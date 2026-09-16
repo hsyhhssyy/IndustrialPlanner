@@ -532,6 +532,16 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    // AI-REMOVED 2026-09-16:
+    // Reason: 根节点平移统一交由 BaseRenderSprite，覆盖普通设备和物流设备。
+    // Trigger: 浏览器计数显示大部分完整布局调用来自物流精灵。
+    // Evidence: pan 中 syncLayoutCalls 3789 / syncPositionCalls 1381。
+    // Replacement: BaseRenderSprite.syncLayout。
+    // Risk: 通过真实浏览器全量布局像素对照验证。
+    // Human Review: Required
+    // Original code:
+    // 完整布局回到绝对屏幕坐标，清除先前纯平移累积的根节点变换。
+    // for (const root of this.getAllRoots()) { root.x = 0; root.y = 0 }
     this.currentLayout = layout
     this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
     this.currentFootprintLayout = this.computeFootprintLayout(layout, context)
@@ -551,10 +561,28 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.applyLayout(layout)
   }
 
+  // AI-REMOVED 2026-09-16:
+  // Reason: 纯平移能力上移至所有精灵共用的基类。
+  // Trigger: 物流设备也需复用平移路径。
+  // Evidence: 移动屏幕不改变精灵本地几何。
+  // Replacement: BaseRenderSprite.syncPosition。
+  // Risk: 子类异步纹理回调仍使用最近完整布局。
+  // Human Review: Required
+  // Original code:
+  //   public syncPosition(layout: RenderSpriteLayout): void {
+  //     if (this.currentLayout === null) return
+  //     // 子节点及异步纹理回调继续使用最后一次完整布局；平移由父节点统一承担。
+  //     for (const root of this.getAllRoots()) {
+  //       root.x = layout.x - this.currentLayout.x
+  //       root.y = layout.y - this.currentLayout.y
+  //     }
+  //   }
+  //
   public syncRuntime(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    layout = this.currentLayout ?? layout
     this.currentSuppressedAccessoryFamily = this.resolveSuppressedAccessoryFamily(context)
     this.syncDeviceTextures(context)
     if (this.currentSuppressedAccessoryFamily !== null) {

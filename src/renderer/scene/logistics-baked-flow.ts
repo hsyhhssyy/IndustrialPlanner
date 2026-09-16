@@ -22,7 +22,7 @@ export class LogisticsBakedFlowScene {
   public readonly container = new Container();
   public readonly endpoints = new Container();
   private readonly back = new Container();
-  private readonly fluid = new Container();
+  public readonly fluid = new Container();
   private readonly routes = new Map<string, RouteView>();
   private session: LogisticsDynamicSession | null = null;
   private assets: LogisticsDynamicAssets | null = null;

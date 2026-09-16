@@ -1,3 +1,5 @@
+import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentEntities } from "@/shared/snapshot/world-document-selection";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EditorQuery } from "@/domain/editor/editor-query";
 import {
@@ -63,18 +65,50 @@ export function createEditorEntityQueries({
     ]),
   );
 
+  const content = createSnapshotSelector(document, selectDocumentEntities, shallowSnapshotEqual);
+  let previousContent: ReturnType<typeof content.getSnapshot> | null = null;
+  let previousDrafts: readonly WorldEntity[] | null = null;
+  let previousDefinitions = workspace.registry.baseDefinitions;
+  let formalEntities: readonly WorldEntity[] = [];
+  let formalIds = new Set<string>();
+  let listedEntities: readonly WorldEntity[] = [];
+  const listEntities = (): readonly WorldEntity[] => {
+    const nextContent = content.getSnapshot();
+    if (previousContent !== nextContent || previousDefinitions !== workspace.registry.baseDefinitions) {
+      previousContent = nextContent;
+      previousDefinitions = workspace.registry.baseDefinitions;
+      formalEntities = resolveListedEntities({
+        document: document.getSnapshot(), drafts: [], baseDefinitions: previousDefinitions,
+      });
+      formalIds = new Set(formalEntities.map((entity) => entity.id));
+      previousDrafts = null;
+    }
+    if (previousDrafts !== state.drafts) {
+      previousDrafts = state.drafts;
+      const seen = new Set(formalIds);
+      listedEntities = [...formalEntities, ...previousDrafts.filter((entity) => {
+        if (seen.has(entity.id)) return false;
+        seen.add(entity.id);
+        return true;
+      })];
+    }
+    return listedEntities;
+  };
+
   return {
-    getEntityById: (entityId) => resolveEntityById({
-      entityId,
-      document: document.getSnapshot(),
-      drafts: state.drafts,
-      baseDefinitions: workspace.registry.baseDefinitions,
-    }),
-    listEntities: () => resolveListedEntities({
-      document: document.getSnapshot(),
-      drafts: state.drafts,
-      baseDefinitions: workspace.registry.baseDefinitions,
-    }),
+    getEntityById: (entityId) => {
+      const snapshot = document.getSnapshot();
+      const entity = snapshot.entities[entityId];
+      // 正式实体不依赖 drafts，避免 observer 因其他虚影移动而重新渲染。
+      if (entity !== undefined) return entity;
+      return resolveEntityById({
+        entityId,
+        document: snapshot,
+        drafts: state.drafts,
+        baseDefinitions: workspace.registry.baseDefinitions,
+      });
+    },
+    listEntities,
     listPowerRangeProvidersCoveringGridRect: (gridRect) => {
       const entities = resolveListedEntities({
         document: document.getSnapshot(),

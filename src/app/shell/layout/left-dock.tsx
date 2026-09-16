@@ -39,7 +39,7 @@ const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   simulation: "workbench.panel.simulation.title",
 };
 
-const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost }>> = {
+const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost; active?: boolean }>> = {
   placement: PlacementPanel,
   region: RegionPanel,
   blueprint: BlueprintPanel,
@@ -137,7 +137,7 @@ const LeftDockView = observer(function LeftDockView({
                     hidden={!isActive}
                     key={panelId}
                   >
-                    <PanelComponent appHost={appHost} />
+                    <PanelComponent appHost={appHost} active={!hidden && isActive} />
                   </div>
                 );
               })}

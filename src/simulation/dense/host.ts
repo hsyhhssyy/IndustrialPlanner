@@ -1,3 +1,5 @@
+import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentSimulation } from "@/shared/snapshot/world-document-selection";
 import { createSimulationQueries } from "@/simulation/projection";
 import { registerSimulationSnapshotReader } from "../testkit";
 import { action, runInAction } from "mobx";
@@ -153,7 +155,8 @@ export function createDenseSimulationHost(
   workspace.simulation = host;
   const documentStore = workspace.editor?.document;
   if (documentStore !== undefined) {
-    disposers.push(documentStore.subscribe((document) => {
+    disposers.push(createSnapshotSelector(documentStore, selectDocumentSimulation, shallowSnapshotEqual).subscribe(() => {
+      const document = documentStore.getSnapshot();
       if (
         internalState.hasStarted
         && controller.hasSimulationRelevantDocumentChange(document)

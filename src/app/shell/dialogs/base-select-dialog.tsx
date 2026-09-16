@@ -1,8 +1,10 @@
+import { selectDocumentIdentity } from "@/shared/snapshot/world-document-selection";
+import { shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import type { EditorBaseDocumentSummary } from "@/domain/editor/editor-document";
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
@@ -23,7 +25,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
   const t = appHost.actions.translate;
   const locale = appHost.state.settings.locale;
   const editor = appHost.workspace.editor;
-  const currentDocument = useEditorDocumentSnapshot(editor);
+  const currentDocument = useEditorDocumentSnapshot(editor, selectDocumentIdentity, shallowSnapshotEqual);
   const dialogState = appHost.internalState.workbench.dialogState["base-select"];
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";

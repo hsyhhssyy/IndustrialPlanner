@@ -23,6 +23,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
   private destroyed = false;
   private visualStateVersion = 0;
   private syncedVisualStateVersion = 0;
+  private positionedLayout: RenderSpriteLayout | null = null;
 
   protected constructor(
     protected readonly entityId: string,
@@ -46,6 +47,8 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   public syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     this.ensureNotDestroyed();
+    this.positionedLayout = layout;
+    for (const root of this.layerRoots.values()) { root.x = 0; root.y = 0; }
     const syncingVisualStateVersion = this.visualStateVersion;
 
     this.syncSpriteLayout(layout, context);
@@ -63,6 +66,16 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   public isVisualSyncInvalidated(): boolean {
     return this.visualStateVersion !== this.syncedVisualStateVersion;
+  }
+
+  public syncPosition(layout: RenderSpriteLayout): void {
+    this.ensureNotDestroyed();
+    if (this.positionedLayout === null) return;
+    // 保留子节点的本地布局和异步资源回调坐标；平移只改变根节点变换。
+    for (const root of this.layerRoots.values()) {
+      root.x = layout.x - this.positionedLayout.x;
+      root.y = layout.y - this.positionedLayout.y;
+    }
   }
 
   public destroy(): void {

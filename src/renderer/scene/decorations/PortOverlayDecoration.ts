@@ -1,4 +1,5 @@
 import { Container, Sprite, Texture } from "pixi.js";
+import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
 
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -87,6 +88,7 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly occupiedDraftPortKeys?: ReadonlySet<string>;
   readonly basePlaceableArea?: GridRectSize;
 }): PortOverlayEntry[] {
+  const occupancy = createPortOccupancyIndex(options);
   const candidates: PortOverlayCandidate[] = [];
   const isPipe = options.kind === LOGISTICS_KIND.pipe;
 
@@ -116,6 +118,7 @@ export function resolveLogisticsPortOverlayEntries(options: {
         : endpoint.direction;
 
       if (!canLegallyLeadLogisticsFromPort({
+        occupancy,
         endpoint,
         kind: endpointKind,
         direction: endpointDirection,
@@ -173,6 +176,7 @@ export function resolveProductionPipePortGhostEntries(options: {
   readonly queries: RegistryQuery;
   readonly hiddenEntityIds?: ReadonlySet<string>;
 }): ProductionPipePortGhostEntry[] {
+  const occupancy = createPortOccupancyIndex(options);
   const entries: ProductionPipePortGhostEntry[] = [];
 
   for (const entity of options.entities) {
@@ -190,6 +194,7 @@ export function resolveProductionPipePortGhostEntries(options: {
       if (
         !endpoint.isPipe
         || !canLegallyLeadPipeFromEndpoint({
+          occupancy,
           endpoint,
           entities: options.entities,
           entityDefinitionMap: options.entityDefinitionMap,
@@ -387,6 +392,7 @@ export function createPortOverlayDecoration(): DecorationLayer {
 }
 
 function canLegallyLeadLogisticsFromPort(options: {
+  occupancy: GridRectIndex<WorldEntity>;
   endpoint: ResolvedPortEndpoint;
   kind: LogisticsKind;
   direction: LogisticsPortDirection;
@@ -409,6 +415,7 @@ function canLegallyLeadLogisticsFromPort(options: {
   }
 
   const occupants = findEntitiesAtGridPoint({
+    occupancy: options.occupancy,
     gridPoint: point,
     entities: options.entities,
     entityDefinitionMap: options.entityDefinitionMap,
@@ -463,6 +470,7 @@ function canLegallyLeadLogisticsFromPort(options: {
   }
 
   return hasAnyConnectedOrdinaryLogisticsPort({
+    occupancy: options.occupancy,
     entity: sameFamilyOccupant,
     definition: neighborDefinition,
     kind: options.kind,
@@ -472,6 +480,7 @@ function canLegallyLeadLogisticsFromPort(options: {
 }
 
 function canLegallyLeadPipeFromEndpoint(options: {
+  occupancy: GridRectIndex<WorldEntity>;
   endpoint: ResolvedPortEndpoint;
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
@@ -483,6 +492,7 @@ function canLegallyLeadPipeFromEndpoint(options: {
 
   return directions.some((direction) =>
     canLegallyLeadLogisticsFromPort({
+      occupancy: options.occupancy,
       endpoint: options.endpoint,
       kind: LOGISTICS_KIND.pipe,
       direction,
@@ -510,6 +520,7 @@ function hasFacingConnectedPort(options: {
 }
 
 function hasAnyConnectedOrdinaryLogisticsPort(options: {
+  occupancy: GridRectIndex<WorldEntity>;
   entity: WorldEntity;
   definition: EntityDefinition;
   kind: LogisticsKind;
@@ -521,6 +532,7 @@ function hasAnyConnectedOrdinaryLogisticsPort(options: {
     if (endpoint.isPipe !== isPipe) return false;
     const expectedDirection = endpoint.direction === "input" ? "output" : "input";
     return findEntitiesAtGridPoint({
+      occupancy: options.occupancy,
       gridPoint: endpoint.outsideGridPoint,
       entities: options.entities,
       entityDefinitionMap: options.entityDefinitionMap,
@@ -594,19 +606,29 @@ function resolveEntityPortEndpoints(
 }
 
 function findEntitiesAtGridPoint(options: {
+  occupancy: GridRectIndex<WorldEntity>;
   gridPoint: GridPoint;
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): WorldEntity[] {
-  return options.entities.filter((entity) => {
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined) return false;
-    const footprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
-    return options.gridPoint.x >= entity.position.x
-      && options.gridPoint.x < entity.position.x + footprint.width
-      && options.gridPoint.y >= entity.position.y
-      && options.gridPoint.y < entity.position.y + footprint.height;
-  });
+  // AI-REMOVED 2026-09-16:
+  // Reason: 每个端口扫描全场实体改为复用本轮矩形索引。
+  // Trigger: 用户要求优化视口拖动与虚影移动。
+  // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
+  // Replacement: GridRectIndex.at
+  // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
+  // Human Review: Required
+  // Original code:
+  //   return options.entities.filter((entity) => {
+  //     const definition = options.entityDefinitionMap.get(entity.definitionId);
+  //     if (definition === undefined) return false;
+  //     const footprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
+  //     return options.gridPoint.x >= entity.position.x
+  //       && options.gridPoint.x < entity.position.x + footprint.width
+  //       && options.gridPoint.y >= entity.position.y
+  //       && options.gridPoint.y < entity.position.y + footprint.height;
+  //   });
+  return options.occupancy.at(options.gridPoint);
 }
 
 function isDefinitionForLogisticsKind(
@@ -937,4 +959,14 @@ function resolvePortChevronRotation(edge: GridEdge): number {
 
 function pointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;
+}
+
+function createPortOccupancyIndex(options: {
+  entities: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): GridRectIndex<WorldEntity> {
+  return new GridRectIndex(options.entities.filter((entity) => options.entityDefinitionMap.has(entity.definitionId)), (entity) => {
+    const footprint = getRotatedGridFootprint(options.entityDefinitionMap.get(entity.definitionId)!.footprint, entity.rotation);
+    return { ...entity.position, ...footprint };
+  });
 }

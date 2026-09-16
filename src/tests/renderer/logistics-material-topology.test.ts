@@ -23,6 +23,22 @@ function topology(entities: readonly WorldEntity[], extra: readonly EntityDefini
 }
 
 describe("物流材质线路与设备端点", () => {
+  it("移动虚影时复用正式拓扑，预览结果与完整求解一致", () => {
+    const actual = getBlueprintEntityArray(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema6.json",
+    ));
+    const committed = topology(actual).committed;
+    const draft = { ...actual[0]!, id: "preview", originalEntityId: null };
+    for (const x of [0, 1, 3, 5]) {
+      const entities = [...actual, { ...draft, position: { x, y: 0 } }];
+      const cached = resolveLogisticsMaterialTopology({ entities, definitions, registry: registry.queries, committed });
+      const complete = topology(entities);
+      expect(cached.committed).toBe(committed);
+      expect(cached.placements).toEqual(complete.placements);
+      expect(cached.previewIds).toEqual(new Set(["preview"]));
+    }
+  });
+
   it("虚影接续正式线路的六格箭头相位，不进入仿真运输组", () => {
     const entities = Array.from({ length: 16 }, (_, index) => pipe(`${index < 5 ? "real" : "draft"}-${index}`, index, index >= 5));
     const result = topology(entities);

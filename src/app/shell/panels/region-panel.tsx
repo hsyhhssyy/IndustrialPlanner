@@ -1,9 +1,11 @@
+import { selectDocumentRegions } from "@/shared/snapshot/world-document-selection";
+import { shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import { createRegionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import type { AppHost } from "@/app/host/app-host";
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -96,7 +98,7 @@ const COPY: Record<"zh-CN" | "en-US", RegionPanelCopy> = {
 
 export const RegionPanel = observer(function RegionPanel({ appHost }: { appHost: AppHost }) {
   const editor = appHost.workspace.editor;
-  const currentDocument = useEditorDocumentSnapshot(editor);
+  const currentDocument = useEditorDocumentSnapshot(editor, selectDocumentRegions, shallowSnapshotEqual);
   const [searchQuery, setSearchQuery] = useState("");
   const copy = COPY[appHost.state.settings.locale];
   const regions = currentDocument?.regions ?? [];

@@ -1,3 +1,5 @@
+import { createSnapshotSelector } from "@/shared/snapshot/snapshot-selector";
+import { selectDocumentContent, sameDocumentRemoteContent } from "@/shared/snapshot/world-document-selection";
 import type {
   SyncAssetEntry,
   SyncAssetSource,
@@ -1072,7 +1074,7 @@ export async function createSyncHost(
   const editorDocument = workspace.editor?.document;
   if (editorDocument !== undefined) {
     let editorDocumentHydrated = false;
-    disposers.push(editorDocument.subscribe((
+    disposers.push(createSnapshotSelector(editorDocument, selectDocumentContent, sameDocumentRemoteContent).subscribe((
       documentSnapshot,
       changeContext?: SnapshotChangeContext,
     ) => {

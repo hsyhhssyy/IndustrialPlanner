@@ -1,4 +1,7 @@
 import { observer } from "mobx-react-lite";
+import { useCallback } from "react";
+import type { WorldDocument } from "@/domain/document/world-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 
 import {
   SWITCH_DEVICE_MODE_BUTTON_ID,
@@ -24,6 +27,12 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   variant?: "sticky" | "inline";
 }) {
   const editor = appHost.workspace.editor;
+  const selectedIds = JSON.stringify(editor?.state.collections.selection ?? []);
+  const selectDefinitions = useCallback((document: WorldDocument) => JSON.stringify([
+    document.baseId,
+    ...(JSON.parse(selectedIds) as string[]).map((id) => document.entities[id]?.definitionId),
+  ]), [selectedIds]);
+  useEditorDocumentSnapshot(editor, selectDefinitions);
 
   if (editor === null) {
     return null;

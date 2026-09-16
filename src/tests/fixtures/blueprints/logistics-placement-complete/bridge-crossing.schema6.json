@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "bridge-crossing-test-20260916",
+  "version": "fixture-v1",
+  "name": "物流桥之间禁止传送带穿越",
+  "description": "传送带从桥 A 拉向桥 B 时经过中间桥 M，路径不应允许与物流设备重叠。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 11,
+    "y": 9
+  },
+  "entities": {
+    "belt-left": {
+      "id": "belt-left",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bridge-a": {
+      "id": "bridge-a",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 11,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt-right": {
+      "id": "belt-right",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bridge-m": {
+      "id": "bridge-m",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 11,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bridge-b": {
+      "id": "bridge-b",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 11,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt-left",
+    "bridge-a",
+    "belt-right",
+    "bridge-m",
+    "bridge-b"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-09-16T00:00:00.000Z",
+  "updatedAt": "2026-09-16T00:00:00.000Z"
+}

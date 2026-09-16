@@ -910,7 +910,8 @@
 
 .debug-log-dialog-body {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(120px, 1fr);
+  overflow-y: auto;
   min-height: 0;
   padding: 14px;
   gap: 10px;

@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, type Texture } from 'pixi.js';
 import type { WorldEntity } from '@/domain/document/world-document';
 import type { EntityDefinition } from '@/domain/registry/types/entity-definition';
 import type { LogisticsMaterialFrameState } from '@/shared/logistics-material';
@@ -25,7 +25,7 @@ export class BuildingEffectsScene {
   private version = '';
   private statusVersion = -1;
   private ringSignature = '';
-  private batches = new Map<string, { batch: BuildingEffectBatch; resourceId: string; frame: number }>();
+  private batches = new Map<string, { batch: BuildingEffectBatch; resourceId: string; frame: number; signature: string; scene: Texture }>();
   private batchSignature = '';
   private readonly reported = new Set<string>();
   private readonly frames = new Map<string, number>();
@@ -117,13 +117,43 @@ export class BuildingEffectsScene {
     }
     const signature = `${version}:${assets.revision}:${[...groups].map(([key, group]) => `${key}:${group.placements.map((p) => p.id).join(',')}`).join('|')}`;
     if (signature !== this.batchSignature) {
-      this.clearBatches();
+      // AI-REMOVED 2026-09-16:
+      // Reason: 可见组变化不应销毁全部特效网格。
+      // Trigger: 拖动与虚影移动触发大量重建。
+      // Evidence: Scene.sync 的整体 batchSignature 变化会 clearBatches。
+      // Replacement: 下方按组几何签名和高度纹理身份复用批次。
+      // Risk: 保持实例顺序、遮挡贴图和透明绘制顺序。
+      // Human Review: Required
+      // Original code:
+      //       this.clearBatches();
+      //       for (const [key, group] of groups) {
+      //         const resource = manifest.effects[group.resourceId]!;
+      //         const batch = new BuildingEffectBatch(this.container, group.placements, resource, group.tile,
+      //           this.height.get(group.tile, assets, retainedHeights)!, assets.template(resource.height)!,
+      //           assets.color(resource.pages[group.page]!.file)!, group.page, manifest.heightMin, manifest.heightMax);
+      //         this.batches.set(key, { batch, resourceId: group.resourceId, frame: group.frame });
+      //       }
+
+      for (const [key, previous] of this.batches) {
+        if (!groups.has(key)) { previous.batch.destroy(); this.batches.delete(key); }
+      }
+      let order = 0;
       for (const [key, group] of groups) {
         const resource = manifest.effects[group.resourceId]!;
-        const batch = new BuildingEffectBatch(this.container, group.placements, resource, group.tile,
-          this.height.get(group.tile, assets, retainedHeights)!, assets.template(resource.height)!,
-          assets.color(resource.pages[group.page]!.file)!, group.page, manifest.heightMin, manifest.heightMax);
-        this.batches.set(key, { batch, resourceId: group.resourceId, frame: group.frame });
+        const scene = this.height.get(group.tile, assets, retainedHeights)!;
+        const groupSignature = group.placements.map((p) =>
+          `${p.id}:${p.x}:${p.y}:${p.rotation}:${p.baseY}:${p.epsilon}`).join('|');
+        let entry = this.batches.get(key);
+        if (!entry || entry.signature !== groupSignature || entry.scene !== scene) {
+          entry?.batch.destroy();
+          const batch = new BuildingEffectBatch(this.container, group.placements, resource, group.tile,
+            scene, assets.template(resource.height)!, assets.color(resource.pages[group.page]!.file)!,
+            group.page, manifest.heightMin, manifest.heightMax);
+          entry = { batch, resourceId: group.resourceId, frame: group.frame, signature: groupSignature, scene };
+          this.batches.set(key, entry);
+        }
+        // 复用对象也保持原先按组生成的透明绘制顺序。
+        this.container.setChildIndex(entry.batch.mesh, order++);
       }
       this.batchSignature = signature;
     }

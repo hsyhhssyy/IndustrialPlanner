@@ -136,6 +136,7 @@ function createEntityDelta(
   const added: Record<string, WorldEntity> = {};
   const removed: Record<string, WorldEntity> = {};
   const updated: Record<string, EditorHistoryValueChange<WorldEntity>> = {};
+  if (before === after) return { added, removed, updated };
   const entityIds = new Set([
     ...Object.keys(before),
     ...Object.keys(after),
@@ -179,6 +180,7 @@ function createDocumentSettingsDelta(
   after: WorldDocument["documentSettings"],
 ): Record<string, EditorHistoryValueChange<unknown>> {
   const changes: Record<string, EditorHistoryValueChange<unknown>> = {};
+  if (before === after) return changes;
   const keys = new Set([
     ...Object.keys(before),
     ...Object.keys(after),
@@ -205,6 +207,7 @@ function areStringArraysEqual(
   left: readonly string[],
   right: readonly string[],
 ): boolean {
+  if (left === right) return true;
   if (left.length !== right.length) {
     return false;
   }
@@ -213,7 +216,7 @@ function areStringArraysEqual(
 }
 
 function areJsonEqual(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return Object.is(left, right) || JSON.stringify(left) === JSON.stringify(right);
 }
 
 function cloneWorldEntity(entity: WorldEntity): WorldEntity {

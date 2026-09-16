@@ -36,8 +36,9 @@ export interface SnapshotStoreReadWrite<TSnapshot>
 
 export function createSnapshotStore<TSnapshot>(
   initialSnapshot: TSnapshot,
+  prepareSnapshot: (snapshot: TSnapshot) => TSnapshot = (snapshot) => snapshot,
 ): SnapshotStoreReadWrite<TSnapshot> {
-  let snapshot = initialSnapshot;
+  let snapshot = prepareSnapshot(initialSnapshot);
   const listeners = new Set<SnapshotListener<TSnapshot>>();
 
   const notify = (context: SnapshotChangeContext) => {
@@ -50,7 +51,7 @@ export function createSnapshotStore<TSnapshot>(
     nextSnapshot: TSnapshot,
     options: SnapshotWriteOptions = {},
   ) => {
-    snapshot = nextSnapshot;
+    snapshot = prepareSnapshot(nextSnapshot);
     notify({ origin: options.origin ?? "local" });
     return snapshot;
   };

@@ -1,3 +1,4 @@
+import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 // AI-REMOVED 2026-08-19:
 // Reason: BasePanel 不再手工同步 App 层的多基地模式副本，因此无需 runInAction。
@@ -14,7 +15,7 @@ import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { createPortal } from "react-dom";
 
-import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { useEditorDocumentSnapshot } from "../hooks";
 import {
   fetchHelpMarkdownHtml,
   MarkdownTutorialOverlay,
@@ -88,10 +89,10 @@ function areStringSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string
 //   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
 // ]);
 
-export const BasePanel = observer(function BasePanel({ appHost }: { appHost: AppHost }) {
+export const BasePanel = observer(function BasePanel({ appHost, active = true }: { appHost: AppHost; active?: boolean }) {
   const t = appHost.actions.translate;
   const editor = appHost.workspace.editor;
-  const currentDocument = useEditorDocumentSnapshot(editor);
+  const currentDocument = useEditorDocumentSnapshot(editor, selectDocumentContent, sameDocumentContent);
   const activeDocumentBaseId = currentDocument?.baseId ?? null;
   const currentBaseId = currentDocument?.baseId ?? DEFAULT_WORLD_BASE_ID;
   const currentBase = appHost.workspace.registry.baseDefinitions.find(
@@ -107,7 +108,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
       regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
     });
   }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
-  const warehouseStats = useWarehouseStats(appHost);
+  const warehouseStats = useWarehouseStats(appHost, active);
   const pinnedItems = useWarehousePinnedItems(appHost);
   const warehouseEntries = buildWarehouseStatsEntries({
     appHost,
@@ -162,6 +163,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     ReadonlySet<string>
   >(() => new Set());
   useEffect(() => {
+    if (!active) return;
     const tick = () => {
       const simulation = appHost.workspace.simulation;
       if (currentDocument === null || simulation === null) {
@@ -193,7 +195,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     tick();
     const intervalId = window.setInterval(tick, BASE_PANEL_PROBLEM_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
-  }, [appHost, appHost.workspace.registry.entityDefinitions, currentDocument]);
+  }, [active, appHost, appHost.workspace.registry.entityDefinitions, currentDocument]);
 
   // AI-REMOVED 2026-08-19:
   // Reason: 多基地 checkbox 不再从 SimulationMode 读取，组件级 simulation 局部变量失去用途。
@@ -282,12 +284,16 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     multiBaseEnabled,
   ]);
 
+  const invalidDocumentEntityIds = JSON.stringify(
+    editor?.state.collections[EntityCollectionType.invalidPlacement]
+      .filter((id) => currentDocument?.entities[id] !== undefined) ?? [],
+  );
   const baseProblems = useMemo<BaseProblem[]>(() => {
     const problems: BaseProblem[] = [];
     if (currentDocument === null || editor === null) return problems;
 
     const entities = Object.values(currentDocument.entities);
-    const invalidIds = editor.state.collections[EntityCollectionType.invalidPlacement];
+    const invalidIds: string[] = JSON.parse(invalidDocumentEntityIds);
 
     for (const problem of [
       ...currentUnknownEntityProblems,
@@ -365,6 +371,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     resolveDeviceName,
     runtimeInfiniteStorageEntityIds,
     siblingUnknownEntityProblems,
+    invalidDocumentEntityIds,
   ]);
 
   const [activeProblemTooltip, setActiveProblemTooltip] = useState<number | null>(null);
@@ -439,6 +446,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
   const [baseBatteryCapacity, setBaseBatteryCapacity] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!active) return;
     const tick = () => {
       const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus() ?? null;
       setTotalPowerDemand(docStatus?.totalPowerDemand ?? null);
@@ -466,7 +474,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [appHost]);
+  }, [active, appHost]);
 
   const powerMode: "real" | "infinite" =
     currentDocument?.documentSettings?.powerMode === "real" ? "real" : "infinite";
