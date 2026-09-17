@@ -8,7 +8,11 @@ import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
-import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import {
+  compareRecipesByDefaultPriority,
+  isRecipeVisibleInToolbox,
+  sortRecipesByDefaultPriority,
+} from "@/shared/registry/recipe-visibility";
 import {
   buildDeviceRunningConsumptionRecipesByMachine,
   resolveCompanionDeviceRunningConsumptionRecipe,
@@ -209,12 +213,14 @@ export function buildProductionPlanningIndex(
     : registry.itemDefinitions.filter((item) => isItemAvailableByActivity(item, activeActivityIds));
   const itemById = new Map(itemDefinitions.map((item) => [item.id, item]));
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
-  const visibleRecipes = registry.recipeDefinitions
-    .filter(isRecipeVisibleInToolbox)
-    .filter((recipe) =>
+  const visibleRecipes = sortRecipesByDefaultPriority(
+    registry.recipeDefinitions
+      .filter(isRecipeVisibleInToolbox)
+      .filter((recipe) =>
       includeInactiveActivityContent
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
-    );
+      ),
+  );
   const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   // AI-REMOVED 2026-08-29:
   // Reason: 私有索引逻辑已由 shared 统一实现，继续保留 active code 会造成规则漂移。
@@ -621,30 +627,40 @@ export function formatProductionDeviceCount(value: number): string {
 
 export function isRecipeExcludedFromProductionPlanningAuto(recipe: RecipeDefinition): boolean {
   return !isRecipeVisibleInToolbox(recipe)
-    || isWaterPurifierNodeRecipe(recipe)
-    || recipe.tags.includes("liquid_bottle_dismantle")
-    || isIronPowderToNuggetRecipe(recipe);
+    || isWaterPurifierNodeRecipe(recipe);
 }
 
 export function resolveProductionPlanningAutoRecipe(
   recipes: readonly RecipeDefinition[],
-  preferInputlessRecipe = false,
+  _preferInputlessRecipe = false,
 ): RecipeDefinition | undefined {
-  const preferredRecipes = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
-  const candidates = preferredRecipes.length > 0
-    ? preferredRecipes
-    : recipes.filter(isIronPowderToNuggetRecipe);
-
-  if (preferInputlessRecipe) {
-    const inputlessRecipe = candidates.find(
-      (recipe) => resolveProductionPlanningRecipeInputs(recipe).length === 0,
-    );
-    if (inputlessRecipe !== undefined) {
-      return inputlessRecipe;
-    }
-  }
-
-  return candidates[0];
+  // AI-REMOVED 2026-09-17:
+  // Reason: 自动规划不再通过例外过滤和“自然资源无输入优先”改变统一配方顺序。
+  // Trigger: 用户要求规划默认配方严格复用 Wiki 默认、普通 ID、装拆瓶最后的排序。
+  // Evidence: sortRecipesByDefaultPriority 已被规划索引、默认吞吐与配方选择器共同使用。
+  // Replacement: 下方 sortRecipesByDefaultPriority 调用。
+  // Risk: Medium - 没有 Wiki 默认标记的自然资源也将按 ID 选配方。
+  // Human Review: Required
+  //
+  // Original code:
+  // const preferredRecipes = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
+  // const candidates = preferredRecipes.length > 0
+  //   ? preferredRecipes
+  //   : recipes.filter(isIronPowderToNuggetRecipe);
+  //
+  // if (preferInputlessRecipe) {
+  //   const inputlessRecipe = candidates.find(
+  //     (recipe) => resolveProductionPlanningRecipeInputs(recipe).length === 0,
+  //   );
+  //   if (inputlessRecipe !== undefined) {
+  //     return inputlessRecipe;
+  //   }
+  // }
+  //
+  // return candidates[0];
+  return sortRecipesByDefaultPriority(
+    recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe)),
+  )[0];
 }
 
 export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
@@ -652,10 +668,19 @@ export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
     || recipe.id === WATER_PURIFIER_BYPRODUCT_RECIPE_ID;
 }
 
-function isIronPowderToNuggetRecipe(recipe: RecipeDefinition): boolean {
-  return recipe.inputs.some((input) => input.itemId === "item_iron_powder")
-    && recipe.outputs.some((output) => output.itemId === "item_iron_nugget");
-}
+// AI-REMOVED 2026-09-17:
+// Reason: 铁粉制蓝铁块不再是自动规划例外，所有普通配方统一按 ID 排序。
+// Trigger: 用户要求 Wiki 默认配方优先，其余按 ID，装瓶/拆瓶最后。
+// Evidence: compareRecipesByDefaultPriority 已成为配方选择对话框与产线规划的统一排序入口。
+// Replacement: src/shared/registry/recipe-visibility.ts 的 compareRecipesByDefaultPriority。
+// Risk: Low - 该配方仍可自动或手动选择，只是不再被特殊排除。
+// Human Review: Required
+//
+// Original code:
+// function isIronPowderToNuggetRecipe(recipe: RecipeDefinition): boolean {
+//   return recipe.inputs.some((input) => input.itemId === "item_iron_powder")
+//     && recipe.outputs.some((output) => output.itemId === "item_iron_nugget");
+// }
 
 function resolveProductionPlanningRecipeInputs(
   recipe: RecipeDefinition,
@@ -727,33 +752,18 @@ function resolveDemand(
   }
 
   if (stack.includes(itemId)) {
-    if (isAllowedProductivePlantCycle(itemId, stack)) {
-      supply.cycle = remaining;
-      return createItemNode({
-        itemId,
-        demandPerMinute: demand,
-        suppliedPerMinute: roundFlow(supplyAfterInfinite + supply.cycle),
-        producedPerMinute: 0,
-        unresolvedPerMinute: 0,
-        supply,
-        recipeNode: null,
-        isInfiniteSource: false,
-        isCycleSource: true,
-        blockedByCycle: false,
-      }, context);
-    }
-
+    supply.cycle = remaining;
     return createItemNode({
       itemId,
       demandPerMinute: demand,
-      suppliedPerMinute: supplyAfterInfinite,
+      suppliedPerMinute: roundFlow(supplyAfterInfinite + supply.cycle),
       producedPerMinute: 0,
-      unresolvedPerMinute: remaining,
+      unresolvedPerMinute: 0,
       supply,
       recipeNode: null,
       isInfiniteSource: false,
-      isCycleSource: false,
-      blockedByCycle: true,
+      isCycleSource: true,
+      blockedByCycle: false,
     }, context);
   }
 
@@ -1159,16 +1169,55 @@ function resolveCandidateForItem(
     }
   }
 
-  if (context.index.naturalResourceItemIds.has(itemId)) {
-    const inputless = candidates.find((candidate) => candidate.inputs.length === 0);
-    if (inputless !== undefined) {
-      return inputless;
-    }
+  // AI-REMOVED 2026-09-17:
+  // Reason: 自然资源不再私自覆盖统一默认配方顺序，系统配方之间也不再按资源估算重新排名。
+  // Trigger: 用户要求产线规划默认配方严格遵循统一排序；模块候选仍保留原估算竞争。
+  // Evidence: resolveAvailableCandidatesForItem 已按共享比较器排序，首个系统候选即默认配方。
+  // Replacement: defaultSystemCandidate + moduleCandidates。
+  // Risk: Medium - 默认系统配方可能比旧启发式消耗更多资源，这是游戏百科顺序优先的预期结果。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (context.index.naturalResourceItemIds.has(itemId)) {
+  //   const inputless = candidates.find((candidate) => candidate.inputs.length === 0);
+  //   if (inputless !== undefined) {
+  //     return inputless;
+  //   }
+  // }
+  //
+  // let best: ProductionPlanningCandidate | undefined;
+  // let bestEstimate: ProductionPlanningPlanEstimate | undefined;
+  // for (const candidate of candidates) {
+  //   const estimate = estimateProductionPlanningCandidate(
+  //     candidate,
+  //     itemId,
+  //     demandPerMinute,
+  //     context,
+  //     stack,
+  //   );
+  //   if (
+  //     best === undefined
+  //     || bestEstimate === undefined
+  //     || compareProductionPlanningEstimates(estimate, bestEstimate, candidate, best) < 0
+  //   ) {
+  //     best = candidate;
+  //     bestEstimate = estimate;
+  //   }
+  // }
+  //
+  // return best;
+  const defaultSystemCandidate = candidates.find((candidate) => candidate.sourceType === "system-recipe");
+  const moduleCandidates = candidates.filter((candidate) => candidate.sourceType !== "system-recipe");
+  if (moduleCandidates.length === 0) {
+    return defaultSystemCandidate;
   }
 
   let best: ProductionPlanningCandidate | undefined;
   let bestEstimate: ProductionPlanningPlanEstimate | undefined;
-  for (const candidate of candidates) {
+  for (const candidate of [
+    ...(defaultSystemCandidate === undefined ? [] : [defaultSystemCandidate]),
+    ...moduleCandidates,
+  ]) {
     const estimate = estimateProductionPlanningCandidate(
       candidate,
       itemId,
@@ -1204,43 +1253,34 @@ function resolveAvailableCandidatesForItem(
   itemId: string,
   context: SolverContext,
 ): ProductionPlanningCandidate[] {
-  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
-    .filter((candidate) => isCandidateAvailableInContext(candidate, context));
-  const preferred = candidates.filter((candidate) => {
-    if (candidate.recipeId === null) {
-      return true;
-    }
-    const recipe = context.index.recipeById.get(candidate.recipeId);
-    return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
-  });
-  if (preferred.length > 0) {
-    if (context.index.naturalResourceItemIds.has(itemId)) {
-      return preferred;
-    }
-    const primarySystemCandidate = preferred.find((candidate) => candidate.recipeId !== null);
-    const primarySystemRecipe = primarySystemCandidate?.recipeId === null
-      || primarySystemCandidate?.recipeId === undefined
-      ? undefined
-      : context.index.recipeById.get(primarySystemCandidate.recipeId);
-    if (primarySystemRecipe === undefined) {
-      return preferred;
-    }
-
-    return preferred.filter((candidate) => {
+  return (context.index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => isCandidateAvailableInContext(candidate, context))
+    .filter((candidate) => {
       if (candidate.recipeId === null) {
         return true;
       }
-      return context.index.recipeById.get(candidate.recipeId)?.machineId === primarySystemRecipe.machineId;
-    });
-  }
+      const recipe = context.index.recipeById.get(candidate.recipeId);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+    })
+    .sort((left, right) => compareProductionPlanningCandidatesByDefaultPriority(left, right, context.index));
+}
 
-  return candidates.filter((candidate) => {
-    if (candidate.recipeId === null) {
-      return true;
-    }
-    const recipe = context.index.recipeById.get(candidate.recipeId);
-    return recipe !== undefined && isIronPowderToNuggetRecipe(recipe);
-  });
+function compareProductionPlanningCandidatesByDefaultPriority(
+  left: ProductionPlanningCandidate,
+  right: ProductionPlanningCandidate,
+  index: ProductionPlanningIndex,
+): number {
+  if (left.recipeId === null || right.recipeId === null) {
+    return Number(left.recipeId === null) - Number(right.recipeId === null)
+      || left.order - right.order
+      || left.id.localeCompare(right.id);
+  }
+  const leftRecipe = index.recipeById.get(left.recipeId);
+  const rightRecipe = index.recipeById.get(right.recipeId);
+  if (leftRecipe === undefined || rightRecipe === undefined) {
+    return left.order - right.order || left.id.localeCompare(right.id);
+  }
+  return compareRecipesByDefaultPriority(leftRecipe, rightRecipe);
 }
 
 function isCandidateAvailableInContext(
@@ -1447,7 +1487,10 @@ function estimateSystemRecipeItem(
   if (demandPerMinute <= EPSILON) {
     return createEmptyEstimate();
   }
-  if (stack.includes(itemId) || stack.length >= MAX_RECURSION_DEPTH) {
+  if (stack.includes(itemId)) {
+    return createResourceEstimate(itemId, demandPerMinute);
+  }
+  if (stack.length >= MAX_RECURSION_DEPTH) {
     return createUnresolvedEstimate(itemId, demandPerMinute);
   }
   if (context.index.naturalResourceItemIds.has(itemId) || isRawPlantResourceItem(itemId)) {
@@ -2190,30 +2233,39 @@ function resolveRecipeOutputPerMinute(
   return recipe?.outputs.find((output) => output.itemId === itemId)?.perMinute ?? 0;
 }
 
-function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {
-  if (!isPlantItem(itemId)) {
-    return false;
-  }
-
-  const repeatIndex = stack.lastIndexOf(itemId);
-  if (repeatIndex < 0) {
-    return false;
-  }
-
-  const cycleItems = stack.slice(repeatIndex);
-  return cycleItems.length > 0
-    && cycleItems.every(isPlantItem)
-    && cycleItems.some(isPlantSeedItem)
-    && cycleItems.some((candidate) => isPlantItem(candidate) && !isPlantSeedItem(candidate));
-}
-
-function isPlantItem(itemId: string): boolean {
-  return itemId.startsWith("item_plant_");
-}
-
-function isPlantSeedItem(itemId: string): boolean {
-  return itemId.includes("_seed");
-}
+// AI-REMOVED 2026-09-17:
+// Reason: 循环切口现统一建模为显式外部供给，不再按植物物品白名单决定是否允许循环。
+// Trigger: 用户要求任何已选循环配方都可展示且不报错，同时不能把零净产出循环伪装成自产。
+// Evidence: resolveDemand 在递归栈重复时写入 supply.cycle 并生成 isCycleSource 节点；估算器将相同切口计为外部资源。
+// Replacement: resolveDemand 的 stack.includes(itemId) 分支。
+// Risk: Medium - 所有循环现在都可解，但切口数量明确依赖外部供给，不代表闭环自持。
+// Human Review: Required
+//
+// Original code:
+// function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {
+//   if (!isPlantItem(itemId)) {
+//     return false;
+//   }
+//
+//   const repeatIndex = stack.lastIndexOf(itemId);
+//   if (repeatIndex < 0) {
+//     return false;
+//   }
+//
+//   const cycleItems = stack.slice(repeatIndex);
+//   return cycleItems.length > 0
+//     && cycleItems.every(isPlantItem)
+//     && cycleItems.some(isPlantSeedItem)
+//     && cycleItems.some((candidate) => isPlantItem(candidate) && !isPlantSeedItem(candidate));
+// }
+//
+// function isPlantItem(itemId: string): boolean {
+//   return itemId.startsWith("item_plant_");
+// }
+//
+// function isPlantSeedItem(itemId: string): boolean {
+//   return itemId.includes("_seed");
+// }
 
 function createNodeId(prefix: string, context: SolverContext): string {
   context.nextNodeIndex += 1;

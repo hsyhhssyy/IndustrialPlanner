@@ -209,9 +209,25 @@ describe("RecipePickerDialog", () => {
 
     expect(queryRecipeButtons(container).map((button) => button.dataset.recipeId)).toEqual([
       regularRecipe.id,
-      fillingRecipe.id,
       dismantlingRecipe.id,
+      fillingRecipe.id,
     ]);
     expect(container.querySelectorAll(".recipe-picker-special-divider")).toHaveLength(1);
+  });
+
+  it("places Wiki default recipes before ordinary recipes in the current filtered list", () => {
+    const wikiDefaultRecipe = findRecipe(appHost, "liquid_transmuter_2_gas_gas_copper_1");
+    const ordinaryRecipe = findRecipe(appHost, "r_furnace_iron_nugget_from_iron_ore_basic");
+
+    act(() => {
+      void appHost.recipePicker.pickRecipe({
+        recipes: [ordinaryRecipe, wikiDefaultRecipe],
+      });
+    });
+
+    expect(queryRecipeButtons(container).map((button) => button.dataset.recipeId)).toEqual([
+      wikiDefaultRecipe.id,
+      ordinaryRecipe.id,
+    ]);
   });
 });

@@ -339,6 +339,8 @@ describe("buildProcessGraph", () => {
     const index = buildProductionPlanningIndex(registry);
     const recipeChoices = new Map<string, string>([
       ["item_xiranite_enr_powder", "liquid_transmuter_2_solid_xiranite_enr_powder_1"],
+      ["item_filter_core", "tools_proc_filter_core_2"],
+      ["item_copper_nugget", "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"],
     ]);
     const plan = createPlanWithChoices(
       [{ id: "t1", itemId: "item_xiranite_enr_powder", perMinute: 12 }],

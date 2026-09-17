@@ -23,6 +23,8 @@
 ## 3. 配方
 
 - [ ] 根据 `FactoryMachineCraftTable` 及关联 craft 子表核对配方 ID、时间、输入、输出、数量和 mode。
+- [ ] 涉及游戏百科默认生产配方或默认排序时，按 [Wiki 默认配方核对](wiki-default-craft.md) 读取 `WikiDefaultCraftTable`；逐项核对 raw `itemId → sourceCraftId`、项目规范化 `recipeId`、目标产物和别名依据。
+- [ ] 明确 `WikiDefaultCraftTable` 只证明每个物品的首选 craft 引用，不证明未入表配方的次级排序；不得从 JSON 键顺序推断完整排序规则。
 - [ ] 精确保留已审阅的水泵能力合并：项目 `water_pump_1` 有意合并 raw `pump_1` 与 `pump_2`，因此 `r_pump_acid_basic` 应与 `pump_2` 的沉积酸抽取能力核对，不得按 `water_pump_1 -> pump_1` 单一别名误报；其他配方字段仍需逐项核对。
 - [ ] 核对 `src/registry/recipe-definition.ts`。
 - [ ] 核对设备可用配方组、变体 mode 和多产物共享语义。

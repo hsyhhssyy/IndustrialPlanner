@@ -369,7 +369,7 @@ describe("production planning unified candidates", () => {
     expect(reversed.unresolvedPerMinute).toBe(forward.unresolvedPerMinute);
   });
 
-  it("re-evaluates xiranite recipes against finite user supply", () => {
+  it("keeps the Wiki default xiranite recipe despite finite supply for another recipe", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const plan = computeProductionPlan({
       targets: [port("item_xiranite_powder", 30)],
@@ -379,6 +379,6 @@ describe("production planning unified candidates", () => {
       sourceConfig: SOURCE_CONFIG,
     }, index);
 
-    expect(plan.roots[0]?.recipeNode?.recipeId).toBe("xiranite_oven_xiranite_powder_1");
+    expect(plan.roots[0]?.recipeNode?.recipeId).toBe("xiranite_oven_xiranite_powder_2");
   });
 });

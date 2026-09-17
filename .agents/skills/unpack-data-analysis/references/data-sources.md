@@ -110,6 +110,7 @@ node .agents/skills/unpack-data-analysis/scripts/fetch-akedata-tables.mjs \
 | renderer template 细节 | `FactoryBuildingRendererTemplateTable`，并结合 `FactoryBuildingTable.rendererTemplateMap` |
 | 工厂物品 | `FactoryItemTable`、`ItemTable` |
 | 制造配方 | `FactoryMachineCraftTable` 及相关 Factory craft 子表 |
+| 游戏百科默认生产配方 | `WikiDefaultCraftTable`，并用 `FactoryMachineCraftTable`、`FactoryItemTable` 交叉核对 |
 | 聚落等级与交易 | `SettlementBasicDataTable` |
 | 区域 ID 与名称引用 | `DomainDataTable` |
 | 中文 / 英文文本 | `I18nTextTable_CN`、`I18nTextTable_EN` |

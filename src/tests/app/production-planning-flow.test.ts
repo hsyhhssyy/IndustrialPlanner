@@ -397,13 +397,41 @@ describe("production planning flow graph", () => {
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
+  it("shows a non-plant recipe loop together with its external cycle-cut supply", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_gas_copper", 60)],
+      supplies: [],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const graph = buildProductionFlowGraph(result, index, t, "device");
+
+    expect(result.unresolvedPerMinute).toBe(0);
+    expect(graph.nodes.some((node) => (
+      node.recipeId === "external-supply:item_gas_copper" && node.tone === "source"
+    ))).toBe(true);
+    expect(graph.nodes.some((node) => (
+      node.recipeId === "liquid_transmuter_2_solid_copper_nugget_1" && node.tone === "cycle"
+    ))).toBe(true);
+    expect(graph.links.some((link) => (
+      link.source.includes("liquid_transmuter_2_gas_gas_copper_1")
+      && link.target.includes("liquid_transmuter_2_solid_copper_nugget_1")
+      && link.itemId === "item_gas_copper"
+    ))).toBe(true);
+  });
+
   it("keeps carbon block plant seed cycles as side-port feedback links in device mode", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_carbon_mtl", 60)],
       supplies: [],
       infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
-      recipeChoices: new Map(),
+      recipeChoices: new Map([[
+        "item_carbon_mtl",
+        "r_furnace_carbon_mtl_from_moss_1_basic",
+      ]]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
@@ -417,8 +445,17 @@ describe("production planning flow graph", () => {
     });
 
     const seedCollectorFeedback = graph.links.find((link) => (
+      link.target.includes("r_seedcol_moss_seed_1_from_moss_1_basic")
+      && link.itemId === "item_plant_moss_1"
+    ));
+    const planterBodyOutput = graph.links.find((link) => (
       link.source.includes("r_planter_moss_1_from_moss_seed_1_basic")
-      && link.target.includes("r_seedcol_moss_seed_1_from_moss_1_basic")
+      && link.target === seedCollectorFeedback?.source
+      && link.itemId === "item_plant_moss_1"
+    ));
+    const externalCycleSupply = graph.links.find((link) => (
+      link.source === "recipe:external-supply:item_plant_moss_1:target:item_plant_moss_1"
+      && link.target === seedCollectorFeedback?.source
       && link.itemId === "item_plant_moss_1"
     ));
     const seedCollectorSeedOutput = graph.links.find((link) => (
@@ -430,6 +467,8 @@ describe("production planning flow graph", () => {
 
     expect(seedCollectorFeedback?.preferredFeedback).toBe(true);
     expect(seedCollectorFeedback?.targetSide).toBe("right");
+    expect(planterBodyOutput).toBeDefined();
+    expect(externalCycleSupply).toBeDefined();
     expect(seedCollectorSeedOutput?.sourceSide).toBe("left");
     expect(layoutFeedback?.direction).toBe("backward");
   });

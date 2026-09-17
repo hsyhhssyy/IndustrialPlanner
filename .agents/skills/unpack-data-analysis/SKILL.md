@@ -12,6 +12,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 分析端口与变体时读取 [端口坐标与变体规则](references/port-coordinates.md)。
 - 分析 raw building 与项目实体的多对多关系时，必须以 `FactoryMachineCrafterTable.modeMap` 建立语义变体，再按 [设备对账脚本](references/reconciliation.md) 结合配方归属映射项目实体；`rendererTemplateMap` 只补充 renderer 证据。
 - 查询设备核心属性时读取 [设备属性来源](references/device-properties.md)。
+- 核对游戏百科为物品指定的默认生产配方时，必须读取 [Wiki 默认配方核对](references/wiki-default-craft.md)；使用 `WikiDefaultCraftTable` 固定默认关系，再用 `FactoryMachineCraftTable` 与项目规范化映射区分真实 craft ID 和百科伪 craft ID。
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
 - 对账物品中英文名称时读取 [物品名称对账](references/item-reconciliation.md)，并使用其中的脚本区分普通物品、缺少直接翻译和项目组合命名物品。
 - 取得解包数据后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。
@@ -22,6 +23,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 ## 不能做什么
 
 - 不得把旧版 `json-export.json` 或任一项目业务 DTO 当作权威格式；AKEData / 本地来源必须保留原始 `TableCfg` 表名和结构。
+- 不得用旧版 `json-export.json` 核对 `WikiDefaultCraftTable`；legacy 来源没有这张表，必须改用已固定版本的 AKEData 或本地 raw table。
 - 不得在同一分析中静默混用来源、跟随 `latest` 漂移、hash 失败后回退，或把 AKEData 描述成游戏官方发布渠道。
 - 不得用普通 `JSON.parse` 读取后再导出包含 Int64 的 raw table，也不得从 legacy 数据伪造已丢失字段或精度。
 - 不得把解包三维坐标直接当成本项目二维坐标，也不得仅凭 `rotation.y` 或 renderer 变体推断端口方位或输入输出反转。

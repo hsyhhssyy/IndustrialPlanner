@@ -2,6 +2,8 @@
 
 import { RegistryContract } from "@/domain/registry/registry-contract"
 import type { ItemDefinition } from "@/domain/registry/types/item-definition"
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition"
+import { WIKI_DEFAULT_CRAFT_RECIPE_TAG } from "@/shared/registry/recipe-visibility"
 
 import { BASE_DEFINITIONS } from "./base-definition"
 import { ENTITY_DEFINITIONS } from "./entity-definition"
@@ -9,9 +11,13 @@ import { ENTITY_VARIANT_DEFINITIONS } from "./entity-variant-definition"
 import { ITEM_DEFINITIONS } from "./item-definition"
 import { createRegistryQuery } from "./registry-query"
 import { RECIPE_DEFINITIONS } from "./recipe-definition"
+import { WIKI_DEFAULT_CRAFT_DEFINITIONS } from "./wiki-default-craft-definition"
 
 const FLUID_COLOR_TAG_PATTERN = /^(?:gas_color|fluid_color|liquid_color):/
 const HEX_COLOR_PATTERN = /^#[\da-f]{6}$/
+const WIKI_DEFAULT_RECIPE_IDS = new Set(
+    WIKI_DEFAULT_CRAFT_DEFINITIONS.map((definition) => definition.recipeId),
+)
 
 /** Registry 启动即拒绝缺层、错相态和已退役颜色 tag，避免渲染期掩盖坏数据。 */
 function validateItemFluidColors(itemDefinitions: readonly ItemDefinition[]): void {
@@ -41,6 +47,26 @@ function validateItemFluidColors(itemDefinitions: readonly ItemDefinition[]): vo
     }
 }
 
+function validateWikiDefaultCraftDefinitions(
+    recipeDefinitions: readonly RecipeDefinition[],
+): void {
+    const recipeById = new Map(recipeDefinitions.map((recipe) => [recipe.id, recipe]))
+    const seenItemIds = new Set<string>()
+    for (const definition of WIKI_DEFAULT_CRAFT_DEFINITIONS) {
+        if (seenItemIds.has(definition.itemId)) {
+            throw new Error(`Duplicate WikiDefaultCraft item: ${definition.itemId}`)
+        }
+        seenItemIds.add(definition.itemId)
+        const recipe = recipeById.get(definition.recipeId)
+        if (recipe === undefined) {
+            throw new Error(`Missing WikiDefaultCraft recipe: ${definition.recipeId}`)
+        }
+        if (!recipe.outputs.some((output) => output.itemId === definition.itemId)) {
+            throw new Error(`WikiDefaultCraft recipe ${definition.recipeId} does not output ${definition.itemId}`)
+        }
+    }
+}
+
 export const createRegistryContract = (): RegistryContract => {
     const baseDefinitions = [...BASE_DEFINITIONS]
     const entityDefinitions = [...ENTITY_DEFINITIONS]
@@ -49,8 +75,12 @@ export const createRegistryContract = (): RegistryContract => {
     validateItemFluidColors(itemDefinitions)
     const recipeDefinitions = RECIPE_DEFINITIONS.map((recipe) => ({
         ...recipe,
+        tags: WIKI_DEFAULT_RECIPE_IDS.has(recipe.id)
+            ? [...recipe.tags, WIKI_DEFAULT_CRAFT_RECIPE_TAG]
+            : [...recipe.tags],
         primaryOutputs: recipe.outputs.length > 0 ? [recipe.outputs[0]!.itemId] : [],
     }))
+    validateWikiDefaultCraftDefinitions(recipeDefinitions)
 
     return {
         queries: createRegistryQuery({
@@ -65,3 +95,6 @@ export const createRegistryContract = (): RegistryContract => {
         recipeDefinitions,
     }
 }
+
+export { WIKI_DEFAULT_CRAFT_DEFINITIONS } from "./wiki-default-craft-definition"
+export type { WikiDefaultCraftDefinition } from "./wiki-default-craft-definition"

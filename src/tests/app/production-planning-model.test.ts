@@ -12,8 +12,11 @@ import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning
 import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { createRegistryContract } from "@/registry";
-import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
+import { createRegistryContract, WIKI_DEFAULT_CRAFT_DEFINITIONS } from "@/registry";
+import {
+  TOOLBOX_HIDDEN_RECIPE_TAG,
+  WIKI_DEFAULT_CRAFT_RECIPE_TAG,
+} from "@/shared/registry/recipe-visibility";
 import { WATER_PURIFIER_BYPRODUCT_RECIPE_ID } from "@/shared/water-purifier-node";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
@@ -94,6 +97,17 @@ function makeInfiniteItemIds(
 }
 
 describe("production planning model", () => {
+  it("registers every WikiDefaultCraft mapping on its normalized output recipe", () => {
+    const registry = createRegistryContract();
+
+    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(9);
+    for (const definition of WIKI_DEFAULT_CRAFT_DEFINITIONS) {
+      const recipe = registry.queries.findRecipeDefinition(definition.recipeId);
+      expect(recipe?.outputs.some((output) => output.itemId === definition.itemId)).toBe(true);
+      expect(recipe?.tags).toContain(WIKI_DEFAULT_CRAFT_RECIPE_TAG);
+    }
+  });
+
   it("filters toolbox-hidden recipes from planning indexes and recipe choices", () => {
     const registry = createRegistryContract();
     const hiddenRecipe: RecipeDefinition = {
@@ -232,14 +246,14 @@ describe("production planning model", () => {
     expect(root?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
   });
 
-  it("excludes the iron-powder-to-nugget recipe from auto selection but allows manual choice", () => {
+  it("sorts ordinary iron-nugget recipes by id and still allows manual choice", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const powderRecipe = index.recipeById.get("r_furnace_iron_nugget_from_iron_powder_basic");
     expect(powderRecipe).toBeDefined();
     if (powderRecipe === undefined) {
       throw new Error("Expected iron powder to nugget recipe");
     }
-    expect(isRecipeExcludedFromProductionPlanningAuto(powderRecipe)).toBe(true);
+    expect(isRecipeExcludedFromProductionPlanningAuto(powderRecipe)).toBe(false);
 
     const autoResult = computeProductionPlan({
       targets: [port("item_iron_nugget", 30)],
@@ -518,6 +532,29 @@ describe("production planning model", () => {
     expect(result.unresolvedPerMinute).toBe(0);
   });
 
+  it("selects the Wiki default copper-gas recipe and cuts its conversion loop as external supply", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_gas_copper", 60)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const cycleNode = flattenNodes(result.roots).find((node) => (
+      node.itemId === "item_gas_copper" && node.isCycleSource
+    ));
+
+    expect(index.recipesByOutputItem.get("item_gas_copper")?.[0]?.id)
+      .toBe("liquid_transmuter_2_gas_gas_copper_1");
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe("liquid_transmuter_2_gas_gas_copper_1");
+    expect(result.recipeTotals.map((total) => total.recipeId))
+      .toContain("liquid_transmuter_2_solid_copper_nugget_1");
+    expect(cycleNode?.supply.cycle).toBe(60);
+    expect(cycleNode?.suppliedPerMinute).toBe(60);
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
   it("can switch sewage between self-produce and external supply", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const recipeChoice = new Map([[
@@ -623,7 +660,11 @@ describe("production planning model", () => {
       ],
       supplies: [],
       infiniteItemIds: baseInfiniteItemIds(index),
-      recipeChoices: new Map(),
+      recipeChoices: new Map([
+        ["item_xiranite_enr_powder", "xiranite_oven_xiranite_enr_powder_1"],
+        ["item_xiranite_powder", "xiranite_oven_xiranite_powder_1"],
+        ["item_copper_nugget", "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"],
+      ]),
       sourceConfig: {
         ...DEFAULT_SOURCE_CONFIG,
         sewagePolicy: "self-produce",
@@ -703,7 +744,7 @@ describe("production planning model", () => {
     expect(result.recipeTotals.map((total) => total.recipeId))
       .not.toContain(WATER_PURIFIER_BYPRODUCT_RECIPE_ID);
     expect(result.roots.find((root) => root.itemId === "item_liquid_xiranite_poly")?.recipeNode?.recipeId)
-      .toBe(TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID);
+      .toBe("r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic");
   });
 
   it("marks only the leftover output as byproduct and nests it under waste treatment", () => {
@@ -712,10 +753,14 @@ describe("production planning model", () => {
       targets: [port("item_equip_script_4_2", 1)],
       supplies: [],
       infiniteItemIds: new Set(["item_liquid_sewage"]),
-      recipeChoices: new Map([[
-        "item_liquid_xiranite_poly",
-        "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
-      ]]),
+      recipeChoices: new Map([
+        ["item_xiranite_enr_powder", "xiranite_oven_xiranite_enr_powder_1"],
+        ["item_xiranite_powder", "xiranite_oven_xiranite_powder_1"],
+        [
+          "item_liquid_xiranite_poly",
+          "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
+        ],
+      ]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
@@ -751,7 +796,12 @@ describe("production planning model", () => {
       targets: [port("item_equip_script_4_2", 1)],
       supplies: [],
       infiniteItemIds: new Set(["item_liquid_sewage"]),
-      recipeChoices: new Map(),
+      recipeChoices: new Map([
+        ["item_copper_enr", "r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic"],
+        ["item_liquid_copper_enr", "r_liquid_purifier_acid_and_copper_enr_from_copper_basic"],
+        ["item_liquid_copper", "r_mix_pool_liquid_copper_from_copper_powder_and_acid_basic"],
+        ["item_carbon_mtl", "r_furnace_carbon_mtl_from_grass_1_basic"],
+      ]),
       sourceConfig: { ...DEFAULT_SOURCE_CONFIG, acidPolicy: "dump-byproduct" },
     }, index);
 

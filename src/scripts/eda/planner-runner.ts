@@ -44,6 +44,7 @@ export interface PlannerBatchOptions {
   readonly verificationSeconds?: number;
   readonly engineKind: Extract<SimulationEngineKind, "dense-v2">;
   readonly profile?: Partial<PlannerSearchProfile>;
+  readonly diagnostics?: boolean;
 }
 
 export interface PlannerAttemptRecord {
@@ -95,6 +96,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
           Math.min((options.candidateSeconds ?? 30) * 1000, deadline - performance.now()), {
             maxEvaluations: remainingEvaluations,
             profile: options.profile,
+            diagnostics: options.diagnostics,
             ...(options.width === undefined ? {} : { outline: { width: options.width, height: options.height! } }),
           });
         localEvaluations += candidate.search.evaluations;

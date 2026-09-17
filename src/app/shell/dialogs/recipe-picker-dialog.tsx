@@ -13,6 +13,7 @@ import {
   isRecipeVisibleInToolbox,
   LIQUID_DISMANTLE_RECIPE_TAG,
   LIQUID_FILLING_RECIPE_TAG,
+  sortRecipesByDefaultPriority,
 } from "@/shared/registry/recipe-visibility";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
@@ -377,8 +378,8 @@ function groupRecipePickerRecipes(recipes: readonly RecipeDefinition[]): {
   }
 
   return {
-    regular,
-    special: [...liquidFilling, ...liquidDismantle],
+    regular: sortRecipesByDefaultPriority(regular),
+    special: sortRecipesByDefaultPriority([...liquidFilling, ...liquidDismantle]),
   };
 }
 

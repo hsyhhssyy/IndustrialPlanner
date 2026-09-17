@@ -366,7 +366,7 @@ function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
 }
 
 function resolveProductionPlanningExternalSupplyPerMinute(node: ProductionPlanningItemNode): number {
-  return node.supply.manual + node.supply.infinite;
+  return node.supply.manual + node.supply.infinite + node.supply.cycle;
 }
 
 function buildProductionPlanningExternalSupplyRecipeId(itemId: string): string {

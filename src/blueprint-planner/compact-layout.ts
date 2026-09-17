@@ -4,7 +4,7 @@ import { resolveEntityGridRect, resolveGasDiffusionRangeGridRect, areGridRectsCo
 import { getPlannerPorts, opposite, ROTATIONS, type PlannerPort } from "./geometry";
 import type { PlannerNetwork, PlannerWire } from "./model";
 import { DEFAULT_SEARCH_PROFILE, type PlannerSearchProfile } from "./search-profile";
-import type { PlannerSearchStatistics } from "./search-types";
+import type { PlannerLayoutIssue, PlannerSearchStatistics } from "./search-types";
 import { buildLayoutGraph } from "./layout-graph";
 import { compactSequencePair } from "./sequence-pair";
 import { restrictPort } from "./wiring";
@@ -165,7 +165,12 @@ export class CompactLayoutSearch {
 
   applyBest(): void {
     this.restore(this.best);
-    this.current = this.evaluate();
+    const issues: PlannerLayoutIssue[] | undefined = this.statistics.diagnostics ? [] : undefined;
+    this.current = this.evaluate(issues);
+    if (issues && this.statistics.diagnostics) this.statistics.diagnostics.lastLayout = {
+      evaluation: this.statistics.evaluations, feasible: this.current.feasible, cost: this.current.cost,
+      issues, conflicts: this.current.conflicts,
+    };
     this.statistics.finalWireLength = this.current.wireLength;
     for (const [index, node] of this.network.nodes.entries()) {
       const pose = this.poses[index]!;
@@ -301,7 +306,12 @@ export class CompactLayoutSearch {
     }
   }
 
-  private evaluate(): Evaluation {
+  private evaluate(issues?: PlannerLayoutIssue[]): Evaluation {
+    // 仅 applyBest 检查点收集；复用原评分条件，逐提案不分配诊断数组。
+    const record = issues ? (kind: PlannerLayoutIssue["kind"], amount: number, indices: number[], position?: { x: number; y: number }) => {
+      if (amount > 0) issues.push({ kind, amount, entityIds: indices.map(index => this.network.nodes[index]!.entity.id),
+        position: position ? { x: position.x, y: position.y } : undefined });
+    } : undefined;
     // 同组、同物料、同运量的端口可互换；每次从原始分配求解，避免历史顺序影响快照。
     this.edges.forEach((edge, index) => { edge.targetKey = this.originalTargetKeys[index]!; edge.sourceKey = this.originalSourceKeys[index]!; });
     for (const group of this.parallelLanes) {
@@ -355,18 +365,24 @@ export class CompactLayoutSearch {
     for (let i = 0; i < rects.length; i++) {
       const rect = rects[i]!;
       if (!this.fixed.has(i)) violations += Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y);
+      if (!this.fixed.has(i)) record?.("minimum-coordinate", Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y), [i], rect);
       for (let j = 0; j < i; j++) {
         const other = rects[j]!;
         violations += Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
           * Math.max(0, Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y));
+        record?.("body-overlap", Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
+          * Math.max(0, Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y)), [i, j], rect);
       }
       maxX = Math.max(maxX, rect.x + rect.width); maxY = Math.max(maxY, rect.y + rect.height);
       overflow += Math.max(0, rect.x + rect.width - width) * rect.height + Math.max(0, rect.y + rect.height - height) * rect.width;
+      record?.("body-boundary", Math.max(0, rect.x + rect.width - width) * rect.height + Math.max(0, rect.y + rect.height - height) * rect.width, [i], rect);
       const behavior = this.network.nodes[i]!.definition.placementBehaviors.find(entry => entry.type === "no-near-same-entity");
       if (behavior?.type === "no-near-same-entity") for (let j = 0; j < i; j++) {
         if (this.network.nodes[j]!.definition.id !== this.network.nodes[i]!.definition.id) continue;
         if (areGridRectsIntersecting({ x: rect.x - behavior.range, y: rect.y - behavior.range,
           width: rect.width + behavior.range * 2, height: rect.height + behavior.range * 2 }, rects[j]!)) violations += 10;
+        if (record && areGridRectsIntersecting({ x: rect.x - behavior.range, y: rect.y - behavior.range,
+          width: rect.width + behavior.range * 2, height: rect.height + behavior.range * 2 }, rects[j]!)) record("same-device-distance", 10, [i, j], rect);
       }
     }
     for (const pair of this.environmentPairs) {
@@ -377,6 +393,8 @@ export class CompactLayoutSearch {
       const device = rects[pair.device]!;
       violations += Math.max(0, range.x - device.x) + Math.max(0, range.y - device.y)
         + Math.max(0, device.x + device.width - range.x - range.width) + Math.max(0, device.y + device.height - range.y - range.height);
+      record?.("environment-coverage", Math.max(0, range.x - device.x) + Math.max(0, range.y - device.y)
+        + Math.max(0, device.x + device.width - range.x - range.width) + Math.max(0, device.y + device.height - range.y - range.height), [pair.device, pair.environment], device);
     }
     // 成品箱清空夹具不计交付面积，但验证时占据的格子必须在布局阶段预留。
     const fixtureRects = this.network.nodes.flatMap((node, index) => {
@@ -385,6 +403,10 @@ export class CompactLayoutSearch {
       const port = this.port(index, portKey(relative));
       const cells = [port.outside, { x: port.outside.x * 2 - port.cell.x, y: port.outside.y * 2 - port.cell.y }];
       for (const cell of cells) if (rects.some(rect => contains(rect, cell))) violations++;
+      if (record) for (const cell of cells) {
+        const blockers = rects.flatMap((rect, i) => contains(rect, cell) ? [i] : []);
+        if (blockers.length) record("fixture-blocked", 1, [index, ...blockers], cell);
+      }
       return cells.map(cell => ({ ...cell, width: 1, height: 1 }));
     });
     const obstacles = [...rects, ...fixtureRects];
@@ -413,12 +435,19 @@ export class CompactLayoutSearch {
       for (const [port, index] of [[source, edge.source], [target, edge.target]] as const) {
         if (direct) continue;
         violations += Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y);
+        record?.("port-minimum-coordinate", Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y), [index], port.outside);
         if (isOccupied(port.outside)) violations++;
+        if (record && isOccupied(port.outside)) record("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, port.outside) ? [i] : [])], port.outside);
         const key = `${port.outside.x},${port.outside.y}/${port.kind}`;
         const owner = String(edgeIndex);
         if (used.has(key) && used.get(key) !== owner) violations++;
+        if (record && used.has(key) && used.get(key) !== owner) {
+          const other = this.edges[Number(used.get(key))]!;
+          record("port-competition", 1, [index, other.source, other.target], port.outside);
+        }
         used.set(key, owner);
         overflow += Math.max(0, port.outside.x + 1 - width) + Math.max(0, port.outside.y + 1 - height);
+        record?.("port-boundary", Math.max(0, port.outside.x + 1 - width) + Math.max(0, port.outside.y + 1 - height), [index], port.outside);
         const next = { x: port.outside.x * 2 - port.cell.x, y: port.outside.y * 2 - port.cell.y };
         // 已分配端口优先留一格直线引出；紧邻且属于同一连接的端口可以直接相接。
         const oppositePort = index === edge.source ? target : source;
@@ -448,7 +477,7 @@ export class CompactLayoutSearch {
       }
       congestion += Math.max(0, density / Math.max(0.125, free / 16) - 0.65) ** 2 * 16;
     }
-    const disconnected = countDisconnectedPorts(obstacles, endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY));
+    const disconnected = countDisconnectedPorts(obstacles, endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY), issues);
     // AI-REMOVED 2026-09-16:
     // Reason: 供电桩改为布线后从合法空位生成，不再参与退火。
     // Trigger: 初排桩数与位置锁死布局并阻挡物流。
@@ -485,12 +514,12 @@ function contains(rect: { x: number; y: number; width: number; height: number },
 
 /** 端口只空出一格仍可能被相邻端口围死；先用自由空间连通分量排除这种假可布线布局。 */
 function countDisconnectedPorts(rects: readonly { x: number; y: number; width: number; height: number }[],
-  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number): number {
-  return ["belt", "pipe"].reduce((sum, kind) => sum + countDisconnectedKind(rects, edges.filter(edge => edge.source.kind === kind), minimumX, minimumY, width, height), 0);
+  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
+  return ["belt", "pipe"].reduce((sum, kind) => sum + countDisconnectedKind(rects, edges.filter(edge => edge.source.kind === kind), minimumX, minimumY, width, height, issues), 0);
 }
 
 function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number }[],
-  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number): number {
+  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
   const grid = new Int32Array(width * height);
   const at = (x: number, y: number) => x < minimumX || x >= width || y < minimumY || y >= height ? -1 : y * width + x;
   for (const rect of rects) for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++) {
@@ -517,6 +546,10 @@ function countDisconnectedKind(rects: readonly { x: number; y: number; width: nu
     const { x, y } = port.outside;
     return [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].filter(key => key >= 0).map(key => grid[key]!).filter(value => value > 0);
   };
-  return edges.filter(edge => !edge.direct && Math.abs(edge.source.outside.x - edge.target.outside.x) + Math.abs(edge.source.outside.y - edge.target.outside.y) > 1
-    && !accessible(edge.source).some(component => accessible(edge.target).includes(component))).length;
+  return edges.filter(edge => {
+    const disconnected = !edge.direct && Math.abs(edge.source.outside.x - edge.target.outside.x) + Math.abs(edge.source.outside.y - edge.target.outside.y) > 1
+      && !accessible(edge.source).some(component => accessible(edge.target).includes(component));
+    if (disconnected) issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
+    return disconnected;
+  }).length;
 }
