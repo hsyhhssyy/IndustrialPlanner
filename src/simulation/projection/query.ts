@@ -192,7 +192,7 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
   };
 }
 
-function resolveDeviceOperatingStatus(options: {
+export function resolveDeviceOperatingStatus(options: {
   device: CompiledSimulationTopology["devices"][string];
   snapshot: RuntimeDeviceSnapshot;
   isPowerOutage: boolean;

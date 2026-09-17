@@ -104,6 +104,7 @@ function createContext(): {
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
   const editorHost = createEditorHost(workspace);
   const appHost = createAppHost(workspace);

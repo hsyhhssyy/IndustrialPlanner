@@ -2,8 +2,13 @@ import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
 } from "./types/simulation-types";
+import type {
+  SimulationBlueprintRunRequest,
+  SimulationBlueprintRunReport,
+} from "./types/simulation-blueprint-types";
 
 export interface SimulationAction {
+  runBlueprint(request: SimulationBlueprintRunRequest, signal?: AbortSignal): Promise<SimulationBlueprintRunReport>;
   start(): Promise<void>;
   /**
    * 开启或关闭“同时运行所有基地”的区域多基地模式。

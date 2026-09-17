@@ -156,6 +156,14 @@ export const LeftToolbar = observer(function LeftToolbar({
         })}
       </div>
       <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
+        {appHost.blueprintPlannerDialog.enabled ? <button
+          type="button" aria-label={t("eda.toolbar")} title={t("eda.title")}
+          aria-pressed={appHost.blueprintPlannerDialog.dialogState.visible}
+          className={cm(styles, appHost.blueprintPlannerDialog.dialogState.visible ? "rail-button rail-button-utility is-active" : "rail-button rail-button-utility")}
+          onClick={() => appHost.blueprintPlannerDialog.open()}>
+          <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="toolbox" /></span>
+          <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
+        </button> : null}
         {utilityToolbarItems.map((item) => {
           const label = t(item.labelKey);
           const isDebugLogButton = item.id === "utility-debug-log";

@@ -1,3 +1,6 @@
+import { createDenseBlueprintEngine } from "./blueprint-engine";
+import { BlueprintExecutionClient } from "../blueprint";
+import type { SimulationBlueprintRunRequest, SimulationBlueprintRunReport } from "@/domain/simulation";
 import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { selectDocumentSimulation } from "@/shared/snapshot/world-document-selection";
 import { createSimulationQueries } from "@/simulation/projection";
@@ -50,11 +53,20 @@ import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
-import {
-  areGridRectsIntersecting,
-  resolveEntityGridRect,
-  resolvePowerRangeGridRect,
-} from "@/shared/geometry/power-range";
+// AI-REMOVED 2026-09-16:
+// Reason: 将两套引擎重复的供电覆盖算法收口至共享几何函数。
+// Trigger: 独立蓝图验证必须与编辑器仿真使用相同供电规则。
+// Evidence: legacy/controller-support 与 dense/host 采用相同矩形相交判定。
+// Replacement: src/shared/geometry/power-range.ts collectPoweredEntityIds
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import {
+//   areGridRectsIntersecting,
+//   resolveEntityGridRect,
+//   resolvePowerRangeGridRect,
+// } from "@/shared/geometry/power-range";
+import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
 // Trigger: Host / legacy 控制器重构。
@@ -169,6 +181,16 @@ export function createDenseSimulationHost(
 }
 
 class DenseSimulationController implements SimulationAction, SimulationInternalAction {
+  private readonly blueprintExecution: BlueprintExecutionClient;
+
+  public runBlueprint(request: SimulationBlueprintRunRequest, signal?: AbortSignal): Promise<SimulationBlueprintRunReport> {
+    return this.blueprintExecution.run(request, signal);
+  }
+
+  public disposeBlueprintRuns(): void {
+    this.blueprintExecution.dispose();
+  }
+
   private readonly workspace: WorkspaceContract;
   private readonly options: CreateSimulationHostOptions;
   private readonly topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
@@ -214,6 +236,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     readonly bridge: DenseEngineBridge;
   }) {
     this.workspace = input.workspace;
+    this.blueprintExecution = new BlueprintExecutionClient(this.workspace.registry, "dense-v2", input.options.workerMode ?? "auto",
+      (engineOptions) => createDenseBlueprintEngine(this.workspace.registry, engineOptions), input.options.blueprintDenseTickRate);
     this.options = input.options;
     this.topologyStore = input.topologyStore;
     this.state = input.state;
@@ -805,6 +829,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   public dispose(): void {
     if (this.disposed) return;
+    this.disposeBlueprintRuns();
     this.reset();
     this.bridge.dispose();
     this.disposed = true;
@@ -1308,30 +1333,41 @@ function cloneWorldDocument(document: WorldDocument): WorldDocument {
   return JSON.parse(JSON.stringify(document)) as WorldDocument;
 }
 
-function computePoweredEntityIds(
-  document: WorldDocument,
-  registry: WorkspaceContract["registry"],
-): Set<string> {
-  const definitionById = new Map(
-    registry.entityDefinitions.map((definition) => [definition.id, definition]),
-  );
-  const entities = resolveOrderedDocumentEntities(document);
-  const powerRangeRects = entities.flatMap((entity) => {
-    const definition = definitionById.get(entity.definitionId);
-    if (definition === undefined) return [];
-    const gridRect = resolvePowerRangeGridRect({ entity, definition });
-    return gridRect === null ? [] : [gridRect];
-  });
-  if (powerRangeRects.length === 0) return new Set();
-
-  return new Set(entities.flatMap((entity) => {
-    const definition = definitionById.get(entity.definitionId);
-    if (definition === undefined) return [];
-    const entityGridRect = resolveEntityGridRect({ entity, definition });
-    return powerRangeRects.some((powerRangeRect) =>
-      areGridRectsIntersecting(entityGridRect, powerRangeRect)
-    ) ? [entity.id] : [];
-  }));
+// AI-REMOVED 2026-09-16:
+// Reason: 将两套引擎重复的供电覆盖算法收口至共享几何函数。
+// Trigger: 独立蓝图验证必须与编辑器仿真使用相同供电规则。
+// Evidence: legacy/controller-support 与 dense/host 采用相同矩形相交判定。
+// Replacement: src/shared/geometry/power-range.ts collectPoweredEntityIds
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function computePoweredEntityIds(
+//   document: WorldDocument,
+//   registry: WorkspaceContract["registry"],
+// ): Set<string> {
+//   const definitionById = new Map(
+//     registry.entityDefinitions.map((definition) => [definition.id, definition]),
+//   );
+//   const entities = resolveOrderedDocumentEntities(document);
+//   const powerRangeRects = entities.flatMap((entity) => {
+//     const definition = definitionById.get(entity.definitionId);
+//     if (definition === undefined) return [];
+//     const gridRect = resolvePowerRangeGridRect({ entity, definition });
+//     return gridRect === null ? [] : [gridRect];
+//   });
+//   if (powerRangeRects.length === 0) return new Set();
+//
+//   return new Set(entities.flatMap((entity) => {
+//     const definition = definitionById.get(entity.definitionId);
+//     if (definition === undefined) return [];
+//     const entityGridRect = resolveEntityGridRect({ entity, definition });
+//     return powerRangeRects.some((powerRangeRect) =>
+//       areGridRectsIntersecting(entityGridRect, powerRangeRect)
+//     ) ? [entity.id] : [];
+//   }));
+// }
+function computePoweredEntityIds(document: WorldDocument, registry: WorkspaceContract["registry"]): Set<string> {
+  return collectPoweredEntityIds(resolveOrderedDocumentEntities(document), registry.entityDefinitions);
 }
 
 function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] {

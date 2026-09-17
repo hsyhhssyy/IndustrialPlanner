@@ -23,6 +23,7 @@ function createWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
 }
 
@@ -132,6 +133,7 @@ function attachSimulationStub(
       enableTimeline: vi.fn(async () => {}),
       disableTimeline: vi.fn(),
       seekTimelineToTick: vi.fn(async () => false),
+      runBlueprint: vi.fn(async () => { throw new Error("独立蓝图执行不属于本 UI 场景"); }),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 

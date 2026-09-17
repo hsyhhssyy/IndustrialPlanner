@@ -1,3 +1,4 @@
+import { createBlueprintPlannerHost } from "./blueprint-planner";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
@@ -39,6 +40,7 @@ const workspace : WorkspaceContract = {
   render: null,
   simulation: null,
   sync: null,
+  blueprintPlanner: null,
 }
 
 const appHost = createAppHost(workspace);
@@ -76,6 +78,8 @@ const simulationHost = createSimulationHost(workspace, {
   getRegionalResourceSettings: (regionTag) =>
     appHost.regionalSettings.getRegionResources(regionTag),
 });
+
+createBlueprintPlannerHost(workspace);
 
 reaction(
   () => [

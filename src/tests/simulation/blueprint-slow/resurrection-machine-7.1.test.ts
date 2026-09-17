@@ -65,6 +65,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
         render: null,
         simulation: null,
         sync: null,
+        blueprintPlanner: null,
       };
 
       const host = createSimulationHost(workspace, {

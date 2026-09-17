@@ -9,7 +9,11 @@ import {
   isRecipeAvailableByActivity,
   resolveEffectiveActivityIds,
 } from "@/shared/registry/activity-availability";
-import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import {
+  isRecipeVisibleInToolbox,
+  LIQUID_DISMANTLE_RECIPE_TAG,
+  LIQUID_FILLING_RECIPE_TAG,
+} from "@/shared/registry/recipe-visibility";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
   buildEncyclopediaIndex,
@@ -105,6 +109,10 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
     () => scopedRecipes.filter((recipe) => matchesRecipeSearch(recipe, normalizedQuery, index, t)),
     [index, normalizedQuery, scopedRecipes, t],
   );
+  const groupedVisibleRecipes = useMemo(
+    () => groupRecipePickerRecipes(visibleRecipes),
+    [visibleRecipes],
+  );
   const emptyText = scopedRecipes.length === 0 ? copy.noRecipes : copy.noMatches;
   const dialogClassName = isTouch ? "recipe-picker-dialog-touch" : "recipe-picker-dialog";
 
@@ -156,16 +164,32 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
         </div>
         <div className={cm(styles, "recipe-picker-list")}>
           {visibleRecipes.length > 0 ? (
-            visibleRecipes.map((recipe) => (
-              <RecipePickerCard
-                copy={copy}
-                index={index}
-                key={recipe.id}
-                recipe={recipe}
-                t={t}
-                onSelect={controller.selectRecipe}
-              />
-            ))
+            <>
+              {groupedVisibleRecipes.regular.map((recipe) => (
+                <RecipePickerCard
+                  copy={copy}
+                  index={index}
+                  key={recipe.id}
+                  recipe={recipe}
+                  t={t}
+                  onSelect={controller.selectRecipe}
+                />
+              ))}
+              {groupedVisibleRecipes.regular.length > 0
+                && groupedVisibleRecipes.special.length > 0 && (
+                <hr className={cm(styles, "recipe-picker-special-divider")} />
+              )}
+              {groupedVisibleRecipes.special.map((recipe) => (
+                <RecipePickerCard
+                  copy={copy}
+                  index={index}
+                  key={recipe.id}
+                  recipe={recipe}
+                  t={t}
+                  onSelect={controller.selectRecipe}
+                />
+              ))}
+            </>
           ) : (
             <div className={cm(styles, "recipe-picker-empty")}>{emptyText}</div>
           )}
@@ -332,6 +356,30 @@ function matchesRecipeSearch(
   return [...recipe.outputs, ...recipe.inputs].some((item) => (
     resolveItemName(item.itemId, index, t).toLowerCase().includes(normalizedQuery)
   ));
+}
+
+function groupRecipePickerRecipes(recipes: readonly RecipeDefinition[]): {
+  regular: RecipeDefinition[];
+  special: RecipeDefinition[];
+} {
+  const regular: RecipeDefinition[] = [];
+  const liquidFilling: RecipeDefinition[] = [];
+  const liquidDismantle: RecipeDefinition[] = [];
+
+  for (const recipe of recipes) {
+    if (recipe.tags.includes(LIQUID_FILLING_RECIPE_TAG)) {
+      liquidFilling.push(recipe);
+    } else if (recipe.tags.includes(LIQUID_DISMANTLE_RECIPE_TAG)) {
+      liquidDismantle.push(recipe);
+    } else {
+      regular.push(recipe);
+    }
+  }
+
+  return {
+    regular,
+    special: [...liquidFilling, ...liquidDismantle],
+  };
 }
 
 function resolveMachineName(

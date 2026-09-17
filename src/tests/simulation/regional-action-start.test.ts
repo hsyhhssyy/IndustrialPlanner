@@ -26,6 +26,7 @@ describe("区域多基地 SimulationAction 启动", () => {
       render: null,
       simulation: null,
       sync: null,
+      blueprintPlanner: null,
     };
 
     const host = createSimulationHost(workspace, { workerMode: "runtime" });
@@ -76,6 +77,7 @@ describe("区域多基地 SimulationAction 启动", () => {
       render: null,
       simulation: null,
       sync: null,
+      blueprintPlanner: null,
     };
 
     const host = createSimulationHost(workspace, { workerMode: "runtime" });
@@ -120,6 +122,7 @@ describe("区域多基地 SimulationAction 启动", () => {
       render: null,
       simulation: null,
       sync: null,
+      blueprintPlanner: null,
     };
 
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);

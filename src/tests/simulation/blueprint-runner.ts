@@ -357,6 +357,7 @@ export function createHeadlessWorkspace(documentSnapshot: WorldDocument, registr
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
 }
 

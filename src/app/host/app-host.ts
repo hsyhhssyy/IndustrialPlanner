@@ -1,3 +1,4 @@
+import { BlueprintPlannerDialogController } from "../shell";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { AppContract } from "@/domain/app/app-contract";
 import { AppActionImpl, AppInternalAction } from "../actions/action-impl";
@@ -44,6 +45,7 @@ export interface AppHost extends AppContract {
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
   blueprintFolderDialog: WorkbenchBlueprintFolderDialogController;
+  blueprintPlannerDialog: BlueprintPlannerDialogController;
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
@@ -99,6 +101,7 @@ export function createAppHost(
   const gestureAdapter = createGestureAdapter(host);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
+  const blueprintPlannerDialog = new BlueprintPlannerDialogController();
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],
@@ -142,6 +145,7 @@ export function createAppHost(
     gestureDiagnostics,
     internalState,
     blueprintFolderDialog,
+    blueprintPlannerDialog,
     blueprintPreview,
     saveBlueprintDialog,
     overlapEntityMenu,
@@ -203,6 +207,7 @@ export function createAppHost(
     internalActions,
     dispose: () => {
       blueprintFolderDialog.close();
+      blueprintPlannerDialog.close();
       blueprintPreview.close();
       saveBlueprintDialog.close();
       overlapEntityMenu.dispose();
@@ -251,7 +256,7 @@ function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
   const visibleDialogIds = Object.entries(appHost.internalState.workbench.dialogState)
     .filter(([, dialogState]) => dialogState?.visible === true)
     .map(([dialogId]) => dialogId);
-  if (visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
+  if (appHost.blueprintPlannerDialog.dialogState.visible || visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
     return "dialog";
   }
   if (visibleDialogIds.includes("inspector")) {

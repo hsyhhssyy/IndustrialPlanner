@@ -21,6 +21,7 @@ function createWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
 }
 
@@ -193,5 +194,24 @@ describe("RecipePickerDialog", () => {
     });
 
     return expect(selectionPromise).resolves.toBeNull();
+  });
+
+  it("places regular recipes before separated liquid filling and dismantling recipes", () => {
+    const regularRecipe = findRecipe(appHost, "r_furnace_iron_nugget_from_iron_ore_basic");
+    const fillingRecipe = findRecipe(appHost, "r_liquid_filling_iron_bottle_water_default");
+    const dismantlingRecipe = findRecipe(appHost, "r_liquid_dismantling_iron_bottle_water_default");
+
+    act(() => {
+      void appHost.recipePicker.pickRecipe({
+        recipes: [dismantlingRecipe, fillingRecipe, regularRecipe],
+      });
+    });
+
+    expect(queryRecipeButtons(container).map((button) => button.dataset.recipeId)).toEqual([
+      regularRecipe.id,
+      fillingRecipe.id,
+      dismantlingRecipe.id,
+    ]);
+    expect(container.querySelectorAll(".recipe-picker-special-divider")).toHaveLength(1);
   });
 });

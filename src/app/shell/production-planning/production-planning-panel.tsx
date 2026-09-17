@@ -1,3 +1,4 @@
+import { createBlueprintPlannerPlan } from "./blueprint-planner-adapter";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
@@ -729,6 +730,18 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     swipeStateRef.current = null;
   };
 
+  const openAutomaticPlanning = () => {
+    if (calculation === null) return;
+    const document = appHost.workspace.editor?.document.getSnapshot();
+    if (document === undefined) return;
+    appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
+      result: calculation.plan, targets: calculation.targets, supplies: calculation.supplies,
+      infiniteItemIds: calculation.infiniteItemIds, sourceBaseId: document.baseId, name: "",
+      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
+    }));
+    appHost.internalActions.closeDialog("toolbox");
+  };
+
   const convertToModule = () => {
     if (calculation === null) {
       return;
@@ -866,6 +879,13 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                 <LucideBoxes />
                 <span>{t("productionPlanning.convertToModule")}</span>
               </button>
+              {appHost.blueprintPlannerDialog.enabled ? <button type="button"
+                className={cm(styles, "production-planning-icon-text-button")}
+                disabled={calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
+                  || appHost.workspace.blueprintPlanner?.state.activeTaskId !== null}
+                onClick={openAutomaticPlanning}>
+                <LucideFactory /><span>{t("eda.planThisLine")}</span>
+              </button> : null}
               <SegmentedControl<ProductionPlanningDisplayMode>
                 label={t("productionPlanning.displayMode")}
                 value={displayMode}

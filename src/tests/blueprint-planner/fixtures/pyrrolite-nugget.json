@@ -1,0 +1,228 @@
+{
+  "fixtureVersion": 2,
+  "request": {
+    "plan": {
+      "name": "灼铜块30/min · 赤铜块外供",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_copper_enr2",
+          "perMinute": 30
+        }
+      ],
+      "recipes": [
+        {
+          "recipeId": "liquid_transmuter_2_solid_copper_enr2_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_gas_copper_enr2",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_enr2",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "gas_reactor_gas_copper_enr2_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_gas_copper_enr",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper_enr2",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_purifier_gas_copper_enr_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_filter_core",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper_enr",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "tools_proc_filter_core_2",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_xiranite_powder",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_filter_core",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "shaper_gas_copper_jar_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_transmuter_2_solid_xiranite_powder_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_xiranite_powder",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_transmuter_1_gas_gas_acid_1",
+          "cyclesPerMinute": 6,
+          "deviceCount": 0.2,
+          "inputs": [
+            {
+              "itemId": "item_liquid_acid",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_acid",
+              "perMinute": 6
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_gas_diffuser_acid_gas_environment_basic",
+          "cyclesPerMinute": 6,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_gas_acid",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [],
+          "runningInputs": []
+        }
+      ],
+      "externalSupplies": [
+        {
+          "itemId": "item_gas_xiranite",
+          "perMinute": 84
+        },
+        {
+          "itemId": "item_copper_nugget",
+          "perMinute": 180
+        },
+        {
+          "itemId": "item_gas_inert",
+          "perMinute": 30
+        },
+        {
+          "itemId": "item_liquid_acid",
+          "perMinute": 6
+        },
+        {
+          "itemId": "item_liquid_xiranite",
+          "perMinute": 6
+        }
+      ],
+      "infiniteItemIds": [],
+      "byproductItemIds": [
+        "item_liquid_sewage"
+      ],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": []
+    },
+    "options": {
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "budgetMs": 120000
+    }
+  }
+}

@@ -106,10 +106,12 @@ function createTimelineReadinessWorkspace(
         resetAdmissionCounter: vi.fn(async () => {}),
         enableTimeline: vi.fn(async () => {}),
         disableTimeline: vi.fn(),
+        runBlueprint: vi.fn(async () => { throw new Error("独立蓝图执行不属于本 UI 场景"); }),
         seekTimelineToTick,
       },
     },
     sync: null,
+    blueprintPlanner: null,
   };
 }
 
@@ -196,10 +198,12 @@ describe("TimelineDialog", () => {
           resetAdmissionCounter: vi.fn(async () => {}),
           enableTimeline: vi.fn(async () => {}),
           disableTimeline: vi.fn(),
-          seekTimelineToTick,
+          runBlueprint: vi.fn(async () => { throw new Error("独立蓝图执行不属于本 UI 场景"); }),
+        seekTimelineToTick,
         },
       },
       sync: null,
+      blueprintPlanner: null,
     };
     appHost = createAppHost(workspace);
 

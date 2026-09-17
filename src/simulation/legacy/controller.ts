@@ -1,3 +1,6 @@
+import { createLegacyBlueprintEngine } from "./blueprint-engine";
+import { BlueprintExecutionClient } from "../blueprint";
+import type { SimulationBlueprintRunRequest, SimulationBlueprintRunReport } from "@/domain/simulation";
 import { action, runInAction } from "mobx";
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { SimulationPerformanceDiagnosticsReadModel } from "@/domain/simulation";
@@ -108,6 +111,16 @@ function createMissingTimelineWorkerBridge(): TimelineWorkerBridge {
 }
 
 export class SimulationActionImpl implements SimulationAction, SimulationInternalAction {
+  private readonly blueprintExecution: BlueprintExecutionClient;
+
+  public runBlueprint(request: SimulationBlueprintRunRequest, signal?: AbortSignal): Promise<SimulationBlueprintRunReport> {
+    return this.blueprintExecution.run(request, signal);
+  }
+
+  public disposeBlueprintRuns(): void {
+    this.blueprintExecution.dispose();
+  }
+
   private readonly timeline: LegacyTimelineController;
   private readonly playback: LegacyPlaybackController;
   private readonly regional: LegacyRegionalController;
@@ -180,6 +193,8 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
+    this.blueprintExecution = new BlueprintExecutionClient(this.workspace.registry, "legacy", options.regionalWorkerMode ?? "auto",
+      (engineOptions) => createLegacyBlueprintEngine(this.workspace.registry, engineOptions));
     this.stateReadWrite = options.state;
     this.presentation = options.presentation;
     this.topology = options.topology;

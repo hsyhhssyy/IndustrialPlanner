@@ -1751,7 +1751,8 @@ export class DenseSimulationKernel {
     recipeId: string,
   ): boolean {
     const device = this.requireDevice(channel.deviceIndex);
-    if (device.allowDuplicateRecipesAcrossChannels === true) {
+    // 消耗通道独立预留库存，普通生产通道仍遵守配方去重。
+    if (channel.consumptionChannel || device.allowDuplicateRecipesAcrossChannels === true) {
       return false;
     }
     const start = this.recipePrograms.deviceChannelOffsets[channel.deviceIndex]!;

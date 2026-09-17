@@ -1,3 +1,4 @@
+import { BlueprintPlannerDialog } from "./blueprint-planner-dialog";
 import { action } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
@@ -695,6 +696,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
         }),
       },
+      "experimental-blueprint-planner": {
+        readValue: () => appHost.blueprintPlannerDialog.enabled,
+        writeValue: (value) => { if (typeof value === "boolean") appHost.blueprintPlannerDialog.setEnabled(value); },
+      },
       "experimental-regional-multi-base": {
         readValue: () => regionalSimulationUiState.experimentalEnabled,
         writeValue: action((value) => {
@@ -1316,6 +1321,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <InspectorDialog appHost={appHost} />
         <SaveBlueprintDialog appHost={appHost} />
         <ToolboxDialog appHost={appHost} />
+        <BlueprintPlannerDialog appHost={appHost} />
         <TimelineDialog appHost={appHost} />
         <WarehouseStatsDialog appHost={appHost} />
         <EncyclopediaPickerDialog appHost={appHost} />
@@ -1385,7 +1391,8 @@ function isAnyDialogShellVisible(
     || appHost.encyclopediaPicker.dialogState.visible
     || appHost.recipePicker.dialogState.visible
     || appHost.blueprintFolderDialog.dialogState.visible
-    || appHost.blueprintPreview.dialogState.visible;
+    || appHost.blueprintPreview.dialogState.visible
+    || appHost.blueprintPlannerDialog.dialogState.visible;
 }
 
 function isEditableKeyboardTarget(event: KeyboardEvent): boolean {

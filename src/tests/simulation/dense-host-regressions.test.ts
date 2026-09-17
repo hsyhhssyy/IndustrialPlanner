@@ -873,5 +873,6 @@ function createDenseTestWorkspace(options: {
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
 }

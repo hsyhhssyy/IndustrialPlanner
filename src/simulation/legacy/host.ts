@@ -141,6 +141,7 @@ export function createLegacySimulationHost(
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
+      actionImpl.disposeBlueprintRuns();
       internalActions.reset();
       bridge.dispose();
     },

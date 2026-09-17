@@ -1061,6 +1061,15 @@
   gap: 8px;
 }
 
+.recipe-picker-special-divider {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 1px;
+  margin: 4px 0;
+  border: 0;
+  background: var(--line);
+}
+
 .recipe-picker-card {
   min-width: 0;
 }

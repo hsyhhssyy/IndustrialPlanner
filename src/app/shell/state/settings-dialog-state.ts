@@ -862,6 +862,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "experimental-blueprint-planner",
+        kind: "switch",
+        labelKey: "settingsField.experimental-blueprint-planner",
+        descriptionKey: "settingsField.experimental-blueprint-plannerDescription",
+        defaultValue: false,
+      },
+      {
         id: "experimental-dense-simulation-engine",
         kind: "switch",
         labelKey: "settingsField.experimental-dense-simulation-engine",

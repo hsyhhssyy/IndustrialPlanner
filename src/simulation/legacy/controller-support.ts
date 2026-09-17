@@ -5,11 +5,20 @@ import type { WorldDocument, WorldEntity } from "@/domain/document/world-documen
 
 import { createLogger } from "@/shared/logging/logger";
 
-import {
-  areGridRectsIntersecting,
-  resolveEntityGridRect,
-  resolvePowerRangeGridRect,
-} from "@/shared/geometry/power-range";
+// AI-REMOVED 2026-09-16:
+// Reason: 将两套引擎重复的供电覆盖算法收口至共享几何函数。
+// Trigger: 独立蓝图验证必须与编辑器仿真使用相同供电规则。
+// Evidence: legacy/controller-support 与 dense/host 采用相同矩形相交判定。
+// Replacement: src/shared/geometry/power-range.ts collectPoweredEntityIds
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import {
+//   areGridRectsIntersecting,
+//   resolveEntityGridRect,
+//   resolvePowerRangeGridRect,
+// } from "@/shared/geometry/power-range";
+import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 
 import type { RegionalResourceSupplySetting } from "../contracts";
 
@@ -61,49 +70,64 @@ export function cloneWorldDocument(document: WorldDocument): WorldDocument {
   return JSON.parse(JSON.stringify(document)) as WorldDocument;
 }
 
+
+// AI-REMOVED 2026-09-16:
+// Reason: 将两套引擎重复的供电覆盖算法收口至共享几何函数。
+// Trigger: 独立蓝图验证必须与编辑器仿真使用相同供电规则。
+// Evidence: legacy/controller-support 与 dense/host 采用相同矩形相交判定。
+// Replacement: src/shared/geometry/power-range.ts collectPoweredEntityIds
+// Risk: Low
+// Human Review: Required
+// Original code:
+// export function computePoweredEntityIds(options: {
+//   readonly document: WorldDocument;
+//   readonly registry: WorkspaceContract["registry"];
+// }): Set<string> {
+//   const definitionMap = new Map(
+//     options.registry.entityDefinitions.map((definition) => [
+//       definition.id,
+//       definition,
+//     ]),
+//   );
+//   const entities = resolveOrderedDocumentEntities(options.document);
+//   const powerRangeRects = entities.flatMap((entity) => {
+//     const definition = definitionMap.get(entity.definitionId);
+//     if (definition === undefined) {
+//       return [];
+//     }
+//
+//     const gridRect = resolvePowerRangeGridRect({
+//       entity,
+//       definition,
+//     });
+//
+//     return gridRect === null ? [] : [gridRect];
+//   });
+//
+//   if (powerRangeRects.length === 0) {
+//     return new Set();
+//   }
+//
+//   return new Set(entities.flatMap((entity) => {
+//     const definition = definitionMap.get(entity.definitionId);
+//     if (definition === undefined) {
+//       return [];
+//     }
+//
+//     const entityGridRect = resolveEntityGridRect({
+//       entity,
+//       definition,
+//     });
+//     return powerRangeRects.some((powerRangeRect) =>
+//       areGridRectsIntersecting(entityGridRect, powerRangeRect),
+//     ) ? [entity.id] : [];
+//   }));
+// }
 export function computePoweredEntityIds(options: {
   readonly document: WorldDocument;
   readonly registry: WorkspaceContract["registry"];
 }): Set<string> {
-  const definitionMap = new Map(
-    options.registry.entityDefinitions.map((definition) => [
-      definition.id,
-      definition,
-    ]),
-  );
-  const entities = resolveOrderedDocumentEntities(options.document);
-  const powerRangeRects = entities.flatMap((entity) => {
-    const definition = definitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      return [];
-    }
-
-    const gridRect = resolvePowerRangeGridRect({
-      entity,
-      definition,
-    });
-
-    return gridRect === null ? [] : [gridRect];
-  });
-
-  if (powerRangeRects.length === 0) {
-    return new Set();
-  }
-
-  return new Set(entities.flatMap((entity) => {
-    const definition = definitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      return [];
-    }
-
-    const entityGridRect = resolveEntityGridRect({
-      entity,
-      definition,
-    });
-    return powerRangeRects.some((powerRangeRect) =>
-      areGridRectsIntersecting(entityGridRect, powerRangeRect),
-    ) ? [entity.id] : [];
-  }));
+  return collectPoweredEntityIds(resolveOrderedDocumentEntities(options.document), options.registry.entityDefinitions);
 }
 
 export function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] {

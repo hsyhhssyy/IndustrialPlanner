@@ -221,7 +221,19 @@ export default defineConfig({
             "src/tests/e2e/**",
             "src/tests/simulation/blueprint/**",
             "src/tests/simulation/blueprint-slow/**",
+            "src/tests/blueprint-planner/batch/**",
           ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "eda",
+          environment: "node",
+          include: ["src/tests/blueprint-planner/batch/**/*.test.ts"],
+          fileParallelism: false,
+          maxWorkers: 1,
+          maxConcurrency: 1,
         },
       },
       {

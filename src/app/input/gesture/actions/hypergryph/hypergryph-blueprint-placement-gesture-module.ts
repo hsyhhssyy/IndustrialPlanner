@@ -469,7 +469,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
   };
 }
 
-function enterBlueprintPlacement(options: {
+export function enterBlueprintPlacement(options: {
   appHost: AppHost;
   editor: EditorContract;
   record?: BlueprintLibraryRecord;

@@ -1,0 +1,68 @@
+{
+  "fixtureVersion": 2,
+  "request": {
+    "plan": {
+      "name": "植物回流",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_plant_moss_3",
+          "perMinute": 30
+        }
+      ],
+      "recipes": [
+        {
+          "recipeId": "r_seedcol_moss_seed_from_moss_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_planter_moss_from_moss_seed_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        }
+      ],
+      "externalSupplies": [],
+      "infiniteItemIds": [],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": []
+    },
+    "options": {
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "budgetMs": 60000
+    }
+  }
+}

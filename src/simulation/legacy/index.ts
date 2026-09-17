@@ -1,4 +1,5 @@
 export { createLegacySimulationHost } from "./host";
+export { createLegacyBlueprintEngine } from "./blueprint-engine";
 
 // AI-REMOVED 2026-09-09:
 // Reason: Legacy 对外只需工厂，内部控制器、阶段函数和协议不应全部成为公共出口。

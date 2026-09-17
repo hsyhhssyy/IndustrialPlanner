@@ -110,3 +110,23 @@ function normalizePowerRange(value: number | undefined): number | null {
 
   return value;
 }
+
+/** 供电覆盖统一使用实体矩形与供电范围相交的现有规则。 */
+export function collectPoweredEntityIds(
+  entities: readonly WorldEntity[],
+  definitions: readonly EntityDefinition[],
+): Set<string> {
+  const byId = new Map(definitions.map((definition) => [definition.id, definition]));
+  const ranges = entities.flatMap((entity) => {
+    const definition = byId.get(entity.definitionId);
+    if (definition === undefined) return [];
+    const range = resolvePowerRangeGridRect({ entity, definition });
+    return range === null ? [] : [range];
+  });
+  return new Set(entities.flatMap((entity) => {
+    const definition = byId.get(entity.definitionId);
+    if (definition === undefined) return [];
+    const rect = resolveEntityGridRect({ entity, definition });
+    return ranges.some((range) => areGridRectsIntersecting(rect, range)) ? [entity.id] : [];
+  }));
+}

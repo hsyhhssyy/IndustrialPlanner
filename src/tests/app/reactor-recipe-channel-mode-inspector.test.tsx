@@ -23,6 +23,7 @@ function createWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    blueprintPlanner: null,
   };
 }
 

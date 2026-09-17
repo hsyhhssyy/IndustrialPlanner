@@ -64,3 +64,4 @@ export {
 } from "./dense-worker-protocol";
 
 export { createDenseSimulationHost } from "./host";
+export { createDenseBlueprintEngine } from "./blueprint-engine";

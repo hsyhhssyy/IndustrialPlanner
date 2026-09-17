@@ -27,6 +27,7 @@ describe("resolveDeviceBodyPresentation", () => {
       render: null,
       simulation: null,
       sync: null,
+      blueprintPlanner: null,
     });
     staticDefinition = {
       ...registry.entityDefinitions[0]!,

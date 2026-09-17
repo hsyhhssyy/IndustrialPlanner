@@ -1,0 +1,77 @@
+{
+  "fixtureVersion": 2,
+  "request": {
+    "plan": {
+      "name": "植物回流",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_plant_grass_1",
+          "perMinute": 30
+        }
+      ],
+      "recipes": [
+        {
+          "recipeId": "r_seedcol_grass_seed_1_from_grass_1_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_hydro_planter_grass_1_from_seed_1_and_water_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        }
+      ],
+      "externalSupplies": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "infiniteItemIds": [],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": []
+    },
+    "options": {
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "budgetMs": 60000
+    }
+  }
+}

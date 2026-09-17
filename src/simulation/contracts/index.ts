@@ -86,3 +86,4 @@ export {
   type SimulationHostFactory,
 } from "./host";
 export { type SimulationInternalAction } from "./internal-action";
+export type { BlueprintExecutionEngine, BlueprintExecutionEngineOptions } from "./blueprint-engine";

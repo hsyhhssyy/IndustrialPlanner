@@ -54,3 +54,5 @@ export type {
   ShortcutScope,
   ShortcutTriggerPolicy,
 } from "./types";
+
+export { enterBlueprintPlacement } from "./hypergryph/hypergryph-blueprint-placement-gesture-module";

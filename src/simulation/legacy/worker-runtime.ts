@@ -296,6 +296,48 @@ export class SimulationWorkerRuntime {
     this.onError = callback;
   }
 
+  /** 独立验证使用相同物理步骤，不启动播放预取或保留历史状态。 */
+  public initializeIsolated(
+    topology: CompiledSimulationTopology,
+    powerMode: "real" | "infinite",
+    initialSlots: readonly SimulationRuntimeSlotPatch[],
+  ): RuntimeTickSnapshot {
+    this.setPowerMode(powerMode);
+    const result = this.loadTopology(topology);
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+    if (result.status !== "started" || this.runtimeState === null) {
+      throw new Error(result.error ?? "Unable to initialize isolated simulation.");
+    }
+    for (const patch of initialSlots) this.patchRuntimeSlot(patch);
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+    this.tickSnapshots.clear();
+    this.tickRuntimeStates.clear();
+    return this.createSnapshotFromRuntimeState(this.runtimeState);
+  }
+
+  public advanceIsolated(): RuntimeTickSnapshot {
+    if (this.runtimeState === null) throw new Error("Isolated simulation is not initialized.");
+    const snapshot = this.createNextTickSnapshot(this.nextTickNumber);
+    this.nextTickNumber += this.standardStepTicks;
+    return snapshot;
+  }
+
+  public disposeIsolated(): void {
+    if (this.fillTimerId !== null) clearTimeout(this.fillTimerId);
+    this.fillTimerId = null;
+    this.runtimeState = null;
+    this.topology = null;
+    this.tickSnapshots.clear();
+    this.tickRuntimeStates.clear();
+    this.mode = "stopped";
+  }
+
   public handleRequest(request: SimulationWorkerRequest): SimulationWorkerResponse {
     try {
       switch (request.type) {

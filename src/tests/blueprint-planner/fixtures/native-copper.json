@@ -1,0 +1,24 @@
+{
+  "name": "赤铜块指定液体配方与自然资源外供",
+  "plannerState": {
+    "targets": [
+      {
+        "id": "target",
+        "itemId": "item_copper_nugget",
+        "perMinute": 30
+      }
+    ],
+    "recipeChoices": {
+      "item_copper_nugget": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+    }
+  },
+  "options": {
+    "solidSupply": "warehouse",
+    "fluidSupply": "conduit",
+    "warehouseBus": "straight",
+    "solidOutput": "stash",
+    "byproducts": "output",
+    "plantStartup": "preload",
+    "budgetMs": 60000
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "initialTemperature": 80,
+  "coolingRatio": 0.025,
+  "congestionWeight": 6,
+  "areaWeight": 0.04,
+  "overflowWeight": 80,
+  "portAlignmentProbability": 0.34,
+  "compactionProbability": 0.25,
+  "routeFeedbackWeight": 6,
+  "initialClearance": 0,
+  "separateOperatingSupply": 1,
+  "fluidGroupSize": 3
+}

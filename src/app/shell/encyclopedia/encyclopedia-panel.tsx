@@ -13,6 +13,10 @@ import type {
 } from "@/app/toolbox-types";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
+  LIQUID_DISMANTLE_RECIPE_TAG,
+  LIQUID_FILLING_RECIPE_TAG,
+} from "@/shared/registry/recipe-visibility";
+import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
   resolveActivityIdsFromTags,
@@ -43,8 +47,17 @@ function isSameNavigationEntry(left: NavEntry | null, right: NavEntry | null): b
   return left.type === right.type && left.id === right.id;
 }
 
-const LIQUID_FILLING_RECIPE_TAG = "bottle_filling";
-const LIQUID_DISMANTLE_RECIPE_TAG = "liquid_bottle_dismantle";
+// AI-REMOVED 2026-09-17:
+// Reason: 装瓶与拆瓶的配方 tag 已提升为共享分类常量，避免百科和配方选择弹窗各自维护字符串。
+// Trigger: 用户要求产线规划配方弹窗统一后置装瓶与拆瓶配方。
+// Evidence: Search-First 确认百科已有相同分类逻辑，而配方弹窗缺少该分组。
+// Replacement: src/shared/registry/recipe-visibility.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const LIQUID_FILLING_RECIPE_TAG = "bottle_filling";
+// const LIQUID_DISMANTLE_RECIPE_TAG = "liquid_bottle_dismantle";
 
 function hasRecipeTag(recipe: RecipeDefinition, tag: string): boolean {
   return recipe.tags.includes(tag);
