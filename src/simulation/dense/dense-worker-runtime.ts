@@ -1,15 +1,22 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 import { DenseFrameEmitter } from "./dense-frame-emitter";
-import type { DenseFrameDelta } from "./dense-frame-delta";
+// AI-REMOVED 2026-09-17:
+// Reason: Dense Worker 不再为区域 Epoch 收集中间 FrameDelta。
+// Trigger: 单复合 kernel 直接发布普通播放帧。
+// Evidence: prepareRegionalEpoch 已归档。
+// Replacement: DenseFrameEmitter.emitTick in advance
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import type { DenseFrameDelta } from "./dense-frame-delta";
 import {
   DenseSimulationKernel,
   type DenseKernelCheckpoint,
-  type DenseRegionalGrantResult,
 } from "./dense-simulation-kernel";
 import { compileDenseTopologyLayout, type DenseTopologyLayout } from "./dense-topology";
 import type { CompiledSimulationTopology } from "../contracts";
-import { resolveRecipePhaseTicks } from "../contracts";
 import {
   DenseMessageSequenceGate,
   type DenseProtocolIdentity,
@@ -26,10 +33,8 @@ interface DenseWorkerSession {
   readonly topology: CompiledSimulationTopology;
   readonly layout: DenseTopologyLayout;
   readonly checkpoints: Map<number, DenseKernelCheckpoint>;
-  readonly captureIntermediateRegionalFrames: boolean;
   runningState: "start" | "pause" | "stop";
   simulationSpeed: number;
-  pendingRegionalGrant: DenseRegionalGrantResult | null;
 }
 
 // AI-REMOVED 2026-09-04:
@@ -64,14 +69,10 @@ export class DenseWorkerRuntime {
           return this.applyCommands(session, request);
         case "request-presentation-checkpoint":
           return this.createCheckpoint(session, request);
+        case "ensure-buffered-through":
+          return this.ensureBufferedThrough(session, request);
         case "release-buffers":
           return this.createCommandAck(session, request, request.sequence);
-        case "prepare-regional-epoch":
-          return this.prepareRegionalEpoch(session, request);
-        case "apply-regional-grant":
-          return this.applyRegionalGrant(session, request);
-        case "finalize-regional-epoch":
-          return this.finalizeRegionalEpoch(session, request);
       }
     } catch (error) {
       return createProtocolError(request, error);
@@ -103,12 +104,7 @@ export class DenseWorkerRuntime {
     const gate = new DenseMessageSequenceGate(identity);
     gate.accept(request);
     const layout = compileDenseTopologyLayout(request.topology, this.registry);
-    const kernel = new DenseSimulationKernel(
-      request.topology,
-      layout,
-      this.registry,
-      request.regional,
-    );
+    const kernel = new DenseSimulationKernel(request.topology, layout, this.registry);
     if (request.migration !== undefined && previousSession !== null) {
       kernel.restoreMigratedRuntime(
         previousSession.kernel,
@@ -117,7 +113,12 @@ export class DenseWorkerRuntime {
     }
     kernel.setPowerMode(request.powerMode);
     kernel.setPowerConsumptionOverride(request.powerConsumptionOverride);
-    const emitter = new DenseFrameEmitter(request.topology, layout, identity);
+    const emitter = new DenseFrameEmitter(
+      request.topology,
+      layout,
+      identity,
+      request.presentationDeviceIds,
+    );
     const initialDelta = request.migration === undefined
       ? emitter.emitInitial(kernel)
       : emitter.emitCheckpoint(kernel);
@@ -129,15 +130,12 @@ export class DenseWorkerRuntime {
       topology: request.topology,
       layout,
       checkpoints: new Map([[kernel.tickNumber, kernel.createCheckpoint()]]),
-      captureIntermediateRegionalFrames:
-        request.regional?.captureIntermediateFrames ?? false,
       runningState: request.migration === undefined
         ? "stop"
         : (previousSession?.runningState ?? "stop"),
       simulationSpeed: request.migration === undefined
         ? 1
         : (previousSession?.simulationSpeed ?? 1),
-      pendingRegionalGrant: null,
     };
     return {
       ...createResponseIdentity(request),
@@ -200,6 +198,16 @@ export class DenseWorkerRuntime {
     return this.createCommandAck(session, request, request.sequence);
   }
 
+  /*
+   * AI-REMOVED 2026-09-17:
+   * Reason: Dense Worker 不再执行多 Worker 区域 Epoch、仓库授权与最终提交。
+   * Trigger: 用户要求 Dense 区域模式使用单复合 kernel 和同一仓库。
+   * Evidence: DenseWorkerRequest 已移除对应 RPC；区域模式通过普通 advance-budget 推进。
+   * Replacement: DenseWorkerRuntime.advance
+   * Risk: Low；Legacy Worker Runtime 保留自己的区域协议。
+   * Human Review: Required
+   *
+   * Original code:
   private prepareRegionalEpoch(
     session: DenseWorkerSession,
     request: Extract<DenseWorkerRequest, { readonly type: "prepare-regional-epoch" }>,
@@ -265,6 +273,7 @@ export class DenseWorkerRuntime {
       runtimeRetainedStateCount: session.checkpoints.size,
     };
   }
+   */
 
   private applyCommand(session: DenseWorkerSession, command: DenseWorkerCommand): void {
     switch (command.type) {
@@ -289,15 +298,19 @@ export class DenseWorkerRuntime {
         return;
       case "set-power-mode":
         session.kernel.setPowerMode(command.powerMode);
+        this.invalidateBufferedFuture(session);
         return;
       case "set-power-consumption-override":
         session.kernel.setPowerConsumptionOverride(command.powerConsumptionOverride);
+        this.invalidateBufferedFuture(session);
         return;
       case "patch-runtime-slot":
         session.kernel.patchRuntimeSlot(command.patch);
+        this.invalidateBufferedFuture(session);
         return;
       case "reset-admission-counter":
         session.kernel.resetAdmissionCounter(command.reset);
+        this.invalidateBufferedFuture(session);
         return;
     }
   }
@@ -317,6 +330,35 @@ export class DenseWorkerRuntime {
       type: "presentation-checkpoint",
       delta: session.emitter.emitCheckpoint(presentationKernel),
       bufferIds: new Uint32Array(),
+      runtimeRetainedStateCount: session.checkpoints.size,
+    };
+  }
+
+  private ensureBufferedThrough(
+    session: DenseWorkerSession,
+    request: Extract<DenseWorkerRequest, { readonly type: "ensure-buffered-through" }>,
+  ): Extract<DenseWorkerResponse, { readonly type: "buffer-ready" }> {
+    if (!Number.isSafeInteger(request.tickNumber) || request.tickNumber < 0) {
+      throw new Error(`Dense buffer target tick is invalid: ${request.tickNumber}.`);
+    }
+    let bufferedThroughTickNumber = session.kernel.tickNumber;
+    for (const tickNumber of session.checkpoints.keys()) {
+      bufferedThroughTickNumber = Math.max(bufferedThroughTickNumber, tickNumber);
+    }
+    if (request.tickNumber > bufferedThroughTickNumber) {
+      const bufferKernel = this.rebuildKernelAtTick(session, bufferedThroughTickNumber);
+      bufferKernel.advanceToTick(request.tickNumber, (committed) => {
+        if (committed.tickNumber % session.topology.standardTickRate === 0) {
+          this.retainCheckpoint(session, bufferKernel.createCheckpoint());
+        }
+      });
+      this.retainCheckpoint(session, bufferKernel.createCheckpoint());
+      bufferedThroughTickNumber = request.tickNumber;
+    }
+    return {
+      ...createResponseIdentity(request),
+      type: "buffer-ready",
+      bufferedThroughTickNumber,
       runtimeRetainedStateCount: session.checkpoints.size,
     };
   }
@@ -365,6 +407,16 @@ export class DenseWorkerRuntime {
         session.checkpoints.delete(oldestTickNumber);
       }
     }
+  }
+
+  private invalidateBufferedFuture(session: DenseWorkerSession): void {
+    const currentTickNumber = session.kernel.tickNumber;
+    for (const tickNumber of session.checkpoints.keys()) {
+      if (tickNumber > currentTickNumber) {
+        session.checkpoints.delete(tickNumber);
+      }
+    }
+    session.checkpoints.set(currentTickNumber, session.kernel.createCheckpoint());
   }
 
   private createCommandAck(

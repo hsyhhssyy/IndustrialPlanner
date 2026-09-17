@@ -84,10 +84,19 @@ import {
 } from "@/shared/world-document-unknown-entities";
 
 import type { SimulationInternalAction } from "../contracts";
-import { DenseProjectionStore, type DenseFrameDelta } from "./dense-frame-delta";
-import { DenseRegionalSimulationSession } from "./dense-regional-session";
+import { DenseProjectionStore } from "./dense-frame-delta";
+import { createDenseRegionalDocument } from "./dense-regional-document";
 import { createDenseEngineBridge, type DenseEngineBridge } from "./dense-engine-bridge";
-import { buildRegionalWarehouseOutletTable } from "../regional";
+// AI-REMOVED 2026-09-17:
+// Reason: Dense 多基地改为单拓扑共享仓库，不再构建跨 Worker 仓库出货表。
+// Trigger: 用户要求所有基地拼成一张大图并直接使用同一个仓库。
+// Evidence: createDenseRegionalDocument + 单 DenseEngineBridge 初始化路径。
+// Replacement: src/simulation/dense/dense-regional-document.ts
+// Risk: Low；Legacy 区域模式仍保留原有仲裁器。
+// Human Review: Required
+//
+// Original code:
+// import { buildRegionalWarehouseOutletTable } from "../regional";
 import type { CreateSimulationHostOptions, SimulationHost } from "../contracts";
 import {
   createInitialSimulationRuntimeStatus,
@@ -101,7 +110,6 @@ import { compileSimulationTopology, createSimulationDocumentHash } from "../topo
 import { createSimulationTopologyMigration } from "../topology";
 import { appendSimulationBaseBuiltinEntities, prepareCurrentSimulationDocument } from "../topology";
 import type {
-  CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
   RegionalResourceSupplySetting,
   WarehouseStats,
@@ -217,15 +225,25 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private pendingPlaybackPerformanceTicks = 0;
   private runtimeRetainedStateCount = 0;
   private primaryTickNumber = 0;
+  private timelineBufferedThroughTick = 0;
   private compiledDocument: WorldDocument | null = null;
   private sourceDocumentSignature: string | null = null;
   private topologyRefreshQueue: Promise<void> | null = null;
   private timelinePresentationActive = false;
-  private regionalSession: DenseRegionalSimulationSession | null = null;
-  private readonly regionalPlaybackDeltas = new Map<number, DenseFrameDelta>();
-  private readonly regionalWarehouseStatsByTick = new Map<number, WarehouseStats>();
-  private regionalWarehouseStats: WarehouseStats | null = null;
-  private regionalEpochInFlight: Promise<void> | null = null;
+  // AI-REMOVED 2026-09-17:
+  // Reason: Dense Host 不再持有多 Worker 区域 Session、Epoch 帧缓存或主线程仓库统计。
+  // Trigger: 用户要求 Dense 多基地合成单图并直接共享同一个仓库。
+  // Evidence: startRegionalSimulation 只初始化 this.bridge；仓库统计来自 this.projection。
+  // Replacement: createDenseRegionalDocument + DenseProjectionStore
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // private regionalSession: DenseRegionalSimulationSession | null = null;
+  // private readonly regionalPlaybackDeltas = new Map<number, DenseFrameDelta>();
+  // private readonly regionalWarehouseStatsByTick = new Map<number, WarehouseStats>();
+  // private regionalWarehouseStats: WarehouseStats | null = null;
+  // private regionalEpochInFlight: Promise<void> | null = null;
   private disposed = false;
 
   public constructor(input: {
@@ -263,9 +281,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   }
 
   public get currentWarehouseStats(): WarehouseStats | null {
-    return this.regionalWarehouseStats
-      ?? this.projection?.getWarehouseStats()
-      ?? null;
+    return this.projection?.getWarehouseStats() ?? null;
   }
 
   public getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel {
@@ -276,12 +292,11 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       targetTickPerSecond: this.state.runningState === "start"
         ? this.state.simulationSpeed * tickRate
         : 0,
-      playbackBufferedFrameCount: this.regionalSession === null
-        ? (this.projection === null ? 0 : 1)
-        : this.regionalPlaybackDeltas.size + (this.projection === null ? 0 : 1),
-      runtimeRetainedStateCount: this.regionalSession?.runtimeRetainedStateCount
-        ?? this.runtimeRetainedStateCount,
-      timelineRetainedFrameCount: 0,
+      playbackBufferedFrameCount: this.projection === null ? 0 : 1,
+      runtimeRetainedStateCount: this.runtimeRetainedStateCount,
+      timelineRetainedFrameCount: this.state.timeline.enabled
+        ? this.runtimeRetainedStateCount
+        : 0,
       timelineGeneratedFramePerSecond: 0,
     };
   }
@@ -317,10 +332,19 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const simulationMode = enabled
       ? SIMULATION_MODE.regionalMultiBase
       : SIMULATION_MODE.singleBase;
+    // AI-REMOVED 2026-09-17:
+    // Reason: Dense 区域模式与时间轴已共用同一 Worker 缓冲区，不再存在两类会话冲突。
+    // Trigger: 用户要求 Dense 时间轴直接读取更远 tick，并允许多基地使用同一机制。
+    // Evidence: 区域模式已由 createDenseRegionalDocument 合并为普通单 kernel 会话。
+    // Replacement: DenseSimulationController.enableTimeline
+    // Risk: Low；App 层若仍保留旧禁用逻辑，需要后续获得跨模块授权后同步清理。
+    // Human Review: Required
+    //
+    // Original code:
+    // || (enabled && this.state.timeline.enabled)
     if (
       simulationMode === this.state.simulationMode
       || this.state.runningState !== "stop"
-      || (enabled && this.state.timeline.enabled)
     ) return;
     if (enabled && !isRegionalSimulationSpeed(this.state.simulationSpeed)) {
       this.state.simulationSpeed = 1;
@@ -331,13 +355,13 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   public readonly pause: SimulationContract["actions"]["pause"] = action(() => {
     if (this.state.runningState !== "start") return;
     this.state.runningState = "pause";
-    if (this.regionalSession === null) this.sendCommands([{ type: "pause" }]);
+    this.sendCommands([{ type: "pause" }]);
   });
 
   public readonly resume: SimulationContract["actions"]["resume"] = action(() => {
     if (this.state.runningState !== "pause") return;
     this.state.runningState = "start";
-    if (this.regionalSession === null) this.sendCommands([{ type: "resume" }]);
+    this.sendCommands([{ type: "resume" }]);
   });
 
   public readonly stop: SimulationContract["actions"]["stop"] = action(() => {
@@ -368,7 +392,6 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.state.simulationMode === SIMULATION_MODE.regionalMultiBase
       && !isRegionalSimulationSpeed(value)
     ) return;
-    if (this.regionalSession !== null && value !== this.state.simulationSpeed) return;
     this.state.simulationSpeed = value;
     if (this.projection !== null) {
       this.sendCommands([{ type: "set-speed", simulationSpeed: value }]);
@@ -420,7 +443,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) await activeTopologyRefresh;
     await this.bridge.sendCommands([{ type: "patch-runtime-slot", patch }]);
-    await this.syncToTick(this.projection.tickNumber ?? 0);
+    this.timelineBufferedThroughTick = this.primaryTickNumber;
+    await this.syncToTick(this.primaryTickNumber);
+    if (this.state.timeline.enabled) await this.ensureTimelineBuffer();
   };
 
   public readonly resetAdmissionCounter: SimulationContract["actions"]["resetAdmissionCounter"] = async (reset) => {
@@ -428,12 +453,25 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) await activeTopologyRefresh;
     await this.bridge.sendCommands([{ type: "reset-admission-counter", reset }]);
-    await this.syncToTick(this.projection.tickNumber ?? 0);
+    this.timelineBufferedThroughTick = this.primaryTickNumber;
+    await this.syncToTick(this.primaryTickNumber);
+    if (this.state.timeline.enabled) await this.ensureTimelineBuffer();
   };
 
   public readonly enableTimeline: SimulationContract["actions"]["enableTimeline"] = async () => {
-    if (this.state.simulationMode !== "single-base") return;
+    // AI-REMOVED 2026-09-17:
+    // Reason: 区域多基地已是普通 Dense 单 Worker 会话，时间轴无需按 simulationMode 禁用。
+    // Trigger: 用户要求 Dense 多基地时间轴不再开启额外 Worker。
+    // Evidence: startRegionalSimulation 初始化同一个 this.bridge，seek 继续请求该 bridge 的检查点。
+    // Replacement: 下方统一的 Dense timeline 初始化路径。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.state.simulationMode !== "single-base") return;
     if (!this.state.hasStarted) await this.start();
+    const activePlaybackAdvance = this.playbackAdvanceInFlight;
+    if (activePlaybackAdvance !== null) await activePlaybackAdvance;
     const currentTimelineTick = Math.max(
       0,
       Math.floor(
@@ -444,7 +482,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     runInAction(() => {
       this.state.timeline = {
         enabled: true,
-        readiness: "ready",
+        readiness: "preparing",
         tickDurationSeconds: DENSE_TIMELINE_TICK_DURATION_SECONDS,
         rulerDurationSeconds: DENSE_TIMELINE_RULER_DURATION_SECONDS,
         windowStartTickNumber: Math.max(0, currentTimelineTick - DENSE_TIMELINE_CAPACITY_TICKS / 2),
@@ -455,6 +493,17 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         isSeeking: false,
       };
     });
+    try {
+      await this.ensureTimelineBuffer();
+      runInAction(() => {
+        this.state.timeline.readiness = "ready";
+      });
+    } catch (error) {
+      runInAction(() => {
+        this.state.timeline.readiness = "idle";
+      });
+      throw error;
+    }
   };
 
   public readonly disableTimeline: SimulationContract["actions"]["disableTimeline"] = action(() => {
@@ -530,18 +579,6 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
     this.assertNotDisposed();
     if (this.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
-      if (this.regionalSession !== null) {
-        const document = this.workspace.editor?.document.getSnapshot();
-        if (document !== undefined) {
-          this.sourceDocumentSignature = createDenseSimulationSourceSignature(document);
-        }
-        const topology = this.topologyStore.getSnapshot();
-        return {
-          status: "started",
-          topologyId: topology?.topologyId ?? null,
-          diagnostics: topology?.diagnostics ?? [],
-        };
-      }
       return this.startRegionalSimulation();
     }
     const activePlaybackAdvance = this.playbackAdvanceInFlight;
@@ -649,6 +686,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       // this.emitter = emitter;
       this.projection = projection;
       this.primaryTickNumber = response.initialDelta.tickNumber;
+      this.timelineBufferedThroughTick = response.initialDelta.tickNumber;
       this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.playbackTargetTickNumber = migrationApplied
         ? Math.max(this.playbackTargetTickNumber, response.initialDelta.tickNumber)
@@ -695,6 +733,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private async initializeDenseTopology(options: {
     readonly document: WorldDocument;
     readonly topology: CompiledSimulationTopology;
+    readonly presentationTopology?: CompiledSimulationTopology;
     readonly migration?: SimulationTopologyMigration;
   }): Promise<{
     readonly identity: { readonly sessionId: string; readonly topologyVersion: number };
@@ -715,6 +754,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       powerConsumptionOverride: normalizePowerConsumptionOverride(
         options.document.documentSettings.powerConsumptionOverride,
       ),
+      ...(options.presentationTopology === undefined
+        ? {}
+        : { presentationDeviceIds: options.presentationTopology.ordering.deviceOrder }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
     });
     return { identity, response };
@@ -724,18 +766,6 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.assertNotDisposed();
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) await activeTopologyRefresh;
-    if (this.regionalSession !== null) {
-      if (tickNumber < (this.projection?.tickNumber ?? 0)) {
-        return createNotFoundTickStatus(tickNumber);
-      }
-      await this.advanceRegionalPresentationToTick(tickNumber);
-      return {
-        status: "ready",
-        retainedFromTick: 0,
-        latestTickNumber: Math.max(tickNumber, this.latestRegionalBufferedTick()),
-        bufferSize: this.regionalPlaybackDeltas.size + 1,
-      };
-    }
     const projection = this.projection;
     if (projection === null) {
       return createNotFoundTickStatus(tickNumber);
@@ -743,7 +773,11 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
     try {
       const response = await this.bridge.advanceToTick(tickNumber, Number.MAX_SAFE_INTEGER);
-      projection.apply(response.delta);
+      if (response.type === "presentation-checkpoint") {
+        projection.replaceCheckpoint(response.delta);
+      } else {
+        projection.apply(response.delta);
+      }
       this.primaryTickNumber = response.delta.tickNumber;
       this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
       this.timelinePresentationActive = false;
@@ -762,15 +796,21 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         this.state.runtimeStatus = {
           ...this.state.runtimeStatus,
           retainedFromTick: 0,
-          latestTickNumber: response.delta.tickNumber,
-          bufferSize: 1,
+          latestTickNumber: Math.max(
+            response.delta.tickNumber,
+            this.timelineBufferedThroughTick,
+          ),
+          bufferSize: this.runtimeRetainedStateCount,
         };
       });
       return {
         status: "ready",
         retainedFromTick: 0,
-        latestTickNumber: response.delta.tickNumber,
-        bufferSize: 1,
+        latestTickNumber: Math.max(
+          response.delta.tickNumber,
+          this.timelineBufferedThroughTick,
+        ),
+        bufferSize: this.runtimeRetainedStateCount,
       };
     } catch (error) {
       runInAction(() => {
@@ -788,10 +828,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   public readonly setDebugDataEnabled: SimulationInternalAction["setDebugDataEnabled"] = () => {};
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
-    if (this.projection !== null && this.regionalSession === null) {
+    if (this.projection !== null) {
       this.sendCommands([{ type: "reset" }]);
     }
-    this.disposeRegionalSession();
     this.projection = null;
     this.playbackRemainderTicks = 0;
     this.playbackTargetTickNumber = 0;
@@ -801,6 +840,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.pendingPlaybackPerformanceTicks = 0;
     this.runtimeRetainedStateCount = 0;
     this.primaryTickNumber = 0;
+    this.timelineBufferedThroughTick = 0;
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
     this.timelinePresentationActive = false;
@@ -942,60 +982,128 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
           },
         );
       }
-      startStage = "validate-warehouse-admission";
-      const admission = buildRegionalWarehouseOutletTable({
-        registry: this.workspace.registry,
-        topologies,
-      });
-      if (!admission.ok || admission.table === null) {
+      const currentTopology = topologies.find(
+        (input) => input.baseId === sourceDocument.baseId,
+      )?.topology;
+      if (currentTopology === undefined) {
         return this.failRegionalStart(
-          admission.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+          `Dense regional current base "${sourceDocument.baseId}" is missing.`,
           {
-            code: "regional-warehouse-admission-failed",
+            code: "regional-current-base-missing",
             currentBaseId: sourceDocument.baseId,
-            diagnostics: admission.diagnostics,
           },
         );
       }
 
-      this.disposeRegionalSession();
-      this.topologyVersion += 1;
-      startStage = "initialize-workers";
-      const created = await DenseRegionalSimulationSession.create({
-        sessionId: `dense-regional-${nextDenseSessionId}`,
+      // AI-REMOVED 2026-09-17:
+      // Reason: 多基地不再创建一组 Worker，也不再由主线程执行 Epoch 仓库仲裁。
+      // Trigger: 用户要求所有基地合成一张大图并直接共享同一个仓库。
+      // Evidence: 下方 regionalDocument/regionalTopology 只初始化一次 this.bridge；仓库由唯一隐藏仓库槽承载。
+      // Replacement: createDenseRegionalDocument + initializeDenseTopology。
+      // Risk: Medium；仓库写入从下一 Epoch 可见改为同一 kernel 内按正常 tick 阶段可见。
+      // Human Review: Required
+      //
+      // Original code:
+      // startStage = "validate-warehouse-admission";
+      // const admission = buildRegionalWarehouseOutletTable({
+      //   registry: this.workspace.registry,
+      //   topologies,
+      // });
+      // if (!admission.ok || admission.table === null) {
+      //   return this.failRegionalStart(
+      //     admission.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+      //     {
+      //       code: "regional-warehouse-admission-failed",
+      //       currentBaseId: sourceDocument.baseId,
+      //       diagnostics: admission.diagnostics,
+      //     },
+      //   );
+      // }
+      // this.topologyVersion += 1;
+      // startStage = "initialize-workers";
+      // const created = await DenseRegionalSimulationSession.create({
+      //   sessionId: `dense-regional-${nextDenseSessionId}`,
+      //   currentBaseId: sourceDocument.baseId,
+      //   table: admission.table,
+      //   bases: topologies.map((input) => {
+      //     const document = admissions.find(
+      //       (candidate) => candidate.document.baseId === input.baseId,
+      //     )!.document;
+      //     return {
+      //       baseId: input.baseId,
+      //       topology: input.topology,
+      //       powerMode: document.documentSettings.powerMode ?? "infinite",
+      //       powerConsumptionOverride: normalizePowerConsumptionOverride(
+      //         document.documentSettings.powerConsumptionOverride,
+      //       ),
+      //     };
+      //   }),
+      //   registry: this.workspace.registry,
+      //   workerMode: this.options.workerMode ?? "auto",
+      // });
+      // nextDenseSessionId += 1;
+      // this.regionalSession = created.session;
+      // this.projection = created.currentBasePresentationProjection;
+      // this.primaryTickNumber = 0;
+      // this.playbackTargetTickNumber = 0;
+      // this.regionalWarehouseStats = createInitialRegionalWarehouseStats(
+      //   currentTopology?.regionalResourceSupply,
+      // );
+      // startStage = "commit-first-epoch";
+      // await this.fillOneRegionalEpoch();
+      startStage = "compose-regional-document";
+      const regionalDocument = createDenseRegionalDocument({
         currentBaseId: sourceDocument.baseId,
-        table: admission.table,
-        bases: topologies.map((input) => {
-          const document = admissions.find(
-            (candidate) => candidate.document.baseId === input.baseId,
-          )!.document;
-          return {
-            baseId: input.baseId,
-            topology: input.topology,
-            powerMode: document.documentSettings.powerMode ?? "infinite",
-            powerConsumptionOverride: normalizePowerConsumptionOverride(
-              document.documentSettings.powerConsumptionOverride,
-            ),
-          };
-        }),
+        documents: admissions.map((admission) => admission.document),
         registry: this.workspace.registry,
-        workerMode: this.options.workerMode ?? "auto",
       });
-      nextDenseSessionId += 1;
-      this.regionalSession = created.session;
-      this.projection = created.currentBasePresentationProjection;
-      this.primaryTickNumber = 0;
-      this.playbackTargetTickNumber = 0;
+      startStage = "compile-regional-topology";
+      const regionalTopology = compileSimulationTopology({
+        document: regionalDocument,
+        registry: this.workspace.registry,
+        poweredEntityIds: computePoweredEntityIds(regionalDocument, this.workspace.registry),
+        simulationMode: SIMULATION_MODE.regionalMultiBase,
+        activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
+        regionalResources,
+        standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+      });
+      const regionalCompileError = regionalTopology.diagnostics.find(
+        (diagnostic) => diagnostic.severity === "error",
+      );
+      if (regionalCompileError !== undefined) {
+        return this.failRegionalStart(
+          regionalCompileError.message,
+          {
+            code: "regional-composite-topology-compile-failed",
+            currentBaseId: sourceDocument.baseId,
+            diagnostic: regionalCompileError,
+          },
+        );
+      }
+
+      startStage = "initialize-worker";
+      const initialized = await this.initializeDenseTopology({
+        document: sourceDocument,
+        topology: regionalTopology,
+        presentationTopology: currentTopology,
+      });
+      const projection = new DenseProjectionStore(
+        initialized.response.layout.dictionary,
+        initialized.identity,
+        currentTopology,
+      );
+      projection.apply(initialized.response.initialDelta);
+      await this.bridge.sendCommands([{ type: "start" }]);
+      this.projection = projection;
+      this.primaryTickNumber = initialized.response.initialDelta.tickNumber;
+      this.timelineBufferedThroughTick = initialized.response.initialDelta.tickNumber;
+      this.runtimeRetainedStateCount = initialized.response.runtimeRetainedStateCount;
+      this.playbackTargetTickNumber = initialized.response.initialDelta.tickNumber;
       this.timelinePresentationActive = false;
       this.compiledDocument = null;
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
-      const currentTopology = topologies.find(
-        (input) => input.baseId === sourceDocument.baseId,
-      )?.topology ?? null;
       this.topologyStore.setSnapshot(currentTopology);
-      this.regionalWarehouseStats = createInitialRegionalWarehouseStats(
-        currentTopology?.regionalResourceSupply,
-      );
+      this.state.regionalTotalPowerDemand = null;
       // AI-REMOVED 2026-09-12:
       // Reason: regional 初始化不再向 SimulationState 发布性能与电池读数。
       // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
@@ -1006,21 +1114,19 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       //
       // Original code:
       // this.publishProjectionSnapshot();
-      startStage = "commit-first-epoch";
-      await this.fillOneRegionalEpoch();
       runInAction(() => {
         this.state.hasStarted = true;
         this.state.runningState = "start";
-        this.state.currentPlaybackTickNumber = 0;
+        this.state.currentPlaybackTickNumber = initialized.response.initialDelta.tickNumber;
         this.state.runtimeStatus = {
           mode: "running",
-          topologyId: currentTopology?.topologyId ?? null,
-          documentHash: currentTopology?.documentHash ?? null,
-          retainedFromTick: 0,
-          latestTickNumber: this.latestRegionalBufferedTick(),
-          bufferSize: this.regionalPlaybackDeltas.size + 1,
-          maxBufferSize: 20,
-          dynamicTickRate: currentTopology?.standardTickRate ?? null,
+          topologyId: currentTopology.topologyId,
+          documentHash: currentTopology.documentHash,
+          retainedFromTick: initialized.response.initialDelta.tickNumber,
+          latestTickNumber: initialized.response.initialDelta.tickNumber,
+          bufferSize: 1,
+          maxBufferSize: 1,
+          dynamicTickRate: currentTopology.standardTickRate,
           error: null,
         };
       });
@@ -1028,12 +1134,12 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         currentBaseId: sourceDocument.baseId,
         regionTag: currentBase.tag,
         regionalBaseIds,
-        latestTickNumber: this.latestRegionalBufferedTick(),
+        executionTopologyId: regionalTopology.topologyId,
       });
       return {
         status: "started",
-        topologyId: currentTopology?.topologyId ?? null,
-        diagnostics: currentTopology?.diagnostics ?? [],
+        topologyId: currentTopology.topologyId,
+        diagnostics: currentTopology.diagnostics,
       };
     } catch (error) {
       return this.failRegionalStart(
@@ -1057,13 +1163,22 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       ...context,
       error: message,
     });
-    this.disposeRegionalSession();
     runInAction(() => {
       this.state.runningState = "stop";
     });
     return this.failStart(message);
   }
 
+  /*
+   * AI-REMOVED 2026-09-17:
+   * Reason: Dense Host 不再调度区域 Epoch 或聚合多个 Worker 的仓库结果。
+   * Trigger: 用户要求 Dense 多基地改为单 Worker 合图和单共享仓库。
+   * Evidence: startRegionalSimulation 只创建一个复合 topology 并初始化一个 bridge。
+   * Replacement: DenseSimulationController.syncToTick
+   * Risk: Low；Legacy 的区域 Epoch 实现在 src/simulation/legacy 中保留。
+   * Human Review: Required
+   *
+   * Original code:
   private async fillOneRegionalEpoch(): Promise<void> {
     const session = this.regionalSession;
     if (session === null) return;
@@ -1095,17 +1210,14 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const tracked = this.regionalEpochInFlight;
     await tracked;
   }
+   */
 
   private async drainPlaybackAdvances(): Promise<void> {
     while (this.state.runningState === "start") {
       const currentTickNumber = this.projection?.tickNumber ?? 0;
       const targetTickNumber = this.playbackTargetTickNumber;
       if (targetTickNumber <= currentTickNumber) return;
-      if (this.regionalSession !== null) {
-        await this.advanceRegionalPresentationToTick(targetTickNumber);
-      } else {
-        await this.syncToTick(targetTickNumber);
-      }
+      await this.syncToTick(targetTickNumber);
       this.pendingPlaybackPerformanceTicks += Math.max(
         0,
         this.primaryTickNumber - currentTickNumber,
@@ -1122,6 +1234,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.pendingPlaybackPerformanceTicks = 0;
   }
 
+  /*
+   * AI-REMOVED 2026-09-17:
+   * Reason: Dense 播放投影直接消费唯一 Worker 的 FrameDelta，不再回放当前基地专属 Epoch 队列。
+   * Trigger: 用户要求所有基地在同一张 Dense 图内持续运行。
+   * Evidence: DenseFrameEmitter 的 presentation filter 直接生成当前基地展示切片。
+   * Replacement: DenseSimulationController.syncToTick + DenseProjectionStore
+   * Risk: Low。
+   * Human Review: Required
+   *
+   * Original code:
   private async advanceRegionalPresentationToTick(targetTickNumber: number): Promise<void> {
     const projection = this.projection;
     if (projection === null || this.regionalSession === null) return;
@@ -1184,6 +1306,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.regionalWarehouseStats = null;
     this.state.regionalTotalPowerDemand = null;
   }
+   */
 
   // AI-REMOVED 2026-09-12:
   // Reason: 性能诊断不是领域状态，电池读数也已有 document runtime read model，禁止继续向 SimulationState 写入。
@@ -1217,6 +1340,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
     this.runtimeRetainedStateCount = 0;
+    this.timelineBufferedThroughTick = 0;
     this.topologyStore.setSnapshot(null);
     runInAction(() => {
       this.state.hasStarted = false;
@@ -1297,6 +1421,28 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         };
       });
     }
+  }
+
+  private async ensureTimelineBuffer(): Promise<void> {
+    if (!this.state.timeline.enabled || this.projection === null) return;
+    const targetTickNumber = DENSE_TIMELINE_ORIGIN_STANDARD_TICK
+      + this.state.timeline.availableToTickNumber * DENSE_TIMELINE_STEP_STANDARD_TICKS;
+    if (targetTickNumber <= this.timelineBufferedThroughTick) return;
+    const response = await this.bridge.ensureBufferedThrough(targetTickNumber);
+    this.timelineBufferedThroughTick = response.bufferedThroughTickNumber;
+    this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
+    runInAction(() => {
+      this.state.runtimeStatus = {
+        ...this.state.runtimeStatus,
+        retainedFromTick: 0,
+        latestTickNumber: Math.max(
+          this.primaryTickNumber,
+          response.bufferedThroughTickNumber,
+        ),
+        bufferSize: response.runtimeRetainedStateCount,
+        maxBufferSize: 900,
+      };
+    });
   }
 }
 
@@ -1465,36 +1611,45 @@ function normalizeRegionalResources(
     .sort((left, right) => left.itemId.localeCompare(right.itemId));
 }
 
-function createInitialRegionalWarehouseStats(
-  supply: CompiledRegionalResourceSupply | undefined,
-): WarehouseStats {
-  const items: Record<string, {
-    producedPerMinute: number;
-    consumedPerMinute: number;
-    warehouseCount: number;
-    infinite: boolean;
-    lastChangedTick: number;
-  }> = {};
-  for (const itemId of supply?.infiniteItemIds ?? []) {
-    items[itemId] = {
-      producedPerMinute: 0,
-      consumedPerMinute: 0,
-      warehouseCount: 0,
-      infinite: true,
-      lastChangedTick: 0,
-    };
-  }
-  for (const [itemId, perMinute] of Object.entries(
-    supply?.finitePerMinuteByItemId ?? {},
-  )) {
-    const current = items[itemId];
-    items[itemId] = {
-      producedPerMinute: perMinute,
-      consumedPerMinute: current?.consumedPerMinute ?? 0,
-      warehouseCount: current?.warehouseCount ?? 0,
-      infinite: current?.infinite ?? false,
-      lastChangedTick: current?.lastChangedTick ?? 0,
-    };
-  }
-  return { items, statsWindowReady: false };
-}
+// AI-REMOVED 2026-09-17:
+// Reason: 单 kernel 区域会话的仓库统计直接由唯一隐藏仓库生成，不再需要 Host 构造区域初始统计。
+// Trigger: 用户要求多基地直接共享同一个仓库，删除主线程仓库同步设施。
+// Evidence: DenseFrameEmitter.createWarehouseStatsDelta 已覆盖初始帧与后续差分。
+// Replacement: DenseProjectionStore.getWarehouseStats
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function createInitialRegionalWarehouseStats(
+//   supply: CompiledRegionalResourceSupply | undefined,
+// ): WarehouseStats {
+//   const items: Record<string, {
+//     producedPerMinute: number;
+//     consumedPerMinute: number;
+//     warehouseCount: number;
+//     infinite: boolean;
+//     lastChangedTick: number;
+//   }> = {};
+//   for (const itemId of supply?.infiniteItemIds ?? []) {
+//     items[itemId] = {
+//       producedPerMinute: 0,
+//       consumedPerMinute: 0,
+//       warehouseCount: 0,
+//       infinite: true,
+//       lastChangedTick: 0,
+//     };
+//   }
+//   for (const [itemId, perMinute] of Object.entries(
+//     supply?.finitePerMinuteByItemId ?? {},
+//   )) {
+//     const current = items[itemId];
+//     items[itemId] = {
+//       producedPerMinute: perMinute,
+//       consumedPerMinute: current?.consumedPerMinute ?? 0,
+//       warehouseCount: current?.warehouseCount ?? 0,
+//       infinite: current?.infinite ?? false,
+//       lastChangedTick: current?.lastChangedTick ?? 0,
+//     };
+//   }
+//   return { items, statsWindowReady: false };
+// }

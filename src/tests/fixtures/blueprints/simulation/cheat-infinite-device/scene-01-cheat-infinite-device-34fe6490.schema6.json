@@ -20,8 +20,14 @@
       "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-        "storageSlotGroups[0].slots[0].initialCount": 8,
-        "storageSlotGroups[1].slots[0].initialItemType": "item_iron_ore"
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_quartz_sand",
+        "storageSlotGroups[4].slots[0].initialCount": 2
       },
       "tags": []
     },
@@ -35,8 +41,14 @@
       "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-        "storageSlotGroups[0].slots[0].initialCount": 8,
-        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water"
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_liquid_acid",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_liquid_plant_grass_1",
+        "storageSlotGroups[4].slots[0].initialCount": 2
       },
       "tags": []
     },
@@ -50,8 +62,14 @@
       "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
-        "storageSlotGroups[0].slots[0].initialCount": 8,
-        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_inert"
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_gas_xiranite",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_gas_copper",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_gas_acid",
+        "storageSlotGroups[4].slots[0].initialCount": 2
       },
       "tags": []
     }
@@ -66,4 +84,3 @@
   "createdAt": "1970-01-01T00:00:00.000Z",
   "updatedAt": "1970-01-01T00:00:00.000Z"
 }
-

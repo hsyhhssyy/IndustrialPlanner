@@ -53,8 +53,15 @@ const DEVICE_CASES = [
   },
 ] as const;
 
+const DESTROY_BUFFER_IDS = [
+  "destroy_buffer",
+  "destroy_buffer_e",
+  "destroy_buffer_s",
+  "destroy_buffer_w",
+] as const;
+
 describe.each(SIMULATION_ENGINE_MATRIX)("cheat infinite device simulation [%s]", (engineKind) => {
-  it("destroys strict-domain inputs while retaining a 50-item infinite output slot", async () => {
+  it("destroys four isolated strict-domain inputs in parallel while retaining a 50-item infinite output slot", async () => {
     // AI-REMOVED 2026-09-08:
     // Reason: finalTick 的 45 只表示约两秒后的观察点，无法跨引擎复用。
     // Trigger: cheat infinite device 纳入全引擎矩阵。
@@ -105,13 +112,15 @@ describe.each(SIMULATION_ENGINE_MATRIX)("cheat infinite device simulation [%s]",
         expect(getDevice(report, started.tickNumber, deviceCase.entityId).channelRecipes[channelId]?.recipeId)
           .toBe(deviceCase.recipeId);
       }
-      expect(findSlot(
-        report,
-        finalTick,
-        deviceCase.entityId,
-        "destroy_buffer",
-        "destroy_slot_1",
-      ).count).toBe(0);
+      for (const bufferId of DESTROY_BUFFER_IDS) {
+        expect(findSlot(
+          report,
+          finalTick,
+          deviceCase.entityId,
+          bufferId,
+          "destroy_slot_1",
+        ).count).toBe(0);
+      }
       expect(findSlot(
         report,
         finalTick,

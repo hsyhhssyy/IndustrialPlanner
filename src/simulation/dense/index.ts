@@ -30,11 +30,20 @@ export { DenseFrameEmitter } from "./dense-frame-emitter";
 //   type DenseLocalRegionalBasePortOptions,
 // } from "./dense-regional-base-port";
 
-export {
-  DenseRegionalSimulationSession,
-  type DenseRegionalBaseInput,
-  type DenseRegionalCommittedEpoch,
-} from "./dense-regional-session";
+// AI-REMOVED 2026-09-17:
+// Reason: Dense 不再公开多 Worker 区域 Session；区域合图完全封装在 Dense Host 内部。
+// Trigger: 用户要求 Dense 多基地共享同一 Worker 与仓库。
+// Evidence: createDenseSimulationHost 是唯一生产入口，内部使用 createDenseRegionalDocument。
+// Replacement: createDenseSimulationHost
+// Risk: Low；仓库内无活动调用方。
+// Human Review: Required
+//
+// Original code:
+// export {
+//   DenseRegionalSimulationSession,
+//   type DenseRegionalBaseInput,
+//   type DenseRegionalCommittedEpoch,
+// } from "./dense-regional-session";
 export { DenseWorkerRuntime } from "./dense-worker-runtime";
 export {
   createDenseEngineBridge,

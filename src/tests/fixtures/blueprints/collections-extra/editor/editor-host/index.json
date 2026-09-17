@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
+  "fixtureRevision": 2,
   "schemaVersion": 6,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -12994,7 +12994,15 @@
                     },
                     "priorityGroup": 5,
                     "roundRobinSeed": 0
-                  },
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_e",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_e",
                     "localCellX": 0,
@@ -13008,8 +13016,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 1
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_s",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_s",
                     "localCellX": 0,
@@ -13023,8 +13039,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 2
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_w",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_w",
                     "localCellX": 0,
@@ -13038,7 +13062,7 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 3
+                    "roundRobinSeed": 0
                   }
                 ]
               },
@@ -13145,6 +13169,57 @@
                   }
                 ],
                 "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_e",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_s",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_w",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
               }
             ],
             "recipeChannels": [
@@ -13160,7 +13235,7 @@
                 "id": "void_2",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_e"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13168,7 +13243,7 @@
                 "id": "void_3",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_s"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13176,7 +13251,7 @@
                 "id": "void_4",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_w"
                 ],
                 "productStorageGroupIds": []
               }
@@ -13189,6 +13264,21 @@
                 "id": "bind_infinite_input",
                 "portGroupId": "infinite_input",
                 "storageSlotGroupId": "destroy_buffer"
+              },
+              {
+                "id": "bind_infinite_input_e",
+                "portGroupId": "infinite_input_e",
+                "storageSlotGroupId": "destroy_buffer_e"
+              },
+              {
+                "id": "bind_infinite_input_s",
+                "portGroupId": "infinite_input_s",
+                "storageSlotGroupId": "destroy_buffer_s"
+              },
+              {
+                "id": "bind_infinite_input_w",
+                "portGroupId": "infinite_input_w",
+                "storageSlotGroupId": "destroy_buffer_w"
               },
               {
                 "id": "bind_infinite_output",
@@ -13209,7 +13299,10 @@
               {
                 "type": "slot-config",
                 "slotGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer",
+                  "destroy_buffer_e",
+                  "destroy_buffer_s",
+                  "destroy_buffer_w"
                 ]
               }
             ],
@@ -13263,7 +13356,15 @@
                     },
                     "priorityGroup": 5,
                     "roundRobinSeed": 0
-                  },
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_e",
+                "kind": 2,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_e",
                     "localCellX": 0,
@@ -13277,8 +13378,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 1
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_s",
+                "kind": 2,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_s",
                     "localCellX": 0,
@@ -13292,8 +13401,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 2
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_w",
+                "kind": 2,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_w",
                     "localCellX": 0,
@@ -13307,7 +13424,7 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 3
+                    "roundRobinSeed": 0
                   }
                 ]
               },
@@ -13414,6 +13531,57 @@
                   }
                 ],
                 "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_e",
+                "kind": 2,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 2,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_s",
+                "kind": 2,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 2,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_w",
+                "kind": 2,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 2,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
               }
             ],
             "recipeChannels": [
@@ -13429,7 +13597,7 @@
                 "id": "void_2",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_e"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13437,7 +13605,7 @@
                 "id": "void_3",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_s"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13445,7 +13613,7 @@
                 "id": "void_4",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_w"
                 ],
                 "productStorageGroupIds": []
               }
@@ -13458,6 +13626,21 @@
                 "id": "bind_infinite_input",
                 "portGroupId": "infinite_input",
                 "storageSlotGroupId": "destroy_buffer"
+              },
+              {
+                "id": "bind_infinite_input_e",
+                "portGroupId": "infinite_input_e",
+                "storageSlotGroupId": "destroy_buffer_e"
+              },
+              {
+                "id": "bind_infinite_input_s",
+                "portGroupId": "infinite_input_s",
+                "storageSlotGroupId": "destroy_buffer_s"
+              },
+              {
+                "id": "bind_infinite_input_w",
+                "portGroupId": "infinite_input_w",
+                "storageSlotGroupId": "destroy_buffer_w"
               },
               {
                 "id": "bind_infinite_output",
@@ -13478,7 +13661,10 @@
               {
                 "type": "slot-config",
                 "slotGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer",
+                  "destroy_buffer_e",
+                  "destroy_buffer_s",
+                  "destroy_buffer_w"
                 ]
               }
             ],
@@ -13532,7 +13718,15 @@
                     },
                     "priorityGroup": 5,
                     "roundRobinSeed": 0
-                  },
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_e",
+                "kind": 4,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_e",
                     "localCellX": 0,
@@ -13546,8 +13740,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 1
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_s",
+                "kind": 4,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_s",
                     "localCellX": 0,
@@ -13561,8 +13763,16 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 2
-                  },
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "infinite_input_w",
+                "kind": 4,
+                "isPipe": true,
+                "direction": "input",
+                "ports": [
                   {
                     "id": "in_w",
                     "localCellX": 0,
@@ -13576,7 +13786,7 @@
                       "exclude": []
                     },
                     "priorityGroup": 5,
-                    "roundRobinSeed": 3
+                    "roundRobinSeed": 0
                   }
                 ]
               },
@@ -13683,6 +13893,57 @@
                   }
                 ],
                 "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_e",
+                "kind": 4,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 4,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_s",
+                "kind": 4,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 4,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "destroy_buffer_w",
+                "kind": 4,
+                "slots": [
+                  {
+                    "id": "destroy_slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 4,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
               }
             ],
             "recipeChannels": [
@@ -13698,7 +13959,7 @@
                 "id": "void_2",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_e"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13706,7 +13967,7 @@
                 "id": "void_3",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_s"
                 ],
                 "productStorageGroupIds": []
               },
@@ -13714,7 +13975,7 @@
                 "id": "void_4",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer_w"
                 ],
                 "productStorageGroupIds": []
               }
@@ -13727,6 +13988,21 @@
                 "id": "bind_infinite_input",
                 "portGroupId": "infinite_input",
                 "storageSlotGroupId": "destroy_buffer"
+              },
+              {
+                "id": "bind_infinite_input_e",
+                "portGroupId": "infinite_input_e",
+                "storageSlotGroupId": "destroy_buffer_e"
+              },
+              {
+                "id": "bind_infinite_input_s",
+                "portGroupId": "infinite_input_s",
+                "storageSlotGroupId": "destroy_buffer_s"
+              },
+              {
+                "id": "bind_infinite_input_w",
+                "portGroupId": "infinite_input_w",
+                "storageSlotGroupId": "destroy_buffer_w"
               },
               {
                 "id": "bind_infinite_output",
@@ -13747,7 +14023,10 @@
               {
                 "type": "slot-config",
                 "slotGroupIds": [
-                  "destroy_buffer"
+                  "destroy_buffer",
+                  "destroy_buffer_e",
+                  "destroy_buffer_s",
+                  "destroy_buffer_w"
                 ]
               }
             ],
@@ -14028,4 +14307,3 @@
     ]
   }
 }
-

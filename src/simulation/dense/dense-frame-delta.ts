@@ -1,4 +1,5 @@
 import type {
+  CompiledSimulationTopology,
   RuntimeDeviceSnapshot,
   RuntimeDiagnosticSnapshot,
   RuntimeNodeSnapshot,
@@ -318,6 +319,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private readonly nodes: Array<RuntimeNodeSnapshot | null>;
   private readonly routingCursors: Record<string, number> = {};
   private readonly transportComponentDomain: Record<string, string | null> = {};
+  private readonly presentationDeviceIds: ReadonlySet<string> | null;
+  private readonly presentationSlotIds: ReadonlySet<string> | null;
+  private readonly presentationNodeIds: ReadonlySet<string> | null;
+  private readonly presentationEdgeIds: ReadonlySet<string> | null;
+  private readonly presentationComponentIds: ReadonlySet<string> | null;
   private warehouseItems: Record<string, WarehouseItemStats> | null = null;
   private warehouseStatsWindowReady = false;
   private initialized = false;
@@ -342,12 +348,28 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       readonly sessionId: string;
       readonly topologyVersion: number;
     },
+    presentationTopology?: CompiledSimulationTopology,
   ) {
     assertSessionIdentity(session);
     this.lookup = createDenseTopologyLookup(dictionary);
     this.slots = Array.from({ length: dictionary.slotIds.length }, () => null);
     this.devices = Array.from({ length: dictionary.deviceIds.length }, () => null);
     this.nodes = Array.from({ length: dictionary.nodeIds.length }, () => null);
+    this.presentationDeviceIds = presentationTopology === undefined
+      ? null
+      : new Set(presentationTopology.ordering.deviceOrder);
+    this.presentationSlotIds = presentationTopology === undefined
+      ? null
+      : new Set(presentationTopology.ordering.slotOrder);
+    this.presentationNodeIds = presentationTopology === undefined
+      ? null
+      : new Set(presentationTopology.ordering.nodeOrder);
+    this.presentationEdgeIds = presentationTopology === undefined
+      ? null
+      : new Set(presentationTopology.ordering.edgeOrder);
+    this.presentationComponentIds = presentationTopology === undefined
+      ? null
+      : new Set(Object.keys(presentationTopology.transportComponents));
     for (const componentId of dictionary.componentIds) {
       this.transportComponentDomain[componentId] = null;
     }
@@ -450,26 +472,43 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   public getSlot(slotId: string): RuntimeTickSnapshot["slots"][string] | null {
+    if (this.presentationSlotIds !== null && !this.presentationSlotIds.has(slotId)) {
+      return null;
+    }
     const index = this.lookup.slotIndexById.get(slotId);
     return index === undefined ? null : this.slots[index] ?? null;
   }
 
   public getDevice(deviceId: string): RuntimeDeviceSnapshot | null {
+    if (this.presentationDeviceIds !== null && !this.presentationDeviceIds.has(deviceId)) {
+      return null;
+    }
     const index = this.lookup.deviceIndexById.get(deviceId);
     return index === undefined ? null : this.devices[index] ?? null;
   }
 
   public getNode(nodeId: string): RuntimeNodeSnapshot | null {
+    if (this.presentationNodeIds !== null && !this.presentationNodeIds.has(nodeId)) {
+      return null;
+    }
     const index = this.lookup.nodeIndexById.get(nodeId);
     return index === undefined ? null : this.nodes[index] ?? null;
   }
 
   public getTransportComponentItemType(componentId: string): string | null {
+    if (
+      this.presentationComponentIds !== null
+      && !this.presentationComponentIds.has(componentId)
+    ) {
+      return null;
+    }
     return this.transportComponentDomain[componentId] ?? null;
   }
 
   public getTransfers(): RuntimeTickSnapshot["transfers"] {
-    return this.transfers;
+    return this.presentationEdgeIds === null
+      ? this.transfers
+      : this.transfers.filter((transfer) => this.presentationEdgeIds!.has(transfer.edgeId));
   }
 
   public getDiagnostics(): RuntimeTickSnapshot["diagnostics"] {
@@ -477,7 +516,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   public getGasDiffusions(): RuntimeTickSnapshot["gasDiffusions"] {
-    return this.gasDiffusions;
+    return this.presentationDeviceIds === null
+      ? this.gasDiffusions
+      : this.gasDiffusions.filter((diffusion) =>
+          this.presentationDeviceIds!.has(diffusion.sourceDeviceId)
+        );
   }
 
   public getWarehouseStats(): RuntimeTickSnapshot["warehouseStats"] {
@@ -507,14 +550,35 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       isPowerOutage: this.currentIsPowerOutage,
       baseBatteryJoules: this.baseBatteryJoulesValue,
       baseBatteryCapacity: this.baseBatteryCapacityValue,
-      slots: materializeIndexedRecord(this.dictionary.slotIds, this.slots, "slot"),
-      devices: materializeIndexedRecord(this.dictionary.deviceIds, this.devices, "device"),
-      nodes: materializeIndexedRecord(this.dictionary.nodeIds, this.nodes, "node"),
-      transfers: this.transfers.map((transfer) => ({ ...transfer })),
-      routingCursors: { ...this.routingCursors },
-      transportComponentDomain: { ...this.transportComponentDomain },
+      slots: materializeIndexedRecord(
+        this.dictionary.slotIds,
+        this.slots,
+        "slot",
+        this.presentationSlotIds,
+      ),
+      devices: materializeIndexedRecord(
+        this.dictionary.deviceIds,
+        this.devices,
+        "device",
+        this.presentationDeviceIds,
+      ),
+      nodes: materializeIndexedRecord(
+        this.dictionary.nodeIds,
+        this.nodes,
+        "node",
+        this.presentationNodeIds,
+      ),
+      transfers: this.getTransfers().map((transfer) => ({ ...transfer })),
+      routingCursors: filterRecordByDevicePrefix(
+        this.routingCursors,
+        this.presentationDeviceIds,
+      ),
+      transportComponentDomain: filterRecordByKey(
+        this.transportComponentDomain,
+        this.presentationComponentIds,
+      ),
       diagnostics: this.diagnostics.map((diagnostic) => ({ ...diagnostic })),
-      gasDiffusions: this.gasDiffusions.map((diffusion) => ({
+      gasDiffusions: this.getGasDiffusions().map((diffusion) => ({
         ...diffusion,
         gridRect: { ...diffusion.gridRect },
       })),
@@ -669,17 +733,17 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     if (!this.initialized || options.requireFullCoverage === true) {
       assertInitialFrameCoverage(
         delta.changedSlotIndexes,
-        this.dictionary.slotIds.length,
+        this.presentationSlotIds?.size ?? this.dictionary.slotIds.length,
         "slots",
       );
       assertInitialFrameCoverage(
         delta.changedDeviceIndexes,
-        this.dictionary.deviceIds.length,
+        this.presentationDeviceIds?.size ?? this.dictionary.deviceIds.length,
         "devices",
       );
       assertInitialFrameCoverage(
         delta.changedNodeIndexes,
-        this.dictionary.nodeIds.length,
+        this.presentationNodeIds?.size ?? this.dictionary.nodeIds.length,
         "nodes",
       );
       assertInitialFrameCoverage(
@@ -999,10 +1063,12 @@ function materializeIndexedRecord<T>(
   ids: readonly string[],
   values: readonly (T | null)[],
   kind: string,
+  presentationIds: ReadonlySet<string> | null = null,
 ): Record<string, T> {
   const result: Record<string, T> = {};
   for (let index = 0; index < ids.length; index += 1) {
     const id = ids[index]!;
+    if (presentationIds !== null && !presentationIds.has(id)) continue;
     const value = values[index];
     if (value === null || value === undefined) {
       throw new Error(`Dense projection has no ${kind} value for "${id}".`);
@@ -1010,6 +1076,27 @@ function materializeIndexedRecord<T>(
     result[id] = value;
   }
   return result;
+}
+
+function filterRecordByKey<T>(
+  values: Readonly<Record<string, T>>,
+  presentationIds: ReadonlySet<string> | null,
+): Record<string, T> {
+  return presentationIds === null
+    ? { ...values }
+    : Object.fromEntries(
+        Object.entries(values).filter(([key]) => presentationIds.has(key)),
+      );
+}
+
+function filterRecordByDevicePrefix<T>(
+  values: Readonly<Record<string, T>>,
+  presentationDeviceIds: ReadonlySet<string> | null,
+): Record<string, T> {
+  if (presentationDeviceIds === null) return { ...values };
+  return Object.fromEntries(Object.entries(values).filter(([key]) =>
+    [...presentationDeviceIds].some((deviceId) => key.startsWith(`${deviceId}:node:`))
+  ));
 }
 
 function requireArrayEntry<T>(

@@ -43,6 +43,12 @@ import {
 export class DenseFrameEmitter {
   private nextFrameSequence = 1;
   private readonly lookup: DenseTopologyLookup;
+  private readonly presentationDeviceFlags: Uint8Array | null;
+  private readonly presentationNodeFlags: Uint8Array | null;
+  private readonly presentationSlotFlags: Uint8Array | null;
+  private readonly presentationComponentFlags: Uint8Array | null;
+  private readonly presentationEdgeFlags: Uint8Array | null;
+  private readonly presentationRoutingCursorFlags: Uint8Array | null;
 
   public constructor(
     private readonly topology: CompiledSimulationTopology,
@@ -51,6 +57,7 @@ export class DenseFrameEmitter {
       readonly sessionId: string;
       readonly topologyVersion: number;
     },
+    presentationDeviceIds?: readonly string[],
   ) {
     if (
       topology.topologyId !== layout.dictionary.topologyId
@@ -59,13 +66,25 @@ export class DenseFrameEmitter {
       throw new Error("Dense frame emitter topology identity mismatch.");
     }
     this.lookup = createDenseTopologyLookup(layout.dictionary);
+    const presentation = compileDensePresentationFilter(
+      topology,
+      layout,
+      this.lookup,
+      presentationDeviceIds,
+    );
+    this.presentationDeviceFlags = presentation?.deviceFlags ?? null;
+    this.presentationNodeFlags = presentation?.nodeFlags ?? null;
+    this.presentationSlotFlags = presentation?.slotFlags ?? null;
+    this.presentationComponentFlags = presentation?.componentFlags ?? null;
+    this.presentationEdgeFlags = presentation?.edgeFlags ?? null;
+    this.presentationRoutingCursorFlags = presentation?.routingCursorFlags ?? null;
   }
 
   public emitInitial(kernel: DenseSimulationKernel): DenseFrameDelta {
     const state = kernel.state;
-    const slotIndexes = Uint32Array.from(
-      { length: this.layout.dictionary.slotIds.length },
-      (_, index) => index,
+    const slotIndexes = createPresentedIndexArray(
+      this.layout.dictionary.slotIds.length,
+      this.presentationSlotFlags,
     );
     const componentIndexes = Uint32Array.from(
       { length: this.layout.dictionary.componentIds.length },
@@ -78,13 +97,13 @@ export class DenseFrameEmitter {
       kernel,
       slotIndexes,
       componentIndexes,
-      routingCursorIndexes: Uint32Array.from(
-        { length: this.layout.dictionary.routingCursorKeys.length },
-        (_, index) => index,
+      routingCursorIndexes: createPresentedIndexArray(
+        this.layout.dictionary.routingCursorKeys.length,
+        this.presentationRoutingCursorFlags,
       ),
-      deviceIndexes: Uint32Array.from(
-        { length: this.layout.dictionary.deviceIds.length },
-        (_, index) => index,
+      deviceIndexes: createPresentedIndexArray(
+        this.layout.dictionary.deviceIds.length,
+        this.presentationDeviceFlags,
       ),
       transfers: createEmptyDenseTransfers(),
       includeStaticPresentation: true,
@@ -108,28 +127,44 @@ export class DenseFrameEmitter {
       }
     }
     slotIndexes.sort(compareNumbers);
+    const presentedSlotIndexes = filterPresentedIndexes(
+      slotIndexes,
+      this.presentationSlotFlags,
+    );
 
     const componentIndexes: number[] = [];
     state.dirtyComponentIndexes.drain((index) => componentIndexes.push(index));
     componentIndexes.sort(compareNumbers);
+    const presentedComponentIndexes = filterPresentedIndexes(
+      componentIndexes,
+      this.presentationComponentFlags,
+    );
     const deviceIndexes: number[] = [];
     state.dirtyDeviceIndexes.drain((index) => deviceIndexes.push(index));
     deviceIndexes.sort(compareNumbers);
+    const presentedDeviceIndexes = filterPresentedIndexes(
+      deviceIndexes,
+      this.presentationDeviceFlags,
+    );
     state.activeDeviceIndexes.clear();
     const routingCursorIndexes: number[] = [];
     state.dirtyRoutingCursorIndexes.drain((index) => routingCursorIndexes.push(index));
     routingCursorIndexes.sort(compareNumbers);
+    const presentedRoutingCursorIndexes = filterPresentedIndexes(
+      routingCursorIndexes,
+      this.presentationRoutingCursorFlags,
+    );
 
     return this.createFrame({
       state,
       tickNumber: result.tickNumber,
       status: FRAME_STATUS_RUNNING,
       kernel,
-      slotIndexes: Uint32Array.from(slotIndexes),
-      componentIndexes: Uint32Array.from(componentIndexes),
-      routingCursorIndexes: Uint32Array.from(routingCursorIndexes),
-      deviceIndexes: Uint32Array.from(deviceIndexes),
-      transfers: result.transfers,
+      slotIndexes: Uint32Array.from(presentedSlotIndexes),
+      componentIndexes: Uint32Array.from(presentedComponentIndexes),
+      routingCursorIndexes: Uint32Array.from(presentedRoutingCursorIndexes),
+      deviceIndexes: Uint32Array.from(presentedDeviceIndexes),
+      transfers: filterPresentedTransfers(result.transfers, this.presentationEdgeFlags),
       includeStaticPresentation: false,
       warehouseMode: WAREHOUSE_PATCHED,
       changedStorageIndexes: dirtyStorageIndexes,
@@ -143,23 +178,23 @@ export class DenseFrameEmitter {
       tickNumber: kernel.tickNumber,
       status: kernel.tickNumber === 0 ? FRAME_STATUS_INITIAL : FRAME_STATUS_RUNNING,
       kernel,
-      slotIndexes: Uint32Array.from(
-        { length: this.layout.dictionary.slotIds.length },
-        (_, index) => index,
+      slotIndexes: createPresentedIndexArray(
+        this.layout.dictionary.slotIds.length,
+        this.presentationSlotFlags,
       ),
       componentIndexes: Uint32Array.from(
         { length: this.layout.dictionary.componentIds.length },
         (_, index) => index,
       ),
-      routingCursorIndexes: Uint32Array.from(
-        { length: this.layout.dictionary.routingCursorKeys.length },
-        (_, index) => index,
+      routingCursorIndexes: createPresentedIndexArray(
+        this.layout.dictionary.routingCursorKeys.length,
+        this.presentationRoutingCursorFlags,
       ),
-      deviceIndexes: Uint32Array.from(
-        { length: this.layout.dictionary.deviceIds.length },
-        (_, index) => index,
+      deviceIndexes: createPresentedIndexArray(
+        this.layout.dictionary.deviceIds.length,
+        this.presentationDeviceFlags,
       ),
-      transfers: kernel.transfers,
+      transfers: filterPresentedTransfers(kernel.transfers, this.presentationEdgeFlags),
       includeStaticPresentation: true,
       warehouseMode: WAREHOUSE_PATCHED,
       changedStorageIndexes: [],
@@ -210,9 +245,9 @@ export class DenseFrameEmitter {
 
     const deviceIndexes = options.deviceIndexes;
     const nodeIndexes = options.includeStaticPresentation
-      ? Uint32Array.from(
-          { length: this.layout.dictionary.nodeIds.length },
-          (_, index) => index,
+      ? createPresentedIndexArray(
+          this.layout.dictionary.nodeIds.length,
+          this.presentationNodeFlags,
         )
       : new Uint32Array();
     const frameSequence = this.nextFrameSequence;
@@ -294,6 +329,12 @@ export class DenseFrameEmitter {
       if (deviceIndex === undefined || itemIndex === undefined) {
         throw new Error("Dense gas diffusion references an unknown dictionary entry.");
       }
+      if (
+        this.presentationDeviceFlags !== null
+        && this.presentationDeviceFlags[deviceIndex] !== 1
+      ) {
+        continue;
+      }
       sourceDeviceIndexes.push(deviceIndex);
       itemIndexes.push(itemIndex);
       gridRects.push(
@@ -342,4 +383,123 @@ export class DenseFrameEmitter {
 
 function compareNumbers(left: number, right: number): number {
   return left - right;
+}
+
+function compileDensePresentationFilter(
+  topology: CompiledSimulationTopology,
+  layout: DenseTopologyLayout,
+  lookup: DenseTopologyLookup,
+  presentationDeviceIds: readonly string[] | undefined,
+): {
+  readonly deviceFlags: Uint8Array;
+  readonly nodeFlags: Uint8Array;
+  readonly slotFlags: Uint8Array;
+  readonly componentFlags: Uint8Array;
+  readonly edgeFlags: Uint8Array;
+  readonly routingCursorFlags: Uint8Array;
+} | null {
+  if (presentationDeviceIds === undefined) return null;
+  const deviceFlags = new Uint8Array(layout.dictionary.deviceIds.length);
+  for (const deviceId of presentationDeviceIds) {
+    const deviceIndex = lookup.deviceIndexById.get(deviceId);
+    if (deviceIndex === undefined) {
+      throw new Error(`Dense presentation cannot resolve device "${deviceId}".`);
+    }
+    deviceFlags[deviceIndex] = 1;
+  }
+  const nodeFlags = new Uint8Array(layout.dictionary.nodeIds.length);
+  for (let nodeIndex = 0; nodeIndex < nodeFlags.length; nodeIndex += 1) {
+    nodeFlags[nodeIndex] = deviceFlags[layout.nodeDeviceIndexes[nodeIndex]!]!;
+  }
+  const slotFlags = new Uint8Array(layout.dictionary.slotIds.length);
+  for (let slotIndex = 0; slotIndex < slotFlags.length; slotIndex += 1) {
+    slotFlags[slotIndex] = nodeFlags[layout.slotNodeIndexes[slotIndex]!]!;
+  }
+  const componentFlags = new Uint8Array(layout.dictionary.componentIds.length);
+  for (let componentIndex = 0; componentIndex < componentFlags.length; componentIndex += 1) {
+    const start = layout.componentDeviceOffsets[componentIndex]!;
+    const end = layout.componentDeviceOffsets[componentIndex + 1]!;
+    for (let offset = start; offset < end; offset += 1) {
+      if (deviceFlags[layout.componentDeviceIndexes[offset]!] === 1) {
+        componentFlags[componentIndex] = 1;
+        break;
+      }
+    }
+  }
+  const edgeFlags = new Uint8Array(layout.dictionary.edgeIds.length);
+  for (let edgeIndex = 0; edgeIndex < edgeFlags.length; edgeIndex += 1) {
+    const sourceDeviceIndex = layout.nodeDeviceIndexes[
+      layout.edgeSourceNodeIndexes[edgeIndex]!
+    ]!;
+    const targetDeviceIndex = layout.nodeDeviceIndexes[
+      layout.edgeTargetNodeIndexes[edgeIndex]!
+    ]!;
+    edgeFlags[edgeIndex] = deviceFlags[sourceDeviceIndex] === 1
+      && deviceFlags[targetDeviceIndex] === 1
+      ? 1
+      : 0;
+  }
+  const presentationDeviceIdSet = new Set(presentationDeviceIds);
+  const routingCursorFlags = Uint8Array.from(
+    layout.dictionary.routingCursorKeys,
+    (key) => topology.ordering.deviceOrder.some((deviceId) =>
+      presentationDeviceIdSet.has(deviceId) && key.startsWith(`${deviceId}:node:`)
+    ) ? 1 : 0,
+  );
+  return {
+    deviceFlags,
+    nodeFlags,
+    slotFlags,
+    componentFlags,
+    edgeFlags,
+    routingCursorFlags,
+  };
+}
+
+function filterPresentedIndexes(
+  indexes: readonly number[],
+  flags: Uint8Array | null,
+): readonly number[] {
+  return flags === null ? indexes : indexes.filter((index) => flags[index] === 1);
+}
+
+function createPresentedIndexArray(
+  length: number,
+  flags: Uint8Array | null,
+): Uint32Array {
+  if (flags === null) {
+    return Uint32Array.from({ length }, (_, index) => index);
+  }
+  const indexes: number[] = [];
+  for (let index = 0; index < length; index += 1) {
+    if (flags[index] === 1) indexes.push(index);
+  }
+  return Uint32Array.from(indexes);
+}
+
+function filterPresentedTransfers(
+  transfers: DenseKernelTickResult["transfers"],
+  edgeFlags: Uint8Array | null,
+): DenseKernelTickResult["transfers"] {
+  if (edgeFlags === null) return transfers;
+  const edgeIndexes: number[] = [];
+  const sourceSlotIndexes: number[] = [];
+  const targetSlotIndexes: number[] = [];
+  const itemIndexes: number[] = [];
+  const amounts: number[] = [];
+  for (let offset = 0; offset < transfers.edgeIndexes.length; offset += 1) {
+    if (edgeFlags[transfers.edgeIndexes[offset]!] !== 1) continue;
+    edgeIndexes.push(transfers.edgeIndexes[offset]!);
+    sourceSlotIndexes.push(transfers.sourceSlotIndexes[offset]!);
+    targetSlotIndexes.push(transfers.targetSlotIndexes[offset]!);
+    itemIndexes.push(transfers.itemIndexes[offset]!);
+    amounts.push(transfers.amounts[offset]!);
+  }
+  return {
+    edgeIndexes: Uint32Array.from(edgeIndexes),
+    sourceSlotIndexes: Uint32Array.from(sourceSlotIndexes),
+    targetSlotIndexes: Uint32Array.from(targetSlotIndexes),
+    itemIndexes: Uint32Array.from(itemIndexes),
+    amounts: Float64Array.from(amounts),
+  };
 }

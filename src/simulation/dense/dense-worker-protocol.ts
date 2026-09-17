@@ -4,7 +4,16 @@ import type {
 } from "@/domain/simulation/types/simulation-types";
 
 import type { CompiledSimulationTopology, SimulationTopologyMigration } from "../contracts";
-import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
+// AI-REMOVED 2026-09-17:
+// Reason: Dense Worker 协议不再传输区域仓库表、需求、授权或入仓批次。
+// Trigger: 用户要求 Dense 多基地共用单 Worker 内的同一个仓库。
+// Evidence: 区域启动只发送复合 CompiledSimulationTopology。
+// Replacement: initialize-session.topology
+// Risk: Low；Legacy Worker 协议不在此文件。
+// Human Review: Required
+//
+// Original code:
+// import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import type { DenseFrameDelta } from "./dense-frame-delta";
 import { DENSE_SIMULATION_PROTOCOL_VERSION, type DenseTopologyLayout } from "./dense-topology";
 
@@ -53,13 +62,23 @@ export type DenseWorkerRequest =
       readonly debugDataEnabled: boolean;
       readonly powerMode: "real" | "infinite";
       readonly powerConsumptionOverride: number | undefined;
+      readonly presentationDeviceIds?: readonly string[];
       readonly migration?: SimulationTopologyMigration;
-      readonly regional?: {
-        readonly baseId: string;
-        readonly table: RegionalWarehouseOutletTable;
-        readonly initialWarehouseCounts: Readonly<Record<string, number>>;
-        readonly captureIntermediateFrames: boolean;
-      };
+      // AI-REMOVED 2026-09-17:
+      // Reason: Dense 初始化不再接受每基地 Epoch 仓库配置。
+      // Trigger: 区域执行已合并为单 topology。
+      // Evidence: createDenseRegionalDocument 产出的 topology 已包含所有基地与唯一仓库。
+      // Replacement: topology + presentationDeviceIds
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // readonly regional?: {
+      //   readonly baseId: string;
+      //   readonly table: RegionalWarehouseOutletTable;
+      //   readonly initialWarehouseCounts: Readonly<Record<string, number>>;
+      //   readonly captureIntermediateFrames: boolean;
+      // };
     })
   | (DenseProtocolIdentity & {
       readonly type: "command-batch";
@@ -75,23 +94,26 @@ export type DenseWorkerRequest =
       readonly tickNumber: number;
     })
   | (DenseProtocolIdentity & {
+      readonly type: "ensure-buffered-through";
+      readonly tickNumber: number;
+    })
+  | (DenseProtocolIdentity & {
       readonly type: "release-buffers";
       readonly bufferIds: Uint32Array;
-    })
-  | (DenseProtocolIdentity & {
-      readonly type: "prepare-regional-epoch";
-      readonly epochNumber: number;
-    })
-  | (DenseProtocolIdentity & {
-      readonly type: "apply-regional-grant";
-      readonly epochNumber: number;
-      readonly grantedOutletIds: readonly string[];
-    })
-  | (DenseProtocolIdentity & {
-      readonly type: "finalize-regional-epoch";
-      readonly epochNumber: number;
-      readonly nextWarehouseCounts: Readonly<Record<string, number>>;
     });
+
+// AI-REMOVED 2026-09-17:
+// Reason: Dense 不再执行跨 Worker 的 prepare/grant/finalize 区域 Epoch RPC。
+// Trigger: 用户要求用单共享仓库消除同步协议。
+// Evidence: DenseWorkerRuntime 只推进单一复合 kernel。
+// Replacement: advance-budget
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// | (DenseProtocolIdentity & { readonly type: "prepare-regional-epoch"; readonly epochNumber: number })
+// | (DenseProtocolIdentity & { readonly type: "apply-regional-grant"; readonly epochNumber: number; readonly grantedOutletIds: readonly string[] })
+// | (DenseProtocolIdentity & { readonly type: "finalize-regional-epoch"; readonly epochNumber: number; readonly nextWarehouseCounts: Readonly<Record<string, number>> });
 
 export type DenseWorkerResponse =
   | (DenseProtocolIdentity & {
@@ -118,24 +140,8 @@ export type DenseWorkerResponse =
       readonly committedTickNumber: number;
     })
   | (DenseProtocolIdentity & {
-      readonly type: "regional-epoch-prepared";
-      readonly epochNumber: number;
-      readonly tickNumber: number;
-      readonly demandedOutletIds: readonly string[];
-      readonly intermediateDeltas: readonly DenseFrameDelta[];
-    })
-  | (DenseProtocolIdentity & {
-      readonly type: "regional-grant-applied";
-      readonly epochNumber: number;
-      readonly tickNumber: number;
-      readonly deposits: readonly RegionWarehouseDeposit[];
-    })
-  | (DenseProtocolIdentity & {
-      readonly type: "regional-epoch-finalized";
-      readonly epochNumber: number;
-      readonly tickNumber: number;
-      readonly delta: DenseFrameDelta;
-      readonly bufferIds: Uint32Array;
+      readonly type: "buffer-ready";
+      readonly bufferedThroughTickNumber: number;
       readonly runtimeRetainedStateCount: number;
     })
   | (DenseProtocolIdentity & {
@@ -150,6 +156,37 @@ export type DenseWorkerResponse =
       readonly message: string;
       readonly failedRequestSequence: number | null;
     });
+
+// AI-REMOVED 2026-09-17:
+// Reason: Dense 协议不再返回区域 Epoch 准备、授权或提交响应。
+// Trigger: 单复合 kernel 直接产生 FrameDelta 与 checkpoint。
+// Evidence: DenseWorkerRequest 已移除对应请求。
+// Replacement: frame-delta + presentation-checkpoint + buffer-ready
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// | (DenseProtocolIdentity & {
+//     readonly type: "regional-epoch-prepared";
+//     readonly epochNumber: number;
+//     readonly tickNumber: number;
+//     readonly demandedOutletIds: readonly string[];
+//     readonly intermediateDeltas: readonly DenseFrameDelta[];
+//   })
+// | (DenseProtocolIdentity & {
+//     readonly type: "regional-grant-applied";
+//     readonly epochNumber: number;
+//     readonly tickNumber: number;
+//     readonly deposits: readonly RegionWarehouseDeposit[];
+//   })
+// | (DenseProtocolIdentity & {
+//     readonly type: "regional-epoch-finalized";
+//     readonly epochNumber: number;
+//     readonly tickNumber: number;
+//     readonly delta: DenseFrameDelta;
+//     readonly bufferIds: Uint32Array;
+//     readonly runtimeRetainedStateCount: number;
+//   })
 
 export class DenseMessageSequenceGate {
   private nextSequence = 1;

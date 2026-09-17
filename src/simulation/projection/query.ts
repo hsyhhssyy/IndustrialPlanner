@@ -159,11 +159,32 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
         return slot !== null && slot.itemType !== null;
       }) === true);
     },
-    getActiveGasDiffusionRanges: () => context.getPresentation()?.getGasDiffusions().map((diffusion) => ({
-      sourceDeviceId: diffusion.sourceDeviceId,
-      gasItemId: diffusion.gasItemId,
-      gridRect: { ...diffusion.gridRect },
-    })) ?? [],
+    getActiveGasDiffusionRanges: () => {
+      const topology = context.getTopology();
+      const presentation = context.getPresentation();
+      if (topology === null || presentation === null) return [];
+      return presentation.getGasDiffusions()
+        .filter((diffusion) => topology.devices[diffusion.sourceDeviceId] !== undefined)
+        .map((diffusion) => ({
+          sourceDeviceId: diffusion.sourceDeviceId,
+          gasItemId: diffusion.gasItemId,
+          gridRect: { ...diffusion.gridRect },
+        }));
+    },
+    // AI-REMOVED 2026-09-17:
+    // Reason: Dense 区域执行投影包含整张复合图，公开展示只能返回当前 topology 所属基地的气体范围。
+    // Trigger: 用户明确要求气体扩散与空间判定不得跨基地，当前编辑基地单独生成展示投影。
+    // Evidence: SimulationQueryContext.getTopology 在区域模式下保持当前基地拓扑。
+    // Replacement: 上方按 topology.devices 过滤后的映射。
+    // Risk: Low；单基地 topology 包含全部可见扩散源，行为不变。
+    // Human Review: Required
+    //
+    // Original code:
+    // getActiveGasDiffusionRanges: () => context.getPresentation()?.getGasDiffusions().map((diffusion) => ({
+    //   sourceDeviceId: diffusion.sourceDeviceId,
+    //   gasItemId: diffusion.gasItemId,
+    //   gridRect: { ...diffusion.gridRect },
+    // })) ?? [],
     getDeviceActiveGasItemIds: (deviceId) => {
       const topology = context.getTopology();
       const presentation = context.getPresentation();

@@ -1,3 +1,13 @@
+/*
+ * AI-REMOVED 2026-09-17:
+ * Reason: Dense 区域模式已收敛为单复合拓扑、单 Worker、单 kernel 与单共享仓库，旧多 Worker Session 不再属于有效实现。
+ * Trigger: 用户要求通过同一仓库消除额外仓库同步设施。
+ * Evidence: createDenseRegionalDocument 与 DenseSimulationController.startRegionalSimulation 已直接初始化唯一 DenseEngineBridge。
+ * Replacement: src/simulation/dense/dense-regional-document.ts + src/simulation/dense/host.ts
+ * Risk: Medium；以下原实现完整保留为归档，Legacy 多基地实现不受影响。
+ * Human Review: Required
+ *
+ * Original code:
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 import { arbitrateRegionalWarehouseEpoch, commitRegionalWarehouseEpoch } from "../regional";
@@ -372,3 +382,4 @@ function mergeRegionalDeposits(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([itemId, amount]) => ({ itemId, amount }));
 }
+ */

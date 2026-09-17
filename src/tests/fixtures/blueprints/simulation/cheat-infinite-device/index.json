@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
+  "fixtureRevision": 2,
   "schemaVersion": 6,
   "source": "src/tests/simulation/cheat-infinite-device.test.ts",
   "migratedAt": "2026-09-14",
@@ -17,4 +17,3 @@
     ]
   }
 }
-

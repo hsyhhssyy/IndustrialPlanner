@@ -894,16 +894,30 @@ function createCheatInfiniteDeviceDefinition(options: {
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
+      // AI-CORRECTION 2026-09-17: 四个销毁输入端口分别绑定独立缓存，避免不同物品争用同一槽位而串行化。
       createPortGroup(
         "infinite_input",
         portDescriptor,
         "input",
-        [
-          createPort("in_n", 0, 0, "N"),
-          createPort("in_e", 0, 0, "E"),
-          createPort("in_s", 0, 0, "S"),
-          createPort("in_w", 0, 0, "W"),
-        ],
+        [createPort("in_n", 0, 0, "N")],
+      ),
+      createPortGroup(
+        "infinite_input_e",
+        portDescriptor,
+        "input",
+        [createPort("in_e", 0, 0, "E")],
+      ),
+      createPortGroup(
+        "infinite_input_s",
+        portDescriptor,
+        "input",
+        [createPort("in_s", 0, 0, "S")],
+      ),
+      createPortGroup(
+        "infinite_input_w",
+        portDescriptor,
+        "input",
+        [createPort("in_w", 0, 0, "W")],
       ),
       createPortGroup(
         "infinite_output",
@@ -931,18 +945,36 @@ function createCheatInfiniteDeviceDefinition(options: {
           ignoreStock: true,
         }),
       ),
+      createStorageSlotGroup(
+        "destroy_buffer_e",
+        options.domain,
+        createSlots("destroy_slot", [500], options.domain),
+      ),
+      createStorageSlotGroup(
+        "destroy_buffer_s",
+        options.domain,
+        createSlots("destroy_slot", [500], options.domain),
+      ),
+      createStorageSlotGroup(
+        "destroy_buffer_w",
+        options.domain,
+        createSlots("destroy_slot", [500], options.domain),
+      ),
     ],
     recipeChannels: [
       createRecipeChannel("void_1", ["destroy_buffer"], []),
-      createRecipeChannel("void_2", ["destroy_buffer"], []),
-      createRecipeChannel("void_3", ["destroy_buffer"], []),
-      createRecipeChannel("void_4", ["destroy_buffer"], []),
+      createRecipeChannel("void_2", ["destroy_buffer_e"], []),
+      createRecipeChannel("void_3", ["destroy_buffer_s"], []),
+      createRecipeChannel("void_4", ["destroy_buffer_w"], []),
     ],
     recipeChannelBehavior: {
       allowDuplicateRecipesAcrossChannels: true,
     },
     portStorageBindings: [
       createBinding("bind_infinite_input", "infinite_input", "destroy_buffer"),
+      createBinding("bind_infinite_input_e", "infinite_input_e", "destroy_buffer_e"),
+      createBinding("bind_infinite_input_s", "infinite_input_s", "destroy_buffer_s"),
+      createBinding("bind_infinite_input_w", "infinite_input_w", "destroy_buffer_w"),
       createBinding("bind_infinite_output", "infinite_output", "infinite_output_buffer"),
     ],
     inspectors: [
@@ -955,6 +987,7 @@ function createCheatInfiniteDeviceDefinition(options: {
       // Trigger: 无限输出槽不得挂载普通槽位编辑器，但 destroy_buffer 仍应遵循配方设备的可检查性约束。
       // Evidence: createRecipeMachineIngredientSlotInspectors 已按 infiniteStorage.slotGroupIds 排除专用槽组。
       // Replacement: createRecipeMachineIngredientSlotInspectors 生成 slotConfig(["destroy_buffer"])。
+      // AI-CORRECTION 2026-09-17: 上述单缓存替代说明现扩展为四个方向各自的 destroy_buffer 槽组。
       // Risk: Low
       // Human Review: Required
       //

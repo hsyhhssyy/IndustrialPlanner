@@ -560,6 +560,168 @@ describe("ST2-RQ-023 dense host regressions", () => {
     }
   });
 
+  it("uses one regional Dense graph with a shared warehouse and base-namespaced devices", async () => {
+    const registry = createRegistryContract();
+    const currentBaseId = "wuling_protocol_core";
+    const backgroundBaseId = registry.baseDefinitions.find(
+      (definition) => definition.tag === "武陵" && definition.id !== currentBaseId,
+    )!.id;
+    const blueprint = loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema6.json",
+    );
+    const documentsByBaseId = Object.fromEntries(
+      registry.baseDefinitions
+        .filter((definition) => definition.tag === "武陵")
+        .map((definition) => {
+          const document = definition.id === currentBaseId || definition.id === backgroundBaseId
+            ? createWorldDocumentFromBlueprint(blueprint)
+            : createWorldDocument({ baseId: definition.id });
+          document.baseId = definition.id;
+          document.documentKey = `dense-regional-shared-${definition.id}`;
+          return [definition.id, document];
+        }),
+    );
+    const currentDocument = documentsByBaseId[currentBaseId]!;
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      registry,
+      readLatestBaseDocuments: async (baseIds) => baseIds.map(
+        (baseId) => documentsByBaseId[baseId]!,
+      ),
+    });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+      const snapshot = readSimulationSnapshot(host)!;
+      expect(Object.keys(snapshot.devices).filter((deviceId) =>
+        deviceId.startsWith("device:warehouse:")
+      )).toEqual([`device:warehouse:${currentBaseId}`]);
+      expect(Object.keys(snapshot.devices)).not.toContain(
+        `device:dense-base:${encodeURIComponent(backgroundBaseId)}:unloader`,
+      );
+      expect(host.topology.getSnapshot()?.ordering.deviceOrder.some((deviceId) =>
+        deviceId.includes("dense-base:")
+      )).toBe(false);
+
+      await host.actions.patchRuntimeSlot({
+        entityId: `dense-base:${encodeURIComponent(backgroundBaseId)}:unloader`,
+        storageGroupId: "unloader_buffer",
+        slotId: "slot_1",
+        itemType: "item_copper_ore",
+        count: 7,
+        ignoreStock: false,
+      });
+      expect(host.queries.getDeviceRuntimeStatus("unloader")?.slotItems).toContainEqual(
+        expect.objectContaining({
+          storageGroupId: "unloader_buffer",
+          slotId: "slot_1",
+          itemType: "item_copper_ore",
+          count: 1,
+        }),
+      );
+      const backgroundSlot = Object.entries(readSimulationSnapshot(host)!.slots).find(
+        ([slotId]) => slotId.includes(
+          `dense-base:${encodeURIComponent(backgroundBaseId)}:unloader`,
+        ),
+      )?.[1];
+      expect(backgroundSlot).toBeUndefined();
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("aggregates regional power in the single Dense kernel while projecting only the current base", async () => {
+    const registry = createRegistryContract();
+    const currentBaseId = "wuling_protocol_core";
+    const backgroundBaseId = registry.baseDefinitions.find(
+      (definition) => definition.tag === "武陵" && definition.id !== currentBaseId,
+    )!.id;
+    const documentsByBaseId = Object.fromEntries(
+      registry.baseDefinitions
+        .filter((definition) => definition.tag === "武陵")
+        .map((definition) => {
+          const document = definition.id === currentBaseId || definition.id === backgroundBaseId
+            ? createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile(
+                "src/tests/fixtures/blueprints/simulation/power-system/index.json",
+                "scene-01",
+                {
+                  initialInputCount: 1,
+                  name: "powered-grinder",
+                  powerX: 4,
+                },
+              ))
+            : createWorldDocument({ baseId: definition.id });
+          document.baseId = definition.id;
+          document.documentKey = `dense-regional-power-${definition.id}`;
+          return [definition.id, document];
+        }),
+    );
+    const workspace = createDenseTestWorkspace({
+      currentDocument: documentsByBaseId[currentBaseId]!,
+      registry,
+      readLatestBaseDocuments: async (baseIds) => baseIds.map(
+        (baseId) => documentsByBaseId[baseId]!,
+      ),
+    });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+
+      const currentBaseDemand = host.topology.getSnapshot()?.totalPowerDemand ?? 0;
+      expect(currentBaseDemand).toBeGreaterThan(0);
+      expect(readSimulationSnapshot(host)?.totalPowerDemand).toBeGreaterThan(
+        currentBaseDemand,
+      );
+      expect(host.queries.getDeviceRuntimeStatus(
+        `dense-base:${encodeURIComponent(backgroundBaseId)}:grinder`,
+      )).toBeNull();
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("fills and seeks the regional timeline from the same Dense checkpoint buffer", async () => {
+    const registry = createRegistryContract();
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const workspace = createDenseTestWorkspace({
+      currentDocument,
+      registry,
+      readLatestBaseDocuments: async (baseIds) =>
+        baseIds.map((baseId) => createWorldDocument({ baseId })),
+    });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+      await host.actions.enableTimeline();
+
+      expect(host.state.timeline.readiness).toBe("ready");
+      expect(host.queries.getPerformanceDiagnostics().timelineRetainedFrameCount)
+        .toBeGreaterThan(1);
+      expect(await host.actions.seekTimelineToTick(600)).toBe(true);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(
+        DENSE_TIMELINE_ORIGIN_STANDARD_TICK
+          + 600 * DENSE_TIMELINE_STEP_STANDARD_TICKS,
+      );
+    } finally {
+      host.dispose();
+    }
+  });
+
   it("starts dense regional simulation after excluding unknown entities from a background base", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_tianwangping_aid" });

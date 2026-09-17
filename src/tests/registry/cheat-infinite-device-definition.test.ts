@@ -52,14 +52,10 @@ describe("cheat infinite device definitions", () => {
         powerDemand: 0,
       });
 
-      expect(definition!.portGroups).toHaveLength(2);
+      expect(definition!.portGroups).toHaveLength(5);
       for (const portGroup of definition!.portGroups) {
         expect(portGroup.kind).toBe(deviceCase.domain);
         expect(portGroup.isPipe).toBe(deviceCase.isPipe);
-        expect(portGroup.ports).toHaveLength(4);
-        expect(new Set(portGroup.ports.map((port) => port.edge))).toEqual(
-          new Set(["NORTH", "EAST", "SOUTH", "WEST"]),
-        );
         for (const port of portGroup.ports) {
           expect(port).toMatchObject({
             localCellX: 0,
@@ -71,6 +67,26 @@ describe("cheat infinite device definitions", () => {
           });
         }
       }
+      expect(definition!.portGroups.map((portGroup) => ({
+        id: portGroup.id,
+        direction: portGroup.direction,
+        ports: portGroup.ports.map((port) => ({ id: port.id, edge: port.edge })),
+      }))).toEqual([
+        { id: "infinite_input", direction: "input", ports: [{ id: "in_n", edge: "NORTH" }] },
+        { id: "infinite_input_e", direction: "input", ports: [{ id: "in_e", edge: "EAST" }] },
+        { id: "infinite_input_s", direction: "input", ports: [{ id: "in_s", edge: "SOUTH" }] },
+        { id: "infinite_input_w", direction: "input", ports: [{ id: "in_w", edge: "WEST" }] },
+        {
+          id: "infinite_output",
+          direction: "output",
+          ports: [
+            { id: "out_n", edge: "NORTH" },
+            { id: "out_e", edge: "EAST" },
+            { id: "out_s", edge: "SOUTH" },
+            { id: "out_w", edge: "WEST" },
+          ],
+        },
+      ]);
 
       expect(definition!.storageSlotGroups).toEqual([
         expect.objectContaining({
@@ -92,6 +108,16 @@ describe("cheat infinite device definitions", () => {
             ignoreStock: true,
           })],
         }),
+        ...["destroy_buffer_e", "destroy_buffer_s", "destroy_buffer_w"].map((id) =>
+          expect.objectContaining({
+            id,
+            kind: deviceCase.domain,
+            slots: [expect.objectContaining({
+              capacity: 500,
+              itemFilterType: deviceCase.domain,
+            })],
+          }),
+        ),
       ]);
       expect(definition!.portStorageBindings).toEqual([
         {
@@ -100,12 +126,35 @@ describe("cheat infinite device definitions", () => {
           storageSlotGroupId: "destroy_buffer",
         },
         {
+          id: "bind_infinite_input_e",
+          portGroupId: "infinite_input_e",
+          storageSlotGroupId: "destroy_buffer_e",
+        },
+        {
+          id: "bind_infinite_input_s",
+          portGroupId: "infinite_input_s",
+          storageSlotGroupId: "destroy_buffer_s",
+        },
+        {
+          id: "bind_infinite_input_w",
+          portGroupId: "infinite_input_w",
+          storageSlotGroupId: "destroy_buffer_w",
+        },
+        {
           id: "bind_infinite_output",
           portGroupId: "infinite_output",
           storageSlotGroupId: "infinite_output_buffer",
         },
       ]);
-      expect(definition!.recipeChannels).toHaveLength(4);
+      expect(definition!.recipeChannels.map((channel) => ({
+        id: channel.id,
+        ingredientStorageGroupIds: channel.ingredientStorageGroupIds,
+      }))).toEqual([
+        { id: "void_1", ingredientStorageGroupIds: ["destroy_buffer"] },
+        { id: "void_2", ingredientStorageGroupIds: ["destroy_buffer_e"] },
+        { id: "void_3", ingredientStorageGroupIds: ["destroy_buffer_s"] },
+        { id: "void_4", ingredientStorageGroupIds: ["destroy_buffer_w"] },
+      ]);
       expect(definition!.recipeChannelBehavior).toEqual({
         allowDuplicateRecipesAcrossChannels: true,
       });
@@ -116,7 +165,12 @@ describe("cheat infinite device definitions", () => {
         },
         {
           type: INSPECTOR_TYPE.slotConfig,
-          slotGroupIds: ["destroy_buffer"],
+          slotGroupIds: [
+            "destroy_buffer",
+            "destroy_buffer_e",
+            "destroy_buffer_s",
+            "destroy_buffer_w",
+          ],
         },
       ]));
 

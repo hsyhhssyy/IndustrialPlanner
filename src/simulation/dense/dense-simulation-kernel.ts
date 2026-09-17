@@ -857,8 +857,9 @@ export class DenseSimulationKernel {
    * 单基地模式在与区域仓库一致的 10 秒边界提交有限地区资源。
    * 余量以六分之一物品为单位保存，避免浮点累计误差。
    */
+  // AI-CORRECTION 2026-09-17: 单 kernel 区域模式与单基地模式共用本地资源供给；仅旧多 Worker Epoch 会话跳过此路径。
   private applySingleBaseRegionalResourceSupply(): void {
-    if (this.topology.simulationMode !== "single-base") {
+    if (this.regionalOptions !== null) {
       return;
     }
     const finiteRates = this.topology.regionalResourceSupply
@@ -2923,9 +2924,19 @@ function assertDenseKernelTopologySupported(
   topology: CompiledSimulationTopology,
   regionalOptions: DenseRegionalKernelOptions | undefined,
 ): void {
-  if (topology.simulationMode === "regional-multi-base" && regionalOptions === undefined) {
-    throw new Error("Dense regional topology requires an explicit regional runtime configuration.");
-  }
+  // AI-REMOVED 2026-09-17:
+  // Reason: Dense 区域模式已合并为单拓扑、单 kernel、单共享仓库，不再强制启用 Epoch 仓库协议。
+  // Trigger: 用户要求多基地在同一 Worker 的一张大图中运行，并直接共享同一仓库。
+  // Evidence: createDenseRegionalDocument 将所有基地编译进同一拓扑，普通 Dense 仓库槽即区域唯一仓库。
+  // Replacement: src/simulation/dense/dense-regional-document.ts
+  // Risk: Low；旧 DenseRegionalSimulationSession 仍可显式传 regionalOptions 运行，但 Host 不再使用。
+  // AI-CORRECTION 2026-09-17: DenseRegionalSimulationSession 已在本次收敛中归档；regionalOptions 暂仅由历史算法回归测试直接使用，不再接入 Worker 协议。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (topology.simulationMode === "regional-multi-base" && regionalOptions === undefined) {
+  //   throw new Error("Dense regional topology requires an explicit regional runtime configuration.");
+  // }
   if (topology.simulationMode === "single-base" && regionalOptions !== undefined) {
     throw new Error("Dense single-base topology cannot use a regional runtime configuration.");
   }

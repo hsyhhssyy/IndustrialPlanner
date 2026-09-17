@@ -7,7 +7,6 @@ import { ActiveTimeWatchdog } from "@/shared/worker/active-time-watchdog";
 import { createLogger } from "@/shared/logging/logger";
 
 import type { CompiledSimulationTopology, SimulationTopologyMigration } from "../contracts";
-import type { RegionalWarehouseOutletTable } from "../regional";
 import { collectDenseFrameTransferables } from "./dense-frame-delta";
 import { DENSE_SIMULATION_PROTOCOL_VERSION } from "./dense-topology";
 import { DenseWorkerRuntime } from "./dense-worker-runtime";
@@ -36,13 +35,8 @@ export interface DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly presentationDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
-    readonly regional?: {
-      readonly baseId: string;
-      readonly table: RegionalWarehouseOutletTable;
-      readonly initialWarehouseCounts: Readonly<Record<string, number>>;
-      readonly captureIntermediateFrames: boolean;
-    };
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>>;
   sendCommands(
     commands: readonly DenseWorkerCommand[],
@@ -56,17 +50,9 @@ export interface DenseEngineBridge {
   requestPresentationCheckpoint(
     tickNumber: number,
   ): Promise<Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }>>;
-  prepareRegionalEpoch(
-    epochNumber: number,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>>;
-  applyRegionalGrant(
-    epochNumber: number,
-    grantedOutletIds: readonly string[],
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>>;
-  finalizeRegionalEpoch(
-    epochNumber: number,
-    nextWarehouseCounts: Readonly<Record<string, number>>,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>>;
+  ensureBufferedThrough(
+    tickNumber: number,
+  ): Promise<Extract<DenseWorkerResponse, { readonly type: "buffer-ready" }>>;
   dispose(): void;
 }
 
@@ -95,13 +81,8 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly presentationDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
-    readonly regional?: {
-      readonly baseId: string;
-      readonly table: RegionalWarehouseOutletTable;
-      readonly initialWarehouseCounts: Readonly<Record<string, number>>;
-      readonly captureIntermediateFrames: boolean;
-    };
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>> {
     this.identity = options.identity;
     this.nextSequence = 1;
@@ -113,8 +94,10 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
       debugDataEnabled: options.debugDataEnabled,
       powerMode: options.powerMode,
       powerConsumptionOverride: options.powerConsumptionOverride,
+      ...(options.presentationDeviceIds === undefined
+        ? {}
+        : { presentationDeviceIds: options.presentationDeviceIds }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
-      ...(options.regional === undefined ? {} : { regional: options.regional }),
     }), "topology-ready"));
   }
 
@@ -159,38 +142,14 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
     }), "presentation-checkpoint"));
   }
 
-  public prepareRegionalEpoch(
-    epochNumber: number,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>> {
+  public ensureBufferedThrough(
+    tickNumber: number,
+  ): Promise<Extract<DenseWorkerResponse, { readonly type: "buffer-ready" }>> {
     return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
       ...this.createIdentity(),
-      type: "prepare-regional-epoch",
-      epochNumber,
-    }), "regional-epoch-prepared"));
-  }
-
-  public applyRegionalGrant(
-    epochNumber: number,
-    grantedOutletIds: readonly string[],
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>> {
-    return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
-      ...this.createIdentity(),
-      type: "apply-regional-grant",
-      epochNumber,
-      grantedOutletIds,
-    }), "regional-grant-applied"));
-  }
-
-  public finalizeRegionalEpoch(
-    epochNumber: number,
-    nextWarehouseCounts: Readonly<Record<string, number>>,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>> {
-    return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
-      ...this.createIdentity(),
-      type: "finalize-regional-epoch",
-      epochNumber,
-      nextWarehouseCounts,
-    }), "regional-epoch-finalized"));
+      type: "ensure-buffered-through",
+      tickNumber,
+    }), "buffer-ready"));
   }
 
   public dispose(): void {
@@ -267,13 +226,8 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     readonly debugDataEnabled: boolean;
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
+    readonly presentationDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
-    readonly regional?: {
-      readonly baseId: string;
-      readonly table: RegionalWarehouseOutletTable;
-      readonly initialWarehouseCounts: Readonly<Record<string, number>>;
-      readonly captureIntermediateFrames: boolean;
-    };
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>> {
     this.rejectAll(new Error("Dense simulation session was replaced by a newer topology."));
     this.identity = options.identity;
@@ -286,8 +240,10 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
       debugDataEnabled: options.debugDataEnabled,
       powerMode: options.powerMode,
       powerConsumptionOverride: options.powerConsumptionOverride,
+      ...(options.presentationDeviceIds === undefined
+        ? {}
+        : { presentationDeviceIds: options.presentationDeviceIds }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
-      ...(options.regional === undefined ? {} : { regional: options.regional }),
     }, "topology-ready");
   }
 
@@ -329,38 +285,14 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     }, "presentation-checkpoint");
   }
 
-  public prepareRegionalEpoch(
-    epochNumber: number,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>> {
+  public ensureBufferedThrough(
+    tickNumber: number,
+  ): Promise<Extract<DenseWorkerResponse, { readonly type: "buffer-ready" }>> {
     return this.request({
       ...this.createIdentity(),
-      type: "prepare-regional-epoch",
-      epochNumber,
-    }, "regional-epoch-prepared");
-  }
-
-  public applyRegionalGrant(
-    epochNumber: number,
-    grantedOutletIds: readonly string[],
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>> {
-    return this.request({
-      ...this.createIdentity(),
-      type: "apply-regional-grant",
-      epochNumber,
-      grantedOutletIds,
-    }, "regional-grant-applied");
-  }
-
-  public finalizeRegionalEpoch(
-    epochNumber: number,
-    nextWarehouseCounts: Readonly<Record<string, number>>,
-  ): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>> {
-    return this.request({
-      ...this.createIdentity(),
-      type: "finalize-regional-epoch",
-      epochNumber,
-      nextWarehouseCounts,
-    }, "regional-epoch-finalized");
+      type: "ensure-buffered-through",
+      tickNumber,
+    }, "buffer-ready");
   }
 
   public dispose(): void {
@@ -496,14 +428,23 @@ export function releaseDenseResponseBuffers(response: DenseWorkerResponse): Arra
   if (response.type === "frame-delta" || response.type === "presentation-checkpoint") {
     return [...collectDenseFrameTransferables(response.delta)];
   }
-  if (response.type === "regional-epoch-prepared") {
-    return response.intermediateDeltas.flatMap((delta) => [
-      ...collectDenseFrameTransferables(delta),
-    ]);
-  }
-  if (response.type === "regional-epoch-finalized") {
-    return [...collectDenseFrameTransferables(response.delta)];
-  }
+  // AI-REMOVED 2026-09-17:
+  // Reason: Dense 不再产生区域 Epoch 响应及其中间帧缓冲。
+  // Trigger: 区域模式已使用普通 frame-delta / presentation-checkpoint。
+  // Evidence: DenseWorkerResponse 已移除 regional-epoch-* variants。
+  // Replacement: 上方统一帧响应分支。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (response.type === "regional-epoch-prepared") {
+  //   return response.intermediateDeltas.flatMap((delta) => [
+  //     ...collectDenseFrameTransferables(delta),
+  //   ]);
+  // }
+  // if (response.type === "regional-epoch-finalized") {
+  //   return [...collectDenseFrameTransferables(response.delta)];
+  // }
   return [];
 }
 
@@ -512,3 +453,107 @@ function createDenseProtocolError(
 ): Error {
   return new Error(`Dense simulation protocol ${response.code}: ${response.message}`);
 }
+
+/*
+ * AI-REMOVED 2026-09-17:
+ * Reason: DenseEngineBridge 不再暴露多 Worker 区域仓库 Epoch RPC，也不再接受区域仓库初始化配置。
+ * Trigger: 用户要求 Dense 多基地使用一份复合拓扑、一个 Worker 和一个共享仓库。
+ * Evidence: DenseSimulationController 只调用 initialize/advance/checkpoint/buffer/command；DenseWorkerRequest 已移除旧消息。
+ * Replacement: initialize(topology + presentationDeviceIds), advanceToTick, ensureBufferedThrough
+ * Risk: Low；Legacy Bridge 仍保留独立区域协议。
+ * Human Review: Required
+ *
+ * Original code:
+import type { RegionalWarehouseOutletTable } from "../regional";
+
+readonly regional?: {
+  readonly baseId: string;
+  readonly table: RegionalWarehouseOutletTable;
+  readonly initialWarehouseCounts: Readonly<Record<string, number>>;
+  readonly captureIntermediateFrames: boolean;
+};
+
+prepareRegionalEpoch(
+  epochNumber: number,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>>;
+applyRegionalGrant(
+  epochNumber: number,
+  grantedOutletIds: readonly string[],
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>>;
+finalizeRegionalEpoch(
+  epochNumber: number,
+  nextWarehouseCounts: Readonly<Record<string, number>>,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>>;
+
+...(options.regional === undefined ? {} : { regional: options.regional }),
+
+// LocalDenseEngineBridge:
+public prepareRegionalEpoch(
+  epochNumber: number,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>> {
+  return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
+    ...this.createIdentity(),
+    type: "prepare-regional-epoch",
+    epochNumber,
+  }), "regional-epoch-prepared"));
+}
+
+public applyRegionalGrant(
+  epochNumber: number,
+  grantedOutletIds: readonly string[],
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>> {
+  return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
+    ...this.createIdentity(),
+    type: "apply-regional-grant",
+    epochNumber,
+    grantedOutletIds,
+  }), "regional-grant-applied"));
+}
+
+public finalizeRegionalEpoch(
+  epochNumber: number,
+  nextWarehouseCounts: Readonly<Record<string, number>>,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>> {
+  return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
+    ...this.createIdentity(),
+    type: "finalize-regional-epoch",
+    epochNumber,
+    nextWarehouseCounts,
+  }), "regional-epoch-finalized"));
+}
+
+// BrowserDenseEngineBridge:
+public prepareRegionalEpoch(
+  epochNumber: number,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-prepared" }>> {
+  return this.request({
+    ...this.createIdentity(),
+    type: "prepare-regional-epoch",
+    epochNumber,
+  }, "regional-epoch-prepared");
+}
+
+public applyRegionalGrant(
+  epochNumber: number,
+  grantedOutletIds: readonly string[],
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-grant-applied" }>> {
+  return this.request({
+    ...this.createIdentity(),
+    type: "apply-regional-grant",
+    epochNumber,
+    grantedOutletIds,
+  }, "regional-grant-applied");
+}
+
+public finalizeRegionalEpoch(
+  epochNumber: number,
+  nextWarehouseCounts: Readonly<Record<string, number>>,
+): Promise<Extract<DenseWorkerResponse, { readonly type: "regional-epoch-finalized" }>> {
+  return this.request({
+    ...this.createIdentity(),
+    type: "finalize-regional-epoch",
+    epochNumber,
+    nextWarehouseCounts,
+  }, "regional-epoch-finalized");
+}
+ */
