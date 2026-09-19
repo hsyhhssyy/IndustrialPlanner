@@ -25,10 +25,11 @@ interface ImportedBuilding {
   spriteId: string;
   sourcePath: string;
   package: string;
+  packageSha256: string;
   animated: boolean;
   spriteOffset: { x: number; y: number; width: number; height: number };
   sourceMetadata: {
-    sourceSite: { root: string; indexSha256: string; releaseId: string };
+    sourceSite: { siteUrl: string; indexSha256: string; releaseId: string };
     spatial: {
       canvasCells: { width: number; height: number };
       footprintRectCells: { left: number; top: number; width: number; height: number };
@@ -43,7 +44,7 @@ interface ImportedBuilding {
 }
 
 const collection = JSON.parse(await readFile(path.resolve("resources/building-top-view-v15.json"), "utf8")) as {
-  sourceSite: { root: string; indexSha256: string; releaseId: string };
+  sourceSite: { siteUrl: string; indexSha256: string; releaseId: string };
   sourceCoordinateTransform: unknown;
   entries: ImportedBuilding[];
 };
@@ -119,8 +120,8 @@ describe("v1.5 建筑素材发布", () => {
     }
     if (!entry.animated) {
       expect(entity?.spriteAnimation).toBeUndefined();
-      const source = await readFile(path.resolve(entry.sourceMetadata.sourceSite.root, entry.package));
-      expect(source.length).toBeGreaterThan(0);
+      expect(entry.package).toMatch(/^buildings\/.+\/package\.json$/);
+      expect(entry.packageSha256).toMatch(/^[0-9a-f]{64}$/);
       return;
     }
     const directory = path.resolve(`public/3d-top-view/animations/${entry.spriteId}`);

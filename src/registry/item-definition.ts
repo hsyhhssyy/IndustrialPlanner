@@ -5,8 +5,20 @@ import {
 } from "@/shared/registry/activity-availability";
 
 /** fluidColors 原值来自固定美术原件，并由 Registry 配色对账测试逐项校验。 */
-export const ITEM_FLUID_COLOR_SOURCE_PATH =
-  "resources/building-assets-site/v1.5-20260917-100609-cst/buildings/logistics/fluid-profiles.json";
+// AI-CORRECTION 2026-09-19: 网站原件不再进入仓库；来源字段记录上游 URL，逐项对账在临时导入批次内完成。
+export const ITEM_FLUID_COLOR_SOURCE_URL =
+  "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/buildings/logistics/fluid-profiles.json";
+// AI-REMOVED 2026-09-19:
+// Reason: 网站原件不再保存在 resources，旧常量会指向必然不存在的本地文件。
+// Trigger: 用户要求展开素材只存在于 .temp/.trash 导入批次。
+// Evidence: Registry 运行时只消费下方 fluidColors；导入器在应用前已对网站配色逐项验收。
+// Replacement: ITEM_FLUID_COLOR_SOURCE_URL。
+// Risk: 常规测试不再离线复核上游原始配色字节；该检查移至导入批次。
+// Human Review: Required
+//
+// Original code:
+// export const ITEM_FLUID_COLOR_SOURCE_PATH =
+//   "resources/building-assets-site/v1.5-20260917-100609-cst/buildings/logistics/fluid-profiles.json";
 
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {

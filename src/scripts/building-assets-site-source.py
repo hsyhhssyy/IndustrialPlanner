@@ -101,6 +101,7 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
         return data
 
     # 原始素材按摘要复用；缓存命中仍重新验证实际字节，不信任文件名或 mtime。
+    # AI-CORRECTION 2026-09-19: 仓库不再保存网站原件，下载批次不得依赖 resources 中的历史素材缓存。
     originals = {}
     manifest = json.loads(download("assets-manifest.json"))
     release = json.loads(download("release.json"))
@@ -176,12 +177,21 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
         if f"buildings/{view}/package.json" not in names:
             raise ValueError(f"Mapped view missing: {view}")
     required_hashes = {indexed[name]["sha256"] for name in names}
-    for folder in ["device-sprite-animation", "device-sprite-original", "building-port-effects", "logistics-materials"]:
-        for file in (Path("resources") / folder).rglob("*"):
-            if file.is_file() and file.suffix in (".webp", ".json"):
-                file_hash = digest(file.read_bytes())
-                if file_hash in required_hashes:
-                    originals[file_hash] = file
+    # AI-REMOVED 2026-09-19:
+    # Reason: 网站原件只允许存在于本次 .temp/.trash 批次，仓库内不再维护展开素材或跨批次缓存。
+    # Trigger: 用户要求移除本地展开素材，降低 Git 体积与变更压力。
+    # Evidence: prepare_source 已按网站完整性索引下载并逐文件校验；项目运行时只消费 public 发布产物。
+    # Replacement: 上方批次内 originals 缓存；首次命中前直接从固定网站发布下载。
+    # Risk: 网站不可用时无法重发历史版本。
+    # Human Review: Required
+    #
+    # Original code:
+    # for folder in ["device-sprite-animation", "device-sprite-original", "building-port-effects", "logistics-materials"]:
+    #     for file in (Path("resources") / folder).rglob("*"):
+    #         if file.is_file() and file.suffix in (".webp", ".json"):
+    #             file_hash = digest(file.read_bytes())
+    #             if file_hash in required_hashes:
+    #                 originals[file_hash] = file
     print(f"Pinned {index['releaseId']}: {len(entries)} mappings, {len(views)} views, {len(names)} files, {len(originals)} cached hashes", flush=True)
     completed = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -336,7 +346,7 @@ def delivery_is_animated(package, phase_static_flags):
 
 
 def prepare_metadata(batch):
-    """无损保留网站 JSON 的大整数；将网站页面与已确认动画阶段关联到同批原件。"""
+    """无损读取网站 JSON 的大整数；将网站页面与已确认动画阶段关联到临时批次原件。"""
     batch = Path(batch).resolve()
     receipt = json.loads((batch / "source-receipt.json").read_text())
     release = validate_path(receipt["releaseId"])
@@ -346,8 +356,8 @@ def prepare_metadata(batch):
     if (stage / "public").exists():
         raise ValueError("Published stage already exists; metadata cannot be changed after publishing")
     source = batch / "site"
-    canonical = f"resources/building-assets-site/{release}"
-    root = stage / canonical
+    source_root = "site"
+    root = batch / source_root
     index_bytes = (source / "integrity.json").read_bytes()
     if digest(index_bytes) != receipt["indexSha256"]:
         raise ValueError("Staged root index differs from pinned receipt")
@@ -355,26 +365,36 @@ def prepare_metadata(batch):
     for entry in receipt["files"]:
         name = validate_path(entry["path"])
         verify((source / name).read_bytes(), indexed[name])
-    for name in [e["path"] for e in receipt["files"]] + ["integrity.json", "integrity.json.sha256"]:
-        target = root / name
-        original = source / name
-        if target.exists():
-            if digest(target.read_bytes()) != digest(original.read_bytes()):
-                raise ValueError(f"Previously staged original changed: {name}")
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(original, target)
+    # AI-REMOVED 2026-09-19:
+    # Reason: 同一批网站原件不再复制到 stage/resources，避免暂存重复并阻止 apply 将展开素材写入仓库。
+    # Trigger: 用户要求网站素材包只存在于 .temp/.trash。
+    # Evidence: source 指向 batch/site，下载阶段已经完成逐文件大小与 SHA-256 校验。
+    # Replacement: root 直接指向 batch/site；发布器通过 import-plan.sourceRoot 显式读取。
+    # Risk: 批次目录清理后不能离线重发。
+    # Human Review: Required
+    #
+    # Original code:
+    # canonical = f"resources/building-assets-site/{release}"
+    # root = stage / canonical
+    # for name in [e["path"] for e in receipt["files"]] + ["integrity.json", "integrity.json.sha256"]:
+    #     target = root / name
+    #     original = source / name
+    #     if target.exists():
+    #         if digest(target.read_bytes()) != digest(original.read_bytes()):
+    #             raise ValueError(f"Previously staged original changed: {name}")
+    #     else:
+    #         target.parent.mkdir(parents=True, exist_ok=True)
+    #         shutil.copyfile(original, target)
     mapping_file = Path("resources/building-top-view-v15.json")
     mapping = json.loads(mapping_file.read_text())
-    history = root / "_import"
+    history = batch / "history"
     history.mkdir(exist_ok=True)
-    previous_mapping = Path(canonical) / "_import/previous-mapping.json"
     receipt_history_suffix = ""
     if receipt.get("scope") == "entities":
         selection_hash = digest("|".join(sorted(e["entityId"] for e in receipt["entries"])).encode())[:16]
         receipt_history_suffix = f".entities-{selection_hash}"
     shutil.copyfile(
-        previous_mapping if previous_mapping.exists() else mapping_file,
+        mapping_file,
         history / f"previous-mapping{receipt_history_suffix}.json",
     )
     shutil.copyfile(
@@ -382,7 +402,6 @@ def prepare_metadata(batch):
         history / f"source-receipt{receipt_history_suffix}.json",
     )
     provenance = {k: receipt[k] for k in ("siteUrl", "releaseId", "sourceVersion", "indexSha256")}
-    provenance["root"] = canonical
     mapping["historicalSource"] = {**mapping.get("historicalSource", {}), **{k: mapping.pop(k) for k in ("sourceArchive", "sourceArchiveSha256", "incrementalFixes", "orientationConflicts", "validationStatus") if k in mapping}}
     mapping["sourceSite"] = provenance
     selected = {e["entityId"] for e in receipt["entries"]}
@@ -466,14 +485,13 @@ def prepare_metadata(batch):
                         "pageColumns": min(previous.get("pageColumns", 5), 4095 // width),
                         "sources": delivery["sources"], "clips": delivery["clips"], "frameTransform": "flip-top-bottom", "coordinateTransform": "projectY = depth - 1 - sourceZ",
                         "playback": delivery["playback"], "clipSelection": delivery["clipSelection"],
-                        "sourceSite": {**provenance, "relativeRoot": f"../../building-assets-site/{release}"}}
+                        "sourceSite": provenance}
             output = stage / "resources/device-sprite-animation" / entry["spriteId"] / "manifest.json"
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
-            previous_animation = Path(canonical) / "_import" / f"{entry['spriteId']}-previous-animation.json"
-            history_source = previous_animation if previous_animation.exists() else previous_path
-            if history_source.exists():
-                shutil.copyfile(history_source, history / previous_animation.name)
+            previous_animation = history / f"{entry['spriteId']}-previous-animation.json"
+            if previous_path.exists():
+                shutil.copyfile(previous_path, previous_animation)
             animations.append(entry["spriteId"])
         else:
             phase = next((p for p in ("static", "bind_pose", "close_idle") if p in source_phases), None)
@@ -493,12 +511,13 @@ def prepare_metadata(batch):
                           "spatial": f"{directory}/{component['spatial']}", "occlusion": f"{directory}/{component['occlusion']}", "ports": None, "effects": None})
     target_mapping = stage / "resources/building-top-view-v15.json"
     if receipt.get("scope") != "logistics":
+        target_mapping.parent.mkdir(parents=True, exist_ok=True)
         target_mapping.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + "\n")
     normalized_entries = [{key: entry[key] for key in ("entityId", "spriteId", "sourcePath", "animated")}
                           for entry in mapping["entries"] if entry["entityId"] in selected]
     if len(normalized_entries) != len(receipt["entries"]):
         raise ValueError("Normalized mapping coverage differs from pinned receipt")
-    plan = {"schemaVersion": 1, "sourceSite": provenance, "entries": normalized_entries, "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
+    plan = {"schemaVersion": 1, "sourceSite": provenance, "sourceRoot": source_root, "entries": normalized_entries, "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
     plan["scope"] = receipt.get("scope", "buildings")
     plan["receiptHistorySuffix"] = receipt_history_suffix
     (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")

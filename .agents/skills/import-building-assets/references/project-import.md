@@ -7,14 +7,15 @@
 | 能力 | 实现与已取得的证据 |
 | --- | --- |
 | 固定发布、下载及哈希校验 | `building-assets-site-source.py`；真实来源闭包通过，离线 HTTP 夹具覆盖缺文件、字节变化和发布切换 |
-| 原始 JSON 与动画来源转换 | 同一 Python 工具的 `--metadata-only`；保留原始字节与大整数，生成原件引用和阶段清单 |
+| 原始 JSON 与动画来源转换 | 同一 Python 工具的 `--metadata-only`；在临时批次内无损读取大整数，生成来源引用和阶段清单 |
 | 静态图、动画分页、首帧及遮罩 | `publishDeviceSprite`、`publishDeviceSpriteAnimations`；普通图与动画均接受显式比例，半尺寸和四分之一夹具覆盖 |
 | 物流材质、数值纹理及 Registry 配色 | `publish-logistics-baked.mjs`、`sync-registry-fluid-colors.mjs`；颜色逐帧缩放重排，数值场最近邻采样为 gzip RGBA8，独立配色表严格写入暂存 `ItemDefinition.fluidColors` |
 | 高度和裁切特效 | `publish-building-port-effects.mjs`、`building-asset-image.mjs`；已修复补边与缩放顺序，回归覆盖奇数边长及已发布特效逐帧像素 |
 | 来源关联和整批验收 | `import-building-assets.mjs validate`；检查原件、尺寸、页引用、数值字节与 Registry 配色，生成每个产物的来源关联与新增/替换/删除清单 |
 | 整批应用与变更核对 | `import-building-assets.mjs apply`；新增、替换及陈旧物流发布文件删除均进入同一应用计划，应用后按摘要核对正式文件 |
+| 已有映射实体的局部建筑导入 | 下载器 `--entity` 与发布器 `scope=entities`；只发布指定实体，合并并保留未选共享高度/特效，使用带实体集合摘要的独立历史收据 |
 
-当前发布入口支持已有建筑映射的完整集合、`--logistics-only` 物流集合，以及用户明确排除物流的建筑集合。完整集合直接发布烘焙物流；排除物流才执行 `defer-logistics`，将相关原件、材质、sprite/mask 移出本批。仅物流模式合并共享高度 manifest，未选建筑、特效和数值文件按原字节保留。发布收据使用 `retained=true` 区分它们与本轮新产物。下载器 `--entity` 仍仅用于限定来源核查，不能用于正式局部建筑导入，也不能手工拼接绕过范围检查。
+当前发布入口支持已有建筑映射的完整集合、一个或多个 `--entity` 已有映射实体、`--logistics-only` 物流集合，以及用户明确排除物流的建筑集合。完整集合直接发布烘焙物流；排除物流才执行 `defer-logistics`，将相关原件、材质、sprite/mask 移出本批。局部实体与仅物流模式合并共享高度 manifest，未选建筑、特效和数值文件按原字节保留。发布收据使用 `retained=true` 区分它们与本轮新产物；局部实体收据以实体集合摘要作为文件名后缀，不能覆盖完整导入收据。不得手工拼接清单绕过范围检查。
 
 日常执行只运行已有入口，不能修脚本或重新设计协议。Registry 绘图范围不一致时，提交脚本给出的实际差异；需要跨模块修改时遵守项目授权规则。2026-09-13 正式批次已排除物流新交付并应用：1457 个原件、772 个新产物及 10 个保留高度文件。该数字只记录首次网站接入规模，不能充当以后批次的检查结果。
 
@@ -24,7 +25,7 @@
 
 | 能力 | 当前状态与执行边界 |
 | --- | --- |
-| 仅留存配色表原件 | 已留存一批原件，但使用了临时编排；正式下载器只有完整范围与 `--logistics-only`，不存在 `source-only` 命令。日常执行停在范围检查，不能扩大导入范围 |
+| 仅留存配色表原件 | 项目不再接受原件写入仓库；下载结果只能存在于本次 `.temp/.trash` 批次，不能扩大为正式导入 |
 | 本批全部比例的独立像素验收 | 独立像素回归已在 `src/tests/scripts/building-assets-site.test.ts` 和 `src/tests/renderer/building-height-effects.test.ts`；后者读取正式目录及当前来源配置。`validate` 仍为结构、尺寸、引用和编码校验，尚无接受本批暂存目录及全部比例的独立像素入口 |
 | 可重复的真实浏览器场景 | 2026-09-14 曾完成三档验收，但尚无随技能提供的固定场景入口。需要此项而无已验证入口时，报告验证能力缺口，不临时重建历史夹具 |
 | 检查基线自动比较与应用后对账 | 已有收据和 `apply`，尚无统一失败集合比较或应用后对账命令。按 [错题本](lessons-learned.md)核对已知字段，无法完成的项如实报告，不虚构命令 |
@@ -42,7 +43,7 @@
 | 位置 | 职责 |
 | --- | --- |
 | `resources/building-top-view-v15.json` | 已确认的 `entityId / spriteId / sourcePath` 映射、偏移和历史来源 |
-| `src/scripts/building-asset-publish-config.mjs` | 发布比例常量及所有版本的独立输出目录，原版不参与缩放 |
+| `src/scripts/building-asset-publish-config.mjs` | 发布比例常量及所有版本的独立输出目录，临时原件不参与应用 |
 | `src/registry/index.ts` | `createRegistryContract` 公共入口，实体显示及动画能力声明 |
 | `src/scripts/sync-device-sprites.mjs` | `publishDeviceSprite`、`publishDeviceSpriteAnimations` 通用发布函数；CLI 仅保留动画和蓝图遮罩重发 |
 | `src/scripts/device-sprite-animation-publisher.mjs` | 分页、逐帧时间线、变换、静态帧和并集遮罩；单版本调用默认使用比例常量的第一项 |
@@ -55,17 +56,17 @@
 
 上表中的既有发布器负责像素处理；网站统一入口是 `import-building-assets.mjs`。其 CLI 默认路径可能指向已导入的历史来源，不能当作网站导入命令直接运行。需要组织数据时使用已验证的显式输入/输出参数；若接口仍强制依赖旧包总清单，归入首次接入维护，不由日常执行者临时扩展。维护时让处理器消费新清单解析后的视图/资源，不能伪造 ZIP、空 `ports.json` 或旧目录兼容层绕过校验。沿用相同的像素处理函数和测试，不重写已有算法。
 
-## 原版与全部发布版本
+## 临时原件与全部发布版本
 
 `BUILDING_ASSET_PUBLISH_RESOLUTIONS` 是唯一比例配置，以下只是修改配置时的示例，不能作为另一份默认值：
 
 | 配置值 | 同一次导入必须完成的产物 |
 | --- | --- |
-| `[0.5]` | 一份 `resources` 原版和一份 `public` 半尺寸版 |
-| `[0.25]` | 一份 `resources` 原版和一份 `public` 四分之一尺寸版 |
-| `[0.5, 0.25]` | 同一份 `resources` 原版，加两份独立的 `public` 发布版本 |
+| `[0.5]` | 批次内一份原件和一份 `public` 半尺寸版 |
+| `[0.25]` | 批次内一份原件和一份 `public` 四分之一尺寸版 |
+| `[0.5, 0.25]` | 批次内同一份原件，加两份独立的 `public` 发布版本 |
 
-通过 `resolveBuildingAssetPublishTargets(outputRoot)` 取得整个列表，不得只读取第一项作为网站导入范围。第一次以临时发布根目录解析并生成；整批验收后再按相同布局应用到正式根目录 `public/3d-top-view`。第一项直接使用根目录，后续项使用 `variants/resolution-<比例>/`；每个根目录包含各自的 `sprites / sprite-masks / animations / logistics / port-effects` 等对应资产。原件仍只有一份，不为每个比例重复下载，也不从已缩小的发布图生成另一版。
+通过 `resolveBuildingAssetPublishTargets(outputRoot)` 取得整个列表，不得只读取第一项作为网站导入范围。原件只下载到批次 `site/` 一份，各比例直接从该目录生成；整批验收后只把派生产物应用到正式根目录 `public/3d-top-view`。第一项直接使用根目录，后续项使用 `variants/resolution-<比例>/`；每个根目录包含各自的 `sprites / sprite-masks / animations / logistics / port-effects` 等对应资产，不从已缩小的发布图生成另一版。
 
 第一项是当前运行时路径使用的版本；增加其他版本不自动新增设备分档、响应式开关或运行时版本选择器。额外版本的产物和来源必须完整，但应用何时选择它们是另一个需求。
 
@@ -100,7 +101,7 @@ spriteOffset.height = canvasCells.height
 
 ## 动画来源清单
 
-网站原件按索引路径保存在 `resources/building-assets-site/<releaseId>/`，同一视图的多个 spriteId 共用原件。`resources/device-sprite-animation/<spriteId>/manifest.json` 是派生来源清单，通过 `sourceSite.relativeRoot` 与 `sources.*.sourcePath` 引用原件；不再为每个 spriteId 复制一套图片。历史清单保存在本次原件目录的 `_import/` 下，不把 ZIP 来源改写成网站来源。
+网站原件按索引路径只保存在本次批次 `site/`。`resources/device-sprite-animation/<spriteId>/manifest.json` 是小型派生来源清单，只记录 `sourceSite` 版本证明与 `sources.*.sourcePath`；发布器通过批次显式 `sourceAssetRoot` 读取原件，不在仓库内为任何 spriteId 保存图片副本。批次收据和历史对照只用于本次验收，应用后随批次清理。
 
 - [ ] 读取阶段的 `animation.json` 和 `spritesheet.json`，核对 `fps`、单元大小、每页像素尺寸、行列数、`frameStart / frameCount` 和实际文件哈希。
 - [ ] 每页成为一个独立 source。分页的 `frameDurationsMs` 来自 `animation.frames[frameStart:frameStart+frameCount].durationMs`，须数量相同且全部为正值；不能按统一 FPS 抹掉长停留帧。
@@ -129,7 +130,7 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 
 ## 物流交付
 
-当前入口为 `collection.json.bakedManifest` 指向的 `logistics-baked.json`，要求 `schemaVersion=2`、`format=logistics-spritesheet-v2`、`fluidPlayback.kind=baked-spatial-field-v2`。原始分层 contract 2 JSON 仍作为原件留存，运行时不再消费旧动态 manifest。协议变化时停止并报告，不让日常执行者改 Shader。
+当前入口为 `collection.json.bakedManifest` 指向的 `logistics-baked.json`，要求 `schemaVersion=2`、`format=logistics-spritesheet-v2`、`fluidPlayback.kind=baked-spatial-field-v2`。原始分层 contract 2 JSON 只在导入批次中参与校验，运行时不消费也不在仓库留存。协议变化时停止并报告，不让日常执行者改 Shader。
 
 - [ ] 下载闭包包含相位页、`fluid-data` / `gas-field`、所有静态组件、端帽，以及 `heightMetadata` 的空间/遮挡分支。
 - [ ] 颜色帧恢复源逻辑画布后逐帧缩放，保留透明裁切偏移，再加挤出边重排；不能整体缩放旧图集。源中未消费的两张 256 像素 pattern/chevron 原图只归档，相位帧负责显示。
@@ -144,7 +145,7 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 
 ### 配色来源与接入状态
 
-2026-09-14 的确定状态：`v1.5-20260914-122929-cst` 的独立配色表已保存到 `resources/building-assets-site/<releaseId>/buildings/logistics/fluid-profiles.json`，含 20 项（11 液体、9 气体）。该次原件获取收据仍如实记录为 `scope=fluid-profiles / sourceOnly=true / published=false`；这是来源留存批次的历史事实，不因后续业务接入而改写。
+2026-09-14 曾留存 `v1.5-20260914-122929-cst` 的独立配色表，含 20 项（11 液体、9 气体）；2026-09-19 起原件退出工作树，后续导入从网站批次临时读取并在应用前对账。旧 `scope=fluid-profiles / sourceOnly=true / published=false` 只属于历史记录，不再定义当前存储策略。
 
 【用户明确要求】流体颜色的唯一运行时真源是 `ItemDefinition.fluidColors`：液体声明 `body / skin / skin2 / splash`，气体声明 `body / skin`。`liquid` / `gas` tag 继续负责物品域；`liquid_color:`、`gas_color:`、`fluid_color:` 已退出 Active Code。蓝图管道、烘焙管道与气体扩散范围均从 Registry 物品定义取色，未知物品或缺少对应分层时统一回退 `#808080`。
 
@@ -158,13 +159,13 @@ A = 0 表示空，A = 255 表示有效表面，B 必须为 0
 
 ## 应用与验证
 
-来源校验、映射对账和所有比例的派生发布在本轮临时目录完成。原版与任一目标版本缺失、哈希错误或尺寸不符时，整个批次不进入正式目录。应用前列出实际目标文件；目标文件存在未提交修改时停止，避免把用户改动混入素材批次。完成后的历史回退以 Git 提交为准，不长期保存本地恢复副本。应用失败或中断时记录实际 Git diff 并停止，只有获得用户明确授权后才能执行 Git 回退。
+来源校验、映射对账和所有比例的派生发布在本轮临时目录完成。原件与任一目标版本缺失、哈希错误或尺寸不符时，整个批次不进入正式目录。应用计划不得包含网站展开原件；应用前列出实际目标文件，目标文件存在未提交修改时停止，避免把用户改动混入素材批次。完成后的历史回退以 Git 提交为准，不长期保存本地恢复副本。应用失败或中断时记录实际 Git diff 并停止，只有获得用户明确授权后才能执行 Git 回退。
 
 网站来源字段及对应测试在首次接入维护阶段完成；实际导入时按已实现的来源协议填写。旧文件的 ZIP 来源继续如实保留，不能追溯改写成网站来源。项目资源说明中的历史导入数量、旧失败记录或手工确认事项也不能自动当成当前结果。
 
-验证重点：源图原字节保留；静态图和 mask 尺寸一致；动画阶段/页/帧/时长完整；显示范围与 Registry 对齐；高度数值及特效依赖完整；物流形状和状态映射有效。应用内观察四角旋转、动画开关、蓝图样式和物流遮挡，遵循项目三个 Screen Profile 及串行清理要求。
+验证重点：批次内源图原字节通过索引校验且不会进入应用计划；静态图和 mask 尺寸一致；动画阶段/页/帧/时长完整；显示范围与 Registry 对齐；高度数值及特效依赖完整；物流形状和状态映射有效。应用内观察四角旋转、动画开关、蓝图样式和物流遮挡，遵循项目三个 Screen Profile 及串行清理要求。
 
-`resources/building-port-effects/README.md` 属于旧交付原文，`source.json` 仍记录其历史字节摘要。它可用于理解旧资产，不能作为网站入口说明或新的权威来源；不要为了改文案破坏原始来源快照。
+`resources/building-port-effects/README.md` 与 `source.json` 只保留旧交付说明和摘要；旧展开资产已退出仓库，不能作为网站入口或可重发来源。
 
 ## 实跑发现的清单差异
 

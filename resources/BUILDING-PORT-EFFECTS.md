@@ -1,6 +1,6 @@
 # 建筑高度与管道端口特效
 
-当前高度遮挡与端口特效已于 2026-09-13 通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 实际导入。网站原件与普通建筑共享 `building-assets-site/v1.5-20260913-195207-cst/`，不重复复制。
+当前高度遮挡与端口特效已于 2026-09-13 通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 实际导入。2026-09-19 起网站原件只存在于 `.temp/.trash` 导入批次，仓库保留发布产物和来源摘要，不保留展开副本。
 
 本次更新 46 个普通建筑视图、14 个共享特效。按比例常量生成半尺寸颜色页与数值高度图；高度按最近邻保留完整 RGBA 字节，裁切特效逐帧补透明边后缩放、重排。正式清单保留当前未导入的 8 个视图，总计 54 个视图；其中 6 个为暂缓新绘制的物流视图，其余 2 个尚未映射。保留的 10 个高度文件逐字节不变，由发布收据 `retained` 记录。
 
@@ -26,14 +26,7 @@
 
 ## 发布与核验
 
-以下命令用于重发已准备好的本地历史来源，不是网站导入入口。网站导入必须按技能解析当前清单、准备并校验输入，不能直接运行默认命令覆盖来源。
-
-```bash
-node src/scripts/publish-building-port-effects.mjs
-npx tsx --tsconfig tsconfig.app.json src/scripts/audit-building-port-effects.ts
-```
-
-源目录为 `resources/building-port-effects`，发布目录为 `public/3d-top-view/port-effects`。普通建筑采用 `source X → project x`、`source Z → project -y`，高度和特效颜色页无损垂直转换并同步 pivot/center/origin/frame rect；contract2 物流视图保留自身 canonical 画布语义。高度图用 Sharp 解码为原始 RGBA，再 gzip 压缩，以 `.rgba.bin` 发布；没有缩放、插值或有损压缩。运行时用 `DecompressionStream` 解压后直接上传数值纹理，最近邻采样，无 mipmap。
+高度与端口特效只能通过网站导入批次重发；旧 `resources/building-port-effects/assets` 展开来源和默认本地重发入口已退役。发布目录为 `public/3d-top-view/port-effects`。普通建筑采用 `source X → project x`、`source Z → project -y`，高度和特效颜色页无损垂直转换并同步 pivot/center/origin/frame rect；contract2 物流视图保留自身 canonical 画布语义。高度图用 Sharp 解码为原始 RGBA，再 gzip 压缩，以 `.rgba.bin` 发布；没有缩放、插值或有损压缩。运行时用 `DecompressionStream` 解压后直接上传数值纹理，最近邻采样，无 mipmap。
 
 发布器严格读取 `resolvedTransform` 和 `resourceBinding`，不按目视方向、旧图片或自动反转猜测端口。端口变体以交付的 `deliveryVariantKeys` 为基础，并组合映射到同一视图、且源数据实际存在的 Registry `alter-variant`；由此接入 `filling_pd_mc_1_liquid/liquid__0` 与 `shaper_1_gas/gas__0`。11 条无法解析的 `deliveryVariantKeys` 和 2 条 Registry 审计 issue 原样保留。
 

@@ -30,7 +30,7 @@
 - [ ] 根据选定视图的元数据遍历依赖；每个依赖都必须在已固定索引中，下载后同时校验长度与 SHA-256，保留原始字节。不能只下载 WebP 而沿用旧 JSON。
 - [ ] 下载结束后重新获取索引锚点，确认与开头一致；若不同，则当前批次失败。不要自动接收新索引再继续旧下载。
 
-同站锚点用于传输一致性和版本锁定，并不提供独立签名认证。站点路径可被更新，因此本地必须保存来源快照；只记录 URL 或 `releaseId` 不足以重现输入。
+同站锚点用于单次下载的一致性锁定，并不提供独立签名认证。站点路径可被更新；按用户 2026-09-19 确认的存储策略，仓库只记录 URL、`releaseId` 和索引摘要，不保存来源快照，因此批次清理后不保证能重现旧输入。
 
 路径相对“声明该引用的 JSON 文件”解析，而不是全部相对站点根目录。合法的 `../spatial.json` 或共享依赖路径允许规范化，但解析后必须仍位于固定站点根路径、命中索引，且本地路径仍在本轮暂存目录内。拒绝协议切换、外域、查询参数、片段、重复编码逃逸和目录穿越。不能把 `resourceId` 当作 URL。
 
@@ -46,7 +46,7 @@
 
 ## 流体配色表
 
-2026-09-14 已保存的独立表使用 `schemaVersion=1`、`profile=endfield-pipe-fluid-colors-v1`，数据位于 `fluidProfiles`。根字段还包括 `profileCount`、`phaseCounts`、`itemIds` 与来源元数据。烘焙清单的 `fluidProfileMetadata` 指向独立表，`fluidProfileCoverage` 描述覆盖；配色值同时保存在 `logistics-baked.json.fluidProfiles`。未来未知格式按 schema 差异处理，不从网页预览提取颜色。
+2026-09-14 核查过的独立表使用 `schemaVersion=1`、`profile=endfield-pipe-fluid-colors-v1`，数据位于 `fluidProfiles`。根字段还包括 `profileCount`、`phaseCounts`、`itemIds` 与来源元数据。烘焙清单的 `fluidProfileMetadata` 指向独立表，`fluidProfileCoverage` 描述覆盖；配色值同时保存在 `logistics-baked.json.fluidProfiles`。未来未知格式按 schema 差异处理，不从网页预览提取颜色。
 
 下列为统一 `publish-logistics / validate` 已实现的验收契约；任一项失败都必须停止批次：
 
@@ -56,17 +56,17 @@
 - [ ] 液体有 `body / skin / skin2 / splash` 四层，气体有 `body / skin` 两层；各层保留来源 `hex / rgba8 / displayRgba8` 等字段，检查格式、四通道及整数范围 0–255。不能给气体伪造额外原始层，也不能用项目 tag 填补液体缺失层。
 - [ ] 发布范围含配色时，以独立表为输入更新暂存 `src/registry/item-definition.ts` 中既有物品的 `fluidColors`；只替换属性初始化值，不生成 shared/public 配色副本，不回写网站原件。`validate` 再次解析暂存 Registry 并逐项对账。
 
-仅留存请求适用 [当前入口与执行边界](project-import.md#已知能力缺口)；留存完成不代表发布或运行时接入。常见误判见 [原件留存与配色状态](lessons-learned.md#原件留存与配色状态)。
+仅下载、不发布的请求只能保留本次 `.temp/.trash` 批次，不能写入仓库；下载完成不代表运行时接入。
 
-## 来源留存
+## 临时来源与长期证明
 
-正式执行导入时，把本轮实际消费的 JSON/WebP 原件和根/分级索引快照保留在 `resources/building-assets-site/<releaseId>/`，按网站相对路径存放。`resources/device-sprite-animation/` 中的派生清单引用这份原件；已有 `resources/device-sprite-original/`、`resources/building-port-effects/`、`resources/logistics-materials/` 的历史来源不追溯改写，也不为满足旧目录假设复制新原件。来源布局与 [项目接入契约](project-import.md#动画来源清单)一致。
+正式执行导入时，本轮实际消费的 JSON/WebP 原件和根/分级索引只保存在批次 `site/`，按网站相对路径存放。`resources/device-sprite-animation/` 中只应用派生清单；它记录网站路径和摘要，但不要求仓库内存在对应图片。`resources/building-assets-site/` 不得出现在应用计划中，也不为旧目录假设复制原件。
 
-来源记录至少包含：站点根 URL、`releaseId`、`sourceVersion`、根索引原字节 SHA-256、获取时间，以及实际导入文件的远端路径、本地路径、字节数和 SHA-256。每个发布产物另外关联原件哈希、实际发布比例及所在版本目录；正式导入整批保存原版与全部配置版本，不能用一条集合级摘要掩盖版本缺失。按文件和实体记录来源；未选中的文件保留原来源。这种记录粒度不代表 CLI 已支持任意单建筑导入，范围仍依主 checklist。
+批次收据至少包含：站点根 URL、`releaseId`、`sourceVersion`、根索引 SHA-256、获取时间，以及实际导入文件的远端路径、批次路径、字节数和 SHA-256。每个发布产物另外关联实际发布比例与来源摘要；应用后的长期证明只保留在映射、动画/运行时 manifest 和 Registry 来源 URL 中。不能用集合级摘要掩盖版本缺失，但也不得把逐文件原件或收据应用到仓库。
 
 `sourceArchiveSha256` 只表示已经存在的历史 ZIP 来源。不得把网站索引哈希写进它，也不得为网站虚构 ZIP 名称。网站来源记录和发布器的来源透传字段必须在首次接入维护阶段一起完成；日常执行者只按已实现协议填写。本技能创建或维护期间不提前修改既有来源事实。
 
-原始 JSON 可能包含超过 JavaScript 安全整数范围的 `pathId`。原件始终按字节保存；需要重写包含这些字段的派生清单时使用无损整数读取方式（例如 Python 整数），不能用普通 `JSON.parse` 后整对象导出。派生运行时数据只提取需要的字段，原件与派生件的哈希分别记录。
+原始 JSON 可能包含超过 JavaScript 安全整数范围的 `pathId`。批次内原件始终按字节校验；需要重写包含这些字段的派生清单时使用无损整数读取方式（例如 Python 整数），不能用普通 `JSON.parse` 后整对象导出。派生运行时数据只提取需要的字段。
 
 ## 已核查的协议基线
 

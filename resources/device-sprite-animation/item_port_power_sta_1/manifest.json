@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 256,
   "frameHeight": 256,
   "fps": 30,
@@ -8,9 +8,9 @@
   "sources": {
     "close_000": {
       "file": "close_000.webp",
-      "rows": 3,
+      "rows": 4,
       "columns": 16,
-      "frameCount": 48,
+      "frameCount": 52,
       "frameDurationsMs": [
         33,
         34,
@@ -55,53 +55,53 @@
         34,
         33,
         33,
-        100,
         34,
-        66,
+        33,
+        33,
         34,
-        66
+        33,
+        33,
+        34,
+        33,
+        33
       ],
       "sourcePath": "buildings/power_station_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "a995b11477a7ef485635a428c9d85cd4976b7a3194ed6f49a88e0f0808029c56"
-    },
-    "open_000": {
-      "file": "open_000.webp",
-      "rows": 2,
-      "columns": 16,
-      "frameCount": 18,
-      "frameDurationsMs": [
-        33,
-        34,
-        100,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/power_station_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "bd04e7d59cf163d38f8b1f29c23db433d2b1badd5269f06eec7ab49041860cf4"
+      "sha256": "ca0c423be1b9b3988a1d31d78a1e7dd4c04be07f55b6ccbb815fafa40eda61e3"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        67
+        33,
+        34
       ],
       "sourcePath": "buildings/power_station_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "993319bcce863f9ccf6a7573340d17059b43294088aa114de9cb16d5a24c85fd"
+      "sha256": "89ac53062b32a009fec6a7144061598fa9a9497662558d96043ab70bd4bc1b32"
+    },
+    "open_000": {
+      "file": "open_000.webp",
+      "rows": 1,
+      "columns": 13,
+      "frameCount": 13,
+      "frameDurationsMs": [
+        200,
+        33,
+        67,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        67
+      ],
+      "sourcePath": "buildings/power_station_1/top/animations/open/spritesheet_000.webp",
+      "sha256": "93970b370aac99df3b602f70480d56acebb65dc1c76771e383dcacb49ac9cc5f"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -132,15 +132,29 @@
         33
       ],
       "sourcePath": "buildings/power_station_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "4b9d4ad6609dbfe166ef1157c8ebe50fbd0b8845f6fd926f9fcb523517b278ee"
+      "sha256": "119f48697cc59572e30302bd977ea3406dd99cf33504b69d81894b15e86c4777"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 52
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
         "startFrame": 0,
-        "frameCount": 18
+        "frameCount": 13
       }
     ],
     "open_idle": [
@@ -149,31 +163,26 @@
         "startFrame": 0,
         "frameCount": 21
       }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 48
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 1
-      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

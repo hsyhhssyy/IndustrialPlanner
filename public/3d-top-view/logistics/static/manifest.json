@@ -157,9 +157,8 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260914-093844-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "de36ddee4885df2f4ae051dd0d2dd9bc4fb6d446e55091d75395ff83d46f7817",
-    "root": "resources/building-assets-site/v1.5-20260914-093844-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

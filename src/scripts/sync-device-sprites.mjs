@@ -4,6 +4,7 @@
  * 同步设备原始精灵图到运行时资源目录。
  * AI-CORRECTION 2026-09-13: 旧静态导入与文件名映射已移至 archived-building-imports/sync-device-sprites-legacy.mjs 注释存档。
  * 下文旧来源、映射和无选项用法已失效；当前仅保留通用发布函数、--animations 和 --blueprint。
+ * AI-CORRECTION 2026-09-19: 仓库不再保存动画原件，--animations 本地重发入口已停用；动画只能由网站导入批次发布。
  * 网站导入统一使用 .agents/skills/import-building-assets/SKILL.md。
  *
  * 作用：
@@ -227,6 +228,7 @@ export async function publishDeviceSpriteAnimations({
   definitions,
   spriteIds,
   sourceDirectory = defaultAnimationSourceDirectory,
+  sourceAssetRoot,
   spriteDirectory = defaultSpriteDirectory,
   maskDirectory = defaultMaskDirectory,
   animationDirectory = defaultAnimationDirectory,
@@ -238,6 +240,7 @@ export async function publishDeviceSpriteAnimations({
     definitions,
     spriteIds,
     sourceDirectory,
+    sourceAssetRoot,
     spriteDirectory,
     maskDirectory,
     animationDirectory,
@@ -261,14 +264,24 @@ async function main() {
   }
 
   if (process.argv.includes('--animations')) {
-    const [sourceDirectory, spriteDirectory, maskDirectory, animationDirectory] = process.argv.slice(2)
-      .filter((argument) => argument !== '--animations');
-    const results = await publishDeviceSpriteAnimations({ sourceDirectory, spriteDirectory, maskDirectory, animationDirectory });
-    console.log(`Published ${results.length} device animations.`);
-    return;
+    // AI-REMOVED 2026-09-19:
+    // Reason: 仓库不再保存动画 WebP 原件，本地重发会依赖已删除的展开素材。
+    // Trigger: 用户要求网站素材只在 .temp/.trash 导入批次中存在。
+    // Evidence: import-building-assets 显式传入 sourceAssetRoot，并在同批完成下载、校验和发布。
+    // Replacement: .agents/skills/import-building-assets/SKILL.md 网站导入流程。
+    // Risk: 网站不可用时无法重发动画。
+    // Human Review: Required
+    //
+    // Original code:
+    // const [sourceDirectory, spriteDirectory, maskDirectory, animationDirectory] = process.argv.slice(2)
+    //   .filter((argument) => argument !== '--animations');
+    // const results = await publishDeviceSpriteAnimations({ sourceDirectory, spriteDirectory, maskDirectory, animationDirectory });
+    // console.log(`Published ${results.length} device animations.`);
+    // return;
+    throw new Error('动画原件不再保存在仓库；请通过 import-building-assets 技能从网站下载并发布。');
   }
 
-  throw new Error('旧静态素材导入入口已移除；网站导入请使用 import-building-assets 技能。本地重发仅支持 --animations 或 --blueprint。');
+  throw new Error('旧静态素材导入入口已移除；网站导入请使用 import-building-assets 技能。本地仅支持 --blueprint。');
 }
 
 // AI-REMOVED 2026-09-05:

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 768,
   "frameHeight": 512,
   "fps": 30,
@@ -22,7 +22,7 @@
         34,
         33,
         33,
-        334,
+        34,
         33,
         33,
         34,
@@ -54,13 +54,13 @@
         33
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
+      "sha256": "37464855f12239ee77ceefdaf7b5e1c941ee47e83e3a9a04ea505afa15491238"
     },
     "close_001": {
       "file": "close_001.webp",
-      "rows": 7,
+      "rows": 8,
       "columns": 5,
-      "frameCount": 32,
+      "frameCount": 40,
       "frameDurationsMs": [
         34,
         33,
@@ -93,10 +93,29 @@
         33,
         33,
         34,
-        33
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
+      "sha256": "7e00d2fadcb05be70c8e5025aa34266804aa682777cd976c4a2a37eb0df082ad"
+    },
+    "close_002": {
+      "file": "close_002.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_002.webp",
+      "sha256": "efc4d6fb9a5eefd99b2759b8a5ce77f71ed7fd5f1cb665a52b4b083e4e8d95bc"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -108,7 +127,7 @@
         34
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "525b12ebb447a6a596359eb90c39156cc9a5978fffab108e929d9a0345e9d488"
+      "sha256": "63f75182f72832d30ef909ade108f231dc28f76be56693e681a7d08a66bea49e"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -126,7 +145,7 @@
         34,
         33,
         33,
-        334,
+        34,
         33,
         33,
         34,
@@ -158,13 +177,13 @@
         33
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "b329750aae3ec64d3ead96d66377ca5bd5686066c60f86ab83689f78dd38ee6f"
+      "sha256": "3e642130a5e6cc300096e9d816e338433009de7410c83b84ef70403384dc6b29"
     },
     "open_001": {
       "file": "open_001.webp",
-      "rows": 7,
+      "rows": 8,
       "columns": 5,
-      "frameCount": 32,
+      "frameCount": 40,
       "frameDurationsMs": [
         34,
         33,
@@ -197,10 +216,29 @@
         33,
         33,
         34,
-        33
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "f112b34de22f8cde70b2e8ee835bec29d391d88d0de44582cb6d304902c6daa6"
+      "sha256": "ee9efc872e749e88c99a16f899596cb9b30c89c367f5605f60e3563c290bf8e7"
+    },
+    "open_002": {
+      "file": "open_002.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_002.webp",
+      "sha256": "16a6cd1ccaa291cae12f8d9914e1cffd689365908265163114c3ded1c139dace"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -218,7 +256,7 @@
         34,
         33,
         33,
-        334,
+        34,
         33,
         33,
         34,
@@ -250,13 +288,13 @@
         33
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "0bf6cbb7fbb8b5c02cd55f866d93b52300300faed45d2f965b5428fa2028b764"
+      "sha256": "a29383f7767b80a5438985a46e367f7b14505949158657aa7b5e090928d20984"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
-      "rows": 7,
+      "rows": 8,
       "columns": 5,
-      "frameCount": 32,
+      "frameCount": 40,
       "frameDurationsMs": [
         34,
         33,
@@ -289,13 +327,56 @@
         33,
         33,
         34,
-        33
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ],
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "ffb899ca9c2573e92d8ae0606d113e9174d0d3953409b6cea874a01dae881d2b"
+      "sha256": "cba9f226ec72144eeaa4e66bb100e4b17276d7ad5481b0546d7ffe95a2ba56fd"
+    },
+    "open_idle_002": {
+      "file": "open_idle_002.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_002.webp",
+      "sha256": "16a6cd1ccaa291cae12f8d9914e1cffd689365908265163114c3ded1c139dace"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 40
+      },
+      {
+        "source": "close_001",
+        "startFrame": 0,
+        "frameCount": 40
+      },
+      {
+        "source": "close_002",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
@@ -305,7 +386,12 @@
       {
         "source": "open_001",
         "startFrame": 0,
-        "frameCount": 32
+        "frameCount": 40
+      },
+      {
+        "source": "open_002",
+        "startFrame": 0,
+        "frameCount": 1
       }
     ],
     "open_idle": [
@@ -317,38 +403,33 @@
       {
         "source": "open_idle_001",
         "startFrame": 0,
-        "frameCount": 32
-      }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
         "frameCount": 40
       },
       {
-        "source": "close_001",
+        "source": "open_idle_002",
         "startFrame": 0,
-        "frameCount": 32
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 2
+        "frameCount": 1
       }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

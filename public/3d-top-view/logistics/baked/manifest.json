@@ -5,10 +5,9 @@
   "pixelsPerCell": 64,
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260914-093844-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "de36ddee4885df2f4ae051dd0d2dd9bc4fb6d446e55091d75395ff83d46f7817",
-    "root": "resources/building-assets-site/v1.5-20260914-093844-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   },
   "pages": {
     "fluid-data": {
@@ -25,6 +24,13 @@
       "data": true,
       "sha256": "6153528d49a6b3bb58dc9103651a5a1ea3de9c2b52350e4f35d80fcc80bd485e"
     },
+    "static-0": {
+      "file": "static-0-340a878a3fa36c19.webp",
+      "width": 2048,
+      "height": 104,
+      "data": false,
+      "sha256": "340a878a3fa36c1993424c5687aef4e08fd7f327dbb4ceadd03289e1d2676454"
+    },
     "conveyor-0": {
       "file": "conveyor-0-3253b478fc0df47a.webp",
       "width": 2048,
@@ -38,16 +44,1054 @@
       "height": 89,
       "data": false,
       "sha256": "cd5ae00f6613653fe9d5c4a361e19732ad22561a85833d7b222a2dce0552a9ac"
-    },
-    "static-0": {
-      "file": "static-0-4d670c4c9371b9c4.webp",
-      "width": 2045,
-      "height": 100,
-      "data": false,
-      "sha256": "4d670c4c9371b9c44fc2fab729c2570fe5d928ecf59850bdd4907dc1ba5ef848"
     }
   },
   "frames": {
+    "static/pipe.endpoint.whitening-small": {
+      "page": "static-0",
+      "rect": [
+        2,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/pipe.endpoint.whitening-standard": {
+      "page": "static-0",
+      "rect": [
+        70,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.left.base": {
+      "page": "static-0",
+      "rect": [
+        138,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.left.edge-glow": {
+      "page": "static-0",
+      "rect": [
+        206,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.left.static": {
+      "page": "static-0",
+      "rect": [
+        274,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.right.base": {
+      "page": "static-0",
+      "rect": [
+        342,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.right.edge-glow": {
+      "page": "static-0",
+      "rect": [
+        410,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.right.static": {
+      "page": "static-0",
+      "rect": [
+        478,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.straight.base": {
+      "page": "static-0",
+      "rect": [
+        546,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.straight.edge-glow": {
+      "page": "static-0",
+      "rect": [
+        614,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.straight.static": {
+      "page": "static-0",
+      "rect": [
+        682,
+        2,
+        64,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "static/conveyor.straight.edge-core": {
+      "page": "static-0",
+      "rect": [
+        750,
+        2,
+        58,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        3,
+        0,
+        58,
+        64
+      ]
+    },
+    "static/conveyor.straight.surface": {
+      "page": "static-0",
+      "rect": [
+        812,
+        2,
+        56,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        4,
+        0,
+        56,
+        64
+      ]
+    },
+    "static/pipe.straight.fluid-body": {
+      "page": "static-0",
+      "rect": [
+        872,
+        2,
+        36,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        64
+      ]
+    },
+    "static/pipe.straight.fluid-specular": {
+      "page": "static-0",
+      "rect": [
+        912,
+        2,
+        36,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        64
+      ]
+    },
+    "static/pipe.straight.gas-body": {
+      "page": "static-0",
+      "rect": [
+        952,
+        2,
+        36,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        64
+      ]
+    },
+    "static/pipe.straight.shell": {
+      "page": "static-0",
+      "rect": [
+        992,
+        2,
+        36,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        64
+      ]
+    },
+    "static/pipe.straight.static-marked": {
+      "page": "static-0",
+      "rect": [
+        1032,
+        2,
+        36,
+        64
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        64
+      ]
+    },
+    "static/conveyor.left.edge-core": {
+      "page": "static-0",
+      "rect": [
+        1072,
+        2,
+        61,
+        61
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        61,
+        61
+      ]
+    },
+    "static/conveyor.right.edge-core": {
+      "page": "static-0",
+      "rect": [
+        1137,
+        2,
+        61,
+        61
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        3,
+        0,
+        61,
+        61
+      ]
+    },
+    "static/conveyor.left.surface": {
+      "page": "static-0",
+      "rect": [
+        1202,
+        2,
+        60,
+        60
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        60,
+        60
+      ]
+    },
+    "static/conveyor.right.surface": {
+      "page": "static-0",
+      "rect": [
+        1266,
+        2,
+        60,
+        60
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        4,
+        0,
+        60,
+        60
+      ]
+    },
+    "static/pipe.left.assembly": {
+      "page": "static-0",
+      "rect": [
+        1330,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.left.fluid-body": {
+      "page": "static-0",
+      "rect": [
+        1384,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.left.fluid-specular": {
+      "page": "static-0",
+      "rect": [
+        1438,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.left.gas-body": {
+      "page": "static-0",
+      "rect": [
+        1492,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.left.shell": {
+      "page": "static-0",
+      "rect": [
+        1546,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.left.static-marked": {
+      "page": "static-0",
+      "rect": [
+        1600,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        0,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.assembly": {
+      "page": "static-0",
+      "rect": [
+        1654,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.fluid-body": {
+      "page": "static-0",
+      "rect": [
+        1708,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.fluid-specular": {
+      "page": "static-0",
+      "rect": [
+        1762,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.gas-body": {
+      "page": "static-0",
+      "rect": [
+        1816,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.shell": {
+      "page": "static-0",
+      "rect": [
+        1870,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/pipe.right.static-marked": {
+      "page": "static-0",
+      "rect": [
+        1924,
+        2,
+        50,
+        50
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        50,
+        50
+      ]
+    },
+    "static/support.straight": {
+      "page": "static-0",
+      "rect": [
+        1978,
+        2,
+        28,
+        40
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        18,
+        12,
+        28,
+        40
+      ]
+    },
+    "static/pipe.endpoint.whitening": {
+      "page": "static-0",
+      "rect": [
+        2010,
+        2,
+        36,
+        36
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        0,
+        36,
+        36
+      ]
+    },
+    "static/pipe.left.support-back": {
+      "page": "static-0",
+      "rect": [
+        2,
+        70,
+        32,
+        32
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        14,
+        14,
+        32,
+        32
+      ]
+    },
+    "static/pipe.right.support-back": {
+      "page": "static-0",
+      "rect": [
+        38,
+        70,
+        32,
+        32
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        18,
+        14,
+        32,
+        32
+      ]
+    },
+    "static/support.corner": {
+      "page": "static-0",
+      "rect": [
+        74,
+        70,
+        32,
+        32
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        18,
+        14,
+        32,
+        32
+      ]
+    },
+    "static/pipe.straight.static-marker": {
+      "page": "static-0",
+      "rect": [
+        110,
+        70,
+        21,
+        29
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        21,
+        16,
+        21,
+        29
+      ]
+    },
+    "static/pipe.straight.support-back": {
+      "page": "static-0",
+      "rect": [
+        135,
+        70,
+        40,
+        28
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        12,
+        18,
+        40,
+        28
+      ]
+    },
+    "static/pipe.left.static-marker": {
+      "page": "static-0",
+      "rect": [
+        179,
+        70,
+        22,
+        25
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        21,
+        16,
+        22,
+        25
+      ]
+    },
+    "static/pipe.right.static-marker": {
+      "page": "static-0",
+      "rect": [
+        205,
+        70,
+        22,
+        25
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        21,
+        16,
+        22,
+        25
+      ]
+    },
+    "static/pipe.endpoint.connector": {
+      "page": "static-0",
+      "rect": [
+        231,
+        70,
+        54,
+        22
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        5,
+        21,
+        54,
+        22
+      ]
+    },
+    "static/pipe.endpoint.connector-highlight": {
+      "page": "static-0",
+      "rect": [
+        289,
+        70,
+        54,
+        22
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        5,
+        21,
+        54,
+        22
+      ]
+    },
+    "static/pipe.endpoint.connector-base": {
+      "page": "static-0",
+      "rect": [
+        347,
+        70,
+        52,
+        18
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        6,
+        23,
+        52,
+        18
+      ]
+    },
+    "static/pipe.straight.support-middle": {
+      "page": "static-0",
+      "rect": [
+        403,
+        70,
+        34,
+        16
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        15,
+        24,
+        34,
+        16
+      ]
+    },
+    "static/pipe.straight.support-front": {
+      "page": "static-0",
+      "rect": [
+        441,
+        70,
+        38,
+        16
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        13,
+        24,
+        38,
+        16
+      ]
+    },
+    "static/pipe.left.support-front": {
+      "page": "static-0",
+      "rect": [
+        483,
+        70,
+        13,
+        13
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        32,
+        32,
+        13,
+        13
+      ]
+    },
+    "static/pipe.right.support-front": {
+      "page": "static-0",
+      "rect": [
+        500,
+        70,
+        13,
+        13
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        19,
+        32,
+        13,
+        13
+      ]
+    },
+    "static/conveyor.straight.arrow-static": {
+      "page": "static-0",
+      "rect": [
+        517,
+        70,
+        12,
+        12
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        26,
+        27,
+        12,
+        12
+      ]
+    },
+    "static/pipe.left.support-middle": {
+      "page": "static-0",
+      "rect": [
+        533,
+        70,
+        12,
+        12
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        32,
+        32,
+        12,
+        12
+      ]
+    },
+    "static/conveyor.left.arrow-static": {
+      "page": "static-0",
+      "rect": [
+        549,
+        70,
+        12,
+        12
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        17,
+        16,
+        12,
+        12
+      ]
+    },
+    "static/conveyor.right.arrow-static": {
+      "page": "static-0",
+      "rect": [
+        565,
+        70,
+        12,
+        12
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        35,
+        16,
+        12,
+        12
+      ]
+    },
+    "static/pipe.right.support-middle": {
+      "page": "static-0",
+      "rect": [
+        581,
+        70,
+        6,
+        6
+      ],
+      "sourceSize": [
+        64,
+        64
+      ],
+      "spriteSourceSize": [
+        23,
+        35,
+        6,
+        6
+      ]
+    },
     "conveyor/straight/highlight/22": {
       "page": "conveyor-0",
       "rect": [
@@ -20719,1013 +21763,6 @@
         3,
         3
       ]
-    },
-    "static/conveyor.left.base": {
-      "page": "static-0",
-      "rect": [
-        2,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.left.edge-glow": {
-      "page": "static-0",
-      "rect": [
-        70,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.left.static": {
-      "page": "static-0",
-      "rect": [
-        138,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.right.base": {
-      "page": "static-0",
-      "rect": [
-        206,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.right.edge-glow": {
-      "page": "static-0",
-      "rect": [
-        274,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.right.static": {
-      "page": "static-0",
-      "rect": [
-        342,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.straight.base": {
-      "page": "static-0",
-      "rect": [
-        410,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.straight.edge-glow": {
-      "page": "static-0",
-      "rect": [
-        478,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.straight.static": {
-      "page": "static-0",
-      "rect": [
-        546,
-        2,
-        64,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        64,
-        64
-      ]
-    },
-    "static/conveyor.straight.edge-core": {
-      "page": "static-0",
-      "rect": [
-        614,
-        2,
-        58,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        3,
-        0,
-        58,
-        64
-      ]
-    },
-    "static/conveyor.straight.surface": {
-      "page": "static-0",
-      "rect": [
-        676,
-        2,
-        56,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        4,
-        0,
-        56,
-        64
-      ]
-    },
-    "static/pipe.straight.fluid-body": {
-      "page": "static-0",
-      "rect": [
-        736,
-        2,
-        36,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        64
-      ]
-    },
-    "static/pipe.straight.fluid-specular": {
-      "page": "static-0",
-      "rect": [
-        776,
-        2,
-        36,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        64
-      ]
-    },
-    "static/pipe.straight.gas-body": {
-      "page": "static-0",
-      "rect": [
-        816,
-        2,
-        36,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        64
-      ]
-    },
-    "static/pipe.straight.shell": {
-      "page": "static-0",
-      "rect": [
-        856,
-        2,
-        36,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        64
-      ]
-    },
-    "static/pipe.straight.static-marked": {
-      "page": "static-0",
-      "rect": [
-        896,
-        2,
-        36,
-        64
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        64
-      ]
-    },
-    "static/conveyor.left.edge-core": {
-      "page": "static-0",
-      "rect": [
-        936,
-        2,
-        61,
-        61
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        61,
-        61
-      ]
-    },
-    "static/conveyor.right.edge-core": {
-      "page": "static-0",
-      "rect": [
-        1001,
-        2,
-        61,
-        61
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        3,
-        0,
-        61,
-        61
-      ]
-    },
-    "static/conveyor.left.surface": {
-      "page": "static-0",
-      "rect": [
-        1066,
-        2,
-        60,
-        60
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        60,
-        60
-      ]
-    },
-    "static/conveyor.right.surface": {
-      "page": "static-0",
-      "rect": [
-        1130,
-        2,
-        60,
-        60
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        4,
-        0,
-        60,
-        60
-      ]
-    },
-    "static/pipe.left.assembly": {
-      "page": "static-0",
-      "rect": [
-        1194,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.left.fluid-body": {
-      "page": "static-0",
-      "rect": [
-        1248,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.left.fluid-specular": {
-      "page": "static-0",
-      "rect": [
-        1302,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.left.gas-body": {
-      "page": "static-0",
-      "rect": [
-        1356,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.left.shell": {
-      "page": "static-0",
-      "rect": [
-        1410,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.left.static-marked": {
-      "page": "static-0",
-      "rect": [
-        1464,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        0,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.assembly": {
-      "page": "static-0",
-      "rect": [
-        1518,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.fluid-body": {
-      "page": "static-0",
-      "rect": [
-        1572,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.fluid-specular": {
-      "page": "static-0",
-      "rect": [
-        1626,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.gas-body": {
-      "page": "static-0",
-      "rect": [
-        1680,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.shell": {
-      "page": "static-0",
-      "rect": [
-        1734,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/pipe.right.static-marked": {
-      "page": "static-0",
-      "rect": [
-        1788,
-        2,
-        50,
-        50
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        50,
-        50
-      ]
-    },
-    "static/support.straight": {
-      "page": "static-0",
-      "rect": [
-        1842,
-        2,
-        28,
-        40
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        18,
-        12,
-        28,
-        40
-      ]
-    },
-    "static/pipe.endpoint.whitening": {
-      "page": "static-0",
-      "rect": [
-        1874,
-        2,
-        36,
-        36
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        0,
-        36,
-        36
-      ]
-    },
-    "static/pipe.left.support-back": {
-      "page": "static-0",
-      "rect": [
-        1914,
-        2,
-        32,
-        32
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        14,
-        14,
-        32,
-        32
-      ]
-    },
-    "static/pipe.right.support-back": {
-      "page": "static-0",
-      "rect": [
-        1950,
-        2,
-        32,
-        32
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        18,
-        14,
-        32,
-        32
-      ]
-    },
-    "static/support.corner": {
-      "page": "static-0",
-      "rect": [
-        1986,
-        2,
-        32,
-        32
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        18,
-        14,
-        32,
-        32
-      ]
-    },
-    "static/pipe.straight.static-marker": {
-      "page": "static-0",
-      "rect": [
-        2022,
-        2,
-        21,
-        29
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        21,
-        16,
-        21,
-        29
-      ]
-    },
-    "static/pipe.straight.support-back": {
-      "page": "static-0",
-      "rect": [
-        2,
-        70,
-        40,
-        28
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        12,
-        18,
-        40,
-        28
-      ]
-    },
-    "static/pipe.left.static-marker": {
-      "page": "static-0",
-      "rect": [
-        46,
-        70,
-        22,
-        25
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        21,
-        16,
-        22,
-        25
-      ]
-    },
-    "static/pipe.right.static-marker": {
-      "page": "static-0",
-      "rect": [
-        72,
-        70,
-        22,
-        25
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        21,
-        16,
-        22,
-        25
-      ]
-    },
-    "static/pipe.endpoint.connector": {
-      "page": "static-0",
-      "rect": [
-        98,
-        70,
-        54,
-        22
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        5,
-        21,
-        54,
-        22
-      ]
-    },
-    "static/pipe.endpoint.connector-highlight": {
-      "page": "static-0",
-      "rect": [
-        156,
-        70,
-        54,
-        22
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        5,
-        21,
-        54,
-        22
-      ]
-    },
-    "static/pipe.endpoint.connector-base": {
-      "page": "static-0",
-      "rect": [
-        214,
-        70,
-        52,
-        18
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        6,
-        23,
-        52,
-        18
-      ]
-    },
-    "static/pipe.straight.support-middle": {
-      "page": "static-0",
-      "rect": [
-        270,
-        70,
-        34,
-        16
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        15,
-        24,
-        34,
-        16
-      ]
-    },
-    "static/pipe.straight.support-front": {
-      "page": "static-0",
-      "rect": [
-        308,
-        70,
-        38,
-        16
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        13,
-        24,
-        38,
-        16
-      ]
-    },
-    "static/pipe.left.support-front": {
-      "page": "static-0",
-      "rect": [
-        350,
-        70,
-        13,
-        13
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        32,
-        32,
-        13,
-        13
-      ]
-    },
-    "static/pipe.right.support-front": {
-      "page": "static-0",
-      "rect": [
-        367,
-        70,
-        13,
-        13
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        19,
-        32,
-        13,
-        13
-      ]
-    },
-    "static/conveyor.straight.arrow-static": {
-      "page": "static-0",
-      "rect": [
-        384,
-        70,
-        12,
-        12
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        26,
-        27,
-        12,
-        12
-      ]
-    },
-    "static/pipe.left.support-middle": {
-      "page": "static-0",
-      "rect": [
-        400,
-        70,
-        12,
-        12
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        32,
-        32,
-        12,
-        12
-      ]
-    },
-    "static/conveyor.left.arrow-static": {
-      "page": "static-0",
-      "rect": [
-        416,
-        70,
-        12,
-        12
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        17,
-        16,
-        12,
-        12
-      ]
-    },
-    "static/conveyor.right.arrow-static": {
-      "page": "static-0",
-      "rect": [
-        432,
-        70,
-        12,
-        12
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        35,
-        16,
-        12,
-        12
-      ]
-    },
-    "static/pipe.right.support-middle": {
-      "page": "static-0",
-      "rect": [
-        448,
-        70,
-        6,
-        6
-      ],
-      "sourceSize": [
-        64,
-        64
-      ],
-      "spriteSourceSize": [
-        23,
-        35,
-        6,
-        6
-      ]
     }
   },
   "clips": {
@@ -22931,6 +22968,8 @@
     "static/pipe.endpoint.connector-highlight": "static/pipe.endpoint.connector-highlight",
     "static/pipe.endpoint.connector": "static/pipe.endpoint.connector",
     "static/pipe.endpoint.whitening": "static/pipe.endpoint.whitening",
+    "static/pipe.endpoint.whitening-small": "static/pipe.endpoint.whitening-small",
+    "static/pipe.endpoint.whitening-standard": "static/pipe.endpoint.whitening-standard",
     "static/pipe.straight.shell": "static/pipe.straight.shell",
     "static/pipe.straight.fluid-body": "static/pipe.straight.fluid-body",
     "static/pipe.straight.gas-body": "static/pipe.straight.gas-body",

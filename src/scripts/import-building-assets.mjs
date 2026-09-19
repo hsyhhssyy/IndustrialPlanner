@@ -66,9 +66,22 @@ async function filesInIfPresent(root) {
   }
 }
 
+function sourceRootFor(batch, plan) {
+  return within(batch, plan.sourceRoot);
+}
+
+function sourceUrlFor(plan, relativePath) {
+  return new URL(relativePath, plan.sourceSite.siteUrl).href;
+}
+
+function isRepositorySourcePayload(relative) {
+  return relative.startsWith('resources/building-assets-site/')
+    || (relative.startsWith('resources/device-sprite-animation/') && !relative.endsWith('/manifest.json'));
+}
+
 async function verifyOriginals(batch, plan) {
   const receipt = await json(path.join(batch, 'source-receipt.json'));
-  const root = within(path.join(batch, 'stage'), plan.sourceSite.root);
+  const root = sourceRootFor(batch, plan);
   const indexBytes = await readFile(path.join(root, 'integrity.json'));
   if (hash(indexBytes) !== receipt.indexSha256 || plan.sourceSite.indexSha256 !== receipt.indexSha256
     || plan.sourceSite.releaseId !== receipt.releaseId) throw new Error('Original root index changed');
@@ -109,7 +122,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       throw new Error(`Registry mapping/animation capability differs: ${entry.entityId}`);
     }
   }
-  const root = within(stage, plan.sourceSite.root);
+  const root = sourceRootFor(batch, plan);
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   if (plan.deferredCategories?.includes('logistics') && ['all', 'logistics', 'effects'].includes(category)) {
     throw new Error('Deferred logistics batch is already assembled; validate/apply it, or prepare a new batch before republishing shared manifests');
@@ -117,7 +130,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   const registryFluidColors = includes('logistics') && plan.logistics
     ? await stageRegistryFluidColors({
       profileFile: path.join(root, 'buildings/logistics/fluid-profiles.json'),
-      profileSourcePath: `${plan.sourceSite.root}/buildings/logistics/fluid-profiles.json`,
+      profileSourceUrl: sourceUrlFor(plan, 'buildings/logistics/fluid-profiles.json'),
       registryFile: path.join(projectRoot, 'src/registry/item-definition.ts'),
       outputFile: within(stage, 'src/registry/item-definition.ts'),
     })
@@ -137,7 +150,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     if (includes('animations')) for (const spriteId of plan.animations) {
       const result = await publishDeviceSpriteAnimations({ definitions: definitions.entityDefinitions, spriteIds: new Set([spriteId]),
         sourceDirectory: path.join(stage, 'resources/device-sprite-animation'), spriteDirectory, maskDirectory,
-        animationDirectory: path.join(outputDirectory, 'animations'), resolution });
+        animationDirectory: path.join(outputDirectory, 'animations'), sourceAssetRoot: root, resolution });
       console.log(`Published ${spriteId}: ${JSON.stringify(result)}`);
     }
     let logistics = null;
@@ -258,9 +271,8 @@ export async function deferWebsiteLogistics(batch, destinationRoot = projectRoot
   plan.deferredCategories = ['logistics'];
   plan.views = plan.views.filter((view) => !view.directory.startsWith('buildings/logistics/'));
   plan.retainedProducts = [...new Map(retained.map((entry) => [entry.path, entry])).values()];
-  await rm(within(stage, `${plan.sourceSite.root}/buildings/logistics`), { recursive: true });
+  await rm(within(sourceRootFor(batch, plan), 'buildings/logistics'), { recursive: true });
   await save(path.join(batch, 'source-receipt.json'), receipt);
-  await save(within(stage, `${plan.sourceSite.root}/_import/source-receipt.json`), receipt);
   await save(path.join(batch, 'import-plan.json'), plan);
   await save(path.join(batch, 'deferred-logistics.json'), { categories: ['logistics'], unchangedFiles: deferred, retainedProducts: plan.retainedProducts });
   await rm(path.join(batch, 'application-plan.json'), { force: true });
@@ -302,8 +314,8 @@ export async function validateWebsiteBatch(batch) {
       throw new Error('Registry item definitions changed after fluid colors were staged');
     }
     registryFluidColors = await verifyRegistryFluidColors({
-      profileFile: path.join(within(stage, plan.sourceSite.root), 'buildings/logistics/fluid-profiles.json'),
-      profileSourcePath: `${plan.sourceSite.root}/buildings/logistics/fluid-profiles.json`,
+      profileFile: path.join(sourceRootFor(batch, plan), 'buildings/logistics/fluid-profiles.json'),
+      profileSourceUrl: sourceUrlFor(plan, 'buildings/logistics/fluid-profiles.json'),
       registryFile: within(stage, 'src/registry/item-definition.ts'),
     });
   }
@@ -369,11 +381,13 @@ export async function validateWebsiteBatch(batch) {
     const sourcePrefix = spriteId ? `buildings/${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
     products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
   }
-  await save(within(stage, `${plan.sourceSite.root}/_import/publish-receipt${plan.receiptHistorySuffix ?? ''}.json`), {
+  await save(path.join(batch, `publish-receipt${plan.receiptHistorySuffix ?? ''}.json`), {
     schemaVersion: 1, sourceSite: plan.sourceSite, sources: receipt.files.map(({ path: file, sha256 }) => ({ path: file, sha256 })),
     products, registryFluidColors,
   });
   const stagedFiles = await filesIn(stage);
+  const stagedSources = stagedFiles.filter(isRepositorySourcePayload);
+  if (stagedSources.length) throw new Error(`Website source payload must remain in the temporary batch: ${stagedSources[0]}`);
   const application = [];
   for (const file of stagedFiles) application.push({ path: file, sha256: await fileHash(within(stage, file)), previousSha256: await fileHash(within(projectRoot, file)) });
   if (plan.logistics) for (const { outputDirectory } of targets) {
@@ -424,6 +438,8 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
       && !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/'))) {
       throw new Error('Application plan contains files outside building resources or Registry fluid colors');
     }
+    const sourcePayload = application.find((entry) => isRepositorySourcePayload(entry.path));
+    if (sourcePayload) throw new Error(`Application plan contains website source payload: ${sourcePayload.path}`);
     const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), 'resources/building-top-view-v15.json'));
     const definitions = await registry();
     const drawingBoundsEntries = plan.scope === 'entities'

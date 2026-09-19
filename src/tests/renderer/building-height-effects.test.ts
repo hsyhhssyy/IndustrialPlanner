@@ -1,6 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
@@ -15,8 +13,19 @@ import {
   selectRingEffectPlacements,
 } from '@/renderer/building-effects/placements';
 import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
-// @ts-expect-error Node 发布配置直接复用，数值采样期望由测试独立计算。
-import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from '../../scripts/building-asset-publish-config.mjs';
+// AI-REMOVED 2026-09-19:
+// Reason: 正式仓库不再保存网站展开原件和发布收据，运行时测试不能依赖本地来源目录。
+// Trigger: 用户要求网站素材只存在于 .temp/.trash 导入批次。
+// Evidence: import-building-assets validate 已在批次内核对原件哈希、尺寸和数值编码。
+// Replacement: 下方直接验证全部已发布数值文件、颜色页和图集边界。
+// Risk: 普通 Vitest 不再逐像素比较网站原图；发布算法的独立夹具测试继续覆盖转换。
+// Human Review: Required
+//
+// Original code:
+// import { readFile, readdir } from 'node:fs/promises';
+// import { createHash } from 'node:crypto';
+// import path from 'node:path';
+// import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from '../../scripts/building-asset-publish-config.mjs';
 
 const manifest = JSON.parse(await readFile('public/3d-top-view/port-effects/manifest.json', 'utf8')) as BuildingEffectsManifest;
 const registry = createRegistryContract();
@@ -216,42 +225,7 @@ describe('建筑高度与端口特效', () => {
     expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBe(2500);
   });
 
-  it('发布高度字节按坐标契约逐行转换，所有数值文件及颜色页存在', async () => {
-    interface SourceSiteReference {
-      readonly root: string;
-    }
-    interface PublishReceiptProduct {
-      readonly path: string;
-      readonly sha256: string;
-      readonly retained?: boolean;
-    }
-    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8')) as {
-      readonly sourceSite: SourceSiteReference;
-      readonly entries: readonly {
-        readonly sourceMetadata: { readonly sourceSite: SourceSiteReference };
-      }[];
-    };
-    const logisticsManifest = JSON.parse(
-      await readFile('public/3d-top-view/logistics/baked/manifest.json', 'utf8'),
-    ) as { readonly sourceSite: SourceSiteReference };
-    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
-    const declaredSourceSites = [...new Map([
-      collection.sourceSite,
-      ...collection.entries.map((entry) => entry.sourceMetadata.sourceSite),
-      logisticsManifest.sourceSite,
-    ].map((sourceSite) => [sourceSite.root, sourceSite])).values()];
-    const publications = (await Promise.all(declaredSourceSites.map(async (sourceSite) => {
-      const importDirectory = path.join(sourceSite.root, '_import');
-      const receiptFiles = (await readdir(importDirectory))
-        .filter((fileName) => /^publish-receipt(?:\.entities-[a-f\d]+)?\.json$/.test(fileName));
-      return Promise.all(receiptFiles.map(async (receiptFile) => ({
-        sourceSite,
-        products: (JSON.parse(await readFile(
-          path.join(importDirectory, receiptFile),
-          'utf8',
-        )) as { readonly products: readonly PublishReceiptProduct[] }).products,
-      })));
-    }))).flat();
+  it('所有已发布高度数值文件和特效颜色页完整且编码合法', async () => {
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
     for (const view of Object.values(manifest.views)) for (const field of Object.values(view.fields)) {
       fields.set(field.file, { field, reflected: view.coordinateSpace === 'project-reflected-source' });
@@ -260,53 +234,23 @@ describe('建筑高度与端口特效', () => {
       fields.set(resource.height.file, { field: resource.height, reflected: resource.coordinateSpace === 'project-reflected-source' });
       for (const page of resource.pages) expect((await readFile(`public/3d-top-view/port-effects/${page.file}`)).length).toBeGreaterThan(0);
     }
-    for (const { field, reflected } of fields.values()) {
+    for (const { field } of fields.values()) {
       const productPath = `public/3d-top-view/port-effects/${field.file}`;
-      const matchingPublications = publications.flatMap(({ sourceSite, products }) =>
-        products
-          .filter((product) => product.path === productPath)
-          .map((product) => ({ sourceSite, product })),
-      );
-      const authoredPublications = matchingPublications.filter(({ product }) => product.retained !== true);
       const compressed = await readFile(productPath);
-      const publishedSha256 = createHash('sha256').update(compressed).digest('hex');
-      if (authoredPublications.length === 0) {
-        expect(matchingPublications.length, `${field.file} has no declared publication receipt`)
-          .toBeGreaterThan(0);
-        expect(matchingPublications.every(({ product }) =>
-          product.retained === true && product.sha256 === publishedSha256), field.file).toBe(true);
-        expect(gunzipSync(compressed).length).toBe(field.width * field.height * 4);
-        continue;
-      }
-      expect(authoredPublications, `${field.file} must have exactly one authoring source`).toHaveLength(1);
-      const authoredPublication = authoredPublications[0]!;
-      expect(publishedSha256, field.file).toBe(authoredPublication.product.sha256);
       const delivered = gunzipSync(compressed);
-      const { data: original, info } = await sharp(path.join(
-        authoredPublication.sourceSite.root,
-        field.file.replace(/\.rgba\.bin$/, ''),
-      ))
-        .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      const expected = Buffer.alloc(field.width * field.height * 4);
-      const rowBytes = field.width * 4;
-      for (let row = 0; row < field.height; row++) {
-        const sampledRow = Math.floor((row + 0.5) / resolution);
-        const sourceRow = reflected ? info.height - 1 - sampledRow : sampledRow;
-        for (let pixel = 0; pixel < field.width; pixel++) {
-          const sourcePixel = Math.floor((pixel + 0.5) / resolution);
-          if (sourcePixel >= info.width || sourceRow < 0 || sourceRow >= info.height) continue;
-          const offset = (sourceRow * info.width + sourcePixel) * 4;
-          original.copy(expected, row * rowBytes + pixel * 4, offset, offset + 4);
-        }
+      expect(delivered.length, field.file).toBe(field.width * field.height * 4);
+      let invalidBluePixels = 0;
+      let invalidAlphaPixels = 0;
+      for (let offset = 0; offset < delivered.length; offset += 4) {
+        if (delivered[offset + 2] !== 0) invalidBluePixels += 1;
+        if (delivered[offset + 3] !== 0 && delivered[offset + 3] !== 255) invalidAlphaPixels += 1;
       }
-      expect(delivered.equals(expected), field.file).toBe(true);
-      expect(delivered.length).toBe(field.width * field.height * 4);
+      expect(invalidBluePixels, field.file).toBe(0);
+      expect(invalidAlphaPixels, field.file).toBe(0);
     }
   });
 
-  it.each(Object.keys(manifest.effects))('发布特效 %s 逐帧补边缩放并重新排布，保持帧序、时长与采样位置', async (resourceId) => {
-    const collection = JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
-    const resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0];
+  it.each(Object.keys(manifest.effects))('发布特效 %s 的分页、帧边界和时长自洽', async (resourceId) => {
     // AI-REMOVED 2026-09-14:
     // Reason: 单个资源覆盖不足；奇数高度和其他端口、状态环同样需要验证。
     // Trigger: 共享缩放函数导致多组烘焙素材错位。
@@ -318,69 +262,19 @@ describe('建筑高度与端口特效', () => {
     // Original code:
     // const resourceId = 'v1.5/fx/P_interactive_large_pipeoff_out_01';
     const resource = manifest.effects[resourceId]!;
-    const reflected = resource.coordinateSpace === 'project-reflected-source';
-    const sourceDirectory = path.join(collection.sourceSite.root, path.dirname(resource.height.file));
-    const sourceEffect = JSON.parse(await readFile(path.join(sourceDirectory, 'effect.json'), 'utf8')) as {
-      frames: { page: number; x: number; y: number; width: number; height: number; durationMs: number }[];
-      spritesheet: string;
-    };
-    const sourceSheet = JSON.parse(await readFile(path.join(sourceDirectory, sourceEffect.spritesheet), 'utf8')) as {
-      pages: { image: string; width: number; height: number }[];
-    };
-    expect(resource.frames.map(({ width, height, durationMs }) => ({
-      width, height, durationMs,
-    }))).toEqual(sourceEffect.frames.map(({ width, height, durationMs }) => ({
-      width: Math.ceil(width * resolution), height: Math.ceil(height * resolution), durationMs,
-    })));
     for (const [pageIndex, page] of resource.pages.entries()) {
-      const delivered = await sharp(`public/3d-top-view/port-effects/${page.file}`).ensureAlpha().raw().toBuffer();
+      const metadata = await sharp(`public/3d-top-view/port-effects/${page.file}`).metadata();
+      expect(metadata).toMatchObject({ width: page.width, height: page.height, format: 'webp' });
       const pageFrames = resource.frames.filter((frame) => frame.page === pageIndex);
-      let mismatches = 0;
       for (const frame of pageFrames) {
-        const original = sourceEffect.frames[resource.frames.indexOf(frame)]!;
-        const sheetPage = sourceSheet.pages[original.page]!;
-        let extract = sharp(path.join(sourceDirectory, sheetPage.image))
-          .extract({ left: original.x, top: original.y, width: original.width, height: original.height });
-        if (reflected) extract = extract.flip();
-        const pixels = await extract.ensureAlpha().raw().toBuffer();
-        // AI-REMOVED 2026-09-14:
-        // Reason: 测试与发布器复用了错误的 Sharp 操作顺序，掩盖了真实行宽错误。
-        // Trigger: 修复奇数尺寸补边后产生的斜纹，必须独立验证像素位置。
-        // Evidence: 同一流水线中 extend 在 resize 后执行；旧期望同样输出多余列。
-        // Replacement: 下方在 CPU 上独立补透明边，只调用 Sharp 执行缩放。
-        // Risk: Low；保持原有帧序、时长、采样位置断言目标。
-        // Human Review: Required
-        //
-        // Original code:
-        // const source = await sharp(pixels, { raw: { width: original.width, height: original.height, channels: 4 } })
-        //   .extend({ left: 0, top: 0, right: frame.width / resolution - original.width,
-        //     bottom: frame.height / resolution - original.height, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        //   .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer();
-        const paddedWidth = frame.width / resolution, paddedHeight = frame.height / resolution;
-        const padded = Buffer.alloc(paddedWidth * paddedHeight * 4);
-        for (let row = 0; row < original.height; row++) {
-          pixels.copy(padded, row * paddedWidth * 4, row * original.width * 4, (row + 1) * original.width * 4);
-        }
-        const resized = await sharp(padded, { raw: { width: paddedWidth, height: paddedHeight, channels: 4 } })
-          .resize(frame.width, frame.height, { kernel: 'lanczos3' }).raw().toBuffer({ resolveWithObject: true });
-        expect(resized.info).toMatchObject({ width: frame.width, height: frame.height, channels: 4 });
-        expect(resized.data.length).toBe(frame.width * frame.height * 4);
-        const source = resized.data;
-        for (let row = 0; row < frame.height; row++) {
-          const sourceRow = row;
-          const deliveredRow = frame.y + row;
-          const sourceOffset = sourceRow * frame.width * 4;
-          const deliveredOffset = (deliveredRow * page.width + frame.x) * 4;
-          for (let pixel = 0; pixel < frame.width; pixel++) {
-            const sourcePixel = sourceOffset + pixel * 4;
-            const deliveredPixel = deliveredOffset + pixel * 4;
-            if (delivered[deliveredPixel + 3] !== source[sourcePixel + 3]
-              || (source[sourcePixel + 3] !== 0
-                && [0, 1, 2].some((channel) => delivered[deliveredPixel + channel] !== source[sourcePixel + channel]))) mismatches++;
-          }
-        }
+        expect(frame.durationMs).toBeGreaterThan(0);
+        expect(frame.x).toBeGreaterThanOrEqual(0);
+        expect(frame.y).toBeGreaterThanOrEqual(0);
+        expect(frame.width).toBeGreaterThan(0);
+        expect(frame.height).toBeGreaterThan(0);
+        expect(frame.x + frame.width).toBeLessThanOrEqual(page.width);
+        expect(frame.y + frame.height).toBeLessThanOrEqual(page.height);
       }
-      expect(mismatches, page.file).toBe(0);
     }
   });
 });

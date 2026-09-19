@@ -9,7 +9,7 @@ const PHASE_ROLES = {
   gas: ['body', 'skin'],
 };
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
-const SOURCE_PATH_PATTERN = /^resources\/building-assets-site\/[^/]+\/buildings\/logistics\/fluid-profiles\.json$/;
+const SOURCE_URL_PATTERN = /^https:\/\/hsyhhssyy\.github\.io\/Endfield-Building-TopView-Assets\/buildings\/logistics\/fluid-profiles\.json$/;
 
 const propertyName = (property) => {
   if (!ts.isPropertyAssignment(property)) return null;
@@ -92,16 +92,16 @@ function fluidColorSourceInitializer(sourceFile) {
   for (const statement of sourceFile.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
-      if (ts.isIdentifier(declaration.name) && declaration.name.text === 'ITEM_FLUID_COLOR_SOURCE_PATH'
+      if (ts.isIdentifier(declaration.name) && declaration.name.text === 'ITEM_FLUID_COLOR_SOURCE_URL'
         && declaration.initializer && ts.isStringLiteral(declaration.initializer)) return declaration.initializer;
     }
   }
-  throw new Error('ITEM_FLUID_COLOR_SOURCE_PATH not found');
+  throw new Error('ITEM_FLUID_COLOR_SOURCE_URL not found');
 }
 
 /** 只替换现有 ItemDefinition.fluidColors 初始化值；物品集合或相态不同则拒绝生成。 */
-export function updateRegistryFluidColorsSource(registrySource, profileSource, profileSourcePath) {
-  if (!SOURCE_PATH_PATTERN.test(profileSourcePath)) throw new Error('Invalid fluid profile source path');
+export function updateRegistryFluidColorsSource(registrySource, profileSource, profileSourceUrl) {
+  if (!SOURCE_URL_PATTERN.test(profileSourceUrl)) throw new Error('Invalid fluid profile source URL');
   const profiles = normalizeFluidProfiles(profileSource);
   const sourceFile = ts.createSourceFile('item-definition.ts', registrySource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   if (sourceFile.parseDiagnostics.length) throw new Error('Registry item definition cannot be parsed');
@@ -120,7 +120,7 @@ export function updateRegistryFluidColorsSource(registrySource, profileSource, p
   }
   const sourceInitializer = fluidColorSourceInitializer(sourceFile);
   const replacements = [{ start: sourceInitializer.getStart(sourceFile), end: sourceInitializer.getEnd(),
-    initializer: `"${profileSourcePath}"` }];
+    initializer: `"${profileSourceUrl}"` }];
   for (const [id, item] of fluidItems) {
     const profile = profiles.get(id);
     if (item.phase !== profile.phase) throw new Error(`Registry fluid phase differs: ${id}`);
@@ -137,20 +137,20 @@ export function updateRegistryFluidColorsSource(registrySource, profileSource, p
     phaseCounts: Object.fromEntries(Object.keys(PHASE_ROLES).map((phase) => [phase, [...profiles.values()].filter((item) => item.phase === phase).length])) };
 }
 
-export async function stageRegistryFluidColors({ profileFile, profileSourcePath, registryFile, outputFile }) {
+export async function stageRegistryFluidColors({ profileFile, profileSourceUrl, registryFile, outputFile }) {
   const profileSource = JSON.parse(await readFile(profileFile, 'utf8'));
   const registrySource = await readFile(registryFile, 'utf8');
-  const result = updateRegistryFluidColorsSource(registrySource, profileSource, profileSourcePath);
+  const result = updateRegistryFluidColorsSource(registrySource, profileSource, profileSourceUrl);
   await mkdir(path.dirname(outputFile), { recursive: true });
   await writeFile(outputFile, result.source);
   return { profileCount: result.profileCount, phaseCounts: result.phaseCounts,
     sourceSha256: createHash('sha256').update(registrySource).digest('hex') };
 }
 
-export async function verifyRegistryFluidColors({ profileFile, profileSourcePath, registryFile }) {
+export async function verifyRegistryFluidColors({ profileFile, profileSourceUrl, registryFile }) {
   const profileSource = JSON.parse(await readFile(profileFile, 'utf8'));
   const registrySource = await readFile(registryFile, 'utf8');
-  const result = updateRegistryFluidColorsSource(registrySource, profileSource, profileSourcePath);
+  const result = updateRegistryFluidColorsSource(registrySource, profileSource, profileSourceUrl);
   if (result.source !== registrySource) throw new Error('Staged Registry fluid colors differ from source');
   return { profileCount: result.profileCount, phaseCounts: result.phaseCounts };
 }

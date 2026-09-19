@@ -1,16 +1,16 @@
 {
-  "schemaVersion": 1,
-  "frameWidth": 1024,
-  "frameHeight": 896,
+  "schemaVersion": 2,
+  "frameWidth": 768,
+  "frameHeight": 640,
   "fps": 30,
   "pageRows": 4,
   "pageColumns": 3,
   "sources": {
     "close_000": {
       "file": "close_000.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -27,17 +27,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_000.webp",
-      "sha256": "f83343628beb02ecf059ffaf52e8397a8bde530c9e4e8f3f35eed26131a57c51"
+      "sha256": "d2fba58d2965be0cceee5f5842fa8ee467f30fc00ee7ed541fe2fa06a70652b9"
     },
     "close_001": {
       "file": "close_001.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -53,17 +80,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_001.webp",
-      "sha256": "8a3fa8ceedd94f87a7ab2a1c769dd930e2c07e29143c1863fec23e0b86c3d5c1"
+      "sha256": "3dc35f99f2778ab281daa6bfae1b6fcff84f6e8dc3026e419cd37b95c949d62a"
     },
     "close_002": {
       "file": "close_002.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -82,13 +124,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_002.webp",
-      "sha256": "d3b39ea0a70886900989e65caa48bbf887ac3b2c01e42f3ce0488f60400b3d1c"
+      "sha256": "19a6568ec088c50c8d5170f331b330049b1fce1a525e039568af0b94f7da0cea"
     },
     "close_003": {
       "file": "close_003.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -105,17 +147,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_003.webp",
-      "sha256": "f403d2090cb6a8444d8e6b7d544be9805053903f43eaadd4d9219c52368f32e9"
+      "sha256": "bf669d738eb5700c2f45e59714df82e0c9ea89cb6ef02cd7566270add63690f2"
     },
     "close_004": {
       "file": "close_004.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -131,17 +200,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_004.webp",
-      "sha256": "76a59c6ad2ab4d7e9c1a01f08d23be68dff220c48710dab6d4ee47470c81d8ab"
+      "sha256": "a31107d38e03a17f39697db934457629144e85126561b301a6cb9a8305b8b113"
     },
     "close_005": {
       "file": "close_005.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -160,23 +244,14 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_005.webp",
-      "sha256": "366c7e9e020e5fd4c8c4b303399fcaf6870236c5f1631909417a252d14973df7"
+      "sha256": "c329abe94223f5bb273007062b4487995d0a42bd61671cc219a595b4504737e6"
     },
     "close_006": {
       "file": "close_006.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 2,
+      "columns": 5,
+      "frameCount": 7,
       "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
         33,
         34,
         33,
@@ -186,131 +261,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_006.webp",
-      "sha256": "8ea1694f0bd9e1fbf6a60c22b3927eda0b13bc7edb43c95f2a6f5d18b4ce41fd"
-    },
-    "close_007": {
-      "file": "close_007.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_007.webp",
-      "sha256": "d035684e779ce1ee69967b82fa8c00796663d1ee5ddfe1c2ea69eb4d0e3e030f"
-    },
-    "close_008": {
-      "file": "close_008.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_008.webp",
-      "sha256": "d6269b1aabc1ee1847454ac24e01a92d1ecb0f44a4b46e462f1bf5cf22d45698"
-    },
-    "close_009": {
-      "file": "close_009.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_009.webp",
-      "sha256": "18a70969fa372f39e4d32756c3f50de29caff1cc561c099be98ad98271dec746"
-    },
-    "close_010": {
-      "file": "close_010.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_010.webp",
-      "sha256": "b2ca0d6f9c7c4a6a48d418310f034577382963516ac0ab34fa8348d4bd5c16ef"
-    },
-    "close_011": {
-      "file": "close_011.webp",
-      "rows": 3,
-      "columns": 4,
-      "frameCount": 10,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        66
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/close/spritesheet_011.webp",
-      "sha256": "f94813c2c0bae46d16f2d29724f84920a4ca71afd2213ec17206d8538aa99b63"
+      "sha256": "790cca185956532e45a337b15682ba86ecc57f37df0c4a47de18c2e740eaa0b4"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -322,13 +273,13 @@
         34
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "be17ddc11290bc02c1983f0e812f2a705b0f34691a7aa522dc3ffaf0cd834c02"
+      "sha256": "9605ae824686e327139a5f173713a731bad7e0aafaa6c9a7904c5c4cd8f07507"
     },
     "open_000": {
       "file": "open_000.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -345,17 +296,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_000.webp",
-      "sha256": "74e65a497af29727211f31ef26db7f8857c1d66db0908fa0ae0df761ee1e2641"
+      "sha256": "4d66b2e8e031fcf9a7a55f2b886ee5d8e5c07157f99371384caaf2f2ed462e96"
     },
     "open_001": {
       "file": "open_001.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -371,17 +349,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_001.webp",
-      "sha256": "9e30745a79317625851fe436a72d403f9470eef5556f3dd0f174df7af9641f6c"
+      "sha256": "a117250e89ec7258afc2fa3e683a65f5677f261f6d3579ef09dee9309cc4a513"
     },
     "open_002": {
       "file": "open_002.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -400,13 +393,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_002.webp",
-      "sha256": "dbe8d591cde249c6b6dcee30bdeb724560201eba9067a1ea96d54909f05cc3ad"
+      "sha256": "01758f2cab2dfa11205ede138758e7022cbae01772a4839db80e6fa0a5706c01"
     },
     "open_003": {
       "file": "open_003.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -423,17 +416,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_003.webp",
-      "sha256": "4c0e2d9ce8a3481037191f57ef977e2fca6859c35dfa043e772a8f0057eab07a"
+      "sha256": "d4d6bba8584a66ece7029c53c76d1ef7316386180ff630b41f36d29280789734"
     },
     "open_004": {
       "file": "open_004.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -449,17 +469,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_004.webp",
-      "sha256": "b7177dbeaf775822ab1b9ceb70d35fd5c65870444cedefa615383861caf1ab4d"
+      "sha256": "38d29dab39402d763a4044674b3f72e3db68fa23a6ccc1598027505a0c0dc348"
     },
     "open_005": {
       "file": "open_005.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -478,13 +513,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_005.webp",
-      "sha256": "d8327d1ddcbabd7285b28cb00ff87760c854a4e3ada7b83b49342d810761a8d3"
+      "sha256": "9a2504bd0813cbf9d08ee8312adb58317541e43f5c7137c8f49c26a4c04d01dd"
     },
     "open_006": {
       "file": "open_006.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -501,19 +536,31 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_006.webp",
-      "sha256": "8f3a2745f2966299164dbb49f828e6b1a41295601272147a4559629913a3ac7a"
+      "sha256": "6150577bf7e82b69d52833f76cc6929028bc0587f8e1402f6e28f394b63d54e8"
     },
     "open_007": {
       "file": "open_007.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 5,
+      "columns": 5,
+      "frameCount": 25,
       "frameDurationsMs": [
-        34,
-        33,
         33,
         34,
         33,
@@ -527,193 +574,27 @@
         34,
         33,
         33,
-        34
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_007.webp",
-      "sha256": "732f1c13fbd7169d29ec5d258670d110833ae06c5f27be31963cdcb0fff6ff29"
-    },
-    "open_008": {
-      "file": "open_008.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_008.webp",
-      "sha256": "956bfe68f186e1c91568cb46612342e5f5080280bb7752fc7041bf63839c297f"
-    },
-    "open_009": {
-      "file": "open_009.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_009.webp",
-      "sha256": "502870b3f180922ea7f089674d92e29f70b709fddb59b7c605e564cbecfc81a6"
-    },
-    "open_010": {
-      "file": "open_010.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_010.webp",
-      "sha256": "320f3dfd4f4a7ce8fdc107cdd02621357dbb382c4060c022edda6cc70bd5f438"
-    },
-    "open_011": {
-      "file": "open_011.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_011.webp",
-      "sha256": "1b89438440dca86c41ed6442f06f1c7ab76d56e3319f97e93ed4deff00803046"
-    },
-    "open_012": {
-      "file": "open_012.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_012.webp",
-      "sha256": "2802afcf12d98f815d6b43cae7f99a31ae991681ffc9176b7be2fbee9195908c"
-    },
-    "open_013": {
-      "file": "open_013.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_013.webp",
-      "sha256": "a59348e88d11aef8e6b84001e588f88e520ac8093f1a37ba3b5bba9a8156173f"
-    },
-    "open_014": {
-      "file": "open_014.webp",
-      "rows": 3,
-      "columns": 4,
-      "frameCount": 11,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open/spritesheet_014.webp",
-      "sha256": "8e3eb57be9ff12551aa79b58bcd83717c8eae7aa5033caf08f627014ea44e11b"
+      "sha256": "63c013ebf12c4615872778643e69c83491088ed89047e5f33e1b8a4c371ea0f0"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -730,17 +611,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "81efdde6dbf273cc4ca5ee55174d83a507fd60d98b8d4a734a91f3a5e4e9f9d8"
+      "sha256": "3a5d6cdd0d6d3512e04f6581929cc7c3cecfc87f627a55679bef5ed090f3712d"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -756,17 +664,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "7f699725629d10c1522a49788d5910c04e179a079f48e35c8d2ca02ac9a3fec3"
+      "sha256": "1bae508b40115576f3768efec5aafc68d6666cf7202e1396d203f8ba631115d1"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -785,13 +708,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "71f3de104868e62e88af26d17542c239be72eb226763274bb2017a7948488f83"
+      "sha256": "9fb849bb9789c94c777b6e09b33ef895ff2754c18f4bd073943cf73b952cfae6"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -808,17 +731,44 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "abab1e203b8542f707f3250d1b8b900e1b9eee0558468ba5c2f99591fc489ca5"
+      "sha256": "95b233b85b8299eab164c49993af4c3958be117adfd20ec5c8930939385c17e1"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         34,
         33,
         33,
@@ -834,17 +784,32 @@
         34,
         33,
         33,
-        34
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "4ea428ad341fe9a2ac5a0a8bdbef1c0ef16e6940be337294a406b670213debf6"
+      "sha256": "d1b681bcf57f80dc8efdf2cccada01533ce159f390d7047170fca978e80b59c1"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33,
         33,
         34,
@@ -863,13 +828,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "c93a7b61c1e9fc1ef5ee143a17eb5e93960dd209cd34e1327fc9e8ce678d45e4"
+      "sha256": "0b9992b11d61f93e491cf6d90ba22d88416f7b2ecd512926b228bf845f4a6e5f"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 6,
+      "columns": 5,
+      "frameCount": 30,
       "frameDurationsMs": [
         33,
         34,
@@ -886,391 +851,73 @@
         33,
         34,
         33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
         33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "4cd3e2c9e41b0f7c5c22aeb448e31b03b85862629b8532906f02a9e35c3737ca"
+      "sha256": "c30acc9a12794f87142fc3da3066156157f7745be3956735697f5393280b6bc1"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
       "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
+        33
       ],
       "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "92c82c830cfd340ad9aa684d2f556fcc8e3f7a41281d4f00e80cb6e6daf1e24e"
-    },
-    "open_idle_008": {
-      "file": "open_idle_008.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_008.webp",
-      "sha256": "c32ae81d37247476bf5dfe40dd8f390fac6d1353e25543ce13220c22393482ef"
-    },
-    "open_idle_009": {
-      "file": "open_idle_009.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_009.webp",
-      "sha256": "4b6d5ff9ab5559cf2aed3892f8cc4605ba326ff15ee6dbea2fef5507d5f3bba5"
-    },
-    "open_idle_010": {
-      "file": "open_idle_010.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_010.webp",
-      "sha256": "887a8d4dff20308c8aaa0f0ea21726f4054ffe16d928e437b8fc11e0dc657903"
-    },
-    "open_idle_011": {
-      "file": "open_idle_011.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_011.webp",
-      "sha256": "542166141c68d9e9d63e9cbb297124cbd9ef6f28fbd6e3c55ecdd844b91f91d7"
-    },
-    "open_idle_012": {
-      "file": "open_idle_012.webp",
-      "rows": 4,
-      "columns": 4,
-      "frameCount": 16,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_012.webp",
-      "sha256": "995dde01245f7494a410143d51b3125f7255491c35425e09f5968e1ff3007e91"
-    },
-    "open_idle_013": {
-      "file": "open_idle_013.webp",
-      "rows": 1,
-      "columns": 3,
-      "frameCount": 3,
-      "frameDurationsMs": [
-        34,
-        33,
-        33
-      ],
-      "sourcePath": "buildings/mix_pool_2/top/animations/open_idle/spritesheet_013.webp",
-      "sha256": "d4fdffeb6fc2d2608b79abf5841ddcbc1c172005f2a7ad9d067932efc4bd92d7"
+      "sha256": "5554bf58a383e8ebef47242132eb525731272bfc2a87c7f12789a2b63ed9c656"
     }
   },
   "clips": {
-    "open": [
-      {
-        "source": "open_000",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_001",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_002",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_003",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_004",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_005",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_006",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_007",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_008",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_009",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_010",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_011",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_012",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_013",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_014",
-        "startFrame": 0,
-        "frameCount": 11
-      }
-    ],
-    "open_idle": [
-      {
-        "source": "open_idle_000",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_006",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_007",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_008",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_009",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_010",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_011",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_012",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "open_idle_013",
-        "startFrame": 0,
-        "frameCount": 3
-      }
-    ],
     "close": [
       {
         "source": "close_000",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_001",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_002",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_003",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_004",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_005",
         "startFrame": 0,
-        "frameCount": 16
+        "frameCount": 30
       },
       {
         "source": "close_006",
         "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "close_007",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "close_008",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "close_009",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "close_010",
-        "startFrame": 0,
-        "frameCount": 16
-      },
-      {
-        "source": "close_011",
-        "startFrame": 0,
-        "frameCount": 10
+        "frameCount": 7
       }
     ],
     "close_idle": [
@@ -1279,17 +926,110 @@
         "startFrame": 0,
         "frameCount": 2
       }
+    ],
+    "open": [
+      {
+        "source": "open_000",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_001",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_002",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_003",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_004",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_005",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_006",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_007",
+        "startFrame": 0,
+        "frameCount": 25
+      }
+    ],
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_004",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_005",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_006",
+        "startFrame": 0,
+        "frameCount": 30
+      },
+      {
+        "source": "open_idle_007",
+        "startFrame": 0,
+        "frameCount": 1
+      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

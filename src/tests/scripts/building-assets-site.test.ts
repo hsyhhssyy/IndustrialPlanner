@@ -34,17 +34,17 @@ describe("网站素材批次", () => {
       const batch = path.join(directory, "batch");
       const current = path.join(directory, "current");
       const stage = path.join(batch, "stage");
-      const root = "resources/building-assets-site/fixture";
+      const sourceRoot = "site";
       const index = JSON.stringify({ files: [] });
-      const sourceSite = { root, releaseId: "fixture", indexSha256: digest(index) };
+      const sourceSite = { siteUrl: "https://example.invalid/assets/", releaseId: "fixture", indexSha256: digest(index) };
       const put = async (file: string, value: unknown) => {
         await mkdir(path.dirname(file), { recursive: true });
         await writeFile(file, typeof value === "string" ? value : JSON.stringify(value));
       };
-      await put(path.join(stage, root, "integrity.json"), index);
-      await put(path.join(stage, root, "buildings/logistics/source.json"), "new source");
+      await put(path.join(batch, sourceRoot, "integrity.json"), index);
+      await put(path.join(batch, sourceRoot, "buildings/logistics/source.json"), "new source");
       await put(path.join(batch, "source-receipt.json"), { ...sourceSite, files: [], logistics: true });
-      await put(path.join(batch, "import-plan.json"), { sourceSite, logistics: true, views: [
+      await put(path.join(batch, "import-plan.json"), { sourceSite, sourceRoot, logistics: true, views: [
         { buildingId: "device", view: "top", directory: "buildings/device/top" },
         { buildingId: "pipe", view: "top", directory: "buildings/logistics/pipe/top" },
       ] });
@@ -69,12 +69,26 @@ describe("网站素材批次", () => {
       expect(await readFile(path.join(stage, effects, "device-height.rgba.bin"), "utf8")).toBe("device height");
       expect(await readFile(path.join(current, "public/3d-top-view/logistics/material.webp"), "utf8")).toBe("existing material");
       await expect(readFile(path.join(stage, "public/3d-top-view/logistics/material.webp"))).rejects.toThrow();
-      await expect(readFile(path.join(stage, root, "buildings/logistics/source.json"))).rejects.toThrow();
+      await expect(readFile(path.join(batch, sourceRoot, "buildings/logistics/source.json"))).rejects.toThrow();
       await expect(readFile(path.join(stage, effects, "new-height.rgba.bin"))).rejects.toThrow();
       const plan = JSON.parse(await readFile(path.join(batch, "import-plan.json"), "utf8"));
       expect(plan.logistics).toBe(false);
       expect(plan.views).toHaveLength(1);
       expect(plan.retainedProducts).toEqual([{ path: `${effects}/old-height.rgba.bin`, sha256: digest("old height") }]);
+    });
+  });
+  it("拒绝把网站展开原件写入仓库应用计划", async () => {
+    await fixture(async (directory) => {
+      const batch = path.join(directory, "batch");
+      await mkdir(path.join(batch, "stage"), { recursive: true });
+      await writeFile(path.join(batch, "import-plan.json"), JSON.stringify({ logistics: false }));
+      await writeFile(path.join(batch, "application-plan.json"), JSON.stringify([{
+        path: "resources/building-assets-site/fixture/source.webp",
+        sha256: digest("source"),
+        previousSha256: null,
+      }]));
+
+      await expect(applyWebsiteBatch(batch)).rejects.toThrow("contains website source payload");
     });
   });
   it("单视图交付按明确模式选择唯一模板，多个候选或模式冲突必须拒绝", () => {

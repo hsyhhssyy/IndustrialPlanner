@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 896,
   "frameHeight": 640,
   "fps": 30,
@@ -38,7 +38,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "cb59e06b39ce9500e6de77f2c38835c7ed7e9aa07af70089b102de0d8b34fa31"
+      "sha256": "25bc84912f78613d4aad81a77680f58d8755aaf74b1d02d2f8e2b53dbd1c7430"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -72,7 +72,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "c05527f1fe6524090c73c8e425290517056b73618d9e56293ff4c1bf79af6299"
+      "sha256": "de46c894663ffc2164c4404961c102bd7532b35453ada3cdd345edbcf6947e4c"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -106,7 +106,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_002.webp",
-      "sha256": "3417423aba661f8b39203a5350a2611ba45780640b81f551dd633250a0e1739e"
+      "sha256": "7a797c735097b012db0272e52efe8c43a05a1ed6db2f4ccf17659673bc50dcb6"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -140,7 +140,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_003.webp",
-      "sha256": "16c8cdb2ede272d7862f75d7711bc616d5794c14988c42b70a3f0f34602ecf46"
+      "sha256": "13814c808830d8ef89855b8bcd80849763f24832def58dd241dc0817d1558f3d"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -174,7 +174,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_004.webp",
-      "sha256": "fe1435339c7b95e34aa1020762635a20c0bd2b3ac9f75855be71ad0b40012830"
+      "sha256": "7c4e8d2469ef2b93408b8bf341d286bce4a1ef956e6771f20a88d6edfcc3d367"
     },
     "close_005": {
       "file": "close_005.webp",
@@ -208,7 +208,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_005.webp",
-      "sha256": "ce5640ffb00783d11ae027b69de62d22f63bedf34f452ac8e193398c4b6fbe18"
+      "sha256": "ed4298534433c0ec6e8aeaaa65e45a5f3dcd4ceaa4ae9a2d7fa6360e360684ed"
     },
     "close_006": {
       "file": "close_006.webp",
@@ -242,7 +242,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_006.webp",
-      "sha256": "1a369ee8f3ec28b1f0dfa5b9ce5a3b97dd8d691b9aa7bddc4d77ba61ae249f26"
+      "sha256": "d99eb22847ddf9ae059891b4cbf4aaabf53e9e54dae633102a09cebe3985885b"
     },
     "close_007": {
       "file": "close_007.webp",
@@ -276,7 +276,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_007.webp",
-      "sha256": "bc97911e5d4bc19370df5f59a2a3e233d2dcf5fd510c5bae056cf2af370c1dbb"
+      "sha256": "cf936f0ba53b32e9941ade89dfd7c19b94b7a63747fced4d8f48517917206537"
     },
     "close_008": {
       "file": "close_008.webp",
@@ -310,13 +310,13 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_008.webp",
-      "sha256": "c90f169fb47d7314bd876c962f99777f97f9c422ce9dc9d997f32d54d2509136"
+      "sha256": "9594c20bdeb84d590b4166c9f131bf412c5c4c2c5a055ab1c290d16e62bd0a47"
     },
     "close_009": {
       "file": "close_009.webp",
-      "rows": 5,
+      "rows": 6,
       "columns": 4,
-      "frameCount": 20,
+      "frameCount": 21,
       "frameDurationsMs": [
         33,
         34,
@@ -337,10 +337,11 @@
         34,
         33,
         33,
-        67
+        34,
+        33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_009.webp",
-      "sha256": "c4291621509a101d6ef2174ccee688745d4e47fa1bbd5ced6a869db381ab823d"
+      "sha256": "df42c8bfab9f09b0354a4bdc68a3e45bec271352a796c8bad0190effaff0fbc5"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -352,7 +353,7 @@
         34
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "7975f91fbea84e042bea1cc68370a562aba3f05c7fcb506217429f1ba1b7073c"
+      "sha256": "d6ae18b4cd3a2557a1243405bd3a391ed9afddfa526bac9e77cdb62de9a765d1"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -386,7 +387,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "adecd31d110a3dbf1af64568afe9ec915ec39c4115f2b003464087be664ace74"
+      "sha256": "edf922db853ebdc12e43e0f033bf54b1f520838df748796b31ef5feb8ba88d9a"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -420,7 +421,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "83973f70c82af41110b1be9e90e413c62a4f3ebf15de4239d621b7238ca72540"
+      "sha256": "46aec6684f4d1d6f553b4ed415320824504b94fe4156fb06a9494912cfb2dd24"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -454,7 +455,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_002.webp",
-      "sha256": "8eb7d8bf01dc97dc345d10d416c04cc1de7578d2f0c4e4f279432ab67e7f867c"
+      "sha256": "84b47bc13372f5bf9d07fe8f9422749996b473ed144b0e615c890c79d2d62812"
     },
     "open_003": {
       "file": "open_003.webp",
@@ -488,7 +489,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_003.webp",
-      "sha256": "4da49545048b0938661fe8b485fb716d2cfa11c1dda3774931204ed719a198be"
+      "sha256": "ef2d1b453c03c73433345befc261c3f9b7c00762ec4a22fb52c93a8cd947b6be"
     },
     "open_004": {
       "file": "open_004.webp",
@@ -522,7 +523,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_004.webp",
-      "sha256": "aafbec8bd2451f0056afe4c82f48ec998b19a59e0afd4f630a94f50a9209b8da"
+      "sha256": "94ea936f8c47c11f863ca261c07c3764041a07665ab7e3f336b0bf9a04782425"
     },
     "open_005": {
       "file": "open_005.webp",
@@ -556,7 +557,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_005.webp",
-      "sha256": "6285eb80fdf4ad7dabcd8dc4772a6ba02b03daf8ceeebf66caffeaab514d7606"
+      "sha256": "58537891f9ccf953580490ee5a1da50898a962125054f09f1100f9c116585cd4"
     },
     "open_006": {
       "file": "open_006.webp",
@@ -590,7 +591,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_006.webp",
-      "sha256": "c834bb8f89802838e816b0c26bb32c73fb38775d480ecc9e73a18643f1cdcd88"
+      "sha256": "66b3c344a08f247c69b2d1d751a676f46abacab76c9abcc50c0e832be6c81004"
     },
     "open_007": {
       "file": "open_007.webp",
@@ -624,7 +625,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_007.webp",
-      "sha256": "56a03ec5059ae2acb3901669bb01c09f92cfef13f3b4e2d0577ef4c1cfb811cd"
+      "sha256": "29fb2c659a960d9fb09dc432bac656dfc7267ac8cea8aa74baa896f19a448b22"
     },
     "open_008": {
       "file": "open_008.webp",
@@ -658,7 +659,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_008.webp",
-      "sha256": "b84ca43a22b5efc16e9ab063325df8dc7cc89d1faa9a746cb9278f906ab377df"
+      "sha256": "7ba9bf46b82c551999ea24a13b64a4e15c863c476fb17a1d9054b5a695479122"
     },
     "open_009": {
       "file": "open_009.webp",
@@ -687,7 +688,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_009.webp",
-      "sha256": "f6997915cf74d3c865f4156d9e76da2241f1f6171be83058cb2c88fa83f8516e"
+      "sha256": "d41041bf2b80a4df22eb952448411b9e1b68b92047c40a7857db5aa3b428f6db"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -721,7 +722,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "9800338e71eb6147c39510e1bf0a41f3ee24cfa53c746deaa44680216de50661"
+      "sha256": "32598ad1600dc234f8a495984be7f0cbac2e3220d452a09ce21e131f14667a0a"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -755,7 +756,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "2c02cc0f59cc492be6d1cb9aa00b6d00e91219e2f64c0dcca1e86427dada949b"
+      "sha256": "605d3fb23f4e416bb77734bdd420d4f28dd6a72f98ae514b5cf09199ea430c52"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -789,7 +790,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "b976fa942f255ae307ff7038627f5f43a90fe879b095c478b9c760220f31fdb6"
+      "sha256": "ee95e937a2949aa77e70dd8c43db3ddd6d429e0e7e2d22e1499de127664fc817"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -823,7 +824,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "9b73f7d1b9ae30a50e6940bc869063a8bb6d3843ab8fa6f7ffc18f4c75e0b90f"
+      "sha256": "2056ff31e853df286d4083fb5194e65901500218d58fc8b1d80dc4775ab9ee71"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -857,7 +858,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "089f2364f30f7b46b51f684182c2081d8e9d618d54c141df424c8b6aa596e389"
+      "sha256": "35121f9829e4f9ec63b246182b3aa38818f17237030eb96f91ffc42842d06957"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -891,7 +892,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "c816fafeab86c4bba24102f6f76dcb7795bf6db4b6f8795e8d616ddfc2e08ca2"
+      "sha256": "b7ad1117f38e1ec660abc20c94a0f238759aa73611fff8cc8f3a37a788439edc"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -925,7 +926,7 @@
         33
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "348e55b878e8135406f2aaf6fd10e315db7bccca683271bf01bf030d841ab4b4"
+      "sha256": "1fd85c2691c084ea2bfa8110c9139b3fe41d5b79c6eab24af58031a38fc47410"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -958,10 +959,69 @@
         34
       ],
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "ab6040ab64367060db84414502ef0efce23e3cccb8c26442cec9eb3d8182e1a9"
+      "sha256": "88ef8289a4a1861000f18445ce116310c547db8e6563ed26e4574f843b7ba186"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_001",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_002",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_003",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_004",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_005",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_006",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_007",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_008",
+        "startFrame": 0,
+        "frameCount": 24
+      },
+      {
+        "source": "close_009",
+        "startFrame": 0,
+        "frameCount": 21
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
@@ -1055,76 +1115,26 @@
         "startFrame": 0,
         "frameCount": 23
       }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_001",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_002",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_003",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_004",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_005",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_006",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_007",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_008",
-        "startFrame": 0,
-        "frameCount": 24
-      },
-      {
-        "source": "close_009",
-        "startFrame": 0,
-        "frameCount": 20
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 2
-      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

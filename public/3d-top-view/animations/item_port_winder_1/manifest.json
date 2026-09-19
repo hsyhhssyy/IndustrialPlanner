@@ -1,19 +1,94 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "resolution": 0.5,
   "frameWidth": 768,
   "frameHeight": 512,
   "appliedSourceToPublishedTransform": "flip-top-bottom",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   },
   "maskFile": "mask.webp",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
   "clips": {
+    "close": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ],
+      "frameCount": 32,
+      "pages": [
+        {
+          "file": "close-0.webp",
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 32
+        }
+      ]
+    },
+    "close_idle": {
+      "frameDurationMs": 33.333333333333336,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "frameCount": 6,
+      "pages": [
+        {
+          "file": "close_idle-0.webp",
+          "rows": 2,
+          "columns": 5,
+          "frameCount": 6
+        }
+      ]
+    },
     "open": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
@@ -150,61 +225,6 @@
           "rows": 3,
           "columns": 5,
           "frameCount": 13
-        }
-      ]
-    },
-    "close": {
-      "frameDurationMs": 33.333333333333336,
-      "frameDurationsMs": [
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        234
-      ],
-      "frameCount": 26,
-      "pages": [
-        {
-          "file": "close-0.webp",
-          "rows": 6,
-          "columns": 5,
-          "frameCount": 26
-        }
-      ]
-    },
-    "close_idle": {
-      "frameDurationMs": 33.333333333333336,
-      "frameDurationsMs": [
-        200
-      ],
-      "frameCount": 1,
-      "pages": [
-        {
-          "file": "close_idle-0.webp",
-          "rows": 1,
-          "columns": 1,
-          "frameCount": 1
         }
       ]
     }

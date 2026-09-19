@@ -19,14 +19,16 @@ export function resolveDeliveredPortVariant(ports, key) {
 /** 保留原件；数值图仅无损解码为 RGBA 并 gzip，避免浏览器颜色管理改变高度字节。 */
 // AI-CORRECTION 2026-09-11: 普通建筑还需无损反射像素行并转换空间元数据；contract2 保留自身画布契约。
 // AI-CORRECTION 2026-09-13: 发布比例显式控制数值图最近邻采样和特效逐帧重排；裁切特效补透明边界。
+// AI-CORRECTION 2026-09-19: 原件只在网站导入临时批次中读取，不再保留到仓库。
 export async function publishBuildingPortEffects({
-  sourceDirectory = 'resources/building-port-effects',
+  sourceDirectory,
   outputDirectory = 'public/3d-top-view/port-effects',
   viewSources = null,
   sourceVersion = null,
   collection: suppliedCollection = null,
   resolution = 1,
 } = {}) {
+  if (!sourceDirectory) throw new Error('sourceDirectory is required; use the website import batch');
   const source = path.resolve(sourceDirectory);
   const output = path.resolve(outputDirectory);
   const json = async (name) => {

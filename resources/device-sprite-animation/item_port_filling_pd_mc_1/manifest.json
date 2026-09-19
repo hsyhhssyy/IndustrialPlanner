@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 768,
   "frameHeight": 512,
   "fps": 30,
@@ -9,24 +9,26 @@
     "close_000": {
       "file": "close_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        67
+        33,
+        34
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "b56e1b462a79df5952f9b687be1a5bd9af39bffdcd50b6f254a706687e5763ec"
+      "sha256": "d4746eee273fc982588edb59064a4ba7169e77e70fbc7202fabc3a6261baac9d"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        67
+        33,
+        34
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "b56e1b462a79df5952f9b687be1a5bd9af39bffdcd50b6f254a706687e5763ec"
+      "sha256": "d4746eee273fc982588edb59064a4ba7169e77e70fbc7202fabc3a6261baac9d"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -76,7 +78,7 @@
         33
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "011dd4da1fc51a82d08a258ffbee6c6e5477a8ba5d7a2558105e14fb7aa43b4e"
+      "sha256": "277ea029aa149afb62a0d1dc746e00f7d6dd3b8710c91d0993e1bc760b45a6a4"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -117,7 +119,7 @@
         34
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "9a59631fec7a77659637f828bf74a7668256a72669f5e67d7b7fb797335c7ae0"
+      "sha256": "2c4bb91e6b879201c39037d86bae91becbb07b34b82c5d40ce5c3d47fb7629da"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -167,7 +169,7 @@
         33
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "ff9297e568b4349cb1392eba4db7ac71363c627093ca661d0d996f1f565eb7b0"
+      "sha256": "4ff3a54831cf2c5d82b7b14408193cbdf9d75604e765a5e1d5f1e4bf53dfd3a9"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -208,10 +210,24 @@
         34
       ],
       "sourcePath": "buildings/filling_powder_mc_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "98c88f5bf4ff803c0f7a3a0739501d02a0f2856aca1044a742bff8e62e64cace"
+      "sha256": "ec0dbf001414f8204a10804fa5968f68b5fbdce944403de4a63584ee6fdfd709"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
@@ -235,31 +251,26 @@
         "startFrame": 0,
         "frameCount": 31
       }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 1
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 1
-      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

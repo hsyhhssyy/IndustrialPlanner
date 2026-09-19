@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
@@ -8,16 +8,11 @@
   "sources": {
     "close_000": {
       "file": "close_000.webp",
-      "rows": 2,
+      "rows": 6,
       "columns": 10,
-      "frameCount": 16,
+      "frameCount": 51,
       "frameDurationsMs": [
         33,
-        67,
-        33,
-        34,
-        33,
-        1133,
         34,
         33,
         33,
@@ -27,10 +22,50 @@
         34,
         33,
         33,
-        67
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ],
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "e8a8f4e7c8688b575ac9eee7efb1926a7973af91fb1cd32e27a6aa4f7592990d"
+      "sha256": "fdf3864a1ab25fb6bdc0b5433781c586e7996fc5f1e56c5816e9f8f1e82994de"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -42,7 +77,7 @@
         34
       ],
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "a00fc27beafe46327ef9e0c6400b2265404ba70c0ba2215429409e637b0563ed"
+      "sha256": "a1ea1e5f060ae4de8647dee8651523ab2c95b924e82ca1e9316aa984fcc36a35"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -99,7 +134,7 @@
         34
       ],
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "78669d15efd5eb894d69325dfca55f87784672cbb7276750c83c29f94f13df38"
+      "sha256": "da562a2472d90cbed6527125bd25c8f9d94ccdaeb72ce04d1c4146e01307d635"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -111,10 +146,24 @@
         67
       ],
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "cb42730ab2f5d1d63a83e2f6d2a2f741d34d128edc400f389effbf514bb90476"
+      "sha256": "875869a85c8dd5f3e7eb98df6b1e49ff93b8ee5e94ac92095afaddec6f52e72b"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 51
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
@@ -128,31 +177,26 @@
         "startFrame": 0,
         "frameCount": 2
       }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 16
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 2
-      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

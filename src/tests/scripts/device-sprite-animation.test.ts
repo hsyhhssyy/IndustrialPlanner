@@ -116,6 +116,40 @@ describe("device animation generation", () => {
     });
   });
 
+  it("从显式临时网站根读取原件，来源证明不携带本地展开路径", async () => {
+    await withFixture(async (options) => {
+      const sourceRoot = path.join(options.sourceDirectory, "fixture");
+      const assetRoot = path.join(path.dirname(options.sourceDirectory), "site");
+      const manifestPath = path.join(sourceRoot, "manifest.json");
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+      for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+        const relative = `buildings/fixture/top/animations/${phase}.webp`;
+        const target = path.join(assetRoot, relative);
+        await mkdir(path.dirname(target), { recursive: true });
+        await writeFile(target, await readFile(path.join(sourceRoot, `${phase}.webp`)));
+        await rm(path.join(sourceRoot, `${phase}.webp`));
+        manifest.sources[phase].sourcePath = relative;
+      }
+      manifest.sourceSite = {
+        siteUrl: "https://example.invalid/assets/",
+        releaseId: "fixture-release",
+        sourceVersion: "fixture",
+        indexSha256: "a".repeat(64),
+      };
+      await writeFile(manifestPath, JSON.stringify(manifest), "utf8");
+
+      await publishDeviceSpriteAnimations({ ...options, sourceAssetRoot: assetRoot });
+
+      const output = JSON.parse(await readFile(
+        path.join(options.animationDirectory, "fixture/manifest.json"),
+        "utf8",
+      ));
+      expect(output.sourceSite).toEqual(manifest.sourceSite);
+      expect(output.sourceSite).not.toHaveProperty("root");
+      expect(output.sourceSite).not.toHaveProperty("relativeRoot");
+    });
+  });
+
   it("拒绝不能整像素缩放的源帧，发布失败时保留原发布目录", async () => {
     await withFixture(async (options) => {
       await publishDeviceSpriteAnimations(options);

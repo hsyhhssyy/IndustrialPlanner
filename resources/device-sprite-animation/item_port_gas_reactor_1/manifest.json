@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 640,
   "frameHeight": 640,
   "fps": 30,
@@ -9,35 +9,38 @@
     "close_000": {
       "file": "close_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        70
+        33,
+        34
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
+      "sha256": "488fe897a7996a6fe1a734c08d72125d54ca444a29a4493d9b2a9285aa67d613"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        70
+        33,
+        34
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
+      "sha256": "c0dbe1ec10bb75d147053d8374f00e57832ceea2cd069104df8e3f43e941ea35"
     },
     "open_000": {
       "file": "open_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        70
+        33,
+        34
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "a91d804468809d13b4042a3d402d1f8d1948d87b0a71e7ece611ce24d22bf6c2"
+      "sha256": "a0fe01fb23afe6be3b80764fcf8b5542843d5d9c9aef38cf15f9c32264bd56d7"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -45,45 +48,45 @@
       "columns": 6,
       "frameCount": 36,
       "frameDurationsMs": [
-        230,
-        540,
-        600,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        100,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "874a1a096811bddafcae648b9a64fc3f3d1514ca522217b8a9cf266e37ecac93"
+      "sha256": "a159845804b216ce14c778d7bc58b2c08806694a648fb1a0052038b54eacdce6"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -91,72 +94,80 @@
       "columns": 6,
       "frameCount": 36,
       "frameDurationsMs": [
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        100,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "d6c77231b1c90b779f1f8e47ec291360e735b99ba9a8f616606cefe1e984e114"
+      "sha256": "5b3ed26096d9e70cd67045584f19db8bb8ab4c728d8599f68cbf245151614509"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
-      "rows": 2,
-      "columns": 6,
-      "frameCount": 9,
+      "rows": 1,
+      "columns": 3,
+      "frameCount": 3,
       "frameDurationsMs": [
-        40,
-        30,
-        30,
-        40,
-        30,
-        30,
-        40,
-        30,
-        30
+        600,
+        533,
+        433
       ],
       "sourcePath": "buildings/gas_reactor_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "967df96ea6e184007a1141cd242e8b5d7de5fa2c91d019e2e3f4bb6f362fa79e"
+      "sha256": "42b763504009fe489126e318440e2bc8d2e03230e12f9da768aeb3af8d3449f1"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 2
+      }
+    ],
     "open": [
       {
         "source": "open_000",
         "startFrame": 0,
-        "frameCount": 1
+        "frameCount": 2
       }
     ],
     "open_idle": [
@@ -173,33 +184,28 @@
       {
         "source": "open_idle_002",
         "startFrame": 0,
-        "frameCount": 9
-      }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 1
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 1
+        "frameCount": 3
       }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

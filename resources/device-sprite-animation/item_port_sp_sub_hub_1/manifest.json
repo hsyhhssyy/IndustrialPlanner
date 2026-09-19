@@ -1,0 +1,1451 @@
+{
+  "schemaVersion": 2,
+  "frameWidth": 1408,
+  "frameHeight": 1152,
+  "fps": 30,
+  "pageRows": 3,
+  "pageColumns": 2,
+  "sources": {
+    "open_idle_000": {
+      "file": "open_idle_000.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_000.webp",
+      "sha256": "09534a15867b0c5fde8cf51328bd48705de43837004dc58152cdd73a3319717b"
+    },
+    "open_idle_001": {
+      "file": "open_idle_001.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_001.webp",
+      "sha256": "bcc2f5f91d071654617b57cf5d32a1d552d34defffa7442843bb93ac76154520"
+    },
+    "open_idle_002": {
+      "file": "open_idle_002.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_002.webp",
+      "sha256": "08a641dfe3cd4453b14df8d446443e8388bccd454bc4fc33a0808f6a1a3a33c5"
+    },
+    "open_idle_003": {
+      "file": "open_idle_003.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_003.webp",
+      "sha256": "6e96336e9dbda1d4cf96a796b2ef2c35cc1571f8691acf660e5f07c8ce903158"
+    },
+    "open_idle_004": {
+      "file": "open_idle_004.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_004.webp",
+      "sha256": "52e4b72e893676a0fa1be182b847a3fa9cc50b76c803d0ebe6f5eab20589eaa9"
+    },
+    "open_idle_005": {
+      "file": "open_idle_005.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_005.webp",
+      "sha256": "c4f87b1ac2f8e777e1848096b9e0aafcf7966307fdf525191ca9aa3424fcc26a"
+    },
+    "open_idle_006": {
+      "file": "open_idle_006.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_006.webp",
+      "sha256": "dbe673abb2c0c3ca3e0a638c9216e0dcabc12552301b1c0a5f9c35d7fab87625"
+    },
+    "open_idle_007": {
+      "file": "open_idle_007.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_007.webp",
+      "sha256": "123044d38db409585fd1843f071994bcfbf1c5210b349659177d08d6a7154347"
+    },
+    "open_idle_008": {
+      "file": "open_idle_008.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_008.webp",
+      "sha256": "db5d0482e5a776ad8647d9cf90b4b9cb15bcc155e739f19f7e35482583ad6884"
+    },
+    "open_idle_009": {
+      "file": "open_idle_009.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_009.webp",
+      "sha256": "8c45378dbe1956dce46857877668075cb9485436d14dee83595e98c94af1c590"
+    },
+    "open_idle_010": {
+      "file": "open_idle_010.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_010.webp",
+      "sha256": "3f5cdb663592becaeda24f8026480e18f8b7689b1cd952afc2522488fd4a2ab2"
+    },
+    "open_idle_011": {
+      "file": "open_idle_011.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_011.webp",
+      "sha256": "8ddd205fb7d68e18d9dd2a003ab1a439794a01adcc52fc8fec77323aeebff6b8"
+    },
+    "open_idle_012": {
+      "file": "open_idle_012.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_012.webp",
+      "sha256": "61274282651802d37a892288c4cc223feba57185631193aac228dfad4c33520b"
+    },
+    "open_idle_013": {
+      "file": "open_idle_013.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_013.webp",
+      "sha256": "92a27b604c146c6f9d1f00fe8e1462219a0f5f08a4808ddc4849a40dbbfc08e4"
+    },
+    "open_idle_014": {
+      "file": "open_idle_014.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_014.webp",
+      "sha256": "54b800d0d6ac79b718664123d3593b463b4cf43f10c1ed8fcbfbf02c05018be2"
+    },
+    "open_idle_015": {
+      "file": "open_idle_015.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_015.webp",
+      "sha256": "a20220b86513eee0fef27620e7e0f2bf11d83fd6b1311b4ea0ee8c3f3ab2bdd4"
+    },
+    "open_idle_016": {
+      "file": "open_idle_016.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_016.webp",
+      "sha256": "15233beae9f6c8f9e6800cc410b8ffb57ab82034d81dce5910e9941f2155d423"
+    },
+    "open_idle_017": {
+      "file": "open_idle_017.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_017.webp",
+      "sha256": "e0e93d222134f79451b6aaace9c8e37a7f59a2855993f8bbea0217515490cf40"
+    },
+    "open_idle_018": {
+      "file": "open_idle_018.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_018.webp",
+      "sha256": "f872d058d17c8a79d70ebea1e207601e6e11fd263a865f0b673ab91b8a5236db"
+    },
+    "open_idle_019": {
+      "file": "open_idle_019.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_019.webp",
+      "sha256": "364e21947d3636d7a566433e07944d86465d53cba79c58792db87f99b33f87a5"
+    },
+    "open_idle_020": {
+      "file": "open_idle_020.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_020.webp",
+      "sha256": "82270b70fc25592494bd3e58ee681ae9f56261f5d328eec1cb789920b023dda5"
+    },
+    "open_idle_021": {
+      "file": "open_idle_021.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_021.webp",
+      "sha256": "ab34f3664fe34fbea68e43f9402b55e93f3785511ee3ee428a927852944cfad4"
+    },
+    "open_idle_022": {
+      "file": "open_idle_022.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_022.webp",
+      "sha256": "999b56698db8949031b0c4d1c5a8405359c7e3b85953508b9823d40d43b3dc05"
+    },
+    "open_idle_023": {
+      "file": "open_idle_023.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_023.webp",
+      "sha256": "b5e0453d40142296c8e8a683d0edfe445aea84996192eb843503489468058f3e"
+    },
+    "open_idle_024": {
+      "file": "open_idle_024.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_024.webp",
+      "sha256": "0016fdfec5541ef14c813480cbae5582a2a31c5c128aa04298ae4e301f695e69"
+    },
+    "open_idle_025": {
+      "file": "open_idle_025.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_025.webp",
+      "sha256": "1a5ee02290b63b587432ebf3132057943991546b7d489b5d7b5eb9176b220b0e"
+    },
+    "open_idle_026": {
+      "file": "open_idle_026.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_026.webp",
+      "sha256": "17cf8b6bafc4c8148ee122fbdc46769acfd1240955ef0f043f281264e6c3a916"
+    },
+    "open_idle_027": {
+      "file": "open_idle_027.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_027.webp",
+      "sha256": "32b24fb299d540aa84ff7dd24df2b999649b7c23266f49652ce91429ee757c64"
+    },
+    "open_idle_028": {
+      "file": "open_idle_028.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_028.webp",
+      "sha256": "24ac4f5e14fb72b61dca1f2435eea41a635a4140d39e4ed2ab54a6187312d317"
+    },
+    "open_idle_029": {
+      "file": "open_idle_029.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_029.webp",
+      "sha256": "b191fe5130fe638f44d5c5aa36f447c725f65f6f343df410d25fc1557b23c12e"
+    },
+    "open_idle_030": {
+      "file": "open_idle_030.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_030.webp",
+      "sha256": "3075a05b115ec7b08fec82b853296a841e6ca90aae304134cd50a0c4c0b494c9"
+    },
+    "open_idle_031": {
+      "file": "open_idle_031.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_031.webp",
+      "sha256": "fe3e9fac118a01349fdc17900410de5a5d0b74caee5fe7ca911808be1ee98dd4"
+    },
+    "open_idle_032": {
+      "file": "open_idle_032.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_032.webp",
+      "sha256": "16f28dc22ee99cde934fa57ba2de9b54b6c00633822e1457f6f9fb87ec7420fd"
+    },
+    "open_idle_033": {
+      "file": "open_idle_033.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_033.webp",
+      "sha256": "70fe2f9c972f1bb030f17d1e1f3dbae451351c2e458dd94a4f394a43feef0a41"
+    },
+    "open_idle_034": {
+      "file": "open_idle_034.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_034.webp",
+      "sha256": "250b8584a935534da5f3c6e123b37bc5ea90b43e9ab8602f9f1d1e2ee88dc6d4"
+    },
+    "open_idle_035": {
+      "file": "open_idle_035.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_035.webp",
+      "sha256": "0f7c69fe6da20b8d82ce60440327ea33eeb9d8be05bb23195802b34d4b9c4c7d"
+    },
+    "open_idle_036": {
+      "file": "open_idle_036.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_036.webp",
+      "sha256": "e145ab0258417244a5322d5e9572cd90430920257f0f0ee2326d03a4d60e54bb"
+    },
+    "open_idle_037": {
+      "file": "open_idle_037.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_037.webp",
+      "sha256": "918983e5c455137b1070f1cd8f785c87813312296263d79631ff46838c9adc18"
+    },
+    "open_idle_038": {
+      "file": "open_idle_038.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_038.webp",
+      "sha256": "0373cad0677a1c8e6be484c09f1a42e8d15cad875e670d1e752b5e6bf69a5eab"
+    },
+    "open_idle_039": {
+      "file": "open_idle_039.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_039.webp",
+      "sha256": "73447919a14033ba7d36f8aaae9f4eb16a5666972fe243e0a457da4537478db1"
+    },
+    "open_idle_040": {
+      "file": "open_idle_040.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_040.webp",
+      "sha256": "5f8362a7dc0587d8469e620e77f799c73e5e002166202e55470ded4dce25881f"
+    },
+    "open_idle_041": {
+      "file": "open_idle_041.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_041.webp",
+      "sha256": "894764947b8bc48465a8081c9fe1f57083a32173df6caac8f2fd3625a732b9ae"
+    },
+    "open_idle_042": {
+      "file": "open_idle_042.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_042.webp",
+      "sha256": "06359e6994b3c1472f3bae2e3b43183767681c4a96a3e33b5558fed13fb04595"
+    },
+    "open_idle_043": {
+      "file": "open_idle_043.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_043.webp",
+      "sha256": "519dfedb65952abccc752c049e5edd7fd9f0868a650c3dcd8018b2540f1be27b"
+    },
+    "open_idle_044": {
+      "file": "open_idle_044.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_044.webp",
+      "sha256": "b375b299096fc60a510a33e07e601e7af934dab33a8a9e433c3f4021844d2210"
+    },
+    "open_idle_045": {
+      "file": "open_idle_045.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_045.webp",
+      "sha256": "2abcb04d2971b94e7e29f0fa5dd59d4e8c0d16cdee2ffa87755706d8230d923d"
+    },
+    "open_idle_046": {
+      "file": "open_idle_046.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_046.webp",
+      "sha256": "7acc36f82b27c66fb99ca5967ae2d46edcdf2cb0475b5ab904df5528cdec8bc6"
+    },
+    "open_idle_047": {
+      "file": "open_idle_047.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_047.webp",
+      "sha256": "478091b82cff38f257517eae1f0c27888ffeccd5ab1de9df59e26c196674251a"
+    },
+    "open_idle_048": {
+      "file": "open_idle_048.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_048.webp",
+      "sha256": "62bbf80912cabdb3016830fd3d8658410b97880ff4d282f01413aa25d6a5461c"
+    },
+    "open_idle_049": {
+      "file": "open_idle_049.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_049.webp",
+      "sha256": "d6589455ead5504da1f1ca180f9f2771d1fa1c2ce1c4346c670997c974fffa1f"
+    },
+    "open_idle_050": {
+      "file": "open_idle_050.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_050.webp",
+      "sha256": "0efd6c96e7961d624d6dcf170702d55fed14e05f6b7094c759cf1d052d24ebaf"
+    },
+    "open_idle_051": {
+      "file": "open_idle_051.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_051.webp",
+      "sha256": "ab581482a409a8f2bfcf4806a646e889af14ecb0e2cb9361aa987967c4188d02"
+    },
+    "open_idle_052": {
+      "file": "open_idle_052.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_052.webp",
+      "sha256": "285080c77412320a274b7cbb58661dad31df970b3eefb66832059e859bdb0c43"
+    },
+    "open_idle_053": {
+      "file": "open_idle_053.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_053.webp",
+      "sha256": "cb9301d025581a987fb3a914e80ffca497b68ac8ee6c8f0465ad50c85b8d9c0c"
+    },
+    "open_idle_054": {
+      "file": "open_idle_054.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_054.webp",
+      "sha256": "6098b8732fe7042f8f19e2bf675676b91badacaa2ee59dcaed05b5208c112f31"
+    },
+    "open_idle_055": {
+      "file": "open_idle_055.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_055.webp",
+      "sha256": "1e6b64ca09f5388d2a60dde1ae8096e07ae2eab41e1788ee24f9945922c22f7d"
+    },
+    "open_idle_056": {
+      "file": "open_idle_056.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_056.webp",
+      "sha256": "139086e4257914df02afd208d21e4e581022a9a222fa0ae7427a3f8880eef5a8"
+    },
+    "open_idle_057": {
+      "file": "open_idle_057.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_057.webp",
+      "sha256": "d44726d0ca13d2b9cfa3396185d4acce20d051ca5dd5ad8b72b28268a3d801cd"
+    },
+    "open_idle_058": {
+      "file": "open_idle_058.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_058.webp",
+      "sha256": "c1c1ceecc030f7116f271525c39c92bef66effe8837eee27ab69a7ff03874702"
+    },
+    "open_idle_059": {
+      "file": "open_idle_059.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_059.webp",
+      "sha256": "f926278e7d2932d06fc70d81b042c19e64db4e8334cece5ef462544d09869894"
+    },
+    "open_idle_060": {
+      "file": "open_idle_060.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_060.webp",
+      "sha256": "12391847cf14013e446c2ade596183e3da4b41902659137d069ce26044879ac1"
+    },
+    "open_idle_061": {
+      "file": "open_idle_061.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_061.webp",
+      "sha256": "8d949746a3ea7d25e5ee4b9abf7177ea533efc1db503ad00b89b152a7e318d0a"
+    },
+    "open_idle_062": {
+      "file": "open_idle_062.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_062.webp",
+      "sha256": "0afdc5401596aa326fea1dfb3ffeaf2519d653d345864762874a92889797f08c"
+    },
+    "open_idle_063": {
+      "file": "open_idle_063.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_063.webp",
+      "sha256": "0250e16dbd8b6eb301ec12465f001558bbc6f3b47e12ef47cd808a7619c7fc89"
+    },
+    "open_idle_064": {
+      "file": "open_idle_064.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_064.webp",
+      "sha256": "43679c1aee92508c9f9a897137515fa3975e41f6d09b044dd903d31cfc560128"
+    },
+    "open_idle_065": {
+      "file": "open_idle_065.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_065.webp",
+      "sha256": "98137e790d54f7c00659e46af771bb07d9edc76ab4f7e38535b947863331a091"
+    },
+    "open_idle_066": {
+      "file": "open_idle_066.webp",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/sp_sub_hub_1/top-level4/animations/open_idle/spritesheet_066.webp",
+      "sha256": "2da11a9986f67abfa2a7b4631b78bf3ba4a9df9d99bd43659a4d43594419910f"
+    }
+  },
+  "clips": {
+    "open_idle": [
+      {
+        "source": "open_idle_000",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_001",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_002",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_003",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_004",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_005",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_006",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_007",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_008",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_009",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_010",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_011",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_012",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_013",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_014",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_015",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_016",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_017",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_018",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_019",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_020",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_021",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_022",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_023",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_024",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_025",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_026",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_027",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_028",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_029",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_030",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_031",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_032",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_033",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_034",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_035",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_036",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_037",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_038",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_039",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_040",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_041",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_042",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_043",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_044",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_045",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_046",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_047",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_048",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_049",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_050",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_051",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_052",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_053",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_054",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_055",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_056",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_057",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_058",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_059",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_060",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_061",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_062",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_063",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_064",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_065",
+        "startFrame": 0,
+        "frameCount": 6
+      },
+      {
+        "source": "open_idle_066",
+        "startFrame": 0,
+        "frameCount": 6
+      }
+    ]
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "playback": {
+    "fallbackClip": "open_idle",
+    "staticClip": "open_idle",
+    "statusClips": {
+      "closed": "open_idle",
+      "idle": "open_idle",
+      "normal": "open_idle",
+      "blocked": "open_idle",
+      "no-power": "open_idle",
+      "not-in-power-net": "open_idle"
+    },
+    "openTransitionClip": null,
+    "closeTransitionClip": null,
+    "clipOptions": {
+      "open_idle": {
+        "playing": true,
+        "restart": false
+      }
+    },
+    "sourceStatuses": {}
+  },
+  "clipSelection": "protocol-core-open-idle-only",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260917-100609-cst",
+    "sourceVersion": "v1.5",
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+  }
+}

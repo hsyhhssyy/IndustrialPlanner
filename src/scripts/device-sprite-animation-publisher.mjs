@@ -42,6 +42,14 @@ function requireWebpFile(value, label) {
   return value;
 }
 
+function requireRelativeAssetPath(value, label) {
+  if (typeof value !== 'string' || !value || value.includes('\\') || path.isAbsolute(value)
+    || value.split('/').some((part) => !part || part === '.' || part === '..')) {
+    throw new Error(`${label} must be a safe relative asset path`);
+  }
+  return value;
+}
+
 function createMaskBuffer(rgba, width, height) {
   const output = Buffer.alloc(width * height * 4);
   for (let pixel = 0; pixel < width * height; pixel += 1) {
@@ -108,7 +116,9 @@ async function readSourceManifest(sourceRoot, maxTextureSize, resolution) {
     sources.set(name, Object.freeze({
       name,
       file: requireWebpFile(sourceDefinition.file, `sources.${name}.file`),
-      sourcePath: sourceDefinition.sourcePath,
+      sourcePath: sourceDefinition.sourcePath === undefined
+        ? null
+        : requireRelativeAssetPath(sourceDefinition.sourcePath, `sources.${name}.sourcePath`),
       rows,
       columns,
       frameCount,
@@ -335,6 +345,7 @@ async function encodeCompletedPage(page, outputDirectory, frameWidth, frameHeigh
 async function publishOneAnimation({
   spriteId,
   sourceDirectory,
+  sourceAssetRoot,
   spriteDirectory,
   maskDirectory,
   animationDirectory,
@@ -360,11 +371,17 @@ async function publishOneAnimation({
 
   try {
     for (const sourceDefinition of sourceManifest.sources.values()) {
-      const sourceFile = sourceManifest.sourceSite
-        ? path.resolve(sourceRoot, sourceManifest.sourceSite.relativeRoot, sourceDefinition.sourcePath)
-        : path.join(sourceRoot, sourceDefinition.file);
-      const resourceRoot = path.dirname(path.resolve(sourceDirectory));
-      if (!sourceFile.startsWith(`${resourceRoot}${path.sep}`)) throw new Error(`Source escapes resource root: ${sourceFile}`);
+      // AI-CORRECTION 2026-09-19: 来源证明与本地文件解析解耦；网站原件只存在于显式传入的临时批次根目录。
+      const assetRoot = path.resolve(sourceAssetRoot ?? sourceRoot);
+      if (sourceAssetRoot !== undefined && sourceDefinition.sourcePath === null) {
+        throw new Error(`${spriteId}/${sourceDefinition.file} has no website source path`);
+      }
+      const sourceFile = sourceAssetRoot === undefined
+        ? path.join(assetRoot, sourceDefinition.file)
+        : path.resolve(assetRoot, sourceDefinition.sourcePath);
+      if (sourceFile !== assetRoot && !sourceFile.startsWith(`${assetRoot}${path.sep}`)) {
+        throw new Error(`Source escapes asset root: ${sourceFile}`);
+      }
       const metadata = await sharp(sourceFile).metadata();
       const expectedWidth = sourceDefinition.columns * sourceManifest.frameWidth;
       const expectedHeight = sourceDefinition.rows * sourceManifest.frameHeight;
@@ -525,6 +542,7 @@ export async function publishPaginatedDeviceSpriteAnimations({
   definitions,
   spriteIds,
   sourceDirectory,
+  sourceAssetRoot,
   spriteDirectory,
   maskDirectory,
   animationDirectory,
@@ -580,6 +598,7 @@ export async function publishPaginatedDeviceSpriteAnimations({
     results.push(await publishOneAnimation({
       spriteId,
       sourceDirectory,
+      sourceAssetRoot,
       spriteDirectory,
       maskDirectory,
       animationDirectory,

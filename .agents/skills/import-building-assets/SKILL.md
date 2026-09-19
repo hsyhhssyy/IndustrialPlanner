@@ -20,17 +20,17 @@ description: 从 Endfield-Building-TopView-Assets 美术网站导入、同步或
 ## 执行边界
 
 - 用户要求导入、同步或更新素材才执行。已有明确范围就直接推进，不重复申请同一授权；创建、修改或校验本技能不构成导入授权。
-- 只处理用户指定的建筑、变体或素材类别；未限定范围的“导入网站素材”按项目已有映射覆盖的全部素材处理，网站新增且没有项目映射的内容列为未映射项。正式入口支持完整已有映射、仅物流集合，以及明确排除物流；其他局部建筑范围仍不支持，不能扩大为全量或手工合并。
+- 只处理用户指定的建筑、变体或素材类别；未限定范围的“导入网站素材”按项目已有映射覆盖的全部素材处理，网站新增且没有项目映射的内容列为未映射项。正式入口支持完整已有映射、仅物流集合、明确排除物流，以及一个或多个已有映射实体的局部建筑范围；不能扩大为全量或手工合并。
 - 网站是美术数据来源，不能据此新增设备、改变配方或推断逻辑端口。网站 ID、Registry entityId 和 spriteId 必须分别对账；业务变更遵循项目模块规范。
-- 正式导入必须一次完成两层素材产物：`resources/` 保留原尺寸、原始下载字节；`public/` 从同一批原件生成全部配置比例的发布版本。范围包含物流时，同批还必须把独立配色表写入 `src/registry/item-definition.ts` 的既有 `fluidColors` 字段；只更新其中一处、漏发某个比例或混用不同来源，都不算完成。用户明确要求“仅保存原件、暂不接入”时按原件留存范围处理，不能扩大为正式导入；当前该范围的入口状态见下表。
+- 网站原件只允许存在于本次 `.temp/.trash` 批次；`public/` 从该批原件生成全部配置比例的发布版本，`resources/` 只保留映射与动画来源清单等小型元数据，不保存原始 JSON/WebP 展开包。范围包含物流时，同批还必须把独立配色表写入 `src/registry/item-definition.ts` 的既有 `fluidColors` 字段；漏发某个比例、混用不同来源或把原件写入仓库，都不算完成。
 - 发布比例唯一配置为 `src/scripts/building-asset-publish-config.mjs` 的 `BUILDING_ASSET_PUBLISH_RESOLUTIONS`。导入前读取该常量及 `resolveBuildingAssetPublishTargets`；不得在技能、导入处理程序或运行时另外维护固定的缩放数值，也不得因为用户要求导入就自行改变该配置。
 - 网站烘焙物流已经接入；范围包含物流时运行 `publish-logistics`，不能继续套用历史暂缓要求。仅用户明确排除物流时运行 `defer-logistics`。仅物流范围使用下载器 `--logistics-only`，共享高度清单内的未选建筑及特效按原字节保留；不改写全局建筑映射。
 - 应用使用本项目发布后的本地资源。不得把运行时纹理 URL 改为美术网站，也不得执行下载的预览 JavaScript。
 
 | 用户本次要求 | 执行路线 |
 | --- | --- |
-| 导入已有映射全部素材、仅物流、或明确排除物流 | 执行下面七阶段 checklist，按阶段 4 的范围表选择命令 |
-| 仅保存配色表等原件，暂不发布或接入 | 阅读 [原件留存与配色状态](references/lessons-learned.md#原件留存与配色状态)；当前没有正式留存 CLI，在阶段 1 报告入口缺口，不使用全量或仅物流命令替代 |
+| 导入已有映射全部素材、指定已有映射实体、仅物流、或明确排除物流 | 执行下面七阶段 checklist，按阶段 4 的范围表选择命令 |
+| 仅保存配色表等原件，暂不发布或接入 | 不支持写入仓库；原件只可留在本次 `.temp/.trash` 批次，并明确其会随批次清理 |
 | 核查网站、维护技能、重发既有本地素材 | 不进入网站下载和导入流程；本地重发也不能恢复执行历史临时脚本 |
 
 ## 导入 checklist
@@ -39,10 +39,10 @@ description: 从 Endfield-Building-TopView-Assets 美术网站导入、同步或
 
 输入：用户要求、当前工作区、比例配置。完成证据：明确的导入范围、全部发布目标和已验证的执行入口。
 
-- [ ] 按上表确定任务路线；原件留存与正式导入的完成标准分开，不把“已保存”写成“已接入”。
+- [ ] 按上表确定任务路线；临时下载与正式导入的完成标准分开，不把“已下载”写成“已接入”。
 - [ ] 记录用户指定的实体、变体、类别。范围未限定时选已有项目映射；中文设备名按项目 i18n 规则核对，不自行翻译成 ID。
 - [ ] 查看当前工作区的 `git status --short`，记录已有改动；不读取其他分支或 worktree，不执行 Git 文件操作。
-- [ ] 运行下方只读命令，列出全部 `resolution / outputDirectory`，确认 `resources` 原版不属于缩放列表。
+- [ ] 运行下方只读命令，列出全部 `resolution / outputDirectory`，确认所有发布版本都从本批临时原件生成。
 - [ ] 核对本次范围涉及的 [就绪检查](references/project-import.md#执行前就绪检查)：网站输入、所需素材类别、全部比例、来源记录和整批应用均已有经过验证的入口。缺任何一项，在此停止，不先下载整批图片，不临时编写替代导入器。
 - [ ] 确定本次验证所用入口及已有检查基线；没有可比基线时记录“无可比基线”，不引用历史失败数量作结论。需要本批逐像素或固定浏览器验收时，先核对就绪检查中的能力缺口，不留到应用后才设计验证脚本。
 
@@ -67,7 +67,7 @@ node --input-type=module -e 'import { resolveBuildingAssetPublishTargets } from 
 python3 src/scripts/building-assets-site-source.py --batch "<批次目录>"
 ```
 
-仅物流范围在同一条命令末尾增加 `--logistics-only`。不得同时加 `--entity`；该参数不支持正式局部建筑导入。
+指定已有映射实体时，为每个实体在同一条命令末尾追加 `--entity <entityId>`；该范围排除物流。仅物流范围增加 `--logistics-only`，不得同时使用 `--entity`。
 
 ### 3. 对账并下载原件
 
@@ -75,7 +75,7 @@ python3 src/scripts/building-assets-site-source.py --batch "<批次目录>"
 
 - [ ] 按已有 `entityId / spriteId / sourcePath` 对照网站 ID 与视图，列出新增、变化、不变、缺失及未映射项。
 - [ ] 按下方决策表处理未映射与缺失项，不新增 Registry 实体，不猜别名或变体。
-- [ ] 使用已验证的依赖解析与下载入口取得本次范围的 JSON/WebP 闭包；逐文件确认大小、SHA-256 和原始来源路径，原件只保留一份。
+- [ ] 使用已验证的依赖解析与下载入口取得本次范围的 JSON/WebP 闭包；逐文件确认大小、SHA-256 和原始来源路径，原件只在批次 `site/` 中保留一份。
 - [ ] 核对下载器已完成结束锚点复查；发布不同会报错，不能混用新旧发布。
 
 ### 4. 生成全部发布版本
@@ -97,6 +97,7 @@ python3 src/scripts/building-assets-site-source.py --batch "<批次目录>" --me
 | 已固定范围 | 随后依次执行的子命令 |
 | --- | --- |
 | 完整已有映射 | `publish-static` → `publish-animations` → `publish-effects` → `publish-logistics` |
+| 一个或多个已有映射实体（下载时已用 `--entity`） | `publish-static` → `publish-animations` → `publish-effects` |
 | 仅物流（下载时已用 `--logistics-only`） | `publish-effects` → `publish-logistics` |
 | 建筑且明确排除物流 | `publish-static` → `publish-animations` → `publish-effects` → `defer-logistics` |
 
@@ -123,7 +124,7 @@ node src/scripts/import-building-assets.mjs <子命令> "<批次目录>"
 - [ ] 对本次涉及的物流、高度和端口特效运行现有专项校验，确认状态映射、数值编码、坐标和依赖完整。
 - [ ] 含物流时，确认 `validate` 已严格对账独立配色表与暂存 Registry：物品集合、液/气相态、分层数量、`rgba8 / displayRgba8 / hex` 及 `ItemDefinition.fluidColors` 必须一致；新增未映射物品、缺层或相态冲突均停止批次。
 - [ ] 将结构校验、独立像素检查、浏览器验收分别记录。下方 `validate` 不执行后两项；端口特效出现斜纹或帧错位时按 [图集斜纹](references/lessons-learned.md#图集斜纹)处理，不能用结构校验通过覆盖视觉失败。
-- [ ] 任一验收失败时保留错误证据，正式 `resources` 和 `public` 不写入。不能以脚本退出码为 0 代替产物验收。
+- [ ] 任一验收失败时保留错误证据，正式映射、Registry 和 `public` 不写入。不能以脚本退出码为 0 代替产物验收。
 
 运行统一验收；成功输出原件数、产物数和应用文件数，并生成 `application-plan.json`：
 
@@ -137,7 +138,7 @@ node src/scripts/import-building-assets.mjs validate "<批次目录>"
 
 - [ ] 列出本次实际写入文件，核对与开始时已有改动是否重叠。导入目标存在未提交修改时停止并报告具体文件；其他不重叠的脏工作区不构成整批停止理由。
 - [ ] 确认本次导入前的已提交版本可作为 Git 回退基线。导入流程不建立长期本地恢复包，也不以 `.temp` 目录承担版本历史职责。
-- [ ] 在既有导入授权内一次应用 `resources` 原版、全部 `public` 版本和物流范围的 Registry 配色，并复核来源、数量及引用。应用计划允许删除受管 `public/<版本>/logistics/` 与已退役 `animations/logistics-contract2/` 中没有暂存对应物的陈旧派生产物。网站原件移除项仍单独报告，不据此删除 Registry 物品或其他项目资产。
+- [ ] 在既有导入授权内一次应用小型 `resources` 映射/动画清单、全部 `public` 版本和物流范围的 Registry 配色，并复核来源、数量及引用。应用计划不得包含 `resources/building-assets-site/` 或其他原始 JSON/WebP 展开包；允许删除受管 `public/<版本>/logistics/` 与已退役 `animations/logistics-contract2/` 中没有暂存对应物的陈旧派生产物。
 - [ ] 应用失败或中断时停止继续写入，记录正式目录的实际状态与当前 Git diff。需要回退时遵循项目 Git 授权规则，由用户明确授权后通过 Git 处理；不得依赖或归档批次恢复副本。
 
 所有前置项完成后，在既有导入授权内执行：
@@ -154,8 +155,8 @@ node src/scripts/import-building-assets.mjs apply "<批次目录>"
 
 - [ ] 按 `simple-check` 执行基础检查；用户已指定检查范围时遵循其范围。失败时按 [检查失败与基线](references/lessons-learned.md#检查失败与基线)记录退出状态、失败集合及新增项，不擅自改断言或业务代码。
 - [ ] 涉及应用内素材效果时，使用阶段 1 确认的场景入口，按 `playwright-cli` 和项目要求逐个验证三个 Screen Profile、保留截图并逐次清理；按 [浏览器场景与端口数量](references/lessons-learned.md#浏览器场景与端口数量)核对场景。缺入口则报告“视觉验证未执行”，不临时编写复杂夹具，不自动运行正式 E2E 或 Blueprint。
-- [ ] 报告发布编号、索引摘要、导入范围、原版数量、每个比例的目录和数量、未映射项及检查结果。区分“未应用”“应用失败或中断”“已应用但验证未完成”“已应用但检查未通过”和“导入完成”；只有所有必需验收通过且无待执行项时才使用“导入完成”。
-- [ ] 按 [批次重试与清理](references/lessons-learned.md#批次重试与清理)清理本轮批次目录和一次性脚本，不创建 `.temp/building-assets-import/` 长期归档。需要长期保留的来源信息进入 `resources/<来源批次>/_import/`，实现与验证结论进入代码、测试、项目文档和 Git 历史。
+- [ ] 报告发布编号、索引摘要、导入范围、临时原件数量、每个比例的目录和数量、未映射项及检查结果。区分“未应用”“应用失败或中断”“已应用但验证未完成”“已应用但检查未通过”和“导入完成”；只有所有必需验收通过且无待执行项时才使用“导入完成”。
+- [ ] 按 [批次重试与清理](references/lessons-learned.md#批次重试与清理)清理本轮批次目录和一次性脚本，不创建长期原件归档；长期只保留发布编号、索引摘要和产物来源字段，不保留网站文件副本。
 
 ## 简单判断与停止条件
 

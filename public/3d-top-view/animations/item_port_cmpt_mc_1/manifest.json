@@ -1,37 +1,91 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "resolution": 0.5,
   "frameWidth": 384,
   "frameHeight": 384,
   "appliedSourceToPublishedTransform": "flip-top-bottom",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   },
   "maskFile": "mask.webp",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open_idle",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": null,
+    "closeTransitionClip": null,
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
   "clips": {
-    "open": {
+    "close_idle": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
-        67
+        33,
+        34
       ],
-      "frameCount": 1,
+      "frameCount": 2,
       "pages": [
         {
-          "file": "open-0.webp",
+          "file": "close_idle-0.webp",
           "rows": 1,
-          "columns": 1,
-          "frameCount": 1
+          "columns": 2,
+          "frameCount": 2
         }
       ]
     },
     "open_idle": {
       "frameDurationMs": 33.333333333333336,
       "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        66,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        66,
+        67,
+        33,
+        134,
+        33,
+        67,
+        33,
         67,
         33,
         33,
@@ -44,7 +98,6 @@
         34,
         33,
         33,
-        400,
         34,
         33,
         33,
@@ -52,13 +105,6 @@
         33,
         33,
         34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        500,
         33,
         33,
         34,
@@ -70,18 +116,8 @@
         34,
         33,
         67,
-        33,
-        33,
+        66,
         34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        334,
         33,
         33,
         34,
@@ -106,7 +142,19 @@
         33,
         33,
         34,
-        533,
+        133,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
         33,
         34,
         33,
@@ -132,7 +180,7 @@
         34,
         66
       ],
-      "frameCount": 99,
+      "frameCount": 137,
       "pages": [
         {
           "file": "open_idle-0.webp",
@@ -148,39 +196,15 @@
         },
         {
           "file": "open_idle-2.webp",
-          "rows": 6,
+          "rows": 7,
           "columns": 5,
-          "frameCount": 29
-        }
-      ]
-    },
-    "close": {
-      "frameDurationMs": 33.333333333333336,
-      "frameDurationsMs": [
-        67
-      ],
-      "frameCount": 1,
-      "pages": [
+          "frameCount": 35
+        },
         {
-          "file": "close-0.webp",
-          "rows": 1,
-          "columns": 1,
-          "frameCount": 1
-        }
-      ]
-    },
-    "close_idle": {
-      "frameDurationMs": 33.333333333333336,
-      "frameDurationsMs": [
-        67
-      ],
-      "frameCount": 1,
-      "pages": [
-        {
-          "file": "close_idle-0.webp",
-          "rows": 1,
-          "columns": 1,
-          "frameCount": 1
+          "file": "open_idle-3.webp",
+          "rows": 7,
+          "columns": 5,
+          "frameCount": 32
         }
       ]
     }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
@@ -10,7 +10,7 @@
       "file": "close_000.webp",
       "rows": 10,
       "columns": 10,
-      "frameCount": 91,
+      "frameCount": 92,
       "frameDurationsMs": [
         33,
         34,
@@ -102,21 +102,24 @@
         33,
         34,
         33,
-        67
+        33,
+        34
       ],
       "sourcePath": "buildings/grinder_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "1cd3ea157732ee975c34aeac33ef2cf6596ffb267590cd82cb8721247a5d8801"
+      "sha256": "37dcc7ceb443e0e27eb532de87b800f37b8db46345645b8e022d20b5e231a2ac"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 3,
+      "frameCount": 3,
       "frameDurationsMs": [
-        100
+        33,
+        34,
+        33
       ],
       "sourcePath": "buildings/grinder_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "58eac5032ca329fd5f38b422bea86525242b4df1329165d19c5b8c037447f448"
+      "sha256": "eca92ae12a3d6b56f98da1d4403fc09a01364888186481d2e3606180509ce40c"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -207,7 +210,7 @@
         33
       ],
       "sourcePath": "buildings/grinder_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "bec9b91bed860bb8784f7ce5338ed62d384b0e414595442d594985d1fc71cd44"
+      "sha256": "9f264512c16a5c58bed86de50f71dfe114417afcdfc2731bf6cb0ea000e04432"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -247,10 +250,24 @@
         33
       ],
       "sourcePath": "buildings/grinder_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "d4069c78e2c6d0232ce8ba518375cd01dde46bb67d3cd131a13c2311b3b3d3a0"
+      "sha256": "5aaba92687d0c6b168f664b9355410dd07a01b02084e8c11c405e1009e9e5460"
     }
   },
   "clips": {
+    "close": [
+      {
+        "source": "close_000",
+        "startFrame": 0,
+        "frameCount": 92
+      }
+    ],
+    "close_idle": [
+      {
+        "source": "close_idle_000",
+        "startFrame": 0,
+        "frameCount": 3
+      }
+    ],
     "open": [
       {
         "source": "open_000",
@@ -264,31 +281,26 @@
         "startFrame": 0,
         "frameCount": 30
       }
-    ],
-    "close": [
-      {
-        "source": "close_000",
-        "startFrame": 0,
-        "frameCount": 91
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
-        "startFrame": 0,
-        "frameCount": 1
-      }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "website-explicit-phases",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": "open",
+    "closeTransitionClip": "close",
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

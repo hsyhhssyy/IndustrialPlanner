@@ -1,24 +1,33 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import type { LogisticsBakedManifest } from '@/shared/logistics-baked';
-// @ts-expect-error Node 发布脚本由实际文件回归验证。
-import { publishLogisticsBaked } from '../../scripts/publish-logistics-baked.mjs';
+// AI-REMOVED 2026-09-19:
+// Reason: 正式仓库不再保存网站物流原件，常规测试不能从本地来源重发。
+// Trigger: 用户要求网站素材只存在于 .temp/.trash 导入批次。
+// Evidence: 导入批次 validate 校验来源与全部发布比例；本文件改为验证运行时产物闭包。
+// Replacement: 下方正式 manifest、分页、数值场和静态图集自洽检查。
+// Risk: 四分之一比例的重发检查改由发布器夹具及导入批次承担。
+// Human Review: Required
+//
+// Original code:
+// import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+// import { publishLogisticsBaked } from '../../scripts/publish-logistics-baked.mjs';
 
 describe('网站烘焙物流发布', () => {
-  it('正式产物使用完整相位序列和共享数值场，端帽完整且保留原件来源', async () => {
+  it('正式产物使用完整相位序列和共享数值场，端帽与来源证明完整', async () => {
     const root = path.resolve('public/3d-top-view/logistics/baked');
-    const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8')) as LogisticsBakedManifest & { sourceSite: { root: string; indexSha256: string } };
-    const sourceRoot = path.resolve(manifest.sourceSite.root);
-    expect(createHash('sha256').update(await readFile(path.join(sourceRoot, 'integrity.json'))).digest('hex')).toBe(manifest.sourceSite.indexSha256);
-    const source = JSON.parse(await readFile(path.join(sourceRoot, 'buildings/logistics/logistics-baked.json'), 'utf8'));
-    expect(manifest.clips).toEqual(source.clips);
-    expect(manifest.fluidPlayback.referenceShader).toEqual(source.fluidPlayback.referenceShader);
-    expect(manifest.cycle).toEqual(source.cycle);
+    const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8')) as LogisticsBakedManifest & {
+      sourceSite: { siteUrl: string; releaseId: string; indexSha256: string };
+    };
+    expect(manifest.sourceSite.siteUrl).toBe('https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/');
+    expect(manifest.sourceSite.releaseId).toMatch(/^v1\.5-/);
+    expect(manifest.sourceSite.indexSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(manifest.sourceSite).not.toHaveProperty('root');
     expect(manifest).not.toHaveProperty('fluidProfiles');
     for (const key of [manifest.endpointConnector.composite, manifest.endpointConnector.whitening]) expect(manifest.frames[`static/${key}`]).toBeDefined();
     expect(Object.entries(manifest.pages).filter(([, value]) => value.data).map(([id]) => id).sort()).toEqual(['fluid-data', 'gas-field']);
@@ -26,60 +35,28 @@ describe('网站烘焙物流发布', () => {
       const bytes = await readFile(path.join(root, page.file));
       expect(createHash('sha256').update(bytes).digest('hex'), id).toBe(page.sha256);
       if (!page.data) expect(await sharp(bytes).metadata()).toMatchObject({ width: page.width, height: page.height });
-      else {
-        const originalPage = source.pages[id];
-        const original = await sharp(path.join(sourceRoot, 'buildings/logistics', originalPage.file)).ensureAlpha().raw().toBuffer();
-        const actual = gunzipSync(bytes);
-        const expected = Buffer.alloc(actual.length);
-        for (let y = 0; y < page.height; y++) for (let x = 0; x < page.width; x++) {
-          const offset = (Math.floor((y + .5) / manifest.resolution) * originalPage.width + Math.floor((x + .5) / manifest.resolution)) * 4;
-          original.copy(expected, (y * page.width + x) * 4, offset, offset + 4);
-        }
-        expect(actual.equals(expected), id).toBe(true);
-      }
+      else expect(gunzipSync(bytes).length, id).toBe(page.width * page.height * 4);
     }
     const statics = JSON.parse(await readFile('public/3d-top-view/logistics/static/manifest.json', 'utf8'));
     expect(Object.keys(statics.frames).filter((key) => key.startsWith('pipe/')).every((key) => key.startsWith('pipe/empty/'))).toBe(true);
   });
 
-  it('同份原件可发布四分之一版本，窄帧恢复画布后与独立缩放一致，原件字节不变', async () => {
-    const current = JSON.parse(await readFile('public/3d-top-view/logistics/baked/manifest.json', 'utf8'));
-    const sourceDirectory = path.resolve(current.sourceSite.root, 'buildings/logistics');
-    const originalBytes = await readFile(path.join(sourceDirectory, 'logistics-baked.json'));
-    const source = JSON.parse(originalBytes.toString('utf8'));
-    await mkdir('.temp/.trash', { recursive: true });
-    const directory = await mkdtemp(path.resolve('.temp/.trash/baked-logistics-test-'));
-    try {
-      const resolution = .25;
-      await publishLogisticsBaked({ sourceDirectory, outputDirectory: path.join(directory, 'logistics'),
-        spriteDirectory: path.join(directory, 'sprites'), maskDirectory: path.join(directory, 'masks'), resolution, sourceSite: current.sourceSite });
-      const manifest = JSON.parse(await readFile(path.join(directory, 'logistics/baked/manifest.json'), 'utf8')) as LogisticsBakedManifest;
-      expect(manifest).not.toHaveProperty('fluidProfiles');
-      for (const key of ['static/pipe.endpoint.connector', 'static/pipe.straight.support-back', 'conveyor/left/highlight/17']) {
-        const frame = source.frames[key];
-        const crop = await sharp(path.join(sourceDirectory, source.pages[frame.page].file))
-          .extract({ left: frame.rect[0], top: frame.rect[1], width: frame.rect[2], height: frame.rect[3] })
-          .extend({ left: frame.spriteSourceSize[0], top: frame.spriteSourceSize[1],
-            right: 128 - frame.spriteSourceSize[0] - frame.rect[2], bottom: 128 - frame.spriteSourceSize[1] - frame.rect[3],
-            background: { r: 0, g: 0, b: 0, alpha: 0 } }).ensureAlpha().raw().toBuffer();
-        const expected = await sharp(crop, { raw: { width: 128, height: 128, channels: 4 } })
-          .resize(32, 32, { kernel: 'lanczos3' }).raw().toBuffer();
-        const published = manifest.frames[key]!;
-        const [x, y, width, height] = published.rect;
-        const actualCrop = await sharp(path.join(directory, 'logistics/baked', manifest.pages[published.page]!.file))
-          .extract({ left: x, top: y, width, height }).ensureAlpha().raw().toBuffer();
-        const actual = Buffer.alloc(32 * 32 * 4);
-        const [left, top] = published.spriteSourceSize;
-        for (let row = 0; row < height; row++) actualCrop.copy(actual, ((top + row) * 32 + left) * 4, row * width * 4, (row + 1) * width * 4);
-        for (let i = 0; i < actual.length; i += 4) {
-          expect(actual[i + 3], key).toBe(expected[i + 3]);
-          if (expected[i + 3]) expect(actual.subarray(i, i + 3), key).toEqual(expected.subarray(i, i + 3));
-        }
-      }
-      expect(await readFile(path.join(sourceDirectory, 'logistics-baked.json'))).toEqual(originalBytes);
-      expect((await sharp(path.join(directory, 'sprites/pipe_straight_1x1.webp')).metadata()).width).toBe(32);
-    } finally { sharp.cache(false); await rm(directory, { recursive: true, force: true }); }
-  }, 30_000);
+  it('正式静态图集与默认物流精灵的分页边界和分辨率一致', async () => {
+    const baked = JSON.parse(await readFile('public/3d-top-view/logistics/baked/manifest.json', 'utf8')) as LogisticsBakedManifest;
+    const statics = JSON.parse(await readFile('public/3d-top-view/logistics/static/manifest.json', 'utf8'));
+    for (const page of Object.values(statics.pages) as { file: string; width: number; height: number }[]) {
+      expect(await sharp(path.join('public/3d-top-view/logistics/static', page.file)).metadata())
+        .toMatchObject({ width: page.width, height: page.height });
+    }
+    for (const frame of Object.values(statics.frames) as { page: string; rect: [number, number, number, number] }[]) {
+      const page = statics.pages[frame.page];
+      const [x, y, width, height] = frame.rect;
+      expect(x + width).toBeLessThanOrEqual(page.width);
+      expect(y + height).toBeLessThanOrEqual(page.height);
+    }
+    expect((await sharp('public/3d-top-view/sprites/pipe_straight_1x1.webp').metadata()).width)
+      .toBe(128 * baked.resolution);
+  });
 });
 
 // AI-REMOVED 2026-09-14:

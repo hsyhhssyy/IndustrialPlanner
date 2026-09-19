@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "frameWidth": 768,
   "frameHeight": 512,
   "fps": 30,
@@ -9,13 +9,14 @@
     "close_idle_000": {
       "file": "close_idle_000.webp",
       "rows": 1,
-      "columns": 1,
-      "frameCount": 1,
+      "columns": 2,
+      "frameCount": 2,
       "frameDurationsMs": [
-        67
+        33,
+        34
       ],
       "sourcePath": "buildings/dismantler_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "10ed32830f9910143358ced992317df45ee20fb127c256b4a1c312dc4af47922"
+      "sha256": "41935822c6377dfe7f15a65cef48e3dba2ebfec825897e561af44b37f92e632d"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -52,10 +53,10 @@
         33,
         33,
         34,
-        200,
         33,
+        67,
         33,
-        34,
+        67,
         33,
         33,
         34,
@@ -65,7 +66,7 @@
         33
       ],
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "f7c7b112b38d6246cc4b025243a89555a3124523ddb70fdbca86a13766ac221a"
+      "sha256": "33f0dac5f88b03c27bf90f713c8fd05e783ca42beae2810a170f00b131d6696c"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -82,13 +83,13 @@
         33,
         34,
         33,
-        200,
         33,
         34,
         33,
+        67,
         33,
-        34,
         33,
+        67,
         33,
         34,
         33,
@@ -115,7 +116,7 @@
         33
       ],
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "57b1ff0dc8f58711f61201a66acf4463909dc877efe3dc169307b8d95002049a"
+      "sha256": "6d39080c7d03900a62788412a4521222598f5598d9c83c840101b4b0ed5a4601"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -127,7 +128,12 @@
         34,
         33,
         33,
-        100,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
         67,
         33,
         34,
@@ -153,19 +159,14 @@
         33,
         34,
         33,
-        100,
         33,
         34,
         33,
-        33,
-        34,
-        33,
-        33,
-        34,
+        67,
         33
       ],
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "cf861ea31616b13b00b5a80c53739bf2458ec55a77e799cdcfb94b7dd5d499dd"
+      "sha256": "11f181807b6944c77138e6255f77c37f6b59f1c26477ec6d5c493a2616c31e08"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -187,19 +188,7 @@
         33,
         33,
         34,
-        333,
         33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        1333,
         33,
         34,
         33,
@@ -212,10 +201,22 @@
         33,
         34,
         33,
-        33
+        67,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
       ],
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "44c3438df6df5f35f17dc955944da47f813afe5923e309c09c4882fed552e7c1"
+      "sha256": "45b93e8614c89fcd01cd2ccd5e87449ccdb09fc003d342554343d6f6a4e8c08d"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -223,6 +224,57 @@
       "columns": 5,
       "frameCount": 40,
       "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        67,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        66,
+        34,
+        33,
+        33,
+        34,
+        66,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        66,
+        34,
+        33,
+        67,
+        33,
+        33,
+        34,
+        33,
+        67,
+        33,
+        33,
+        34,
+        33
+      ],
+      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_004.webp",
+      "sha256": "3a0b721d6b78d73a710423e4fbe7d336f7c7c85b1b67fea447577bc2b662b235"
+    },
+    "open_idle_005": {
+      "file": "open_idle_005.webp",
+      "rows": 8,
+      "columns": 5,
+      "frameCount": 40,
+      "frameDurationsMs": [
+        33,
         34,
         33,
         33,
@@ -239,7 +291,56 @@
         33,
         33,
         34,
-        133,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        67,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34
+      ],
+      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_005.webp",
+      "sha256": "7c58889704329ede7a718f87dc9c2069fefde4fce32f4c448de13f1cd7457375"
+    },
+    "open_idle_006": {
+      "file": "open_idle_006.webp",
+      "rows": 8,
+      "columns": 5,
+      "frameCount": 40,
+      "frameDurationsMs": [
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        100,
+        200,
+        67,
+        33,
         33,
         34,
         33,
@@ -264,41 +365,15 @@
         33,
         34
       ],
-      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "17e62acef8f9dc9ffb4ac77a906318d4c984434d73c7eac28bbeceddff180ff1"
+      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_006.webp",
+      "sha256": "e7373fa5c6db6c9e671eb8dad972b6533a37b0e0dda08706041a92e945a6ef34"
     },
-    "open_idle_005": {
-      "file": "open_idle_005.webp",
-      "rows": 8,
+    "open_idle_007": {
+      "file": "open_idle_007.webp",
+      "rows": 3,
       "columns": 5,
-      "frameCount": 39,
+      "frameCount": 13,
       "frameDurationsMs": [
-        33,
-        367,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
-        33,
-        33,
-        34,
         33,
         33,
         34,
@@ -313,1946 +388,79 @@
         34,
         33
       ],
-      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "fde3714d11625b7028f8205c0412c3d1e611e0495fbb58020e5345ba8ab39ae0"
+      "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_007.webp",
+      "sha256": "588409289ed90d5450c6663623e1b336e006d7be4c54adba5c06508d8978be6e"
     }
   },
   "clips": {
-    "open": [
+    "close_idle": [
       {
-        "source": "open_idle_000",
+        "source": "close_idle_000",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          200
-        ]
+        "frameCount": 2
       }
     ],
     "open_idle": [
       {
         "source": "open_idle_000",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_000",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
+        "startFrame": 0,
+        "frameCount": 40
       },
       {
         "source": "open_idle_001",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          200
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_001",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
+        "frameCount": 40
       },
       {
         "source": "open_idle_002",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          100
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          67
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          100
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_002",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
+        "frameCount": 40
       },
       {
         "source": "open_idle_003",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          333
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          1333
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      }
-    ],
-    "close": [
-      {
-        "source": "open_idle_003",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_003",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
+        "frameCount": 40
       },
       {
         "source": "open_idle_004",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          133
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_004",
-        "startFrame": 39,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
+        "frameCount": 40
       },
       {
         "source": "open_idle_005",
         "startFrame": 0,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
+        "frameCount": 40
       },
       {
-        "source": "open_idle_005",
-        "startFrame": 1,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          367
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 2,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 3,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 4,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 5,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 6,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 7,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 8,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 9,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 10,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 11,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 12,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 13,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 14,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 15,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 16,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 17,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 18,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 19,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 20,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 21,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 22,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 23,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 24,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 25,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 26,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 27,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 28,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 29,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 30,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 31,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 32,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 33,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 34,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 35,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 36,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 37,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          34
-        ]
-      },
-      {
-        "source": "open_idle_005",
-        "startFrame": 38,
-        "frameCount": 1,
-        "frameDurationsMs": [
-          33
-        ]
-      }
-    ],
-    "close_idle": [
-      {
-        "source": "close_idle_000",
+        "source": "open_idle_006",
         "startFrame": 0,
-        "frameCount": 1
+        "frameCount": 40
+      },
+      {
+        "source": "open_idle_007",
+        "startFrame": 0,
+        "frameCount": 13
       }
     ]
   },
   "frameTransform": "flip-top-bottom",
   "coordinateTransform": "projectY = depth - 1 - sourceZ",
-  "clipSelection": "validated-existing-ranges",
+  "playback": {
+    "fallbackClip": "close_idle",
+    "staticClip": "open_idle",
+    "statusClips": {
+      "normal": "open_idle"
+    },
+    "openTransitionClip": null,
+    "closeTransitionClip": null,
+    "clipOptions": {},
+    "sourceStatuses": {}
+  },
+  "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260913-195207-cst",
+    "releaseId": "v1.5-20260917-100609-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "d6675aa22e690a8e61f5466dc2a40053e3589f7e296d785e8bbb87b8e45b5966",
-    "root": "resources/building-assets-site/v1.5-20260913-195207-cst",
-    "relativeRoot": "../../building-assets-site/v1.5-20260913-195207-cst"
+    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
   }
 }

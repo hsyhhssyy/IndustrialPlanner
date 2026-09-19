@@ -2,21 +2,21 @@
 
 当前素材已于 2026-09-13 通过 [网站建筑素材导入技能](../.agents/skills/import-building-assets/SKILL.md) 实际导入，发布编号为 `v1.5-20260913-195207-cst`。覆盖 51 条实体映射、31 套动画及 20 套静态图；6 项 Registry 绘图范围已按用户授权同步。
 
-- 原件：`building-assets-site/v1.5-20260913-195207-cst/`，1457 个网站文件保持下载原字节，动画来源清单通过 `sourceSite` 引用同一份原件。
+- 原件：网站 JSON/WebP 只在 `.temp/.trash` 导入批次中下载和校验，不进入仓库；动画来源清单只保留发布编号、索引摘要和网站相对路径。
 - 发布：`public/3d-top-view/`，按 `BUILDING_ASSET_PUBLISH_RESOLUTIONS` 的当前值 `[0.5]` 生成 772 个新产物，静态首帧、遮罩、动画分页和高度特效使用同一配置。
 - 管道、传送带的新绘制已由用户明确暂缓；65 个现有物流材质文件保持不变。共享高度清单另保留 10 个既有高度文件，收据标记为 `retained`，不计入本次缩放数量。
-- 网站发布、逐文件哈希、产物来源及比例见原件目录 `_import/source-receipt.json` 和 `_import/publish-receipt.json`。旧来源事实保留在映射的 `historicalSource` 和 `_import/` 历史清单中。
+- 网站发布、逐文件哈希、产物来源及比例在导入批次的 `source-receipt.json`、`publish-receipt.json` 中验收；应用后只保留映射与运行时 manifest 中的小型来源证明。
 - ZIP 导入、PNG 大图拆分和旧静态批量同步入口已退役；原文仅保留在 `src/scripts/archived-building-imports/` 注释审计档。
 
 ## 历史记录（2026-09-11）
 
-以下保留旧 ZIP 导入记录，目录、数量和限制仅代表当时状态；当前网站来源以上述记录及发布收据为准。
+以下保留旧 ZIP 导入记录，目录、数量和限制仅代表当时状态；对应展开原件已于 2026-09-19 退出工作树。
 
 既有资源的历史来源仍是 `动画素材包/buildings_frontend_v1.5.zip`，SHA-256 记录在 `building-top-view-v15.json`，不得改写为网站来源。以下为 2026-09-11 的导入记录：清单覆盖 51 条 Registry 映射，31 条动画、20 条静态，对应 46 个唯一普通视图；31 条动画共 532 个分页。原始普通资源共 463 个文件，已与 ZIP 逐字节核对。另有 6 个连续物流材质视图由 `logistics-materials/contract2/` 覆盖。ZIP 共 54 个视图，其中 2 个没有当时实体或确定的模式映射。
 
 ## 来源与发布
 
-- 动画源位于 `device-sprite-animation/<spriteId>/`，静态源位于 `device-sprite-original/v15/`。source 文件保留 ZIP 原始字节；来源 hash 不以发布后的 WebP hash 代替。
+- `device-sprite-animation/<spriteId>/manifest.json` 只保留动画来源元数据；旧动画 WebP 原件已移除。`device-sprite-original/` 中非网站、自定义来源不属于本次清理范围。
 - 网站导入的版本锁定、哈希校验、范围选择、来源记录及暂存发布流程统一维护在上述技能中，不再提供 ZIP 命令或 `--prepare-only` 兼容入口。
 - 各条目的来源 hash 独立记录，单建筑更新不改其他条目；已有 ZIP 摘要只表示历史输入，网站导入须另记发布编号、索引摘要和逐文件来源。
 - 退役脚本原文以 `AI-REMOVED` 注释保留在 `src/scripts/archived-building-imports/`，仅供审计。
