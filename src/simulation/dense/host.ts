@@ -108,7 +108,12 @@ import {
   SimulationPerformanceRateWindow,
   type SimulationStateReadWrite,
 } from "../contracts";
-import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
+import {
+  convertSimulationPhaseTickBetweenRates,
+  convertSimulationPhaseTickBetweenRatesExact,
+  DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND,
+  DENSE_STANDARD_TICK_RATE_PER_SECOND,
+} from "../contracts";
 import { compileSimulationTopology, createSimulationDocumentHash } from "../topology";
 import { createSimulationTopologyMigration } from "../topology";
 import { appendSimulationBaseBuiltinEntities, prepareCurrentSimulationDocument } from "../topology";
@@ -124,11 +129,35 @@ import type {
 let nextDenseSessionId = 1;
 const DENSE_TIMELINE_TICK_DURATION_SECONDS = 0.5;
 const DENSE_TIMELINE_RULER_DURATION_SECONDS = 300;
-const DENSE_TIMELINE_STEP_STANDARD_TICKS =
-  DENSE_STANDARD_TICK_RATE_PER_SECOND * DENSE_TIMELINE_TICK_DURATION_SECONDS;
+// AI-REMOVED 2026-09-19:
+// Reason: Dense standard TPS 热切换后，时间轴半秒步长必须由当前 topology rate 推导，不能继续固定为 4 TPS 下的 2 ticks。
+// Trigger: 用户要求 Dense 在 x4 及以上使用真实 4 / 2 standard TPS 动态切换。
+// Evidence: 2 TPS 下半秒时间轴步长应为 1 tick；固定常量会把时间轴尺度放大一倍。
+// Replacement: resolveDenseTimelineStepStandardTicks
+// Risk: Low；目前 4 / 2 TPS 都能精确表示 0.5 秒步长。
+// Human Review: Required
+//
+// Original code:
+// const DENSE_TIMELINE_STEP_STANDARD_TICKS =
+//   DENSE_STANDARD_TICK_RATE_PER_SECOND * DENSE_TIMELINE_TICK_DURATION_SECONDS;
 const DENSE_TIMELINE_ORIGIN_STANDARD_TICK = 1;
 const DENSE_TIMELINE_CAPACITY_TICKS = 600;
+const DENSE_DYNAMIC_STANDARD_RATE_MINIMUM_SPEED = 4;
+const DENSE_BACKPRESSURE_WALL_SECONDS = 0.5;
+const DENSE_RATE_SAMPLE_SIMULATION_SECONDS = 2;
+const DENSE_HIGH_RATE_CAPACITY_MARGIN = 1.1;
+const DENSE_LOW_RATE_RECOVERY_MARGIN = 2.5;
 const logger = createLogger("dense-simulation-runtime");
+
+interface DenseActiveTopologySource {
+  readonly initializationDocument: WorldDocument;
+  readonly executionDocument: WorldDocument;
+  readonly executionExcludedIssues: readonly UnknownWorldEntityDefinitionIssue[];
+  readonly presentationDocument: WorldDocument | null;
+  readonly presentationExcludedIssues: readonly UnknownWorldEntityDefinitionIssue[];
+  readonly regionalResources: readonly RegionalResourceSupplySetting[];
+  readonly operatingStatusDeviceIds: readonly string[];
+}
 
 export function createDenseSimulationHost(
   workspace: WorkspaceContract,
@@ -236,6 +265,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private sourceDocumentSignature: string | null = null;
   private topologyRefreshQueue: Promise<void> | null = null;
   private timelinePresentationActive = false;
+  private activeTopologySource: DenseActiveTopologySource | null = null;
+  private pendingStandardTickRate: number | null = null;
+  private rateSampleWallTimeMs = 0;
+  private rateSampleSimulationSeconds = 0;
   // AI-REMOVED 2026-09-17:
   // Reason: Dense Host 不再持有多 Worker 区域 Session、Epoch 帧缓存或主线程仓库统计。
   // Trigger: 用户要求 Dense 多基地合成单图并直接共享同一个仓库。
@@ -403,8 +436,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       && !isRegionalSimulationSpeed(value)
     ) return;
     this.state.simulationSpeed = value;
+    this.resetDenseRateSample();
     if (this.projection !== null) {
-      this.sendCommands([{ type: "set-speed", simulationSpeed: value }]);
+      void this.bridge.sendCommands([{ type: "set-speed", simulationSpeed: value }]).then(() => {
+        if (
+          this.state.simulationSpeed < DENSE_DYNAMIC_STANDARD_RATE_MINIMUM_SPEED
+          && this.projection !== null
+        ) {
+          this.requestDenseStandardTickRate(DENSE_STANDARD_TICK_RATE_PER_SECOND);
+        }
+      }).catch((error: unknown) => this.publishRuntimeError(error));
     }
   });
 
@@ -430,6 +471,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.playbackTargetTickNumber,
       this.projection?.tickNumber ?? 0,
     ) + wholeTicks;
+    this.observeDensePlaybackBackpressure();
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) {
       await activeTopologyRefresh;
@@ -486,7 +528,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       0,
       Math.floor(
         (this.primaryTickNumber - DENSE_TIMELINE_ORIGIN_STANDARD_TICK)
-        / DENSE_TIMELINE_STEP_STANDARD_TICKS,
+        / resolveDenseTimelineStepStandardTicks(this.requireCurrentStandardTickRate()),
       ),
     );
     runInAction(() => {
@@ -539,7 +581,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     });
     try {
       const standardTickNumber = DENSE_TIMELINE_ORIGIN_STANDARD_TICK
-        + timelineTickNumber * DENSE_TIMELINE_STEP_STANDARD_TICKS;
+        + timelineTickNumber * resolveDenseTimelineStepStandardTicks(
+          this.requireCurrentStandardTickRate(),
+        );
       const response = await this.bridge.requestPresentationCheckpoint(standardTickNumber);
       this.projection?.replaceCheckpoint(response.delta);
       this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
@@ -569,10 +613,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   };
 
   public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = () => {
+    return this.enqueueDenseRuntimeTransition(() => this.refreshFromCurrentDocumentNow());
+  };
+
+  private enqueueDenseRuntimeTransition<TResult>(
+    operation: () => Promise<TResult>,
+  ): Promise<TResult> {
     const queuedRefresh = this.topologyRefreshQueue;
     const refresh = queuedRefresh === null
-      ? this.refreshFromCurrentDocumentNow()
-      : queuedRefresh.then(() => this.refreshFromCurrentDocumentNow());
+      ? operation()
+      : queuedRefresh.then(operation);
     const completion = refresh.then(
       () => undefined,
       () => undefined,
@@ -584,7 +634,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       }
     });
     return refresh;
-  };
+  }
 
   private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
     this.assertNotDisposed();
@@ -615,13 +665,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         : normalizeRegionalResources(
             this.options.getRegionalResourceSettings(currentBase.tag),
           );
+      const standardTickRate = this.topologyStore.getSnapshot()?.standardTickRate
+        ?? DENSE_STANDARD_TICK_RATE_PER_SECOND;
       const compiledTopology = compileSimulationTopology({
         document,
         registry: this.workspace.registry,
         poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
         simulationMode: this.state.simulationMode,
         activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
-        standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+        standardTickRate,
         ...(regionalResources === undefined ? {} : { regionalResources }),
       });
       const topology = appendUnknownEntityAdmissionDiagnostics(
@@ -706,6 +758,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
       this.operatingStatusTopology = topology;
       this.topologyStore.setSnapshot(topology);
+      this.activeTopologySource = {
+        initializationDocument: cloneWorldDocument(document),
+        executionDocument: cloneWorldDocument(document),
+        executionExcludedIssues: [...admission.excludedIssues],
+        presentationDocument: null,
+        presentationExcludedIssues: [],
+        regionalResources: regionalResources === undefined ? [] : [...regionalResources],
+        operatingStatusDeviceIds: [],
+      };
       // AI-REMOVED 2026-09-12:
       // Reason: 性能与电池读数不再由 SimulationState 发布，初始化只需提交投影和运行态。
       // Trigger: 用户要求统一通过 SimulationQuery 每秒查询仿真性能诊断。
@@ -859,6 +920,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
     this.timelinePresentationActive = false;
+    this.activeTopologySource = null;
+    this.pendingStandardTickRate = null;
+    this.resetDenseRateSample();
     this.operatingStatusTopology = null;
     this.topologyStore.setSnapshot(null);
     this.state.runningState = "stop";
@@ -961,6 +1025,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const regionalResources = normalizeRegionalResources(
         this.options.getRegionalResourceSettings?.(currentBase.tag) ?? [],
       );
+      const standardTickRate = this.topologyStore.getSnapshot()?.standardTickRate
+        ?? DENSE_STANDARD_TICK_RATE_PER_SECOND;
       startStage = "compile-topologies";
       const topologies = admissions.map((admission, regionBaseOrderIndex) => ({
         baseId: admission.document.baseId,
@@ -976,7 +1042,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
             simulationMode: SIMULATION_MODE.regionalMultiBase,
             activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
             regionalResources,
-            standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+            standardTickRate,
           }),
           admission.excludedIssues,
         ),
@@ -1082,7 +1148,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         simulationMode: SIMULATION_MODE.regionalMultiBase,
         activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
         regionalResources,
-        standardTickRate: DENSE_STANDARD_TICK_RATE_PER_SECOND,
+        standardTickRate,
       });
       const regionalCompileError = regionalTopology.diagnostics.find(
         (diagnostic) => diagnostic.severity === "error",
@@ -1135,6 +1201,20 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
       this.operatingStatusTopology = regionalTopology;
       this.topologyStore.setSnapshot(currentTopology);
+      const currentAdmission = admissions.find(
+        (admission) => admission.document.baseId === sourceDocument.baseId,
+      );
+      this.activeTopologySource = {
+        initializationDocument: cloneWorldDocument(sourceDocument),
+        executionDocument: cloneWorldDocument(regionalDocument),
+        executionExcludedIssues: [],
+        presentationDocument: cloneWorldDocument(
+          currentAdmission?.document ?? sourceDocument,
+        ),
+        presentationExcludedIssues: [...(currentAdmission?.excludedIssues ?? [])],
+        regionalResources: [...regionalResources],
+        operatingStatusDeviceIds: [...operatingStatusDeviceIds],
+      };
       this.state.regionalTotalPowerDemand = null;
       // AI-REMOVED 2026-09-12:
       // Reason: regional 初始化不再向 SimulationState 发布性能与电池读数。
@@ -1249,12 +1329,304 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const currentTickNumber = this.projection?.tickNumber ?? 0;
       const targetTickNumber = this.playbackTargetTickNumber;
       if (targetTickNumber <= currentTickNumber) return;
+      const standardTickRate = this.requireCurrentStandardTickRate();
+      const advanceStartedAt = performance.now();
       await this.syncToTick(targetTickNumber);
-      this.pendingPlaybackPerformanceTicks += Math.max(
+      const advancedTicks = Math.max(
         0,
         this.primaryTickNumber - currentTickNumber,
       );
+      this.pendingPlaybackPerformanceTicks += advancedTicks;
+      this.observeDenseRateCapacity({
+        standardTickRate,
+        advancedTicks,
+        wallTimeMs: Math.max(0.001, performance.now() - advanceStartedAt),
+      });
+      await this.applyPendingDenseStandardTickRate();
     }
+  }
+
+  private observeDensePlaybackBackpressure(): void {
+    const standardTickRate = this.projection?.standardTickRate;
+    if (standardTickRate === null || standardTickRate === undefined) return;
+    if (this.state.simulationSpeed < DENSE_DYNAMIC_STANDARD_RATE_MINIMUM_SPEED) {
+      this.requestDenseStandardTickRate(DENSE_STANDARD_TICK_RATE_PER_SECOND);
+      return;
+    }
+    if (standardTickRate !== DENSE_STANDARD_TICK_RATE_PER_SECOND) return;
+    const backlogTicks = Math.max(
+      0,
+      this.playbackTargetTickNumber - this.primaryTickNumber,
+    );
+    const backlogWallSeconds = backlogTicks
+      / (standardTickRate * this.state.simulationSpeed);
+    if (backlogWallSeconds >= DENSE_BACKPRESSURE_WALL_SECONDS) {
+      this.requestDenseStandardTickRate(DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND);
+    }
+  }
+
+  private observeDenseRateCapacity(options: {
+    readonly standardTickRate: number;
+    readonly advancedTicks: number;
+    readonly wallTimeMs: number;
+  }): void {
+    if (
+      this.state.simulationSpeed < DENSE_DYNAMIC_STANDARD_RATE_MINIMUM_SPEED
+      || options.advancedTicks <= 0
+      || options.wallTimeMs <= 0
+    ) {
+      return;
+    }
+    this.rateSampleWallTimeMs += options.wallTimeMs;
+    this.rateSampleSimulationSeconds += options.advancedTicks / options.standardTickRate;
+    if (this.rateSampleSimulationSeconds < DENSE_RATE_SAMPLE_SIMULATION_SECONDS) {
+      return;
+    }
+
+    const simulationSecondsPerWallSecond = this.rateSampleSimulationSeconds
+      / (this.rateSampleWallTimeMs / 1_000);
+    const backlogTicks = Math.max(
+      0,
+      this.playbackTargetTickNumber - this.primaryTickNumber,
+    );
+    const backlogWallSeconds = backlogTicks
+      / (options.standardTickRate * this.state.simulationSpeed);
+    if (
+      options.standardTickRate === DENSE_STANDARD_TICK_RATE_PER_SECOND
+      && simulationSecondsPerWallSecond
+        < this.state.simulationSpeed * DENSE_HIGH_RATE_CAPACITY_MARGIN
+    ) {
+      this.requestDenseStandardTickRate(DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND);
+    } else if (
+      options.standardTickRate === DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND
+      && backlogWallSeconds < DENSE_BACKPRESSURE_WALL_SECONDS / 2
+      && simulationSecondsPerWallSecond
+        >= this.state.simulationSpeed * DENSE_LOW_RATE_RECOVERY_MARGIN
+    ) {
+      this.requestDenseStandardTickRate(DENSE_STANDARD_TICK_RATE_PER_SECOND);
+    }
+    this.resetDenseRateSample();
+  }
+
+  private requestDenseStandardTickRate(standardTickRate: number): void {
+    if (
+      standardTickRate !== DENSE_STANDARD_TICK_RATE_PER_SECOND
+      && standardTickRate !== DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND
+    ) {
+      throw new Error(`Unsupported Dense standard tick rate ${standardTickRate}.`);
+    }
+    const currentStandardTickRate = this.projection?.standardTickRate;
+    if (currentStandardTickRate === standardTickRate) {
+      this.pendingStandardTickRate = null;
+      return;
+    }
+    this.pendingStandardTickRate = standardTickRate;
+    if (this.playbackAdvanceInFlight === null) {
+      void this.applyPendingDenseStandardTickRate().catch((error: unknown) => {
+        this.publishRuntimeError(error);
+      });
+    }
+  }
+
+  private async applyPendingDenseStandardTickRate(): Promise<void> {
+    const requestedStandardTickRate = this.pendingStandardTickRate;
+    const currentStandardTickRate = this.projection?.standardTickRate;
+    if (
+      requestedStandardTickRate === null
+      || currentStandardTickRate === null
+      || currentStandardTickRate === undefined
+    ) {
+      return;
+    }
+    if (requestedStandardTickRate === currentStandardTickRate) {
+      this.pendingStandardTickRate = null;
+      return;
+    }
+    if (
+      requestedStandardTickRate === DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND
+      && this.state.simulationSpeed < DENSE_DYNAMIC_STANDARD_RATE_MINIMUM_SPEED
+    ) {
+      this.pendingStandardTickRate = DENSE_STANDARD_TICK_RATE_PER_SECOND;
+      return;
+    }
+    if (
+      convertSimulationPhaseTickBetweenRatesExact(
+        this.primaryTickNumber,
+        currentStandardTickRate,
+        requestedStandardTickRate,
+      ) === null
+    ) {
+      return;
+    }
+
+    this.pendingStandardTickRate = null;
+    await this.enqueueDenseRuntimeTransition(() =>
+      this.switchDenseStandardTickRate(requestedStandardTickRate)
+    );
+  }
+
+  private async switchDenseStandardTickRate(
+    nextStandardTickRate: number,
+  ): Promise<void> {
+    const source = this.activeTopologySource;
+    const previousExecutionTopology = this.operatingStatusTopology;
+    const previousStandardTickRate = this.requireCurrentStandardTickRate();
+    if (
+      source === null
+      || previousExecutionTopology === null
+      || previousStandardTickRate === nextStandardTickRate
+    ) {
+      return;
+    }
+
+    const compile = (document: WorldDocument) => compileSimulationTopology({
+      document,
+      registry: this.workspace.registry,
+      poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
+      simulationMode: this.state.simulationMode,
+      activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
+      standardTickRate: nextStandardTickRate,
+      ...(source.regionalResources.length === 0
+        ? {}
+        : { regionalResources: source.regionalResources }),
+    });
+    const executionTopology = appendUnknownEntityAdmissionDiagnostics(
+      compile(source.executionDocument),
+      source.executionExcludedIssues,
+    );
+    const executionCompileError = executionTopology.diagnostics.find(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (executionCompileError !== undefined) {
+      throw new Error(executionCompileError.message);
+    }
+    const presentationTopology = source.presentationDocument === null
+      ? null
+      : appendUnknownEntityAdmissionDiagnostics(
+          compile(source.presentationDocument),
+          source.presentationExcludedIssues,
+        );
+    const presentationCompileError = presentationTopology?.diagnostics.find(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (presentationCompileError !== undefined) {
+      throw new Error(presentationCompileError.message);
+    }
+
+    const migration = createSimulationTopologyMigration({
+      previousDocument: source.executionDocument,
+      nextDocument: source.executionDocument,
+      previousTopology: previousExecutionTopology,
+      nextTopology: executionTopology,
+      baseTickNumber: this.primaryTickNumber,
+    });
+    if (migration === null) {
+      throw new Error("Dense standard tick rate transition requires a migration source.");
+    }
+
+    const initialized = await this.initializeDenseTopology({
+      document: source.initializationDocument,
+      topology: executionTopology,
+      ...(presentationTopology === null ? {} : { presentationTopology }),
+      operatingStatusDeviceIds: source.operatingStatusDeviceIds,
+      migration,
+    });
+    // 初始化等待期间 RAF 仍会按旧频率累计墙钟目标；必须在提交新频率前读取最新值并一次换算。
+    const previousPlaybackTarget = this.playbackTargetTickNumber;
+    const previousPlaybackRemainder = this.playbackRemainderTicks;
+    const projection = new DenseProjectionStore(
+      initialized.response.layout.dictionary,
+      initialized.identity,
+      presentationTopology ?? undefined,
+      source.operatingStatusDeviceIds,
+    );
+    projection.apply(initialized.response.initialDelta);
+
+    const convertedPlaybackTarget = convertSimulationPhaseTickBetweenRates(
+      previousPlaybackTarget,
+      previousStandardTickRate,
+      nextStandardTickRate,
+    );
+    const convertedWholeTarget = Math.floor(convertedPlaybackTarget);
+    let convertedRemainder = previousPlaybackRemainder
+      * nextStandardTickRate
+      / previousStandardTickRate
+      + convertedPlaybackTarget
+      - convertedWholeTarget;
+    let normalizedTarget = convertedWholeTarget;
+    if (convertedRemainder >= 1) {
+      const extraWholeTicks = Math.floor(convertedRemainder);
+      normalizedTarget += extraWholeTicks;
+      convertedRemainder -= extraWholeTicks;
+    }
+
+    this.projection = projection;
+    this.primaryTickNumber = initialized.response.initialDelta.tickNumber;
+    this.timelineBufferedThroughTick = this.primaryTickNumber;
+    this.runtimeRetainedStateCount = initialized.response.runtimeRetainedStateCount;
+    this.playbackTargetTickNumber = Math.max(this.primaryTickNumber, normalizedTarget);
+    this.playbackRemainderTicks = convertedRemainder;
+    this.timelinePresentationActive = false;
+    this.operatingStatusTopology = executionTopology;
+    const publishedTopology = presentationTopology ?? executionTopology;
+    this.topologyStore.setSnapshot(publishedTopology);
+    this.resetDenseRateSample();
+
+    runInAction(() => {
+      this.state.currentPlaybackTickNumber = this.primaryTickNumber;
+      this.state.runtimeStatus = {
+        mode: "running",
+        topologyId: publishedTopology.topologyId,
+        documentHash: publishedTopology.documentHash,
+        retainedFromTick: this.primaryTickNumber,
+        latestTickNumber: this.primaryTickNumber,
+        bufferSize: this.runtimeRetainedStateCount,
+        maxBufferSize: 1,
+        dynamicTickRate: nextStandardTickRate,
+        error: null,
+      };
+      if (this.state.timeline.enabled) {
+        const timelineStepTicks = resolveDenseTimelineStepStandardTicks(
+          nextStandardTickRate,
+        );
+        const cursorTickNumber = Math.max(
+          0,
+          Math.floor(
+            (this.primaryTickNumber - DENSE_TIMELINE_ORIGIN_STANDARD_TICK)
+              / timelineStepTicks,
+          ),
+        );
+        this.state.timeline = {
+          ...this.state.timeline,
+          readiness: "preparing",
+          windowStartTickNumber: cursorTickNumber,
+          cursorTickNumber,
+          availableFromTickNumber: cursorTickNumber,
+          availableToTickNumber: cursorTickNumber + DENSE_TIMELINE_CAPACITY_TICKS,
+          isSeeking: false,
+        };
+      }
+    });
+    if (this.state.timeline.enabled) {
+      await this.ensureTimelineBuffer();
+      runInAction(() => {
+        this.state.timeline.readiness = "ready";
+      });
+    }
+  }
+
+  private requireCurrentStandardTickRate(): number {
+    const standardTickRate = this.projection?.standardTickRate
+      ?? this.topologyStore.getSnapshot()?.standardTickRate;
+    if (standardTickRate === null || standardTickRate === undefined) {
+      throw new Error("Dense standard tick rate is unavailable before initialization.");
+    }
+    return standardTickRate;
+  }
+
+  private resetDenseRateSample(): void {
+    this.rateSampleWallTimeMs = 0;
+    this.rateSampleSimulationSeconds = 0;
   }
 
   private flushPlaybackPerformanceWindow(): void {
@@ -1373,6 +1745,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.sourceDocumentSignature = null;
     this.runtimeRetainedStateCount = 0;
     this.timelineBufferedThroughTick = 0;
+    this.activeTopologySource = null;
+    this.pendingStandardTickRate = null;
+    this.resetDenseRateSample();
     this.operatingStatusTopology = null;
     this.topologyStore.setSnapshot(null);
     runInAction(() => {
@@ -1416,13 +1791,17 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   private sendCommands(commands: Parameters<DenseEngineBridge["sendCommands"]>[0]): void {
     void this.bridge.sendCommands(commands).catch((error: unknown) => {
-      runInAction(() => {
-        this.state.runtimeStatus = {
-          ...this.state.runtimeStatus,
-          mode: "error",
-          error: error instanceof Error ? error.message : String(error),
-        };
-      });
+      this.publishRuntimeError(error);
+    });
+  }
+
+  private publishRuntimeError(error: unknown): void {
+    runInAction(() => {
+      this.state.runtimeStatus = {
+        ...this.state.runtimeStatus,
+        mode: "error",
+        error: error instanceof Error ? error.message : String(error),
+      };
     });
   }
 
@@ -1459,7 +1838,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private async ensureTimelineBuffer(): Promise<void> {
     if (!this.state.timeline.enabled || this.projection === null) return;
     const targetTickNumber = DENSE_TIMELINE_ORIGIN_STANDARD_TICK
-      + this.state.timeline.availableToTickNumber * DENSE_TIMELINE_STEP_STANDARD_TICKS;
+      + this.state.timeline.availableToTickNumber * resolveDenseTimelineStepStandardTicks(
+        this.requireCurrentStandardTickRate(),
+      );
     if (targetTickNumber <= this.timelineBufferedThroughTick) return;
     const response = await this.bridge.ensureBufferedThrough(targetTickNumber);
     this.timelineBufferedThroughTick = response.bufferedThroughTickNumber;
@@ -1477,6 +1858,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       };
     });
   }
+}
+
+function resolveDenseTimelineStepStandardTicks(standardTickRate: number): number {
+  const stepTicks = standardTickRate * DENSE_TIMELINE_TICK_DURATION_SECONDS;
+  if (!Number.isSafeInteger(stepTicks) || stepTicks <= 0) {
+    throw new Error(
+      `Dense standard tick rate ${standardTickRate} cannot represent the timeline step.`,
+    );
+  }
+  return stepTicks;
 }
 
 function createNotFoundTickStatus(tickNumber: number): SimulationTickPullStatus {

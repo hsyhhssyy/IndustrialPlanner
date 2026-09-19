@@ -2464,6 +2464,8 @@ export class SimulationWorkerRuntime {
     this.simulationSpeed = value;
     if (this.topology !== null && this.runtimeState !== null) {
       const previousDynamicTickRate = this.dynamicTickRate;
+      // AI-CORRECTION 2026-09-19: 调速命令必须在当前 tick 强制重算；否则该 tick 已按旧速度评估时，去重会阻止 x16 → x1 恢复最高 tickRate。
+      this.lastDynamicRateAdjustmentTick = null;
       this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
       if (this.dynamicTickRate !== previousDynamicTickRate) {
         this.synchronizeCurrentTickRateInterval();

@@ -10,7 +10,10 @@ import {
 } from "@/simulation/dense/dense-frame-delta";
 import { DenseWorkerRuntime } from "@/simulation/dense/dense-worker-runtime";
 import { type DenseWorkerResponse } from "@/simulation/dense/dense-worker-protocol";
-import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
+import {
+  DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND,
+  DENSE_STANDARD_TICK_RATE_PER_SECOND,
+} from "@/simulation/contracts/tick-rate";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 // AI-REMOVED 2026-09-14:
@@ -133,7 +136,143 @@ describe("Dense checkpoint 的传输缓冲区所有权", () => {
       expect(projection.materializeSnapshot().transfers).toEqual(expectedTransfers);
     }
   });
+
+  it("在半秒相位边界热切换 4/2 TPS 并保留运行态", () => {
+    const registry = createRegistryContract();
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json",
+    ));
+    const compileAtRate = (standardTickRate: number) => compileSimulationTopology({
+      document,
+      registry,
+      simulationMode: "single-base",
+      poweredEntityIds: new Set(document.entityOrder),
+      standardTickRate,
+    });
+    const topology4 = compileAtRate(DENSE_STANDARD_TICK_RATE_PER_SECOND);
+    const topology2 = compileAtRate(DENSE_LOW_STANDARD_TICK_RATE_PER_SECOND);
+    const runtime = new DenseWorkerRuntime(registry);
+    const session4 = {
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
+      sessionId: "dense-rate-4",
+      topologyVersion: 1,
+    } as const;
+    const initialized4 = runtime.handleRequest({
+      ...session4,
+      sequence: 1,
+      type: "initialize-session",
+      topology: topology4,
+      perfEnabled: false,
+      debugDataEnabled: false,
+      powerMode: "infinite",
+      powerConsumptionOverride: undefined,
+    });
+    if (initialized4.type !== "topology-ready") {
+      throw new Error(`Unexpected Dense 4 TPS initialization: ${initialized4.type}.`);
+    }
+    const projection4 = new DenseProjectionStore(initialized4.layout.dictionary, session4);
+    projection4.apply(initialized4.initialDelta);
+    projection4.apply(transferResponseFrame(runtime.handleRequest({
+      ...session4,
+      sequence: 2,
+      type: "advance-budget",
+      targetTickNumber: 3,
+      wallTimeBudgetMs: Number.MAX_SAFE_INTEGER,
+    })));
+    const beforeDownshift = projection4.materializeSnapshot();
+
+    const session2 = {
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
+      sessionId: "dense-rate-2",
+      topologyVersion: 2,
+    } as const;
+    const initialized2 = runtime.handleRequest({
+      ...session2,
+      sequence: 1,
+      type: "initialize-session",
+      topology: topology2,
+      perfEnabled: false,
+      debugDataEnabled: false,
+      powerMode: "infinite",
+      powerConsumptionOverride: undefined,
+      migration: { baseTickNumber: 3, resetDeviceIds: [] },
+    });
+    if (initialized2.type !== "topology-ready") {
+      throw new Error(`Unexpected Dense 2 TPS migration: ${initialized2.type}.`);
+    }
+    const projection2 = new DenseProjectionStore(initialized2.layout.dictionary, session2);
+    projection2.apply(initialized2.initialDelta);
+    const afterDownshift = projection2.materializeSnapshot();
+    expect(afterDownshift).toMatchObject({
+      tickNumber: 2,
+      standardTickRate: 2,
+      tickRate: 2,
+      slots: beforeDownshift.slots,
+    });
+    expect(readRecipeProgressSeconds(afterDownshift)).toEqual(
+      readRecipeProgressSeconds(beforeDownshift),
+    );
+
+    projection2.apply(transferResponseFrame(runtime.handleRequest({
+      ...session2,
+      sequence: 2,
+      type: "advance-budget",
+      targetTickNumber: 3,
+      wallTimeBudgetMs: Number.MAX_SAFE_INTEGER,
+    })));
+    const beforeUpshift = projection2.materializeSnapshot();
+    const session4Restored = {
+      protocolVersion: DENSE_SIMULATION_PROTOCOL_VERSION,
+      sessionId: "dense-rate-4-restored",
+      topologyVersion: 3,
+    } as const;
+    const restored4 = runtime.handleRequest({
+      ...session4Restored,
+      sequence: 1,
+      type: "initialize-session",
+      topology: topology4,
+      perfEnabled: false,
+      debugDataEnabled: false,
+      powerMode: "infinite",
+      powerConsumptionOverride: undefined,
+      migration: { baseTickNumber: 3, resetDeviceIds: [] },
+    });
+    if (restored4.type !== "topology-ready") {
+      throw new Error(`Unexpected Dense 4 TPS restoration: ${restored4.type}.`);
+    }
+    const restoredProjection4 = new DenseProjectionStore(
+      restored4.layout.dictionary,
+      session4Restored,
+    );
+    restoredProjection4.apply(restored4.initialDelta);
+    const afterUpshift = restoredProjection4.materializeSnapshot();
+    expect(afterUpshift).toMatchObject({
+      tickNumber: 5,
+      standardTickRate: 4,
+      tickRate: 4,
+      slots: beforeUpshift.slots,
+    });
+    expect(readRecipeProgressSeconds(afterUpshift)).toEqual(
+      readRecipeProgressSeconds(beforeUpshift),
+    );
+  });
 });
+
+function readRecipeProgressSeconds(snapshot: ReturnType<DenseProjectionStore["materializeSnapshot"]>) {
+  return Object.values(snapshot.devices).flatMap((device) =>
+    Object.entries(device.channelRecipes).flatMap(([channelId, recipe]) =>
+      recipe === null
+        ? []
+        : [{
+            deviceId: device.deviceId,
+            channelId,
+            recipeId: recipe.recipeId,
+            progressSeconds: recipe.progressTicks / snapshot.standardTickRate,
+            durationSeconds: recipe.durationTicks / snapshot.standardTickRate,
+          }]
+    )
+  );
+}
 
 function transferResponseFrame(response: DenseWorkerResponse): DenseFrameDelta {
   if (response.type !== "frame-delta" && response.type !== "presentation-checkpoint") {

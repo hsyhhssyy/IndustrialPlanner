@@ -17,7 +17,11 @@ import type {
   RuntimeDeviceSnapshot,
   RuntimeGasDiffusionSnapshot,
 } from "../contracts";
-import { resolveRecipePhaseTicks } from "../contracts";
+import {
+  convertSimulationPhaseTickBetweenRates,
+  convertSimulationPhaseTickBetweenRatesExact,
+  resolveRecipePhaseTicks,
+} from "../contracts";
 import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import { DenseIndexSet } from "./dense-index-set";
 import { DenseRuntimeState } from "./dense-runtime-state";
@@ -89,7 +93,7 @@ export interface DenseKernelCheckpoint {
   readonly deviceFlags: Uint8Array;
   readonly routingCursors: Uint32Array;
   readonly channelRecipeIndexes: Int32Array;
-  readonly channelProgressTicks: Uint32Array;
+  readonly channelProgressTicks: Float64Array;
   readonly channelStates: Uint8Array;
   readonly channelRunIds: Uint32Array;
   readonly channelReservations: Array<readonly DenseRecipeReservation[] | null>;
@@ -164,7 +168,7 @@ export class DenseSimulationKernel {
   private readonly recipePrograms: DenseRecipeProgramSet;
   private readonly lookup: DenseTopologyLookup;
   private readonly channelRecipeIndexes: Int32Array;
-  private readonly channelProgressTicks: Uint32Array;
+  private readonly channelProgressTicks: Float64Array;
   private readonly channelStates: Uint8Array;
   private readonly channelRunIds: Uint32Array;
   private readonly channelReservations: Array<readonly DenseRecipeReservation[] | null>;
@@ -221,7 +225,7 @@ export class DenseSimulationKernel {
     this.recipePrograms = compileDenseRecipePrograms(topology, layout, registry);
     this.channelRecipeIndexes = new Int32Array(this.recipePrograms.channels.length);
     this.channelRecipeIndexes.fill(DENSE_INDEX_NONE);
-    this.channelProgressTicks = new Uint32Array(this.recipePrograms.channels.length);
+    this.channelProgressTicks = new Float64Array(this.recipePrograms.channels.length);
     this.channelStates = new Uint8Array(this.recipePrograms.channels.length);
     this.channelRunIds = new Uint32Array(this.recipePrograms.channels.length);
     this.channelReservations = Array.from(
@@ -536,13 +540,32 @@ export class DenseSimulationKernel {
     previous: DenseSimulationKernel,
     resetDeviceIds: readonly string[],
   ): void {
-    if (previous.topology.standardTickRate !== this.topology.standardTickRate) {
-      throw new Error("Dense topology migration cannot change the standard tick rate.");
+    // AI-REMOVED 2026-09-19:
+    // Reason: 该拦截使 topology 已有的 standard rate 配置无法用于运行中热切换。
+    // Trigger: 用户要求 Dense 在 x4 及以上真实修改 standard TPS，不使用虚拟帧。
+    // Evidence: tick 1 相位坐标换算可以精确识别 4 → 2 的合法边界；Dense Worker 迁移回归已覆盖 4 → 2 → 4 运行态保留。
+    // Replacement: 下方 convertSimulationPhaseTickBetweenRatesExact 检查与全套 rate-aware 迁移。
+    // Risk: 中；新增 rate-dependent 状态时必须同步扩展迁移缩放。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (previous.topology.standardTickRate !== this.topology.standardTickRate) {
+    //   throw new Error("Dense topology migration cannot change the standard tick rate.");
+    // }
+    const migratedTickNumber = convertSimulationPhaseTickBetweenRatesExact(
+      previous.currentTickNumber,
+      previous.topology.standardTickRate,
+      this.topology.standardTickRate,
+    );
+    if (migratedTickNumber === null) {
+      throw new Error(
+        `Dense standard tick rate cannot switch from ${previous.topology.standardTickRate} to ${this.topology.standardTickRate} at tick ${previous.currentTickNumber}.`,
+      );
     }
 
     const resetDevices = new Set(resetDeviceIds);
     const preservedDeviceIds = new Set<string>();
-    this.currentTickNumber = previous.currentTickNumber;
+    this.currentTickNumber = migratedTickNumber;
     // 迁移后的拓扑索引可能变化，旧帧的传输事件不能带入新拓扑。
     this.currentTickTransfers = createEmptyDenseTransfers();
     this.baseBatteryJoulesValue = previous.baseBatteryJoulesValue;
@@ -611,6 +634,7 @@ export class DenseSimulationKernel {
     this.restoreMigratedRecipeChannels(previous, preservedDeviceIds);
     this.restoreMigratedAdmissionCounters(previous, preservedDeviceIds);
     this.restoreMigratedRoutingCursors(previous, preservedDeviceIds);
+    this.restoreMigratedWarehouseStats(previous);
     this.resetConflictingMigratedTransportComponents();
     this.updateDeviceBlockStates();
     this.activeGasDiffusions = this.collectActiveGasDiffusions();
@@ -1892,7 +1916,9 @@ export class DenseSimulationKernel {
       const recipeIndex = channel.candidates.findIndex((candidate) =>
         candidate.recipeId === previousRecipe.recipeId
         && candidate.recipeType === previousRecipe.recipeType
-        && candidate.durationTicks === previousRecipe.durationTicks
+        // AI-CORRECTION 2026-09-19: standard TPS 热切换会等比例改变 durationTicks；迁移兼容性必须比较真实持续秒数。
+        && candidate.durationTicks * previous.topology.standardTickRate
+          === previousRecipe.durationTicks * this.topology.standardTickRate
       );
       if (recipeIndex < 0) continue;
       const reservations = this.mapMigratedReservations(
@@ -1923,7 +1949,9 @@ export class DenseSimulationKernel {
 
       this.channelRecipeIndexes[channel.index] = recipeIndex;
       this.channelProgressTicks[channel.index] =
-        previous.channelProgressTicks[previousChannel.index]!;
+        previous.channelProgressTicks[previousChannel.index]!
+          * this.topology.standardTickRate
+          / previous.topology.standardTickRate;
       this.channelStates[channel.index] = previous.channelStates[previousChannel.index]!;
       this.channelRunIds[channel.index] = previous.channelRunIds[previousChannel.index]!;
       this.channelReservations[channel.index] = reservations;
@@ -2010,14 +2038,56 @@ export class DenseSimulationKernel {
       this.admission.counts[index] = previous.admission.counts[previousIndex]!;
       this.admission.windowCounts[index] = previous.admission.windowCounts[previousIndex]!;
       this.admission.windowStartTicks[index] =
-        previous.admission.windowStartTicks[previousIndex]!;
+        this.convertMigratedPhaseTick(
+          previous,
+          previous.admission.windowStartTicks[previousIndex]!,
+        );
       this.admission.pastWindowCounts[index] = [
         ...(previous.admission.pastWindowCounts[previousIndex] ?? []),
       ];
       this.admission.moveTicks[index] = [
-        ...(previous.admission.moveTicks[previousIndex] ?? []),
+        ...(previous.admission.moveTicks[previousIndex] ?? []).map((tickNumber) =>
+          this.convertMigratedPhaseTick(previous, tickNumber)
+        ),
       ];
     }
+  }
+
+  private restoreMigratedWarehouseStats(previous: DenseSimulationKernel): void {
+    const mapEntries = (
+      entries: readonly (readonly [itemIndex: number, amount: number])[],
+    ): readonly (readonly [itemIndex: number, amount: number])[] => entries.flatMap(
+      ([previousItemIndex, amount]) => {
+        const itemIndex = mapDenseItemIndex(previous.layout, this.lookup, previousItemIndex);
+        return itemIndex === DENSE_INDEX_NONE ? [] : [[itemIndex, amount] as const];
+      },
+    );
+    this.warehouseStatsBuckets = previous.warehouseStatsBuckets.map((bucket) => ({
+      tickNumber: this.convertMigratedPhaseTick(previous, bucket.tickNumber),
+      produced: mapEntries(bucket.produced),
+      consumed: mapEntries(bucket.consumed),
+    }));
+    for (let previousItemIndex = 0; previousItemIndex < previous.layout.dictionary.itemIds.length; previousItemIndex += 1) {
+      const itemIndex = mapDenseItemIndex(previous.layout, this.lookup, previousItemIndex);
+      if (itemIndex === DENSE_INDEX_NONE) continue;
+      this.warehouseProducedTotals[itemIndex] = previous.warehouseProducedTotals[previousItemIndex] ?? 0;
+      this.warehouseConsumedTotals[itemIndex] = previous.warehouseConsumedTotals[previousItemIndex] ?? 0;
+      this.warehouseLastChangedTicks[itemIndex] = this.convertMigratedPhaseTick(
+        previous,
+        previous.warehouseLastChangedTicks[previousItemIndex] ?? 0,
+      );
+    }
+  }
+
+  private convertMigratedPhaseTick(
+    previous: DenseSimulationKernel,
+    tickNumber: number,
+  ): number {
+    return convertSimulationPhaseTickBetweenRates(
+      tickNumber,
+      previous.topology.standardTickRate,
+      this.topology.standardTickRate,
+    );
   }
 
   private restoreMigratedRoutingCursors(

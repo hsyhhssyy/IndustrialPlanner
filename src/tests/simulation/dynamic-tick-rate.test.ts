@@ -17,7 +17,11 @@ import {
   resolveDeviceRecipePlans,
 } from "@/simulation/legacy/runtime-slot-access";
 import { canDeviceTransferAtCurrentPhase } from "@/simulation/legacy/phase-gating";
-import { isDynamicTickRateCompatibleWithTransferUnits } from "@/simulation/contracts/tick-rate";
+import {
+  convertSimulationPhaseTickBetweenRates,
+  convertSimulationPhaseTickBetweenRatesExact,
+  isDynamicTickRateCompatibleWithTransferUnits,
+} from "@/simulation/contracts/tick-rate";
 import type { CompiledSimulationRecipePlan, CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createSimulationTestRegistry } from "./simulation-test-registry";
@@ -41,6 +45,14 @@ const registry = createSimulationTestRegistry({
 });
 
 describe("REQ-080: dynamic simulation tick rate", () => {
+  it("converts phase-anchored Dense tick coordinates between 4 TPS and 2 TPS", () => {
+    expect(convertSimulationPhaseTickBetweenRatesExact(1, 4, 2)).toBe(1);
+    expect(convertSimulationPhaseTickBetweenRatesExact(3, 4, 2)).toBe(2);
+    expect(convertSimulationPhaseTickBetweenRatesExact(2, 4, 2)).toBeNull();
+    expect(convertSimulationPhaseTickBetweenRatesExact(2, 2, 4)).toBe(3);
+    expect(convertSimulationPhaseTickBetweenRates(2, 4, 2)).toBe(1.5);
+  });
+
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
     // AI-CORRECTION 2026-07-30: 回滚 — 管道恢复 10 tick 周期，当前 belt 为 20 tick、pipe 为 10 tick。
     // 最严格约束是 pipe 的 10 tick，因此测试使用 [10]。
@@ -132,6 +144,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       requestId: 3,
       simulationSpeed: 1,
     });
+    expect(runtime.getStatus().dynamicTickRate).toBe(20);
     runtime.handleRequest({
       type: "get-tick-snapshot",
       requestId: 4,

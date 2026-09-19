@@ -4,6 +4,7 @@ import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import {
+  resolveStandardStepTicks,
   SimulationPerformanceRateWindow,
   STANDARD_TICK_RATE_PER_SECOND,
 } from "../contracts";
@@ -216,7 +217,17 @@ export class LegacyPlaybackController {
           Math.trunc(previousPlaybackTickNumber),
           this.context.stateReadWrite.runtimeStatus.latestTickNumber ?? 0,
         );
-      const maxFrameStepTicks = Math.max(1, Math.ceil(Math.max(0, tickDelta)));
+      const currentRealTickInterval = this.context.presentation.currentSnapshot === null
+        ? 1
+        : resolveStandardStepTicks(
+            this.context.presentation.currentSnapshot.tickRate,
+            this.context.presentation.currentSnapshot.standardTickRate,
+          ) ?? 1;
+      // AI-CORRECTION 2026-09-19: 变速后队列中可能仍是旧低 tickRate 的稀疏帧；公开游标至少跨到下一真实帧边界，否则 x16 → x1 会永久停在间隔内部。
+      const maxFrameStepTicks = Math.max(
+        currentRealTickInterval,
+        Math.ceil(Math.max(0, tickDelta)),
+      );
       // AI-REMOVED 2026-09-04:
       // Reason: 真实 tick 区间只限制旧快照的 progress 展示外推，不限制墙钟播放目标。
       // Trigger: 高倍速且当前 tickRate 较高时，逐真实 tick 限制会让 60 FPS 播放永久追不上 runtime。
