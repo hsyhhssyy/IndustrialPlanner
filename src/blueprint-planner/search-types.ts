@@ -2,6 +2,9 @@ import type { PlannerSearchProfile } from "./search-profile";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { PlannerWire } from "./model";
 
+/** M1 消融实验只控制搜索策略，不参与参数训练或改变验收。 */
+export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "constrained-routing";
+
 /** 搜索控制属于规划器内部；生产界面仍使用 Domain 的时间预算。 */
 export interface PlannerSearchOptions {
   readonly maxEvaluations?: number;
@@ -9,6 +12,8 @@ export interface PlannerSearchOptions {
   readonly profile?: Partial<PlannerSearchProfile>;
   /** 离线诊断按布局检查点采样，不改变提案、随机数或验收规则。 */
   readonly diagnostics?: boolean;
+  /** 省略时只启用已验证的 power-dedup；显式数组替换默认集合，[] 用于旧算法对照。 */
+  readonly experiments?: readonly PlannerSearchExperiment[];
 }
 
 export interface PlannerLayoutIssue {
@@ -36,6 +41,7 @@ export interface PlannerSearchDiagnostics {
 }
 
 export interface PlannerSearchStatistics {
+  readonly experiments?: readonly PlannerSearchExperiment[];
   readonly seed: number;
   readonly evaluationLimit: number;
   readonly outline: { readonly width: number; readonly height: number };

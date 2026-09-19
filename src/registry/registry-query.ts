@@ -5,6 +5,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags"
 import { LOGISTICS_KIND } from "@/domain/shared/logistics"
 import type { ItemDomain } from "@/domain/registry/types/entity-definition"
+import { isProtocolCoreDefinitionId } from "@/shared/protocol-core"
 import {
     LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE,
     isLogisticsEquipmentDefinitionId,
@@ -89,10 +90,6 @@ interface CreateRegistryQueryOptions {
 //     "pipe_connector",
 //     "pipe_admission",
 // ])
-
-const PROTOCOL_CORE_DEVICE_IDS = new Set<string>([
-    "sp_hub_1",
-])
 
 export const createRegistryQuery = (options: CreateRegistryQueryOptions): RegistryQuery => {
     const entityDefinitionById = new Map(
@@ -189,7 +186,7 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
                 || isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definitionId)
         },
         isProtocolCore(definitionId) {
-            return PROTOCOL_CORE_DEVICE_IDS.has(definitionId)
+            return isProtocolCoreDefinitionId(definitionId)
         },
         isItemLiquid(itemId) {
             return itemDomainById.get(itemId) === ItemDomainFlag.Liquid

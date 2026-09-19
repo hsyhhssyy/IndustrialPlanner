@@ -1,4 +1,4 @@
-import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
+import type { PlannerSearchExperiment, PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import type { PlannerSearchProfile } from "@/blueprint-planner/search-profile";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -45,6 +45,7 @@ export interface PlannerBatchOptions {
   readonly engineKind: Extract<SimulationEngineKind, "dense-v2">;
   readonly profile?: Partial<PlannerSearchProfile>;
   readonly diagnostics?: boolean;
+  readonly experiments?: readonly PlannerSearchExperiment[];
 }
 
 export interface PlannerAttemptRecord {
@@ -97,6 +98,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
             maxEvaluations: remainingEvaluations,
             profile: options.profile,
             diagnostics: options.diagnostics,
+            experiments: options.experiments,
             ...(options.width === undefined ? {} : { outline: { width: options.width, height: options.height! } }),
           });
         localEvaluations += candidate.search.evaluations;

@@ -125,7 +125,7 @@ describe("dark pipe warehouse ingress", () => {
       .toMatchObject({ itemType: null, count: 0 });
   });
 
-  it("keeps fluid in the local share-all storage of a linked dark pipe inlet", async () => {
+  it("moves linked inlet fluid into the outlet through the transport channels", async () => {
     const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -158,7 +158,8 @@ describe("dark pipe warehouse ingress", () => {
     });
 
     expect(getDevice(report, 1, "inlet").channelRecipes).toEqual({});
-    expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(4);
+    expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(0);
+    expect(findSlot(report, finalTick, "outlet", "unloader_buffer", "slot_1").count).toBe(4);
     expect(listWarehouseIngressTransfers(report)).toEqual([]);
   });
 

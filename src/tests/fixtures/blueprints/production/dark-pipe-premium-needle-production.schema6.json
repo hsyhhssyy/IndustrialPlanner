@@ -2051,7 +2051,7 @@
       "linkType": "share-all",
       "source": {
         "entityId": "test-extra-13",
-        "storageSlotGroupId": "unloader_buffer",
+        "storageSlotGroupId": "transport_input",
         "slotId": "slot_1"
       },
       "target": {
@@ -2065,7 +2065,7 @@
       "linkType": "share-all",
       "source": {
         "entityId": "legacy_d8591492_0009",
-        "storageSlotGroupId": "unloader_buffer",
+        "storageSlotGroupId": "transport_input",
         "slotId": "slot_1"
       },
       "target": {
@@ -2079,7 +2079,7 @@
       "linkType": "share-all",
       "source": {
         "entityId": "legacy_d8591492_0103",
-        "storageSlotGroupId": "unloader_buffer",
+        "storageSlotGroupId": "transport_input",
         "slotId": "slot_1"
       },
       "target": {
@@ -2093,4 +2093,3 @@
   "createdAt": "2026-04-19T08:10:16.195Z",
   "updatedAt": "2026-04-19T08:10:16.195Z"
 }
-

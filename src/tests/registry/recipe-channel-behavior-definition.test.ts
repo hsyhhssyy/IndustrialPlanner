@@ -39,6 +39,8 @@ describe("recipe channel behavior definitions", () => {
   it.each([
     "log_connector",
     "pipe_connector",
+    "udpipe_unloader_1",
+    "udpipe_unloader_2",
     // AI-REMOVED 2026-08-19:
     // Reason: 多口暗管入口销毁 channel 已退出，不再需要允许跨 channel 重复运行同一配方。
     // Trigger: 用户要求暗管入口在所有模式下提交仓库并抛弃销毁机制。

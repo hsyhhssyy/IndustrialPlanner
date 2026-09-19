@@ -1731,7 +1731,7 @@ describe("ID rewriting in blueprint placement", () => {
     // 应有 2 条暗管 slotLink：原始一对 + 新一对
     const darkPipeLinks = finalDoc.slotLinks.filter(
       (link) => link.linkType === "share-all"
-        && link.source.storageSlotGroupId === "unloader_buffer"
+        && link.source.storageSlotGroupId === "transport_input"
         && link.target.storageSlotGroupId === "loader_buffer",
     );
     expect(darkPipeLinks).toHaveLength(2);

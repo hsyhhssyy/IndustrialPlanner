@@ -649,7 +649,7 @@ describe("SlotConfigInspector", () => {
     expectSlotGroupRole(container, "item_output_buffer", "shared");
   });
 
-  it("renders water pump output and dark pipe shared storage groups", () => {
+  it("renders water pump output and dark pipe storage group roles", () => {
     const workspace = createWorkspace();
     const picker = new WorkbenchEncyclopediaPickerController(() => ({
       desktopCategory: "all",
@@ -671,9 +671,9 @@ describe("SlotConfigInspector", () => {
         expectedRole: "output",
       },
       { definitionId: "udpipe_loader_1", slotGroupId: "loader_buffer", expectedRole: "shared" },
-      { definitionId: "udpipe_unloader_1", slotGroupId: "unloader_buffer", expectedRole: "shared" },
+      { definitionId: "udpipe_unloader_1", slotGroupId: "unloader_buffer", expectedRole: "output" },
       { definitionId: "udpipe_loader_2", slotGroupId: "loader_buffer", expectedRole: "shared" },
-      { definitionId: "udpipe_unloader_2", slotGroupId: "unloader_buffer", expectedRole: "shared" },
+      { definitionId: "udpipe_unloader_2", slotGroupId: "unloader_buffer", expectedRole: "output" },
     ] as const;
 
     for (const testCase of cases) {

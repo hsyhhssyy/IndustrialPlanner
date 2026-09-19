@@ -599,6 +599,33 @@ export interface UiStateReadWrite extends UiState {
   runtime: RuntimeStateReadWrite;
 }
 
+export function canUseWorkbenchBottomDock(
+  screenProfile: Pick<ScreenProfile, "deviceClass">,
+): boolean {
+  return screenProfile.deviceClass === "desktop" || screenProfile.deviceClass === "tablet";
+}
+
+export function isToolboxBottomDockActive(
+  state: Pick<UiStateReadWrite, "screenProfile" | "workbench">,
+): boolean {
+  return state.workbench.dialogState.toolbox.visible
+    && state.workbench.toolbox.dockPreference === "bottom"
+    && canUseWorkbenchBottomDock(state.screenProfile);
+}
+
+export function isTimelineBottomDockActive(
+  state: Pick<UiStateReadWrite, "screenProfile" | "workbench">,
+): boolean {
+  return state.workbench.dialogState.timeline.visible
+    && (
+      state.screenProfile.deviceClass === "mobile"
+      || (
+        state.workbench.timelineDockPreference === "bottom"
+        && canUseWorkbenchBottomDock(state.screenProfile)
+      )
+    );
+}
+
 class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
   leftDockSuppressed = false;

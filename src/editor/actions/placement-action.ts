@@ -22,6 +22,7 @@ import { snapPlacementToOuterRingEdge } from "../placement-snapping";
 import { cloneEntityConfig } from "../entity-config-clone";
 import { translateRegionRects } from "@/shared/geometry/region-rects";
 import { cloneRegionAnnotation } from "@/shared/region-annotations";
+import { resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
 
 type EditorPlacementActions = Pick<
   EditorAction,
@@ -48,8 +49,11 @@ export function createEditorPlacementActions({
       centerGridPoint: GridPoint,
     ) => {
       state.regionAnnotations.moveFeedback = null;
+      const targetDefinitionId = workspace.registry.queries.isProtocolCore(deviceDefinitionId)
+        ? resolveProtocolCoreDefinitionIdForBase(document.getSnapshot().baseId)
+        : deviceDefinitionId;
       const definition = workspace.registry.entityDefinitions.find(
-        (def) => def.id === deviceDefinitionId,
+        (def) => def.id === targetDefinitionId,
       );
 
       if (definition === undefined) {
@@ -64,7 +68,7 @@ export function createEditorPlacementActions({
       );
 
       const nextDraftId = generatePlacementDraftId(
-        deviceDefinitionId,
+        targetDefinitionId,
         ++placementDraftCounter,
         reservedIds,
       );
@@ -81,7 +85,7 @@ export function createEditorPlacementActions({
       });
       const draft: DraftEntity = {
         id: nextDraftId,
-        definitionId: deviceDefinitionId,
+        definitionId: targetDefinitionId,
         position: snappedPlacement.position,
         rotation: snappedPlacement.rotation,
         config: {},
@@ -112,9 +116,9 @@ export function createEditorPlacementActions({
       state.internalTransientState.placementHistoryAction = {
         type: "entity.place",
         label: "放置设备",
-        detail: deviceDefinitionId,
+        detail: targetDefinitionId,
         entityIds: [draft.id],
-        definitionIds: [deviceDefinitionId],
+        definitionIds: [targetDefinitionId],
         count: 1,
       };
       syncPlacementValidationState({
@@ -149,8 +153,11 @@ export function createEditorPlacementActions({
           continue;
         }
 
+        const targetDefinitionId = workspace.registry.queries.isProtocolCore(entity.definitionId)
+          ? resolveProtocolCoreDefinitionIdForBase(currentDocument.baseId)
+          : entity.definitionId;
         const draftId = generatePlacementDraftId(
-          entity.definitionId,
+          targetDefinitionId,
           ++placementDraftCounter,
           reservedIds,
         );
@@ -159,6 +166,7 @@ export function createEditorPlacementActions({
         nextPreviewDrafts.push({
           ...cloneWorldEntity(entity),
           id: draftId,
+          definitionId: targetDefinitionId,
           originalEntityId: draftId,
           position: {
             x: entity.position.x + placementVector.x,

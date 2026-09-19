@@ -488,7 +488,7 @@ describe("createEditorHost", () => {
       linkType: "share-all",
       source: {
         entityId: "outlet",
-        storageSlotGroupId: "unloader_buffer",
+        storageSlotGroupId: "transport_input",
         slotId: "slot_1",
       },
       target: {
@@ -556,7 +556,7 @@ describe("createEditorHost", () => {
     ]);
     expect(linked.slotLinks.filter((slotLink) =>
       slotLink.source.entityId === "outlet"
-      && slotLink.source.storageSlotGroupId === "unloader_buffer"
+      && slotLink.source.storageSlotGroupId === "transport_input"
       && slotLink.source.slotId === "slot_1",
     )).toHaveLength(1);
   });
@@ -3598,7 +3598,7 @@ describe("createEditorHost", () => {
     expect(document.entityOrder).toEqual(["protocol-core:valley4_infra_outpost"]);
     expect(document.entities["protocol-core:valley4_infra_outpost"]).toEqual({
       id: "protocol-core:valley4_infra_outpost",
-      definitionId: "sp_hub_1",
+      definitionId: "sp_sub_hub_1",
       position: { x: 0, y: 0 },
       rotation: 0,
       config: {},

@@ -21,6 +21,8 @@ export interface SimulationPresentationProjection {
   readonly baseBatteryCapacity: number;
   getSlot(slotId: string): RuntimeSlotSnapshot | null;
   getDevice(deviceId: string): RuntimeDeviceSnapshot | null;
+  /** 读取展示设备及其显式携带的远端状态源；不扩张普通展示投影。 */
+  getOperatingStatusDevice(deviceId: string): RuntimeDeviceSnapshot | null;
   getNode(nodeId: string): RuntimeNodeSnapshot | null;
   getTransportComponentItemType(componentId: string): string | null;
   getTransfers(): readonly RuntimeTransferSnapshot[];

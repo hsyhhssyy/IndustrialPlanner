@@ -59,6 +59,10 @@ export class LegacySnapshotPresentationProjection implements SimulationPresentat
     return this.readSnapshot()?.devices[deviceId] ?? null;
   }
 
+  public getOperatingStatusDevice(deviceId: string): RuntimeDeviceSnapshot | null {
+    return this.getDevice(deviceId);
+  }
+
   public getNode(nodeId: string): RuntimeNodeSnapshot | null {
     return this.readSnapshot()?.nodes[nodeId] ?? null;
   }

@@ -13,6 +13,10 @@ import {
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import { createDenseRegionalDocument } from "@/simulation/dense/dense-regional-document";
+import { resolveDarkPipeStatusSourceByDeviceId } from "@/simulation/projection";
+import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+import { compileSimulationTopology } from "@/simulation/topology";
 import {
   DENSE_STANDARD_TICK_RATE_PER_SECOND,
   RECIPE_PHASE_DURATION_SECONDS,
@@ -83,6 +87,61 @@ describe("ST2-RQ-023 dense host regressions", () => {
       }
     },
   );
+
+  it("materializes cross-base dark-pipe links into the dense composite document", () => {
+    const currentBaseId = "wuling_protocol_core";
+    const remoteBaseId = "wuling_tianwangping_aid";
+    const inlet = createEntity("inlet", "udpipe_loader_1", 0, 0, 180);
+    const outlet = createEntity("outlet", "udpipe_unloader_1", 0, 0, 180);
+    const currentDocument = {
+      ...createWorldDocument({ baseId: currentBaseId }),
+      entities: { inlet },
+      entityOrder: [inlet.id],
+    };
+    const remoteDocument = {
+      ...createWorldDocument({ baseId: remoteBaseId }),
+      entities: { outlet },
+      entityOrder: [outlet.id],
+    };
+    const link = createRegionalDarkPipeLink({
+      inlet: { baseId: currentBaseId, entityId: inlet.id },
+      outlet: { baseId: remoteBaseId, entityId: outlet.id },
+    });
+
+    const composite = createDenseRegionalDocument({
+      currentBaseId,
+      documents: [currentDocument, remoteDocument],
+      registry: createRegistryContract(),
+      darkPipeLinks: [link],
+    });
+
+    expect(composite.slotLinks).toContainEqual({
+      id: link.id,
+      linkType: "share-all",
+      source: {
+        entityId: `dense-base:${remoteBaseId}:outlet`,
+        storageSlotGroupId: "transport_input",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: inlet.id,
+        storageSlotGroupId: "loader_buffer",
+        slotId: "slot_1",
+      },
+    });
+    const topology = compileSimulationTopology({
+      document: composite,
+      registry: createRegistryContract(),
+      poweredEntityIds: new Set(),
+      simulationMode: SIMULATION_MODE.regionalMultiBase,
+      activeActivityIds: [],
+    });
+    const statusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(topology);
+    expect(statusSourceByDeviceId.get("device:inlet"))
+      .toBe(`device:dense-base:${remoteBaseId}:outlet`);
+    expect(statusSourceByDeviceId.get(`device:dense-base:${remoteBaseId}:outlet`))
+      .toBe(`device:dense-base:${remoteBaseId}:outlet`);
+  });
 
   describeSimulationEngineMatrix("topology refresh contract", (engineKind) => {
     it("preserves existing inventory and recipe progress when adding an unrelated building", async () => {

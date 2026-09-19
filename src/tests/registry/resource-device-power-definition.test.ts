@@ -11,6 +11,14 @@ function requireEntity(id: string) {
 }
 
 describe("resource device power definitions", () => {
+  it("仅供电桩将 idle 展示为 running", () => {
+    expect(requireEntity("power_diffuser_1").isIdleAsRunning).toBe(true);
+    expect(ENTITY_DEFINITIONS
+      .filter((definition) => definition.isIdleAsRunning === true)
+      .map((definition) => definition.id))
+      .toEqual(["power_diffuser_1"]);
+  });
+
   it.each([
     ["dumper_1", 10],
     ["miner_2", 5],

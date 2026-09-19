@@ -36,6 +36,7 @@ export interface DenseEngineBridge {
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
     readonly presentationDeviceIds?: readonly string[];
+    readonly operatingStatusDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>>;
   sendCommands(
@@ -82,6 +83,7 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
     readonly presentationDeviceIds?: readonly string[];
+    readonly operatingStatusDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>> {
     this.identity = options.identity;
@@ -97,6 +99,9 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
       ...(options.presentationDeviceIds === undefined
         ? {}
         : { presentationDeviceIds: options.presentationDeviceIds }),
+      ...(options.operatingStatusDeviceIds === undefined
+        ? {}
+        : { operatingStatusDeviceIds: options.operatingStatusDeviceIds }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
     }), "topology-ready"));
   }
@@ -227,6 +232,7 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     readonly powerMode: "real" | "infinite";
     readonly powerConsumptionOverride: number | undefined;
     readonly presentationDeviceIds?: readonly string[];
+    readonly operatingStatusDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
   }): Promise<Extract<DenseWorkerResponse, { readonly type: "topology-ready" }>> {
     this.rejectAll(new Error("Dense simulation session was replaced by a newer topology."));
@@ -243,6 +249,9 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
       ...(options.presentationDeviceIds === undefined
         ? {}
         : { presentationDeviceIds: options.presentationDeviceIds }),
+      ...(options.operatingStatusDeviceIds === undefined
+        ? {}
+        : { operatingStatusDeviceIds: options.operatingStatusDeviceIds }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
     }, "topology-ready");
   }
@@ -462,6 +471,7 @@ function createDenseProtocolError(
  * Replacement: initialize(topology + presentationDeviceIds), advanceToTick, ensureBufferedThrough
  * Risk: Low；Legacy Bridge 仍保留独立区域协议。
  * Human Review: Required
+ * AI-CORRECTION 2026-09-18: initialize 现可额外携带 operatingStatusDeviceIds，只投影暗管联动所需的远端设备状态。
  *
  * Original code:
 import type { RegionalWarehouseOutletTable } from "../regional";

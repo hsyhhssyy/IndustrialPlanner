@@ -1,20 +1,25 @@
 // @vitest-environment node
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
-import { normalizeDeviceSpriteAnimationDefinition } from "@/shared/device-sprite-animation";
+import {
+  DEVICE_SPRITE_ANIMATION_STATUSES,
+  normalizeDeviceSpriteAnimationDefinition,
+  resolveDeviceSpriteAnimationStatusClip,
+} from "@/shared/device-sprite-animation";
 // @ts-expect-error Node 发布配置直接复用，测试不得复制发布比例。
 import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from "../../scripts/building-asset-publish-config.mjs";
 
 const COMPONENT_MACHINE_ENTITY_ID = "cmpt_mc_1";
+const PROTOCOL_CORE_ENTITY_IDS = ["sp_hub_1", "sp_sub_hub_1"] as const;
 const ANIMATION_PHASES = ["open", "open_idle", "close", "close_idle"] as const;
 
-type AnimationPhase = typeof ANIMATION_PHASES[number];
+type AnimationPhase = string;
 
 interface SourceAnimationManifest {
   readonly frameWidth: number;
@@ -23,11 +28,18 @@ interface SourceAnimationManifest {
   readonly sources: Record<string, {
     readonly frameDurationsMs: readonly number[];
   }>;
-  readonly clips: Record<AnimationPhase, readonly {
+  readonly clips: Record<string, readonly {
     readonly source: string;
     readonly startFrame: number;
     readonly frameCount: number;
   }[]>;
+  readonly playback: {
+    readonly fallbackClip: string;
+    readonly staticClip: string;
+    readonly statusClips: Record<string, string>;
+    readonly openTransitionClip: string | null;
+    readonly closeTransitionClip: string | null;
+  };
   readonly sourceSite: {
     readonly releaseId: string;
     readonly indexSha256: string;
@@ -35,7 +47,44 @@ interface SourceAnimationManifest {
 }
 
 describe("device animation definitions", () => {
-  it("publishes the fitting unit idle loop through the four-phase runtime contract", async () => {
+  it.each(PROTOCOL_CORE_ENTITY_IDS)("publishes %s as an open_idle-only loop", async (entityId) => {
+    const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === entityId);
+    expect(entity).toBeDefined();
+    if (entity?.spriteAnimation === undefined) throw new Error(`Missing animation definition: ${entityId}`);
+
+    const sourceManifest = JSON.parse(await readFile(path.resolve(
+      `resources/device-sprite-animation/${entity.spriteId}/manifest.json`,
+    ), "utf8"));
+    expect(sourceManifest.clipSelection).toBe("protocol-core-open-idle-only");
+    expect(Object.keys(sourceManifest.clips)).toEqual(["open_idle"]);
+    expect(Object.keys(sourceManifest.sources).every((source) => source.startsWith("open_idle_"))).toBe(true);
+
+    const animationDirectory = path.resolve(`public/3d-top-view/animations/${entity.spriteId}`);
+    const runtimeManifest = JSON.parse(await readFile(path.join(animationDirectory, "manifest.json"), "utf8"));
+    expect(Object.keys(runtimeManifest.clips)).toEqual(["open_idle"]);
+    expect(runtimeManifest.playback).toEqual(sourceManifest.playback);
+    const normalized = normalizeDeviceSpriteAnimationDefinition(entity.spriteAnimation, runtimeManifest);
+    expect(normalized.clipIds).toEqual(["open_idle"]);
+    expect(normalized.playback.openTransitionClip).toBeNull();
+    expect(normalized.playback.closeTransitionClip).toBeNull();
+    expect(normalized.playback.clipOptions.open_idle).toEqual({
+      playing: true,
+      restart: false,
+      loop: true,
+    });
+    for (const status of DEVICE_SPRITE_ANIMATION_STATUSES) {
+      expect(resolveDeviceSpriteAnimationStatusClip(normalized, status)).toBe("open_idle");
+    }
+
+    const referencedFiles = new Set([
+      "manifest.json",
+      normalized.maskFile,
+      ...normalized.clips.open_idle!.pages.map((page) => page.file),
+    ]);
+    expect(new Set(await readdir(animationDirectory))).toEqual(referencedFiles);
+  });
+
+  it("publishes the fitting unit through the status-driven runtime contract", async () => {
     const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === COMPONENT_MACHINE_ENTITY_ID);
     expect(entity).toBeDefined();
     if (entity === undefined) throw new Error(`Missing entity definition: ${COMPONENT_MACHINE_ENTITY_ID}`);
@@ -62,9 +111,15 @@ describe("device animation definitions", () => {
     //   { source: "close_idle_000", startFrame: 0, frameCount: 1 },
     // ]);
     // AI-CORRECTION 2026-09-14: close_idle 与其他阶段统一从来源范围解析，不再固定来源文件名或帧数。
-    const sourceTimelines = Object.fromEntries(ANIMATION_PHASES.map((phase) => {
-      expect(sourceManifest.clips[phase].length).toBeGreaterThan(0);
-      const timeline = sourceManifest.clips[phase].flatMap((range) => {
+    const sourceClipIds = Object.keys(sourceManifest.clips);
+    expect(sourceClipIds.length).toBeGreaterThan(0);
+    expect(sourceClipIds.every((clipId) => ANIMATION_PHASES.includes(clipId as typeof ANIMATION_PHASES[number]))).toBe(true);
+    // AI-CORRECTION 2026-09-18: 新素材片段集合由 manifest 决定；当前设备仅交付 open_idle/close_idle，不再强制四段齐全。
+    const sourceTimelines = Object.fromEntries(sourceClipIds.map((phase) => {
+      const ranges = sourceManifest.clips[phase];
+      expect(ranges?.length).toBeGreaterThan(0);
+      if (ranges === undefined) throw new Error(`Missing source clip: ${phase}`);
+      const timeline = ranges.flatMap((range) => {
         const source = sourceManifest.sources[range.source];
         expect(source, `${phase} references missing source ${range.source}`).toBeDefined();
         if (source === undefined) throw new Error(`${phase} references missing source ${range.source}`);
@@ -83,14 +138,17 @@ describe("device animation definitions", () => {
       releaseId: sourceManifest.sourceSite.releaseId,
       indexSha256: sourceManifest.sourceSite.indexSha256,
     });
+    expect(Object.keys(runtimeManifest.clips)).toEqual(sourceClipIds);
+    expect(runtimeManifest.playback).toMatchObject(sourceManifest.playback);
     const normalized = normalizeDeviceSpriteAnimationDefinition(entity.spriteAnimation, runtimeManifest);
     expect(normalized.closeIdleMode).toBe(entity.spriteAnimation?.closeIdleMode);
     expect(normalized.frameWidth).toBe(sourceManifest.frameWidth);
     expect(normalized.frameHeight).toBe(sourceManifest.frameHeight);
     expect(normalized.resolution).toBe(BUILDING_ASSET_PUBLISH_RESOLUTIONS[0]);
 
-    for (const phase of ANIMATION_PHASES) {
+    for (const phase of sourceClipIds) {
       const sourceTimeline = sourceTimelines[phase];
+      if (sourceTimeline === undefined) throw new Error(`Missing source timeline: ${phase}`);
       const expectedFrameEndTimes: number[] = [];
       let elapsedMs = 0;
       for (const duration of sourceTimeline) {
@@ -98,10 +156,11 @@ describe("device animation definitions", () => {
         expectedFrameEndTimes.push(elapsedMs);
       }
       expect(runtimeManifest.clips[phase].frameDurationsMs).toEqual(sourceTimeline);
-      expect(normalized.clips[phase].frameCount).toBe(sourceTimeline.length);
-      expect(normalized.clips[phase].durationMs).toBe(elapsedMs);
-      expect(normalized.clips[phase].frameEndTimesMs).toEqual(expectedFrameEndTimes);
-      expect(normalized.clips[phase].pages.reduce((total, page) => total + page.frameCount, 0))
+      const normalizedClip = normalized.clips[phase]!;
+      expect(normalizedClip.frameCount).toBe(sourceTimeline.length);
+      expect(normalizedClip.durationMs).toBe(elapsedMs);
+      expect(normalizedClip.frameEndTimesMs).toEqual(expectedFrameEndTimes);
+      expect(normalizedClip.pages.reduce((total, page) => total + page.frameCount, 0))
         .toBe(sourceTimeline.length);
     }
 

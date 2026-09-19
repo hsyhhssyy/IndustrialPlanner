@@ -387,7 +387,7 @@
       "linkType": "share-all",
       "source": {
         "entityId": "outlet",
-        "storageSlotGroupId": "unloader_buffer",
+        "storageSlotGroupId": "transport_input",
         "slotId": "slot_1"
       },
       "target": {
@@ -401,4 +401,3 @@
   "createdAt": "1970-01-01T00:00:00.000Z",
   "updatedAt": "1970-01-01T00:00:00.000Z"
 }
-

@@ -8,6 +8,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 
 describe("区域多基地 SimulationAction 启动", () => {
   it("开启区域模式时保留合法倍率并将任意非法倍率归一化为 x1", () => {
@@ -144,6 +145,60 @@ describe("区域多基地 SimulationAction 启动", () => {
           regionBaseCount: 1,
           regionTag: "武陵",
           error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
+        },
+      );
+    } finally {
+      host.dispose();
+      consoleError.mockRestore();
+    }
+  });
+
+  it("Legacy 区域模式明确拒绝跨基地暗管关系", async () => {
+    const registry = createRegistryContract();
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const workspace: WorkspaceContract = {
+      state: createWorkspaceState(),
+      registry,
+      app: null,
+      editor: {
+        document: createSnapshotStore(currentDocument),
+        state: {} as never,
+        queries: {} as never,
+        actions: {} as never,
+      },
+      render: null,
+      simulation: null,
+      sync: null,
+      blueprintPlanner: null,
+    };
+    const link = createRegionalDarkPipeLink({
+      inlet: { baseId: currentDocument.baseId, entityId: "inlet" },
+      outlet: { baseId: "wuling_tianwangping_aid", entityId: "outlet" },
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const host = createSimulationHost(workspace, {
+      engineKind: "legacy",
+      workerMode: "runtime",
+      getRegionalDarkPipeLinks: () => [link],
+    });
+
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+
+      expect(host.state.runningState).toBe("stop");
+      expect(host.internalState.runtimeStatus).toMatchObject({
+        mode: "error",
+        error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+      });
+      expect(consoleError).toHaveBeenCalledWith(
+        "[industrial-planner:simulation-runtime] Regional simulation start rejected.",
+        {
+          code: "legacy-regional-dark-pipe-unsupported",
+          currentBaseId: currentDocument.baseId,
+          regionTag: "武陵",
+          darkPipeLinkCount: 1,
+          error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
         },
       );
     } finally {

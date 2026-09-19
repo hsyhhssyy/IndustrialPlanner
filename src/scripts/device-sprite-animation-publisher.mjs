@@ -63,11 +63,11 @@ async function fileExists(filePath) {
   }
 }
 
-async function readSourceManifest(sourceRoot, phases, maxTextureSize, resolution) {
+async function readSourceManifest(sourceRoot, maxTextureSize, resolution) {
   const manifestPath = path.join(sourceRoot, 'manifest.json');
   const source = requireRecord(JSON.parse(await readFile(manifestPath, 'utf8')), 'source manifest');
-  if (source.schemaVersion !== 1) {
-    throw new Error('source manifest.schemaVersion must be 1');
+  if (source.schemaVersion !== 2) {
+    throw new Error('source manifest.schemaVersion must be 2');
   }
   const frameWidth = requirePositiveInteger(source.frameWidth, 'source manifest.frameWidth');
   const frameHeight = requirePositiveInteger(source.frameHeight, 'source manifest.frameHeight');
@@ -116,8 +116,10 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize, resolution
     }));
   }
   const clipDefinitions = requireRecord(source.clips, 'source manifest.clips');
+  const clipIds = Object.keys(clipDefinitions).map((clipId) => requireSourceName(clipId, 'source manifest clip ID'));
+  if (clipIds.length === 0) throw new Error('source manifest.clips must not be empty');
   const clips = {};
-  for (const phase of phases) {
+  for (const phase of clipIds) {
     const ranges = clipDefinitions[phase];
     if (!Array.isArray(ranges) || ranges.length === 0) {
       throw new Error(`source manifest.clips.${phase} must be a non-empty array`);
@@ -155,14 +157,16 @@ async function readSourceManifest(sourceRoot, phases, maxTextureSize, resolution
     sourceArchiveSha256: source.sourceArchiveSha256 ?? null,
     sourceSite: source.sourceSite ?? null,
     sources,
+    clipIds: Object.freeze(clipIds),
     clips: Object.freeze(clips),
+    playback: requireRecord(source.playback, 'source manifest.playback'),
   });
 }
 
-function createOutputPlan(sourceManifest, phases) {
+function createOutputPlan(sourceManifest) {
   const pagesByPhase = {};
   const mappingsBySource = new Map([...sourceManifest.sources.keys()].map((name) => [name, []]));
-  for (const phase of phases) {
+  for (const phase of sourceManifest.clipIds) {
     const logicalFrames = sourceManifest.clips[phase].flatMap((range) => (
       Array.from({ length: range.frameCount }, (_, offset) => ({
         source: range.source,
@@ -337,7 +341,6 @@ async function publishOneAnimation({
   maskOverrideDirectory,
   maxTextureSize,
   resolution,
-  phases,
   registryDefinition,
   normalizeDeviceSpriteAnimationDefinition,
 }) {
@@ -345,8 +348,8 @@ async function publishOneAnimation({
     throw new Error(`Animation ${spriteId} has an existing mask override; resolve it before publishing`);
   }
   const sourceRoot = path.join(sourceDirectory, spriteId);
-  const sourceManifest = await readSourceManifest(sourceRoot, phases, maxTextureSize, resolution);
-  const { pagesByPhase, mappingsBySource } = createOutputPlan(sourceManifest, phases);
+  const sourceManifest = await readSourceManifest(sourceRoot, maxTextureSize, resolution);
+  const { pagesByPhase, mappingsBySource } = createOutputPlan(sourceManifest);
   const stagingRootParent = path.resolve('.temp/.trash');
   await mkdir(stagingRootParent, { recursive: true });
   const stagingRoot = await mkdtemp(path.join(stagingRootParent, `device-animation-${spriteId}-`));
@@ -414,7 +417,8 @@ async function publishOneAnimation({
               + ' needs a transparent background and visible content',
           );
         }
-        if (mapping.page.phase === 'open' && mapping.page.firstFrameIndex === 0 && mapping.localFrameIndex === 0) {
+        if (mapping.page.phase === sourceManifest.playback.staticClip
+          && mapping.page.firstFrameIndex === 0 && mapping.localFrameIndex === 0) {
           firstFrame = extractFrame(
             data,
             info.width,
@@ -435,9 +439,9 @@ async function publishOneAnimation({
       }
     }
     if (firstFrame === null) {
-      throw new Error(`Animation ${spriteId} has no logical open first frame`);
+      throw new Error(`Animation ${spriteId} has no static source clip first frame`);
     }
-    for (const phase of phases) {
+    for (const phase of sourceManifest.clipIds) {
       for (const page of pagesByPhase[phase]) {
         if (page.buffer !== null || page.filledFrames !== page.frameCount) {
           throw new Error(`Animation ${spriteId}/${page.file} was not fully assembled`);
@@ -461,7 +465,7 @@ async function publishOneAnimation({
       .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
       .webp({ lossless: true, effort: 6 }).toFile(path.join(stagingAnimationDirectory, 'mask.webp'));
     const outputManifest = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       resolution,
       frameWidth: sourceManifest.frameWidth,
       frameHeight: sourceManifest.frameHeight,
@@ -469,7 +473,8 @@ async function publishOneAnimation({
       ...(sourceManifest.sourceArchiveSha256 ? { sourceArchiveSha256: sourceManifest.sourceArchiveSha256 } : {}),
       ...(sourceManifest.sourceSite ? { sourceSite: sourceManifest.sourceSite } : {}),
       maskFile: 'mask.webp',
-      clips: Object.fromEntries(phases.map((phase) => [phase, {
+      playback: sourceManifest.playback,
+      clips: Object.fromEntries(sourceManifest.clipIds.map((phase) => [phase, {
         frameDurationMs: sourceManifest.frameDurationMs,
         ...(sourceManifest.clips[phase].some((range) => range.frameDurationsMs
           || sourceManifest.sources.get(range.source).frameDurationsMs)
@@ -509,7 +514,7 @@ async function publishOneAnimation({
       spriteId,
       frameWidth: sourceManifest.frameWidth,
       frameHeight: sourceManifest.frameHeight,
-      pageCount: phases.reduce((total, phase) => total + pagesByPhase[phase].length, 0),
+      pageCount: sourceManifest.clipIds.reduce((total, phase) => total + pagesByPhase[phase].length, 0),
     };
   } finally {
     await rm(stagingRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
@@ -538,7 +543,6 @@ export async function publishPaginatedDeviceSpriteAnimations({
   // allowUnregisteredSourceIds = new Set(),
 }) {
   const {
-    DEVICE_SPRITE_ANIMATION_PHASES: phases,
     getDeviceSpriteAnimationSignature,
     normalizeDeviceSpriteAnimationDefinition,
     validateDeviceSpriteAnimationId,
@@ -582,7 +586,6 @@ export async function publishPaginatedDeviceSpriteAnimations({
       maskOverrideDirectory,
       maxTextureSize,
       resolution,
-      phases,
       registryDefinition,
       normalizeDeviceSpriteAnimationDefinition,
     }));

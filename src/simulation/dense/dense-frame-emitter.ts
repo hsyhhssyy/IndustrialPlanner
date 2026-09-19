@@ -58,6 +58,7 @@ export class DenseFrameEmitter {
       readonly topologyVersion: number;
     },
     presentationDeviceIds?: readonly string[],
+    operatingStatusDeviceIds: readonly string[] = [],
   ) {
     if (
       topology.topologyId !== layout.dictionary.topologyId
@@ -72,6 +73,15 @@ export class DenseFrameEmitter {
       this.lookup,
       presentationDeviceIds,
     );
+    if (presentation !== null) {
+      for (const deviceId of operatingStatusDeviceIds) {
+        const deviceIndex = this.lookup.deviceIndexById.get(deviceId);
+        if (deviceIndex === undefined) {
+          throw new Error(`Dense operating status cannot resolve device "${deviceId}".`);
+        }
+        presentation.deviceFlags[deviceIndex] = 1;
+      }
+    }
     this.presentationDeviceFlags = presentation?.deviceFlags ?? null;
     this.presentationNodeFlags = presentation?.nodeFlags ?? null;
     this.presentationSlotFlags = presentation?.slotFlags ?? null;

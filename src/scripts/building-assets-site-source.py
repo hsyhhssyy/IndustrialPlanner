@@ -12,6 +12,10 @@ import urllib.request
 from pathlib import Path
 
 SITE_URL = "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/"
+PROTOCOL_CORE_OPEN_IDLE_ONLY_SPRITE_IDS = frozenset({
+    "item_port_sp_hub_1",
+    "item_port_sp_sub_hub_1",
+})
 
 
 def digest(data):
@@ -196,13 +200,139 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
         "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "entries": [{k: e[k] for k in ("entityId", "spriteId", "sourcePath", "animated")} for e in entries],
         "logistics": "logistics" in selected_buildings,
-        "scope": "logistics" if logistics_only else "buildings",
+        "scope": "logistics" if logistics_only else "entities" if selected_ids else "buildings",
         "unmappedBuildings": sorted(set(buildings) - selected_buildings),
         "files": [{**indexed[name], "localPath": f"site/{name}"} for name in sorted(names)],
     }
     (batch / "source-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
     print(f"Source ready: {batch / 'source-receipt.json'}", flush=True)
     return receipt
+
+
+def create_status_playback(package, source_phases, sprite_id):
+    """将网站片段与 statusControl 规范化为项目运行时唯一播放路由。"""
+    clip_ids = set(source_phases)
+    status_clips = {}
+    source_statuses = {}
+    clip_options = {}
+    fallback_candidates = []
+    status_control = package.get("statusControl")
+    runtime_status_by_code = {
+        "IDLE": "idle",
+        "RUNNING": "normal",
+        "BLOCKED": "blocked",
+        "NO_POWER": "no-power",
+        "NOT_IN_POWER_NET": "not-in-power-net",
+    }
+    if status_control is not None:
+        if not isinstance(status_control, dict) or not isinstance(status_control.get("codes"), list):
+            raise ValueError(f"Invalid statusControl: {sprite_id}")
+        seen_status_keys = set()
+        for item in status_control["codes"]:
+            animation = item.get("animation") if isinstance(item, dict) else None
+            code = item.get("code") if isinstance(item, dict) else None
+            status_key = item.get("statusKey") if isinstance(item, dict) else None
+            if (not isinstance(code, str) or not code or not code.replace("_", "").isalnum()
+                    or not code[0].isalpha() or code != code.upper()
+                    or not isinstance(status_key, int) or status_key <= 0
+                    or status_key in seen_status_keys or not isinstance(animation, dict)):
+                raise ValueError(f"Invalid statusControl entry: {sprite_id}")
+            clip = animation.get("clip")
+            playing = animation.get("playing")
+            restart = animation.get("restart")
+            if clip not in clip_ids or not isinstance(playing, bool) or not isinstance(restart, bool):
+                raise ValueError(f"Invalid statusControl animation: {sprite_id}/{code}")
+            seen_status_keys.add(status_key)
+            source_statuses[code] = {
+                "statusKey": status_key,
+                "clip": clip,
+                "playing": playing,
+                "restart": restart,
+            }
+            option = {"playing": playing, "restart": restart}
+            if clip in clip_options and clip_options[clip] != option:
+                raise ValueError(f"Conflicting statusControl playback: {sprite_id}/{clip}")
+            clip_options[clip] = option
+            runtime_status = runtime_status_by_code.get(code)
+            if runtime_status is not None:
+                if runtime_status in status_clips and status_clips[runtime_status] != clip:
+                    raise ValueError(f"Duplicate runtime status animation: {sprite_id}/{runtime_status}")
+                status_clips[runtime_status] = clip
+            if code == "CLOSED":
+                fallback_candidates.append(clip)
+
+    if "open_idle" in clip_ids:
+        status_clips.setdefault("normal", "open_idle")
+    if "close_idle" in clip_ids:
+        fallback_candidates.append("close_idle")
+    if "static" in clip_ids and not fallback_candidates:
+        fallback_candidates.append("static")
+        clip_options.setdefault("static", {"playing": False, "restart": False})
+
+    fallback_candidates = list(dict.fromkeys(fallback_candidates))
+    if len(fallback_candidates) != 1:
+        raise ValueError(f"Animation requires exactly one fallback clip: {sprite_id}/{fallback_candidates}")
+    fallback_clip = fallback_candidates[0]
+    normal_clip = status_clips.get("normal")
+    open_transition = "open" if normal_clip == "open_idle" and "open" in clip_ids else None
+    close_transition = "close" if fallback_clip == "close_idle" and "close" in clip_ids else None
+    if "open" in clip_ids and open_transition is None:
+        raise ValueError(f"Open transition has no open_idle target: {sprite_id}")
+    if "close" in clip_ids and close_transition is None:
+        raise ValueError(f"Close transition has no close_idle target: {sprite_id}")
+    static_clip = open_transition or normal_clip or fallback_clip
+    return {
+        "fallbackClip": fallback_clip,
+        "staticClip": static_clip,
+        "statusClips": status_clips,
+        "openTransitionClip": open_transition,
+        "closeTransitionClip": close_transition,
+        "clipOptions": clip_options,
+        "sourceStatuses": source_statuses,
+    }
+
+
+def resolve_animation_delivery(package, sources, source_phases, sprite_id):
+    """协议核心只发布并播放 open_idle；其他设备继续遵循网站 status 路由。"""
+    if sprite_id not in PROTOCOL_CORE_OPEN_IDLE_ONLY_SPRITE_IDS:
+        return {
+            "sources": sources,
+            "clips": source_phases,
+            "playback": create_status_playback(package, source_phases, sprite_id),
+            "clipSelection": "website-status-driven-phases",
+        }
+    ranges = source_phases.get("open_idle")
+    if not ranges:
+        raise ValueError(f"Protocol core requires open_idle animation: {sprite_id}")
+    selected_source_names = {frame_range["source"] for frame_range in ranges}
+    selected_sources = {
+        name: source for name, source in sources.items() if name in selected_source_names
+    }
+    if set(selected_sources) != selected_source_names:
+        raise ValueError(f"Protocol core open_idle references unknown sources: {sprite_id}")
+    return {
+        "sources": selected_sources,
+        "clips": {"open_idle": ranges},
+        "playback": {
+            "fallbackClip": "open_idle",
+            "staticClip": "open_idle",
+            "statusClips": {
+                status: "open_idle" for status in (
+                    "closed", "idle", "normal", "blocked", "no-power", "not-in-power-net"
+                )
+            },
+            "openTransitionClip": None,
+            "closeTransitionClip": None,
+            "clipOptions": {"open_idle": {"playing": True, "restart": False}},
+            "sourceStatuses": {},
+        },
+        "clipSelection": "protocol-core-open-idle-only",
+    }
+
+
+def delivery_is_animated(package, phase_static_flags):
+    """网站 statusControl 与非静态轨道均要求进入动画发布链。"""
+    return package.get("statusControl") is not None or any(not is_static for is_static in phase_static_flags)
 
 
 def prepare_metadata(batch):
@@ -239,8 +369,18 @@ def prepare_metadata(batch):
     history = root / "_import"
     history.mkdir(exist_ok=True)
     previous_mapping = Path(canonical) / "_import/previous-mapping.json"
-    shutil.copyfile(previous_mapping if previous_mapping.exists() else mapping_file, history / "previous-mapping.json")
-    shutil.copyfile(batch / "source-receipt.json", history / "source-receipt.json")
+    receipt_history_suffix = ""
+    if receipt.get("scope") == "entities":
+        selection_hash = digest("|".join(sorted(e["entityId"] for e in receipt["entries"])).encode())[:16]
+        receipt_history_suffix = f".entities-{selection_hash}"
+    shutil.copyfile(
+        previous_mapping if previous_mapping.exists() else mapping_file,
+        history / f"previous-mapping{receipt_history_suffix}.json",
+    )
+    shutil.copyfile(
+        batch / "source-receipt.json",
+        history / f"source-receipt{receipt_history_suffix}.json",
+    )
     provenance = {k: receipt[k] for k in ("siteUrl", "releaseId", "sourceVersion", "indexSha256")}
     provenance["root"] = canonical
     mapping["historicalSource"] = {**mapping.get("historicalSource", {}), **{k: mapping.pop(k) for k in ("sourceArchive", "sourceArchiveSha256", "incrementalFixes", "orientationConflicts", "validationStatus") if k in mapping}}
@@ -277,11 +417,13 @@ def prepare_metadata(batch):
         sources = {}
         source_phases = {}
         declared_static_phases = []
+        phase_static_flags = []
         frame_rates = set()
         for phase in package["animations"]:
             phase_root = f"{directory}/animations/{validate_path(phase)}"
             sheet = json.loads((root / phase_root / "spritesheet.json").read_text())
             animation = json.loads((root / phase_root / "animation.json").read_text())
+            phase_static_flags.append(animation.get("static") is True)
             if animation.get("static") is True:
                 declared_static_phases.append(phase)
             frame_rates.add(animation["fps"])
@@ -307,36 +449,31 @@ def prepare_metadata(batch):
                                  "frameCount": page["frameCount"], "frameDurationsMs": durations, "sourcePath": source_path, "sha256": source_hash}
                 ranges.append({"source": name, "startFrame": 0, "frameCount": page["frameCount"]})
             source_phases[phase] = ranges
+        entry["animated"] = delivery_is_animated(package, phase_static_flags)
         if entry["animated"]:
+            entry["closeIdleMode"] = entry.get("closeIdleMode") or (
+                "hold-last" if "close_idle" in source_phases else "loop"
+            )
             previous_path = Path("resources/device-sprite-animation") / entry["spriteId"] / "manifest.json"
-            previous = json.loads(previous_path.read_text())
-            phases = ("open", "open_idle", "close", "close_idle")
-            if all(phase in source_phases for phase in phases):
-                clips = {phase: source_phases[phase] for phase in phases}
-                selection = "website-explicit-phases"
-            else:
-                if set(sources) != set(previous["sources"]) or any(sources[k]["frameCount"] != v["frameCount"] for k, v in previous["sources"].items()):
-                    raise ValueError(f"Confirmed clip ranges no longer match website frames: {entry['spriteId']}")
-                clips = previous["clips"]
-                for ranges in clips.values():
-                    for item in ranges:
-                        source_item = sources[item["source"]]
-                        start, count = item["startFrame"], item["frameCount"]
-                        times = source_item["frameDurationsMs"][start:start + count]
-                        if len(times) != count or (item.get("frameDurationsMs") is not None and item["frameDurationsMs"] != times):
-                            raise ValueError(f"Confirmed clip timing differs: {entry['spriteId']}")
-                selection = "validated-existing-ranges"
+            previous = json.loads(previous_path.read_text()) if previous_path.exists() else {}
+            delivery = resolve_animation_delivery(
+                package, sources, source_phases, entry["spriteId"]
+            )
             if len(frame_rates) != 1:
                 raise ValueError(f"Animation phases have different frame rates: {directory}")
-            manifest = {"schemaVersion": 1, "frameWidth": width, "frameHeight": height, "fps": frame_rates.pop(),
-                        "pageRows": min(previous["pageRows"], 4095 // height), "pageColumns": min(previous["pageColumns"], 4095 // width),
-                        "sources": sources, "clips": clips, "frameTransform": "flip-top-bottom", "coordinateTransform": "projectY = depth - 1 - sourceZ",
-                        "clipSelection": selection, "sourceSite": {**provenance, "relativeRoot": f"../../building-assets-site/{release}"}}
+            manifest = {"schemaVersion": 2, "frameWidth": width, "frameHeight": height, "fps": frame_rates.pop(),
+                        "pageRows": min(previous.get("pageRows", 7), 4095 // height),
+                        "pageColumns": min(previous.get("pageColumns", 5), 4095 // width),
+                        "sources": delivery["sources"], "clips": delivery["clips"], "frameTransform": "flip-top-bottom", "coordinateTransform": "projectY = depth - 1 - sourceZ",
+                        "playback": delivery["playback"], "clipSelection": delivery["clipSelection"],
+                        "sourceSite": {**provenance, "relativeRoot": f"../../building-assets-site/{release}"}}
             output = stage / "resources/device-sprite-animation" / entry["spriteId"] / "manifest.json"
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
             previous_animation = Path(canonical) / "_import" / f"{entry['spriteId']}-previous-animation.json"
-            shutil.copyfile(previous_animation if previous_animation.exists() else previous_path, history / previous_animation.name)
+            history_source = previous_animation if previous_animation.exists() else previous_path
+            if history_source.exists():
+                shutil.copyfile(history_source, history / previous_animation.name)
             animations.append(entry["spriteId"])
         else:
             phase = next((p for p in ("static", "bind_pose", "close_idle") if p in source_phases), None)
@@ -357,8 +494,13 @@ def prepare_metadata(batch):
     target_mapping = stage / "resources/building-top-view-v15.json"
     if receipt.get("scope") != "logistics":
         target_mapping.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + "\n")
-    plan = {"schemaVersion": 1, "sourceSite": provenance, "entries": receipt["entries"], "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
+    normalized_entries = [{key: entry[key] for key in ("entityId", "spriteId", "sourcePath", "animated")}
+                          for entry in mapping["entries"] if entry["entityId"] in selected]
+    if len(normalized_entries) != len(receipt["entries"]):
+        raise ValueError("Normalized mapping coverage differs from pinned receipt")
+    plan = {"schemaVersion": 1, "sourceSite": provenance, "entries": normalized_entries, "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
     plan["scope"] = receipt.get("scope", "buildings")
+    plan["receiptHistorySuffix"] = receipt_history_suffix
     (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")
     print(f"Metadata prepared: {len(animations)} animations, {len(statics)} static sprites, {len(views)} height views", flush=True)
 

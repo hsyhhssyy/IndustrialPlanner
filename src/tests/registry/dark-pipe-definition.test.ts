@@ -7,6 +7,7 @@ import {
 } from "@/domain/registry/types/entity-simulation-behavior";
 import {
   FluidDomain,
+  RecipeItemDomainId,
 } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 // AI-REMOVED 2026-08-19:
@@ -153,12 +154,13 @@ describe("dark pipe definitions", () => {
     ]));
   });
 
-  it("configures dark pipe outlets as warehouse-linked generators with one 500-capacity fluid slot", () => {
+  it("configures dark pipe outlets with a stable warehouse buffer and rate-limited transport channels", () => {
     for (const id of ["udpipe_unloader_1", "udpipe_unloader_2"]) {
       const outlet = getEntity(id);
+      const channelCount = id === "udpipe_unloader_1" ? 2 : 4;
 
       expect(outlet.tags).not.toContain("WarehouseSink");
-      expect(outlet.storageSlotGroups).toHaveLength(1);
+      expect(outlet.storageSlotGroups).toHaveLength(2);
       expect(outlet.storageSlotGroups[0]).toMatchObject({
         id: "unloader_buffer",
         kind: FluidDomain,
@@ -172,14 +174,33 @@ describe("dark pipe definitions", () => {
           }),
         ],
       });
-      expect(outlet.recipeChannels).toEqual([
-        {
-          id: "default",
+      expect(outlet.storageSlotGroups[1]).toMatchObject({
+        id: "transport_input",
+        kind: FluidDomain,
+        slots: [
+          expect.objectContaining({
+            id: "slot_1",
+            capacity: 500,
+            initialItemType: null,
+            initialCount: 0,
+            itemFilterType: FluidDomain,
+          }),
+        ],
+      });
+      expect(outlet.recipeChannels).toEqual(
+        Array.from({ length: channelCount }, (_, index) => ({
+          id: `transport_${index + 1}`,
           type: "normal-channel",
-          ingredientStorageGroupIds: ["unloader_buffer"],
+          ingredientStorageGroupIds: ["transport_input"],
           productStorageGroupIds: ["unloader_buffer"],
           manualRecipeOnly: undefined,
-        },
+        })),
+      );
+      expect(outlet.recipeChannelBehavior).toEqual({
+        allowDuplicateRecipesAcrossChannels: true,
+      });
+      expect(outlet.portStorageBindings).toEqual([
+        { id: "bind_fluid_output", portGroupId: "fluid_output", storageSlotGroupId: "unloader_buffer" },
       ]);
       expect(outlet.inspectors).toEqual(expect.arrayContaining([
         { type: INSPECTOR_TYPE.darkPipeLink },
@@ -187,6 +208,22 @@ describe("dark pipe definitions", () => {
         { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["unloader_buffer"] },
       ]));
     }
+  });
+
+  it.each([
+    ["r_udpipe_unloader_transport_fluid_any_internal", "udpipe_unloader_1"],
+    ["r_udpipe_unloader_multi_transport_fluid_any_internal", "udpipe_unloader_2"],
+  ])("registers one-second single-item transport recipe %s", (recipeId, machineId) => {
+    const recipe = createRegistryContract().queries.findRecipeDefinition(recipeId);
+
+    expect(recipe).toMatchObject({
+      id: recipeId,
+      durationSeconds: 1,
+      inputs: [{ itemId: RecipeItemDomainId.Fluid, amount: 1 }],
+      outputs: [{ itemId: "same-as-input", amount: 1 }],
+      machineId,
+      recipeType: "reserved-item",
+    });
   });
 
   it("does not register the retired dark pipe inlet void recipes", () => {

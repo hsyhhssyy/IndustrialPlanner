@@ -135,6 +135,7 @@ export function normalizeWorldDocument(
 
   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
   const migration = migrateBlueprintDocumentState({
+    baseId: value.baseId,
     entities: value.entities,
     entityOrder: value.entityOrder,
     slotLinks: value.slotLinks,

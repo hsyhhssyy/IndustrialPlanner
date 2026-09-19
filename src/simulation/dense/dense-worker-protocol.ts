@@ -63,7 +63,9 @@ export type DenseWorkerRequest =
       readonly powerMode: "real" | "infinite";
       readonly powerConsumptionOverride: number | undefined;
       readonly presentationDeviceIds?: readonly string[];
+      readonly operatingStatusDeviceIds?: readonly string[];
       readonly migration?: SimulationTopologyMigration;
+      // AI-CORRECTION 2026-09-18: 初始化协议另携带少量远端 operatingStatusDeviceIds，仅投影暗管联动所需设备状态，不扩张场景展示。
       // AI-REMOVED 2026-09-17:
       // Reason: Dense 初始化不再接受每基地 Epoch 仓库配置。
       // Trigger: 区域执行已合并为单 topology。

@@ -34,6 +34,8 @@ export class CompactLayoutSearch {
   private randomState: number;
   private readonly penalties = new Map<string, number>();
   private focus: number[] = [];
+  private repairIssues: PlannerLayoutIssue[] = [];
+  private repairFocus: number[] = [];
   private reheatUntil = 0;
   // AI-REMOVED 2026-09-16:
   // Reason: 高密度升温/越界优先实验未改善 30×40 案例，收敛回已验证策略。
@@ -110,8 +112,21 @@ export class CompactLayoutSearch {
 
   async advance(count: number, checkBudget: () => void): Promise<boolean> {
     const end = Math.min(this.statistics.evaluationLimit, this.statistics.evaluations + count);
+    const repairEnabled = this.statistics.experiments?.includes("constraint-repair") === true;
+    let refreshRepairAt = this.statistics.evaluations;
     while (this.statistics.evaluations < end && this.movable.length) {
       checkBudget();
+      if (repairEnabled && this.statistics.evaluations >= refreshRepairAt) {
+        this.repairIssues = [];
+        this.current = this.evaluate(this.repairIssues);
+        const causes = new Set(this.repairIssues.flatMap(issue => issue.entityIds));
+        const affected = this.network.nodes.flatMap((node, index) => causes.has(node.entity.id) ? [index] : []);
+        this.repairFocus = this.movable.filter(index => affected.some(cause => index === cause
+          || areGridRectsIntersecting({ ...this.poses[cause]!, width: this.dimensions(cause).width + 2,
+            height: this.dimensions(cause).height + 2, x: this.poses[cause]!.x - 1, y: this.poses[cause]!.y - 1 },
+          { ...this.poses[index]!, ...this.dimensions(index) })));
+        refreshRepairAt = this.statistics.evaluations + 64;
+      }
       const progress = this.statistics.evaluations / this.statistics.evaluationLimit;
       const temperature = Math.max(this.statistics.evaluations < this.reheatUntil ? 5 : 0, this.profile.initialTemperature * Math.pow(this.profile.coolingRatio, progress));
       this.statistics.evaluations++;
@@ -131,10 +146,13 @@ export class CompactLayoutSearch {
   //       }) : [];
   //       const pool = overflowNodes.length && this.random() < 0.65 ? overflowNodes
   //         : this.focus.length && this.random() < 0.65 ? this.focus : this.movable;
-      const pool = this.focus.length && this.random() < 0.65 ? this.focus : this.movable;
+      const focus = repairEnabled && this.repairFocus.length ? this.repairFocus : this.focus;
+      const pool = focus.length && this.random() < 0.65 ? focus : this.movable;
       const index = pool[Math.floor(this.random() * pool.length)]!;
       const previous = this.snapshot();
-      this.propose(index, progress);
+      const repair = repairEnabled && this.repairIssues.length > 0 && this.random() < 0.35
+        ? this.repairIssues[Math.floor(this.random() * this.repairIssues.length)] : undefined;
+      if (!repair || !this.proposeRepair(repair)) this.propose(index, progress);
       // 独立暗管与服务设备共同移动/旋转，保持已形成的局部供料关系；暗管自身仍可单独微调。
       const moveTerminals = this.random() < 0.5;
       for (const { parent, terminal } of moveTerminals ? this.localTerminals : []) {
@@ -201,6 +219,52 @@ export class CompactLayoutSearch {
     this.current = this.evaluate(); this.bestEvaluation = this.current; this.best = this.snapshot();
   }
 
+  /** 只产生一个待评价提案；接受、回退及计数仍由 advance 的共同路径负责。 */
+  private proposeRepair(issue: PlannerLayoutIssue): boolean {
+    const indices = issue.entityIds.map(id => this.network.nodes.findIndex(node => node.entity.id === id)).filter(index => index >= 0);
+    const movable = indices.filter(index => !this.fixed.has(index));
+    if (!movable.length) return false;
+    const index = movable[Math.floor(this.random() * movable.length)]!, pose = this.poses[index]!, size = this.dimensions(index);
+    let dx = 0, dy = 0;
+    if (["minimum-coordinate", "body-boundary", "port-minimum-coordinate", "port-boundary"].includes(issue.kind)) {
+      const minX = this.network.nodes.some(node => node.purpose === "bus") ? 5 : 0;
+      const minY = minX && this.network.request.options.warehouseBus === "free" ? 5 : 0;
+      let left = pose.x - minX, top = pose.y - minY;
+      let right = pose.x + size.width - this.statistics.outline.width, bottom = pose.y + size.height - this.statistics.outline.height;
+      for (const edge of this.edges) {
+        const key = edge.source === index ? edge.sourceKey : edge.target === index ? edge.targetKey : undefined;
+        if (key === undefined) continue;
+        const point = this.port(index, key).outside;
+        left = Math.min(left, point.x - Math.max(0, minX - 1)); top = Math.min(top, point.y - Math.max(0, minY - 1));
+        right = Math.max(right, point.x + 1 - this.statistics.outline.width); bottom = Math.max(bottom, point.y + 1 - this.statistics.outline.height);
+      }
+      dx = left < 0 ? -left : right > 0 ? -right : 0;
+      dy = top < 0 ? -top : bottom > 0 ? -bottom : 0;
+    } else if (issue.kind === "environment-coverage") {
+      const pair = this.environmentPairs.find(pair => indices.includes(pair.device) && indices.includes(pair.environment));
+      if (!pair) return false;
+      const environment = this.network.nodes[pair.environment]!, environmentPose = this.poses[pair.environment]!;
+      const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: environmentPose, rotation: environmentPose.rotation },
+        definition: environment.definition, gasDiffusionRange: environment.recipe!.gasDiffusionOutput!.range })!;
+      const device = this.poses[pair.device]!, dimensions = this.dimensions(pair.device);
+      dx = Math.max(0, range.x - device.x) - Math.max(0, device.x + dimensions.width - range.x - range.width);
+      dy = Math.max(0, range.y - device.y) - Math.max(0, device.y + dimensions.height - range.y - range.height);
+      if (index === pair.environment) { dx = -dx; dy = -dy; }
+    } else if (issue.kind === "body-overlap") {
+      const other = indices.find(other => other !== index);
+      if (other === undefined) return false;
+      const position = this.poses[other]!, dimensions = this.dimensions(other);
+      if (!areGridRectsIntersecting({ ...pose, ...size }, { ...position, ...dimensions })) return false;
+      const shifts = [{ x: position.x - pose.x - size.width, y: 0 }, { x: position.x + dimensions.width - pose.x, y: 0 },
+        { x: 0, y: position.y - pose.y - size.height }, { x: 0, y: position.y + dimensions.height - pose.y }];
+      shifts.sort((a, b) => Math.abs(a.x) + Math.abs(a.y) - Math.abs(b.x) - Math.abs(b.y));
+      ({ x: dx, y: dy } = shifts[0]!);
+    } else return false;
+    if (dx !== 0 && dy !== 0) { if (this.random() < 0.5) dx = 0; else dy = 0; }
+    pose.x += dx; pose.y += dy;
+    return dx !== 0 || dy !== 0;
+  }
+
   private propose(index: number, progress: number): void {
     const pose = this.poses[index]!, mode = this.random();
     const origin = { ...pose };
@@ -227,8 +291,9 @@ export class CompactLayoutSearch {
     if (this.random() < this.profile.compactionProbability) {
       if (this.random() < 0.65) {
         // 对 3–6 个相邻实体重新组合次序，越过单设备平移无法穿越的密集局部。
+        // 订正 2026-09-17：constraint-repair 实验优先选择违例相关实体，实验分组不保证两两相邻。
         const distance = (other: number) => Math.abs(this.poses[other]!.x - pose.x) + Math.abs(this.poses[other]!.y - pose.y)
-          - (this.neighbors[index]!.includes(other) ? 4 : 0);
+          - (this.neighbors[index]!.includes(other) ? 4 : 0) - (this.repairFocus.includes(other) ? 100 : 0);
         const group = [...this.movable].sort((a, b) => distance(a) - distance(b)).slice(0, 3 + Math.floor(this.random() * 4));
         const positive = group.map((_, local) => local).sort((a, b) => this.poses[group[a]!]!.y - this.poses[group[b]!]!.y
           || this.poses[group[a]!]!.x - this.poses[group[b]!]!.x);
@@ -308,6 +373,7 @@ export class CompactLayoutSearch {
 
   private evaluate(issues?: PlannerLayoutIssue[]): Evaluation {
     // 仅 applyBest 检查点收集；复用原评分条件，逐提案不分配诊断数组。
+    // 订正 2026-09-17：constraint-repair 实验每 64 提案刷新当前违例，共用原评分，不额外生成候选。
     const record = issues ? (kind: PlannerLayoutIssue["kind"], amount: number, indices: number[], position?: { x: number; y: number }) => {
       if (amount > 0) issues.push({ kind, amount, entityIds: indices.map(index => this.network.nodes[index]!.entity.id),
         position: position ? { x: position.x, y: position.y } : undefined });

@@ -6,7 +6,7 @@ import {
 
 /** fluidColors 原值来自固定美术原件，并由 Registry 配色对账测试逐项校验。 */
 export const ITEM_FLUID_COLOR_SOURCE_PATH =
-  "resources/building-assets-site/v1.5-20260914-122929-cst/buildings/logistics/fluid-profiles.json";
+  "resources/building-assets-site/v1.5-20260917-100609-cst/buildings/logistics/fluid-profiles.json";
 
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {

@@ -14,7 +14,9 @@ import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import { ModuleBalancingPanel } from "@/app/shell/module-balancing/module-balancing-panel";
 import { ProductionPlanningPanel } from "@/app/shell/production-planning";
 import {
+  canUseWorkbenchBottomDock,
   COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT,
+  isToolboxBottomDockActive,
   TOOLBOX_DIALOG_TAB_IDS,
   type ToolboxDialogTabId,
 } from "@/app/state/state-impl";
@@ -66,15 +68,11 @@ function shouldUseImmersiveMaximizedDialog(
 export function canUseToolboxBottomDock(
   screenProfile: AppHost["state"]["screenProfile"],
 ): boolean {
-  return screenProfile.deviceClass === "desktop" || screenProfile.deviceClass === "tablet";
+  return canUseWorkbenchBottomDock(screenProfile);
 }
 
 export function shouldRenderToolboxBottomDock(appHost: AppHost): boolean {
-  return (
-    appHost.internalState.workbench.dialogState.toolbox.visible
-    && appHost.internalState.workbench.toolbox.dockPreference === "bottom"
-    && canUseToolboxBottomDock(appHost.state.screenProfile)
-  );
+  return isToolboxBottomDockActive(appHost.internalState);
 }
 
 const TOOLBOX_DIALOG_TABS: Array<{

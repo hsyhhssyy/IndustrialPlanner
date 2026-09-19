@@ -28,6 +28,7 @@ import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RegistryQuery } from "@/domain/registry/registry-query"
+import type { SimulationDeviceOperatingStatus } from "@/domain/simulation"
 import type { RenderHost } from "@/renderer/renderer-host"
 import {
   isBatchMove,
@@ -305,7 +306,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private animationLoadVersion = 0
   private animationFrameLoadVersion = 0
   private animationFrameLoadKey: string | null = null
-  private animationDesiredWorking = false
+  private animationStatus: SimulationDeviceOperatingStatus = "closed"
   private animationPaused = false
   private animationSeeking = false
   private animationCursor: number | null = null
@@ -1078,6 +1079,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   /** 只在低频同步时读取仿真输入，逐帧播放不查询 Registry 或 Runtime。 */
+  /** AI-CORRECTION 2026-09-18: 低频输入现为互斥设备展示 status，不再从配方推进聚合 working。 */
   private syncDeviceAnimationInputs(context?: RenderSpriteSyncContext): boolean {
     if (this.definition.spriteAnimation === undefined || context === undefined) {
       return false
@@ -1096,9 +1098,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (paused !== this.animationPaused || seeking) {
       this.discardNextAnimationDelta = true
     }
-    const status = continuouslyAnimated || simulation?.state.runningState === "stop"
-      ? null
-      : simulation?.queries.getDeviceRuntimeStatus(this.entityId) ?? null
+    const status: SimulationDeviceOperatingStatus = continuouslyAnimated
+      ? "normal"
+      : simulation?.queries.getDeviceOperatingStatus(this.entityId) ?? "closed"
     // AI-REMOVED 2026-09-05: 首次 Runtime 门槛已移除，正式非工作设备允许 close_idle。
     // Trigger: REQ-025 边界审阅。Evidence: 下方真实实体判定。Replacement: None。
     // Risk: Low; Human Review: Required. Original code:
@@ -1107,8 +1109,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // }
     // 普通暂停保留目标；seek 落点即使仍暂停，也需要读取新的工作状态。
     if (!paused || seekFinished || cursorRewound || pausedCursorChanged || this.animationState === null) {
-      this.animationDesiredWorking = continuouslyAnimated || (status !== null
-        && Object.values(status.channelRecipes).some((channel) => channel?.isProgressing === true))
+      this.animationStatus = status
     }
     this.animationPaused = paused
     this.animationSeeking = seeking
@@ -1118,12 +1119,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.animationWasHidden = false
     if (this.animationState !== null) {
       if (this.animationStableResetPending && !seeking) {
-        this.animationState.reset(this.animationDesiredWorking, true)
+        this.animationState.reset(this.animationStatus, true)
         this.animationStableResetPending = false
         this.discardNextAnimationDelta = true
         this.applyAnimationFrame()
       } else if (!paused) {
-        this.animationState.setDesiredWorking(this.animationDesiredWorking)
+        this.animationState.setStatus(this.animationStatus)
       }
     }
     const editor = context.workspace.editor
@@ -1224,8 +1225,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
       const animationState = new DeviceAnimationState(
         textures.definition,
-        this.animationDesiredWorking,
-        this.animationStableResetPending,
+        this.animationStatus,
+        true,
       )
       if (!this.animationVisible) {
         this.animationRequested = false

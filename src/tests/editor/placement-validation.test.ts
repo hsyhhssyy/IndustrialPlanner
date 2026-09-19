@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEditorHost } from "@/editor/editor-host";
+import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
   createWorldDocument,
@@ -636,5 +637,41 @@ describe("placement validation", () => {
     expect(finalDoc.entities["belt-to-replace"]).toBeUndefined();
     // slotLink 指向被替换实体，应被移除
     expect(finalDoc.slotLinks).toHaveLength(0);
+  });
+
+  it("normalizes a blueprint protocol core to the target base core before placement", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const existingCore = createEntity("existing-core", "sp_sub_hub_1", 0, 0);
+    editorHost.internalDocument.setSnapshot(
+      createDocumentWithEntities([existingCore], "valley4_infra_outpost"),
+    );
+    const blueprintCore = createEntity("blueprint-core", "sp_hub_1", 0, 0);
+    const blueprint: BlueprintDocument = {
+      schemaVersion: 6,
+      blueprintId: "protocol-core-placement",
+      version: "1",
+      name: "协议核心放置",
+      description: "",
+      baseId: "wuling_protocol_core",
+      initialGridPoint: { x: 0, y: 0 },
+      entities: { [blueprintCore.id]: blueprintCore },
+      entityOrder: [blueprintCore.id],
+      slotLinks: [],
+      regions: [],
+      createdAt: "2026-09-18T00:00:00.000Z",
+      updatedAt: "2026-09-18T00:00:00.000Z",
+    };
+
+    editorHost.actions.createBlueprintPlacementDraft?.(blueprint, { x: 10, y: 10 });
+
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+    expect(editorHost.internalState.drafts.find((draft) => draft.id === draftId)?.definitionId)
+      .toBe("sp_sub_hub_1");
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+    const protocolCores = Object.values(editorHost.document.getSnapshot().entities)
+      .filter((entity) => workspace.registry.queries.isProtocolCore(entity.definitionId));
+    expect(protocolCores).toHaveLength(1);
+    expect(protocolCores[0]?.definitionId).toBe("sp_sub_hub_1");
   });
 });

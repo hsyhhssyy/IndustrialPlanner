@@ -17,6 +17,7 @@ export type { SlotLinkDefinition, CacheLinkEndpointDefinition, LinkType };
 // AI-CORRECTION 2026-09-09: schema 6 新增持久区域标记，缺失字段的旧文档迁移为空数组。
 // AI-CORRECTION 2026-09-11: schema 7 承载 AKEData 端口朝向兼容迁移；schema 6 文档必须先经过 6→7。
 // AI-CORRECTION 2026-09-11: 远端 v1.5.0 发布 schema 为 5；未发布的区域、端口和变体 ID 变更统一为 schema 6，撤回额外版本 7。
+// USER-REQUIREMENT 2026-09-18: WorldDocument 与 Blueprint 共用迁移边界；升级前必须先核查当前 schema 是否已进入生产环境。当前生产版本为 5、目标版本 6，未上线前的新增迁移统一并入 5→6，禁止新建 6→7。
 export const WORLD_DOCUMENT_SCHEMA_VERSION = 6;
 
 export interface WorldEntity {

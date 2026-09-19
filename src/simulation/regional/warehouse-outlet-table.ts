@@ -511,13 +511,56 @@ function hasExecutableRecipePlanTouchingNode(
   node: CompiledSimulationNode,
 ): boolean {
   for (const channel of device.recipeChannels) {
-    if (channel.ingredientNodeIds.includes(node.id) || channel.productNodeIds.includes(node.id)) {
-      if (channelHasExecutableRecipe(registry, topology, device, channel)) {
-        return true;
-      }
+    if (!channelHasExecutableRecipe(registry, topology, device, channel)) {
+      continue;
+    }
+    if (channel.ingredientNodeIds.includes(node.id)) {
+      return true;
+    }
+    if (
+      channel.productNodeIds.includes(node.id)
+      && channelCanReceiveRecipeInputs(registry, topology, device, channel)
+    ) {
+      return true;
     }
   }
   return false;
+}
+
+function channelCanReceiveRecipeInputs(
+  registry: RegistryContract,
+  topology: CompiledSimulationTopology,
+  device: CompiledSimulationDevice,
+  channel: CompiledSimulationDevice["recipeChannels"][number],
+): boolean {
+  const recipes = listExecutableChannelRecipes(registry, topology, device, channel);
+  if (recipes.some((recipe) => recipe.inputs.length === 0)) {
+    return true;
+  }
+
+  return channel.ingredientNodeIds.some((nodeId) => {
+    const ingredientNode = topology.nodes[nodeId];
+    if (ingredientNode === undefined) {
+      return false;
+    }
+    if (ingredientNode.inputPortIds.length > 0) {
+      return true;
+    }
+    if (ingredientNode.slotIds.some((slotId) => {
+      const slot = topology.slots[slotId];
+      return slot !== undefined
+        && (slot.initialCount > 0 || slot.initialItemType !== null || slot.ignoreStock);
+    })) {
+      return true;
+    }
+    return Object.values(topology.links).some((link) =>
+      ingredientNode.slotIds.some((slotId) =>
+        link.sourceSlotIds.includes(slotId)
+        || link.targetSlotIds.includes(slotId)
+        || Object.values(link.targetSlotIdBySourceSlotId).includes(slotId)
+      )
+    );
+  });
 }
 
 function channelHasExecutableRecipe(
@@ -526,17 +569,28 @@ function channelHasExecutableRecipe(
   device: CompiledSimulationDevice,
   channel: CompiledSimulationDevice["recipeChannels"][number],
 ): boolean {
-  if (channel.manualRecipeOnly) {
-    return channel.defaultRecipeId !== null;
-  }
+  return listExecutableChannelRecipes(registry, topology, device, channel).length > 0;
+}
 
-  // 严格物流与物流族设备的动态搬运配方不是“读取仓库源槽”的普通配方；
-  // 仓库取货源设备按准入规则不允许是物流族，这里只要存在静态普通配方即判定可执行。
-  const recipes = registry.queries.findRecipeDefinitionsByMachine(device.definitionId);
-  return recipes.some((recipe) =>
-    isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
-    && recipeMatchesChannelType(recipe, channel),
-  );
+function listExecutableChannelRecipes(
+  registry: RegistryContract,
+  topology: CompiledSimulationTopology,
+  device: CompiledSimulationDevice,
+  channel: CompiledSimulationDevice["recipeChannels"][number],
+): readonly RecipeDefinition[] {
+  const recipes = registry.queries.findRecipeDefinitionsByMachine(device.definitionId)
+    .filter((recipe) =>
+      isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
+      && recipeMatchesChannelType(recipe, channel)
+    );
+  if (!channel.manualRecipeOnly) {
+    // 严格物流与物流族设备的动态搬运配方不是“读取仓库源槽”的普通配方；
+    // 仓库取货源设备按准入规则不允许是物流族，这里只返回静态普通配方。
+    return recipes;
+  }
+  return channel.defaultRecipeId === null
+    ? []
+    : recipes.filter((recipe) => recipe.id === channel.defaultRecipeId);
 }
 
 function recipeMatchesChannelType(

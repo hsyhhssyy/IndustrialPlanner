@@ -61,16 +61,12 @@ describe("v1.5 建筑素材发布", () => {
   it.each([
     ["filling_pd_mc_1_liquid", "liquid__0"],
     ["shaper_1_gas", "gas__0"],
-  ])("$0 发布 Registry 变体对应的管道端口特效", async (entityId, variantKey) => {
+  ])("$0 不借用新版素材未交付的管道变体", async (entityId, variantKey) => {
     const manifest = JSON.parse(await readFile(path.resolve("public/3d-top-view/port-effects/manifest.json"), "utf8"));
     const viewKey = manifest.definitions[entityId];
     const ports = manifest.views[viewKey]?.variants[variantKey];
 
-    expect(ports).toHaveLength(1);
-    expect(ports[0]?.bindings).toMatchObject({
-      off: "v1.5/fx/P_interactive_large_pipeoff_in_01",
-    });
-    expect(ports[0]?.bindings.on).toMatch(/^v1\.5\/fx\/P_interactive_(?:bend)?large_pipeon_in_01$/);
+    expect(ports).toBeUndefined();
   });
 
   it("启用液体灌装机现有动画资源", () => {
@@ -150,8 +146,8 @@ describe("v1.5 建筑素材发布", () => {
   it("接入最终修复集合，不重复导入实体或保留被撤回的包", () => {
     const ids = collection.entries.map((entry) => entry.entityId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(collection.entries).toHaveLength(51);
-    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(31);
+    expect(collection.entries).toHaveLength(52);
+    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(37);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
       "grinder_1",
@@ -172,6 +168,7 @@ describe("v1.5 建筑素材发布", () => {
       "pipe_connector",
       "pipe_converger",
       "pipe_splitter",
+      "sp_sub_hub_1",
     ]));
     const packages = collection.entries.map((entry) => entry.package);
     for (const supersededPackage of [

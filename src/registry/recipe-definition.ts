@@ -3386,6 +3386,26 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   //   recipeType: "immediate-consume",
   //   tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
   // },
+  {
+    id: "r_udpipe_unloader_transport_fluid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_unloader_transport_fluid_any_internal.name",
+    durationSeconds: 1,
+    inputs: [{ itemId: RecipeItemDomainId.Fluid, amount: 1 }],
+    outputs: [{ itemId: "same-as-input", amount: 1 }],
+    machineId: "udpipe_unloader_1",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
+  {
+    id: "r_udpipe_unloader_multi_transport_fluid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_unloader_multi_transport_fluid_any_internal.name",
+    durationSeconds: 1,
+    inputs: [{ itemId: RecipeItemDomainId.Fluid, amount: 1 }],
+    outputs: [{ itemId: "same-as-input", amount: 1 }],
+    machineId: "udpipe_unloader_2",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
   // =========================================================================
   // 作弊无限设备销毁配方 — 按设备物品域销毁任意输入
   // =========================================================================

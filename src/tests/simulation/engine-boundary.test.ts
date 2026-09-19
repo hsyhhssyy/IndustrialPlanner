@@ -57,6 +57,8 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       await host.actions.start();
       expect(host.queries.getDeviceOperatingStatus("storage")).toBe("idle");
       expect(host.queries.getDeviceOperatingStatus("device:storage")).toBe("idle");
+      expect(host.queries.getDeviceOperatingStatus("power")).toBe("normal");
+      expect(host.queries.getDeviceOperatingStatus("device:power")).toBe("normal");
       expect(host.state).not.toHaveProperty("statistics");
       expect(host.state).not.toHaveProperty("bufferSize");
       expect(host.queries.getPerformanceDiagnostics()).toMatchObject({
@@ -88,10 +90,12 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       expect(host.queries.getDeviceActiveGasItemIds("missing")).toBeNull();
       host.actions.stop();
       expect(host.queries.getDeviceOperatingStatus("storage")).toBe("closed");
+      expect(host.queries.getDeviceOperatingStatus("power")).toBe("closed");
       expect(host.queries.getDeviceRuntimeStatus("storage")).toBeNull();
       expect(readSimulationSnapshot(host)).toBeNull();
       await host.actions.start();
       expect(host.queries.getDeviceOperatingStatus("storage")).toBe("idle");
+      expect(host.queries.getDeviceOperatingStatus("power")).toBe("normal");
       expect(host.queries.getDeviceRuntimeStatus("storage")?.slotItems).toContainEqual(
         expect.objectContaining({ itemType: "item_copper_ore", count: 7 }),
       );
@@ -196,6 +200,28 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       );
       expect((await host.internalActions.syncToTick(completionTick)).status).toBe("ready");
       expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("blocked");
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("projects a linked dark-pipe pair from the outlet transport recipe status", async () => {
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema6.json",
+    ));
+    const workspace = createHeadlessWorkspace(document, createRegistryContract());
+    const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
+    try {
+      await host.actions.start();
+      const topology = host.topology.getSnapshot();
+      if (topology === null) throw new Error("Expected compiled topology");
+      const progressingTick = resolveFirstTickNumberAtSimulationMilliseconds(
+        topology.standardTickRate,
+        500,
+      );
+      expect((await host.internalActions.syncToTick(progressingTick)).status).toBe("ready");
+      expect(host.queries.getDeviceOperatingStatus("outlet")).toBe("normal");
+      expect(host.queries.getDeviceOperatingStatus("inlet")).toBe("normal");
     } finally {
       host.dispose();
     }

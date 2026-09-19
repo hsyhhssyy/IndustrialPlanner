@@ -1,10 +1,21 @@
 import type { DeviceSpriteAnimationDefinition } from "../domain/registry";
+import type { SimulationDeviceOperatingStatus } from "../domain/simulation";
 
+/** AI-CORRECTION 2026-09-18: 四个名称现在只表示传统机械动画角色；正式 manifest 可包含任意显式 status 片段。 */
 export const DEVICE_SPRITE_ANIMATION_PHASES = ["open", "open_idle", "close", "close_idle"] as const;
+export const DEVICE_SPRITE_ANIMATION_STATUSES = [
+  "closed",
+  "idle",
+  "normal",
+  "blocked",
+  "no-power",
+  "not-in-power-net",
+] as const satisfies readonly SimulationDeviceOperatingStatus[];
 export const DEFAULT_DEVICE_SPRITE_FRAME_DURATION_MS = 100;
 /** 离线发布的保守上限；运行时还须检查当前 GPU 的实际限制。 */
 export const DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE = 4096;
-export type DeviceSpriteAnimationPhase = typeof DEVICE_SPRITE_ANIMATION_PHASES[number];
+/** 兼容既有调用点的名称；值现在是 manifest 声明的任意安全片段 ID。 */
+export type DeviceSpriteAnimationPhase = string;
 
 export interface DeviceSpriteAnimationManifestPage {
   readonly file: string;
@@ -36,8 +47,31 @@ export interface NormalizedDeviceSpriteAnimationClipDefinition {
   readonly pageIndexByFrame: readonly number[];
 }
 
+export interface NormalizedDeviceSpriteAnimationClipPlayback {
+  readonly playing: boolean;
+  readonly restart: boolean;
+  readonly loop: boolean;
+}
+
+export interface NormalizedDeviceSpriteAnimationSourceStatus {
+  readonly statusKey: number;
+  readonly clip: DeviceSpriteAnimationPhase;
+  readonly playing: boolean;
+  readonly restart: boolean;
+}
+
 export interface NormalizedDeviceSpriteAnimationDefinition {
   readonly clips: Readonly<Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipDefinition>>;
+  readonly clipIds: readonly DeviceSpriteAnimationPhase[];
+  readonly playback: {
+    readonly fallbackClip: DeviceSpriteAnimationPhase;
+    readonly staticClip: DeviceSpriteAnimationPhase;
+    readonly statusClips: Readonly<Partial<Record<SimulationDeviceOperatingStatus, DeviceSpriteAnimationPhase>>>;
+    readonly openTransitionClip: DeviceSpriteAnimationPhase | null;
+    readonly closeTransitionClip: DeviceSpriteAnimationPhase | null;
+    readonly clipOptions: Readonly<Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipPlayback>>;
+    readonly sourceStatuses: Readonly<Record<string, NormalizedDeviceSpriteAnimationSourceStatus>>;
+  };
   readonly closeIdleMode: DeviceSpriteAnimationDefinition["closeIdleMode"];
   readonly frameWidth: number;
   readonly frameHeight: number;
@@ -67,6 +101,20 @@ function requireAssetFile(value: unknown, label: string): string {
   return value;
 }
 
+function requireClipId(value: unknown, label: string): DeviceSpriteAnimationPhase {
+  if (typeof value !== "string" || !/^[a-zA-Z0-9_-]+$/.test(value)) {
+    throw new Error(`${label} must be a safe clip ID`);
+  }
+  return value;
+}
+
+function requireBoolean(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean`);
+  }
+  return value;
+}
+
 export function normalizeDeviceSpriteAnimationDefinition(
   definition: unknown,
   manifest: unknown,
@@ -76,8 +124,8 @@ export function normalizeDeviceSpriteAnimationDefinition(
     throw new Error("spriteAnimation.closeIdleMode must be loop or hold-last");
   }
   const manifestSource = requireRecord(manifest, "animation manifest");
-  if (manifestSource.schemaVersion !== 1) {
-    throw new Error("animation manifest.schemaVersion must be 1");
+  if (manifestSource.schemaVersion !== 2) {
+    throw new Error("animation manifest.schemaVersion must be 2");
   }
   const frameWidth = requirePositiveInteger(manifestSource.frameWidth, "animation manifest.frameWidth");
   const frameHeight = requirePositiveInteger(manifestSource.frameHeight, "animation manifest.frameHeight");
@@ -90,8 +138,12 @@ export function normalizeDeviceSpriteAnimationDefinition(
   const maskFile = requireAssetFile(manifestSource.maskFile, "animation manifest.maskFile");
   const sourceClips = requireRecord(manifestSource.clips, "animation manifest.clips");
   const clips = {} as Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipDefinition>;
+  const clipIds = Object.keys(sourceClips).map((clipId) => requireClipId(clipId, "animation manifest clip ID"));
+  if (clipIds.length === 0) {
+    throw new Error("animation manifest.clips must not be empty");
+  }
   const pageFiles = new Set<string>();
-  for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
+  for (const phase of clipIds) {
     const clip = requireRecord(sourceClips[phase], `animation manifest.clips.${phase}`);
     const frameCount = requirePositiveInteger(clip.frameCount, `${phase}.frameCount`);
     const frameDurationMs = clip.frameDurationMs === undefined
@@ -159,14 +211,98 @@ export function normalizeDeviceSpriteAnimationDefinition(
       pageIndexByFrame,
     });
   }
+  const playbackSource = requireRecord(manifestSource.playback, "animation manifest.playback");
+  const requireExistingClip = (value: unknown, label: string): DeviceSpriteAnimationPhase => {
+    const clipId = requireClipId(value, label);
+    if (clips[clipId] === undefined) throw new Error(`${label} references an unknown clip: ${clipId}`);
+    return clipId;
+  };
+  const fallbackClip = requireExistingClip(playbackSource.fallbackClip, "playback.fallbackClip");
+  const staticClip = requireExistingClip(playbackSource.staticClip, "playback.staticClip");
+  const statusClipSource = requireRecord(playbackSource.statusClips, "playback.statusClips");
+  const supportedStatuses = new Set<string>(DEVICE_SPRITE_ANIMATION_STATUSES);
+  const statusClips: Partial<Record<SimulationDeviceOperatingStatus, DeviceSpriteAnimationPhase>> = {};
+  for (const [status, clip] of Object.entries(statusClipSource)) {
+    if (!supportedStatuses.has(status)) throw new Error(`playback.statusClips has unsupported status: ${status}`);
+    statusClips[status as SimulationDeviceOperatingStatus] = requireExistingClip(
+      clip,
+      `playback.statusClips.${status}`,
+    );
+  }
+  const readTransition = (key: "openTransitionClip" | "closeTransitionClip") => (
+    playbackSource[key] === undefined || playbackSource[key] === null
+      ? null
+      : requireExistingClip(playbackSource[key], `playback.${key}`)
+  );
+  const openTransitionClip = readTransition("openTransitionClip");
+  const closeTransitionClip = readTransition("closeTransitionClip");
+  const transitionClips = new Set([openTransitionClip, closeTransitionClip].filter((clip): clip is string => clip !== null));
+  if (transitionClips.has(fallbackClip)) throw new Error("playback.fallbackClip cannot be a transition clip");
+  for (const [status, clip] of Object.entries(statusClips)) {
+    if (transitionClips.has(clip)) throw new Error(`playback.statusClips.${status} cannot be a transition clip`);
+  }
+  if (openTransitionClip !== null && statusClips.normal !== "open_idle") {
+    throw new Error("playback.openTransitionClip requires normal to resolve to open_idle");
+  }
+  if (closeTransitionClip !== null && fallbackClip !== "close_idle") {
+    throw new Error("playback.closeTransitionClip requires close_idle as fallback");
+  }
+  const clipOptionsSource = playbackSource.clipOptions === undefined
+    ? {}
+    : requireRecord(playbackSource.clipOptions, "playback.clipOptions");
+  for (const clipId of Object.keys(clipOptionsSource)) {
+    if (clips[clipId] === undefined) throw new Error(`playback.clipOptions references an unknown clip: ${clipId}`);
+  }
+  const clipOptions = Object.fromEntries(clipIds.map((clipId) => {
+    const option = clipOptionsSource[clipId] === undefined
+      ? {}
+      : requireRecord(clipOptionsSource[clipId], `playback.clipOptions.${clipId}`);
+    const isTransition = transitionClips.has(clipId);
+    const playing = option.playing === undefined ? true : requireBoolean(option.playing, `${clipId}.playing`);
+    const restart = option.restart === undefined ? true : requireBoolean(option.restart, `${clipId}.restart`);
+    const loop = playing && !isTransition && !(clipId === "close_idle" && source.closeIdleMode === "hold-last");
+    return [clipId, Object.freeze({ playing, restart, loop })];
+  })) as Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipPlayback>;
+  const sourceStatusesSource = playbackSource.sourceStatuses === undefined
+    ? {}
+    : requireRecord(playbackSource.sourceStatuses, "playback.sourceStatuses");
+  const sourceStatuses: Record<string, NormalizedDeviceSpriteAnimationSourceStatus> = {};
+  for (const [code, value] of Object.entries(sourceStatusesSource)) {
+    if (!/^[A-Z][A-Z0-9_]*$/.test(code)) throw new Error(`Invalid source status code: ${code}`);
+    const item = requireRecord(value, `playback.sourceStatuses.${code}`);
+    const statusKey = requirePositiveInteger(item.statusKey, `${code}.statusKey`);
+    sourceStatuses[code] = Object.freeze({
+      statusKey,
+      clip: requireExistingClip(item.clip, `${code}.clip`),
+      playing: requireBoolean(item.playing, `${code}.playing`),
+      restart: requireBoolean(item.restart, `${code}.restart`),
+    });
+  }
   return Object.freeze({
     clips: Object.freeze(clips),
+    clipIds: Object.freeze(clipIds),
+    playback: Object.freeze({
+      fallbackClip,
+      staticClip,
+      statusClips: Object.freeze(statusClips),
+      openTransitionClip,
+      closeTransitionClip,
+      clipOptions: Object.freeze(clipOptions),
+      sourceStatuses: Object.freeze(sourceStatuses),
+    }),
     closeIdleMode: source.closeIdleMode,
     frameWidth,
     frameHeight,
     resolution,
     maskFile,
   });
+}
+
+export function resolveDeviceSpriteAnimationStatusClip(
+  definition: NormalizedDeviceSpriteAnimationDefinition,
+  status: SimulationDeviceOperatingStatus,
+): DeviceSpriteAnimationPhase {
+  return definition.playback.statusClips[status] ?? definition.playback.fallbackClip;
 }
 
 export function getDeviceSpriteAnimationSignature(definition: DeviceSpriteAnimationDefinition): string {
@@ -215,6 +351,9 @@ export function resolveDeviceSpriteAnimationFrame(
   frameIndex: number,
 ): { readonly page: DeviceSpriteAnimationManifestPage; readonly pageIndex: number; readonly localFrameIndex: number } {
   const clip = definition.clips[phase];
+  if (clip === undefined) {
+    throw new Error(`Unknown animation clip: ${phase}`);
+  }
   if (!Number.isSafeInteger(frameIndex) || frameIndex < 0 || frameIndex >= clip.frameCount) {
     throw new Error(`${phase} frame index is out of range: ${frameIndex}`);
   }

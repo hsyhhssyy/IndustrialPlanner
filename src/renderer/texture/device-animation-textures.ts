@@ -3,7 +3,6 @@ import { Rectangle, Texture } from "pixi.js";
 import type { DeviceSpriteAnimationDefinition } from "@/domain/registry";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import {
-  DEVICE_SPRITE_ANIMATION_PHASES,
   getDeviceSpriteAnimationSignature,
   normalizeDeviceSpriteAnimationDefinition,
   resolveDeviceSpriteAnimationFrame,
@@ -128,7 +127,7 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
   private destroyed = false;
   // 未报告可见性时，首次请求帧视为激活；显式隐藏后禁止帧请求重新激活会话。
   private visible: boolean | null = null;
-  private phase: DeviceSpriteAnimationPhase = "close_idle";
+  private phase: DeviceSpriteAnimationPhase;
 
   public constructor(
     private readonly cache: DeviceAnimationTextureCache,
@@ -139,6 +138,7 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
     this.mask = asset.mask;
     this.frameWidth = asset.definition.frameWidth;
     this.frameHeight = asset.definition.frameHeight;
+    this.phase = asset.definition.playback.fallbackClip;
   }
 
   public hasFrame(phase: DeviceSpriteAnimationPhase, frameIndex: number): boolean {
@@ -230,7 +230,7 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
 
   private resolveFrame(phase: DeviceSpriteAnimationPhase, frameIndex: number): Texture | null {
     const resolved = resolveDeviceSpriteAnimationFrame(this.definition, phase, frameIndex);
-    return this.asset.pages[phase][resolved.pageIndex]?.frames?.[resolved.localFrameIndex] ?? null;
+    return this.asset.pages[phase]?.[resolved.pageIndex]?.frames?.[resolved.localFrameIndex] ?? null;
   }
 
   private resolveRetainedPages(
@@ -238,39 +238,36 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
     frameIndex: number,
   ): readonly DeviceAnimationPageRuntime[] {
     const resolved = resolveDeviceSpriteAnimationFrame(this.definition, phase, frameIndex);
-    const current = this.asset.pages[phase][resolved.pageIndex];
-    if (current === undefined) {
+    const phasePages = this.asset.pages[phase];
+    const current = phasePages?.[resolved.pageIndex];
+    if (phasePages === undefined || current === undefined) {
       return [];
     }
     const result = new Set<DeviceAnimationPageRuntime>([current]);
-    const nextInClip = this.asset.pages[phase][resolved.pageIndex + 1];
+    const nextInClip = phasePages[resolved.pageIndex + 1];
     if (nextInClip !== undefined) {
       result.add(nextInClip);
       return [...result];
     }
     const addFirstPage = (candidate: DeviceSpriteAnimationPhase) => {
-      const page = this.asset.pages[candidate][0];
+      const page = this.asset.pages[candidate]?.[0];
       if (page !== undefined) {
         result.add(page);
       }
     };
-    switch (phase) {
-      case "open":
-        addFirstPage("open_idle");
-        break;
-      case "open_idle":
-        addFirstPage("open_idle");
-        addFirstPage("close");
-        break;
-      case "close":
-        addFirstPage("close_idle");
-        break;
-      case "close_idle":
-        if (this.definition.closeIdleMode === "loop") {
-          addFirstPage("close_idle");
-        }
-        addFirstPage("open");
-        break;
+    const playback = this.definition.playback;
+    if (phase === playback.openTransitionClip) {
+      addFirstPage(playback.statusClips.normal ?? playback.fallbackClip);
+    } else if (phase === playback.closeTransitionClip) {
+      addFirstPage(playback.fallbackClip);
+    } else {
+      if (playback.clipOptions[phase]?.loop) addFirstPage(phase);
+      if (phase === playback.fallbackClip && playback.openTransitionClip !== null) {
+        addFirstPage(playback.openTransitionClip);
+      }
+      if (phase === playback.statusClips.normal && playback.closeTransitionClip !== null) {
+        addFirstPage(playback.closeTransitionClip);
+      }
     }
     return [...result];
   }
@@ -388,8 +385,8 @@ export class DeviceAnimationTextureCache {
     for (const asset of this.resolvedAssets) {
       residentMasks += 1;
       residentDecodedBytes += asset.mask.source.pixelWidth * asset.mask.source.pixelHeight * 4;
-      for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-        for (const page of asset.pages[phase]) {
+      for (const phase of asset.definition.clipIds) {
+        for (const page of asset.pages[phase] ?? []) {
           if (page.loadPromise !== null) loadingPages += 1;
           if (page.frames !== null && page.texture !== null) {
             residentPages += 1;
@@ -420,15 +417,16 @@ export class DeviceAnimationTextureCache {
         // overBudgetBytes: Math.max(0, this.reservedBytes - this.budgetBytes),
         mode: "full-set" as const,
         offscreenGraceMs: OFFSCREEN_GRACE_MS,
-        retainedSetBytes: retainedAssets.reduce((sum, asset) => sum + DEVICE_SPRITE_ANIMATION_PHASES
-          .reduce((bytes, phase) => bytes + asset.pages[phase].reduce((total, page) => total + page.estimatedBytes, 0), 0), 0),
+        retainedSetBytes: retainedAssets.reduce((sum, asset) => sum + asset.definition.clipIds
+          .reduce((bytes, phase) => bytes + (asset.pages[phase] ?? [])
+            .reduce((total, page) => total + page.estimatedBytes, 0), 0), 0),
         retainedAssets: retainedAssets.length,
         visibleSessions: [...this.resolvedAssets].reduce((sum, asset) => sum + asset.visibleOwners.size, 0),
         visibleAssets: [...this.resolvedAssets].filter(asset => asset.visibleOwners.size > 0).length,
         queuedPages: this.queuedPages.size,
         totalsSinceCreation: { ...this.totals },
         assets: retainedAssets.slice(0, 12).map(asset => {
-            const pages = DEVICE_SPRITE_ANIMATION_PHASES.flatMap(phase => asset.pages[phase]);
+            const pages = asset.definition.clipIds.flatMap(phase => asset.pages[phase] ?? []);
             return { spriteId: asset.spriteId, visibleInstances: asset.visibleOwners.size,
               totalSetBytes: pages.reduce((sum, page) => sum + page.estimatedBytes, 0),
               totalPages: pages.length,
@@ -456,8 +454,8 @@ export class DeviceAnimationTextureCache {
       session.destroy();
     }
     for (const asset of this.resolvedAssets) {
-      for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-        for (const page of asset.pages[phase]) {
+      for (const phase of asset.definition.clipIds) {
+        for (const page of asset.pages[phase] ?? []) {
           page.owners.clear();
           page.warm = false;
           void this.unloadPage(page);
@@ -619,8 +617,8 @@ export class DeviceAnimationTextureCache {
       const visible = asset.visibleOwners.size > 0;
       if (retained && !visible) nextExpiry = Math.min(nextExpiry, asset.lastVisibleAt + OFFSCREEN_GRACE_MS);
       const currentPhases = new Set(asset.visibleOwners.values());
-      for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-        for (const page of asset.pages[phase]) {
+      for (const phase of asset.definition.clipIds) {
+        for (const page of asset.pages[phase] ?? []) {
           // 优先级只决定加载顺序；整套页面在可见期及离屏 20 秒内均保留并继续加载。
           page.warm = retained;
           if (retained) {
@@ -734,7 +732,7 @@ export class DeviceAnimationTextureCache {
       throw error;
     }
     const createPageRuntimes = (phase: DeviceSpriteAnimationPhase) => (
-      definition.clips[phase].pages.map((page, pageIndex): DeviceAnimationPageRuntime => ({
+      definition.clips[phase]!.pages.map((page, pageIndex): DeviceAnimationPageRuntime => ({
         phase,
         pageIndex,
         manifest: page,
@@ -751,16 +749,14 @@ export class DeviceAnimationTextureCache {
         unloadPromise: null,
       }))
     );
-    const pages: Record<DeviceSpriteAnimationPhase, readonly DeviceAnimationPageRuntime[]> = {
-      open: createPageRuntimes("open"),
-      open_idle: createPageRuntimes("open_idle"),
-      close: createPageRuntimes("close"),
-      close_idle: createPageRuntimes("close_idle"),
-    };
+    const pages = Object.fromEntries(definition.clipIds.map((clipId) => [
+      clipId,
+      createPageRuntimes(clipId),
+    ])) as Record<DeviceSpriteAnimationPhase, readonly DeviceAnimationPageRuntime[]>;
     const asset: DeviceAnimationAsset = { definition, mask, maskUrl, pages, spriteId,
       visibleOwners: new Map(), lastVisibleAt: -Infinity, unavailable: false };
-    for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-      for (const page of pages[phase]) this.pageAssets.set(page, asset);
+    for (const phase of definition.clipIds) {
+      for (const page of pages[phase] ?? []) this.pageAssets.set(page, asset);
     }
     this.resolvedAssets.add(asset);
     this.scheduleResidency();

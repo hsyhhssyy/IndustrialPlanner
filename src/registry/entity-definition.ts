@@ -141,11 +141,12 @@ type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBeh
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
 /** AI-CORRECTION 2026-09-10: 展示字段 spriteAnimation / spriteOffset 同样可选，与完整设备复用素材契约。 */
 /** AI-CORRECTION 2026-09-10: 本次仅放开实际需要的 spriteAnimation；空壳设备尚无 spriteOffset 接入需求。 */
+/** AI-CORRECTION 2026-09-18: power_diffuser_1 的新 spatial.json 已要求空壳设备接入 spriteOffset。 */
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput,
-  "requiresPower" | "powerDemand" | "powerRange" | "displayOrder" | "spriteAnimation"
+  "requiresPower" | "powerDemand" | "powerRange" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset"
 >>;
 
 const RECIPE_MACHINE_IDS = new Set(
@@ -260,6 +261,23 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     //   recipeMachineInspectors,
     // ),
   };
+}
+
+function createProtocolCoreDefinitions(
+  primaryDefinition: EntityDefinition,
+): readonly EntityDefinition[] {
+  return [
+    primaryDefinition,
+    {
+      ...primaryDefinition,
+      id: "sp_sub_hub_1",
+      nameKey: "registry.entity.sp_sub_hub_1.name",
+      spriteId: "item_port_sp_sub_hub_1",
+      iconPath: "device-icons/item_port_sp_sub_hub_1.webp",
+      // AI-CORRECTION 2026-09-18: 四级次级协议核心画布仅在西侧扩展 1 格，网站 spatial.json 为 11×9。
+      spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
+    },
+  ];
 }
 
 // AI-REMOVED 2026-08-19:
@@ -1027,6 +1045,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "storager_1",
     nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
+    // AI-CORRECTION 2026-09-18: 网站现为 close_idle 动画轨道，协议储存箱进入统一 status 动画链。
+    spriteAnimation: { closeIdleMode: "hold-last" },
     iconPath: "device-icons/item_port_storager_1.webp",
     footprint: { width: 3, height: 3 },
     // AI-CORRECTION 2026-09-11: fix2 撤回 3×4 重复包，改用与占地一致的 3×3 画布。
@@ -1123,7 +1143,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus",
     iconPath: "device-icons/item_port_log_hongs_bus.webp",
     footprint: { width: 4, height: 8 },
-    spriteOffset: { topView: { x: -1, y: -1, width: 6, height: 10 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 4×8。
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 8 } },
     uiGroup: "warehouse",
     displayOrder: 405,
     tags: ["武陵", "bus"],
@@ -1150,7 +1171,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/item_port_log_hongs_bus_source.webp",
     footprint: { width: 4, height: 4 },
     // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
-    spriteOffset: { topView: { x: 0, y: -1, width: 5, height: 5 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 4×4。
+    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 4 } },
     uiGroup: "warehouse",
     displayOrder: 406,
     tags: ["武陵", "bus"],
@@ -2435,6 +2457,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "udpipe_loader_1",
     nameKey: "registry.entity.udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
+    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_loader_1.webp",
     footprint: { width: 3, height: 3 },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，西侧扩展改到东侧。
@@ -2554,6 +2578,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_port_udpipe_unloader_1 — 暗管出口（3×3）
    *
    * 缓存组：1 个 universal（单槽 × 1 容量）
+   * AI-CORRECTION 2026-09-18: 当前改为隐藏 transport_input 与物理 unloader_buffer 两组流体槽，前者只供暗管运输配方读取。
    * AI-CORRECTION 2026-06-06: 暗管系列槽位容量统一改为 500。
    * 求解图节点：1 个
    * 端口：1 fluid output(东)
@@ -2568,12 +2593,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "udpipe_unloader_1",
     nameKey: "registry.entity.udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
+    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_unloader_1.webp",
     footprint: { width: 3, height: 3 },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
     // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
     // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
-    spriteOffset: { topView: { x: -1, y: 0, width: 5, height: 3 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将出口画布收敛为西侧扩展 1 格、总宽 4 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 408,
     // AI-REMOVED 2026-06-06:
@@ -2603,11 +2631,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FluidDomain,
         createSlots("slot", [500], FluidDomain),
       ),
+      createStorageSlotGroup(
+        "transport_input",
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
+      ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
+    // AI-CORRECTION 2026-09-18: 直连运输改为从隐藏 transport_input 读取并写入 unloader_buffer；单口出口以两个一秒单件 channel 形成 2/s 上限。
     recipeChannels: [
-      createRecipeChannel("default", ["unloader_buffer"], ["unloader_buffer"]),
+      createRecipeChannel("transport_1", ["transport_input"], ["unloader_buffer"]),
+      createRecipeChannel("transport_2", ["transport_input"], ["unloader_buffer"]),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
     ],
@@ -3174,7 +3212,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/item_port_mix_pool_2.webp",
     footprint: { width: 6, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    spriteOffset: { topView: { x: -1, y: -1, width: 8, height: 7 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 6×5。
+    spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 607,
     tags: [PRODUCER_TAG, "武陵"],
@@ -3573,7 +3612,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
     // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将扩展画布更新为西侧 1 格、总宽 7 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
     tags: [
@@ -3697,7 +3737,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
     // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将扩展画布更新为西侧 1 格、总宽 7 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
@@ -3882,6 +3923,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/transmuter_1_gastrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明西侧扩展 1 格、总宽 7 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 615,
     tags: [
@@ -4003,6 +4046,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/transmuter_1_liquidtrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明西侧扩展 1 格、总宽 7 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 616,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
@@ -4119,14 +4164,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 输出缓存组：6 个（各 1 槽 × 1 容量）
    * 编译节点：20 个（14 input-view + 6 output-view）
    */
-  createEntityDefinition({
+  // AI-CORRECTION 2026-09-18: 协议核心与次级协议核心共用完整功能定义，仅身份与素材不同。
+  ...createProtocolCoreDefinitions(createEntityDefinition({
     id: "sp_hub_1",
     nameKey: "registry.entity.sp_hub_1.name",
     spriteId: "item_port_sp_hub_1",
     iconPath: "device-icons/item_port_sp_hub_1.webp",
     footprint: { width: 9, height: 9 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将协议核心画布更新为四周各扩展 1 格。
+    spriteOffset: { topView: { x: -1, y: -1, width: 11, height: 11 } },
     uiGroup: "hidden",
     tags: [WAREHOUSE_SINK_TAG],
     placementBehaviors: [
@@ -4338,7 +4385,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e8"] },
       */
     ],
-  }),
+  })),
   createEntityDefinition({
     // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "water_pump_1",
@@ -4442,6 +4489,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "udpipe_loader_2",
     nameKey: "registry.entity.udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
+    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_loader_2.webp",
     footprint: { width: 3, height: 5 },
     // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
@@ -4551,9 +4600,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "udpipe_unloader_2",
     nameKey: "registry.entity.udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
+    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_unloader_2.webp",
     footprint: { width: 3, height: 5 },
-    spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 5 } },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将出口画布更新为西侧扩展 1 格。
+    spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 410,
     tags: ["武陵", "OuterRingAllowed"],
@@ -4588,11 +4640,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FluidDomain,
         createSlots("slot", [500], FluidDomain),
       ),
+      createStorageSlotGroup(
+        "transport_input",
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
+      ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
+    // AI-CORRECTION 2026-09-18: 直连运输改为从隐藏 transport_input 读取并写入 unloader_buffer；多口出口以四个一秒单件 channel 形成 4/s 上限。
     recipeChannels: [
-      createRecipeChannel("default", ["unloader_buffer"], ["unloader_buffer"]),
+      createRecipeChannel("transport_1", ["transport_input"], ["unloader_buffer"]),
+      createRecipeChannel("transport_2", ["transport_input"], ["unloader_buffer"]),
+      createRecipeChannel("transport_3", ["transport_input"], ["unloader_buffer"]),
+      createRecipeChannel("transport_4", ["transport_input"], ["unloader_buffer"]),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
     ],
@@ -4913,9 +4977,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/item_port_power_diffuser_1.webp",
     footprint: { width: 2, height: 2 },
     spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明四周各扩展 1 格的 4×4 画布。
+    spriteOffset: { topView: { x: -1, y: -1, width: 4, height: 4 } },
     uiGroup: "resourcePower",
     displayOrder: 302,
     powerRange: 12,
+    isIdleAsRunning: true,
     tags: [],
   }),
   createEntityDefinition({

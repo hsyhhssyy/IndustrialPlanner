@@ -520,7 +520,7 @@ describe("legacy-blueprint-import", () => {
       linkType: "share-all",
       source: {
         entityId: "dark_pipe_0002",
-        storageSlotGroupId: "unloader_buffer",
+        storageSlotGroupId: "transport_input",
         slotId: "slot_1",
       },
       target: {

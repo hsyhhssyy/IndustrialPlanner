@@ -16,6 +16,12 @@ import {
   migrateBlueprintDocumentState,
   migrateBlueprintEntityDeviceIds,
 } from "@/shared/blueprint-device-id-migration";
+import {
+  DARK_PIPE_INLET_STORAGE_GROUP_ID,
+  DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID,
+  DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+  DARK_PIPE_SLOT_ID,
+} from "@/shared/dark-pipe-link";
 import { publishForceFlattenBlueprintVersionEnabled } from "@/shared/logging/debug-mode-runtime";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 
@@ -510,6 +516,108 @@ describe("blueprint device id migration version chain", () => {
     }
   });
 
+  it.each([
+    ["wuling_protocol_core", "sp_hub_1"],
+    ["valley4_protocol_core", "sp_hub_1"],
+    ["wuling_tianwangping_aid", "sp_sub_hub_1"],
+    ["wuling_heart_repair_station", "sp_sub_hub_1"],
+    ["stm_hongs_3", "sp_sub_hub_1"],
+    ["valley4_refugee_shelter", "sp_sub_hub_1"],
+    ["valley4_infra_outpost", "sp_sub_hub_1"],
+    ["valley4_rebuilt_command", "sp_sub_hub_1"],
+  ])("migrates schema 5 base %s to its expected protocol core", (baseId, definitionId) => {
+    const core = createEntity("sp_hub_1", 180);
+    const state = {
+      baseId,
+      entities: { entity: core },
+      entityOrder: ["entity"],
+      slotLinks: [createPumpWarehouseLink("item_copper_ore")],
+    };
+
+    const result = migrateBlueprintDocumentState(state, 5, 6);
+
+    expect(result?.entities.entity).toEqual({
+      ...core,
+      definitionId,
+    });
+    expect(result?.entityOrder).toEqual(state.entityOrder);
+    expect(result?.slotLinks).toEqual(state.slotLinks);
+  });
+
+  it("does not rewrite portable blueprint protocol cores without a world base migration context", () => {
+    const core = createEntity("sp_hub_1");
+
+    expect(migrateBlueprintDocumentState({
+      entities: { entity: core },
+      entityOrder: ["entity"],
+      slotLinks: [],
+    }, 5, 6)?.entities.entity).toEqual(core);
+  });
+
+  it("moves schema 5 dark-pipe links from the shared outlet buffer to the transport input", () => {
+    const outlet = {
+      ...createEntity("udpipe_unloader_1"),
+      id: "outlet",
+    };
+    const inlet = {
+      ...createEntity("udpipe_loader_1"),
+      id: "inlet",
+    };
+    const warehouse = {
+      ...createEntity("liquid_storager_1"),
+      id: "warehouse",
+    };
+    const darkPipeLink: SlotLinkDefinition = {
+      id: "dark-pipe-link:outlet:inlet",
+      linkType: "share-all",
+      source: {
+        entityId: outlet.id,
+        storageSlotGroupId: DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID,
+        slotId: DARK_PIPE_SLOT_ID,
+      },
+      target: {
+        entityId: inlet.id,
+        storageSlotGroupId: DARK_PIPE_INLET_STORAGE_GROUP_ID,
+        slotId: DARK_PIPE_SLOT_ID,
+      },
+    };
+    const unrelatedWarehouseLink: SlotLinkDefinition = {
+      id: "warehouse-link:outlet:item_liquid_water",
+      linkType: "share-all",
+      source: {
+        entityId: outlet.id,
+        storageSlotGroupId: DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID,
+        slotId: DARK_PIPE_SLOT_ID,
+      },
+      target: {
+        entityId: warehouse.id,
+        storageSlotGroupId: "warehouse",
+        slotId: "item_liquid_water",
+      },
+    };
+    const state = {
+      entities: { outlet, inlet, warehouse },
+      entityOrder: [outlet.id, inlet.id, warehouse.id],
+      slotLinks: [darkPipeLink, unrelatedWarehouseLink],
+    };
+    const original = structuredClone(state);
+
+    const result = migrateBlueprintDocumentState(state, 5, 6);
+
+    expect(result?.slotLinks).toEqual([
+      {
+        ...darkPipeLink,
+        source: {
+          ...darkPipeLink.source,
+          storageSlotGroupId: DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+        },
+      },
+      unrelatedWarehouseLink,
+    ]);
+    expect(state).toEqual(original);
+    expect(migrateBlueprintDocumentState(result!, 6, 6)).toEqual(result);
+  });
+
   it("keeps every production schema 2 to 3 rotation offset at zero in this release", () => {
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
@@ -824,7 +932,7 @@ describe("blueprint device id migration version chain", () => {
     const registeredIds = new Set(ENTITY_DEFINITIONS.map((definition) => definition.id));
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
-    expect(ENTITY_DEFINITIONS).toHaveLength(65);
+    expect(ENTITY_DEFINITIONS).toHaveLength(66);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
     expect(version3Spec?.deviceRules.every((rule) => {
       const currentId = migrateOneEntity(rule.toDeviceId, 3, BLUEPRINT_DEVICE_ID_SCHEMA_VERSION)

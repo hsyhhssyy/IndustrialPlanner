@@ -414,11 +414,13 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
 
         await expectReady(host.internalActions.syncToTick(halfSecondTick));
         expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("normal");
+        expect(host.queries.getDeviceOperatingStatus("power")).toBe("normal");
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(0);
 
         await expectReady(host.internalActions.syncToTick(threeSecondTick));
         expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(true);
         expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("no-power");
+        expect(host.queries.getDeviceOperatingStatus("power")).toBe("idle");
         const frozenProgressSeconds = readGrinderProgressSeconds(host);
 
         const outageDocument = documentStore.getSnapshot();
@@ -434,6 +436,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
 
         expect(readSimulationSnapshot(host)?.isPowerOutage).toBe(false);
         expect(host.queries.getDeviceOperatingStatus("grinder")).toBe("normal");
+        expect(host.queries.getDeviceOperatingStatus("power")).toBe("normal");
         expect(readGrinderProgressSeconds(host)).toBeGreaterThan(frozenProgressSeconds);
       } finally {
         host.dispose();

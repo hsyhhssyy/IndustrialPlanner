@@ -324,6 +324,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private readonly presentationNodeIds: ReadonlySet<string> | null;
   private readonly presentationEdgeIds: ReadonlySet<string> | null;
   private readonly presentationComponentIds: ReadonlySet<string> | null;
+  private readonly emittedDeviceCount: number;
   private warehouseItems: Record<string, WarehouseItemStats> | null = null;
   private warehouseStatsWindowReady = false;
   private initialized = false;
@@ -349,6 +350,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       readonly topologyVersion: number;
     },
     presentationTopology?: CompiledSimulationTopology,
+    operatingStatusDeviceIds: readonly string[] = [],
   ) {
     assertSessionIdentity(session);
     this.lookup = createDenseTopologyLookup(dictionary);
@@ -370,6 +372,12 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     this.presentationComponentIds = presentationTopology === undefined
       ? null
       : new Set(Object.keys(presentationTopology.transportComponents));
+    this.emittedDeviceCount = presentationTopology === undefined
+      ? dictionary.deviceIds.length
+      : new Set([
+          ...presentationTopology.ordering.deviceOrder,
+          ...operatingStatusDeviceIds,
+        ]).size;
     for (const componentId of dictionary.componentIds) {
       this.transportComponentDomain[componentId] = null;
     }
@@ -483,6 +491,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     if (this.presentationDeviceIds !== null && !this.presentationDeviceIds.has(deviceId)) {
       return null;
     }
+    const index = this.lookup.deviceIndexById.get(deviceId);
+    return index === undefined ? null : this.devices[index] ?? null;
+  }
+
+  public getOperatingStatusDevice(deviceId: string): RuntimeDeviceSnapshot | null {
     const index = this.lookup.deviceIndexById.get(deviceId);
     return index === undefined ? null : this.devices[index] ?? null;
   }
@@ -738,7 +751,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       );
       assertInitialFrameCoverage(
         delta.changedDeviceIndexes,
-        this.presentationDeviceIds?.size ?? this.dictionary.deviceIds.length,
+        this.emittedDeviceCount,
         "devices",
       );
       assertInitialFrameCoverage(

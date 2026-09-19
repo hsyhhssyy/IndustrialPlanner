@@ -118,6 +118,7 @@ export class DenseWorkerRuntime {
       layout,
       identity,
       request.presentationDeviceIds,
+      request.operatingStatusDeviceIds,
     );
     const initialDelta = request.migration === undefined
       ? emitter.emitInitial(kernel)

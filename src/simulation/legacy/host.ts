@@ -44,6 +44,7 @@ export function createLegacySimulationHost(
     getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
     getRegionalResourceSettings: options.getRegionalResourceSettings,
+    getRegionalDarkPipeLinks: options.getRegionalDarkPipeLinks,
     regionalWorkerMode: options.workerMode ?? "auto",
   });
   const actions: SimulationContract["actions"] = actionImpl;
@@ -124,7 +125,9 @@ export function createLegacySimulationHost(
     topology: topologyStore,
     queries: createSimulationQueries({
       state: internalState,
+      registryQueries: workspace.registry.queries,
       getTopology: () => topologyStore.getSnapshot(),
+      getOperatingStatusTopology: () => topologyStore.getSnapshot(),
       getPresentation: () => presentation,
       getTotalPowerDemand: (topology) => {
         const override = workspace.editor?.document?.getSnapshot().documentSettings.powerConsumptionOverride;

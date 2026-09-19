@@ -90,9 +90,16 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   const stage = path.join(batch, 'stage');
   const plan = await json(path.join(batch, 'import-plan.json'));
   const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : stage, 'resources/building-top-view-v15.json'));
-  if (plan.scope !== 'logistics' && ((!plan.logistics && !plan.deferredCategories?.includes('logistics')) || plan.entries.length !== collection.entries.length
-    || collection.entries.some((entry) => !plan.entries.some((selected) => selected.entityId === entry.entityId)))) {
-    throw new Error('Publishing requires the complete approved mapping and logistics collection; partial import is not implemented');
+  const selectedEntityIds = new Set(plan.entries.map((entry) => entry.entityId));
+  const selectedMappingsAreComplete = plan.entries.length > 0
+    && plan.entries.every((entry) => collection.entries.some((candidate) => candidate.entityId === entry.entityId));
+  if (plan.scope === 'buildings' && ((!plan.logistics && !plan.deferredCategories?.includes('logistics'))
+    || plan.entries.length !== collection.entries.length
+    || collection.entries.some((entry) => !selectedEntityIds.has(entry.entityId)))) {
+    throw new Error('Complete building import requires the complete approved mapping and logistics collection');
+  }
+  if (plan.scope === 'entities' && (plan.logistics || !selectedMappingsAreComplete)) {
+    throw new Error('Entity-scoped import requires one or more approved building mappings and excludes logistics');
   }
   await verifyOriginals(batch, plan);
   const definitions = await registry();
@@ -145,7 +152,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       viewSources: plan.views, sourceVersion: plan.sourceSite.sourceVersion,
       collection: { entries: collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId)) }, resolution }) : null;
     if (heights?.issues.length) throw new Error(`Height/effect bindings unresolved: ${JSON.stringify(heights.issues)}`);
-    if (heights && plan.scope === 'logistics') {
+    if (heights && (plan.scope === 'logistics' || plan.scope === 'entities')) {
       plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/`)),
         ...await retainWebsiteEffects(stage, outputDirectory, new Set(plan.views.map((view) => `${view.buildingId}/${view.view}`)))];
     }
@@ -158,7 +165,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   console.log(`Published category ${category}; run validate after all four categories finish`);
 }
 
-/** 局部物流导入只替换对应高度视图；其他建筑、特效及其来源字节按原样保留。 */
+/** 局部导入只替换对应高度视图；其他建筑与共享特效按原样保留。 */
 async function retainWebsiteEffects(stage, outputDirectory, selectedViews) {
   const prefix = `${path.relative(stage, outputDirectory)}/port-effects`;
   const current = await json(within(projectRoot, `${prefix}/manifest.json`));
@@ -176,7 +183,7 @@ async function retainWebsiteEffects(stage, outputDirectory, selectedViews) {
   }
   next.definitions = { ...current.definitions, ...next.definitions };
   for (const [key, effect] of Object.entries(current.effects)) {
-    if (next.effects[key]) throw new Error(`Unexpected shared effect in logistics scope: ${key}`);
+    if (next.effects[key]) continue;
     next.effects[key] = effect;
     await retain(effect.height.file);
     for (const page of effect.pages) await retain(page.file);
@@ -362,7 +369,7 @@ export async function validateWebsiteBatch(batch) {
     const sourcePrefix = spriteId ? `buildings/${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
     products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
   }
-  await save(within(stage, `${plan.sourceSite.root}/_import/publish-receipt.json`), {
+  await save(within(stage, `${plan.sourceSite.root}/_import/publish-receipt${plan.receiptHistorySuffix ?? ''}.json`), {
     schemaVersion: 1, sourceSite: plan.sourceSite, sources: receipt.files.map(({ path: file, sha256 }) => ({ path: file, sha256 })),
     products, registryFluidColors,
   });
@@ -419,7 +426,10 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
     }
     const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), 'resources/building-top-view-v15.json'));
     const definitions = await registry();
-    const differences = collection.entries.filter((entry) => {
+    const drawingBoundsEntries = plan.scope === 'entities'
+      ? collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId))
+      : collection.entries;
+    const differences = drawingBoundsEntries.filter((entry) => {
       const definition = definitions.entityDefinitions.find((candidate) => candidate.id === entry.entityId);
       const offset = definition.spriteOffset?.topView ?? { x: 0, y: 0, ...definition.footprint };
       return ['x', 'y', 'width', 'height'].some((key) => offset[key] !== entry.spriteOffset[key]);

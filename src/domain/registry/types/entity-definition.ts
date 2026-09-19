@@ -104,6 +104,8 @@ export interface EntityDefinition {
   powerDemand: number;
   /** 供电范围边长，单位：格。仅供电源类设备声明。 */
   powerRange?: number;
+  /** 基地未停电时，将设备的 idle 展示状态规一化为 normal。 */
+  readonly isIdleAsRunning?: boolean;
 
   /**
    * Inspector 面板声明（对应《模拟器抽象方式》§4 Inspector 层）。

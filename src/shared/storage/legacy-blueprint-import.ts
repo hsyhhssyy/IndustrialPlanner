@@ -108,7 +108,8 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
 const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
 const WAREHOUSE_SUBMIT_RECIPE_ID = "r_warehouse_submit";
 const DARK_PIPE_INLET_STORAGE_GROUP_ID = "loader_buffer";
-const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "unloader_buffer";
+// AI-CORRECTION 2026-09-18: 旧版暗管关系导入后指向出口隐藏原料槽，真实输出缓存不再与入口瞬时共享。
+const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "transport_input";
 const DARK_PIPE_SLOT_ID = "slot_1";
 const DARK_PIPE_LINK_ID_PREFIX = "dark-pipe-link:";
 const PROTOCOL_CORE_OUTPUTS_BY_PORT_ID: Readonly<Record<string, {

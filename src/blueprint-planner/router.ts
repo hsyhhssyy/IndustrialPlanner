@@ -91,6 +91,28 @@ export class PlannerRouter {
 
   get entities(): readonly WorldEntity[] { return this.generated; }
 
+  /** 初次布线排序的局部空间估计；复用真实静态占用与端口预留，不替代 A* 可达性验证。 */
+  estimateEndpointFreedom(source: PlannerPort, target: PlannerPort): number {
+    const terminals = new Set([cellKey(source.outside), cellKey(target.outside)]);
+    const count = (port: PlannerPort): number => {
+      const visited = new Set([cellKey(port.outside)]);
+      let frontier = [port.outside];
+      for (let depth = 0; depth < 2; depth++) {
+        const next: GridPoint[] = [];
+        for (const point of frontier) for (const delta of DELTAS) {
+          const neighbor = { x: point.x + delta.x, y: point.y + delta.y }, key = cellKey(neighbor);
+          if (visited.has(key) || this.blocked.has(key) || (this.reserved.get(key)?.has(port.kind) && !terminals.has(key))
+            || neighbor.x < this.boundary.minimumX || neighbor.x > (this.boundary.maximumX ?? Infinity)
+            || neighbor.y < (this.boundary.minimumY ?? -Infinity) || neighbor.y > (this.boundary.maximumY ?? Infinity)) continue;
+          visited.add(key); next.push(neighbor);
+        }
+        frontier = next;
+      }
+      return visited.size - 1;
+    };
+    return Math.min(count(source), count(target));
+  }
+
   async connect(source: PlannerPort, target: PlannerPort, checkBudget: () => void, minimumCells = 0): Promise<number> {
     this.activeRoute = `${portId(source)}>${portId(target)}`;
     this.conflicts.clear();

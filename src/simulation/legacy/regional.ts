@@ -12,6 +12,7 @@ import { appendSimulationBaseBuiltinEntities, prepareCurrentSimulationDocument }
 import type {
   CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
+  CreateSimulationHostOptions,
   RuntimeTickSnapshot,
   RegionalResourceSupplySetting,
 } from "../contracts";
@@ -70,6 +71,7 @@ interface LegacyRegionalContext {
   readonly presentation: LegacyPresentationState;
   readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   readonly getRegionalResourceSettings: ((regionTag: string) => readonly RegionalResourceSupplySetting[]) | undefined;
+  readonly getRegionalDarkPipeLinks: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
   readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   readonly regionalWorkerMode: "auto" | "runtime";
   readonly playback: LegacyPlaybackController;
@@ -143,6 +145,26 @@ export class LegacyRegionalController {
       logger.error("Regional simulation start rejected.", {
         code: "unknown-current-base",
         currentBaseId: sourceDocument.baseId,
+        error: this.context.stateReadWrite.runtimeStatus.error,
+      });
+      this.context.recoverFromStartFailure();
+      return;
+    }
+
+    const regionalDarkPipeLinks = this.context.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [];
+    if (regionalDarkPipeLinks.length > 0) {
+      runInAction(() => {
+        this.context.stateReadWrite.runtimeStatus = {
+          ...this.context.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+        };
+      });
+      logger.error("Regional simulation start rejected.", {
+        code: "legacy-regional-dark-pipe-unsupported",
+        currentBaseId: sourceDocument.baseId,
+        regionTag: currentBase.tag,
+        darkPipeLinkCount: regionalDarkPipeLinks.length,
         error: this.context.stateReadWrite.runtimeStatus.error,
       });
       this.context.recoverFromStartFailure();

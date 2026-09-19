@@ -436,9 +436,25 @@ describe("GenericDeviceSprite", () => {
             pages: [{ file: `${phase}-0.webp`, rows: 1, columns: 1, frameCount: 1, firstFrameIndex: 0 }],
             pageIndexByFrame: [0],
           }])),
+          clipIds: ["open", "open_idle", "close", "close_idle"],
+          playback: {
+            fallbackClip: "close_idle",
+            staticClip: "open",
+            statusClips: { normal: "open_idle" },
+            openTransitionClip: "open",
+            closeTransitionClip: "close",
+            clipOptions: {
+              open: { playing: true, restart: true, loop: false },
+              open_idle: { playing: true, restart: true, loop: true },
+              close: { playing: true, restart: true, loop: false },
+              close_idle: { playing: true, restart: true, loop: false },
+            },
+            sourceStatuses: {},
+          },
           closeIdleMode: "hold-last",
           frameWidth: 2,
           frameHeight: 2,
+          resolution: 1,
           maskFile: "mask.webp",
         },
         mask: animationMask,
@@ -502,7 +518,7 @@ describe("GenericDeviceSprite", () => {
     })
     contextWorkspace.simulation.state = { runningState: "run", timeline: null }
     Object.assign(contextWorkspace.simulation.queries, {
-      getDeviceRuntimeStatus: () => null,
+      getDeviceOperatingStatus: () => "closed",
     })
     const layout = { x: 16, y: 24, width: 48, height: 32, rotation: 0 as const }
 
@@ -543,12 +559,12 @@ describe("GenericDeviceSprite", () => {
 
     const sprite = new GenericDeviceSprite("protocol-core", definition, renderHost as never)
     const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
-    const getDeviceRuntimeStatus = vi.fn(() => null)
+    const getDeviceOperatingStatus = vi.fn(() => "idle" as const)
     const workspace = context.workspace as unknown as {
       editor: { queries: { getEntityById?: (entityId: string) => object } };
       simulation: {
         state: object;
-        queries: { getDeviceRuntimeStatus?: typeof getDeviceRuntimeStatus };
+        queries: { getDeviceOperatingStatus?: typeof getDeviceOperatingStatus };
       };
     }
     workspace.editor.queries.getEntityById = () => ({ id: "protocol-core" })
@@ -556,9 +572,9 @@ describe("GenericDeviceSprite", () => {
       runningState: "pause",
       timeline: { isSeeking: true, cursorTickNumber: 42 },
     }
-    workspace.simulation.queries.getDeviceRuntimeStatus = getDeviceRuntimeStatus
+    workspace.simulation.queries.getDeviceOperatingStatus = getDeviceOperatingStatus
     const internals = sprite as unknown as {
-      animationDesiredWorking: boolean;
+      animationStatus: string;
       animationPaused: boolean;
       animationSeeking: boolean;
       animationCursor: number | null;
@@ -566,11 +582,11 @@ describe("GenericDeviceSprite", () => {
     }
 
     expect(internals.syncDeviceAnimationInputs(context)).toBe(true)
-    expect(internals.animationDesiredWorking).toBe(true)
+    expect(internals.animationStatus).toBe("normal")
     expect(internals.animationPaused).toBe(false)
     expect(internals.animationSeeking).toBe(false)
     expect(internals.animationCursor).toBeNull()
-    expect(getDeviceRuntimeStatus).not.toHaveBeenCalled()
+    expect(getDeviceOperatingStatus).not.toHaveBeenCalled()
   })
 
   it("draws matching outlined top-view icon and text when the combined label fits", async () => {

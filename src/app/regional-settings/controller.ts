@@ -4,6 +4,11 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SyncAssetEntry, SyncAssetSource } from "@/domain/sync";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
 import {
+  findRegionalDarkPipeLinkForEndpoint,
+  type RegionalDarkPipeEndpoint,
+  type RegionalDarkPipeLink,
+} from "@/shared/dark-pipe-link";
+import {
   cloneRegionalSettingsAsset,
   createDefaultRegionalSettingsAsset,
   normalizeRegionalPerMinute,
@@ -38,6 +43,10 @@ export class RegionalSettingsController {
     return this.asset.multiBaseEnabled;
   }
 
+  public get darkPipeLinks(): readonly RegionalDarkPipeLink[] {
+    return this.asset.darkPipeLinks;
+  }
+
   public async hydrate(): Promise<void> {
     const stored = await loadRegionalSettingsAsset(this.registry.itemDefinitions);
     runInAction(() => {
@@ -53,6 +62,84 @@ export class RegionalSettingsController {
       regionTag,
       this.registry.itemDefinitions,
     );
+  }
+
+  public getRegionalDarkPipeLinks(regionTag: string): readonly RegionalDarkPipeLink[] {
+    const baseIds = new Set(
+      this.registry.baseDefinitions
+        .filter((definition) => definition.tag === regionTag)
+        .map((definition) => definition.id),
+    );
+    return this.asset.darkPipeLinks.filter((link) =>
+      baseIds.has(link.inlet.baseId) && baseIds.has(link.outlet.baseId)
+    );
+  }
+
+  public findDarkPipeLink(endpoint: RegionalDarkPipeEndpoint): RegionalDarkPipeLink | null {
+    return findRegionalDarkPipeLinkForEndpoint(this.asset.darkPipeLinks, endpoint);
+  }
+
+  public addDarkPipeLink(link: RegionalDarkPipeLink): boolean {
+    const inletBase = this.registry.baseDefinitions.find(
+      (definition) => definition.id === link.inlet.baseId,
+    );
+    const outletBase = this.registry.baseDefinitions.find(
+      (definition) => definition.id === link.outlet.baseId,
+    );
+    if (
+      inletBase === undefined
+      || outletBase === undefined
+      || inletBase.id === outletBase.id
+      || inletBase.tag !== outletBase.tag
+      || this.asset.darkPipeLinks.some((candidate) => candidate.id === link.id)
+      || this.findDarkPipeLink(link.inlet) !== null
+      || this.findDarkPipeLink(link.outlet) !== null
+    ) {
+      return false;
+    }
+    this.asset = {
+      ...cloneRegionalSettingsAsset(this.asset),
+      darkPipeLinks: [...this.asset.darkPipeLinks, link]
+        .sort((left, right) => left.id.localeCompare(right.id)),
+    };
+    this.queuePersist();
+    return true;
+  }
+
+  public removeDarkPipeLink(linkId: string): boolean {
+    const darkPipeLinks = this.asset.darkPipeLinks.filter((link) => link.id !== linkId);
+    if (darkPipeLinks.length === this.asset.darkPipeLinks.length) {
+      return false;
+    }
+    this.asset = {
+      ...cloneRegionalSettingsAsset(this.asset),
+      darkPipeLinks,
+    };
+    this.queuePersist();
+    return true;
+  }
+
+  public pruneDarkPipeLinksForBase(
+    baseId: string,
+    existingEntityIds: ReadonlySet<string>,
+  ): void {
+    const darkPipeLinks = this.asset.darkPipeLinks.filter((link) => {
+      if (link.inlet.baseId === baseId && !existingEntityIds.has(link.inlet.entityId)) {
+        return false;
+      }
+      if (link.outlet.baseId === baseId && !existingEntityIds.has(link.outlet.entityId)) {
+        return false;
+      }
+      return true;
+    });
+    if (darkPipeLinks.length === this.asset.darkPipeLinks.length) {
+      return;
+    }
+    this.asset = {
+      ...cloneRegionalSettingsAsset(this.asset),
+      darkPipeLinks,
+    };
+    this.queuePersist();
   }
 
   public setMultiBaseEnabled(enabled: boolean): void {

@@ -44,7 +44,7 @@ async function withFixture(run: (options: {
         .toFile(path.join(options.sourceDirectory, "fixture", `${DEVICE_SPRITE_ANIMATION_PHASES[index]}.webp`));
     }
     await writeFile(path.join(options.sourceDirectory, "fixture/manifest.json"), JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 2,
       frameWidth: 2,
       frameHeight: 2,
       fps: 10,
@@ -56,6 +56,15 @@ async function withFixture(run: (options: {
       clips: Object.fromEntries(DEVICE_SPRITE_ANIMATION_PHASES.map((phase) => [phase, [{
         source: phase, startFrame: 0, frameCount: 2,
       }]])),
+      playback: {
+        fallbackClip: "close_idle",
+        staticClip: "open",
+        statusClips: { normal: "open_idle" },
+        openTransitionClip: "open",
+        closeTransitionClip: "close",
+        clipOptions: {},
+        sourceStatuses: {},
+      },
     }), "utf8");
     await run(options);
   } finally {
@@ -158,6 +167,50 @@ describe("device animation generation", () => {
         frameHeight: 2,
         clips: { open: { frameCount: 2, frameDurationMs: 100 } },
       });
+    });
+  });
+
+  it("发布任意命名的 status 片段，并把显式播放路由原样写入正式 manifest", async () => {
+    await withFixture(async (options) => {
+      const manifestPath = path.join(options.sourceDirectory, "fixture/manifest.json");
+      const source = JSON.parse(await readFile(manifestPath, "utf8"));
+      source.clips = {
+        RUNNING: [{ source: "open_idle", startFrame: 0, frameCount: 2 }],
+        CLOSED: [{ source: "close_idle", startFrame: 0, frameCount: 2 }],
+        PORT_DISCONNECT: [{ source: "close", startFrame: 0, frameCount: 1 }],
+      };
+      source.playback = {
+        fallbackClip: "CLOSED",
+        staticClip: "RUNNING",
+        statusClips: { normal: "RUNNING" },
+        openTransitionClip: null,
+        closeTransitionClip: null,
+        clipOptions: {
+          RUNNING: { playing: true, restart: true },
+          CLOSED: { playing: true, restart: true },
+          PORT_DISCONNECT: { playing: false, restart: true },
+        },
+        sourceStatuses: {
+          CLOSED: { statusKey: 3, clip: "CLOSED", playing: true, restart: true },
+          RUNNING: { statusKey: 4, clip: "RUNNING", playing: true, restart: true },
+          PORT_DISCONNECT: { statusKey: 5, clip: "PORT_DISCONNECT", playing: false, restart: true },
+        },
+      };
+      await writeFile(manifestPath, JSON.stringify(source), "utf8");
+
+      expect(await publishDeviceSpriteAnimations(options)).toEqual([{
+        spriteId: "fixture", frameWidth: 2, frameHeight: 2, pageCount: 3,
+      }]);
+      const outputRoot = path.join(options.animationDirectory, "fixture");
+      const output = JSON.parse(await readFile(path.join(outputRoot, "manifest.json"), "utf8"));
+      expect(Object.keys(output.clips)).toEqual(["RUNNING", "CLOSED", "PORT_DISCONNECT"]);
+      expect(output.playback).toEqual(source.playback);
+      expect((await readdir(outputRoot)).sort()).toEqual([
+        "CLOSED-0.webp", "PORT_DISCONNECT-0.webp", "RUNNING-0.webp", "manifest.json", "mask.webp",
+      ]);
+      const runningFirst = await sharp(path.join(options.sourceDirectory, "fixture/open_idle.webp"))
+        .extract({ left: 0, top: 0, width: 2, height: 2 }).ensureAlpha().raw().toBuffer();
+      expect(await readPixels(path.join(options.spriteDirectory, "fixture.webp"))).toEqual([...runningFirst]);
     });
   });
 

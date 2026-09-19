@@ -3617,6 +3617,41 @@
   color: var(--danger);
 }
 
+.dark-pipe-regional-link {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.dark-pipe-regional-link-label {
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.dark-pipe-regional-link-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.dark-pipe-regional-link-select {
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.dark-pipe-regional-link-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .toggle-on,
 .toggle-off {
   position: relative;

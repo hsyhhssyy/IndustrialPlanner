@@ -243,6 +243,72 @@ print('verified')
     expect(result.trim()).toBe("verified");
   });
 
+  it("网站动画归一化支持传统过渡与显式 status，且不会把 PORT_DISCONNECT 猜成 blocked", () => {
+    const result = execFileSync("python3", ["-c", `
+import runpy,sys,json
+m=runpy.run_path(sys.argv[1])
+legacy=m['create_status_playback']({'animations':['open','open_idle','close','close_idle']}, {k:[] for k in ['open','open_idle','close','close_idle']}, 'legacy')
+assert legacy['fallbackClip']=='close_idle'
+assert legacy['statusClips']=={'normal':'open_idle'}
+assert legacy['openTransitionClip']=='open' and legacy['closeTransitionClip']=='close'
+package={'animations':['RUNNING','CLOSED','PORT_DISCONNECT'],'statusControl':{'codes':[
+  {'code':'CLOSED','statusKey':3,'animation':{'clip':'CLOSED','playing':True,'restart':True}},
+  {'code':'RUNNING','statusKey':4,'animation':{'clip':'RUNNING','playing':True,'restart':True}},
+  {'code':'PORT_DISCONNECT','statusKey':5,'animation':{'clip':'PORT_DISCONNECT','playing':False,'restart':True}},
+]}}
+explicit=m['create_status_playback'](package, {k:[] for k in package['animations']}, 'explicit')
+assert explicit['fallbackClip']=='CLOSED'
+assert explicit['statusClips']=={'normal':'RUNNING'}
+assert 'blocked' not in explicit['statusClips']
+assert explicit['sourceStatuses']['PORT_DISCONNECT']['statusKey']==5
+assert m['delivery_is_animated'](package, [True,True,True]) is True
+assert m['delivery_is_animated']({'animations':['close_idle']}, [False]) is True
+assert m['delivery_is_animated']({'animations':['static']}, [True]) is False
+try:
+  m['create_status_playback']({'animations':['close_idle','CLOSED'],'statusControl':{'codes':[
+    {'code':'CLOSED','statusKey':3,'animation':{'clip':'CLOSED','playing':True,'restart':True}},
+  ]}}, {'close_idle':[],'CLOSED':[]}, 'ambiguous')
+except ValueError: pass
+else: raise AssertionError('ambiguous fallback accepted')
+print(json.dumps(explicit,sort_keys=True))
+`, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
+    expect(JSON.parse(result).statusClips).toEqual({ normal: "RUNNING" });
+  });
+
+  it("两种协议核心只交付 open_idle，并把所有运行状态固定到该循环", () => {
+    const result = execFileSync("python3", ["-c", `
+import runpy,sys,json
+m=runpy.run_path(sys.argv[1])
+sources={'open_000':{'file':'open.webp'},'open_idle_000':{'file':'idle.webp'},'close_000':{'file':'close.webp'},'close_idle_000':{'file':'closed.webp'}}
+clips={
+  'open':[{'source':'open_000','startFrame':0,'frameCount':1}],
+  'open_idle':[{'source':'open_idle_000','startFrame':0,'frameCount':2}],
+  'close':[{'source':'close_000','startFrame':0,'frameCount':1}],
+}
+for sprite_id in ['item_port_sp_hub_1','item_port_sp_sub_hub_1']:
+    delivery=m['resolve_animation_delivery']({},sources,clips,sprite_id)
+    assert delivery['clipSelection']=='protocol-core-open-idle-only'
+    assert set(delivery['sources'])=={'open_idle_000'}
+    assert set(delivery['clips'])=={'open_idle'}
+    assert delivery['playback']['fallbackClip']=='open_idle'
+    assert delivery['playback']['staticClip']=='open_idle'
+    assert set(delivery['playback']['statusClips'].values())=={'open_idle'}
+    assert delivery['playback']['openTransitionClip'] is None
+    assert delivery['playback']['closeTransitionClip'] is None
+    assert delivery['playback']['clipOptions']['open_idle']=={'playing':True,'restart':False}
+generic=m['resolve_animation_delivery']({'animations':['close_idle']},{'close_idle_000':sources['close_idle_000']},{'close_idle':[{'source':'close_idle_000','startFrame':0,'frameCount':1}]},'other')
+assert generic['clipSelection']=='website-status-driven-phases'
+try:
+    m['resolve_animation_delivery']({},sources,{'open':clips['open']},'item_port_sp_hub_1')
+except ValueError: pass
+else: raise AssertionError('protocol core without open_idle accepted')
+print(json.dumps(delivery,sort_keys=True))
+`, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
+    const delivery = JSON.parse(result);
+    expect(Object.keys(delivery.clips)).toEqual(["open_idle"]);
+    expect(new Set(Object.values(delivery.playback.statusClips))).toEqual(new Set(["open_idle"]));
+  });
+
   it("通过本地 HTTP 固定发布，拒绝缺文件、源字节变化及下载中途发布切换", async () => {
     await fixture(async (directory) => {
       const result = execFileSync("python3", ["-c", `
@@ -288,6 +354,7 @@ try:
     base='http://127.0.0.1:'+str(server.server_port)+'/'
     m['prepare_source']('good',['fixture'],base)
     assert Path('good/site/buildings/fixture/top/package.json').read_bytes()==source
+    assert json.loads(Path('good/source-receipt.json').read_text())['scope']=='entities'
     for mode in ['missing','changed','switched']:
         anchors=0
         try:m['prepare_source'](mode,['fixture'],base)

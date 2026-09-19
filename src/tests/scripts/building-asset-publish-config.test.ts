@@ -58,12 +58,21 @@ describe("建筑素材发布规格", () => {
         .webp({ lossless: true }).toFile(imagePath);
       const manifestPath = path.join(sourceRoot, "manifest.json");
       await writeFile(manifestPath, JSON.stringify({
-        schemaVersion: 1, frameWidth: 4, frameHeight: 4, fps: 10, pageRows: 1, pageColumns: 2,
+        schemaVersion: 2, frameWidth: 4, frameHeight: 4, fps: 10, pageRows: 1, pageColumns: 2,
         sources: { frames: { file: "frames.webp", rows: 1, columns: 2, frameCount: 2,
           frameDurationsMs: [30, 170] } },
         clips: Object.fromEntries(DEVICE_SPRITE_ANIMATION_PHASES.map((phase) => [phase, [
           { source: "frames", startFrame: 0, frameCount: 2 },
         ]])),
+        playback: {
+          fallbackClip: "close_idle",
+          staticClip: "open",
+          statusClips: { normal: "open_idle" },
+          openTransitionClip: "open",
+          closeTransitionClip: "close",
+          clipOptions: {},
+          sourceStatuses: {},
+        },
       }));
       const originals = await Promise.all([imagePath, manifestPath].map((file) => readFile(file)));
       const targets = resolveBuildingAssetPublishTargets(path.join(directory, "public"), [0.5, 0.25]);

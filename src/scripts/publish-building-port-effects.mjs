@@ -118,6 +118,11 @@ export async function publishBuildingPortEffects({
     const availableVariantKeys = new Set((ports?.variants ?? []).map((variant) => variant.rendererTemplateKey));
     const sourcePath = `${building.buildingId}/${building.view}`;
     for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath)) {
+      // 网站包已明确声明 rendererTemplate 时直接纳入发布；暗管没有 alter-variant 标签，不能靠 Registry 模式反推。
+      const deliveredTemplate = entry.sourceMetadata?.package?.rendererTemplate;
+      if (typeof deliveredTemplate === 'string' && availableVariantKeys.has(deliveredTemplate)) {
+        requestedVariantKeys.add(deliveredTemplate);
+      }
       const definition = definitions.get(entry.entityId);
       const mode = definition?.tags.find((tag) => tag.startsWith('alter-variant:'))
         ?.slice('alter-variant:'.length);

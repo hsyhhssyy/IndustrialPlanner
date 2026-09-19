@@ -7,11 +7,23 @@ import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import { rotateLocalPortCell } from "@/shared/geometry/port";
+import {
+  DARK_PIPE_INLET_STORAGE_GROUP_ID,
+  DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID,
+  DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+  DARK_PIPE_SLOT_ID,
+  resolveDarkPipeRole,
+} from "@/shared/dark-pipe-link";
 import { readForceFlattenBlueprintVersionEnabled } from "@/shared/logging/debug-mode-runtime";
 import { normalizeRegionAnnotations } from "@/shared/region-annotations";
+import {
+  isProtocolCoreDefinitionId,
+  resolveProtocolCoreDefinitionIdForBase,
+} from "@/shared/protocol-core";
 
 // AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
 // AI-CORRECTION 2026-09-11: 远端发布 tag v1.5.0 仍为 schema 5；所有当前未发布变更统一进入 5→6。
+// USER-REQUIREMENT 2026-09-18: 修改迁移目标前必须先核查目标 schema 是否已经上线；未上线时不得增加下一个版本，只能把新增迁移追加到现有生产版本至目标版本的 step。当前固定追加到 5→6。
 export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 6;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
@@ -62,7 +74,9 @@ export interface BlueprintDeviceIdMigrationRule {
 type BlueprintDocumentMigration =
   | "normalize-admission-rate"
   | "migrate-resource-pump-sources"
-  | "remove-dark-pipe-recipe-channel-config";
+  | "remove-dark-pipe-recipe-channel-config"
+  | "replace-base-protocol-core"
+  | "migrate-dark-pipe-transport-input-links";
 
 export interface BlueprintDeviceIdMigrationSpec {
   readonly fromVersion: number;
@@ -98,6 +112,7 @@ export interface BlueprintEntityDeviceIdMigrationResult<TEntity extends WorldEnt
 }
 
 export interface BlueprintDocumentMigrationState<TEntity extends WorldEntity> {
+  readonly baseId?: string;
   readonly entities: Record<string, TEntity>;
   readonly entityOrder: readonly string[];
   readonly slotLinks: readonly SlotLinkDefinition[];
@@ -301,6 +316,11 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "log_admission", toDeviceId: "log_admission", rotationOffset: 270 },
       { fromDeviceId: "pipe_admission", toDeviceId: "pipe_admission", rotationOffset: 270 },
     ],
+    // AI-CORRECTION 2026-09-18: 生产环境仍为 schema 5；暗管共享槽位改为传输输入后，旧链路迁移追加到现有 5→6 step，不新建未发布版本。
+    documentMigrations: [
+      "replace-base-protocol-core",
+      "migrate-dark-pipe-transport-input-links",
+    ],
   },
   // AI-REMOVED 2026-09-11:
   // Reason: 撤回额外的 schema 8；三台设备重命名与端口旋转属于同一次未发布升级。
@@ -468,6 +488,7 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     ? BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
     : sourceSchemaVersion;
   let nextState: BlueprintDocumentMigrationState<TEntity> = {
+    baseId: state.baseId,
     entities: state.entities,
     entityOrder: state.entityOrder,
     slotLinks: state.slotLinks,
@@ -518,6 +539,21 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
           nextState = {
             ...nextState,
             entities: removeLegacyDarkPipeRecipeChannelConfig(nextState.entities),
+          };
+          break;
+        case "replace-base-protocol-core":
+          nextState = {
+            ...nextState,
+            entities: replaceBaseProtocolCore(nextState.entities, nextState.baseId),
+          };
+          break;
+        case "migrate-dark-pipe-transport-input-links":
+          nextState = {
+            ...nextState,
+            slotLinks: migrateDarkPipeTransportInputLinks(
+              nextState.slotLinks,
+              nextState.entities,
+            ),
           };
           break;
       }
@@ -654,6 +690,76 @@ function removeLegacyDarkPipeRecipeChannelConfig<TEntity extends WorldEntity>(
   return nextEntities;
 }
 
+function replaceBaseProtocolCore<TEntity extends WorldEntity>(
+  entities: Record<string, TEntity>,
+  baseId: string | undefined,
+): Record<string, TEntity> {
+  if (baseId === undefined) {
+    return entities;
+  }
+
+  const expectedDefinitionId = resolveProtocolCoreDefinitionIdForBase(baseId);
+  let nextEntities = entities;
+
+  for (const [entityId, entity] of Object.entries(entities)) {
+    if (
+      !isProtocolCoreDefinitionId(entity.definitionId)
+      || entity.definitionId === expectedDefinitionId
+    ) {
+      continue;
+    }
+
+    if (nextEntities === entities) {
+      nextEntities = { ...entities };
+    }
+    nextEntities[entityId] = {
+      ...entity,
+      definitionId: expectedDefinitionId,
+    };
+  }
+
+  return nextEntities;
+}
+
+function migrateDarkPipeTransportInputLinks<TEntity extends WorldEntity>(
+  slotLinks: readonly SlotLinkDefinition[],
+  entities: Readonly<Record<string, TEntity>>,
+): readonly SlotLinkDefinition[] {
+  let nextSlotLinks: SlotLinkDefinition[] | null = null;
+
+  for (const [index, link] of slotLinks.entries()) {
+    if (link.linkType !== "share-all") {
+      continue;
+    }
+
+    const sourceEntity = entities[link.source.entityId];
+    const targetEntity = entities[link.target.entityId];
+    if (
+      sourceEntity === undefined
+      || targetEntity === undefined
+      || resolveDarkPipeRole(sourceEntity.definitionId) !== "outlet"
+      || resolveDarkPipeRole(targetEntity.definitionId) !== "inlet"
+      || link.source.storageSlotGroupId !== DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID
+      || link.source.slotId !== DARK_PIPE_SLOT_ID
+      || link.target.storageSlotGroupId !== DARK_PIPE_INLET_STORAGE_GROUP_ID
+      || link.target.slotId !== DARK_PIPE_SLOT_ID
+    ) {
+      continue;
+    }
+
+    nextSlotLinks ??= [...slotLinks];
+    nextSlotLinks[index] = {
+      ...link,
+      source: {
+        ...link.source,
+        storageSlotGroupId: DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+      },
+    };
+  }
+
+  return nextSlotLinks ?? slotLinks;
+}
+
 function applyResourcePumpSourceMigration<TEntity extends WorldEntity>(
   state: BlueprintDocumentMigrationState<TEntity>,
 ): BlueprintDocumentMigrationState<TEntity> {
@@ -734,9 +840,11 @@ function applyResourcePumpSourceMigration<TEntity extends WorldEntity>(
   }
 
   return {
+    baseId: state.baseId,
     entities: nextEntities,
     entityOrder: state.entityOrder,
     slotLinks: nextSlotLinks,
+    regions: state.regions,
   };
 }
 

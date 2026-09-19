@@ -59,7 +59,13 @@ reaction(
   },
   { fireImmediately: true },
 );
-createEditorHost(workspace);
+const editorHost = createEditorHost(workspace);
+editorHost.document.subscribe((document) => {
+  appHost.regionalSettings.pruneDarkPipeLinksForBase(
+    document.baseId,
+    new Set(Object.keys(document.entities)),
+  );
+});
 await createSyncHost(workspace, {
   assetSources: [
     ...createModuleBalancingSyncSources(appHost),
@@ -77,6 +83,8 @@ const simulationHost = createSimulationHost(workspace, {
   }),
   getRegionalResourceSettings: (regionTag) =>
     appHost.regionalSettings.getRegionResources(regionTag),
+  getRegionalDarkPipeLinks: (regionTag) =>
+    appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
 });
 
 createBlueprintPlannerHost(workspace);

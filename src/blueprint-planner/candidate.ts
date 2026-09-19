@@ -19,7 +19,7 @@ import { CompactLayoutSearch } from "./compact-layout";
 import { resolveSearchProfile } from "./search-profile";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
 import { auditPlannerSupply, type PlannerSupplyAudit } from "./supply-audit";
-import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
+import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchExperiment, PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
 
 export interface PlannerCandidate {
   readonly supplyAudit: PlannerSupplyAudit;
@@ -37,6 +37,10 @@ export async function createPlannerCandidate(
   const diagnosticStarted = performance.now();
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   checkBudget();
+  const experiments: readonly PlannerSearchExperiment[] = options.experiments ?? ["power-dedup"];
+  for (const experiment of experiments) {
+    if (!["constraint-repair", "power-dedup", "constrained-routing"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
+  }
   const profile = resolveSearchProfile(options.profile);
   const network = createProductionNetwork(registry, request);
   // AI-REMOVED 2026-09-16:
@@ -69,6 +73,7 @@ export async function createPlannerCandidate(
   const outline = options.outline ? { ...options.outline } : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
   const statistics: PlannerSearchStatistics = { seed: variant, evaluationLimit: options.maxEvaluations ?? 50_000,
     evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline, profile };
+  if (experiments.length) Object.assign(statistics, { experiments: [...experiments] });
   const diagnostics: PlannerSearchDiagnostics | undefined = options.diagnostics ? {
     timingsMs: { setup: 0, layout: 0, routing: 0, power: 0, supply: 0, finalization: 0 },
     layoutChecks: 0, feasibleLayouts: 0, fullyRoutedAttempts: 0,
@@ -252,12 +257,17 @@ export async function createPlannerCandidate(
           minimumY: network.nodes.some(node => node.purpose === "bus") && request.options.warehouseBus === "free" ? 4 : 0,
           maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0, history,
         });
+      if (retry === 0 && experiments.includes("constrained-routing")) {
+        const freedom = wires.map(wire => candidateRouter.estimateEndpointFreedom(wire.source, wire.target));
+        order.sort((a, b) => freedom[a]! - freedom[b]! || lengths[a]! - lengths[b]!);
+      }
       statistics.routingAttempts++;
       travelSeconds.length = 0;
       let routedWireCount = 0;
       let rejectionPhase: "routing" | "power" | "supply" = "routing";
       try {
         // 先处理短线，失败边的代价反馈给后续摆位，而非反复扩大世界边界。
+        // 订正 2026-09-17：constrained-routing 实验先处理端口自由空间较少的线，同分仍按短线优先。
         for (const index of order) {
           blockedIndex = index; checkBudget();
           update("routing", `正在连接物流 ${index + 1}/${wires.length}`);
@@ -279,7 +289,11 @@ export async function createPlannerCandidate(
         }
         enterPhase("power"); rejectionPhase = "power";
         const coverage = await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
-        if (coverage === null) { failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure); continue; }
+        if (coverage === null) {
+          failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
+          if (experiments.includes("power-dedup")) break;
+          continue;
+        }
         enterPhase("supply"); rejectionPhase = "supply";
         auditPlannerSupply(registry, network, wires, candidateRouter.routes);
         powerNodes = coverage;

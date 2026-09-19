@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -108,13 +108,13 @@ describe('建筑高度与端口特效', () => {
   it.each([
     ['filling_pd_mc_1_liquid', 'fluid_input', 'in_e_2'],
     ['shaper_1_gas', 'gas_input', 'in_e_1'],
-  ])('%s 使用新版管道端口特效', (definitionId, portGroupId, portId) => {
+  ])('%s 在新版素材未交付对应模式时不借用其他管道特效', (definitionId) => {
     const target: WorldEntity = { ...entity, id: definitionId, definitionId };
     const scene = resolveBuildingEffectScene({ manifest, definitions, entities: [target] });
 
-    expect(scene.effects).toHaveLength(1);
+    expect(scene.effects).toHaveLength(0);
     expect(scene.issues).toHaveLength(0);
-    expect([...scene.portKeys.values()]).toEqual([`${definitionId}:${portGroupId}:${portId}`]);
+    expect(scene.portKeys.size).toBe(0);
   });
 
   it('输入锚点发生明确偏移时拒绝该端口绑定', () => {
@@ -180,7 +180,7 @@ describe('建筑高度与端口特效', () => {
     const changed = resolveBuildingEffectScene({ manifest: fixture, definitions,
       entities: [{ ...entity, definitionId: 'transmuter_1_liquidtrans' }], ringStatus: new Map([[entity.id, -1]]) });
     expect(changed.effects.filter((effect) => effect.ring)).toHaveLength(0);
-    expect(changed.effects.every((effect) => effect.id.includes('liquidtrans__0'))).toBe(true);
+    expect(changed.effects).toHaveLength(0);
   });
 
   it('动画使用逐帧时长，独立于建筑动画帧号', () => {
@@ -240,13 +240,18 @@ describe('建筑高度与端口特效', () => {
       ...collection.entries.map((entry) => entry.sourceMetadata.sourceSite),
       logisticsManifest.sourceSite,
     ].map((sourceSite) => [sourceSite.root, sourceSite])).values()];
-    const publications = await Promise.all(declaredSourceSites.map(async (sourceSite) => ({
-      sourceSite,
-      products: (JSON.parse(await readFile(
-        path.join(sourceSite.root, '_import/publish-receipt.json'),
-        'utf8',
-      )) as { readonly products: readonly PublishReceiptProduct[] }).products,
-    })));
+    const publications = (await Promise.all(declaredSourceSites.map(async (sourceSite) => {
+      const importDirectory = path.join(sourceSite.root, '_import');
+      const receiptFiles = (await readdir(importDirectory))
+        .filter((fileName) => /^publish-receipt(?:\.entities-[a-f\d]+)?\.json$/.test(fileName));
+      return Promise.all(receiptFiles.map(async (receiptFile) => ({
+        sourceSite,
+        products: (JSON.parse(await readFile(
+          path.join(importDirectory, receiptFile),
+          'utf8',
+        )) as { readonly products: readonly PublishReceiptProduct[] }).products,
+      })));
+    }))).flat();
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
     for (const view of Object.values(manifest.views)) for (const field of Object.values(view.fields)) {
       fields.set(field.file, { field, reflected: view.coordinateSpace === 'project-reflected-source' });

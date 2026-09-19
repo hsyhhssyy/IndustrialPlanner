@@ -4958,6 +4958,117 @@ describe("WorkbenchApp", () => {
     expect(gestures).toHaveLength(2);
   });
 
+  it("keeps canvas shortcuts active behind bottom docks and restores canvas focus from dock inputs", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.setActivePanel("base");
+      appHost.internalActions.setToolboxDockPreference("bottom");
+      appHost.internalActions.openDialog("toolbox");
+    });
+
+    const searchInput = container.querySelector(
+      ".toolbox-bottom-dock .encyclopedia-search-input",
+    ) as HTMLInputElement | null;
+    const canvasPanel = container.querySelector(".canvas-panel") as HTMLElement | null;
+    const viewportSurface = container.querySelector(".canvas-viewport-surface") as HTMLElement | null;
+
+    expect(searchInput).not.toBeNull();
+    expect(canvasPanel).not.toBeNull();
+    expect(viewportSurface).not.toBeNull();
+
+    if (!searchInput || !canvasPanel || !viewportSurface) {
+      throw new Error("Bottom dock focus test could not find the expected input and canvas elements.");
+    }
+
+    act(() => {
+      searchInput.focus();
+    });
+    expect(document.activeElement).toBe(searchInput);
+
+    act(() => {
+      searchInput.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        code: "KeyP",
+        key: "p",
+      }));
+    });
+    expect(appHost.internalState.runtime.activePanel).toBe("base");
+
+    act(() => {
+      dispatchPointerEvent(viewportSurface, "pointerdown", {
+        pointerId: 71,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 240,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchPointerEvent(viewportSurface, "pointerup", {
+        pointerId: 71,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 240,
+        button: 0,
+        buttons: 0,
+      });
+    });
+    expect(document.activeElement).toBe(canvasPanel);
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        code: "KeyP",
+        key: "p",
+      }));
+    });
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+
+    act(() => {
+      appHost.internalActions.setActivePanel("base");
+      appHost.internalActions.setToolboxBottomDockCollapsed(true);
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        code: "KeyP",
+        key: "p",
+      }));
+    });
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+
+    act(() => {
+      appHost.internalActions.closeDialog("toolbox");
+      appHost.internalActions.setActivePanel("base");
+      appHost.internalActions.setTimelineDockPreference("bottom");
+      appHost.internalActions.openDialog("timeline");
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        code: "KeyP",
+        key: "p",
+      }));
+    });
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+
+    act(() => {
+      appHost.internalActions.closeDialog("timeline");
+      appHost.internalActions.setActivePanel("base");
+      appHost.internalActions.setToolboxDockPreference("floating");
+      appHost.internalActions.openDialog("toolbox");
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        code: "KeyP",
+        key: "p",
+      }));
+    });
+    expect(appHost.internalState.runtime.activePanel).toBe("base");
+  });
+
   it("opens the save blueprint dialog from Ctrl+S on desktop multi-selection and prevents the browser default", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

@@ -180,7 +180,11 @@ describe("recipe channel slot compatibility", () => {
 
       // 计算每个配方物品可出现的域集合（通配符 any/fluid 展开为多个域）
       const inputDomainSets = recipe.inputs.map((inp) => itemDomains(inp.itemId));
-      const outputDomainSets = recipe.outputs.map((out) => itemDomains(out.itemId));
+      const outputDomainSets = recipe.outputs.map((out) =>
+        out.itemId === "same-as-input"
+          ? inputDomainSets[0] ?? AnyDomain
+          : itemDomains(out.itemId)
+      );
 
       let anyChannelOk = false;
       const channelResults: string[] = [];

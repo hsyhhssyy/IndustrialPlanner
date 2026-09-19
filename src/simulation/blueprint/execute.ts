@@ -164,7 +164,13 @@ export async function executeBlueprint(
         const device = topology!.devices[snapshot.deviceId];
         return device?.sourceEntityId === null || device === undefined ? [] : [{
           entityId: device.sourceEntityId,
-          status: resolveDeviceOperatingStatus({ device, snapshot, isPowerOutage: engine!.isPowerOutage }),
+          status: resolveDeviceOperatingStatus({
+            device,
+            snapshot,
+            isPowerOutage: engine!.isPowerOutage,
+            isIdleAsRunning: registry.queries.findEntityDefinition(device.definitionId)
+              ?.isIdleAsRunning === true,
+          }),
         }];
       }),
       diagnostics: [...diagnostics.values()],

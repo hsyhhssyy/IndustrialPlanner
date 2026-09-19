@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 2,
-  "updatedAt": "2026-09-16",
+  "fixtureRevision": 3,
+  "updatedAt": "2026-09-18",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json",
@@ -1703,6 +1703,13 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-65.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-66.schema6.json",
       "role": "test-scene",
       "schemaVersion": 6,
       "version": "fixture-v1",

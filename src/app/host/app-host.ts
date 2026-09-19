@@ -15,7 +15,12 @@ import {
 } from "../input/gesture/diagnostics";
 import { KeyboardShortcutManager } from "../actions/keyboard-shortcut-manager";
 import { hookLocalstorage } from "../state/storage-hook";
-import { createUiStateReadWrite, UiStateReadWrite } from "../state/state-impl";
+import {
+  createUiStateReadWrite,
+  isTimelineBottomDockActive,
+  isToolboxBottomDockActive,
+  UiStateReadWrite,
+} from "../state/state-impl";
 import { hookThemeApplicator } from "../theme/theme-applicator";
 import { WorkbenchBlueprintFolderDialogController } from "../shell/state/blueprint-folder-dialog-state";
 import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
@@ -253,8 +258,14 @@ export function createAppHost(
 }
 
 function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
+  const toolboxBottomDockActive = isToolboxBottomDockActive(appHost.internalState);
+  const timelineBottomDockActive = isTimelineBottomDockActive(appHost.internalState);
   const visibleDialogIds = Object.entries(appHost.internalState.workbench.dialogState)
-    .filter(([, dialogState]) => dialogState?.visible === true)
+    .filter(([dialogId, dialogState]) => (
+      dialogState?.visible === true
+      && !(dialogId === "toolbox" && toolboxBottomDockActive)
+      && !(dialogId === "timeline" && timelineBottomDockActive)
+    ))
     .map(([dialogId]) => dialogId);
   if (appHost.blueprintPlannerDialog.dialogState.visible || visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
     return "dialog";

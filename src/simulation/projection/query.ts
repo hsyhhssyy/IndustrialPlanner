@@ -1,4 +1,5 @@
 import type { SimulationQuery } from "@/domain/simulation/simulation-query";
+import type { RegistryQuery } from "@/domain/registry";
 import type {
   SimulationDeviceOperatingStatus,
   SimulationDeviceRuntimeChannelRecipeStatus,
@@ -14,13 +15,20 @@ import {
   type SimulationStateReadWrite,
   type WarehouseStats,
 } from "@/simulation/contracts";
+import {
+  DARK_PIPE_INLET_STORAGE_GROUP_ID,
+  DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+  resolveDarkPipeRole,
+} from "@/shared/dark-pipe-link";
 import type { SimulationPresentationProjection } from "./presentation-projection";
 import { buildDeviceGasCoverage } from "./gas-coverage";
 
 /** 引擎提供当前投影及会话汇总；Query 只负责构建公开读模型。 */
 export interface SimulationQueryContext {
   readonly state: SimulationStateReadWrite;
+  readonly registryQueries: RegistryQuery;
   getTopology(): CompiledSimulationTopology | null;
+  getOperatingStatusTopology(): CompiledSimulationTopology | null;
   getPresentation(): SimulationPresentationProjection | null;
   getTotalPowerDemand(topology: CompiledSimulationTopology, presentation: SimulationPresentationProjection): number | null;
   getWarehouseStats(): WarehouseStats | null;
@@ -39,6 +47,7 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
   let cachedOperatingTickNumber: number | null = null;
   let cachedOperatingRunningState: SimulationStateReadWrite["runningState"] | null = null;
   let cachedOperatingPowerOutage = false;
+  let cachedDarkPipeStatusSourceByDeviceId = new Map<string, string>();
   const cachedOperatingStatuses = new Map<string, {
     readonly snapshot: RuntimeDeviceSnapshot;
     readonly status: SimulationDeviceOperatingStatus;
@@ -89,29 +98,39 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
     getDeviceOperatingStatus: (deviceId) => {
       const runningState = context.state.runningState;
       const topology = context.getTopology();
+      const operatingStatusTopology = context.getOperatingStatusTopology();
       const presentation = context.getPresentation();
       const tickNumber = presentation?.tickNumber ?? null;
-      if (topology === null || presentation === null || tickNumber === null) {
+      if (topology === null || operatingStatusTopology === null
+        || presentation === null || tickNumber === null) {
         return runningState === "stop" ? "closed" : null;
       }
 
-      if (cachedOperatingTopology !== topology
+      const topologyChanged = cachedOperatingTopology !== operatingStatusTopology;
+      if (topologyChanged
         || cachedOperatingPresentation !== presentation
         || cachedOperatingTickNumber !== tickNumber
         || cachedOperatingRunningState !== runningState
         || cachedOperatingPowerOutage !== presentation.isPowerOutage) {
         cachedOperatingStatuses.clear();
-        cachedOperatingTopology = topology;
+        cachedOperatingTopology = operatingStatusTopology;
         cachedOperatingPresentation = presentation;
         cachedOperatingTickNumber = tickNumber;
         cachedOperatingRunningState = runningState;
         cachedOperatingPowerOutage = presentation.isPowerOutage;
+        if (topologyChanged) {
+          cachedDarkPipeStatusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(
+            operatingStatusTopology,
+          );
+        }
       }
 
-      const compiledDeviceId = resolveCompiledDeviceId(topology, deviceId);
+      const compiledDeviceId = resolveCompiledDeviceId(operatingStatusTopology, deviceId);
       if (compiledDeviceId === null) return null;
-      const device = topology.devices[compiledDeviceId];
-      const snapshot = presentation.getDevice(compiledDeviceId);
+      const statusSourceDeviceId = cachedDarkPipeStatusSourceByDeviceId.get(compiledDeviceId)
+        ?? compiledDeviceId;
+      const device = operatingStatusTopology.devices[statusSourceDeviceId];
+      const snapshot = presentation.getOperatingStatusDevice(statusSourceDeviceId);
       if (device === undefined || snapshot === null) return null;
 
       const cached = cachedOperatingStatuses.get(deviceId);
@@ -120,6 +139,8 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
         device,
         snapshot,
         isPowerOutage: presentation.isPowerOutage,
+        isIdleAsRunning: context.registryQueries.findEntityDefinition(device.definitionId)
+          ?.isIdleAsRunning === true,
       });
       cachedOperatingStatuses.set(deviceId, { snapshot, status });
       return status;
@@ -217,6 +238,7 @@ export function resolveDeviceOperatingStatus(options: {
   device: CompiledSimulationTopology["devices"][string];
   snapshot: RuntimeDeviceSnapshot;
   isPowerOutage: boolean;
+  isIdleAsRunning: boolean;
 }): SimulationDeviceOperatingStatus {
   if (options.device.powerStatus === "out-of-power-range") return "not-in-power-net";
   if (options.device.requiresPower && options.isPowerOutage) return "no-power";
@@ -226,7 +248,59 @@ export function resolveDeviceOperatingStatus(options: {
     if (recipe?.state === "waiting-output") return "blocked";
     hasProgressingRecipe ||= recipe?.state === "running" && recipe.isProgressing;
   }
-  return hasProgressingRecipe ? "normal" : "idle";
+  return hasProgressingRecipe || (options.isIdleAsRunning && !options.isPowerOutage)
+    ? "normal"
+    : "idle";
+}
+
+
+
+/**
+ * 已直连暗管以出口运输配方作为整对设备的展示状态源。
+ * 索引仅在 topology 变化时构建，逐设备状态查询不扫描 links。
+ */
+export function resolveDarkPipeStatusSourceByDeviceId(
+  topology: CompiledSimulationTopology,
+): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const link of Object.values(topology.links)) {
+    if (link.linkType !== "share-all") continue;
+    const outletDeviceId = resolveDarkPipeLinkEndpointDeviceId({
+      topology,
+      slotIds: link.sourceSlotIds,
+      expectedRole: "outlet",
+      expectedStorageGroupId: DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+    });
+    const inletDeviceId = resolveDarkPipeLinkEndpointDeviceId({
+      topology,
+      slotIds: link.targetSlotIds,
+      expectedRole: "inlet",
+      expectedStorageGroupId: DARK_PIPE_INLET_STORAGE_GROUP_ID,
+    });
+    if (outletDeviceId === null || inletDeviceId === null) continue;
+    result.set(outletDeviceId, outletDeviceId);
+    result.set(inletDeviceId, outletDeviceId);
+  }
+  return result;
+}
+
+function resolveDarkPipeLinkEndpointDeviceId(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly slotIds: readonly string[];
+  readonly expectedRole: "inlet" | "outlet";
+  readonly expectedStorageGroupId: string;
+}): string | null {
+  let resolvedDeviceId: string | null = null;
+  for (const slotId of options.slotIds) {
+    const slot = options.topology.slots[slotId];
+    if (slot?.sourceStorageSlotGroupId !== options.expectedStorageGroupId) continue;
+    const node = options.topology.nodes[slot.nodeId];
+    const device = node === undefined ? undefined : options.topology.devices[node.deviceId];
+    if (device === undefined || resolveDarkPipeRole(device.definitionId) !== options.expectedRole) continue;
+    if (resolvedDeviceId !== null && resolvedDeviceId !== device.id) return null;
+    resolvedDeviceId = device.id;
+  }
+  return resolvedDeviceId;
 }
 
 

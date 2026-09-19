@@ -2,6 +2,7 @@ import type { SimulationContract } from "@/domain/simulation/simulation-contract
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { SimulationEngineKind } from "@/domain/simulation/types/simulation-types";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
+import type { RegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import type { CompiledSimulationTopology } from "./types";
 import type { SimulationStateReadWrite } from "./state";
 import type { SimulationInternalAction } from "./internal-action";
@@ -28,6 +29,8 @@ export interface CreateSimulationHostOptions {
   readonly getActiveActivityIds?: () => readonly string[];
   /** 按基地中文地区 tag 读取地区资源供给。 */
   readonly getRegionalResourceSettings?: (regionTag: string) => readonly import("./types").RegionalResourceSupplySetting[];
+  /** 按基地中文地区 tag 读取跨基地暗管连接。 */
+  readonly getRegionalDarkPipeLinks?: (regionTag: string) => readonly RegionalDarkPipeLink[];
 }
 
 export type SimulationHostFactory = (workspace: WorkspaceContract, options: CreateSimulationHostOptions) => SimulationHost;

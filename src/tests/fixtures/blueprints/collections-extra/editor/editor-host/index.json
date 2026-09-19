@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 2,
+  "fixtureRevision": 5,
   "schemaVersion": 6,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -61,6 +61,9 @@
             "id": "storager_1",
             "nameKey": "registry.entity.storager_1.name",
             "spriteId": "item_port_storager_1",
+            "spriteAnimation": {
+              "closeIdleMode": "hold-last"
+            },
             "iconPath": "device-icons/item_port_storager_1.webp",
             "footprint": {
               "width": 3,
@@ -411,10 +414,10 @@
             },
             "spriteOffset": {
               "topView": {
-                "x": -1,
-                "y": -1,
-                "width": 6,
-                "height": 10
+                "x": 0,
+                "y": 0,
+                "width": 4,
+                "height": 8
               }
             },
             "uiGroup": "warehouse",
@@ -467,9 +470,9 @@
             "spriteOffset": {
               "topView": {
                 "x": 0,
-                "y": -1,
-                "width": 5,
-                "height": 5
+                "y": 0,
+                "width": 4,
+                "height": 4
               }
             },
             "uiGroup": "warehouse",
@@ -3798,6 +3801,9 @@
             "id": "udpipe_loader_1",
             "nameKey": "registry.entity.udpipe_loader_1.name",
             "spriteId": "item_port_udpipe_loader_1",
+            "spriteAnimation": {
+              "closeIdleMode": "loop"
+            },
             "iconPath": "device-icons/item_port_udpipe_loader_1.webp",
             "footprint": {
               "width": 3,
@@ -3910,6 +3916,9 @@
             "id": "udpipe_unloader_1",
             "nameKey": "registry.entity.udpipe_unloader_1.name",
             "spriteId": "item_port_udpipe_unloader_1",
+            "spriteAnimation": {
+              "closeIdleMode": "loop"
+            },
             "iconPath": "device-icons/item_port_udpipe_unloader_1.webp",
             "footprint": {
               "width": 3,
@@ -3919,7 +3928,7 @@
               "topView": {
                 "x": -1,
                 "y": 0,
-                "width": 5,
+                "width": 4,
                 "height": 3
               }
             },
@@ -3973,20 +3982,50 @@
                   }
                 ],
                 "splitLinkType": "share-all"
+              },
+              {
+                "id": "transport_input",
+                "kind": 6,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 6,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
               }
             ],
             "recipeChannels": [
               {
-                "id": "default",
+                "id": "transport_1",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
+                  "transport_input"
+                ],
+                "productStorageGroupIds": [
                   "unloader_buffer"
+                ]
+              },
+              {
+                "id": "transport_2",
+                "type": "normal-channel",
+                "ingredientStorageGroupIds": [
+                  "transport_input"
                 ],
                 "productStorageGroupIds": [
                   "unloader_buffer"
                 ]
               }
             ],
+            "recipeChannelBehavior": {
+              "allowDuplicateRecipesAcrossChannels": true
+            },
             "portStorageBindings": [
               {
                 "id": "bind_fluid_output",
@@ -7358,10 +7397,10 @@
             },
             "spriteOffset": {
               "topView": {
-                "x": -1,
-                "y": -1,
-                "width": 8,
-                "height": 7
+                "x": 0,
+                "y": 0,
+                "width": 6,
+                "height": 5
               }
             },
             "uiGroup": "advancedManufacturing",
@@ -9077,9 +9116,9 @@
             },
             "spriteOffset": {
               "topView": {
-                "x": 0,
+                "x": -1,
                 "y": 0,
-                "width": 6,
+                "width": 7,
                 "height": 5
               }
             },
@@ -9372,9 +9411,9 @@
             },
             "spriteOffset": {
               "topView": {
-                "x": 0,
+                "x": -1,
                 "y": 0,
-                "width": 6,
+                "width": 7,
                 "height": 5
               }
             },
@@ -9862,6 +9901,14 @@
             "spriteAnimation": {
               "closeIdleMode": "hold-last"
             },
+            "spriteOffset": {
+              "topView": {
+                "x": -1,
+                "y": 0,
+                "width": 7,
+                "height": 5
+              }
+            },
             "uiGroup": "advancedManufacturing",
             "displayOrder": 615,
             "tags": [
@@ -10148,6 +10195,14 @@
             },
             "spriteAnimation": {
               "closeIdleMode": "hold-last"
+            },
+            "spriteOffset": {
+              "topView": {
+                "x": -1,
+                "y": 0,
+                "width": 7,
+                "height": 5
+              }
             },
             "uiGroup": "advancedManufacturing",
             "displayOrder": 616,
@@ -10438,9 +10493,9 @@
             "spriteOffset": {
               "topView": {
                 "x": -1,
-                "y": 0,
+                "y": -1,
                 "width": 11,
-                "height": 9
+                "height": 11
               }
             },
             "uiGroup": "hidden",
@@ -11519,6 +11574,9 @@
             "id": "udpipe_loader_2",
             "nameKey": "registry.entity.udpipe_loader_2.name",
             "spriteId": "item_port_udpipe_loader_2",
+            "spriteAnimation": {
+              "closeIdleMode": "loop"
+            },
             "iconPath": "device-icons/item_port_udpipe_loader_2.webp",
             "footprint": {
               "width": 3,
@@ -11646,6 +11704,9 @@
             "id": "udpipe_unloader_2",
             "nameKey": "registry.entity.udpipe_unloader_2.name",
             "spriteId": "item_port_udpipe_unloader_2",
+            "spriteAnimation": {
+              "closeIdleMode": "loop"
+            },
             "iconPath": "device-icons/item_port_udpipe_unloader_2.webp",
             "footprint": {
               "width": 3,
@@ -11653,7 +11714,7 @@
             },
             "spriteOffset": {
               "topView": {
-                "x": 0,
+                "x": -1,
                 "y": 0,
                 "width": 4,
                 "height": 5
@@ -11724,20 +11785,70 @@
                   }
                 ],
                 "splitLinkType": "share-all"
+              },
+              {
+                "id": "transport_input",
+                "kind": 6,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 500,
+                    "itemFilter": "type",
+                    "itemFilterType": 6,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
               }
             ],
             "recipeChannels": [
               {
-                "id": "default",
+                "id": "transport_1",
                 "type": "normal-channel",
                 "ingredientStorageGroupIds": [
+                  "transport_input"
+                ],
+                "productStorageGroupIds": [
                   "unloader_buffer"
+                ]
+              },
+              {
+                "id": "transport_2",
+                "type": "normal-channel",
+                "ingredientStorageGroupIds": [
+                  "transport_input"
+                ],
+                "productStorageGroupIds": [
+                  "unloader_buffer"
+                ]
+              },
+              {
+                "id": "transport_3",
+                "type": "normal-channel",
+                "ingredientStorageGroupIds": [
+                  "transport_input"
+                ],
+                "productStorageGroupIds": [
+                  "unloader_buffer"
+                ]
+              },
+              {
+                "id": "transport_4",
+                "type": "normal-channel",
+                "ingredientStorageGroupIds": [
+                  "transport_input"
                 ],
                 "productStorageGroupIds": [
                   "unloader_buffer"
                 ]
               }
             ],
+            "recipeChannelBehavior": {
+              "allowDuplicateRecipesAcrossChannels": true
+            },
             "portStorageBindings": [
               {
                 "id": "bind_fluid_output",
@@ -12477,9 +12588,18 @@
             "spriteAnimation": {
               "closeIdleMode": "hold-last"
             },
+            "spriteOffset": {
+              "topView": {
+                "x": -1,
+                "y": -1,
+                "width": 4,
+                "height": 4
+              }
+            },
             "uiGroup": "resourcePower",
             "displayOrder": 302,
             "powerRange": 12,
+            "isIdleAsRunning": true,
             "tags": [],
             "requiresPower": false,
             "powerDemand": 0,
@@ -14302,6 +14422,971 @@
           }
         },
         "file": "scene-08-variant-65.schema6.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definition": {
+            "id": "sp_sub_hub_1",
+            "nameKey": "registry.entity.sp_sub_hub_1.name",
+            "spriteId": "item_port_sp_sub_hub_1",
+            "iconPath": "device-icons/item_port_sp_sub_hub_1.webp",
+            "footprint": {
+              "width": 9,
+              "height": 9
+            },
+            "spriteAnimation": {
+              "closeIdleMode": "hold-last"
+            },
+            "spriteOffset": {
+              "topView": {
+                "x": -1,
+                "y": 0,
+                "width": 11,
+                "height": 9
+              }
+            },
+            "uiGroup": "hidden",
+            "tags": [
+              "WarehouseSink"
+            ],
+            "placementBehaviors": [
+              {
+                "type": "default-placement"
+              },
+              {
+                "type": "cannot-be-placed-outside-base"
+              }
+            ],
+            "requiresPower": false,
+            "powerDemand": 0,
+            "portGroups": [
+              {
+                "id": "item_output_w2",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_w_2",
+                    "localCellX": 0,
+                    "localCellY": 1,
+                    "edge": "WEST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_output_w5",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_w_5",
+                    "localCellX": 0,
+                    "localCellY": 4,
+                    "edge": "WEST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_output_w8",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_w_8",
+                    "localCellX": 0,
+                    "localCellY": 7,
+                    "edge": "WEST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_output_e2",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_e_2",
+                    "localCellX": 8,
+                    "localCellY": 1,
+                    "edge": "EAST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_output_e5",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_e_5",
+                    "localCellX": 8,
+                    "localCellY": 4,
+                    "edge": "EAST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_output_e8",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "output",
+                "ports": [
+                  {
+                    "id": "out_e_8",
+                    "localCellX": 8,
+                    "localCellY": 7,
+                    "edge": "EAST",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n2",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_2",
+                    "localCellX": 1,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n3",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_3",
+                    "localCellX": 2,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n4",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_4",
+                    "localCellX": 3,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n5",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_5",
+                    "localCellX": 4,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n6",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_6",
+                    "localCellX": 5,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n7",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_7",
+                    "localCellX": 6,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_n8",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_n_8",
+                    "localCellX": 7,
+                    "localCellY": 0,
+                    "edge": "NORTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s2",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_2",
+                    "localCellX": 1,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s3",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_3",
+                    "localCellX": 2,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s4",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_4",
+                    "localCellX": 3,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s5",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_5",
+                    "localCellX": 4,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s6",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_6",
+                    "localCellX": 5,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s7",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_7",
+                    "localCellX": 6,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              },
+              {
+                "id": "item_input_s8",
+                "kind": 1,
+                "isPipe": false,
+                "direction": "input",
+                "ports": [
+                  {
+                    "id": "in_s_8",
+                    "localCellX": 7,
+                    "localCellY": 8,
+                    "edge": "SOUTH",
+                    "acceptRule": {
+                      "base": {
+                        "kind": "domain",
+                        "flags": 1
+                      },
+                      "exclude": []
+                    },
+                    "priorityGroup": 5,
+                    "roundRobinSeed": 0
+                  }
+                ]
+              }
+            ],
+            "storageSlotGroups": [
+              {
+                "id": "unbuffer_w2",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "unbuffer_w5",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "unbuffer_w8",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "unbuffer_e2",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "unbuffer_e5",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "unbuffer_e8",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n2",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n3",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n4",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n5",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n6",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n7",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_n8",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s2",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s3",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s4",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s5",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s6",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s7",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              },
+              {
+                "id": "inbuffer_s8",
+                "kind": 1,
+                "slots": [
+                  {
+                    "id": "slot_1",
+                    "capacity": 1,
+                    "itemFilter": "type",
+                    "itemFilterType": 1,
+                    "lock": null,
+                    "initialItemType": null,
+                    "initialCount": 0,
+                    "ignoreStock": false
+                  }
+                ],
+                "splitLinkType": "share-all"
+              }
+            ],
+            "portStorageBindings": [
+              {
+                "id": "bind_output_w2",
+                "portGroupId": "item_output_w2",
+                "storageSlotGroupId": "unbuffer_w2"
+              },
+              {
+                "id": "bind_output_w5",
+                "portGroupId": "item_output_w5",
+                "storageSlotGroupId": "unbuffer_w5"
+              },
+              {
+                "id": "bind_output_w8",
+                "portGroupId": "item_output_w8",
+                "storageSlotGroupId": "unbuffer_w8"
+              },
+              {
+                "id": "bind_output_e2",
+                "portGroupId": "item_output_e2",
+                "storageSlotGroupId": "unbuffer_e2"
+              },
+              {
+                "id": "bind_output_e5",
+                "portGroupId": "item_output_e5",
+                "storageSlotGroupId": "unbuffer_e5"
+              },
+              {
+                "id": "bind_output_e8",
+                "portGroupId": "item_output_e8",
+                "storageSlotGroupId": "unbuffer_e8"
+              },
+              {
+                "id": "bind_input_n2",
+                "portGroupId": "item_input_n2",
+                "storageSlotGroupId": "inbuffer_n2"
+              },
+              {
+                "id": "bind_input_n3",
+                "portGroupId": "item_input_n3",
+                "storageSlotGroupId": "inbuffer_n3"
+              },
+              {
+                "id": "bind_input_n4",
+                "portGroupId": "item_input_n4",
+                "storageSlotGroupId": "inbuffer_n4"
+              },
+              {
+                "id": "bind_input_n5",
+                "portGroupId": "item_input_n5",
+                "storageSlotGroupId": "inbuffer_n5"
+              },
+              {
+                "id": "bind_input_n6",
+                "portGroupId": "item_input_n6",
+                "storageSlotGroupId": "inbuffer_n6"
+              },
+              {
+                "id": "bind_input_n7",
+                "portGroupId": "item_input_n7",
+                "storageSlotGroupId": "inbuffer_n7"
+              },
+              {
+                "id": "bind_input_n8",
+                "portGroupId": "item_input_n8",
+                "storageSlotGroupId": "inbuffer_n8"
+              },
+              {
+                "id": "bind_input_s2",
+                "portGroupId": "item_input_s2",
+                "storageSlotGroupId": "inbuffer_s2"
+              },
+              {
+                "id": "bind_input_s3",
+                "portGroupId": "item_input_s3",
+                "storageSlotGroupId": "inbuffer_s3"
+              },
+              {
+                "id": "bind_input_s4",
+                "portGroupId": "item_input_s4",
+                "storageSlotGroupId": "inbuffer_s4"
+              },
+              {
+                "id": "bind_input_s5",
+                "portGroupId": "item_input_s5",
+                "storageSlotGroupId": "inbuffer_s5"
+              },
+              {
+                "id": "bind_input_s6",
+                "portGroupId": "item_input_s6",
+                "storageSlotGroupId": "inbuffer_s6"
+              },
+              {
+                "id": "bind_input_s7",
+                "portGroupId": "item_input_s7",
+                "storageSlotGroupId": "inbuffer_s7"
+              },
+              {
+                "id": "bind_input_s8",
+                "portGroupId": "item_input_s8",
+                "storageSlotGroupId": "inbuffer_s8"
+              }
+            ],
+            "inspectors": [
+              {
+                "type": "problem"
+              },
+              {
+                "type": "warehouse-item-link",
+                "slotGroupIds": [
+                  "unbuffer_w2",
+                  "unbuffer_w5",
+                  "unbuffer_w8",
+                  "unbuffer_e2",
+                  "unbuffer_e5",
+                  "unbuffer_e8"
+                ]
+              }
+            ],
+            "displayOrder": 100,
+            "recipeChannels": []
+          }
+        },
+        "file": "scene-08-variant-66.schema6.json",
         "version": "fixture-v1"
       }
     ]

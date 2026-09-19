@@ -18,6 +18,17 @@ import type {
 
 export type DarkPipeRole = "inlet" | "outlet";
 
+export interface RegionalDarkPipeEndpoint {
+  readonly baseId: string;
+  readonly entityId: string;
+}
+
+export interface RegionalDarkPipeLink {
+  readonly id: string;
+  readonly inlet: RegionalDarkPipeEndpoint;
+  readonly outlet: RegionalDarkPipeEndpoint;
+}
+
 export const DARK_PIPE_LINK_TOOL: ActiveTool = "dark-pipe-link";
 
 export const DARK_PIPE_INLET_DEFINITION_IDS = [
@@ -31,9 +42,11 @@ export const DARK_PIPE_OUTLET_DEFINITION_IDS = [
 ] as const;
 
 export const DARK_PIPE_INLET_STORAGE_GROUP_ID = "loader_buffer";
-export const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "unloader_buffer";
+export const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "transport_input";
+export const DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID = "unloader_buffer";
 export const DARK_PIPE_SLOT_ID = "slot_1";
 export const DARK_PIPE_LINK_ID_PREFIX = "dark-pipe-link:";
+export const REGIONAL_DARK_PIPE_LINK_ID_PREFIX = "regional-dark-pipe-link:";
 
 const DARK_PIPE_INLET_DEFINITION_ID_SET = new Set<string>(DARK_PIPE_INLET_DEFINITION_IDS);
 const DARK_PIPE_OUTLET_DEFINITION_ID_SET = new Set<string>(DARK_PIPE_OUTLET_DEFINITION_IDS);
@@ -87,6 +100,38 @@ export function createDarkPipeSlotLink(options: {
       slotId: DARK_PIPE_SLOT_ID,
     },
   };
+}
+
+export function createRegionalDarkPipeLink(options: {
+  readonly inlet: RegionalDarkPipeEndpoint;
+  readonly outlet: RegionalDarkPipeEndpoint;
+}): RegionalDarkPipeLink {
+  return {
+    id: `${REGIONAL_DARK_PIPE_LINK_ID_PREFIX}${encodeRegionalDarkPipeEndpoint(options.outlet)}:${encodeRegionalDarkPipeEndpoint(options.inlet)}`,
+    inlet: { ...options.inlet },
+    outlet: { ...options.outlet },
+  };
+}
+
+export function findRegionalDarkPipeLinkForEndpoint(
+  links: readonly RegionalDarkPipeLink[],
+  endpoint: RegionalDarkPipeEndpoint,
+): RegionalDarkPipeLink | null {
+  return links.find((link) =>
+    isSameRegionalDarkPipeEndpoint(link.inlet, endpoint)
+    || isSameRegionalDarkPipeEndpoint(link.outlet, endpoint)
+  ) ?? null;
+}
+
+export function isSameRegionalDarkPipeEndpoint(
+  left: RegionalDarkPipeEndpoint,
+  right: RegionalDarkPipeEndpoint,
+): boolean {
+  return left.baseId === right.baseId && left.entityId === right.entityId;
+}
+
+function encodeRegionalDarkPipeEndpoint(endpoint: RegionalDarkPipeEndpoint): string {
+  return `${encodeURIComponent(endpoint.baseId)}:${encodeURIComponent(endpoint.entityId)}`;
 }
 
 export function isDarkPipeSlotLink(

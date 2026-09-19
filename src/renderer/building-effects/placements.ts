@@ -35,8 +35,9 @@ export interface EffectScene {
 /** 仅按明确模式取绑定；多个允许模式时以 Registry alter-variant 选择，绝不合并。 */
 export function selectEffectVariant(view: BuildingHeightView, definition: EntityDefinition): string | undefined {
   const keys = Object.keys(view.variants);
-  if (keys.length === 1) return keys[0];
   const mode = definition.tags.find((tag) => tag.startsWith('alter-variant:'))?.slice('alter-variant:'.length);
+  // AI-CORRECTION 2026-09-18: 有 alter-variant 的实体必须精确命中对应模板；新版素材只交付另一模式时不得复用唯一变体。
+  if (mode === undefined) return keys.length === 1 ? keys[0] : undefined;
   const selected = keys.filter((key) => key === `${mode}__0`);
   return selected.length === 1 ? selected[0] : undefined;
 }

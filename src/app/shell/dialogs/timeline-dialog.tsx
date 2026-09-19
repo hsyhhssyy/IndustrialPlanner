@@ -20,8 +20,10 @@ import type { AppHost } from "@/app/host/app-host";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
+  canUseWorkbenchBottomDock,
   COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
+  isTimelineBottomDockActive,
 } from "@/app/state/state-impl";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -71,20 +73,11 @@ function shouldUseImmersiveMaximizedDialog(
 export function canUseTimelineBottomDock(
   screenProfile: AppHost["state"]["screenProfile"],
 ): boolean {
-  return screenProfile.deviceClass === "desktop" || screenProfile.deviceClass === "tablet";
+  return canUseWorkbenchBottomDock(screenProfile);
 }
 
 export function shouldRenderTimelineBottomDock(appHost: AppHost): boolean {
-  return (
-    appHost.internalState.workbench.dialogState.timeline.visible
-    && (
-      appHost.state.screenProfile.deviceClass === "mobile"
-      || (
-        appHost.internalState.workbench.timelineDockPreference === "bottom"
-        && canUseTimelineBottomDock(appHost.state.screenProfile)
-      )
-    )
-  );
+  return isTimelineBottomDockActive(appHost.internalState);
 }
 
 export function resolveTimelineBottomDockGridHeight(appHost: AppHost): number {

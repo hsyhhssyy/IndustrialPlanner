@@ -1,6 +1,11 @@
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import {
+  createRegionalDarkPipeLink,
+  type RegionalDarkPipeEndpoint,
+  type RegionalDarkPipeLink,
+} from "@/shared/dark-pipe-link";
 
-export const REGIONAL_SETTINGS_SCHEMA_VERSION = 1 as const;
+export const REGIONAL_SETTINGS_SCHEMA_VERSION = 2 as const;
 export const REGIONAL_SETTINGS_ASSET_ID = "default";
 
 export type RegionalResourceSupplyMode = "infinite" | "rate";
@@ -20,6 +25,7 @@ export interface RegionalSettingsAsset {
   readonly schemaVersion: typeof REGIONAL_SETTINGS_SCHEMA_VERSION;
   readonly multiBaseEnabled: boolean;
   readonly regions: Readonly<Record<string, RegionalResourceConfig>>;
+  readonly darkPipeLinks: readonly RegionalDarkPipeLink[];
 }
 
 export function createDefaultRegionalSettingsAsset(): RegionalSettingsAsset {
@@ -27,6 +33,7 @@ export function createDefaultRegionalSettingsAsset(): RegionalSettingsAsset {
     schemaVersion: REGIONAL_SETTINGS_SCHEMA_VERSION,
     multiBaseEnabled: false,
     regions: {},
+    darkPipeLinks: [],
   };
 }
 
@@ -83,7 +90,7 @@ export function normalizeRegionalSettingsAsset(
   }
 
   const schemaVersion = value.schemaVersion;
-  if (schemaVersion !== REGIONAL_SETTINGS_SCHEMA_VERSION) {
+  if (schemaVersion !== 1 && schemaVersion !== REGIONAL_SETTINGS_SCHEMA_VERSION) {
     return null;
   }
 
@@ -118,6 +125,9 @@ export function normalizeRegionalSettingsAsset(
     regions: Object.fromEntries(
       Object.entries(regions).sort(([left], [right]) => left.localeCompare(right)),
     ),
+    darkPipeLinks: schemaVersion === 1
+      ? []
+      : normalizeRegionalDarkPipeLinks(value.darkPipeLinks),
   };
 }
 
@@ -133,7 +143,59 @@ export function cloneRegionalSettingsAsset(
         { resources: config.resources.map(cloneRegionalResourceSetting) },
       ]),
     ),
+    darkPipeLinks: asset.darkPipeLinks.map((link) => ({
+      id: link.id,
+      inlet: { ...link.inlet },
+      outlet: { ...link.outlet },
+    })),
   };
+}
+
+function normalizeRegionalDarkPipeLinks(value: unknown): readonly RegionalDarkPipeLink[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const endpointKeys = new Set<string>();
+  const linkIds = new Set<string>();
+  const links: RegionalDarkPipeLink[] = [];
+  for (const rawLink of value) {
+    if (!isRecord(rawLink)) {
+      continue;
+    }
+    const inlet = normalizeRegionalDarkPipeEndpoint(rawLink.inlet);
+    const outlet = normalizeRegionalDarkPipeEndpoint(rawLink.outlet);
+    if (inlet === null || outlet === null || inlet.baseId === outlet.baseId) {
+      continue;
+    }
+    const normalized = createRegionalDarkPipeLink({ inlet, outlet });
+    const inletKey = createRegionalDarkPipeEndpointKey(inlet);
+    const outletKey = createRegionalDarkPipeEndpointKey(outlet);
+    if (
+      linkIds.has(normalized.id)
+      || endpointKeys.has(inletKey)
+      || endpointKeys.has(outletKey)
+    ) {
+      continue;
+    }
+    linkIds.add(normalized.id);
+    endpointKeys.add(inletKey);
+    endpointKeys.add(outletKey);
+    links.push(normalized);
+  }
+  return links.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function normalizeRegionalDarkPipeEndpoint(value: unknown): RegionalDarkPipeEndpoint | null {
+  if (!isRecord(value) || typeof value.baseId !== "string" || typeof value.entityId !== "string") {
+    return null;
+  }
+  const baseId = value.baseId.trim();
+  const entityId = value.entityId.trim();
+  return baseId === "" || entityId === "" ? null : { baseId, entityId };
+}
+
+function createRegionalDarkPipeEndpointKey(endpoint: RegionalDarkPipeEndpoint): string {
+  return `${endpoint.baseId}\u0000${endpoint.entityId}`;
 }
 
 export function normalizeRegionalPerMinute(value: number): number {

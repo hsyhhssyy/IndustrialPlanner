@@ -3,7 +3,10 @@ import { BlueprintExecutionClient } from "../blueprint";
 import type { SimulationBlueprintRunRequest, SimulationBlueprintRunReport } from "@/domain/simulation";
 import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { selectDocumentSimulation } from "@/shared/snapshot/world-document-selection";
-import { createSimulationQueries } from "@/simulation/projection";
+import {
+  createSimulationQueries,
+  resolveDarkPipeStatusSourceByDeviceId,
+} from "@/simulation/projection";
 import { registerSimulationSnapshotReader } from "../testkit";
 import { action, runInAction } from "mobx";
 
@@ -158,7 +161,9 @@ export function createDenseSimulationHost(
     actions,
     queries: createSimulationQueries({
       state: internalState,
+      registryQueries: workspace.registry.queries,
       getTopology: () => controller.currentTopology,
+      getOperatingStatusTopology: () => controller.currentOperatingStatusTopology,
       getPresentation: () => controller.currentProjection,
       getTotalPowerDemand: (_topology, projection) => internalState.regionalTotalPowerDemand
         ?? controller.currentPowerConsumptionOverride ?? projection.totalPowerDemand,
@@ -205,6 +210,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private readonly state: SimulationStateReadWrite;
   private readonly bridge: DenseEngineBridge;
   private projection: DenseProjectionStore | null = null;
+  private operatingStatusTopology: CompiledSimulationTopology | null = null;
   // AI-REMOVED 2026-09-03:
   // Reason: Dense 物理状态与帧编码必须只存在于 Worker，Host 不能同时持有第二份运行时真相。
   // Trigger: ST2-RQ-023 Phase B 接入独立 dense Worker 协议。
@@ -268,6 +274,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   public get currentTopology(): CompiledSimulationTopology | null {
     return this.topologyStore.getSnapshot();
+  }
+
+  public get currentOperatingStatusTopology(): CompiledSimulationTopology | null {
+    return this.operatingStatusTopology;
   }
 
   public get simulationState(): SimulationStateReadWrite {
@@ -694,6 +704,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.timelinePresentationActive = false;
       this.compiledDocument = cloneWorldDocument(document);
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
+      this.operatingStatusTopology = topology;
       this.topologyStore.setSnapshot(topology);
       // AI-REMOVED 2026-09-12:
       // Reason: 性能与电池读数不再由 SimulationState 发布，初始化只需提交投影和运行态。
@@ -734,6 +745,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     readonly document: WorldDocument;
     readonly topology: CompiledSimulationTopology;
     readonly presentationTopology?: CompiledSimulationTopology;
+    readonly operatingStatusDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
   }): Promise<{
     readonly identity: { readonly sessionId: string; readonly topologyVersion: number };
@@ -757,6 +769,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       ...(options.presentationTopology === undefined
         ? {}
         : { presentationDeviceIds: options.presentationTopology.ordering.deviceOrder }),
+      ...(options.operatingStatusDeviceIds === undefined
+        ? {}
+        : { operatingStatusDeviceIds: options.operatingStatusDeviceIds }),
       ...(options.migration === undefined ? {} : { migration: options.migration }),
     });
     return { identity, response };
@@ -844,6 +859,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
     this.timelinePresentationActive = false;
+    this.operatingStatusTopology = null;
     this.topologyStore.setSnapshot(null);
     this.state.runningState = "stop";
     this.state.hasStarted = false;
@@ -1056,6 +1072,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         currentBaseId: sourceDocument.baseId,
         documents: admissions.map((admission) => admission.document),
         registry: this.workspace.registry,
+        darkPipeLinks: this.options.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [],
       });
       startStage = "compile-regional-topology";
       const regionalTopology = compileSimulationTopology({
@@ -1081,16 +1098,30 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         );
       }
 
+      const regionalStatusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(
+        regionalTopology,
+      );
+      const currentDeviceIds = new Set(currentTopology.ordering.deviceOrder);
+      const operatingStatusDeviceIds = [...new Set(
+        currentTopology.ordering.deviceOrder.flatMap((deviceId) => {
+          const sourceDeviceId = regionalStatusSourceByDeviceId.get(deviceId);
+          return sourceDeviceId === undefined || currentDeviceIds.has(sourceDeviceId)
+            ? []
+            : [sourceDeviceId];
+        }),
+      )];
       startStage = "initialize-worker";
       const initialized = await this.initializeDenseTopology({
         document: sourceDocument,
         topology: regionalTopology,
         presentationTopology: currentTopology,
+        operatingStatusDeviceIds,
       });
       const projection = new DenseProjectionStore(
         initialized.response.layout.dictionary,
         initialized.identity,
         currentTopology,
+        operatingStatusDeviceIds,
       );
       projection.apply(initialized.response.initialDelta);
       await this.bridge.sendCommands([{ type: "start" }]);
@@ -1102,6 +1133,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.timelinePresentationActive = false;
       this.compiledDocument = null;
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
+      this.operatingStatusTopology = regionalTopology;
       this.topologyStore.setSnapshot(currentTopology);
       this.state.regionalTotalPowerDemand = null;
       // AI-REMOVED 2026-09-12:
@@ -1341,6 +1373,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.sourceDocumentSignature = null;
     this.runtimeRetainedStateCount = 0;
     this.timelineBufferedThroughTick = 0;
+    this.operatingStatusTopology = null;
     this.topologyStore.setSnapshot(null);
     runInAction(() => {
       this.state.hasStarted = false;

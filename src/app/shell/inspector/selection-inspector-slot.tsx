@@ -230,6 +230,7 @@ function renderInspector(options: {
           appHost={options.appHost}
           definition={options.definition}
           entity={options.entity}
+          translate={options.translate}
         />
       );
     case INSPECTOR_TYPE.submitToWarehouse:

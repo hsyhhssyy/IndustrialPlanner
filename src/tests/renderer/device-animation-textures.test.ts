@@ -16,10 +16,17 @@ const definition: DeviceSpriteAnimationDefinition = {
 };
 
 const manifest = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   frameWidth: 2,
   frameHeight: 2,
   maskFile: "mask.webp",
+  playback: {
+    fallbackClip: "close_idle",
+    staticClip: "open",
+    statusClips: { normal: "open_idle" },
+    openTransitionClip: "open",
+    closeTransitionClip: "close",
+  },
   clips: {
     open: {
       frameCount: 3,
@@ -411,7 +418,7 @@ describe("device animation textures", () => {
 
   it("uses manifest density for pixel validation and rejects a mismatched texture density", () => {
     const normalized = normalizeDeviceSpriteAnimationDefinition(definition, { ...manifest, resolution: 0.5 });
-    const page = normalized.clips.open.pages[0]!;
+    const page = normalized.clips.open!.pages[0]!;
     expect(resolveDeviceSpriteAnimationGrid(normalized, page, { width: 2, height: 1 }))
       .toEqual({ frameWidth: 2, frameHeight: 2 });
     expect(() => resolveDeviceSpriteAnimationGrid(normalized, page, { width: 4, height: 2, resolution: 1 }))
@@ -468,7 +475,7 @@ describe("device animation textures", () => {
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])("rejects invalid texture resolution %s", (resolution) => {
     const normalized = normalizeDeviceSpriteAnimationDefinition(definition, manifest);
-    expect(() => resolveDeviceSpriteAnimationGrid(normalized, normalized.clips.open.pages[0]!, {
+    expect(() => resolveDeviceSpriteAnimationGrid(normalized, normalized.clips.open!.pages[0]!, {
       width: 2, height: 1, resolution,
     })).toThrow("resolution");
   });
@@ -659,7 +666,7 @@ describe("device animation textures", () => {
 
   it("checks manifest page dimensions against the common frame size", () => {
     const normalized = normalizeDeviceSpriteAnimationDefinition(definition, manifest);
-    const page = normalized.clips.open.pages[0]!;
+    const page = normalized.clips.open!.pages[0]!;
     expect(resolveDeviceSpriteAnimationGrid(normalized, page, { width: 4, height: 2 }))
       .toEqual({ frameWidth: 2, frameHeight: 2 });
     expect(() => resolveDeviceSpriteAnimationGrid(normalized, page, { width: 3, height: 2 }))
@@ -730,7 +737,7 @@ describe("device animation textures", () => {
     })).toThrow();
   });
 
-  it("rejects a missing phase and an unknown close idle strategy", () => {
+  it("accepts optional transitions and rejects an unknown playback target or close idle strategy", () => {
     const clipsWithoutClose = {
       open: manifest.clips.open,
       open_idle: manifest.clips.open_idle,
@@ -739,8 +746,37 @@ describe("device animation textures", () => {
     expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
       ...manifest,
       clips: clipsWithoutClose,
-    })).toThrow();
+      playback: { ...manifest.playback, closeTransitionClip: null },
+    })).not.toThrow();
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
+      ...manifest,
+      playback: { ...manifest.playback, fallbackClip: "missing" },
+    })).toThrow("unknown clip");
     expect(() => normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "ping-pong" }, manifest))
       .toThrow();
+  });
+
+  it("保留来源 status 元数据，但不会因相同数值把 PORT_DISCONNECT 映射成 blocked", () => {
+    const explicitManifest = {
+      ...manifest,
+      playback: {
+        fallbackClip: "close_idle",
+        staticClip: "open_idle",
+        statusClips: { normal: "open_idle" },
+        openTransitionClip: "open",
+        closeTransitionClip: "close",
+        sourceStatuses: {
+          PORT_DISCONNECT: {
+            statusKey: 5,
+            clip: "close_idle",
+            playing: false,
+            restart: true,
+          },
+        },
+      },
+    };
+    const normalized = normalizeDeviceSpriteAnimationDefinition(definition, explicitManifest);
+    expect(normalized.playback.sourceStatuses.PORT_DISCONNECT?.statusKey).toBe(5);
+    expect(normalized.playback.statusClips.blocked).toBeUndefined();
   });
 });

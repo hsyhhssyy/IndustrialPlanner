@@ -26,7 +26,10 @@ import type {
   TickPerfStage3Details,
 } from "../contracts";
 
-import type { SimulationInternalAction } from "@/simulation/contracts";
+import type {
+  CreateSimulationHostOptions,
+  SimulationInternalAction,
+} from "@/simulation/contracts";
 import type { LegacyPresentationState } from "./state";
 import type { SimulationStateReadWrite } from "../contracts";
 import type { SimulationWorkerBridge, TimelineWorkerBridge } from "./bridge-contract";
@@ -103,6 +106,7 @@ interface SimulationActionImplOptions {
   getDebugDataEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
   getRegionalResourceSettings?: (regionTag: string) => readonly import("../contracts").RegionalResourceSupplySetting[];
+  getRegionalDarkPipeLinks?: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
   regionalWorkerMode?: "auto" | "runtime";
 }
 
@@ -143,6 +147,8 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
 
   private readonly getRegionalResourceSettings: SimulationActionImplOptions["getRegionalResourceSettings"];
+
+  private readonly getRegionalDarkPipeLinks: SimulationActionImplOptions["getRegionalDarkPipeLinks"];
 
   private readonly regionalWorkerMode: "auto" | "runtime";
 
@@ -204,6 +210,7 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.getDebugDataEnabled = options.getDebugDataEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
     this.getRegionalResourceSettings = options.getRegionalResourceSettings;
+    this.getRegionalDarkPipeLinks = options.getRegionalDarkPipeLinks;
     this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
@@ -233,7 +240,9 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     });
     this.regional = new LegacyRegionalController({
       workspace: this.workspace, stateReadWrite: this.stateReadWrite, presentation: this.presentation, topology: this.topology,
-      getRegionalResourceSettings: this.getRegionalResourceSettings, getActiveActivityIds: this.getActiveActivityIds,
+      getRegionalResourceSettings: this.getRegionalResourceSettings,
+      getRegionalDarkPipeLinks: this.getRegionalDarkPipeLinks,
+      getActiveActivityIds: this.getActiveActivityIds,
       regionalWorkerMode: this.regionalWorkerMode, playback: this.playback,
       recoverFromStartFailure: (error) => this.recoverFromStartFailure(error),
     });
