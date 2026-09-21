@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "upgradedAt": "2026-09-14",
+  "fixtureRevision": 3,
+  "upgradedAt": "2026-09-21",
   "blueprints": [
     {
       "file": "public/blueprints/dark-pipe-premium-needle-line.json",
@@ -58,7 +58,27 @@
       "schemaVersion": 6,
       "version": "v1.3.0",
       "blueprintId": "2dec8da2-1c38-47f3-a574-a586bd4efad5"
+    },
+    {
+      "file": "public/blueprints/v1.5-copper-block-bud-needle-line.json",
+      "sourceSchemaVersion": 6,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "188b9ece-6847-4e21-8c27-28ef46e93a30"
+    },
+    {
+      "file": "public/blueprints/v1.5-copper-block-separation-core-line.json",
+      "sourceSchemaVersion": 6,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "362b65c4-7518-4e1b-b14e-451b26455f0f"
+    },
+    {
+      "file": "public/blueprints/v1.5-six-xiranite-full-speed-gas-solid-conversion.json",
+      "sourceSchemaVersion": 5,
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "blueprintId": "91f40c25-cd29-4801-b5ea-ec1a6fcce90f"
     }
   ]
 }
-

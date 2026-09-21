@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 3,
-  "updatedAt": "2026-09-18",
+  "fixtureRevision": 5,
+  "updatedAt": "2026-09-21",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json",
@@ -3236,6 +3236,27 @@
     },
     {
       "file": "public/blueprints/wuling-battery-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/v1.5-copper-block-bud-needle-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/v1.5-copper-block-separation-core-line.json",
+      "role": "system-blueprint",
+      "schemaVersion": 6,
+      "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "public/blueprints/v1.5-six-xiranite-full-speed-gas-solid-conversion.json",
       "role": "system-blueprint",
       "schemaVersion": 6,
       "version": "v1.3.0",

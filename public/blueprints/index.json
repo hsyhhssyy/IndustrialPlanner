@@ -2,15 +2,23 @@
   "version": "v1.3.0",
   "folders": [
     {
-      "name": "新手教程",
+      "name": "赤石科技",
       "blueprints": [
-        "getting-started-tutorial"
+        "resurrection-machine-7.1"
       ]
     },
     {
-      "name": "四号谷地产线样例",
+      "name": "1.5雪凇幽梦版本蓝图",
       "blueprints": [
-        "premium-capsule-line"
+        "v1.5-copper-block-bud-needle-line",
+        "v1.5-copper-block-separation-core-line",
+        "v1.5-six-xiranite-full-speed-gas-solid-conversion"
+      ]
+    },
+    {
+      "name": "1.4向渊行版本蓝图",
+      "blueprints": [
+        "v1.4-4-core-xiranite"
       ]
     },
     {
@@ -23,15 +31,15 @@
       ]
     },
     {
-      "name": "赤石科技",
+      "name": "四号谷地产线样例",
       "blueprints": [
-        "resurrection-machine-7.1"
+        "premium-capsule-line"
       ]
     },
     {
-      "name": "1.4向渊行版本蓝图",
+      "name": "新手教程",
       "blueprints": [
-        "v1.4-4-core-xiranite"
+        "getting-started-tutorial"
       ]
     }
   ]

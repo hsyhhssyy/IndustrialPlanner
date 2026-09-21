@@ -19,35 +19,43 @@ describe("system-blueprint public assets", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
 
     expect(snapshot.version).toBe("v1.3.0");
-    expect(rootDirectory.folders).toHaveLength(5);
-    expect(rootDirectory.folders[0]).toMatchObject({
-      name: "新手教程",
-      parentFolderId: null,
-    });
-    expect(rootDirectory.folders[1]).toMatchObject({
-      name: "四号谷地产线样例",
-      parentFolderId: null,
-    });
-    expect(rootDirectory.folders[2]).toMatchObject({
-      name: "武陵产线样例",
-      parentFolderId: null,
-    });
-    expect(rootDirectory.folders[3]).toMatchObject({
-      name: "赤石科技",
-      parentFolderId: null,
-    });
-    expect(rootDirectory.folders[4]).toMatchObject({
-      name: "1.4向渊行版本蓝图",
-      parentFolderId: null,
-    });
+    expect(rootDirectory.folders.map(({ name }) => name)).toEqual([
+      "赤石科技",
+      "1.5雪凇幽梦版本蓝图",
+      "1.4向渊行版本蓝图",
+      "武陵产线样例",
+      "四号谷地产线样例",
+      "新手教程",
+    ]);
+    expect(rootDirectory.folders.every(({ parentFolderId }) => parentFolderId === null)).toBe(true);
 
-    const valley4FolderDirectory = listSystemBlueprintDirectory(
+    const v15FolderDirectory = listSystemBlueprintDirectory(
       snapshot,
       rootDirectory.folders[1]?.folderId ?? null,
     );
+    expect(v15FolderDirectory.blueprints.map(({ name, sourcePath }) => ({ name, sourcePath }))).toEqual([
+      {
+        name: "基于赤铜块的芽针产线",
+        sourcePath: "v1.5-copper-block-bud-needle-line.json",
+      },
+      {
+        name: "基于赤铜块的分离芯生产线",
+        sourcePath: "v1.5-copper-block-separation-core-line.json",
+      },
+      {
+        name: "6息壤可自启动满速固气转化",
+        sourcePath: "v1.5-six-xiranite-full-speed-gas-solid-conversion.json",
+      },
+    ]);
+    expect(v15FolderDirectory.blueprints.map(({ schemaVersion }) => schemaVersion)).toEqual([6, 6, 6]);
+
+    const valley4FolderDirectory = listSystemBlueprintDirectory(
+      snapshot,
+      rootDirectory.folders[4]?.folderId ?? null,
+    );
     const wulingFolderDirectory = listSystemBlueprintDirectory(
       snapshot,
-      rootDirectory.folders[2]?.folderId ?? null,
+      rootDirectory.folders[3]?.folderId ?? null,
     );
 
     expect(valley4FolderDirectory.blueprints).toHaveLength(1);
@@ -108,7 +116,7 @@ describe("system-blueprint public assets", () => {
 
     const chishiFolderDirectory = listSystemBlueprintDirectory(
       snapshot,
-      rootDirectory.folders[3]?.folderId ?? null,
+      rootDirectory.folders[0]?.folderId ?? null,
     );
     expect(chishiFolderDirectory.blueprints).toHaveLength(1);
     expect(chishiFolderDirectory.blueprints[0]).toMatchObject({
