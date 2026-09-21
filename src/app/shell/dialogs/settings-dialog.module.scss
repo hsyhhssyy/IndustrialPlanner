@@ -1312,7 +1312,8 @@
   width: min(420px, 100%);
   height: auto;
   min-height: 0;
-  max-height: min(220px, 60vh);
+  // AI-CORRECTION 2026-09-21: 确认框现在也承载设备动画资源警告；允许长文案完整显示，短确认框仍按内容自适应。
+  max-height: min(360px, 85vh);
 }
 
 .confirm-reset-dialog-body {

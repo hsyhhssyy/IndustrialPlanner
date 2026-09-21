@@ -298,6 +298,16 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const deviceAnimationsWarningDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 460,
+    height: null,
+    activeTab: null,
+  }), []);
+
   const clearStorageConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
     maximized: false,
@@ -731,6 +741,25 @@ export const SettingsDialog = observer(function SettingsDialog({
       experimentalFeaturesDialogState.visible = false;
     });
   }, [controller, experimentalFeaturesDialogState]);
+
+  const handleRequestToggleDeviceAnimations = useCallback(() => {
+    runInAction(() => {
+      deviceAnimationsWarningDialogState.visible = true;
+    });
+  }, [deviceAnimationsWarningDialogState]);
+
+  const handleDeviceAnimationsWarningCancel = useCallback(() => {
+    runInAction(() => {
+      deviceAnimationsWarningDialogState.visible = false;
+    });
+  }, [deviceAnimationsWarningDialogState]);
+
+  const handleDeviceAnimationsWarningConfirm = useCallback(() => {
+    controller.updateSwitchValue("game-play-device-animations", true);
+    runInAction(() => {
+      deviceAnimationsWarningDialogState.visible = false;
+    });
+  }, [controller, deviceAnimationsWarningDialogState]);
 
   // AI-REMOVED 2026-06-24:
   // Reason: conflictPendingRef 被声明但从未被使用，属于死代码
@@ -1185,6 +1214,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                             t,
                             isEditable,
                             onSelectValue: handleSelectSettingValue,
+                            onRequestToggleDeviceAnimations: handleRequestToggleDeviceAnimations,
                             onRequestToggleExperimentalFeatures: handleRequestToggleExperimentalFeatures,
                           })}
                         </div>
@@ -1444,6 +1474,17 @@ export const SettingsDialog = observer(function SettingsDialog({
         promptKey="cloudflareStatus.deleteAllDataFinalPrompt"
         t={t}
         titleKey="cloudflareStatus.deleteAllData"
+      />
+    )}
+    {deviceAnimationsWarningDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={deviceAnimationsWarningDialogState}
+        confirmLabelKey="settingsField.game-play-device-animations-warning-confirm"
+        confirmMessageKey="settingsField.game-play-device-animations-warning-message"
+        onCancel={handleDeviceAnimationsWarningCancel}
+        onConfirm={handleDeviceAnimationsWarningConfirm}
+        t={t}
+        titleKey="settingsField.game-play-device-animations-warning-title"
       />
     )}
     {activityDialogState.visible && (
@@ -1966,6 +2007,7 @@ function renderSettingControl(options: {
   t: AppHost["actions"]["translate"];
   isEditable: boolean;
   onSelectValue?: (settingId: string, value: string) => void;
+  onRequestToggleDeviceAnimations?: () => void;
   onRequestToggleExperimentalFeatures?: () => void;
 }) {
   const {
@@ -1974,6 +2016,7 @@ function renderSettingControl(options: {
     t,
     isEditable,
     onSelectValue,
+    onRequestToggleDeviceAnimations,
     onRequestToggleExperimentalFeatures,
   } = options;
   const value = controller.getValue(setting.id);
@@ -2120,6 +2163,10 @@ function renderSettingControl(options: {
         onChange={(event) => {
           if (setting.id === "other-experimental-features" && event.target.checked && onRequestToggleExperimentalFeatures) {
             onRequestToggleExperimentalFeatures();
+            return;
+          }
+          if (setting.id === "game-play-device-animations" && event.target.checked && onRequestToggleDeviceAnimations) {
+            onRequestToggleDeviceAnimations();
             return;
           }
           controller.updateSwitchValue(setting.id, event.target.checked);
