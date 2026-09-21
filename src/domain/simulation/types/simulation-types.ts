@@ -51,6 +51,7 @@ export interface SimulationPerformanceDiagnosticsReadModel {
 export interface SimulationState {
   readonly runningState: SimulationRunState;
   /** 当前编辑与下一次编译使用的仿真模式；仿真停止时同样可观察。 */
+  /** AI-CORRECTION 2026-09-20: 该字段只表示当前或最近一次启动时固化的会话模式；停止态的下一次会话选择必须读取 AppSettings。 */
   readonly simulationMode: SimulationMode;
   /**
    * 仅作为 advancePlaybackByDeltaMs 的时间推进倍率使用。

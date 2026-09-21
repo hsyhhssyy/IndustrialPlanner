@@ -3,6 +3,7 @@
   "frameWidth": 768,
   "frameHeight": 512,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 7,
   "pageColumns": 5,
   "sources": {
@@ -15,8 +16,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "41935822c6377dfe7f15a65cef48e3dba2ebfec825897e561af44b37f92e632d"
+      "sha256": "f84978f5058d883a994d410114d5e47984e8cbea64a6fc56b3477a05ac6e3584"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -65,8 +68,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "33f0dac5f88b03c27bf90f713c8fd05e783ca42beae2810a170f00b131d6696c"
+      "sha256": "d1ca9a7de548ae47b8911a1201e9c1dd74b857d8adbc58d09e2ef6d643084512"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -115,8 +120,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "6d39080c7d03900a62788412a4521222598f5598d9c83c840101b4b0ed5a4601"
+      "sha256": "a582499cd383791e787033eb42359ccbeca88a88c81c6336ea6ff98552fe9b2b"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -165,8 +172,10 @@
         67,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "11f181807b6944c77138e6255f77c37f6b59f1c26477ec6d5c493a2616c31e08"
+      "sha256": "eb6c35a444a3f0e0bcb46df8addebc2c96a807080b417c993de56ed9f33a039d"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -215,8 +224,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "45b93e8614c89fcd01cd2ccd5e87449ccdb09fc003d342554343d6f6a4e8c08d"
+      "sha256": "b5b9bdaebc06fe78992fb775ada7ed36d0a9dae46a945ccaf51c4ac0feba5d00"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -265,8 +276,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "3a0b721d6b78d73a710423e4fbe7d336f7c7c85b1b67fea447577bc2b662b235"
+      "sha256": "0ef88727a14afb70c1cb4bcc34157e347ea1bb0bd70354d8d6f52b13b5abc92b"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -315,8 +328,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "7c58889704329ede7a718f87dc9c2069fefde4fce32f4c448de13f1cd7457375"
+      "sha256": "1174ee4715d84b6c66476bc6824833cff31df9f0fff3177ff8e543177bb4ddb5"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -365,8 +380,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "e7373fa5c6db6c9e671eb8dad972b6533a37b0e0dda08706041a92e945a6ef34"
+      "sha256": "7c197c7f9eca1713a47726cd0c08751adb20adb5e50c22c5adc4352cff8f3698"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -388,8 +405,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/dismantler_1/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "588409289ed90d5450c6663623e1b336e006d7be4c54adba5c06508d8978be6e"
+      "sha256": "f29eb8b5aad5df11a4f2dc60afc23a6bd4ef41c7561a3066373d71d025d59007"
     }
   },
   "clips": {
@@ -459,8 +478,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

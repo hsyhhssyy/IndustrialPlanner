@@ -39,7 +39,7 @@ import { tsImport } from 'tsx/esm/api';
 
 
 import { publishPaginatedDeviceSpriteAnimations } from './device-sprite-animation-publisher.mjs';
-import { publishedImageSize } from './building-asset-image.mjs';
+import { publishedImageSize, resolveAssetScale } from './building-asset-image.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
@@ -85,7 +85,7 @@ export async function publishDeviceSprite(
   maskOutputFilePath,
   maskOverrideFilePath,
   rotation = 0,
-  { frameTransform = null, crop = null, resolution = 1 } = {},
+  { frameTransform = null, crop = null, resolution = 1, sourceResolution = 1 } = {},
 ) {
   if (frameTransform !== null && frameTransform !== 'flip-top-bottom') {
     throw new Error('frameTransform must be null or flip-top-bottom');
@@ -108,7 +108,9 @@ export async function publishDeviceSprite(
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const published = publishedImageSize(info.width, info.height, resolution);
+  // AI-CORRECTION 2026-09-20: resolution 是绝对目标密度；64px 网站原件使用 target/source，不能再次乘 0.5。
+  const scale = resolveAssetScale(sourceResolution, resolution);
+  const published = publishedImageSize(info.width, info.height, scale);
 
   // 输出旋转后的 WebP sprite
   // AI-CORRECTION 2026-09-11: 裁剪、反射与上方生成遮罩的顺序一致。
@@ -125,14 +127,16 @@ export async function publishDeviceSprite(
   //   webpPipeline.rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
   // }
   const webpPipeline = sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } });
-  if (resolution !== 1) webpPipeline.resize(published.width, published.height, { kernel: 'lanczos3' });
+  if (scale !== 1) webpPipeline.resize(published.width, published.height, { kernel: 'lanczos3' });
   await webpPipeline
     .webp({ lossless: true, effort: 6 })
     .toFile(spriteOutputFilePath);
 
   if (await fileExists(maskOverrideFilePath)) {
     const override = await sharp(maskOverrideFilePath).metadata();
-    if (override.width !== info.width || override.height !== info.height) throw new Error('Mask override dimensions differ from source frame');
+    if (!override.width || !override.height || override.width * published.height !== override.height * published.width) {
+      throw new Error('Mask override aspect ratio differs from published frame');
+    }
     await sharp(maskOverrideFilePath).resize(published.width, published.height, { kernel: 'lanczos3' })
       .webp({ lossless: true, effort: 6 }).toFile(maskOutputFilePath);
   } else {

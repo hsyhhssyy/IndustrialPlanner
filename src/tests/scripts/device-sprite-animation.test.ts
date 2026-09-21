@@ -116,6 +116,40 @@ describe("device animation generation", () => {
     });
   });
 
+  it("64px 网站动画保持 128px 逻辑帧并按原物理像素直接发布", async () => {
+    await withFixture(async (options) => {
+      const manifestPath = path.join(options.sourceDirectory, "fixture/manifest.json");
+      const source = JSON.parse(await readFile(manifestPath, "utf8"));
+      source.frameWidth = 4;
+      source.frameHeight = 4;
+      source.sourceResolution = 0.5;
+      for (const definition of Object.values(source.sources) as Record<string, unknown>[]) {
+        definition.physicalFrameWidth = 2;
+        definition.physicalFrameHeight = 2;
+      }
+      await writeFile(manifestPath, JSON.stringify(source), "utf8");
+
+      await publishDeviceSpriteAnimations({ ...options, resolution: 0.5 });
+
+      const outputRoot = path.join(options.animationDirectory, "fixture");
+      const output = JSON.parse(await readFile(path.join(outputRoot, "manifest.json"), "utf8"));
+      expect(output).toMatchObject({
+        sourceResolution: 0.5,
+        resolution: 0.5,
+        frameWidth: 4,
+        frameHeight: 4,
+      });
+      expect(await sharp(path.join(outputRoot, "open-0.webp")).metadata())
+        .toMatchObject({ width: 4, height: 2 });
+      expect(await sharp(path.join(outputRoot, "mask.webp")).metadata())
+        .toMatchObject({ width: 2, height: 2 });
+      expect(await sharp(path.join(options.spriteDirectory, "fixture.webp")).metadata())
+        .toMatchObject({ width: 2, height: 2 });
+      expect(await sharp(path.join(options.maskDirectory, "fixture.webp")).metadata())
+        .toMatchObject({ width: 2, height: 2 });
+    });
+  });
+
   it("从显式临时网站根读取原件，来源证明不携带本地展开路径", async () => {
     await withFixture(async (options) => {
       const sourceRoot = path.join(options.sourceDirectory, "fixture");

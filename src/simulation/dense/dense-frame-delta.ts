@@ -1,11 +1,20 @@
 import type {
-  CompiledSimulationTopology,
   RuntimeDeviceSnapshot,
   RuntimeDiagnosticSnapshot,
   RuntimeNodeSnapshot,
   RuntimeTickSnapshot,
   WarehouseItemStats,
 } from "../contracts";
+// AI-REMOVED 2026-09-20:
+// Reason: ProjectionStore 不再直接接收公开 topology，而是接收已经校验并包含 ID 映射的 DensePresentationIdentity。
+// Trigger: ST2-RQ-036 需要规范执行 topology 与公开展示 topology 解耦。
+// Evidence: constructor 的第三参数和全部公开 ID 投影均由 DensePresentationIdentity 提供。
+// Replacement: DensePresentationIdentity
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import type { CompiledSimulationTopology } from "../contracts";
 import type { SimulationPresentationProjection } from "../projection";
 import {
   DENSE_INDEX_NONE,
@@ -14,6 +23,15 @@ import {
   type DenseTopologyDictionary,
   type DenseTopologyLookup,
 } from "./dense-topology";
+import {
+  projectDenseDeviceSnapshot,
+  projectDenseGasDiffusionSnapshot,
+  projectDenseNodeSnapshot,
+  projectDenseRoutingKey,
+  projectDenseSlotSnapshot,
+  projectDenseTransferSnapshot,
+  type DensePresentationIdentity,
+} from "./dense-presentation-identity";
 
 const SLOT_FLAG_IGNORE_STOCK = 1;
 export const FRAME_STATUS_INITIAL = 0;
@@ -319,6 +337,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private readonly nodes: Array<RuntimeNodeSnapshot | null>;
   private readonly routingCursors: Record<string, number> = {};
   private readonly transportComponentDomain: Record<string, string | null> = {};
+  private readonly presentationIdentity: DensePresentationIdentity | null;
   private readonly presentationDeviceIds: ReadonlySet<string> | null;
   private readonly presentationSlotIds: ReadonlySet<string> | null;
   private readonly presentationNodeIds: ReadonlySet<string> | null;
@@ -349,7 +368,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       readonly sessionId: string;
       readonly topologyVersion: number;
     },
-    presentationTopology?: CompiledSimulationTopology,
+    presentationIdentity?: DensePresentationIdentity,
     operatingStatusDeviceIds: readonly string[] = [],
   ) {
     assertSessionIdentity(session);
@@ -357,25 +376,26 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     this.slots = Array.from({ length: dictionary.slotIds.length }, () => null);
     this.devices = Array.from({ length: dictionary.deviceIds.length }, () => null);
     this.nodes = Array.from({ length: dictionary.nodeIds.length }, () => null);
-    this.presentationDeviceIds = presentationTopology === undefined
+    this.presentationIdentity = presentationIdentity ?? null;
+    this.presentationDeviceIds = presentationIdentity === undefined
       ? null
-      : new Set(presentationTopology.ordering.deviceOrder);
-    this.presentationSlotIds = presentationTopology === undefined
+      : new Set(presentationIdentity.topology.ordering.deviceOrder);
+    this.presentationSlotIds = presentationIdentity === undefined
       ? null
-      : new Set(presentationTopology.ordering.slotOrder);
-    this.presentationNodeIds = presentationTopology === undefined
+      : new Set(presentationIdentity.topology.ordering.slotOrder);
+    this.presentationNodeIds = presentationIdentity === undefined
       ? null
-      : new Set(presentationTopology.ordering.nodeOrder);
-    this.presentationEdgeIds = presentationTopology === undefined
+      : new Set(presentationIdentity.topology.ordering.nodeOrder);
+    this.presentationEdgeIds = presentationIdentity === undefined
       ? null
-      : new Set(presentationTopology.ordering.edgeOrder);
-    this.presentationComponentIds = presentationTopology === undefined
+      : new Set(presentationIdentity.topology.ordering.edgeOrder);
+    this.presentationComponentIds = presentationIdentity === undefined
       ? null
-      : new Set(Object.keys(presentationTopology.transportComponents));
-    this.emittedDeviceCount = presentationTopology === undefined
+      : new Set(Object.keys(presentationIdentity.topology.transportComponents));
+    this.emittedDeviceCount = presentationIdentity === undefined
       ? dictionary.deviceIds.length
       : new Set([
-          ...presentationTopology.ordering.deviceOrder,
+          ...presentationIdentity.executionDeviceIds,
           ...operatingStatusDeviceIds,
         ]).size;
     for (const componentId of dictionary.componentIds) {
@@ -473,9 +493,27 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     this.currentIsPowerOutage = delta.isPowerOutage;
     this.baseBatteryJoulesValue = delta.baseBatteryJoules;
     this.baseBatteryCapacityValue = delta.baseBatteryCapacity;
-    this.transfers = decodeTransfers(delta, this.dictionary);
+    const decodedTransfers = decodeTransfers(delta, this.dictionary);
+    this.transfers = this.presentationIdentity === null
+      ? decodedTransfers
+      : decodedTransfers.flatMap((transfer) => {
+          const projected = projectDenseTransferSnapshot(
+            this.presentationIdentity!,
+            transfer,
+          );
+          return projected === null ? [] : [projected];
+        });
     this.diagnostics = delta.diagnostics.map((diagnostic) => ({ ...diagnostic }));
-    this.gasDiffusions = decodeGasDiffusions(delta, this.dictionary);
+    const decodedGasDiffusions = decodeGasDiffusions(delta, this.dictionary);
+    this.gasDiffusions = this.presentationIdentity === null
+      ? decodedGasDiffusions
+      : decodedGasDiffusions.flatMap((diffusion) => {
+          const projected = projectDenseGasDiffusionSnapshot(
+            this.presentationIdentity!,
+            diffusion,
+          );
+          return projected === null ? [] : [projected];
+        });
     this.initialized = true;
   }
 
@@ -483,7 +521,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     if (this.presentationSlotIds !== null && !this.presentationSlotIds.has(slotId)) {
       return null;
     }
-    const index = this.lookup.slotIndexById.get(slotId);
+    const executionSlotId = this.presentationIdentity
+      ?.executionSlotIdByPresentationId.get(slotId) ?? slotId;
+    const index = this.lookup.slotIndexById.get(executionSlotId);
     return index === undefined ? null : this.slots[index] ?? null;
   }
 
@@ -491,7 +531,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     if (this.presentationDeviceIds !== null && !this.presentationDeviceIds.has(deviceId)) {
       return null;
     }
-    const index = this.lookup.deviceIndexById.get(deviceId);
+    const executionDeviceId = this.presentationIdentity
+      ?.executionDeviceIdByPresentationId.get(deviceId) ?? deviceId;
+    const index = this.lookup.deviceIndexById.get(executionDeviceId);
     return index === undefined ? null : this.devices[index] ?? null;
   }
 
@@ -504,7 +546,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     if (this.presentationNodeIds !== null && !this.presentationNodeIds.has(nodeId)) {
       return null;
     }
-    const index = this.lookup.nodeIndexById.get(nodeId);
+    const executionNodeId = this.presentationIdentity
+      ?.executionNodeIdByPresentationId.get(nodeId) ?? nodeId;
+    const index = this.lookup.nodeIndexById.get(executionNodeId);
     return index === undefined ? null : this.nodes[index] ?? null;
   }
 
@@ -515,7 +559,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     ) {
       return null;
     }
-    return this.transportComponentDomain[componentId] ?? null;
+    const executionComponentId = this.presentationIdentity
+      ?.executionComponentIdByPresentationId.get(componentId) ?? componentId;
+    return this.transportComponentDomain[executionComponentId] ?? null;
   }
 
   public getTransfers(): RuntimeTickSnapshot["transfers"] {
@@ -551,8 +597,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     }
 
     return {
-      topologyId: this.dictionary.topologyId,
-      documentHash: this.dictionary.documentHash,
+      topologyId: this.presentationIdentity?.topology.topologyId ?? this.dictionary.topologyId,
+      documentHash: this.presentationIdentity?.topology.documentHash ?? this.dictionary.documentHash,
       tickNumber: this.currentTickNumber,
       standardTickRate: this.currentStandardTickRate,
       tickRate: this.currentTickRate,
@@ -563,33 +609,61 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       isPowerOutage: this.currentIsPowerOutage,
       baseBatteryJoules: this.baseBatteryJoulesValue,
       baseBatteryCapacity: this.baseBatteryCapacityValue,
-      slots: materializeIndexedRecord(
-        this.dictionary.slotIds,
-        this.slots,
-        "slot",
-        this.presentationSlotIds,
-      ),
-      devices: materializeIndexedRecord(
-        this.dictionary.deviceIds,
-        this.devices,
-        "device",
-        this.presentationDeviceIds,
-      ),
-      nodes: materializeIndexedRecord(
-        this.dictionary.nodeIds,
-        this.nodes,
-        "node",
-        this.presentationNodeIds,
-      ),
+      slots: this.presentationIdentity === null
+        ? materializeIndexedRecord(
+            this.dictionary.slotIds,
+            this.slots,
+            "slot",
+            this.presentationSlotIds,
+          )
+        : materializeProjectedIndexedRecord({
+            presentationIds: this.presentationIdentity.topology.ordering.slotOrder,
+            executionIdByPresentationId:
+              this.presentationIdentity.executionSlotIdByPresentationId,
+            executionIds: this.dictionary.slotIds,
+            values: this.slots,
+            kind: "slot",
+          }),
+      devices: this.presentationIdentity === null
+        ? materializeIndexedRecord(
+            this.dictionary.deviceIds,
+            this.devices,
+            "device",
+            this.presentationDeviceIds,
+          )
+        : materializeProjectedIndexedRecord({
+            presentationIds: this.presentationIdentity.topology.ordering.deviceOrder,
+            executionIdByPresentationId:
+              this.presentationIdentity.executionDeviceIdByPresentationId,
+            executionIds: this.dictionary.deviceIds,
+            values: this.devices,
+            kind: "device",
+          }),
+      nodes: this.presentationIdentity === null
+        ? materializeIndexedRecord(
+            this.dictionary.nodeIds,
+            this.nodes,
+            "node",
+            this.presentationNodeIds,
+          )
+        : materializeProjectedIndexedRecord({
+            presentationIds: this.presentationIdentity.topology.ordering.nodeOrder,
+            executionIdByPresentationId:
+              this.presentationIdentity.executionNodeIdByPresentationId,
+            executionIds: this.dictionary.nodeIds,
+            values: this.nodes,
+            kind: "node",
+          }),
       transfers: this.getTransfers().map((transfer) => ({ ...transfer })),
-      routingCursors: filterRecordByDevicePrefix(
-        this.routingCursors,
-        this.presentationDeviceIds,
-      ),
-      transportComponentDomain: filterRecordByKey(
-        this.transportComponentDomain,
-        this.presentationComponentIds,
-      ),
+      routingCursors: this.presentationIdentity === null
+        ? filterRecordByDevicePrefix(this.routingCursors, this.presentationDeviceIds)
+        : projectRoutingCursorRecord(this.routingCursors, this.presentationIdentity),
+      transportComponentDomain: this.presentationIdentity === null
+        ? filterRecordByKey(this.transportComponentDomain, this.presentationComponentIds)
+        : projectTransportComponentRecord(
+            this.transportComponentDomain,
+            this.presentationIdentity,
+          ),
       diagnostics: this.diagnostics.map((diagnostic) => ({ ...diagnostic })),
       gasDiffusions: this.getGasDiffusions().map((diffusion) => ({
         ...diffusion,
@@ -828,6 +902,13 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
         reserved: delta.changedSlotNumbers[offset * 2 + 1]!,
         ignoreStock: (delta.changedSlotFlags[offset]! & SLOT_FLAG_IGNORE_STOCK) !== 0,
       };
+      if (this.presentationIdentity !== null) {
+        this.slots[slotIndex] = projectDenseSlotSnapshot(
+          this.presentationIdentity,
+          slotId,
+          this.slots[slotIndex]!,
+        ) ?? this.slots[slotIndex];
+      }
     }
   }
 
@@ -841,7 +922,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           `Dense device delta id mismatch at ${deviceIndex}: expected "${expectedId}", received "${value.deviceId}".`,
         );
       }
-      this.devices[deviceIndex] = value;
+      this.devices[deviceIndex] = this.presentationIdentity === null
+        ? value
+        : projectDenseDeviceSnapshot(this.presentationIdentity, expectedId, value) ?? value;
     }
   }
 
@@ -855,7 +938,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           `Dense node delta id mismatch at ${nodeIndex}: expected "${expectedId}", received "${value.nodeId}".`,
         );
       }
-      this.nodes[nodeIndex] = value;
+      this.nodes[nodeIndex] = this.presentationIdentity === null
+        ? value
+        : projectDenseNodeSnapshot(this.presentationIdentity, expectedId, value) ?? value;
     }
   }
 
@@ -1089,6 +1174,56 @@ function materializeIndexedRecord<T>(
     result[id] = value;
   }
   return result;
+}
+
+function materializeProjectedIndexedRecord<T>(options: {
+  readonly presentationIds: readonly string[];
+  readonly executionIdByPresentationId: ReadonlyMap<string, string>;
+  readonly executionIds: readonly string[];
+  readonly values: readonly (T | null)[];
+  readonly kind: string;
+}): Record<string, T> {
+  const executionIndexById = new Map(
+    options.executionIds.map((id, index) => [id, index] as const),
+  );
+  const result: Record<string, T> = {};
+  for (const presentationId of options.presentationIds) {
+    const executionId = options.executionIdByPresentationId.get(presentationId);
+    const executionIndex = executionId === undefined
+      ? undefined
+      : executionIndexById.get(executionId);
+    const value = executionIndex === undefined ? undefined : options.values[executionIndex];
+    if (value === null || value === undefined) {
+      throw new Error(
+        `Dense projection has no ${options.kind} value for "${presentationId}".`,
+      );
+    }
+    result[presentationId] = value;
+  }
+  return result;
+}
+
+function projectRoutingCursorRecord<T>(
+  values: Readonly<Record<string, T>>,
+  identity: DensePresentationIdentity,
+): Record<string, T> {
+  const result: Record<string, T> = {};
+  for (const [executionKey, value] of Object.entries(values)) {
+    const presentationKey = projectDenseRoutingKey(identity, executionKey);
+    if (presentationKey !== null) result[presentationKey] = value;
+  }
+  return result;
+}
+
+function projectTransportComponentRecord<T>(
+  values: Readonly<Record<string, T>>,
+  identity: DensePresentationIdentity,
+): Record<string, T> {
+  return Object.fromEntries(
+    [...identity.executionComponentIdByPresentationId].map(
+      ([presentationId, executionId]) => [presentationId, values[executionId]] as const,
+    ).filter((entry): entry is readonly [string, T] => entry[1] !== undefined),
+  );
 }
 
 function filterRecordByKey<T>(

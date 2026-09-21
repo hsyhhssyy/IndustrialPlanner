@@ -3,6 +3,7 @@
   "frameWidth": 768,
   "frameHeight": 512,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 7,
   "pageColumns": 5,
   "sources": {
@@ -53,8 +54,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "37464855f12239ee77ceefdaf7b5e1c941ee47e83e3a9a04ea505afa15491238"
+      "sha256": "0af9d454bfa8aa15bcc71ce5624f531cdfbd4ba43fbe9d1e16df791adfa1a691"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -103,8 +106,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "7e00d2fadcb05be70c8e5025aa34266804aa682777cd976c4a2a37eb0df082ad"
+      "sha256": "dca04cdc1e544086ca5f3eb7fc52e6ba265ceb885f3fc130761242e3585c9a34"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -114,8 +119,10 @@
       "frameDurationsMs": [
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close/spritesheet_002.webp",
-      "sha256": "efc4d6fb9a5eefd99b2759b8a5ce77f71ed7fd5f1cb665a52b4b083e4e8d95bc"
+      "sha256": "dbefd1cb85dd1911c078b307259a4e361d681caec8926690c04316ea96461a74"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -126,8 +133,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "63f75182f72832d30ef909ade108f231dc28f76be56693e681a7d08a66bea49e"
+      "sha256": "fce89b816ef3164fb2d1a07a660f0b955c6417fb92cafe6d87f0e551eae137f7"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -176,8 +185,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "3e642130a5e6cc300096e9d816e338433009de7410c83b84ef70403384dc6b29"
+      "sha256": "7b04f8250e0b9b211b012fc4c96f104818b048fe82a71e87af2c84f8e309175a"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -226,8 +237,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "ee9efc872e749e88c99a16f899596cb9b30c89c367f5605f60e3563c290bf8e7"
+      "sha256": "aa85bc9212abf615f3a6e865c8ed6d55efa88c8839969769921be4710c67680b"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -237,8 +250,10 @@
       "frameDurationsMs": [
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open/spritesheet_002.webp",
-      "sha256": "16a6cd1ccaa291cae12f8d9914e1cffd689365908265163114c3ded1c139dace"
+      "sha256": "d0702a19d671491ee0dc08e845d71d060cda51a1325ba132beb26a8efcb56404"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -287,8 +302,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "a29383f7767b80a5438985a46e367f7b14505949158657aa7b5e090928d20984"
+      "sha256": "aa38033a8dd08cc334edbf632db3412f4519e4c7ee9c42641900489a01b5cfb3"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -337,8 +354,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "cba9f226ec72144eeaa4e66bb100e4b17276d7ad5481b0546d7ffe95a2ba56fd"
+      "sha256": "42dc64182b344234fd7b221194d801205b52f6b0eeffe4282494c54a67dc6842"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -348,8 +367,10 @@
       "frameDurationsMs": [
         33
       ],
+      "physicalFrameWidth": 384,
+      "physicalFrameHeight": 256,
       "sourcePath": "buildings/tools_assebling_mc_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "16a6cd1ccaa291cae12f8d9914e1cffd689365908265163114c3ded1c139dace"
+      "sha256": "d0702a19d671491ee0dc08e845d71d060cda51a1325ba132beb26a8efcb56404"
     }
   },
   "clips": {
@@ -428,8 +449,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

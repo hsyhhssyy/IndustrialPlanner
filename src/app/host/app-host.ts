@@ -30,6 +30,7 @@ import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blue
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
+import { regionalSimulationUiState } from "../state/regional-simulation-ui-state";
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 生命周期和状态已由独立顶层 sync 模块拥有。
 // Trigger: 用户要求 app 不再实例化或驱动同步客户端。
@@ -76,13 +77,41 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const regionalSettings = new RegionalSettingsController(workspace.registry);
   const host = {
     workspace,
     internalState,
   } as AppHost;
+  const publicSettings = new Proxy(internalState.settings, {
+    get(target, property, receiver) {
+      if (property === "regionalMultiBaseEnabled") {
+        return regionalSimulationUiState.experimentalEnabled
+          && regionalSettings.multiBaseEnabled;
+      }
+      return Reflect.get(target, property, receiver);
+    },
+    has(target, property) {
+      return property === "regionalMultiBaseEnabled" || Reflect.has(target, property);
+    },
+    ownKeys(target) {
+      return [...Reflect.ownKeys(target), "regionalMultiBaseEnabled"];
+    },
+    getOwnPropertyDescriptor(target, property) {
+      if (property === "regionalMultiBaseEnabled") {
+        return {
+          configurable: true,
+          enumerable: true,
+          value: regionalSimulationUiState.experimentalEnabled
+            && regionalSettings.multiBaseEnabled,
+          writable: false,
+        };
+      }
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  }) as unknown as AppContract["state"]["settings"];
   const publicState: AppContract["state"] = {
     get settings() {
-      return internalState.settings;
+      return publicSettings;
     },
     get workbench() {
       return internalState.workbench;
@@ -112,7 +141,16 @@ export function createAppHost(
     internalState.workbench.dialogState["save-blueprint"],
   );
   const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
-  const regionalSettings = new RegionalSettingsController(workspace.registry);
+  // AI-REMOVED 2026-09-20:
+  // Reason: RegionalSettingsController 必须在 AppSettings 公共投影创建前存在，才能无副本公开多基地选择。
+  // Trigger: ST2-RQ-035 要求 AppSettings 成为静态设置 Contract，Simulation 启动时直接读取该 Contract。
+  // Evidence: publicSettings 的 regionalMultiBaseEnabled getter 组合实验门控与同步资产选择。
+  // Replacement: createAppHost 顶部、internalState 创建后的 regionalSettings 实例。
+  // Risk: Low；实例仍由同一个 AppHost 持有并沿用原 hydrate / sync 生命周期。
+  // Human Review: Required
+  //
+  // Original code:
+  // const regionalSettings = new RegionalSettingsController(workspace.registry);
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );

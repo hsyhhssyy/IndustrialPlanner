@@ -3,6 +3,7 @@
   "frameWidth": 640,
   "frameHeight": 640,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 6,
   "pageColumns": 5,
   "sources": {
@@ -49,8 +50,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "ab6019f6bb81d405ab4ef64c96c488bc3fb553d8ed885cc27cd94186c3c432db"
+      "sha256": "610ba7050de1c54d19b77fe1a8df846874f5eea52a9d77d22707934c219d1cad"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -95,8 +98,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "17a544456b44f923ec82b3d0e768455eedd47a9b10309f4aec127c4714301fa8"
+      "sha256": "80629cd992ceb61ebd45e9250e96330779191c9093a5d14aaf46357782397339"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -141,8 +146,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_002.webp",
-      "sha256": "53cfd9ab2f79bd3b861d29a3c1828912efd9fe9060be4893c5dd129359993c94"
+      "sha256": "fdec2fa7d1188c155259dddef3776197258c7db50960fa42607bf0f27da48c3f"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -187,8 +194,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_003.webp",
-      "sha256": "ae4c8344c6199606b5524dfc7d3478377184dce9ba57b87250ecea8d9d1beb4a"
+      "sha256": "f8aec986d0aa91410f3601ce2e9bbb6c0f3ab0d566e1a80ed8a6799786f7ad2b"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -233,8 +242,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_004.webp",
-      "sha256": "abe338c0e30efe6aef1b9003c8fe344d02770770068280c0ffd72cba4489010b"
+      "sha256": "49815a4a82ee4d8c7f0c57082c270f7919538fe392312b9491e5f720d6cbf47d"
     },
     "close_005": {
       "file": "close_005.webp",
@@ -250,8 +261,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close/spritesheet_005.webp",
-      "sha256": "bbe50888fba19331d087cac8f9ae97b9b9cc5e467611ea04467d757e0caa05ef"
+      "sha256": "682773d695cb68b454aa2cda54ea98e5136d57a20101524442dd51d4b4b86388"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -262,8 +275,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "e67059769d7dd6cf15a973c829c5072c401ddc487ebd8acbcc253bcd7c3e2c7b"
+      "sha256": "dd470654bd173985fdee0c3ffcde9bd26cf6a76c74bb2bc74cdcd7414109816b"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -308,8 +323,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "f27240a565d0f39887febd234081b55f68f580bcd171144ce8e512a1c97b7313"
+      "sha256": "4eddde7141499b0b4849588208620eb695179ac821ed3eacbf41e8b50411db24"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -352,8 +369,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "e9755282b209ab26cee7844098a15c2c81dc4f5faf597173e6a5d50f07970676"
+      "sha256": "3a52d8a61165759107b914c37249393f90c7ae17c0cd0d204ac1c2706efba6ce"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -398,8 +417,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "9db028a3481cf5c0fa032d3d08f19bdfdbc04ca7a68c987e5d6205d3703299b0"
+      "sha256": "a6a0fc6e6e2fb5b90c3b0458d534289ef399f6c3981cb2a795c36a9ec17a55a1"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -444,8 +465,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "6ebb8419dbe34766a91da3c981e73a8e237e30274c44fb361eccfebcc9836eb2"
+      "sha256": "5be0060ee8d5f2c7d87897c14ee75ed4e5d2b70a71c5d46ade05906583d57297"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -490,8 +513,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "e85d394ccfa9a27733b864d3416bcd7e8b76adb7f3f6a58d9f445c9abc6ad179"
+      "sha256": "0aa42a7289c2d704fc1574d4193a1dd035d63815c9c65ea24ce436f5ad5112ea"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -536,8 +561,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "9f6dabdd089cec3916b28b2c6eb3e74d1a9a9ade4a1b2cc80a0dbf25e456a380"
+      "sha256": "03de47d710006b359479562c01d64a1ed3bea9fd2f0925f20a0be3b59b92e208"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -582,8 +609,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "fed928223b23ee3a23b5ece4ab67495ea2e08a63b626451bf332c0a52309f750"
+      "sha256": "dfb37ba8ebd100278e56bfcfe647af77b0128026d3a80c2f024daefd0bcd392c"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -599,8 +628,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/liquid_purifier_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "f3cb91dd5b5f6c916ba50c44fafeb96e30bd0b92634636f67fc8a37595752d64"
+      "sha256": "1c703c30f13e8e30b8ab2f4a012bc84f549ea2af1568c218aaea08421290d20b"
     }
   },
   "clips": {
@@ -704,8 +735,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

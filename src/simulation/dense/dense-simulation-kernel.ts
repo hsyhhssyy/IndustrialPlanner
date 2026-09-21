@@ -2990,6 +2990,59 @@ function mapDenseItemIndex(
   return nextLookup.itemIndexById.get(itemId) ?? DENSE_INDEX_NONE;
 }
 
+// AI-REMOVED 2026-09-20:
+// Reason: kernel migration 不再为当前基地切换重写设备作用域 ID；规范执行 ID 在会话内恒定。
+// Trigger: ST2-RQ-036 要求基地切换保留同一 kernel 与 checkpoint 缓冲。
+// Evidence: Host 的纯展示切换改用 DenseWorkerRuntime.switchPresentation。
+// Replacement: src/simulation/dense/dense-presentation-identity.ts
+// Risk: Low；真实 topology migration 继续按相同设备 ID 保留 Runtime。
+// Human Review: Required
+//
+// Original code:
+// function remapDeviceScopedId(
+//   id: string,
+//   sourceDeviceId: string,
+//   targetDeviceId: string,
+// ): string {
+//   if (id === sourceDeviceId) return targetDeviceId;
+//   const separator = id[sourceDeviceId.length];
+//   return id.startsWith(sourceDeviceId) && (separator === ":" || separator === "/")
+//     ? `${targetDeviceId}${id.slice(sourceDeviceId.length)}`
+//     : id;
+// }
+//
+// function invertDeviceIdMap(
+//   sourceDeviceIdByTargetDeviceId: ReadonlyMap<string, string>,
+// ): ReadonlyMap<string, string> {
+//   return new Map(
+//     [...sourceDeviceIdByTargetDeviceId].map(([targetDeviceId, sourceDeviceId]) => [
+//       sourceDeviceId,
+//       targetDeviceId,
+//     ]),
+//   );
+// }
+//
+// function remapScopedIdByDeviceMap(
+//   id: string,
+//   targetDeviceIdBySourceDeviceId: ReadonlyMap<string, string>,
+// ): string {
+//   const sourceDeviceIds = [...targetDeviceIdBySourceDeviceId.keys()]
+//     .sort((left, right) => right.length - left.length);
+//   for (const sourceDeviceId of sourceDeviceIds) {
+//     const separator = id[sourceDeviceId.length];
+//     if (
+//       id !== sourceDeviceId
+//       && (!id.startsWith(sourceDeviceId) || (separator !== ":" && separator !== "/"))
+//     ) continue;
+//     return remapDeviceScopedId(
+//       id,
+//       sourceDeviceId,
+//       targetDeviceIdBySourceDeviceId.get(sourceDeviceId)!,
+//     );
+//   }
+//   return id;
+// }
+
 function assertDenseKernelTopologySupported(
   topology: CompiledSimulationTopology,
   regionalOptions: DenseRegionalKernelOptions | undefined,

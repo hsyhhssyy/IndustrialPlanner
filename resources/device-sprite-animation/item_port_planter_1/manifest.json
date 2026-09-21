@@ -3,6 +3,7 @@
   "frameWidth": 640,
   "frameHeight": 640,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 6,
   "pageColumns": 5,
   "sources": {
@@ -15,8 +16,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "9e5a730a154d67b550988e8c7718bba99b2e45811c9e7cecdcf7ecf14d8f44f9"
+      "sha256": "912c428ccd4873202f275b4ffdb8172b76751a6442e3fb16754d0db8324427a3"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -27,8 +30,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "9e5a730a154d67b550988e8c7718bba99b2e45811c9e7cecdcf7ecf14d8f44f9"
+      "sha256": "912c428ccd4873202f275b4ffdb8172b76751a6442e3fb16754d0db8324427a3"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -73,8 +78,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "05b0b3aa5d76567be79884194642851ccc1240ccad59480a83212a61a361aeb1"
+      "sha256": "f9dc156aa600bc8cf2d35d57d50bae92b18d5983b8e5e67f06597a5b21dc704c"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -119,8 +126,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "c8f32a2013a2552a772c67a2b31115940f36899f88514c7702dd84e9e245acac"
+      "sha256": "97eef294503ba678ea36496205a25ad2fb0773836c36afc4ebdd4a669e5026ab"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -165,8 +174,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_002.webp",
-      "sha256": "63ab29583b5e1c095b0f6475854198e4536e8e633e37058be2a5d160460faf8b"
+      "sha256": "e12453067e89d31d41df3cdb59fb5cb24562037a25c194d26fd53e1da18c4605"
     },
     "open_003": {
       "file": "open_003.webp",
@@ -211,8 +222,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_003.webp",
-      "sha256": "469b28e3302c8ec9e21e93aa943d3a6b43327478184cadcfcf3f41258498a92f"
+      "sha256": "4ca5c938dcee229d5d85222e6bd2f92e948b0427d51f5b3ba7554e5b3c80f53a"
     },
     "open_004": {
       "file": "open_004.webp",
@@ -257,8 +270,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_004.webp",
-      "sha256": "ee8d682180293396dadbe74f4884a0a55d4da4daea5ddeca9ae68b8c66725e85"
+      "sha256": "6c84689502094239fae4653846adbc1cad9e050c6acfc620871934ffa6426544"
     },
     "open_005": {
       "file": "open_005.webp",
@@ -286,8 +301,10 @@
         34,
         66
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open/spritesheet_005.webp",
-      "sha256": "9499c7b48d9009939e829d7f5ee2ad914aee20e92bdc82b965442572c424c6ed"
+      "sha256": "44f0f34b1763335a145b3828f7283ba53640149962bbe466bf369fbf4cc7df8b"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -332,8 +349,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "579b7eaecb3cf511d025624b9e94abecce5da800da15ebc1413df1400f15844f"
+      "sha256": "19a6685045476e67d9d188da789391cc5805ab113c59aadca1e48b37ee816d52"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -378,8 +397,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "d6a3dbc89a96608a2170df12cf1b3493fefc8ae375efc09c8d9632a05964a18f"
+      "sha256": "d5109aaa0bc5e88776c6e0cf49429a2694f57a8e7233b49b1527f8b0e5be5554"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -424,8 +445,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "2b2b64b244688177308c6846a0d5f90750f4a8353be1dc76a0bdd6bf3fa8d322"
+      "sha256": "71baf20401f5a7dea4c54773cca2baf3f9f5da20587ccfb89869a997d189f55f"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -470,8 +493,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "8cb67198da8e88f79c453752c97335429a40e1251f8280b70e769443896574c2"
+      "sha256": "5fa391325058f3a7f651fb4d3135202d91f878abdd60c4f08ff10fbec115e5af"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -516,8 +541,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "d50bf87f89d0415941678920980e33f2dad107e008ea29b95a70ec4b6aebfb5f"
+      "sha256": "e40aefa66ebe2ba571e1084c8d049164ab69c9b4f9efdaebecd7d3a1aa115f43"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -545,8 +572,10 @@
         34,
         66
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/planter_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "9499c7b48d9009939e829d7f5ee2ad914aee20e92bdc82b965442572c424c6ed"
+      "sha256": "44f0f34b1763335a145b3828f7283ba53640149962bbe466bf369fbf4cc7df8b"
     }
   },
   "clips": {
@@ -645,8 +674,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

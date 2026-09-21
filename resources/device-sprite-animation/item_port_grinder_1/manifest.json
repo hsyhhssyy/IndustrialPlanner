@@ -3,6 +3,7 @@
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 7,
   "pageColumns": 5,
   "sources": {
@@ -105,8 +106,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/grinder_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "37dcc7ceb443e0e27eb532de87b800f37b8db46345645b8e022d20b5e231a2ac"
+      "sha256": "f9db384c71472b3c48390f14f5473e7cc3b81b4f74a7cbb3200dc51a3bebf1c4"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -118,8 +121,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/grinder_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "eca92ae12a3d6b56f98da1d4403fc09a01364888186481d2e3606180509ce40c"
+      "sha256": "460bcae7b0706af82abe3653e75e2c6ec25163ef2c807801b1367132aa574e81"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -209,8 +214,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/grinder_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "9f264512c16a5c58bed86de50f71dfe114417afcdfc2731bf6cb0ea000e04432"
+      "sha256": "2b575aa59a57fe7e22aff997d0af5d403a9ba1bd0f07f80957ff0183c1b1c6db"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -249,8 +256,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/grinder_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "5aaba92687d0c6b168f664b9355410dd07a01b02084e8c11c405e1009e9e5460"
+      "sha256": "e157d18bf0ce4e3e8834e86f3649760cb1fbbfaa29c6b4a382f990b16a552c3a"
     }
   },
   "clips": {
@@ -299,8 +308,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

@@ -201,6 +201,31 @@ function listDeviceSlotIds(
   return device.nodeIds.flatMap((nodeId) => topology.nodes[nodeId]?.slotIds ?? []);
 }
 
+// AI-REMOVED 2026-09-20:
+// Reason: 通用 topology migration 不再接受当前基地切换产生的跨实体／设备 ID 映射。
+// Trigger: ST2-RQ-036 将基地切换定义为展示投影替换，规范执行 ID 不发生变化。
+// Evidence: Dense Host 仅在真实执行文档变化时调用 createSimulationTopologyMigration。
+// Replacement: DensePresentationIdentity + DenseEngineBridge.switchPresentation
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// interface options additions:
+// readonly previousEntityIdByNextEntityId?: Readonly<Record<string, string>>;
+// readonly previousDeviceIdByNextDeviceId?: Readonly<Record<string, string>>;
+//
+// function remapDeviceScopedId(
+//   id: string,
+//   sourceDeviceId: string,
+//   targetDeviceId: string,
+// ): string {
+//   if (id === sourceDeviceId) return targetDeviceId;
+//   const separator = id[sourceDeviceId.length];
+//   return id.startsWith(sourceDeviceId) && (separator === ":" || separator === "/")
+//     ? `${targetDeviceId}${id.slice(sourceDeviceId.length)}`
+//     : id;
+// }
+
 // AI-REMOVED 2026-05-23:
 // Reason: 替换为 collectEntityResetReasons，后者逐字段比较并产出详细的变化原因日志。
 // Trigger: 需求——当设备无法增量编译时必须输出具体变化原因。

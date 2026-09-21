@@ -68,7 +68,7 @@ export function DarkPipeLinkInspector({
   const selectingState = appHost.state.toolInfo.darkPipeLink;
   const isSelectingThisEntity = appHost.state.activeTool === DARK_PIPE_LINK_TOOL
     && selectingState?.sourceEntityId === entity.id;
-  const canCreateRegionalLink = appHost.regionalSettings.multiBaseEnabled
+  const canCreateRegionalLink = appHost.state.settings.regionalMultiBaseEnabled
     && appHost.workspace.simulation?.engineKind === "dense-v2";
   const regionalLinksSignature = JSON.stringify(appHost.regionalSettings.darkPipeLinks);
   const currentBase = documentSnapshot === null

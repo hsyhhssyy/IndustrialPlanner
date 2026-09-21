@@ -20,23 +20,18 @@ const MINIMUM_BASE_PARTITION_GAP = 1_024;
  * Dense 区域模式的执行文档。当前基地保留原 ID 与坐标，其余基地只在 Dense 私有执行层改名、平移。
  * 所有文档中的 warehouse 端点保持不变，因此拓扑编译器只创建一个隐藏仓库。
  */
+// AI-CORRECTION 2026-09-20: ST2-RQ-036 起所有基地（含单基地）均使用稳定基地作用域 ID；输入顺序决定固定空间分区，当前展示基地不再参与执行文档生成。
 export function createDenseRegionalDocument(options: {
-  readonly currentBaseId: string;
   readonly documents: readonly WorldDocument[];
   readonly registry: RegistryContract;
   readonly darkPipeLinks?: readonly RegionalDarkPipeLink[];
 }): WorldDocument {
-  const currentDocument = options.documents.find(
-    (document) => document.baseId === options.currentBaseId,
-  );
-  if (currentDocument === undefined) {
-    throw new Error(`Dense regional document is missing current base "${options.currentBaseId}".`);
+  const orderedDocuments = [...options.documents];
+  const rootDocument = orderedDocuments[0];
+  if (rootDocument === undefined) {
+    throw new Error("Dense execution document requires at least one base document.");
   }
 
-  const orderedDocuments = [
-    currentDocument,
-    ...options.documents.filter((document) => document !== currentDocument),
-  ];
   const partitionStride = resolvePartitionStride(orderedDocuments, options.registry);
   const entities: Record<string, WorldEntity> = {};
   const entityOrder: string[] = [];
@@ -45,14 +40,14 @@ export function createDenseRegionalDocument(options: {
 
   for (let baseIndex = 0; baseIndex < orderedDocuments.length; baseIndex += 1) {
     const document = orderedDocuments[baseIndex]!;
-    const isCurrentBase = document.baseId === options.currentBaseId;
-    const offsetX = isCurrentBase ? 0 : partitionStride * baseIndex;
+    const offsetX = partitionStride * baseIndex;
     for (const entityId of document.entityOrder) {
       const entity = document.entities[entityId];
       if (entity === undefined) continue;
-      const compositeEntityId = isCurrentBase
-        ? entity.id
-        : createRegionalEntityId(document.baseId, entity.id);
+      const compositeEntityId = resolveDenseRegionalEntityId(
+        document.baseId,
+        entity.id,
+      );
       if (entities[compositeEntityId] !== undefined) {
         throw new Error(`Dense regional document contains duplicate entity "${compositeEntityId}".`);
       }
@@ -71,11 +66,12 @@ export function createDenseRegionalDocument(options: {
     for (const link of document.slotLinks) {
       slotLinks.push({
         ...link,
-        id: isCurrentBase
-          ? link.id
-          : createRegionalEntityId(document.baseId, link.id),
-        source: remapLinkEndpoint(link.source, document.baseId, isCurrentBase),
-        target: remapLinkEndpoint(link.target, document.baseId, isCurrentBase),
+        id: resolveDenseRegionalEntityId(
+          document.baseId,
+          link.id,
+        ),
+        source: remapLinkEndpoint(link.source, document.baseId),
+        target: remapLinkEndpoint(link.target, document.baseId),
       });
     }
   }
@@ -83,24 +79,26 @@ export function createDenseRegionalDocument(options: {
   appendRegionalDarkPipeLinks({
     links: options.darkPipeLinks ?? [],
     documentsByBaseId,
-    currentBaseId: options.currentBaseId,
     entities,
     slotLinks,
   });
 
+  const executionBaseId = createDenseExecutionBaseId(orderedDocuments);
+
   return {
-    ...currentDocument,
-    documentKey: `dense-regional:${currentDocument.documentKey}`,
-    meta: { ...currentDocument.meta },
+    ...rootDocument,
+    baseId: executionBaseId,
+    documentKey: executionBaseId,
+    meta: { ...rootDocument.meta },
     entities,
     entityOrder,
     slotLinks,
-    regions: currentDocument.regions.map((region) => ({ ...region })),
+    regions: rootDocument.regions.map((region) => ({ ...region })),
     documentSettings: {
-      ...currentDocument.documentSettings,
+      ...rootDocument.documentSettings,
       viewport: {
-        ...currentDocument.documentSettings.viewport,
-        center: { ...currentDocument.documentSettings.viewport.center },
+        ...rootDocument.documentSettings.viewport,
+        center: { ...rootDocument.documentSettings.viewport.center },
       },
     },
   };
@@ -122,7 +120,6 @@ function indexRegionalDocuments(
 function appendRegionalDarkPipeLinks(options: {
   readonly links: readonly RegionalDarkPipeLink[];
   readonly documentsByBaseId: ReadonlyMap<string, WorldDocument>;
-  readonly currentBaseId: string;
   readonly entities: Readonly<Record<string, WorldEntity>>;
   readonly slotLinks: SlotLinkDefinition[];
 }): void {
@@ -165,11 +162,9 @@ function appendRegionalDarkPipeLinks(options: {
 
     const sourceEntityId = remapRegionalEntityId(
       link.outlet,
-      options.currentBaseId,
     );
     const targetEntityId = remapRegionalEntityId(
       link.inlet,
-      options.currentBaseId,
     );
     if (options.entities[sourceEntityId] === undefined || options.entities[targetEntityId] === undefined) {
       throw new Error(`Dense regional dark-pipe link "${link.id}" could not resolve its composite endpoints.`);
@@ -227,21 +222,20 @@ function createRegionalDarkPipeEndpointKey(endpoint: RegionalDarkPipeEndpoint): 
 
 function remapRegionalEntityId(
   endpoint: RegionalDarkPipeEndpoint,
-  currentBaseId: string,
 ): string {
-  return endpoint.baseId === currentBaseId
-    ? endpoint.entityId
-    : createRegionalEntityId(endpoint.baseId, endpoint.entityId);
+  return resolveDenseRegionalEntityId(
+    endpoint.baseId,
+    endpoint.entityId,
+  );
 }
 
 function remapLinkEndpoint(
   endpoint: SlotLinkDefinition["source"],
   baseId: string,
-  isCurrentBase: boolean,
 ): SlotLinkDefinition["source"] {
   return {
     ...endpoint,
-    entityId: isWarehouseEndpoint(endpoint.entityId) || isCurrentBase
+    entityId: isWarehouseEndpoint(endpoint.entityId)
       ? endpoint.entityId
       : createRegionalEntityId(baseId, endpoint.entityId),
   };
@@ -253,6 +247,19 @@ function isWarehouseEndpoint(entityId: string): boolean {
 
 function createRegionalEntityId(baseId: string, localId: string): string {
   return `dense-base:${encodeURIComponent(baseId)}:${localId}`;
+}
+
+export function resolveDenseRegionalEntityId(
+  baseId: string,
+  localId: string,
+): string {
+  return createRegionalEntityId(baseId, localId);
+}
+
+function createDenseExecutionBaseId(documents: readonly WorldDocument[]): string {
+  return `dense-region:${documents
+    .map((document) => encodeURIComponent(document.baseId))
+    .join("+")}`;
 }
 
 function resolvePartitionStride(

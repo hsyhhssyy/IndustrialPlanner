@@ -1366,7 +1366,16 @@ describe("WorkbenchApp", () => {
       },
       actions: {
         start: vi.fn(async () => {}),
-        setRegionalMultiBaseEnabled: vi.fn(),
+        // AI-REMOVED 2026-09-20:
+        // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
+        // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
+        // Evidence: SimulationAction Contract 已移除该方法。
+        // Replacement: AppSettings.regionalMultiBaseEnabled。
+        // Risk: Low；本 mock 不调用该动作。
+        // Human Review: Required
+        //
+        // Original code:
+        // setRegionalMultiBaseEnabled: vi.fn(),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),

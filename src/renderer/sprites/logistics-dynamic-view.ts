@@ -32,8 +32,21 @@ export class LogisticsDynamicView {
     } else {
       this.supports.push(add(`static/pipe.${state.shape}.support-middle`));
       add(`static/pipe.${state.shape}.shell`);
-      if (state.shape === 'straight') animated('pattern');
+      // AI-REMOVED 2026-09-20:
+      // Reason: 网站 64px 烘焙协议已移除 pipe/straight/pattern，直管标识改为静态 Logo 图层。
+      // Trigger: 导入 v1.5-20260919-212522-cst 时新版 clips 不再包含 pattern。
+      // Evidence: logistics-baked.json 仅声明三种 pipe/*/chevron，网站 baked.js 也只播放 chevron。
+      // Replacement: 下方 marker 对应的 static-logo-glow/static-logo-core。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (state.shape === 'straight') animated('pattern');
       animated('chevron');
+      if (state.shape === 'straight' && state.marker) {
+        add('static/pipe.straight.static-logo-glow');
+        add('static/pipe.straight.static-logo-core');
+      }
       this.supports.push(add(`static/pipe.${state.shape}.support-front`));
     }
   }

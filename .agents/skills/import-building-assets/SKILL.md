@@ -1,11 +1,11 @@
 ---
 name: import-building-assets
-description: 从 Endfield-Building-TopView-Assets 美术网站导入、同步或更新本项目建筑俯视图、动画、物流材质及高度特效时使用；仅核查网站可用性、维护技能、分析解包数据或重发既有本地素材时不得自动执行导入。
+description: 从 Endfield-Building-TopView-Assets 美术网站直接导入、同步或更新 64px 建筑俯视图、动画、物流材质及高度特效时使用；仅核查网站可用性、维护技能、分析解包数据或重发既有本地素材时不得自动执行导入。
 ---
 
 # 网站建筑素材导入
 
-美术交付源固定为 <https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/>。导入由本技能组织执行；不再接受 ZIP、PNG 大图拆分或按中文文件名猜设备的旧导入流程。
+美术交付源固定为 <https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/> 的 **64px 分文件发布**。从站点根目录的 `assets-manifest.json`、`integrity.json` 及 `buildings/**` 直接取得依赖闭包；不得下载或解包 `release-assets.json` 所列的 128px/64px ZIP，也不接受 PNG 大图拆分或按中文文件名猜设备的旧导入流程。
 
 ## 执行方式
 
@@ -22,9 +22,9 @@ description: 从 Endfield-Building-TopView-Assets 美术网站导入、同步或
 - 用户要求导入、同步或更新素材才执行。已有明确范围就直接推进，不重复申请同一授权；创建、修改或校验本技能不构成导入授权。
 - 只处理用户指定的建筑、变体或素材类别；未限定范围的“导入网站素材”按项目已有映射覆盖的全部素材处理，网站新增且没有项目映射的内容列为未映射项。正式入口支持完整已有映射、仅物流集合、明确排除物流，以及一个或多个已有映射实体的局部建筑范围；不能扩大为全量或手工合并。
 - 网站是美术数据来源，不能据此新增设备、改变配方或推断逻辑端口。网站 ID、Registry entityId 和 spriteId 必须分别对账；业务变更遵循项目模块规范。
-- 网站原件只允许存在于本次 `.temp/.trash` 批次；`public/` 从该批原件生成全部配置比例的发布版本，`resources/` 只保留映射与动画来源清单等小型元数据，不保存原始 JSON/WebP 展开包。范围包含物流时，同批还必须把独立配色表写入 `src/registry/item-definition.ts` 的既有 `fluidColors` 字段；漏发某个比例、混用不同来源或把原件写入仓库，都不算完成。
-- 发布比例唯一配置为 `src/scripts/building-asset-publish-config.mjs` 的 `BUILDING_ASSET_PUBLISH_RESOLUTIONS`。导入前读取该常量及 `resolveBuildingAssetPublishTargets`；不得在技能、导入处理程序或运行时另外维护固定的缩放数值，也不得因为用户要求导入就自行改变该配置。
-- 网站烘焙物流已经接入；范围包含物流时运行 `publish-logistics`，不能继续套用历史暂缓要求。仅用户明确排除物流时运行 `defer-logistics`。仅物流范围使用下载器 `--logistics-only`，共享高度清单内的未选建筑及特效按原字节保留；不改写全局建筑映射。
+- 网站原件固定为 `textureProfile.pixelsPerCell=64`、`logicalPixelsPerCell=128`、`resolution=0.5` 的直传文件，只允许存在于本次 `.temp/.trash` 批次。`public/` 从该批原件生成全部配置目标，`resources/` 只保留映射与动画来源清单等小型元数据，不保存原始 JSON/WebP 展开包。范围包含物流时，同批还必须把独立配色表写入 `src/registry/item-definition.ts` 的既有 `fluidColors` 字段；漏发某个目标、混用不同来源或把原件写入仓库，都不算完成。
+- 发布目标密度唯一配置为 `src/scripts/building-asset-publish-config.mjs` 的 `BUILDING_ASSET_PUBLISH_RESOLUTIONS`。该值是相对 128px 逻辑坐标的**绝对目标 resolution**，不是对已下载文件再次相乘的缩放率；实际像素变换率必须是 `targetResolution / sourceResolution`。当前源与目标均为 `0.5` 时必须保持 64px，不得再次缩成 32px。导入前读取该常量及 `resolveBuildingAssetPublishTargets`；不得在技能、导入处理程序或运行时另外维护固定数值，也不得因为用户要求导入就自行改变该配置。
+- 网站烘焙物流的业务与运行时契约已经接入；64px 来源发布能力通过就绪检查后，范围包含物流时运行 `publish-logistics`，不能继续套用历史暂缓要求。仅用户明确排除物流时运行 `defer-logistics`。仅物流范围使用下载器 `--logistics-only`，共享高度清单内的未选建筑及特效按原字节保留；不改写全局建筑映射。
 - 应用使用本项目发布后的本地资源。不得把运行时纹理 URL 改为美术网站，也不得执行下载的预览 JavaScript。
 
 | 用户本次要求 | 执行路线 |
@@ -42,7 +42,7 @@ description: 从 Endfield-Building-TopView-Assets 美术网站导入、同步或
 - [ ] 按上表确定任务路线；临时下载与正式导入的完成标准分开，不把“已下载”写成“已接入”。
 - [ ] 记录用户指定的实体、变体、类别。范围未限定时选已有项目映射；中文设备名按项目 i18n 规则核对，不自行翻译成 ID。
 - [ ] 查看当前工作区的 `git status --short`，记录已有改动；不读取其他分支或 worktree，不执行 Git 文件操作。
-- [ ] 运行下方只读命令，列出全部 `resolution / outputDirectory`，确认所有发布版本都从本批临时原件生成。
+- [ ] 运行下方只读命令，列出全部 `resolution / outputDirectory`；确认下载源为 64px / `sourceResolution=0.5`，每个发布器都按 `targetResolution / sourceResolution` 处理，且没有目标密度高于来源密度。
 - [ ] 核对本次范围涉及的 [就绪检查](references/project-import.md#执行前就绪检查)：网站输入、所需素材类别、全部比例、来源记录和整批应用均已有经过验证的入口。缺任何一项，在此停止，不先下载整批图片，不临时编写替代导入器。
 - [ ] 确定本次验证所用入口及已有检查基线；没有可比基线时记录“无可比基线”，不引用历史失败数量作结论。需要本批逐像素或固定浏览器验收时，先核对就绪检查中的能力缺口，不留到应用后才设计验证脚本。
 
@@ -58,7 +58,7 @@ node --input-type=module -e 'import { resolveBuildingAssetPublishTargets } from 
 
 - [ ] 建立唯一暂存目录 `.temp/.trash/building-assets-import-<唯一批次>/`，记录实际路径。所有下载和派生文件先写入此处。
 - [ ] 按 [网站来源与校验](references/site-source.md#一次发布的完整性链) 获取锚点、根索引和清单，先校验字节再消费元数据。
-- [ ] 核对 `releaseId / sourceVersion`、schema、路径和分级索引一致性；记录根索引 SHA-256。
+- [ ] 核对 `assets-manifest.json` 为受支持的 64px 直传 schema，`defaultPixelsPerCell / preview.pixelsPerCell` 均为 `64`，`preview.root` 为 `./`；再核对 `releaseId / sourceVersion`、路径和分级索引一致性并记录根索引 SHA-256。`releaseAssets` 只作发行说明，不跟随其中 URL。
 - [ ] 执行下方下载命令。它同时完成阶段 2 的固定发布和阶段 3 的下载校验；只运行一次。记录实际发布编号、索引摘要和 `source-receipt.json`，不用历史编号代替当前版本。
 
 后续所有 `<批次目录>` 必须替换为同一个实际路径：
@@ -75,7 +75,7 @@ python3 src/scripts/building-assets-site-source.py --batch "<批次目录>"
 
 - [ ] 按已有 `entityId / spriteId / sourcePath` 对照网站 ID 与视图，列出新增、变化、不变、缺失及未映射项。
 - [ ] 按下方决策表处理未映射与缺失项，不新增 Registry 实体，不猜别名或变体。
-- [ ] 使用已验证的依赖解析与下载入口取得本次范围的 JSON/WebP 闭包；逐文件确认大小、SHA-256 和原始来源路径，原件只在批次 `site/` 中保留一份。
+- [ ] 使用已验证的依赖解析与下载入口从站点根目录取得本次范围的 64px JSON/WebP 闭包；逐文件确认大小、SHA-256、`textureProfile` 和原始来源路径，原件只在批次 `site/` 中保留一份。下载清单中不得出现 GitHub Release ZIP。
 - [ ] 核对下载器已完成结束锚点复查；发布不同会报错，不能混用新旧发布。
 
 ### 4. 生成全部发布版本
@@ -84,8 +84,8 @@ python3 src/scripts/building-assets-site-source.py --batch "<批次目录>"
 
 - [ ] 列出“实体 / 类别 / 比例 / 原件路径 / 产物路径”矩阵。核对静态图、静态遮罩、动画首帧、分页、动画遮罩、物流材质、高度特效；不适用类别必须有依据。
 - [ ] 用 `resolveBuildingAssetPublishTargets` 解析本次暂存发布根目录，确认首项和额外版本目录互不覆盖。
-- [ ] 按已验证的调用方式显式传入输入目录、所选 ID、每个目标的比例与输出目录；逐个完成列表，不用默认 CLI 重发旧来源。
-- [ ] 每个版本直接从原件生成；按 [项目接入契约](references/project-import.md) 使用已实现的变换和采样，不修改逻辑占地、动画时序或缩放策略。
+- [ ] 按已验证的调用方式显式传入输入目录、所选 ID、`sourceResolution=0.5`、每个绝对目标 resolution 与输出目录；逐个完成列表，不用默认 CLI 重发旧来源。
+- [ ] 每个版本直接从 64px 原件生成；目标 `0.5` 只允许坐标变换、逐帧重排或无损编码，不进行二次缩放；更低目标按 `targetResolution / 0.5` 采样。按 [项目接入契约](references/project-import.md) 保持逻辑占地和动画时序。
 - [ ] 任一类别或比例生成失败，停止本批次。不得先应用成功部分，也不得用原尺寸产物填补失败版本。
 
 先生成来源清单，随后按范围表逐条执行；每条成功后勾选对应类别，失败则停止：
@@ -118,8 +118,8 @@ node src/scripts/import-building-assets.mjs <子命令> "<批次目录>"
 
 输入：阶段 4 的矩阵与产物。完成证据：每项验收结果和完整来源关联。
 
-- [ ] 原件字节与固定索引一致；每个发布产物都能关联原件哈希、发布编号和实际比例。
-- [ ] 矩阵无缺项，实际图片尺寸与目标比例一致；同版颜色图与遮罩尺寸一致，缩放后的宽高都是正整数；裁切特效按已实现的透明补边规则验收。
+- [ ] 64px 原件字节与固定索引一致；每个发布产物都能关联原件哈希、发布编号、来源 resolution 和绝对目标 resolution。
+- [ ] 矩阵无缺项，实际图片尺寸等于逻辑尺寸乘绝对目标 resolution；当前 `0.5 → 0.5` 的图片不得变成 32px 密度。同版颜色图与遮罩尺寸一致，缩放后的宽高都是正整数；裁切特效按来源 `physicalRect` 和已实现的透明补边规则验收。
 - [ ] 动画逻辑画布、阶段、页数、帧数和逐帧时长符合来源及发布协议；manifest 引用均存在。
 - [ ] 对本次涉及的物流、高度和端口特效运行现有专项校验，确认状态映射、数值编码、坐标和依赖完整。
 - [ ] 含物流时，确认 `validate` 已严格对账独立配色表与暂存 Registry：物品集合、液/气相态、分层数量、`rgba8 / displayRgba8 / hex` 及 `ItemDefinition.fluidColors` 必须一致；新增未映射物品、缺层或相态冲突均停止批次。
@@ -134,7 +134,7 @@ node src/scripts/import-building-assets.mjs validate "<批次目录>"
 
 ### 6. 整批应用
 
-输入：全部验收通过的同一批原版与发布版本。完成证据：受影响文件清单和应用后的对账结果。
+输入：全部验收通过的同一批 64px 来源与发布版本。完成证据：受影响文件清单和应用后的对账结果。
 
 - [ ] 列出本次实际写入文件，核对与开始时已有改动是否重叠。导入目标存在未提交修改时停止并报告具体文件；其他不重叠的脏工作区不构成整批停止理由。
 - [ ] 确认本次导入前的已提交版本可作为 Git 回退基线。导入流程不建立长期本地恢复包，也不以 `.temp` 目录承担版本历史职责。
@@ -172,6 +172,8 @@ node src/scripts/import-building-assets.mjs apply "<批次目录>"
 | 单次超时、连接中断、HTTP 429 或 5xx | 同一文件、同一固定发布最多重试 2 次；不能重试成功则停止。429 遵循 `Retry-After`，未提供时等待 5 秒；长等待分段并报告进度 |
 | 其他 HTTP 失败或重试用尽 | 停止，报告状态码与路径；不切换源站、凭据或旧包 |
 | 哈希或大小不符、发布切换、未知 schema、无合法路径 | 停止本批次，记录实际值与期望值；不以重试绕过验证，不回退旧来源 |
+| 直传清单不是 64px、`textureProfile` 不一致，或入口试图使用 `release-assets.json` 中的 ZIP | 停止本批次，报告清单字段或错误入口；不切换 128px ZIP、不解包 64px ZIP |
+| 发布器把绝对目标 `0.5` 当作对 64px 原件再次缩放的倍率，或不支持来源 `physicalRect` | 停在就绪检查；维护来源密度协议后重新建批，不生成 32px 产物 |
 | 元数据与 Registry 冲突，或需要新坐标/动画/采样规则 | 停止并提交维护问题；不重新居中、不猜旋转、不合成阶段、不修改业务接口 |
 | 发布器缺少本次所需能力，或没有验证过的调用方式 | 停在就绪检查；不在导入中实现缺失接口，不用旧 ZIP、空文件或临时兼容层补齐 |
 

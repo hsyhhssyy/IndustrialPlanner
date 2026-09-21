@@ -17,6 +17,7 @@ import type { AppHost } from "@/app/host/app-host";
 //
 // Original code:
 // import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+// AI-CORRECTION 2026-09-20: 停止态的冲突判断读取 AppSettings，运行态才读取已固化的 SimulationMode。
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
@@ -96,6 +97,11 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
   const simulation = appHost.workspace.simulation;
   const timelineEnabled = simulation?.state.timeline.enabled ?? false;
   const simulationRunningState = simulation?.state.runningState ?? "stop";
+  // AI-CORRECTION 2026-09-20: 停止态使用 AppSettings 预判下一次会话，运行态使用已经固化的会话事实。
+  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
+    && (simulationRunningState === "stop"
+      ? appHost.state.settings.regionalMultiBaseEnabled
+      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
   const discardedPageTimelineRecoveryPendingRef = useRef(
     dialogState.visible
     && typeof document !== "undefined"
@@ -138,7 +144,7 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
     if (
       !dialogState.visible
       || simulation === null
-      || simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase
+      || regionalMultiBaseEnabled
       || timelineEnabled
       // AI-REMOVED 2026-07-17:
       // Reason: 持久化恢复的时间轴窗口必须能够从全新的 stop/idle 仿真状态重新启动。
@@ -166,7 +172,7 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
     discardedPageTimelineRecoveryPendingRef.current = false;
     setTimelineBackgroundRecoveryEligibility(false);
     void simulation.actions.enableTimeline();
-  }, [dialogState.visible, simulation, simulationRunningState, timelineEnabled]);
+  }, [dialogState.visible, regionalMultiBaseEnabled, simulation, simulationRunningState, timelineEnabled]);
 
   if (shouldRenderTimelineBottomDock(appHost)) {
     return null;
@@ -396,6 +402,10 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const simulation = appHost.workspace.simulation;
   const timeline = simulation?.state.timeline ?? null;
   const debugMode = appHost.state.settings.debugMode;
+  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
+    && (simulation.state.runningState === "stop"
+      ? appHost.state.settings.regionalMultiBaseEnabled
+      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
   const [dragTickNumber, setDragTickNumber] = useState<number | null>(null);
   const [dragWindowStartTickNumber, setDragWindowStartTickNumber] = useState<number | null>(null);
   const [pendingSeek, setPendingSeek] = useState<{
@@ -496,7 +506,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     };
   }, [debugMode]);
 
-  if (simulation?.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
+  if (regionalMultiBaseEnabled) {
     return (
       <div className={cm(styles, "timeline-empty-state")}>
         {t("timelineDialog.regionalMultiBaseConflict")}

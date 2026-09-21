@@ -29,7 +29,7 @@ interface DenseWorkerSession {
   readonly identity: Pick<DenseProtocolIdentity, "sessionId" | "topologyVersion">;
   readonly gate: DenseMessageSequenceGate;
   readonly kernel: DenseSimulationKernel;
-  readonly emitter: DenseFrameEmitter;
+  emitter: DenseFrameEmitter;
   readonly topology: CompiledSimulationTopology;
   readonly layout: DenseTopologyLayout;
   readonly checkpoints: Map<number, DenseKernelCheckpoint>;
@@ -69,6 +69,8 @@ export class DenseWorkerRuntime {
           return this.applyCommands(session, request);
         case "request-presentation-checkpoint":
           return this.createCheckpoint(session, request);
+        case "switch-presentation":
+          return this.switchPresentation(session, request);
         case "ensure-buffered-through":
           return this.ensureBufferedThrough(session, request);
         case "release-buffers":
@@ -110,6 +112,16 @@ export class DenseWorkerRuntime {
         previousSession.kernel,
         request.migration.resetDeviceIds,
       );
+      // AI-REMOVED 2026-09-20:
+      // Reason: Dense migration 不再接受因当前基地变化产生的跨设备 ID 映射。
+      // Trigger: ST2-RQ-036 以稳定规范执行身份和 switch-presentation 取代迁移补偿。
+      // Evidence: createDenseRegionalDocument 对单/多基地均生成稳定基地作用域 ID。
+      // Replacement: DenseWorkerRuntime.switchPresentation
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // request.migration.previousDeviceIdByNextDeviceId,
     }
     kernel.setPowerMode(request.powerMode);
     kernel.setPowerConsumptionOverride(request.powerConsumptionOverride);
@@ -318,7 +330,9 @@ export class DenseWorkerRuntime {
 
   private createCheckpoint(
     session: DenseWorkerSession,
-    request: Extract<DenseWorkerRequest, { readonly type: "request-presentation-checkpoint" }>,
+    request: Extract<DenseWorkerRequest, {
+      readonly type: "request-presentation-checkpoint" | "switch-presentation";
+    }>,
   ): Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }> {
     if (!Number.isSafeInteger(request.tickNumber) || request.tickNumber < 0) {
       throw new Error(`Dense checkpoint tick is invalid: ${request.tickNumber}.`);
@@ -333,6 +347,20 @@ export class DenseWorkerRuntime {
       bufferIds: new Uint32Array(),
       runtimeRetainedStateCount: session.checkpoints.size,
     };
+  }
+
+  private switchPresentation(
+    session: DenseWorkerSession,
+    request: Extract<DenseWorkerRequest, { readonly type: "switch-presentation" }>,
+  ): Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }> {
+    session.emitter = new DenseFrameEmitter(
+      session.topology,
+      session.layout,
+      session.identity,
+      request.presentationDeviceIds,
+      request.operatingStatusDeviceIds,
+    );
+    return this.createCheckpoint(session, request);
   }
 
   private ensureBufferedThrough(

@@ -546,6 +546,17 @@ export interface SimulationTopologyMigration {
   readonly resetDeviceIds: readonly string[];
 }
 
+// AI-REMOVED 2026-09-20:
+// Reason: topology migration 重新只处理稳定同 ID 的真实图变更，不再承担当前基地切换产生的跨 ID 补偿。
+// Trigger: ST2-RQ-036 规定当前基地仅是 Dense 展示投影。
+// Evidence: Dense 规范执行文档的实体 ID 不依赖当前基地，基地切换走 switch-presentation。
+// Replacement: DensePresentationIdentity
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// readonly previousDeviceIdByNextDeviceId?: Readonly<Record<string, string>>;
+
 export interface SimulationTickSnapshotResult {
   readonly status: SimulationTickPullStatus;
   readonly currentTick: RuntimeTickSnapshot | null;

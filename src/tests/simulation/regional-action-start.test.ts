@@ -9,19 +9,24 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+import type { AppContract } from "@/domain/app/app-contract";
 
-describe("区域多基地 SimulationAction 启动", () => {
-  it("开启区域模式时保留合法倍率并将任意非法倍率归一化为 x1", () => {
+describe("区域多基地启动模式固化", () => {
+  it("Dense 启动时读取 AppSettings，并将区域模式不支持的倍率归一化为 x1", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const appSettings = { regionalMultiBaseEnabled: true };
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(),
       registry,
-      app: null,
+      app: createRegionalMultiBaseAppContract(appSettings),
       editor: {
         document: createSnapshotStore(currentDocument),
         state: {} as never,
-        queries: {} as never,
+        queries: {
+          readLatestBaseDocuments: async (baseIds: readonly string[]) =>
+            baseIds.map((baseId) => createWorldDocument({ baseId })),
+        } as never,
         actions: {} as never,
       },
       render: null,
@@ -30,29 +35,54 @@ describe("区域多基地 SimulationAction 启动", () => {
       blueprintPlanner: null,
     };
 
-    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
     try {
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.singleBase);
-      for (const speed of [0.25, 1, 2]) {
-        host.actions.setRegionalMultiBaseEnabled(false);
-        host.actions.setSimulationSpeed(speed);
-        host.actions.setRegionalMultiBaseEnabled(true);
-        expect(host.state.simulationSpeed).toBe(speed);
-        expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
-      }
-
-      for (const speed of [0, 0.5, 4, 16, 32]) {
-        host.actions.setRegionalMultiBaseEnabled(false);
-        host.actions.setSimulationSpeed(speed);
-        host.actions.setRegionalMultiBaseEnabled(true);
-        expect(host.state.simulationSpeed).toBe(1);
-      }
+      host.actions.setSimulationSpeed(16);
+      // AI-REMOVED 2026-09-20:
+      // Reason: 外部不再通过 SimulationAction 预写会话模式。
+      // Trigger: ST2-RQ-035 要求 Dense.start 从 AppSettings 固化模式与倍率。
+      // Evidence: 本测试已把 AppContract 设置为 true，并直接启动新会话。
+      // Replacement: await host.actions.start()。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+      expect(host.state.simulationSpeed).toBe(1);
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      // AI-REMOVED 2026-09-20:
+      // Reason: 倍率归一化已移到 Dense.start，旧测试通过已删除的 Action 反复切换模式。
+      // Trigger: ST2-RQ-035 要求外部只能设置 AppSettings，并在启动边界固化模式。
+      // Evidence: 上方以 x16 启动并断言归一化为 x1；合法倍率由下一测试的 x2 覆盖。
+      // Replacement: 本测试与下一个会话固化测试。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // for (const speed of [0.25, 1, 2]) {
+      //   host.actions.setRegionalMultiBaseEnabled(false);
+      //   host.actions.setSimulationSpeed(speed);
+      //   host.actions.setRegionalMultiBaseEnabled(true);
+      //   expect(host.state.simulationSpeed).toBe(speed);
+      //   expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      // }
+      // for (const speed of [0, 0.5, 4, 16, 32]) {
+      //   host.actions.setRegionalMultiBaseEnabled(false);
+      //   host.actions.setSimulationSpeed(speed);
+      //   host.actions.setRegionalMultiBaseEnabled(true);
+      //   expect(host.state.simulationSpeed).toBe(1);
+      // }
     } finally {
       host.dispose();
     }
   });
 
-  it("区域 x2 启动只等待首个 Epoch，再异步补充 20 Tick 播放缓冲", async () => {
+  it("运行中设置变化不改写当前会话，并在下一次启动重新固化", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const otherBaseIds = registry.baseDefinitions
@@ -61,10 +91,11 @@ describe("区域多基地 SimulationAction 启动", () => {
     const latestDocuments = otherBaseIds.map((baseId) => createWorldDocument({ baseId }));
 
     const editorDocument = createSnapshotStore(currentDocument);
+    const appSettings = { regionalMultiBaseEnabled: true };
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(),
       registry,
-      app: null,
+      app: createRegionalMultiBaseAppContract(appSettings),
       editor: {
         document: editorDocument,
         state: {} as never,
@@ -81,24 +112,39 @@ describe("区域多基地 SimulationAction 启动", () => {
       blueprintPlanner: null,
     };
 
-    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
     try {
       host.actions.setSimulationSpeed(2);
-      host.actions.setRegionalMultiBaseEnabled(true);
       await host.actions.start();
       expect(host.state.runningState).toBe("start");
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
       expect(host.state.simulationSpeed).toBe(2);
-      expect(host.internalState.runtimeStatus.dynamicTickRate).toBe(10);
-      expect(host.internalState.runtimeStatus.maxBufferSize).toBe(20);
       host.actions.pause();
-      host.actions.setRegionalMultiBaseEnabled(false);
+      appSettings.regionalMultiBaseEnabled = false;
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
       expect(readSimulationSnapshot(host)?.tickNumber).toBeGreaterThanOrEqual(0);
-      expect(host.internalState.runtimeStatus.latestTickNumber).toBeGreaterThanOrEqual(1);
-      expect(host.internalState.runtimeStatus.latestTickNumber).toBeLessThanOrEqual(11);
-      expect(host.internalState.runtimeStatus.bufferSize).toBeLessThanOrEqual(20);
       expect(host.queries.getWarehouseStats()).not.toBeNull();
+      host.actions.stop();
+      await host.actions.start();
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.singleBase);
+      // AI-REMOVED 2026-09-20:
+      // Reason: 本测试改为验证设置与会话模式的生命周期边界，不再验证已被 Dense 合图实现替代的旧 Epoch 缓冲细节。
+      // Trigger: ST2-RQ-035 要求运行中设置变化不影响当前会话、下次 start 才生效。
+      // Evidence: 当前断言覆盖 x2 保留、运行中 mode 不变及 stop/start 后切换为 single-base。
+      // Replacement: 当前测试；Dense 缓冲回归由 dense-host-regressions 覆盖。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // expect(host.internalState.runtimeStatus.dynamicTickRate).toBe(10);
+      // expect(host.internalState.runtimeStatus.maxBufferSize).toBe(20);
+      // host.actions.setRegionalMultiBaseEnabled(false);
+      // expect(host.internalState.runtimeStatus.latestTickNumber).toBeGreaterThanOrEqual(1);
+      // expect(host.internalState.runtimeStatus.latestTickNumber).toBeLessThanOrEqual(11);
+      // expect(host.internalState.runtimeStatus.bufferSize).toBeLessThanOrEqual(20);
     } finally {
       host.dispose();
     }
@@ -113,7 +159,7 @@ describe("区域多基地 SimulationAction 启动", () => {
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(),
       registry,
-      app: null,
+      app: createRegionalMultiBaseAppContract({ regionalMultiBaseEnabled: true }),
       editor: {
         document: createSnapshotStore(currentDocument),
         state: {} as never,
@@ -127,9 +173,11 @@ describe("区域多基地 SimulationAction 启动", () => {
     };
 
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
       await host.actions.start();
 
       expect(host.state.runningState).toBe("stop");
@@ -138,7 +186,7 @@ describe("区域多基地 SimulationAction 启动", () => {
         error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
       });
       expect(consoleError).toHaveBeenCalledWith(
-        "[industrial-planner:simulation-runtime] Regional simulation start rejected.",
+        "[industrial-planner:dense-simulation-runtime] Dense regional simulation start rejected.",
         {
           code: "insufficient-regional-bases",
           currentBaseId: "wuling_protocol_core",
@@ -153,13 +201,13 @@ describe("区域多基地 SimulationAction 启动", () => {
     }
   });
 
-  it("Legacy 区域模式明确拒绝跨基地暗管关系", async () => {
+  it("Legacy 忽略多基地设置并始终启动单基地会话", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(),
       registry,
-      app: null,
+      app: createRegionalMultiBaseAppContract({ regionalMultiBaseEnabled: true }),
       editor: {
         document: createSnapshotStore(currentDocument),
         state: {} as never,
@@ -183,27 +231,49 @@ describe("区域多基地 SimulationAction 启动", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
       await host.actions.start();
 
-      expect(host.state.runningState).toBe("stop");
-      expect(host.internalState.runtimeStatus).toMatchObject({
-        mode: "error",
-        error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
-      });
-      expect(consoleError).toHaveBeenCalledWith(
-        "[industrial-planner:simulation-runtime] Regional simulation start rejected.",
-        {
-          code: "legacy-regional-dark-pipe-unsupported",
-          currentBaseId: currentDocument.baseId,
-          regionTag: "武陵",
-          darkPipeLinkCount: 1,
-          error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
-        },
-      );
+      expect(host.state.runningState).toBe("start");
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.singleBase);
+      expect(host.internalState.runtimeStatus.error).toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
+      // AI-REMOVED 2026-09-20:
+      // Reason: Legacy 已无区域多基地产品入口，不能再进入跨基地暗管拒绝分支。
+      // Trigger: ST2-RQ-035 要求 Legacy 无条件固化 single-base。
+      // Evidence: 即使 AppSettings 为 true 且存在跨基地暗管，当前启动仍成功且模式为 single-base。
+      // Replacement: 上方 Legacy 单基地会话断言。
+      // Risk: Medium；旧 Legacy 区域能力仍保留在内部，但不可从公开入口启动。
+      // Human Review: Required
+      //
+      // Original code:
+      // expect(host.state.runningState).toBe("stop");
+      // expect(host.internalState.runtimeStatus).toMatchObject({
+      //   mode: "error",
+      //   error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+      // });
+      // expect(consoleError).toHaveBeenCalledWith(
+      //   "[industrial-planner:simulation-runtime] Regional simulation start rejected.",
+      //   {
+      //     code: "legacy-regional-dark-pipe-unsupported",
+      //     currentBaseId: currentDocument.baseId,
+      //     regionTag: "武陵",
+      //     darkPipeLinkCount: 1,
+      //     error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+      //   },
+      // );
     } finally {
       host.dispose();
       consoleError.mockRestore();
     }
   });
 });
+
+function createRegionalMultiBaseAppContract(
+  settings: { regionalMultiBaseEnabled: boolean },
+): AppContract {
+  return {
+    state: { settings },
+    queries: {},
+    actions: {},
+  } as unknown as AppContract;
+}

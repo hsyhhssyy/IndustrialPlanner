@@ -5,9 +5,11 @@ import type { ItemDefinition } from '@/domain/registry/types/item-definition';
 export interface LogisticsBakedManifest {
   schemaVersion: 2;
   format: 'logistics-spritesheet-v2';
+  sourceResolution?: number;
   resolution: number;
   pixelsPerCell: number;
-  pages: Record<string, { file: string; width: number; height: number; data: boolean; sha256: string }>;
+  pages: Record<string, { file: string; width: number; height: number; data: boolean;
+    filter?: 'linear' | 'nearest'; sha256: string }>;
   frames: Record<string, {
     page: string; rect: [number, number, number, number];
     sourceSize: [number, number]; spriteSourceSize: [number, number, number, number];

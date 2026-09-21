@@ -274,46 +274,65 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     runInAction(() => {
       this.stateReadWrite.hasStarted = true;
       this.stateReadWrite.runningState = "starting";
+      this.stateReadWrite.simulationMode = SIMULATION_MODE.singleBase;
     });
 
     try {
-      if (this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
-        await this.regional.startRegionalSimulation();
+      // AI-REMOVED 2026-09-20:
+      // Reason: Legacy 产品入口不再支持区域多基地，会话启动必须无条件使用单基地拓扑。
+      // Trigger: ST2-RQ-035 要求 Legacy 忽略 AppSettings 中保留的 Dense 多基地选择。
+      // Evidence: 基地面板在 Legacy 下禁用；SimulationMode 在 start 开始时已固化为 single-base。
+      // Replacement: 下方统一的 refreshFromCurrentDocument 单基地启动路径。
+      // Risk: Medium；Legacy 区域实现保留为审计代码，但不再有产品启动入口。
+      // Human Review: Required
+      //
+      // Original code:
+      // if (this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
+      //   await this.regional.startRegionalSimulation();
+      // } else {
+      const result = await this.refreshFromCurrentDocument();
+      if (result.status === "started") {
+        runInAction(() => {
+          this.stateReadWrite.runningState = "start";
+        });
+        this.playback.ensurePlaybackHotQueue();
       } else {
-        const result = await this.refreshFromCurrentDocument();
-        if (result.status === "started") {
-          runInAction(() => {
-            this.stateReadWrite.runningState = "start";
-          });
-          this.playback.ensurePlaybackHotQueue();
-        } else {
-          this.recoverFromStartFailure();
-        }
+        this.recoverFromStartFailure();
       }
+      // }
     } catch (error) {
       console.error("[Simulation] Failed to start simulation.", error);
       this.recoverFromStartFailure(error);
     }
   };
 
-  public readonly setRegionalMultiBaseEnabled: SimulationAction["setRegionalMultiBaseEnabled"] = action((enabled) => {
-    const simulationMode = enabled
-      ? SIMULATION_MODE.regionalMultiBase
-      : SIMULATION_MODE.singleBase;
-    if (simulationMode === this.stateReadWrite.simulationMode) {
-      return;
-    }
-    if (this.stateReadWrite.runningState !== "stop") {
-      return;
-    }
-    if (enabled && this.stateReadWrite.timeline.enabled) {
-      return;
-    }
-    if (enabled && !isRegionalSimulationSpeed(this.stateReadWrite.simulationSpeed)) {
-      this.setSimulationSpeed(DEFAULT_SIMULATION_SPEED);
-    }
-    this.stateReadWrite.simulationMode = simulationMode;
-  });
+  // AI-REMOVED 2026-09-20:
+  // Reason: Legacy 不支持区域多基地，且会话模式不再允许外部 Action 写入。
+  // Trigger: ST2-RQ-035 将用户选择收归 AppSettings，并要求 Legacy 启动始终固化 single-base。
+  // Evidence: start 在任何 Worker 初始化前写入 single-base，公共 SimulationAction 已移除该方法。
+  // Replacement: SimulationActionImpl.start。
+  // Risk: Medium；旧 Legacy 区域实现不可再由产品入口触达。
+  // Human Review: Required
+  //
+  // Original code:
+  // public readonly setRegionalMultiBaseEnabled: SimulationAction["setRegionalMultiBaseEnabled"] = action((enabled) => {
+  //   const simulationMode = enabled
+  //     ? SIMULATION_MODE.regionalMultiBase
+  //     : SIMULATION_MODE.singleBase;
+  //   if (simulationMode === this.stateReadWrite.simulationMode) {
+  //     return;
+  //   }
+  //   if (this.stateReadWrite.runningState !== "stop") {
+  //     return;
+  //   }
+  //   if (enabled && this.stateReadWrite.timeline.enabled) {
+  //     return;
+  //   }
+  //   if (enabled && !isRegionalSimulationSpeed(this.stateReadWrite.simulationSpeed)) {
+  //     this.setSimulationSpeed(DEFAULT_SIMULATION_SPEED);
+  //   }
+  //   this.stateReadWrite.simulationMode = simulationMode;
+  // });
 
   public readonly pause: SimulationAction["pause"] = action(() => {
     this.timeline.cancelPendingResume();

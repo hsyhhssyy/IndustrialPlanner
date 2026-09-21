@@ -1525,6 +1525,8 @@
 }
 
 .base-regional-switch-control:has(input:disabled) .base-regional-switch-track {
+  border-color: var(--line);
+  background: var(--surface-4);
   opacity: 0.55;
 }
 

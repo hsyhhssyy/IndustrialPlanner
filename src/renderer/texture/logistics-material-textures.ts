@@ -38,7 +38,8 @@ export class LogisticsMaterialTextureCache {
     return response;
   }
 
-  private async loadImage(url: string, width: number, height: number, data = false): Promise<LoadedImage> {
+  private async loadImage(url: string, width: number, height: number, data = false,
+    filter: 'linear' | 'nearest' = 'linear'): Promise<LoadedImage> {
     const response = await this.fetch(url);
     let bitmap: ImageBitmap | null = null;
     let texture: Texture;
@@ -47,12 +48,12 @@ export class LogisticsMaterialTextureCache {
       const rgba = new Uint8Array(await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
       if (rgba.length !== width * height * 4) throw new Error(`Numeric texture dimensions differ: ${url}`);
       texture = new Texture({ source: new BufferImageSource({ resource: rgba, width, height, format: 'rgba8unorm',
-        alphaMode: 'no-premultiply-alpha', scaleMode: 'linear', addressMode: 'clamp-to-edge', autoGenerateMipmaps: false }) });
+        alphaMode: 'no-premultiply-alpha', scaleMode: filter, addressMode: 'clamp-to-edge', autoGenerateMipmaps: false }) });
     } else {
       bitmap = await createImageBitmap(await response.blob(), { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' });
       if (bitmap.width !== width || bitmap.height !== height) { bitmap.close(); throw new Error(`Texture dimensions differ: ${url}`); }
       texture = new Texture({ source: new ImageSource({ resource: bitmap, alphaMode: 'premultiplied-alpha',
-        scaleMode: 'linear', addressMode: 'clamp-to-edge', autoGenerateMipmaps: false }) });
+        scaleMode: filter, addressMode: 'clamp-to-edge', autoGenerateMipmaps: false }) });
     }
     texture.source.label = url;
     texture.source.autoGarbageCollect = false;
@@ -105,7 +106,7 @@ export class LogisticsMaterialTextureCache {
     try {
       const results = await Promise.allSettled(Object.entries(manifest.pages).map(async ([id, page]) => {
         if (!/^[\w-]+\.(?:webp|rgba\.bin)$/.test(page.file)) throw new Error(`Unsafe baked resource: ${page.file}`);
-        const image = await this.loadImage(`${ROOT}/baked/${page.file}`, page.width, page.height, page.data);
+        const image = await this.loadImage(`${ROOT}/baked/${page.file}`, page.width, page.height, page.data, page.filter);
         loaded.push(image); textures.set(id, image.texture);
       }));
       const failure = results.find((result) => result.status === 'rejected');

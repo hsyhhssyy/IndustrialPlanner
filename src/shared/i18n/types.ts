@@ -511,6 +511,7 @@ export type UiKey =
   | "basePanel.runAllBasesHelp"
   | "basePanel.runAllBasesHelpLoadFailed"
   | "basePanel.runAllBasesHelpLoading"
+  | "basePanel.runAllBasesLegacyUnsupported"
   | "regionalResources.addResource"
   | "regionalResources.infiniteProfile"
   | "regionalResources.infiniteProfileSummary"

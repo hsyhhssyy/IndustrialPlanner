@@ -2,6 +2,15 @@ import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
+/** 目标 resolution 是相对 128px 逻辑坐标的绝对密度；发布倍率只由目标/来源计算。 */
+export function resolveAssetScale(sourceResolution, targetResolution) {
+  if (!Number.isFinite(sourceResolution) || sourceResolution <= 0 || sourceResolution > 1
+    || !Number.isFinite(targetResolution) || targetResolution <= 0 || targetResolution > sourceResolution) {
+    throw new Error(`Invalid source/target resolutions: ${sourceResolution} -> ${targetResolution}`);
+  }
+  return targetResolution / sourceResolution;
+}
+
 /** 缩放必须落在完整像素上；逻辑坐标由各自 manifest 保留。 */
 // AI-CORRECTION 2026-09-13: 裁切特效可向右、下补透明像素至采样周期边界，保持原采样密度及 pivot。
 export function publishedImageSize(width, height, resolution, padToPixel = false) {
@@ -61,10 +70,43 @@ export async function resizeAssetRgba(data, width, height, resolution, numeric =
   return { data: output, ...size };
 }
 
+/** 从来源 physicalRect 只复制完整归属像素；半像素边界落为透明补边，禁止读取相邻帧。 */
+function extractPhysicalFrame(data, pageWidth, pageHeight, rect, logicalWidth, logicalHeight, sourceResolution, flipVertical) {
+  if (!Array.isArray(rect) || rect.length !== 4 || rect.some((value) => !Number.isFinite(value))) {
+    throw new Error('Effect physicalRect is invalid');
+  }
+  const [left, top, width, height] = rect;
+  const expectedWidth = logicalWidth * sourceResolution;
+  const expectedHeight = logicalHeight * sourceResolution;
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+  if (left < 0 || top < 0 || width <= 0 || height <= 0 || left + width > pageWidth || top + height > pageHeight
+    || !close(width, expectedWidth) || !close(height, expectedHeight)) {
+    throw new Error('Effect physicalRect differs from its logical frame');
+  }
+  const outputWidth = Math.ceil(width), outputHeight = Math.ceil(height);
+  const sourceLeft = Math.ceil(left), sourceTop = Math.ceil(top);
+  const sourceRight = Math.floor(left + width), sourceBottom = Math.floor(top + height);
+  const copyWidth = sourceRight - sourceLeft, copyHeight = sourceBottom - sourceTop;
+  const outputLeft = close(left, sourceLeft) ? 0 : 1;
+  const outputTop = close(top, sourceTop) ? 0 : 1;
+  if (copyWidth <= 0 || copyHeight <= 0 || outputLeft + copyWidth > outputWidth || outputTop + copyHeight > outputHeight) {
+    throw new Error('Effect physicalRect has no safe pixel interior');
+  }
+  const output = Buffer.alloc(outputWidth * outputHeight * 4);
+  for (let y = 0; y < copyHeight; y += 1) {
+    const sourceOffset = ((sourceTop + y) * pageWidth + sourceLeft) * 4;
+    const targetY = flipVertical ? outputHeight - 1 - (outputTop + y) : outputTop + y;
+    data.copy(output, (targetY * outputWidth + outputLeft) * 4, sourceOffset, sourceOffset + copyWidth * 4);
+  }
+  return { data: output, width: outputWidth, height: outputHeight };
+}
+
 /** 裁切特效逐帧反射、补透明边界并缩放后重新分页，避免跨帧滤波和半像素图集坐标。 */
-export async function publishEffectFrames({ sourceRoot, outputRoot, directory, effect, sheet, resolution, flipVertical }) {
+export async function publishEffectFrames({ sourceRoot, outputRoot, directory, effect, sheet,
+  sourceResolution = 1, resolution, flipVertical }) {
   const first = effect.frames[0];
   if (!first) throw new Error('Effect has no frames');
+  const scale = resolveAssetScale(sourceResolution, resolution);
   const size = publishedImageSize(first.width, first.height, resolution, true);
   const columns = Math.min(8, effect.frames.length, Math.floor(2047 / size.width));
   const rows = Math.floor(2047 / size.height);
@@ -87,16 +129,13 @@ export async function publishEffectFrames({ sourceRoot, outputRoot, directory, e
         if (sourcePage.info.width !== page.width || sourcePage.info.height !== page.height) throw new Error('Effect page dimensions differ');
         cachedIndex = frame.page;
       }
-      if (![frame.x, frame.y, frame.width, frame.height].every(Number.isSafeInteger)
-        || frame.x < 0 || frame.y < 0 || frame.x + frame.width > sourcePage.info.width
-        || frame.y + frame.height > sourcePage.info.height) throw new Error('Effect frame rectangle is invalid');
-      const extracted = Buffer.alloc(frame.width * frame.height * 4);
-      for (let y = 0; y < frame.height; y++) {
-        const sy = frame.y + (flipVertical ? frame.height - 1 - y : y);
-        const offset = (sy * sourcePage.info.width + frame.x) * 4;
-        sourcePage.data.copy(extracted, y * frame.width * 4, offset, offset + frame.width * 4);
+      const physicalRect = frame.physicalRect ?? [frame.x, frame.y, frame.width, frame.height];
+      const extracted = extractPhysicalFrame(sourcePage.data, sourcePage.info.width, sourcePage.info.height,
+        physicalRect, frame.width, frame.height, sourceResolution, flipVertical);
+      const scaled = await resizeAssetRgba(extracted.data, extracted.width, extracted.height, scale, false, true);
+      if (scaled.width !== size.width || scaled.height !== size.height) {
+        throw new Error('Effect target dimensions differ from its logical frame');
       }
-      const scaled = await resizeAssetRgba(extracted, frame.width, frame.height, resolution, false, true);
       const x = local % columns * size.width, y = Math.floor(local / columns) * size.height;
       for (let row = 0; row < size.height; row++) {
         scaled.data.copy(pixels, ((y + row) * width + x) * 4, row * size.width * 4, (row + 1) * size.width * 4);

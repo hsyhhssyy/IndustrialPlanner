@@ -9,6 +9,7 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
       selectedGroupId: "experimental",
       values: {
         "other-experimental-features": true,
+        "experimental-dense-simulation-engine": true,
       },
     }));
     localStorage.setItem("v3-experimental-regional-multi-base", "true");
@@ -65,5 +66,48 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
     speed: 1,
     timelineEnabled: false,
     timelineVisible: true,
+  });
+});
+
+test("legacy keeps regional multi-base disabled and explains the limitation", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.addInitScript(() => {
+    localStorage.setItem("v3-user-settings-dialog", JSON.stringify({
+      selectedGroupId: "experimental",
+      values: {
+        "other-experimental-features": true,
+      },
+    }));
+    localStorage.setItem("v3-experimental-regional-multi-base", "true");
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "基地" }).click();
+
+  const regionalSwitch = page.getByRole("switch", { name: "同时运行所有基地" });
+  await expect(regionalSwitch).toBeDisabled();
+
+  await page.evaluate(() => {
+    window.__industrialPlannerAppHost?.regionalSettings.setMultiBaseEnabled(true);
+  });
+  await expect(regionalSwitch).toBeChecked();
+  await expect(regionalSwitch).toBeDisabled();
+
+  await page.getByRole("button", { name: "同时运行所有基地帮助" }).click();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "传统解析器不支持同时运行所有基地。",
+  );
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "开始仿真" }).click();
+  await expect.poll(() => page.evaluate(() => ({
+    engineKind: window.__industrialPlannerAppHost?.workspace.simulation?.engineKind,
+    runningState: window.__industrialPlannerAppHost?.workspace.simulation?.state.runningState,
+    simulationMode: window.__industrialPlannerAppHost?.workspace.simulation?.state.simulationMode,
+  }))).toEqual({
+    engineKind: "legacy",
+    runningState: "start",
+    simulationMode: "single-base",
   });
 });

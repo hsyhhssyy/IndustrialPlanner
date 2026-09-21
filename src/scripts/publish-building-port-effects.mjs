@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
-import { publishEffectFrames, resizeAssetRgba } from './building-asset-image.mjs';
+import { publishEffectFrames, resizeAssetRgba, resolveAssetScale } from './building-asset-image.mjs';
 
 /** single-view 交付用显式模式选中唯一模板；不从交付键拼接或猜测模板名称。 */
 export function resolveDeliveredPortVariant(ports, key) {
@@ -26,6 +26,7 @@ export async function publishBuildingPortEffects({
   viewSources = null,
   sourceVersion = null,
   collection: suppliedCollection = null,
+  sourceResolution = 1,
   resolution = 1,
 } = {}) {
   if (!sourceDirectory) throw new Error('sourceDirectory is required; use the website import batch');
@@ -37,6 +38,11 @@ export async function publishBuildingPortEffects({
     return JSON.parse(await readFile(file, 'utf8'));
   };
   const root = viewSources ? { version: sourceVersion, profile: 'top-sprite-height-v1', buildings: viewSources } : await json('assets/manifest.json');
+  const scale = resolveAssetScale(sourceResolution, resolution);
+  const verifySourceResolution = (document, label) => {
+    if (document.textureProfile === undefined && sourceResolution === 1) return;
+    if (document.textureProfile?.resolution !== sourceResolution) throw new Error(`${label} source resolution differs`);
+  };
   const collection = suppliedCollection ?? JSON.parse(await readFile('resources/building-top-view-v15.json', 'utf8'));
   const { createRegistryContract } = await tsImport('../registry/index.ts', {
     parentURL: import.meta.url,
@@ -73,7 +79,8 @@ export async function publishBuildingPortEffects({
           row.copy(data, bottom);
         }
       }
-      const scaled = await resizeAssetRgba(data, info.width, info.height, resolution, true, padToPixel);
+      // AI-CORRECTION 2026-09-20: 网站高度图已经是 64px 物理像素，目标倍率必须使用 target/source。
+      const scaled = await resizeAssetRgba(data, info.width, info.height, scale, true, padToPixel);
       await writeFile(destination, gzipSync(scaled.data, { level: 9 }));
       result = { file, width: scaled.width, height: scaled.height, sourceHeight: info.height };
     } else {
@@ -93,6 +100,9 @@ export async function publishBuildingPortEffects({
     const ports = building.ports === null ? null : await json(building.ports ?? `${directory}/ports.json`);
     const occlusionPath = building.occlusion ?? `${directory}/occlusion/occlusion.json`;
     const occlusion = await json(occlusionPath);
+    for (const [label, document] of [['spatial', spatial], ['occlusion', occlusion]]) {
+      verifySourceResolution(document, `${label}: ${directory}`);
+    }
     // contract2 的遮挡字段自带 canonicalSourceZReflection，已由物流发布契约决定画布方向。
     // 只有普通建筑源图需要在此处把 source +Z 逐行反射到项目 -y。
     const canonicalCanvas = occlusion.fields.some((field) =>
@@ -103,8 +113,9 @@ export async function publishBuildingPortEffects({
       const delivered = await publish(`${path.posix.dirname(occlusionPath)}/${field.file}`, true, reflectSourcePlane);
       fields[field.name] = { file: delivered.file, width: delivered.width, height: delivered.height,
         min: field.heightMin, max: field.heightMax,
-        pivot: [field.worldToPixel.pivotPixels.x * resolution, (reflectSourcePlane
-          ? delivered.sourceHeight - field.worldToPixel.pivotPixels.y : field.worldToPixel.pivotPixels.y) * resolution],
+        pivot: [field.worldToPixel.pivotPixels.x * resolution, reflectSourcePlane
+          ? delivered.height - field.worldToPixel.pivotPixels.y * resolution
+          : field.worldToPixel.pivotPixels.y * resolution],
         center: [field.worldToPixel.cameraCenterSource.x,
           reflectSourcePlane ? -field.worldToPixel.cameraCenterSource.z : field.worldToPixel.cameraCenterSource.z],
         pixelsPerCell: field.worldToPixel.pixelsPerCell.x * resolution };
@@ -164,26 +175,31 @@ export async function publishBuildingPortEffects({
     };
     const effectsPath = building.effects ?? `${directory}/effects/resources.json`;
     const registry = building.effects === null ? null : await json(effectsPath);
+    if (registry) verifySourceResolution(registry, `Effect registry: ${directory}`);
     for (const entry of registry?.resources ?? []) {
       const id = entry.id ?? entry.resourceId;
       if (manifest.effects[id]) continue;
       const effectPath = path.posix.normalize(`${path.posix.dirname(effectsPath)}/${entry.path}`);
       const effectDirectory = path.posix.dirname(effectPath);
       const effect = await json(effectPath);
+      verifySourceResolution(effect, `Effect: ${id}`);
       if (effect.geometry.additionalPrefabTransformRequired) throw new Error(`Unsupported prefab transform: ${id}`);
       const sheet = await json(`${effectDirectory}/${effect.spritesheet}`);
+      verifySourceResolution(sheet, `Effect spritesheet: ${id}`);
       const pages = [];
-      if (resolution === 1) for (const page of sheet.pages) pages.push({ file: await publish(`${effectDirectory}/${page.image}`, false, reflectSourcePlane),
+      if (resolution === 1 && sourceResolution === 1) for (const page of sheet.pages) pages.push({ file: await publish(`${effectDirectory}/${page.image}`, false, reflectSourcePlane),
         width: page.width, height: page.height });
-      const packed = resolution === 1 ? null : await publishEffectFrames({
-        sourceRoot: source, outputRoot: output, directory: effectDirectory, effect, sheet, resolution, flipVertical: reflectSourcePlane,
+      const packed = resolution === 1 && sourceResolution === 1 ? null : await publishEffectFrames({
+        sourceRoot: source, outputRoot: output, directory: effectDirectory, effect, sheet,
+        sourceResolution, resolution, flipVertical: reflectSourcePlane,
       });
       const height = await publish(`${effectDirectory}/${effect.heightTemplate.file}`, true, reflectSourcePlane, true);
       manifest.effects[id] = {
         height: { file: height.file, width: height.width, height: height.height,
           min: effect.heightTemplate.heightMin, max: effect.heightTemplate.heightMax,
-          pivot: [effect.projection.pivotPixels[0] * resolution, (reflectSourcePlane
-            ? height.sourceHeight - effect.projection.pivotPixels[1] : effect.projection.pivotPixels[1]) * resolution],
+          pivot: [effect.projection.pivotPixels[0] * resolution, reflectSourcePlane
+            ? height.height - effect.projection.pivotPixels[1] * resolution
+            : effect.projection.pivotPixels[1] * resolution],
           center: [effect.projection.cameraCenterSource[0], reflectSourcePlane
             ? -effect.projection.cameraCenterSource[1] : effect.projection.cameraCenterSource[1]],
           pixelsPerCell: effect.projection.pixelsPerCell * resolution },

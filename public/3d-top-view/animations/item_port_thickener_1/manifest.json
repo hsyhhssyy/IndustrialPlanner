@@ -1,14 +1,16 @@
 {
   "schemaVersion": 2,
   "resolution": 0.5,
+  "sourceResolution": 0.5,
   "frameWidth": 768,
   "frameHeight": 512,
   "appliedSourceToPublishedTransform": "flip-top-bottom",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   },
   "maskFile": "mask.webp",
   "playback": {

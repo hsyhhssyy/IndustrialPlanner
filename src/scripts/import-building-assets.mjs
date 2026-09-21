@@ -124,6 +124,9 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   }
   const root = sourceRootFor(batch, plan);
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
+  if (plan.sourceResolution !== 0.5 || targets.some((target) => target.resolution > plan.sourceResolution)) {
+    throw new Error(`Unsupported source/target resolutions: ${plan.sourceResolution}`);
+  }
   if (plan.deferredCategories?.includes('logistics') && ['all', 'logistics', 'effects'].includes(category)) {
     throw new Error('Deferred logistics batch is already assembled; validate/apply it, or prepare a new batch before republishing shared manifests');
   }
@@ -145,7 +148,8 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     if (includes('static')) for (const item of plan.statics) {
       await publishDeviceSprite(within(root, item.sourcePath), path.join(spriteDirectory, `${item.spriteId}.webp`),
         path.join(maskDirectory, `${item.spriteId}.webp`), path.join(projectRoot, `resources/device-sprite-mask-overrides/${item.spriteId}.webp`),
-        0, { crop: { left: 0, top: 0, width: item.width, height: item.height }, frameTransform: 'flip-top-bottom', resolution });
+        0, { crop: { left: 0, top: 0, width: item.physicalWidth, height: item.physicalHeight },
+          frameTransform: 'flip-top-bottom', sourceResolution: item.sourceResolution, resolution });
     }
     if (includes('animations')) for (const spriteId of plan.animations) {
       const result = await publishDeviceSpriteAnimations({ definitions: definitions.entityDefinitions, spriteIds: new Set([spriteId]),
@@ -159,11 +163,13 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       await rm(path.join(outputDirectory, 'logistics'), { recursive: true, force: true });
       await rm(path.join(outputDirectory, 'animations/logistics-contract2'), { recursive: true, force: true });
       logistics = await publishLogisticsBaked({ sourceDirectory: path.join(root, 'buildings/logistics'),
-        outputDirectory: path.join(outputDirectory, 'logistics'), spriteDirectory, maskDirectory, resolution, sourceSite: plan.sourceSite });
+        outputDirectory: path.join(outputDirectory, 'logistics'), spriteDirectory, maskDirectory,
+        sourceResolution: plan.sourceResolution, resolution, sourceSite: plan.sourceSite });
     }
     const heights = includes('effects') ? await publishBuildingPortEffects({ sourceDirectory: root, outputDirectory: path.join(outputDirectory, 'port-effects'),
       viewSources: plan.views, sourceVersion: plan.sourceSite.sourceVersion,
-      collection: { entries: collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId)) }, resolution }) : null;
+      collection: { entries: collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId)) },
+      sourceResolution: plan.sourceResolution, resolution }) : null;
     if (heights?.issues.length) throw new Error(`Height/effect bindings unresolved: ${JSON.stringify(heights.issues)}`);
     if (heights && (plan.scope === 'logistics' || plan.scope === 'entities')) {
       plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/`)),
@@ -294,7 +300,7 @@ async function verifyImage(root, file, width, height, numeric = false) {
 
 function verifyRect(rect, page) {
   const [x, y, width, height] = rect;
-  if (!rect.every(Number.isSafeInteger) || x < 0 || y < 0 || width <= 0 || height <= 0
+  if (!rect.every(Number.isFinite) || x < 0 || y < 0 || width <= 0 || height <= 0
     || x + width > page.width || y + height > page.height) throw new Error(`Atlas rectangle out of bounds: ${rect}`);
 }
 
@@ -329,7 +335,8 @@ export async function validateWebsiteBatch(batch) {
       const manifest = await json(path.join(directory, 'manifest.json'));
       const definition = definitions.entityDefinitions.find((candidate) => candidate.id === entry.entityId);
       const animation = animationProtocol.normalizeDeviceSpriteAnimationDefinition(definition.spriteAnimation, manifest);
-      if (animation.resolution !== resolution || manifest.sourceSite.indexSha256 !== receipt.indexSha256) throw new Error(`Animation provenance differs: ${entry.spriteId}`);
+      if (animation.resolution !== resolution || manifest.sourceResolution !== plan.sourceResolution
+        || manifest.sourceSite.indexSha256 !== receipt.indexSha256) throw new Error(`Animation provenance differs: ${entry.spriteId}`);
       await verifyImage(directory, animation.maskFile, width * resolution, height * resolution);
       for (const clip of Object.values(animation.clips)) for (const page of clip.pages) {
         await verifyImage(directory, page.file, page.columns * width * resolution, page.rows * height * resolution);
@@ -355,7 +362,8 @@ export async function validateWebsiteBatch(batch) {
       for (const frame of Object.values(material.frames)) verifyRect(frame.rect, material.pages[frame.page]);
       const dynamicRoot = path.join(root, 'logistics/baked');
       const dynamic = await json(path.join(dynamicRoot, 'manifest.json'));
-      if (dynamic.schemaVersion !== 2 || dynamic.format !== 'logistics-spritesheet-v2' || dynamic.resolution !== resolution) throw new Error('Invalid baked manifest');
+      if (dynamic.schemaVersion !== 2 || dynamic.format !== 'logistics-spritesheet-v2'
+        || dynamic.sourceResolution !== plan.sourceResolution || dynamic.resolution !== resolution) throw new Error('Invalid baked manifest');
       for (const resource of Object.values(dynamic.pages)) {
         await verifyImage(dynamicRoot, resource.file, resource.width, resource.height, resource.data ? 'rgba' : false);
         if (await fileHash(path.join(dynamicRoot, resource.file)) !== resource.sha256) throw new Error(`Baked product hash differs: ${resource.file}`);

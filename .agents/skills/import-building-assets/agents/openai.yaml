@@ -1,4 +1,4 @@
 interface:
   display_name: "网站建筑素材导入"
-  short_description: "按 checklist 导入原版及全部发布规格，区分原件留存，按错题本定位异常并报告缺口"
-  default_prompt: "使用 $import-building-assets 按本次范围和 checklist 执行，先核对现有入口与完成标准，遇异常查错题本并按证据处理；仅留存原件不扩大为发布，维护技能不执行导入。"
+  short_description: "直接校验并导入网站 64px 分文件素材，拒绝 ZIP 与二次缩放"
+  default_prompt: "使用 $import-building-assets 从素材网站的 64px 分文件发布导入本次范围，先核对来源与目标密度能力，拒绝 ZIP 和二次缩放；维护技能不执行导入。"

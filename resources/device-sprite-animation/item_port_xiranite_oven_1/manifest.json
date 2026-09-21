@@ -3,6 +3,7 @@
   "frameWidth": 640,
   "frameHeight": 640,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 6,
   "pageColumns": 5,
   "sources": {
@@ -15,8 +16,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "b2bc341538b773185d7d1e0274beca2dd801ad7a5086ee77ee24639691f9c5bf"
+      "sha256": "3df3d104b8152b077bbe5fd2677519a4a9cf21888c402149273b82faf18bf05d"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -61,8 +64,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "4f8ecde248d392441358cddb9df2c4d0931bb9eed1ebb44f9ec15952616ee637"
+      "sha256": "119cd9d46b72a6d20abae837ea6b7939a77d1ad56f203e46ec9c983348e5c207"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -107,8 +112,10 @@
         1100,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "0e02148a392dd98bdd9cc0d78187f8adb70d4d97342addc1745125055fb5f520"
+      "sha256": "982dc0af1eb66169309f6dce23ce8d1b86635598918119d1c5865586e9895bf0"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -153,8 +160,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "6b04b53029f48fe9277dad923cda9d4a726797ec5dc87f1e4a4c2c6964cb5330"
+      "sha256": "ed25892419c3b606bd7c2247fa155af5eae12fb77a253b859558637c7217e4b2"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -199,8 +208,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "a00f9325ed86a80f152cea54f4a66f6cd49d9bcbb0e4cde93f3d11c147286450"
+      "sha256": "838632526c7760e9e69871ec401ca6980409139d4b4fb23c8c67111673fac9ad"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -245,8 +256,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "3b58fc2281fee8536530abf774090789df8ba29a019c6c9fe2e00fe99c1c893b"
+      "sha256": "85feb2683190ffbdd7e8f651d5e5eab44940bf8af07cbb0019e234780b24b29c"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -291,8 +304,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "334e98671349b764b1a2c723cff6c4d71f01f9c36e0d5f6cdaf9be215c7c36a4"
+      "sha256": "54a08b1022792206bf345c8011774e9f142a7519d4cdf6708dd8aa19d08455d9"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -337,8 +352,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "c0ebf8b9d0cc7db1a0282aaeecd95da59f95b3905983fe2937c44dbcbec5e510"
+      "sha256": "4b5df5cc9d72a182d0d1bf31824fce56b18201af4185eb8dc833a820bd617d6e"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -383,8 +400,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "a8dcbcbf88f993469cfb6e20bf29af1f3c95987393f816495db8c92f34fd10db"
+      "sha256": "5502bab8f5a32e7f9e64c2d4c9714e91d1767e2bad9433e19d4d9179272eb368"
     },
     "open_idle_008": {
       "file": "open_idle_008.webp",
@@ -429,8 +448,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_008.webp",
-      "sha256": "3ff46fd76595550712c956bb8683a5570a038868e9a3e5a5dbd3f51e197ff332"
+      "sha256": "41489b405b5337e353535a02f5f71fa4378239d3ef0ff4931fecaeb50ce81b6d"
     },
     "open_idle_009": {
       "file": "open_idle_009.webp",
@@ -475,8 +496,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_009.webp",
-      "sha256": "fd7bcd4e6dd7f4888afaf3f98fab2b738eaa21303964238d3e5b28af69567d86"
+      "sha256": "f19df78a7cca27f17b5d5007d66cf1fd528ce1b63f5ccad817df1b862676f1b4"
     },
     "open_idle_010": {
       "file": "open_idle_010.webp",
@@ -521,8 +544,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_010.webp",
-      "sha256": "5bb4d7bd3b223af6c6c96c86e75c1cf3e2c2be0e5d28cc2bda7a44eed6812ba2"
+      "sha256": "454f8f874d30df7838216aa5bf08636f3ff10aef85d943653b5d15721968b177"
     },
     "open_idle_011": {
       "file": "open_idle_011.webp",
@@ -567,8 +592,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_011.webp",
-      "sha256": "9c623f519263a57c70cc38017d9267f82322e8b574a6dcc58c8057e3891fe5ce"
+      "sha256": "ec5aab5ba4e70791729742501753bdce373f7f97b25c332d3d7b9adc20803a95"
     },
     "open_idle_012": {
       "file": "open_idle_012.webp",
@@ -613,8 +640,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_012.webp",
-      "sha256": "690c883ec11cc17804b58761da7c89bcdc29b4ea4ae69e4ba2e54aabb3871ba6"
+      "sha256": "ac1b33073c40b1fdc5be8ed8a290af84a933e1646756d3e92abef0ad4590bb29"
     },
     "open_idle_013": {
       "file": "open_idle_013.webp",
@@ -659,8 +688,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_013.webp",
-      "sha256": "3ed0e86cace74826e169a4492ee7007f46a36949a3b515892da99b3a4797b579"
+      "sha256": "8e800383f224c4f997406776ceecda27c34e2a81fe42408d36f9e6547580bd91"
     },
     "open_idle_014": {
       "file": "open_idle_014.webp",
@@ -705,8 +736,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_014.webp",
-      "sha256": "7595c5ded6dafdfdab88dc8d33bb22edb42ac171140de83f390df4dca06a87ec"
+      "sha256": "6b342e4becd7f2e25c21640d5c76d6b07e177081bea4d35f75b86c44040dbaea"
     },
     "open_idle_015": {
       "file": "open_idle_015.webp",
@@ -751,8 +784,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_015.webp",
-      "sha256": "90f62ab179e64199607e9f8619ab08edef2b95529d9beb5d2b70fd2527ebf5f5"
+      "sha256": "ffe906afbc233f345a4d126be13e175cd8c12f1538d2760dd353384215a9e486"
     },
     "open_idle_016": {
       "file": "open_idle_016.webp",
@@ -797,8 +832,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_016.webp",
-      "sha256": "422d6bf686aa94aa32b3e0f02343bd106eda549d409d2db699b17feb59a2a1ce"
+      "sha256": "c11cf33febd592b8709f69cd0bf60d42272876cbaad7c0e03ad56d38ae08b3c3"
     },
     "open_idle_017": {
       "file": "open_idle_017.webp",
@@ -843,8 +880,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_017.webp",
-      "sha256": "8f37da0fdf11489daf9b1a5fb5f30487bb194af5a6c7b5b8c44c446dc7920629"
+      "sha256": "8159cbaa697a4b8368550f5e56c6e231d72958e7738355988760af11f5347ef4"
     },
     "open_idle_018": {
       "file": "open_idle_018.webp",
@@ -889,8 +928,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_018.webp",
-      "sha256": "cfaa152786400c42b928c630e59f159f82b518df28946ed1c1ba14b05da6793d"
+      "sha256": "dcd9fdda43d87e3251976290d70d00c4dde8e3990664b3699443e89336fdb954"
     },
     "open_idle_019": {
       "file": "open_idle_019.webp",
@@ -935,8 +976,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_019.webp",
-      "sha256": "ce2f6310bef69c1c50e64c074eb690b8942bca55c23944f60cc71483879a0c5f"
+      "sha256": "f8d31c03dc4e49c1a316222441794635526ec857fb3f85637d7f87d9b298c660"
     },
     "open_idle_020": {
       "file": "open_idle_020.webp",
@@ -981,8 +1024,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_020.webp",
-      "sha256": "1b8ae425c2d244c05fac72f88edaa97f8336391c514f55797edec6c3ceed8dcc"
+      "sha256": "ca2b52a04832ea8487534158a6c8f3121625908774ed2412bebaa7a680f3dc43"
     },
     "open_idle_021": {
       "file": "open_idle_021.webp",
@@ -992,8 +1037,10 @@
       "frameDurationsMs": [
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/xiranite_oven_1/top/animations/open_idle/spritesheet_021.webp",
-      "sha256": "1eec4a4deb21bf71a3441a3558a4fa1eff47b1e1a98e6fc9a39c3367d4a4a83b"
+      "sha256": "05a2115ce1ee8452982fa5c7f6dc693e75abc20d6b110ed5591bdfa3ba85dfe7"
     }
   },
   "clips": {
@@ -1133,8 +1180,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

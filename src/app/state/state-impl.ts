@@ -68,7 +68,7 @@ export function resolveLeftDockWidthForScreenProfile(
   return clampLeftDockWidth(width);
 }
 
-export interface AppSettingsReadWrite extends AppSettings {
+export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBaseEnabled"> {
   locale: AppLocale;
   themeId: AppThemeId;
   // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
@@ -583,7 +583,17 @@ export type ActivePanel =
   | null;
 export type PlacementGroup = Exclude<UiGroup, "hidden">;
 
-export interface UiStateReadWrite extends UiState {
+// AI-REMOVED 2026-09-20:
+// Reason: 内部可持久化设置不包含公开计算属性 regionalMultiBaseEnabled，不能再把 settings 直接声明为 UiState.settings 的可写子类型。
+// Trigger: ST2-RQ-035 将有效多基地选择作为 AppSettings 的无副本投影公开。
+// Evidence: AppSettingsReadWrite 明确 Omit 该计算字段，AppHost 单独构造公共 settings read model。
+// Replacement: 下方 Omit<UiState, "settings"> 后重新声明 settings。
+// Risk: Low；其余 UiState 字段仍保持原继承约束。
+// Human Review: Required
+//
+// Original code:
+// export interface UiStateReadWrite extends UiState {
+export interface UiStateReadWrite extends Omit<UiState, "settings"> {
   /// settings存储用户显式在设置页面配置的设置，这里面所有的内容都要持久化
   settings: AppSettingsReadWrite;
   /// workbenchState存储用户没有显式配置，但是仍然需要存储的状态，比如dock的开合状态等等。

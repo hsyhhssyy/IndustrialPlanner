@@ -1,27 +1,30 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import sharp from 'sharp';
-import { publishedImageSize, resizeAssetRgba } from './building-asset-image.mjs';
+import { publishedImageSize, resizeAssetRgba, resolveAssetScale } from './building-asset-image.mjs';
 import { compositeLogisticsLayers, publishAtlas } from './publish-logistics-materials.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const save = (file, value) => writeFile(file, `${JSON.stringify(value, null, 2)}\n`);
 
 /** 逐帧恢复源画布后缩放、裁切并重排；不同帧之间不参与滤波。数值场保留原始通道。 */
-export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, spriteDirectory, maskDirectory, resolution, sourceSite }) {
+export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, spriteDirectory, maskDirectory,
+  sourceResolution = 1, resolution, sourceSite }) {
   const source = JSON.parse(await readFile(path.join(sourceDirectory, 'logistics-baked.json'), 'utf8'));
   if (source.schemaVersion !== 2 || source.format !== 'logistics-spritesheet-v2'
-    || source.fluidPlayback?.kind !== 'baked-spatial-field-v2' || source.pixelsPerCell !== 128) {
+    || source.fluidPlayback?.kind !== 'baked-spatial-field-v2' || source.pixelsPerCell !== 128
+    || source.textureProfile?.resolution !== sourceResolution) {
     throw new Error('Unsupported baked logistics protocol');
   }
+  const scale = resolveAssetScale(sourceResolution, resolution);
   const size = publishedImageSize(128, 128, resolution).width;
   const directory = path.join(outputDirectory, 'baked');
   const staticDirectory = path.join(outputDirectory, 'static');
   for (const folder of [directory, staticDirectory, spriteDirectory, maskDirectory]) await mkdir(folder, { recursive: true });
   const manifest = {
-    schemaVersion: 2, format: source.format, resolution, pixelsPerCell: size, sourceSite,
+    schemaVersion: 2, format: source.format, sourceResolution, resolution, pixelsPerCell: size, sourceSite,
     pages: {}, frames: {}, clips: source.clips,
     staticResources: Object.fromEntries(Object.entries(source.staticResources).map(([key, resource]) => [key, resource.frame])),
     parametersByResourceId: Object.fromEntries(Object.entries(source.parametersByResourceId)
@@ -55,77 +58,68 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     const decoded = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     if (decoded.info.width !== page.width || decoded.info.height !== page.height) throw new Error(`Baked source dimensions differ: ${id}`);
     if (page.group === 'fluid-field') {
-      const scaled = await resizeAssetRgba(decoded.data, page.width, page.height, resolution, true);
+      const scaled = await resizeAssetRgba(decoded.data, page.width, page.height, scale, true);
       const encoded = gzipSync(scaled.data);
       const target = `${id}-${digest(encoded).slice(0, 16)}.rgba.bin`;
       await writeFile(path.join(directory, target), encoded);
-      manifest.pages[id] = { file: target, width: scaled.width, height: scaled.height, data: true, sha256: digest(encoded) };
-    } else originals.set(id, decoded);
+      manifest.pages[id] = { file: target, width: scaled.width, height: scaled.height, data: true,
+        filter: page.filter ?? 'linear', sha256: digest(encoded) };
+    } else {
+      let outputBytes = bytes;
+      let width = page.width, height = page.height;
+      if (scale !== 1) {
+        const scaled = await resizeAssetRgba(decoded.data, page.width, page.height, scale);
+        width = scaled.width; height = scaled.height;
+        outputBytes = await sharp(scaled.data, { raw: { width, height, channels: 4 } }).webp({ lossless: true }).toBuffer();
+      }
+      const target = `${id}-${digest(outputBytes).slice(0, 16)}.webp`;
+      if (scale === 1) await copyFile(file, path.join(directory, target));
+      else await writeFile(path.join(directory, target), outputBytes);
+      manifest.pages[id] = { file: target, width, height, data: false,
+        filter: page.filter ?? 'linear', sha256: digest(outputBytes) };
+      originals.set(id, decoded);
+    }
   }
   const fullFrames = new Map();
-  const groups = new Map();
   const requiredFrames = new Set(Object.values(manifest.clips).flatMap((clip) => clip.frames));
-  for (const [key, frame] of Object.entries(source.frames)) if (key.startsWith('static/') && frame.sourceSize.every((value) => value === 128)) requiredFrames.add(key);
-  manifest.staticResources = Object.fromEntries(Object.entries(manifest.staticResources).filter(([, frame]) => requiredFrames.has(frame)));
+  for (const frame of Object.values(manifest.staticResources)) requiredFrames.add(frame);
+  manifest.staticResources = Object.fromEntries(Object.entries(manifest.staticResources).filter(([, frame]) => source.frames[frame]));
   for (const [key, frame] of Object.entries(source.frames)) {
     // 原始 pattern/chevron 长图已烘焙为相位帧，运行时不再加载这两个未消费的原贴图。
+    // AI-CORRECTION 2026-09-20: 新版移除直管 pattern clip，并直接交付 64px 物理图集；这里只保留清单引用帧。
     if (!requiredFrames.has(key)) continue;
     const original = originals.get(frame.page);
-    const [x, y, width, height] = frame.rect;
+    const [x, y, width, height] = frame.physicalRect ?? [];
     const [left, top, trimWidth, trimHeight] = frame.spriteSourceSize;
-    if (!original || frame.rotated || frame.sourceSize.some((value) => value !== 128)
-      || ![x, y, width, height, left, top].every(Number.isSafeInteger)
-      || x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > original.info.width || y + height > original.info.height
-      || left < 0 || top < 0 || left + width > 128 || top + height > 128 || trimWidth !== width || trimHeight !== height) {
+    const sourceWidth = frame.sourceSize[0] * sourceResolution;
+    const sourceHeight = frame.sourceSize[1] * sourceResolution;
+    if (!original || frame.rotated || ![sourceWidth, sourceHeight].every(Number.isSafeInteger)
+      || ![x, y, width, height, left, top, trimWidth, trimHeight].every(Number.isFinite)
+      || x < 0 || y < 0 || width <= 0 || height <= 0
+      || x + width > original.info.width || y + height > original.info.height) {
       throw new Error(`Invalid baked frame: ${key}`);
     }
-    const full = Buffer.alloc(128 * 128 * 4);
-    for (let row = 0; row < height; row++) {
-      const offset = ((y + row) * original.info.width + x) * 4;
-      original.data.copy(full, ((top + row) * 128 + left) * 4, offset, offset + width * 4);
-    }
-    if (key.startsWith('static/')) fullFrames.set(key, full);
-    const scaled = await resizeAssetRgba(full, 128, 128, resolution);
-    // 裁切向外覆盖采样核边缘，保持原画布/pivot，不能将窄帧拉伸为整格。
-    const sx = Math.max(0, Math.floor(left * resolution) - 2);
-    const sy = Math.max(0, Math.floor(top * resolution) - 2);
-    const sw = Math.min(size, Math.ceil((left + width) * resolution) + 2) - sx;
-    const sh = Math.min(size, Math.ceil((top + height) * resolution) + 2) - sy;
-    const group = source.pages[frame.page].group;
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push({ key, scaled: scaled.data, sx, sy, width: sw, height: sh });
-  }
-  for (const [group, frames] of groups) {
-    let x = 2, y = 2, rowHeight = 0, pageIndex = 0, pending = [];
-    const limit = 2048;
-    const flush = async () => {
-      if (!pending.length) return;
-      const width = Math.max(...pending.map((f) => f.x + f.width + 2));
-      const height = Math.max(...pending.map((f) => f.y + f.height + 2));
-      const pixels = Buffer.alloc(width * height * 4);
-      const pageId = `${group}-${pageIndex++}`;
-      for (const frame of pending) {
-        for (let row = -2; row < frame.height + 2; row++) for (let column = -2; column < frame.width + 2; column++) {
-          const src = ((frame.sy + Math.max(0, Math.min(frame.height - 1, row))) * size
-            + frame.sx + Math.max(0, Math.min(frame.width - 1, column))) * 4;
-          frame.scaled.copy(pixels, ((frame.y + row) * width + frame.x + column) * 4, src, src + 4);
-        }
-        manifest.frames[frame.key] = { page: pageId, rect: [frame.x, frame.y, frame.width, frame.height],
-          sourceSize: [size, size], spriteSourceSize: [frame.sx, frame.sy, frame.width, frame.height] };
-      }
-      const bytes = await sharp(pixels, { raw: { width, height, channels: 4 } }).webp({ lossless: true }).toBuffer();
-      const file = `${pageId}-${digest(bytes).slice(0, 16)}.webp`;
-      await writeFile(path.join(directory, file), bytes);
-      manifest.pages[pageId] = { file, width, height, data: false, sha256: digest(bytes) };
-      pending = []; x = 2; y = 2; rowHeight = 0;
+    manifest.frames[key] = {
+      page: frame.page,
+      rect: [x * scale, y * scale, width * scale, height * scale],
+      sourceSize: frame.sourceSize.map((value) => value * resolution),
+      spriteSourceSize: frame.spriteSourceSize.map((value) => value * resolution),
     };
-    for (const frame of frames) {
-      if (x + frame.width + 2 > limit) { x = 2; y += rowHeight + 4; rowHeight = 0; }
-      if (y + frame.height + 2 > limit) await flush();
-      pending.push({ ...frame, x, y });
-      x += frame.width + 4; rowHeight = Math.max(rowHeight, frame.height);
+    if (!key.startsWith('static/') || sourceWidth !== 128 * sourceResolution || sourceHeight !== 128 * sourceResolution) continue;
+    const full = Buffer.alloc(sourceWidth * sourceHeight * 4);
+    const sourceLeft = Math.ceil(x), sourceTop = Math.ceil(y);
+    const sourceRight = Math.floor(x + width), sourceBottom = Math.floor(y + height);
+    const targetLeft = Math.ceil(left * sourceResolution), targetTop = Math.ceil(top * sourceResolution);
+    const copyWidth = Math.min(sourceRight - sourceLeft, sourceWidth - targetLeft);
+    const copyHeight = Math.min(sourceBottom - sourceTop, sourceHeight - targetTop);
+    if (copyWidth <= 0 || copyHeight <= 0) throw new Error(`Baked frame has no safe physical interior: ${key}`);
+    for (let row = 0; row < copyHeight; row++) {
+      const offset = ((sourceTop + row) * original.info.width + sourceLeft) * 4;
+      original.data.copy(full, ((targetTop + row) * sourceWidth + targetLeft) * 4, offset, offset + copyWidth * 4);
     }
-    await flush();
+    // 裁切向外覆盖采样核边缘，保持原画布/pivot，不能将窄帧拉伸为整格。
+    // AI-CORRECTION 2026-09-20: 直接保留网站图集与 physicalRect；静态回退只安全复制完整归属像素。
+    fullFrames.set(key, full);
   }
   for (const [key, clip] of Object.entries(manifest.clips)) {
     if (clip.phaseSamples !== clip.frames.length || clip.frames.some((frame) => !manifest.frames[frame])) throw new Error(`Incomplete phase clip: ${key}`);
@@ -148,7 +142,9 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
       if (support) push('support-back');
       if (support) push('support-middle');
       push('shell');
-      if (marker) push('static-marker');
+      if (marker) push('static-chevron');
+      if (marker && shape === 'straight') push('static-logo-glow');
+      if (marker && shape === 'straight') push('static-logo-core');
       if (support) push('support-front');
       const pixels = compositeLogisticsLayers(layers);
       entries.push([`pipe/empty/${shape}/${Number(support)}${Number(marker)}`, pixels]);
@@ -156,12 +152,12 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     }
   }
   entries.push(['belt/straight-base', get('conveyor.straight.base')]);
-  await publishAtlas(staticDirectory, 'baked-static', entries, statics, resolution);
+  await publishAtlas(staticDirectory, 'baked-static', entries, statics, resolution, sourceResolution);
   await save(path.join(staticDirectory, 'manifest.json'), statics);
   for (const [kind, shape, pixels] of defaults) {
     const rotation = shape === 'straight' ? 270 : shape === 'left' ? 90 : 0;
-    const image = await sharp(pixels, { raw: { width: 128, height: 128, channels: 4 } }).rotate(rotation).raw().toBuffer();
-    const scaled = await resizeAssetRgba(image, 128, 128, resolution);
+    const image = await sharp(pixels, { raw: { width: size, height: size, channels: 4 } }).rotate(rotation).raw().toBuffer();
+    const scaled = await resizeAssetRgba(image, size, size, scale);
     const file = `${kind}_${shape === 'straight' ? 'straight' : shape === 'left' ? 'turn_cw' : 'turn_ccw'}_1x1.webp`;
     await sharp(scaled.data, { raw: { width: size, height: size, channels: 4 } }).webp({ lossless: true }).toFile(path.join(spriteDirectory, file));
     const mask = Buffer.from(scaled.data);

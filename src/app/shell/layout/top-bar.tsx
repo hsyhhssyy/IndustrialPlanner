@@ -170,8 +170,11 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   const currentSpeed = simulation?.state.simulationSpeed ?? 1;
   const isStarting = simulation?.state.runningState === "starting";
   const t = appHost.actions.translate;
-  const regionalMultiBaseEnabled = simulation?.state.simulationMode
-    === SIMULATION_MODE.regionalMultiBase;
+  // AI-CORRECTION 2026-09-20: 停止态预览下一次会话时读取 AppSettings；运行态只反映已经固化的会话模式。
+  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
+    && (simulation.state.runningState === "stop"
+      ? appHost.state.settings.regionalMultiBaseEnabled
+      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
   const visibleSpeedOptions = regionalMultiBaseEnabled
     ? SIMULATION_SPEED_OPTIONS.filter(isRegionalSimulationSpeed)
     : SIMULATION_SPEED_OPTIONS;
@@ -232,8 +235,12 @@ export const TimelineButton = observer(function TimelineButton({
 }) {
   const label = appHost.actions.translate("timelineDialog.title");
   const active = appHost.internalState.workbench.dialogState.timeline.visible;
-  const disabled = appHost.workspace.simulation?.state.simulationMode
-    === SIMULATION_MODE.regionalMultiBase;
+  const simulation = appHost.workspace.simulation;
+  // AI-CORRECTION 2026-09-20: 停止态时间轴入口属于下一次会话配置，不能读取上一次会话的 SimulationMode。
+  const disabled = simulation?.engineKind === "dense-v2"
+    && (simulation.state.runningState === "stop"
+      ? appHost.state.settings.regionalMultiBaseEnabled
+      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
 
   return (
     <button

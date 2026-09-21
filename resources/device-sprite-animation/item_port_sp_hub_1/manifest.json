@@ -3,6 +3,7 @@
   "frameWidth": 1408,
   "frameHeight": 1408,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 2,
   "pageColumns": 2,
   "sources": {
@@ -17,8 +18,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "855b0bfefc6aa58f2acadffd7798d2d3d76483893b7af1a1bf59904c16416e97"
+      "sha256": "419970a358406508c463831c4b9ccaf379ca5198b85f3025dee80d2e0940a2a8"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -31,8 +34,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "cc570030a1ca0bc703f70cecec356f1ee59f6661ea570dd6724179d4a5334808"
+      "sha256": "eb07dde01c6eca8533ee81843a74c2f102e0414dd7f2454f9067582a5fbffb16"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -45,8 +50,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "b8a23ee832553e6ba59f67523000cce6360b2faf8d53a8f230cd5c7b4a9e0c68"
+      "sha256": "436d24f5e31a0c40e72be77064d7e1a57afd6035589bf8c285dbc0534fa64c42"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -59,8 +66,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "6ed65eb4af1ef474aacc6b92cac18a8089e0937d52e1d5d4a832f3598cdaf044"
+      "sha256": "2f730cd1e7104dd99fb8290440328b779285b45e3a5c847d8946877e5c885c82"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -73,8 +82,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "37f5872453c12877fb4e57a3f30376d0a588cc832575db70820723e026e40a0c"
+      "sha256": "e3275ca57b537460833fd9f5ce73e32f730ad319af2cb53e262936283e6910d7"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -87,8 +98,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "04ad7e8d444ac09daaf64ae6116bd5e808a7fb9932e0377196aac13072d9ed84"
+      "sha256": "497b0f239f10b6cf17117cdd87831a9ec81f72993b90089e908d050db969b72d"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -101,8 +114,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "4293cea0d441c5c6bf07ee50fb09206f0c2c52a6542e3a1cd6608c4e09801f95"
+      "sha256": "33feccaa5a3df05d3382162c5f4b460dad81bc95f986aecc08587e18036494dd"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -115,8 +130,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "7de32e9b667052d7bf7cf1ca43bcf7b0e7ee1df8928fc4dc749052c641fa930c"
+      "sha256": "a3a330234aab1ccb73323b50d5d15aa01ff92c12672bfabfe49f15c63931279c"
     },
     "open_idle_008": {
       "file": "open_idle_008.webp",
@@ -129,8 +146,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_008.webp",
-      "sha256": "250b383dc71fd976bbe7a32e95706b3417ccdf8be503e30e65ac7ac3ef80cb90"
+      "sha256": "e4d4baa9f0944a2f5a8739fb9387c53569f996dc51173aa5d17b463b5c935e59"
     },
     "open_idle_009": {
       "file": "open_idle_009.webp",
@@ -143,8 +162,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_009.webp",
-      "sha256": "8ce3dd52f95a51b89d16a0cfadc20a96fbc66d2b22bdd824d8e155cfe6054508"
+      "sha256": "ded9ea78a5d1ac5751669a0365115248d0a34d8a2a4c7a79cc9e6141f6e5fc12"
     },
     "open_idle_010": {
       "file": "open_idle_010.webp",
@@ -157,8 +178,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_010.webp",
-      "sha256": "2acc93faa9587f3350ae71c5e36ab0c984b782c391b5fed6857a04e9ffa50142"
+      "sha256": "8c17d51538a374736ecd746fe2aaee4b832a074d14bc5a083d03957bd0cbbe7b"
     },
     "open_idle_011": {
       "file": "open_idle_011.webp",
@@ -171,8 +194,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_011.webp",
-      "sha256": "e3efa609ef052ae87ea524159eeda59048f515ba3fb66530e15c9c4259bce5f4"
+      "sha256": "88a60bc681653ff2235aa173fa947372ccd472562efae11d1f0a1e14ba078f87"
     },
     "open_idle_012": {
       "file": "open_idle_012.webp",
@@ -185,8 +210,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_012.webp",
-      "sha256": "7ae9c0fdd55b0c7945a5008efa409ca60e33c3632608a71434bff26660d3df57"
+      "sha256": "e4508c864a077416add7047dbaa818bde8862b116ae79c0e23d4fa8fe7b0f064"
     },
     "open_idle_013": {
       "file": "open_idle_013.webp",
@@ -199,8 +226,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_013.webp",
-      "sha256": "3bb698107dc49cc982cf0c9ad89c18e04d8cc9bf127eb27f598e4138e10e6378"
+      "sha256": "ab176a29659279e388636478247f531f735973243835642646cea2d9a7baa7e3"
     },
     "open_idle_014": {
       "file": "open_idle_014.webp",
@@ -213,8 +242,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_014.webp",
-      "sha256": "3a8a8e455dcef64990e59961f7248ac8b8a31d3f29af677301deb90880ef3df8"
+      "sha256": "f3dbdafdce9a34b8ca89c9535936a90e32342328415e64f0d9ccea84d17c9da8"
     },
     "open_idle_015": {
       "file": "open_idle_015.webp",
@@ -227,8 +258,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_015.webp",
-      "sha256": "e5c54be22117d71301f8a0156a00b469b2fdfde8efa4afe0bfb6617f8f4e9a43"
+      "sha256": "f932a36b786bd937363f2a5c7578005f510581ddb842a2c9315e759f98f16c31"
     },
     "open_idle_016": {
       "file": "open_idle_016.webp",
@@ -241,8 +274,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_016.webp",
-      "sha256": "4ff0e5c250c20d04a785edc6274829a392967276c4556ae9a88d1f3dab2051cf"
+      "sha256": "8fe0af2f1da490d758a688533ffe9439180a1ac7b5657954f515333f7bbaf0e7"
     },
     "open_idle_017": {
       "file": "open_idle_017.webp",
@@ -255,8 +290,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_017.webp",
-      "sha256": "a77780400c51de2ef670e893a7005674ebd8d42f0815bd0eb1f86e00871113fd"
+      "sha256": "3ed9c8b20ad8d71d8bda3825be76185cd4db1e63fceb8f9eb2b03ae14c5c9d28"
     },
     "open_idle_018": {
       "file": "open_idle_018.webp",
@@ -269,8 +306,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_018.webp",
-      "sha256": "edcb67d934c363fcf299135f837621c5bbc20eb07e002b8178e7b953156b1de9"
+      "sha256": "13190db570323fa1a0697626fd4379d43ca8e61a674aee801c0b69424d6a5741"
     },
     "open_idle_019": {
       "file": "open_idle_019.webp",
@@ -283,8 +322,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_019.webp",
-      "sha256": "7f698cd3dac71ff0c8f5fcbe089b2a43d40022db744f7737a2eff9a0fca21c24"
+      "sha256": "813c55f5faa6a1a563165df7b76f03b53ed4e1d32a8d1fb0f4824030f0ac419c"
     },
     "open_idle_020": {
       "file": "open_idle_020.webp",
@@ -297,8 +338,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_020.webp",
-      "sha256": "356e772a8618dcc2d709868907bdb6cdd3b824e22432fb0b965383127647aeea"
+      "sha256": "b56304649c22666effd84fa223e7ede0efaae521178e543fbf7744bfe55988a0"
     },
     "open_idle_021": {
       "file": "open_idle_021.webp",
@@ -311,8 +354,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_021.webp",
-      "sha256": "19585a21f7b86de80a933404e7da0aac99ad562e03e25551a256162cb5aca337"
+      "sha256": "bb2d470cd39b50f2505041e6bc353002386a32a992fff007ae5c9a31b02c39ce"
     },
     "open_idle_022": {
       "file": "open_idle_022.webp",
@@ -325,8 +370,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_022.webp",
-      "sha256": "bf58a9f14972cb0caf94e8d2c50588f3e621701bdf78099198c0afdac870c15e"
+      "sha256": "5af76b9492283ef411015a2328024b3333c895956f8f1cbae07a99f6a33e85e2"
     },
     "open_idle_023": {
       "file": "open_idle_023.webp",
@@ -339,8 +386,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_023.webp",
-      "sha256": "d5817cf1c84ee7cb8ebd03113ddb064c5583a9d8edee642b0c07ec74fa8ea901"
+      "sha256": "d37e80ebb0339088eba7889b45d92a3e6dec870637b4970a74ed7dae2926103b"
     },
     "open_idle_024": {
       "file": "open_idle_024.webp",
@@ -353,8 +402,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_024.webp",
-      "sha256": "a00f0eb258a1d6c2fc36afff09efbafeacd422ac9cd4a07a9f49c892553ec14e"
+      "sha256": "534a8b3c193ced07f59ee75d31c1964119141e92f83ec8b1c1b37f78bf807a98"
     },
     "open_idle_025": {
       "file": "open_idle_025.webp",
@@ -367,8 +418,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_025.webp",
-      "sha256": "1f658abba871ef335a108c60e5aa1813ff65588b0c44735c0a506d74c2d5eba7"
+      "sha256": "8876636eb0b8f91d731f26423342b364254464a969eec5cb6cc2a7c90104ee48"
     },
     "open_idle_026": {
       "file": "open_idle_026.webp",
@@ -381,8 +434,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_026.webp",
-      "sha256": "9207677ad33b69c7535923009e8b13068b99b98a765615d3139b78e51d082866"
+      "sha256": "b39506bfbf49efaaa86c234c99340bdf4495adac5415b88c34b8e4c33737f382"
     },
     "open_idle_027": {
       "file": "open_idle_027.webp",
@@ -395,8 +450,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_027.webp",
-      "sha256": "fca076e4472baab02e2483a97f6136d9c35d4caf2739d8e41cfc7a00be85c429"
+      "sha256": "13053e66fe0d413a27075c95b052deb1fed5879c97c95cdfbd528cb3e0957777"
     },
     "open_idle_028": {
       "file": "open_idle_028.webp",
@@ -409,8 +466,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_028.webp",
-      "sha256": "82a40a00628cb57f971d5ca50de9f13c6bc990cfec388d97f59ab973e0cc56a3"
+      "sha256": "387243cc1edb165e4746cf0dabfa3c3bcb0074df2edadbe65485279737dcd743"
     },
     "open_idle_029": {
       "file": "open_idle_029.webp",
@@ -423,8 +482,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_029.webp",
-      "sha256": "2679906536fcea3b61a496f9f69e839939c8a697c1c02561be7d759307142477"
+      "sha256": "db9eee9dcf32fe36c662c911fefa506b1df266fecc80a4a0cd1693694a52ce0b"
     },
     "open_idle_030": {
       "file": "open_idle_030.webp",
@@ -437,8 +498,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_030.webp",
-      "sha256": "d18a376e7ce585c018636939e30cd347f53a6e23646459bf1e85af6b4a866e2d"
+      "sha256": "37aa836c3ecc4586cca07d357b1c63505eef2f74abd6d22f9b247e99c43be388"
     },
     "open_idle_031": {
       "file": "open_idle_031.webp",
@@ -451,8 +514,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_031.webp",
-      "sha256": "bca1a652a5040f81525c25d4009f2419701351c642ba905abf0c35f7e03cbac5"
+      "sha256": "60464412dd0cb498b47a41fd441799fffc6e26781aab30a5e5d016c95e1400f0"
     },
     "open_idle_032": {
       "file": "open_idle_032.webp",
@@ -465,8 +530,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_032.webp",
-      "sha256": "95a908a91f32484024928df46a6773aed98f0e1e28eb39c31c6f624238a9a2d8"
+      "sha256": "c50d36c956ddd9614dee4a327b28965e030942487fd3ad026e2c580cac007961"
     },
     "open_idle_033": {
       "file": "open_idle_033.webp",
@@ -479,8 +546,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_033.webp",
-      "sha256": "35adb0959d82f69c75fef6526b581eae18e9391723fc362b547e9209a32e1a10"
+      "sha256": "2afc5c3877a4f251e98cff956a8c7e831c2b3a27a2e5b456ca371191303589c4"
     },
     "open_idle_034": {
       "file": "open_idle_034.webp",
@@ -493,8 +562,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_034.webp",
-      "sha256": "25cb0a2c13e650e0f6ac32950b3f77e0da038623b239de6671283c8ba6b1a89e"
+      "sha256": "bd80b7dc07a2a26a342dcc04eef0afad57966a0b251908dbb7cf638702e72241"
     },
     "open_idle_035": {
       "file": "open_idle_035.webp",
@@ -507,8 +578,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_035.webp",
-      "sha256": "69645e888dc673d34b17aad4f18f763526de52fffde12358335fbffcb10997a0"
+      "sha256": "ba8d071f54136c4652c37c879e18f36f22db2c918801929c4f1d07c55e3c9622"
     },
     "open_idle_036": {
       "file": "open_idle_036.webp",
@@ -521,8 +594,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_036.webp",
-      "sha256": "8076ac27116fe9dfe809b80b81e920b691c19c10e375cf4afc9ed36d3d286ddf"
+      "sha256": "9f601e98ff891aa0476e06a3097f306d02fb1a380c87a16ef649221975914eee"
     },
     "open_idle_037": {
       "file": "open_idle_037.webp",
@@ -535,8 +610,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_037.webp",
-      "sha256": "53c16054ed82f5ba5b1bd0cebbdb28a832f5385ca47cd0d79e6705671ac26e99"
+      "sha256": "750b9e67b23c735540920bcf5445cb2e78d91e903fbe2d639e5cc1b5c7f33bc2"
     },
     "open_idle_038": {
       "file": "open_idle_038.webp",
@@ -549,8 +626,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_038.webp",
-      "sha256": "5f942c8995e2ff45371598cab771dbb65fc7c50adc6b920c789f39ac681b3e7e"
+      "sha256": "b2c2140a2c62de664dc5cd27ea522e00e5419a435e760208e28052c45e7ee555"
     },
     "open_idle_039": {
       "file": "open_idle_039.webp",
@@ -563,8 +642,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_039.webp",
-      "sha256": "71321f8983e2871df85c97b4c68d4572a85619d14e79f4b9206860fc661cf6b0"
+      "sha256": "23393da8c9f73c28e50f363a72c9bed4790654b5d39dea39c9b9460eb12f3c8f"
     },
     "open_idle_040": {
       "file": "open_idle_040.webp",
@@ -577,8 +658,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_040.webp",
-      "sha256": "6b8a08c7b8fbefc5aa25f1902b2f01fa4a8b1b54efcfad84aa3e134f1bd87af0"
+      "sha256": "c42ca78513878cecb41be69c74025e606b09c59184468cf50d4164ac83d8e243"
     },
     "open_idle_041": {
       "file": "open_idle_041.webp",
@@ -591,8 +674,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_041.webp",
-      "sha256": "10844a33a2fb5f669418b153b7e9f364f22d98c59fde913fa90ca72300c84300"
+      "sha256": "2e120720d642bca88672cbcec6d3dc043a8bab49bb05bdbe189c14435b36854c"
     },
     "open_idle_042": {
       "file": "open_idle_042.webp",
@@ -605,8 +690,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_042.webp",
-      "sha256": "49d9494e43cedda65cf7e116c1ce2b886a0e3dccaa410d1908f86b849c79897c"
+      "sha256": "b51feb374b1dcef6ddbccf74bb3d951d98bd28d22981a73191030d39c229f9fa"
     },
     "open_idle_043": {
       "file": "open_idle_043.webp",
@@ -619,8 +706,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_043.webp",
-      "sha256": "e4b26e4e8e5f3569c50abad51e31ead3254a9acf2b54c3272086f179175fec26"
+      "sha256": "c91671c5f51104a5457eb254e2e11d1ee6fa54ef5ecaad43cad27e9a81655987"
     },
     "open_idle_044": {
       "file": "open_idle_044.webp",
@@ -633,8 +722,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_044.webp",
-      "sha256": "e3893d70b28ce49c27c80a1c1a5bd5edc797b73f3653d46d111a9989902e5dcd"
+      "sha256": "5530174ecb82295660218ef8fee812c0984f9ca57788f09710aab8b6772144e6"
     },
     "open_idle_045": {
       "file": "open_idle_045.webp",
@@ -647,8 +738,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_045.webp",
-      "sha256": "20d65441689dc5ac5baa1ee612647de02c4b029dbe9823eed60c5630ccaf71e7"
+      "sha256": "ea45a51d3bda62014075709e9589f93b2fbaab3cbb0d28fbc0cb8e02d41fcc7c"
     },
     "open_idle_046": {
       "file": "open_idle_046.webp",
@@ -661,8 +754,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_046.webp",
-      "sha256": "96fb08fd6257b262b0863dcf4ef5ee148d4338c72169c0352f40f19ec121d3c0"
+      "sha256": "2e709154db975310da9390b7aa8eeb7ccd7a4332b81e0b63df5b91d6c4e87af1"
     },
     "open_idle_047": {
       "file": "open_idle_047.webp",
@@ -675,8 +770,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_047.webp",
-      "sha256": "194d901a688a68b66a69a1665e42293eafb23c1a35de13597060b29e63dd702b"
+      "sha256": "9925625267771b2402f2a067e602c8b282a5cb2f9b6d8f697f7d5ba7da6f21be"
     },
     "open_idle_048": {
       "file": "open_idle_048.webp",
@@ -689,8 +786,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_048.webp",
-      "sha256": "9708e4248acfca530c1e169621069f7e6a5ed08c8e37def28a6cf205349cd721"
+      "sha256": "8296fca55c1a44f28b08800769fac58752726999633e7b99ad6b7d60794a712c"
     },
     "open_idle_049": {
       "file": "open_idle_049.webp",
@@ -703,8 +802,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_049.webp",
-      "sha256": "6fba81c8a4ecff86f84792a712916ec105585cffac5ac4e2c56675dbe433d9d0"
+      "sha256": "57c11d1528dcb0fc647767528f32ac541f7b6be53685e157b2433024e6e571c2"
     },
     "open_idle_050": {
       "file": "open_idle_050.webp",
@@ -717,8 +818,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_050.webp",
-      "sha256": "4771839781a1e138172cab8378c59b6a8eeb774ea401ecf391243633dd63c515"
+      "sha256": "8c3b9cc52819d18c69d233fb5556078d8c1ed1dbd1a7c3c0025a9b57e3f87bb9"
     },
     "open_idle_051": {
       "file": "open_idle_051.webp",
@@ -731,8 +834,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_051.webp",
-      "sha256": "e32fea84f159ae77dcfac152b246dba20b1a4a3de379135f1094c769e51cecb7"
+      "sha256": "b85137535647b2f96f6932366fb4c37113331e74a1393fa14891f92b9e9487fb"
     },
     "open_idle_052": {
       "file": "open_idle_052.webp",
@@ -745,8 +850,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_052.webp",
-      "sha256": "98ac1115c0c5a3d2bf5823419607cb247811d293a9b62dbffcdd7e09777d4c3e"
+      "sha256": "37ec8683c89da2ca38d3c3040cdbfdac73c20181f4e8c9cedb0f4c4b824fd240"
     },
     "open_idle_053": {
       "file": "open_idle_053.webp",
@@ -759,8 +866,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_053.webp",
-      "sha256": "c3d6abe07a91476f20d79f72dbadff805c94794880caf7ab11446ee8d8b8298f"
+      "sha256": "bc34d4ff8c0db0c002788338e81118e53fe6ac495f360e7eb0fdad281c67bcc7"
     },
     "open_idle_054": {
       "file": "open_idle_054.webp",
@@ -773,8 +882,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_054.webp",
-      "sha256": "c8163e2496d55c15197737ba20e9f4aabc5d4a4b428d1a4599ea3489fccd585f"
+      "sha256": "5aa99e2b0020d7ebb40625cdf82d62c9cb4486457ce708aaf3a68d4c18c37c34"
     },
     "open_idle_055": {
       "file": "open_idle_055.webp",
@@ -787,8 +898,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_055.webp",
-      "sha256": "9c8b40b1f452232ae4e5ef7a6bec7a704ce435ae4e0b8ed88ad20724a480cd95"
+      "sha256": "d96ac1f72c0fed9f6c8e4a67cb7e01396a17d9fc666dfe14d1eba0722bebebd6"
     },
     "open_idle_056": {
       "file": "open_idle_056.webp",
@@ -801,8 +914,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_056.webp",
-      "sha256": "f8a03736c40e5d53079d0492bbf10dbd7327b551d83450b1f6dabf7aa649bf51"
+      "sha256": "7d38ca4bbac7dfdfa4110b0eb9914b3e553bb663cc1b22054f2f07aade61f585"
     },
     "open_idle_057": {
       "file": "open_idle_057.webp",
@@ -815,8 +930,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_057.webp",
-      "sha256": "3e6b327cf2bc661c60cebf203c8e2502f6609a3eb86ba06b857a1051f3fac337"
+      "sha256": "b036c7037b0c1f0ead3ce13daa85eb8b5480f3b3368f989afe8c3f08f9133195"
     },
     "open_idle_058": {
       "file": "open_idle_058.webp",
@@ -829,8 +946,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_058.webp",
-      "sha256": "ec866c598eac8176ad3f41b6d98adc851b2142079a1a412629ca3176f8878744"
+      "sha256": "bf88085c19e782cd9b816f4dc6eea9059359bd7eda9357c459009095ff11dac5"
     },
     "open_idle_059": {
       "file": "open_idle_059.webp",
@@ -843,8 +962,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_059.webp",
-      "sha256": "1b36ffb4d56873f668f918aac32833b367b5fccfb5e0b79375f2d00957d61676"
+      "sha256": "c201e84b4a1b525a20d1129840cc6ac32d5a4270d67c1420cc1b3d46f0f35933"
     },
     "open_idle_060": {
       "file": "open_idle_060.webp",
@@ -857,8 +978,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_060.webp",
-      "sha256": "7a808fc863d53679f160f2d99744e97b0f389fb24bed02060ff2f2497c147ed1"
+      "sha256": "c31215e278a0c6faf421880a86c1c7505f8671059a16ea8c41d70957a66ae083"
     },
     "open_idle_061": {
       "file": "open_idle_061.webp",
@@ -871,8 +994,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_061.webp",
-      "sha256": "879a610a79a4721b1bdf1bfeb222505f779b87e9450d6d28a6174c0ab3c4335c"
+      "sha256": "0a2d153dfbf6d032ce22dc938836c86cb56b7e68c68756a9405cbe7bcfe9a4ba"
     },
     "open_idle_062": {
       "file": "open_idle_062.webp",
@@ -885,8 +1010,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_062.webp",
-      "sha256": "0f6b775d4a6c429b1ab97ed4f37064cf3a584b6ed52545a6ef750d7f74be483a"
+      "sha256": "aa1be34f4f89bb0e0127855ab216ee0d7ed9a8782b329ea3732e258569f72304"
     },
     "open_idle_063": {
       "file": "open_idle_063.webp",
@@ -899,8 +1026,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_063.webp",
-      "sha256": "092c56421d8bca2373982af2580fa89cfbd5be186245a792feb684c1e3e33615"
+      "sha256": "bf16bfc61268fba4abfd03f43fbafcbf8745aff5666787ea387086b703f80039"
     },
     "open_idle_064": {
       "file": "open_idle_064.webp",
@@ -913,8 +1042,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_064.webp",
-      "sha256": "13818de2507c922ef6dbcd3ece18951f24dac497f6b10c1143db3ac79fce1515"
+      "sha256": "c00c542cb16395a790b0ebb53e4b2ae2737b3d17e43294094cd55936a6850e76"
     },
     "open_idle_065": {
       "file": "open_idle_065.webp",
@@ -927,8 +1058,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_065.webp",
-      "sha256": "4ca2fa7bd23afd7e95940a547620b8bc709433a0cc76eaa58c0f388480c083f1"
+      "sha256": "00d68a04ff0f1a5d64dd4f7fe18e60c91e5f59994de4622ab71e48fadccc3aac"
     },
     "open_idle_066": {
       "file": "open_idle_066.webp",
@@ -941,8 +1074,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_066.webp",
-      "sha256": "605644ac85dfb5904686c2338a061410cc0c7722465e9175e985ea07a6d57f1e"
+      "sha256": "ed122d2190644ff9db0398a24e08e1f4eb44984971c9bb4e90577e6f7cd2bd94"
     },
     "open_idle_067": {
       "file": "open_idle_067.webp",
@@ -955,8 +1090,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_067.webp",
-      "sha256": "387a7de28fc9808f9265ae4b044dbd19e9e8200211d4fed225d502efd2cdc871"
+      "sha256": "b3a424b3959ef7fc9429b0edecd54098e92b9a2acb0c758fa633434d65d1f963"
     },
     "open_idle_068": {
       "file": "open_idle_068.webp",
@@ -969,8 +1106,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_068.webp",
-      "sha256": "d00084d54677162b9ae3c10ff09bf2940de6a0ce5bbe7f06c8b14d81feb43307"
+      "sha256": "6c10e931abaaa993203f52788e457db790600896e4551319c442077bb36c95e3"
     },
     "open_idle_069": {
       "file": "open_idle_069.webp",
@@ -983,8 +1122,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_069.webp",
-      "sha256": "d9b57f337460e722e6949d79e8d4bc96524c75d6c1a5b7cb1adad7fd3e4ccbc1"
+      "sha256": "95aeb7e0a8df6dadbc0e5db8c615ce59bbfe9518604bad32fbdc7280f4d0176e"
     },
     "open_idle_070": {
       "file": "open_idle_070.webp",
@@ -997,8 +1138,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_070.webp",
-      "sha256": "b0c94d5573e9b2ec2b9959eb13e87bdae6fd4835b9604ac1360c885eff89d16f"
+      "sha256": "a03cabb5825bbd6d9ff96aac8fd670435dc5adc86d77cc3fadbae357c2df96c7"
     },
     "open_idle_071": {
       "file": "open_idle_071.webp",
@@ -1011,8 +1154,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_071.webp",
-      "sha256": "be8247258e2564af3c0e8dde4449433138c11ab4f480be6b65237abd1e9fc2f0"
+      "sha256": "5b4edaa76435d2ab3a3ae3c168449d70813a95e0cbe0b1afdc08bd82cf3f6c79"
     },
     "open_idle_072": {
       "file": "open_idle_072.webp",
@@ -1025,8 +1170,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_072.webp",
-      "sha256": "62f22d1baa308da912b5bfd9a5f2f06f501ff354ef11b169b8f9b0a6d30d5a7e"
+      "sha256": "d33327b1fd9d94bd644224f26ef556efb44fd2e4b05c1d1f0648fda810468239"
     },
     "open_idle_073": {
       "file": "open_idle_073.webp",
@@ -1039,8 +1186,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_073.webp",
-      "sha256": "f8ff4bfaca1e8260ac9df0b2d893b9a6742da707c720972bc80df586f3790fa6"
+      "sha256": "fec9f6c3673e7de4e3bd56270c2745b12e182b5d9c94fa519cf31a2028d96c66"
     },
     "open_idle_074": {
       "file": "open_idle_074.webp",
@@ -1053,8 +1202,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_074.webp",
-      "sha256": "5a1b7f47588f69cbf82f1839da068acd4ca4e3242e2c27b0d93d5884850e79e5"
+      "sha256": "8199bf24ef7e2746e5f06332faa5dc5eb37c6eee80148233aaa669323e2c1a96"
     },
     "open_idle_075": {
       "file": "open_idle_075.webp",
@@ -1067,8 +1218,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_075.webp",
-      "sha256": "7e0a97b46e30218b89d869472c5f7550a3562246bb58e27f9a6b17d82cba0950"
+      "sha256": "51978594395e2ca021707468acde9ba5e2344865fccdd82c90142209d0dcf7ff"
     },
     "open_idle_076": {
       "file": "open_idle_076.webp",
@@ -1081,8 +1234,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_076.webp",
-      "sha256": "97ea73b589de965b79adf56bfc83b5f5ded9e131501781a00a7c72c236eee745"
+      "sha256": "0c5282ae39e83ded1acbed0f64dc3c6016d13169c0f5b0f71c98c7d4ddc7b5cd"
     },
     "open_idle_077": {
       "file": "open_idle_077.webp",
@@ -1095,8 +1250,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_077.webp",
-      "sha256": "1a0c9e3ac907a2619183acf8367f82c669eacfb14f9a59db7521ed7362bf6415"
+      "sha256": "587472d007be0dc9850f15b40a4b788f0e34c5f343950a011541d6c2bd81483f"
     },
     "open_idle_078": {
       "file": "open_idle_078.webp",
@@ -1109,8 +1266,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_078.webp",
-      "sha256": "1035b73466d9058abc4e054488b4fef093d69f2df2bbf6043760c74b8320a963"
+      "sha256": "8d8f4c702ecc221be89f2de6abea23cc201824ef1ccf5dc02885aeaa2112c55e"
     },
     "open_idle_079": {
       "file": "open_idle_079.webp",
@@ -1123,8 +1282,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_079.webp",
-      "sha256": "d89c2793c698a80ca985117e5a0c24b60b0cb6c59d52beed50b76ac16d852c3b"
+      "sha256": "fa21c5b7394bea8a3aefa6c70c7dbfbf60f1ea0525ada5d73eab4d744904648d"
     },
     "open_idle_080": {
       "file": "open_idle_080.webp",
@@ -1137,8 +1298,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_080.webp",
-      "sha256": "a40c6eb05e30546fac852f061f483d72af1cb15144773647b202a420b9849492"
+      "sha256": "da11ba7d6795aa53b268fc5b2e7591df8fa286d5107f04d09841c7681d8c4c19"
     },
     "open_idle_081": {
       "file": "open_idle_081.webp",
@@ -1151,8 +1314,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_081.webp",
-      "sha256": "bbda9f2582b8a4df25622e60a8141bd4d11231f5621d6b7ae8a7fa02d11a6f3c"
+      "sha256": "3f966658ab5a6836978775567afc278155452912bb8dff4fe79eb89938ac7bf0"
     },
     "open_idle_082": {
       "file": "open_idle_082.webp",
@@ -1165,8 +1330,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_082.webp",
-      "sha256": "1c46780728d0d7a8ff0e8530dc0bf83d29e63dc645fd87f7702e66083b626c5a"
+      "sha256": "6cc2277c8a39c3f7dc16bd1ba42041b9af9a12a07421b30e0eef9fcc881fea7a"
     },
     "open_idle_083": {
       "file": "open_idle_083.webp",
@@ -1179,8 +1346,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_083.webp",
-      "sha256": "92a5d3a54c0b5fe3b38ad11f5b1c737bfe4fd7213c6fe60a53b10d4d42fc60ee"
+      "sha256": "90a4c7de128e4ddcb100ebb3ebca4ee29d3004f80aeb6ea7f979782857565ea9"
     },
     "open_idle_084": {
       "file": "open_idle_084.webp",
@@ -1193,8 +1362,10 @@
         33,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_084.webp",
-      "sha256": "5a244da215255f974a5379e7993ad27828e415854dc7f1a4e2dd35a550f2a888"
+      "sha256": "3ced79e4050976e6cae53c1941a1409a4219b5dcb8ff005bbfc94389169bc15d"
     },
     "open_idle_085": {
       "file": "open_idle_085.webp",
@@ -1207,8 +1378,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_085.webp",
-      "sha256": "c39e6d239474806f9c35671081475082ebf2dc7b4ca29673c44d6940ad2636c7"
+      "sha256": "dcf0fd2c71c564c4ebd9977c2dad9fe62ef978456ba99ac3d20a60b85b2dfa19"
     },
     "open_idle_086": {
       "file": "open_idle_086.webp",
@@ -1221,8 +1394,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_086.webp",
-      "sha256": "c105e55bad7cfab2eec63c424a35d7387af0d81fe9995ced592946068b01d0c5"
+      "sha256": "cf338ec7741a021bee507b12b824556b0c3493c5513e582f42813016a3aedc03"
     },
     "open_idle_087": {
       "file": "open_idle_087.webp",
@@ -1234,8 +1409,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 704,
+      "physicalFrameHeight": 704,
       "sourcePath": "buildings/sp_hub_1/top/animations/open_idle/spritesheet_087.webp",
-      "sha256": "97a90be75f08b4cb8d75980255fc944a8ff355a7f9e6d644d9590bfaee8d51e1"
+      "sha256": "fa6eddf834e7fea60b241405b193aa27701b12567e56463abe2f382d2969d125"
     }
   },
   "clips": {
@@ -1708,8 +1885,9 @@
   "clipSelection": "protocol-core-open-idle-only",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

@@ -347,6 +347,7 @@ const UI: Record<string, string> = {
     "basePanel.runAllBasesHelp": "Run All Bases Simultaneously Help",
     "basePanel.runAllBasesHelpLoadFailed": "Failed to load help content",
     "basePanel.runAllBasesHelpLoading": "Loading help content…",
+    "basePanel.runAllBasesLegacyUnsupported": "The legacy solver does not support running all bases simultaneously.",
     "regionalResources.addResource": "Add Resource",
     "regionalResources.infiniteProfile": "Infinite",
     "regionalResources.infiniteProfileSummary": "Unlimited supply for all regional natural resources",

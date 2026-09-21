@@ -3,6 +3,7 @@
   "frameWidth": 384,
   "frameHeight": 384,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 7,
   "pageColumns": 5,
   "sources": {
@@ -64,8 +65,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "fdf3864a1ab25fb6bdc0b5433781c586e7996fc5f1e56c5816e9f8f1e82994de"
+      "sha256": "509f7f83fc7129f7213912e30d8406abfe9c86e801651a58e3042c3b9e348a05"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -76,8 +79,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "a1ea1e5f060ae4de8647dee8651523ab2c95b924e82ca1e9316aa984fcc36a35"
+      "sha256": "eba342965566a3130e4b8f23dd1db8642af7518f98cd909b6110af411283e54d"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -133,8 +138,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "da562a2472d90cbed6527125bd25c8f9d94ccdaeb72ce04d1c4146e01307d635"
+      "sha256": "10c0e792fb552c5be4da563674efade7a0996ece9b1e5ab2fa5f6b386b6d63b6"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -145,8 +152,10 @@
         33,
         67
       ],
+      "physicalFrameWidth": 192,
+      "physicalFrameHeight": 192,
       "sourcePath": "buildings/liquid_cleaner_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "875869a85c8dd5f3e7eb98df6b1e49ff93b8ee5e94ac92095afaddec6f52e72b"
+      "sha256": "ce52eff77b7bc2bcdf56ee90a20948d60afb33691dfbbc9ea9dc400ae5a9e3b8"
     }
   },
   "clips": {
@@ -195,8 +204,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

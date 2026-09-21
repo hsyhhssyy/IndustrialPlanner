@@ -4,6 +4,7 @@ import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
 import { createWorldDocument } from "@/domain/document/world-document";
+import type { AppContract } from "@/domain/app/app-contract";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
@@ -109,7 +110,6 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     const composite = createDenseRegionalDocument({
-      currentBaseId,
       documents: [currentDocument, remoteDocument],
       registry: createRegistryContract(),
       darkPipeLinks: [link],
@@ -124,7 +124,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
         slotId: "slot_1",
       },
       target: {
-        entityId: inlet.id,
+        entityId: `dense-base:${currentBaseId}:inlet`,
         storageSlotGroupId: "loader_buffer",
         slotId: "slot_1",
       },
@@ -137,7 +137,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
       activeActivityIds: [],
     });
     const statusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(topology);
-    expect(statusSourceByDeviceId.get("device:inlet"))
+    expect(statusSourceByDeviceId.get(`device:dense-base:${currentBaseId}:inlet`))
       .toBe(`device:dense-base:${remoteBaseId}:outlet`);
     expect(statusSourceByDeviceId.get(`device:dense-base:${remoteBaseId}:outlet`))
       .toBe(`device:dense-base:${remoteBaseId}:outlet`);
@@ -603,7 +603,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
       expect(host.state.runningState).toBe("start");
@@ -614,6 +614,124 @@ describe("ST2-RQ-023 dense host regressions", () => {
       });
       await host.actions.advancePlaybackByDeltaMs(500);
       expect(readSimulationSnapshot(host)?.tickNumber).toBeGreaterThanOrEqual(1);
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("keeps the Dense regional simulation running when switching the current base", async () => {
+    const registry = createRegistryContract();
+    const currentBaseId = "wuling_protocol_core";
+    const nextBaseId = registry.baseDefinitions.find(
+      (definition) => definition.tag === "武陵" && definition.id !== currentBaseId,
+    )!.id;
+    const blueprint = loadBlueprintVariantFromFile(
+      "src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json",
+      "scene-02",
+      { engineKind: "dense-v2" },
+    );
+    const documentsByBaseId = Object.fromEntries(
+      registry.baseDefinitions
+        .filter((definition) => definition.tag === "武陵")
+        .map((definition) => {
+          const document = definition.id === currentBaseId || definition.id === nextBaseId
+            ? createWorldDocumentFromBlueprint(blueprint)
+            : createWorldDocument({ baseId: definition.id });
+          document.baseId = definition.id;
+          document.documentKey = `dense-regional-base-switch-${definition.id}`;
+          return [definition.id, document];
+        }),
+    );
+    const documentStore = createSnapshotStore(documentsByBaseId[currentBaseId]!);
+    const readLatestBaseDocuments = vi.fn(async (baseIds: readonly string[]) =>
+      baseIds.map((baseId) => documentsByBaseId[baseId]!)
+    );
+    const workspace = createDenseTestWorkspace({
+      currentDocument: documentsByBaseId[currentBaseId]!,
+      documentStore,
+      registry,
+      readLatestBaseDocuments,
+    });
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      setRegionalMultiBaseSetting(workspace, true);
+      await host.actions.start();
+      await host.actions.advancePlaybackByDeltaMs(1_000);
+      await host.actions.patchRuntimeSlot({
+        entityId: "stable-storage",
+        storageGroupId: "storage_slot_1",
+        slotId: "slot_1",
+        itemType: "item_copper_ore",
+        count: 13,
+        ignoreStock: false,
+      });
+      const beforeSwitchTickNumber = readSimulationSnapshot(host)!.tickNumber;
+      expect(beforeSwitchTickNumber).toBeGreaterThan(0);
+      await host.actions.enableTimeline();
+
+      documentStore.setSnapshot(documentsByBaseId[nextBaseId]!);
+      await vi.waitFor(() => {
+        expect(host.topology.getSnapshot()?.ordering.deviceOrder).toContain(
+          `device:warehouse:${nextBaseId}`,
+        );
+      });
+
+      expect(host.state.runningState).toBe("start");
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(beforeSwitchTickNumber);
+      expect(Object.keys(readSimulationSnapshot(host)!.devices)).not.toContainEqual(
+        expect.stringContaining("dense-base:"),
+      );
+      await host.actions.patchRuntimeSlot({
+        entityId: "stable-storage",
+        storageGroupId: "storage_slot_1",
+        slotId: "slot_1",
+        itemType: "item_copper_ore",
+        count: 11,
+        ignoreStock: false,
+      });
+      expect(host.queries.getDeviceRuntimeStatus("stable-storage")?.slotItems)
+        .toContainEqual(expect.objectContaining({
+          storageGroupId: "storage_slot_1",
+          slotId: "slot_1",
+          itemType: "item_copper_ore",
+          count: 11,
+        }));
+      expect(await host.actions.seekTimelineToTick(0)).toBe(true);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(
+        DENSE_TIMELINE_ORIGIN_STANDARD_TICK,
+      );
+
+      documentStore.setSnapshot(documentsByBaseId[currentBaseId]!);
+      await vi.waitFor(() => {
+        expect(host.topology.getSnapshot()?.ordering.deviceOrder).toContain(
+          `device:warehouse:${currentBaseId}`,
+        );
+      });
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(beforeSwitchTickNumber);
+      expect(host.queries.getDeviceRuntimeStatus("stable-storage")?.slotItems)
+        .toContainEqual(expect.objectContaining({
+          storageGroupId: "storage_slot_1",
+          slotId: "slot_1",
+          itemType: "item_copper_ore",
+          count: 13,
+        }));
+
+      documentStore.setSnapshot(documentsByBaseId[nextBaseId]!);
+      await vi.waitFor(() => {
+        expect(host.queries.getDeviceRuntimeStatus("stable-storage")?.slotItems)
+          .toContainEqual(expect.objectContaining({
+            storageGroupId: "storage_slot_1",
+            slotId: "slot_1",
+            itemType: "item_copper_ore",
+            count: 11,
+          }));
+      });
+      expect(readLatestBaseDocuments).toHaveBeenCalledTimes(1);
     } finally {
       host.dispose();
     }
@@ -654,7 +772,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
       const snapshot = readSimulationSnapshot(host)!;
       expect(Object.keys(snapshot.devices).filter((deviceId) =>
@@ -733,7 +851,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
       const currentBaseDemand = host.topology.getSnapshot()?.totalPowerDemand ?? 0;
@@ -764,7 +882,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
       await host.actions.enableTimeline();
 
@@ -837,7 +955,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
       expect(host.state.runningState).toBe("start");
@@ -941,7 +1059,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
       expect(host.state.runningState).toBe("stop");
@@ -974,7 +1092,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
     });
 
     try {
-      host.actions.setRegionalMultiBaseEnabled(true);
+      setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
       expect(host.state.runningState).toBe("stop");
@@ -1096,4 +1214,26 @@ function createDenseTestWorkspace(options: {
     sync: null,
     blueprintPlanner: null,
   };
+}
+
+// AI-REMOVED 2026-09-20:
+// Reason: Dense 区域回归不能再通过公共 SimulationAction 预写内部会话模式。
+// Trigger: ST2-RQ-035 要求 start 从 AppContract 的布尔设置固化 SimulationMode。
+// Evidence: 本文件七个区域启动场景均在 start 前调用 setRegionalMultiBaseSetting。
+// Replacement: setRegionalMultiBaseSetting。
+// Risk: Low；每个场景仍在相同启动边界启用多基地。
+// Human Review: Required
+//
+// Original code (seven call sites):
+// host.actions.setRegionalMultiBaseEnabled(true);
+
+function setRegionalMultiBaseSetting(
+  workspace: WorkspaceContract,
+  enabled: boolean,
+): void {
+  workspace.app = {
+    state: { settings: { regionalMultiBaseEnabled: enabled } },
+    queries: {},
+    actions: {},
+  } as unknown as AppContract;
 }

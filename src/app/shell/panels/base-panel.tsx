@@ -207,7 +207,9 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
   //
   // Original code:
   // const simulation = appHost.workspace.simulation;
-  const multiBaseEnabled = appHost.regionalSettings.multiBaseEnabled;
+  // AI-CORRECTION 2026-09-20: ST2-RQ-035 后静态 UI 读取 AppSettings 投影；RegionalSettingsController 仅保存同步资产原值。
+  const multiBaseEnabled = appHost.state.settings.regionalMultiBaseEnabled;
+  const regionalMultiBaseSupported = appHost.workspace.simulation?.engineKind === "dense-v2";
   const currentUnknownEntityProblems = useMemo<RegionalUnknownEntityProblem[]>(() => {
     if (currentDocument === null) return [];
     return collectUnknownWorldEntityDefinitionIssues({
@@ -558,12 +560,13 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
               <input
                 checked={multiBaseEnabled}
                 disabled={
-                  regionalSimulationUiState.siblingBaseCount < 1
+                  !regionalMultiBaseSupported
+                  || regionalSimulationUiState.siblingBaseCount < 1
                   || appHost.workspace.simulation?.state.runningState !== "stop"
                 }
                 onChange={(event) => {
                   const simulation = appHost.workspace.simulation;
-                  if (simulation === null) return;
+                  if (simulation === null || !regionalMultiBaseSupported) return;
 
                   const enabled = event.target.checked;
                   if (
@@ -601,6 +604,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                   // });
                   // AI-CORRECTION 2026-08-19: 当前 checkbox 读取 RegionalSettingsController，SimulationMode 由 main.tsx 的实验门控 reaction 派生。
                   // AI-CORRECTION 2026-08-20: 当前控件使用 switch 语义与外观，状态仍读取 RegionalSettingsController。
+                  // AI-CORRECTION 2026-09-20: 当前 switch 读取 AppSettings；SimulationMode 只在 Simulation.start 时固化。
                   if (enabled) {
                     setRegionalHelpTutorialVisible(true);
                   }
@@ -617,6 +621,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
             </label>
             <RegionalMultiBaseHelp
               compactLayout={appHost.state.screenProfile.deviceClass === "mobile"}
+              legacyUnsupported={!regionalMultiBaseSupported}
               onCloseTutorial={() => setRegionalHelpTutorialVisible(false)}
               t={t}
               tutorialVisible={regionalHelpTutorialVisible}
@@ -823,11 +828,13 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
 
 function RegionalMultiBaseHelp({
   compactLayout,
+  legacyUnsupported,
   onCloseTutorial,
   t,
   tutorialVisible,
 }: {
   compactLayout: boolean;
+  legacyUnsupported: boolean;
   onCloseTutorial: () => void;
   t: AppHost["actions"]["translate"];
   tutorialVisible: boolean;
@@ -847,7 +854,7 @@ function RegionalMultiBaseHelp({
   const title = t("basePanel.runAllBasesHelp");
 
   useEffect(() => {
-    if (!tooltipVisible || tooltipHtml !== null || tooltipLoadFailed) return;
+    if (legacyUnsupported || !tooltipVisible || tooltipHtml !== null || tooltipLoadFailed) return;
 
     let cancelled = false;
     void fetchHelpMarkdownHtml(REGIONAL_MULTI_BASE_HELP_PATH, {
@@ -865,7 +872,7 @@ function RegionalMultiBaseHelp({
     return () => {
       cancelled = true;
     };
-  }, [tooltipHtml, tooltipLoadFailed, tooltipVisible]);
+  }, [legacyUnsupported, tooltipHtml, tooltipLoadFailed, tooltipVisible]);
 
   useEffect(() => {
     if (!tooltipVisible) return;
@@ -957,7 +964,9 @@ function RegionalMultiBaseHelp({
               ...tooltipPosition,
             }}
           >
-            {tooltipLoadFailed ? (
+            {legacyUnsupported ? (
+              <p>{t("basePanel.runAllBasesLegacyUnsupported")}</p>
+            ) : tooltipLoadFailed ? (
               <p>{t("basePanel.runAllBasesHelpLoadFailed")}</p>
             ) : tooltipHtml === null ? (
               <p>{t("basePanel.runAllBasesHelpLoading")}</p>

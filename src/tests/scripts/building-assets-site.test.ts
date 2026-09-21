@@ -14,6 +14,8 @@ import { publishDeviceSprite } from "../../scripts/sync-device-sprites.mjs";
 import { applyWebsiteBatch, deferWebsiteLogistics, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
 // @ts-expect-error Node 端口发布器直接复用。
 import { resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
+// @ts-expect-error Node 物流发布器直接复用。
+import { publishLogisticsBaked } from "../../scripts/publish-logistics-baked.mjs";
 
 async function fixture(run: (directory: string) => Promise<void>): Promise<void> {
   const parent = path.resolve(".temp/.trash");
@@ -26,7 +28,7 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
   }
 }
 
-const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
   it("暂缓物流时同时排除原件和发布图，并保留共享清单中的既有高度", async () => {
@@ -116,6 +118,20 @@ describe("网站素材批次", () => {
     });
   });
 
+  it("64px 静态原件发布到 64px 目标时不重复缩小", async () => {
+    await fixture(async (directory) => {
+      const source = path.join(directory, "source.webp");
+      await sharp({ create: { width: 64, height: 32, channels: 4, background: { r: 32, g: 64, b: 128, alpha: 1 } } })
+        .webp({ lossless: true }).toFile(source);
+      const sprite = path.join(directory, "sprite.webp");
+      const mask = path.join(directory, "mask.webp");
+      await publishDeviceSprite(source, sprite, mask, path.join(directory, "missing.webp"), 0,
+        { sourceResolution: 0.5, resolution: 0.5 });
+      expect(await sharp(sprite).metadata()).toMatchObject({ width: 64, height: 32 });
+      expect(await sharp(mask).metadata()).toMatchObject({ width: 64, height: 32 });
+    });
+  });
+
   it("数值图整字节取最近样本，裁切边界补透明像素而不改变采样密度", async () => {
     const pixels = Buffer.alloc(5 * 4 * 4);
     for (let i = 0; i < 20; i++) pixels.set([i, 255 - i, 0, 255], i * 4);
@@ -152,28 +168,123 @@ describe("网站素材批次", () => {
     },
   );
 
-  it("奇数宽特效逐帧缩放后重新排布，避免相邻帧颜色混入", async () => {
+  it("64px 奇数宽特效按半像素 physicalRect 补透明边，避免相邻帧颜色混入", async () => {
     await fixture(async (directory) => {
       const sourceRoot = path.join(directory, "source");
       const outputRoot = path.join(directory, "output");
       await mkdir(path.join(sourceRoot, "buildings/effect"), { recursive: true });
-      const pixels = Buffer.alloc(10 * 4 * 4);
-      for (let y = 0; y < 4; y++) for (let x = 0; x < 10; x++) pixels.set(x < 5 ? [255, 0, 0, 255] : [0, 0, 255, 255], (y * 10 + x) * 4);
-      await sharp(pixels, { raw: { width: 10, height: 4, channels: 4 } }).webp({ lossless: true })
+      const pixels = Buffer.alloc(5 * 2 * 4);
+      for (let y = 0; y < 2; y++) for (let x = 0; x < 5; x++) {
+        pixels.set(x < 2 ? [255, 0, 0, 255] : x === 2 ? [255, 0, 255, 255] : [0, 0, 255, 255], (y * 5 + x) * 4);
+      }
+      await sharp(pixels, { raw: { width: 5, height: 2, channels: 4 } }).webp({ lossless: true })
         .toFile(path.join(sourceRoot, "buildings/effect/source.webp"));
       const effect = { frames: [
-        { page: 0, x: 0, y: 0, width: 5, height: 4, durationMs: 33 },
-        { page: 0, x: 5, y: 0, width: 5, height: 4, durationMs: 1340 },
+        { page: 0, x: 0, y: 0, width: 5, height: 4, durationMs: 33, physicalRect: [0, 0, 2.5, 2] },
+        { page: 0, x: 5, y: 0, width: 5, height: 4, durationMs: 1340, physicalRect: [2.5, 0, 2.5, 2] },
       ] };
-      const sheet = { pages: [{ image: "source.webp", width: 10, height: 4 }] };
-      const result = await publishEffectFrames({ sourceRoot, outputRoot, directory: "buildings/effect", effect, sheet, resolution: 0.5, flipVertical: true });
+      const sheet = { pages: [{ image: "source.webp", width: 5, height: 2 }] };
+      const result = await publishEffectFrames({ sourceRoot, outputRoot, directory: "buildings/effect", effect, sheet,
+        sourceResolution: 0.5, resolution: 0.5, flipVertical: true });
       expect(result.frames).toEqual([
         { page: 0, x: 0, y: 0, width: 3, height: 2, durationMs: 33 },
         { page: 0, x: 3, y: 0, width: 3, height: 2, durationMs: 1340 },
       ]);
       const rgba = await sharp(path.join(outputRoot, result.pages[0].file)).ensureAlpha().raw().toBuffer();
       expect(rgba[2]).toBe(0);
-      expect(rgba[3 * 4]).toBe(0);
+      expect(rgba[2 * 4 + 3]).toBe(0);
+      expect(rgba[3 * 4 + 3]).toBe(0);
+      expect(rgba[4 * 4 + 2]).toBeGreaterThan(200);
+    });
+  });
+
+  it("64px 烘焙物流保留网站物理图集并生成 64px 静态回退", async () => {
+    await fixture(async (directory) => {
+      const sourceDirectory = path.join(directory, "source");
+      const outputDirectory = path.join(directory, "output");
+      const spriteDirectory = path.join(directory, "sprites");
+      const maskDirectory = path.join(directory, "masks");
+      await mkdir(path.join(sourceDirectory, "baked"), { recursive: true });
+      const page = await sharp({ create: { width: 64, height: 64, channels: 4,
+        background: { r: 80, g: 120, b: 160, alpha: 0.75 } } }).webp({ lossless: true }).toBuffer();
+      const field = await sharp({ create: { width: 4, height: 4, channels: 4,
+        background: { r: 1, g: 2, b: 3, alpha: 1 } } }).webp({ lossless: true }).toBuffer();
+      await writeFile(path.join(sourceDirectory, "baked/static.webp"), page);
+      await writeFile(path.join(sourceDirectory, "baked/fluid-field.webp"), field);
+      const staticNames = [
+        ...["straight", "left", "right"].flatMap((shape) => [
+          `conveyor.${shape}.static`,
+          `pipe.${shape}.support-back`,
+          `pipe.${shape}.support-middle`,
+          `pipe.${shape}.shell`,
+          `pipe.${shape}.static-chevron`,
+          `pipe.${shape}.support-front`,
+        ]),
+        "conveyor.straight.base",
+        "pipe.straight.static-logo-glow",
+        "pipe.straight.static-logo-core",
+      ];
+      const clips = Object.fromEntries([
+        ...["straight", "left", "right"].flatMap((shape) => [
+          `conveyor/${shape}/highlight`, `conveyor/${shape}/arrow`,
+        ]),
+        ...["straight", "left", "right"].map((shape) => `pipe/${shape}/chevron`),
+      ].map((clip) => [clip, { phaseSamples: 1, frames: [`dynamic/${clip}`] }]));
+      const frame = {
+        page: "static-0", rect: [0, 0, 128, 128], physicalRect: [0, 0, 64, 64], rotated: false,
+        sourceSize: [128, 128], spriteSourceSize: [0, 0, 128, 128],
+      };
+      const frames = Object.fromEntries([
+        ...staticNames.map((name) => [`static/${name}`, frame]),
+        ...Object.keys(clips).map((clip) => [`dynamic/${clip}`, frame]),
+      ]);
+      const manifest = {
+        schemaVersion: 2,
+        format: "logistics-spritesheet-v2",
+        pixelsPerCell: 128,
+        textureProfile: { pixelsPerCell: 64, logicalPixelsPerCell: 128, resolution: 0.5 },
+        pages: {
+          "static-0": { file: "baked/static.webp", width: 64, height: 64, bytes: page.length,
+            sha256: digest(page), group: "static", filter: "linear" },
+          "fluid-field": { file: "baked/fluid-field.webp", width: 4, height: 4, bytes: field.length,
+            sha256: digest(field), group: "fluid-field", filter: "nearest" },
+        },
+        frames,
+        clips,
+        staticResources: Object.fromEntries(staticNames.map((name) => [name, { frame: `static/${name}` }])),
+        parametersByResourceId: {
+          grid_belt_01_mid: { arrowSpeed: 1, flowSpeed: 1, timeOffset: 1, flowSpace: 1 },
+          grid_belt_01_left: { arrowSpeed: 1, flowSpeed: 1, timeOffset: 1, flowSpace: 1 },
+          grid_belt_01_right: { arrowSpeed: 1, flowSpeed: 1, timeOffset: 1, flowSpace: 1 },
+          log_pipe_02_mid: { waterDirection: 1, flowOffset: 1, staticDensity: 1,
+            flowDensity: 1, flowSpeed: 1 },
+        },
+        cycle: { fillCellsPerSecond: 1, drainDuration: 1, refillDuration: 1, edgeWidth: 1 },
+        fluidPlayback: { kind: "baked-spatial-field-v2", referenceShader: { vertex: "void main(){}",
+          fragment: "void main(){}" } },
+        endpointConnector: { composite: "source-over", whitening: "alpha" },
+      };
+      await writeFile(path.join(sourceDirectory, "logistics-baked.json"), JSON.stringify(manifest), "utf8");
+
+      expect(await publishLogisticsBaked({ sourceDirectory, outputDirectory, spriteDirectory, maskDirectory,
+        sourceResolution: 0.5, resolution: 0.5, sourceSite: { releaseId: "fixture" } }))
+        .toMatchObject({ pages: 2, resolution: 0.5 });
+
+      const output = JSON.parse(await readFile(path.join(outputDirectory, "baked/manifest.json"), "utf8"));
+      expect(output).toMatchObject({ sourceResolution: 0.5, resolution: 0.5, pixelsPerCell: 64 });
+      expect(output.clips).not.toHaveProperty("pipe/straight/pattern");
+      expect(output.staticResources).toHaveProperty("pipe.straight.static-logo-glow");
+      expect(output.pages["static-0"]).toMatchObject({ width: 64, height: 64, filter: "linear" });
+      expect(output.pages["fluid-field"]).toMatchObject({ width: 4, height: 4, filter: "nearest", data: true });
+      expect(await sharp(path.join(outputDirectory, "baked", output.pages["static-0"].file)).metadata())
+        .toMatchObject({ width: 64, height: 64 });
+      expect(await sharp(path.join(outputDirectory, "static/baked-static.webp")).metadata())
+        .toMatchObject({ width: 272 });
+      for (const file of ["belt_straight_1x1.webp", "belt_turn_cw_1x1.webp", "belt_turn_ccw_1x1.webp",
+        "pipe_straight_1x1.webp", "pipe_turn_cw_1x1.webp", "pipe_turn_ccw_1x1.webp"]) {
+        expect(await sharp(path.join(spriteDirectory, file)).metadata()).toMatchObject({ width: 64, height: 64 });
+        expect(await sharp(path.join(maskDirectory, file)).metadata()).toMatchObject({ width: 64, height: 64 });
+      }
     });
   });
 
@@ -252,6 +363,10 @@ m['verify'](raw,entry)
 try: m['verify'](raw+b' ',entry)
 except ValueError: pass
 else: raise AssertionError('invalid bytes accepted')
+m['validate_texture_profile']({'pixelsPerCell':64,'logicalPixelsPerCell':128,'resolution':.5},'fixture')
+try:m['validate_texture_profile']({'pixelsPerCell':128,'logicalPixelsPerCell':128,'resolution':1},'legacy')
+except ValueError:pass
+else:raise AssertionError('legacy 128px profile accepted')
 print('verified')
 `, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
     expect(result.trim()).toBe("verified");
@@ -336,11 +451,12 @@ digest=lambda raw: hashlib.sha256(raw).hexdigest()
 entry=lambda name,raw: {'path':name,'bytes':len(raw),'sha256':digest(raw)}
 release={'schemaVersion':1,'releaseId':'fixture-release','sourceVersion':'v1.5'}
 part={'id':'fixture','contentHash':'a'*64,'integrity':'buildings/fixture/integrity.json'}
-source=b'{"pathId":9223372036854775807}'
+profile={'pixelsPerCell':64,'logicalPixelsPerCell':128,'resolution':.5}
+source=encode({'pathId':9223372036854775807,'textureProfile':profile})
 documents={'buildings/fixture/top/package.json':source,'buildings/fixture/variants.json':b'{}'}
 scoped=[entry(k.removeprefix('buildings/fixture/'),v) for k,v in documents.items()]
 documents[part['integrity']]=encode({'schemaVersion':1,'algorithm':'sha256','building':'fixture','contentHash':part['contentHash'],'files':scoped,'fileCount':len(scoped),'totalBytes':sum(v['bytes'] for v in scoped)})
-documents['assets-manifest.json']=encode({**release,'buildingCount':1,'buildings':[part]})
+documents['assets-manifest.json']=encode({'schemaVersion':2,'releaseId':release['releaseId'],'sourceVersion':release['sourceVersion'],'defaultPixelsPerCell':64,'preview':{'pixelsPerCell':64,'root':'./'},'buildingCount':1,'buildings':[part]})
 documents['release.json']=encode(release)
 indexed=[entry(k,v) for k,v in documents.items()]
 documents['integrity.json']=encode({**release,'algorithm':'sha256','buildings':[part],'files':indexed,'fileCount':len(indexed),'totalBytes':sum(v['bytes'] for v in indexed)})
@@ -369,6 +485,7 @@ try:
     m['prepare_source']('good',['fixture'],base)
     assert Path('good/site/buildings/fixture/top/package.json').read_bytes()==source
     assert json.loads(Path('good/source-receipt.json').read_text())['scope']=='entities'
+    assert json.loads(Path('good/source-receipt.json').read_text())['sourceResolution']==.5
     for mode in ['missing','changed','switched']:
         anchors=0
         try:m['prepare_source'](mode,['fixture'],base)

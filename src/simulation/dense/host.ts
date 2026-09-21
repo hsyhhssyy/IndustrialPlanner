@@ -88,7 +88,26 @@ import {
 
 import type { SimulationInternalAction } from "../contracts";
 import { DenseProjectionStore } from "./dense-frame-delta";
-import { createDenseRegionalDocument } from "./dense-regional-document";
+import {
+  createDenseRegionalDocument,
+} from "./dense-regional-document";
+// AI-REMOVED 2026-09-20:
+// Reason: 规范执行身份不再随当前基地变化，Host 无需为基地切换手工计算前后实体 ID。
+// Trigger: ST2-RQ-036 将基地切换收敛为 Dense 内部展示投影替换。
+// Evidence: createDensePresentationIdentity 从稳定规范拓扑确定性派生映射。
+// Replacement: src/simulation/dense/dense-presentation-identity.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveDenseRegionalEntityId } from "./dense-regional-document";
+import {
+  createDenseOperatingStatusTopology,
+  createDensePresentationIdentity,
+  resolveDenseExecutionDeviceId,
+  type DensePresentationIdentity,
+} from "./dense-presentation-identity";
+import type { DenseTopologyDictionary } from "./dense-topology";
 import { createDenseEngineBridge, type DenseEngineBridge } from "./dense-engine-bridge";
 // AI-REMOVED 2026-09-17:
 // Reason: Dense 多基地改为单拓扑共享仓库，不再构建跨 Worker 仓库出货表。
@@ -157,6 +176,10 @@ interface DenseActiveTopologySource {
   readonly presentationExcludedIssues: readonly UnknownWorldEntityDefinitionIssue[];
   readonly regionalResources: readonly RegionalResourceSupplySetting[];
   readonly operatingStatusDeviceIds: readonly string[];
+  readonly presentationIdentity: DensePresentationIdentity;
+  readonly executionDictionary: DenseTopologyDictionary;
+  readonly regionTag: string | null;
+  readonly regionalDocuments: readonly WorldDocument[] | null;
 }
 
 export function createDenseSimulationHost(
@@ -239,6 +262,12 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private readonly state: SimulationStateReadWrite;
   private readonly bridge: DenseEngineBridge;
   private projection: DenseProjectionStore | null = null;
+  private presentationIdentity: DensePresentationIdentity | null = null;
+  private executionTopology: CompiledSimulationTopology | null = null;
+  private denseSessionIdentity: {
+    readonly sessionId: string;
+    readonly topologyVersion: number;
+  } | null = null;
   private operatingStatusTopology: CompiledSimulationTopology | null = null;
   // AI-REMOVED 2026-09-03:
   // Reason: Dense 物理状态与帧编码必须只存在于 Worker，Host 不能同时持有第二份运行时真相。
@@ -318,8 +347,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   }
 
   public get currentPowerConsumptionOverride(): number | undefined {
+    const sessionDocument = this.activeTopologySource?.initializationDocument;
     return normalizePowerConsumptionOverride(
-      this.workspace.editor?.document.getSnapshot().documentSettings.powerConsumptionOverride,
+      (sessionDocument ?? this.workspace.editor?.document.getSnapshot())
+        ?.documentSettings.powerConsumptionOverride,
     );
   }
 
@@ -350,9 +381,19 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   public readonly start: SimulationContract["actions"]["start"] = async () => {
     if (this.state.runningState === "starting") return;
+    const simulationMode = this.workspace.app?.state.settings.regionalMultiBaseEnabled === true
+      ? SIMULATION_MODE.regionalMultiBase
+      : SIMULATION_MODE.singleBase;
     runInAction(() => {
       this.state.hasStarted = true;
       this.state.runningState = "starting";
+      this.state.simulationMode = simulationMode;
+      if (
+        simulationMode === SIMULATION_MODE.regionalMultiBase
+        && !isRegionalSimulationSpeed(this.state.simulationSpeed)
+      ) {
+        this.state.simulationSpeed = 1;
+      }
     });
     if (this.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
       await this.startRegionalSimulation();
@@ -371,29 +412,38 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     });
   };
 
-  public readonly setRegionalMultiBaseEnabled: SimulationContract["actions"]["setRegionalMultiBaseEnabled"] = action((enabled) => {
-    const simulationMode = enabled
-      ? SIMULATION_MODE.regionalMultiBase
-      : SIMULATION_MODE.singleBase;
-    // AI-REMOVED 2026-09-17:
-    // Reason: Dense 区域模式与时间轴已共用同一 Worker 缓冲区，不再存在两类会话冲突。
-    // Trigger: 用户要求 Dense 时间轴直接读取更远 tick，并允许多基地使用同一机制。
-    // Evidence: 区域模式已由 createDenseRegionalDocument 合并为普通单 kernel 会话。
-    // Replacement: DenseSimulationController.enableTimeline
-    // Risk: Low；App 层若仍保留旧禁用逻辑，需要后续获得跨模块授权后同步清理。
-    // Human Review: Required
-    //
-    // Original code:
-    // || (enabled && this.state.timeline.enabled)
-    if (
-      simulationMode === this.state.simulationMode
-      || this.state.runningState !== "stop"
-    ) return;
-    if (enabled && !isRegionalSimulationSpeed(this.state.simulationSpeed)) {
-      this.state.simulationSpeed = 1;
-    }
-    this.state.simulationMode = simulationMode;
-  });
+  // AI-REMOVED 2026-09-20:
+  // Reason: Dense 会话模式必须在 start 时从 AppSettings 固化，外部不得预写 SimulationMode。
+  // Trigger: ST2-RQ-035 将多基地用户选择收归 AppContract，并移除 main reaction。
+  // Evidence: start 已在进入 starting 前读取 regionalMultiBaseEnabled 并归一化区域倍率。
+  // Replacement: DenseSimulationController.start。
+  // Risk: Medium；停止态 UI 与测试必须改读/改写 AppSettings，而不是调用 Simulation Action。
+  // Human Review: Required
+  //
+  // Original code:
+  // public readonly setRegionalMultiBaseEnabled: SimulationContract["actions"]["setRegionalMultiBaseEnabled"] = action((enabled) => {
+  //   const simulationMode = enabled
+  //     ? SIMULATION_MODE.regionalMultiBase
+  //     : SIMULATION_MODE.singleBase;
+  //   // AI-REMOVED 2026-09-17:
+  //   // Reason: Dense 区域模式与时间轴已共用同一 Worker 缓冲区，不再存在两类会话冲突。
+  //   // Trigger: 用户要求 Dense 时间轴直接读取更远 tick，并允许多基地使用同一机制。
+  //   // Evidence: 区域模式已由 createDenseRegionalDocument 合并为普通单 kernel 会话。
+  //   // Replacement: DenseSimulationController.enableTimeline
+  //   // Risk: Low；App 层若仍保留旧禁用逻辑，需要后续获得跨模块授权后同步清理。
+  //   // Human Review: Required
+  //   //
+  //   // Original code:
+  //   // || (enabled && this.state.timeline.enabled)
+  //   if (
+  //     simulationMode === this.state.simulationMode
+  //     || this.state.runningState !== "stop"
+  //   ) return;
+  //   if (enabled && !isRegionalSimulationSpeed(this.state.simulationSpeed)) {
+  //     this.state.simulationSpeed = 1;
+  //   }
+  //   this.state.simulationMode = simulationMode;
+  // });
 
   public readonly pause: SimulationContract["actions"]["pause"] = action(() => {
     if (this.state.runningState !== "start") return;
@@ -494,7 +544,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (this.state.runningState === "stop" || this.projection === null) return;
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) await activeTopologyRefresh;
-    await this.bridge.sendCommands([{ type: "patch-runtime-slot", patch }]);
+    const executionDeviceId = this.presentationIdentity === null
+      ? null
+      : resolveDenseExecutionDeviceId(this.presentationIdentity, patch.entityId);
+    await this.bridge.sendCommands([{
+      type: "patch-runtime-slot",
+      patch: executionDeviceId === null
+        ? patch
+        : { ...patch, entityId: executionDeviceId },
+    }]);
     this.timelineBufferedThroughTick = this.primaryTickNumber;
     await this.syncToTick(this.primaryTickNumber);
     if (this.state.timeline.enabled) await this.ensureTimelineBuffer();
@@ -504,7 +562,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (this.state.runningState === "stop" || this.projection === null) return;
     const activeTopologyRefresh = this.topologyRefreshQueue;
     if (activeTopologyRefresh !== null) await activeTopologyRefresh;
-    await this.bridge.sendCommands([{ type: "reset-admission-counter", reset }]);
+    const executionDeviceId = this.presentationIdentity === null
+      ? null
+      : resolveDenseExecutionDeviceId(this.presentationIdentity, reset.entityId);
+    await this.bridge.sendCommands([{
+      type: "reset-admission-counter",
+      reset: executionDeviceId === null
+        ? reset
+        : { ...reset, entityId: executionDeviceId },
+    }]);
     this.timelineBufferedThroughTick = this.primaryTickNumber;
     await this.syncToTick(this.primaryTickNumber);
     if (this.state.timeline.enabled) await this.ensureTimelineBuffer();
@@ -655,9 +721,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         document: sourceDocument,
         workspace: this.workspace,
       });
-      const document = admission.document;
+      const presentationDocument = admission.document;
       const currentBase = this.workspace.registry.baseDefinitions.find(
-        (definition) => definition.id === document.baseId,
+        (definition) => definition.id === presentationDocument.baseId,
       );
       const regionalResources = currentBase === undefined
         || this.options.getRegionalResourceSettings === undefined
@@ -667,7 +733,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
           );
       const standardTickRate = this.topologyStore.getSnapshot()?.standardTickRate
         ?? DENSE_STANDARD_TICK_RATE_PER_SECOND;
-      const compiledTopology = compileSimulationTopology({
+      const compile = (document: WorldDocument) => compileSimulationTopology({
         document,
         registry: this.workspace.registry,
         poweredEntityIds: computePoweredEntityIds(document, this.workspace.registry),
@@ -676,25 +742,38 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         standardTickRate,
         ...(regionalResources === undefined ? {} : { regionalResources }),
       });
-      const topology = appendUnknownEntityAdmissionDiagnostics(
-        compiledTopology,
+      const presentationTopology = appendUnknownEntityAdmissionDiagnostics(
+        compile(presentationDocument),
         admission.excludedIssues,
       );
-      const compileError = topology.diagnostics.find((diagnostic) => diagnostic.severity === "error");
+      const executionDocument = createDenseRegionalDocument({
+        documents: [presentationDocument],
+        registry: this.workspace.registry,
+      });
+      const executionTopology = compile(executionDocument);
+      const compileError = [
+        ...presentationTopology.diagnostics,
+        ...executionTopology.diagnostics,
+      ].find((diagnostic) => diagnostic.severity === "error");
       if (compileError !== undefined) {
-        return this.failRefresh(compileError.message, topology.diagnostics);
+        return this.failRefresh(compileError.message, presentationTopology.diagnostics);
       }
+      const presentationIdentity = createDensePresentationIdentity({
+        baseId: presentationDocument.baseId,
+        presentationTopology,
+        executionTopology,
+      });
 
-      const previousTopology = this.topologyStore.getSnapshot();
+      const previousTopology = this.executionTopology;
       const migration = this.compiledDocument === null
         || previousTopology === null
         || this.projection === null
         ? null
         : createSimulationTopologyMigration({
             previousDocument: this.compiledDocument,
-            nextDocument: document,
+            nextDocument: executionDocument,
             previousTopology,
-            nextTopology: topology,
+            nextTopology: executionTopology,
             baseTickNumber: this.primaryTickNumber,
           });
       let migrationApplied = migration !== null;
@@ -707,8 +786,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       };
       try {
         initialized = await this.initializeDenseTopology({
-          document,
-          topology,
+          document: executionDocument,
+          topology: executionTopology,
+          presentationIdentity,
           migration: migration ?? undefined,
         });
       } catch (migrationError) {
@@ -722,12 +802,17 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
             : String(migrationError),
         });
         initialized = await this.initializeDenseTopology({
-          document,
-          topology,
+          document: executionDocument,
+          topology: executionTopology,
+          presentationIdentity,
         });
       }
       const { identity: session, response } = initialized;
-      const projection = new DenseProjectionStore(response.layout.dictionary, session);
+      const projection = new DenseProjectionStore(
+        response.layout.dictionary,
+        session,
+        presentationIdentity,
+      );
       projection.apply(response.initialDelta);
 
       // AI-REMOVED 2026-09-03:
@@ -754,18 +839,28 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         ? Math.max(this.playbackTargetTickNumber, response.initialDelta.tickNumber)
         : response.initialDelta.tickNumber;
       this.timelinePresentationActive = false;
-      this.compiledDocument = cloneWorldDocument(document);
+      this.compiledDocument = cloneWorldDocument(executionDocument);
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
-      this.operatingStatusTopology = topology;
-      this.topologyStore.setSnapshot(topology);
+      this.executionTopology = executionTopology;
+      this.presentationIdentity = presentationIdentity;
+      this.denseSessionIdentity = session;
+      this.operatingStatusTopology = createDenseOperatingStatusTopology(
+        executionTopology,
+        presentationIdentity,
+      );
+      this.topologyStore.setSnapshot(presentationTopology);
       this.activeTopologySource = {
-        initializationDocument: cloneWorldDocument(document),
-        executionDocument: cloneWorldDocument(document),
+        initializationDocument: cloneWorldDocument(executionDocument),
+        executionDocument: cloneWorldDocument(executionDocument),
         executionExcludedIssues: [...admission.excludedIssues],
-        presentationDocument: null,
-        presentationExcludedIssues: [],
+        presentationDocument: cloneWorldDocument(presentationDocument),
+        presentationExcludedIssues: [...admission.excludedIssues],
         regionalResources: regionalResources === undefined ? [] : [...regionalResources],
         operatingStatusDeviceIds: [],
+        presentationIdentity,
+        executionDictionary: response.layout.dictionary,
+        regionTag: null,
+        regionalDocuments: null,
       };
       // AI-REMOVED 2026-09-12:
       // Reason: 性能与电池读数不再由 SimulationState 发布，初始化只需提交投影和运行态。
@@ -782,20 +877,20 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         this.state.currentPlaybackTickNumber = response.initialDelta.tickNumber;
         this.state.runtimeStatus = {
           mode: "running",
-          topologyId: topology.topologyId,
-          documentHash: topology.documentHash,
+          topologyId: presentationTopology.topologyId,
+          documentHash: presentationTopology.documentHash,
           retainedFromTick: response.initialDelta.tickNumber,
           latestTickNumber: response.initialDelta.tickNumber,
           bufferSize: 1,
           maxBufferSize: 1,
-          dynamicTickRate: topology.standardTickRate,
+          dynamicTickRate: presentationTopology.standardTickRate,
           error: null,
         };
       });
       return {
         status: "started",
-        topologyId: topology.topologyId,
-        diagnostics: topology.diagnostics,
+        topologyId: presentationTopology.topologyId,
+        diagnostics: presentationTopology.diagnostics,
       };
     } catch (error) {
       return this.failStart(error instanceof Error ? error.message : String(error));
@@ -805,7 +900,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   private async initializeDenseTopology(options: {
     readonly document: WorldDocument;
     readonly topology: CompiledSimulationTopology;
-    readonly presentationTopology?: CompiledSimulationTopology;
+    readonly presentationIdentity?: DensePresentationIdentity;
     readonly operatingStatusDeviceIds?: readonly string[];
     readonly migration?: SimulationTopologyMigration;
   }): Promise<{
@@ -827,9 +922,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       powerConsumptionOverride: normalizePowerConsumptionOverride(
         options.document.documentSettings.powerConsumptionOverride,
       ),
-      ...(options.presentationTopology === undefined
+      ...(options.presentationIdentity === undefined
         ? {}
-        : { presentationDeviceIds: options.presentationTopology.ordering.deviceOrder }),
+        : { presentationDeviceIds: options.presentationIdentity.executionDeviceIds }),
       ...(options.operatingStatusDeviceIds === undefined
         ? {}
         : { operatingStatusDeviceIds: options.operatingStatusDeviceIds }),
@@ -908,6 +1003,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.sendCommands([{ type: "reset" }]);
     }
     this.projection = null;
+    this.presentationIdentity = null;
+    this.executionTopology = null;
+    this.denseSessionIdentity = null;
     this.playbackRemainderTicks = 0;
     this.playbackTargetTickNumber = 0;
     this.playbackAdvanceInFlight = null;
@@ -956,6 +1054,10 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
   }
 
   private async startRegionalSimulation(): Promise<SimulationStartResult> {
+    const activePlaybackAdvance = this.playbackAdvanceInFlight;
+    if (activePlaybackAdvance !== null) {
+      await activePlaybackAdvance;
+    }
     const editor = this.workspace.editor;
     const sourceDocument = editor?.document.getSnapshot();
     if (editor === null || editor === undefined || sourceDocument === undefined) {
@@ -1001,6 +1103,13 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         },
       );
     }
+
+    const switchedPresentation = await this.trySwitchRegionalPresentation({
+      sourceDocument,
+      currentBaseId: currentBase.id,
+      regionTag: currentBase.tag,
+    });
+    if (switchedPresentation !== null) return switchedPresentation;
 
     const regionalBaseIds = regionBases.map((definition) => definition.id);
     let startStage = "read-base-documents";
@@ -1135,7 +1244,6 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       // await this.fillOneRegionalEpoch();
       startStage = "compose-regional-document";
       const regionalDocument = createDenseRegionalDocument({
-        currentBaseId: sourceDocument.baseId,
         documents: admissions.map((admission) => admission.document),
         registry: this.workspace.registry,
         darkPipeLinks: this.options.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [],
@@ -1164,12 +1272,32 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         );
       }
 
+      const previousSource = this.activeTopologySource;
+      const previousExecutionTopology = this.executionTopology;
+      const migration = previousSource === null
+        || previousExecutionTopology === null
+        || previousSource.regionTag !== currentBase.tag
+        ? null
+        : createSimulationTopologyMigration({
+            previousDocument: previousSource.executionDocument,
+            nextDocument: regionalDocument,
+            previousTopology: previousExecutionTopology,
+            nextTopology: regionalTopology,
+            baseTickNumber: this.primaryTickNumber,
+          });
+
+      const presentationIdentity = createDensePresentationIdentity({
+        baseId: sourceDocument.baseId,
+        presentationTopology: currentTopology,
+        executionTopology: regionalTopology,
+      });
+
       const regionalStatusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(
         regionalTopology,
       );
-      const currentDeviceIds = new Set(currentTopology.ordering.deviceOrder);
+      const currentDeviceIds = new Set(presentationIdentity.executionDeviceIds);
       const operatingStatusDeviceIds = [...new Set(
-        currentTopology.ordering.deviceOrder.flatMap((deviceId) => {
+        presentationIdentity.executionDeviceIds.flatMap((deviceId) => {
           const sourceDeviceId = regionalStatusSourceByDeviceId.get(deviceId);
           return sourceDeviceId === undefined || currentDeviceIds.has(sourceDeviceId)
             ? []
@@ -1178,15 +1306,16 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       )];
       startStage = "initialize-worker";
       const initialized = await this.initializeDenseTopology({
-        document: sourceDocument,
+        document: regionalDocument,
         topology: regionalTopology,
-        presentationTopology: currentTopology,
+        presentationIdentity,
         operatingStatusDeviceIds,
+        ...(migration === null ? {} : { migration }),
       });
       const projection = new DenseProjectionStore(
         initialized.response.layout.dictionary,
         initialized.identity,
-        currentTopology,
+        presentationIdentity,
         operatingStatusDeviceIds,
       );
       projection.apply(initialized.response.initialDelta);
@@ -1195,17 +1324,28 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.primaryTickNumber = initialized.response.initialDelta.tickNumber;
       this.timelineBufferedThroughTick = initialized.response.initialDelta.tickNumber;
       this.runtimeRetainedStateCount = initialized.response.runtimeRetainedStateCount;
-      this.playbackTargetTickNumber = initialized.response.initialDelta.tickNumber;
+      this.playbackTargetTickNumber = migration === null
+        ? initialized.response.initialDelta.tickNumber
+        : Math.max(
+            this.playbackTargetTickNumber,
+            initialized.response.initialDelta.tickNumber,
+          );
       this.timelinePresentationActive = false;
       this.compiledDocument = null;
       this.sourceDocumentSignature = createDenseSimulationSourceSignature(sourceDocument);
-      this.operatingStatusTopology = regionalTopology;
+      this.executionTopology = regionalTopology;
+      this.presentationIdentity = presentationIdentity;
+      this.denseSessionIdentity = initialized.identity;
+      this.operatingStatusTopology = createDenseOperatingStatusTopology(
+        regionalTopology,
+        presentationIdentity,
+      );
       this.topologyStore.setSnapshot(currentTopology);
       const currentAdmission = admissions.find(
         (admission) => admission.document.baseId === sourceDocument.baseId,
       );
       this.activeTopologySource = {
-        initializationDocument: cloneWorldDocument(sourceDocument),
+        initializationDocument: cloneWorldDocument(regionalDocument),
         executionDocument: cloneWorldDocument(regionalDocument),
         executionExcludedIssues: [],
         presentationDocument: cloneWorldDocument(
@@ -1214,6 +1354,12 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         presentationExcludedIssues: [...(currentAdmission?.excludedIssues ?? [])],
         regionalResources: [...regionalResources],
         operatingStatusDeviceIds: [...operatingStatusDeviceIds],
+        presentationIdentity,
+        executionDictionary: initialized.response.layout.dictionary,
+        regionTag: currentBase.tag,
+        regionalDocuments: admissions.map((admission) =>
+          cloneWorldDocument(admission.document)
+        ),
       };
       this.state.regionalTotalPowerDemand = null;
       // AI-REMOVED 2026-09-12:
@@ -1265,6 +1411,131 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         },
       );
     }
+  }
+
+  private async trySwitchRegionalPresentation(options: {
+    readonly sourceDocument: WorldDocument;
+    readonly currentBaseId: string;
+    readonly regionTag: string;
+  }): Promise<SimulationStartResult | null> {
+    const source = this.activeTopologySource;
+    const executionTopology = this.executionTopology;
+    const sessionIdentity = this.denseSessionIdentity;
+    if (
+      source?.regionTag !== options.regionTag
+      || source.regionalDocuments === null
+      || executionTopology === null
+      || sessionIdentity === null
+    ) {
+      return null;
+    }
+    const cachedDocument = source.regionalDocuments.find(
+      (document) => document.baseId === options.currentBaseId,
+    );
+    if (cachedDocument === undefined) return null;
+
+    const admission = prepareDenseSimulationDocument({
+      document: options.sourceDocument,
+      workspace: this.workspace,
+      useCurrentEditorPlacementState: true,
+    });
+    if (
+      createSimulationDocumentHash(admission.document)
+      !== createSimulationDocumentHash(cachedDocument)
+    ) {
+      return null;
+    }
+
+    const presentationTopology = appendUnknownEntityAdmissionDiagnostics(
+      compileSimulationTopology({
+        document: admission.document,
+        registry: this.workspace.registry,
+        poweredEntityIds: computePoweredEntityIds(
+          admission.document,
+          this.workspace.registry,
+        ),
+        simulationMode: SIMULATION_MODE.regionalMultiBase,
+        activeActivityIds: this.options.getActiveActivityIds?.() ?? [],
+        regionalResources: source.regionalResources,
+        standardTickRate: executionTopology.standardTickRate,
+      }),
+      admission.excludedIssues,
+    );
+    const compileError = presentationTopology.diagnostics.find(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (compileError !== undefined) {
+      return this.failRefresh(compileError.message, presentationTopology.diagnostics);
+    }
+
+    const presentationIdentity = createDensePresentationIdentity({
+      baseId: options.currentBaseId,
+      presentationTopology,
+      executionTopology,
+    });
+    const operatingStatusDeviceIds = resolveDenseOperatingStatusDeviceIds(
+      executionTopology,
+      presentationIdentity,
+    );
+    const response = await this.bridge.switchPresentation({
+      tickNumber: this.primaryTickNumber,
+      presentationDeviceIds: presentationIdentity.executionDeviceIds,
+      operatingStatusDeviceIds,
+    });
+    const projection = new DenseProjectionStore(
+      source.executionDictionary,
+      sessionIdentity,
+      presentationIdentity,
+      operatingStatusDeviceIds,
+    );
+    projection.apply(response.delta);
+
+    this.projection = projection;
+    this.presentationIdentity = presentationIdentity;
+    this.operatingStatusTopology = createDenseOperatingStatusTopology(
+      executionTopology,
+      presentationIdentity,
+    );
+    this.runtimeRetainedStateCount = response.runtimeRetainedStateCount;
+    this.timelinePresentationActive = false;
+    this.sourceDocumentSignature = createDenseSimulationSourceSignature(
+      options.sourceDocument,
+    );
+    this.topologyStore.setSnapshot(presentationTopology);
+    this.activeTopologySource = {
+      ...source,
+      presentationDocument: cloneWorldDocument(admission.document),
+      presentationExcludedIssues: [...admission.excludedIssues],
+      operatingStatusDeviceIds: [...operatingStatusDeviceIds],
+      presentationIdentity,
+    };
+    runInAction(() => {
+      this.state.currentPlaybackTickNumber = this.primaryTickNumber;
+      this.state.runtimeStatus = {
+        ...this.state.runtimeStatus,
+        topologyId: presentationTopology.topologyId,
+        documentHash: presentationTopology.documentHash,
+        retainedFromTick: 0,
+        latestTickNumber: Math.max(
+          this.primaryTickNumber,
+          this.timelineBufferedThroughTick,
+        ),
+        bufferSize: response.runtimeRetainedStateCount,
+        dynamicTickRate: presentationTopology.standardTickRate,
+        error: null,
+      };
+    });
+    logger.info("Dense regional presentation switched without rebuilding the runtime.", {
+      currentBaseId: options.currentBaseId,
+      regionTag: options.regionTag,
+      executionTopologyId: executionTopology.topologyId,
+      tickNumber: response.delta.tickNumber,
+    });
+    return {
+      status: "started",
+      topologyId: presentationTopology.topologyId,
+      diagnostics: presentationTopology.diagnostics,
+    };
   }
 
   private failRegionalStart(
@@ -1512,6 +1783,18 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (presentationCompileError !== undefined) {
       throw new Error(presentationCompileError.message);
     }
+    if (presentationTopology === null || source.presentationDocument === null) {
+      throw new Error("Dense standard tick rate transition requires a presentation topology.");
+    }
+    const presentationIdentity = createDensePresentationIdentity({
+      baseId: source.presentationDocument.baseId,
+      presentationTopology,
+      executionTopology,
+    });
+    const operatingStatusDeviceIds = resolveDenseOperatingStatusDeviceIds(
+      executionTopology,
+      presentationIdentity,
+    );
 
     const migration = createSimulationTopologyMigration({
       previousDocument: source.executionDocument,
@@ -1527,8 +1810,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const initialized = await this.initializeDenseTopology({
       document: source.initializationDocument,
       topology: executionTopology,
-      ...(presentationTopology === null ? {} : { presentationTopology }),
-      operatingStatusDeviceIds: source.operatingStatusDeviceIds,
+      presentationIdentity,
+      operatingStatusDeviceIds,
       migration,
     });
     // 初始化等待期间 RAF 仍会按旧频率累计墙钟目标；必须在提交新频率前读取最新值并一次换算。
@@ -1537,8 +1820,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const projection = new DenseProjectionStore(
       initialized.response.layout.dictionary,
       initialized.identity,
-      presentationTopology ?? undefined,
-      source.operatingStatusDeviceIds,
+      presentationIdentity,
+      operatingStatusDeviceIds,
     );
     projection.apply(initialized.response.initialDelta);
 
@@ -1567,9 +1850,21 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     this.playbackTargetTickNumber = Math.max(this.primaryTickNumber, normalizedTarget);
     this.playbackRemainderTicks = convertedRemainder;
     this.timelinePresentationActive = false;
-    this.operatingStatusTopology = executionTopology;
-    const publishedTopology = presentationTopology ?? executionTopology;
+    this.executionTopology = executionTopology;
+    this.presentationIdentity = presentationIdentity;
+    this.denseSessionIdentity = initialized.identity;
+    this.operatingStatusTopology = createDenseOperatingStatusTopology(
+      executionTopology,
+      presentationIdentity,
+    );
+    const publishedTopology = presentationTopology;
     this.topologyStore.setSnapshot(publishedTopology);
+    this.activeTopologySource = {
+      ...source,
+      operatingStatusDeviceIds: [...operatingStatusDeviceIds],
+      presentationIdentity,
+      executionDictionary: initialized.response.layout.dictionary,
+    };
     this.resetDenseRateSample();
 
     runInAction(() => {
@@ -1741,6 +2036,9 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     diagnostics: SimulationStartResult["diagnostics"] = [],
   ): SimulationStartResult {
     this.projection = null;
+    this.presentationIdentity = null;
+    this.executionTopology = null;
+    this.denseSessionIdentity = null;
     this.compiledDocument = null;
     this.sourceDocumentSignature = null;
     this.runtimeRetainedStateCount = 0;
@@ -1897,6 +2195,69 @@ function createDenseSimulationSourceSignature(document: WorldDocument): string {
     powerMode,
     powerConsumptionOverride ?? "default",
   ].join("|");
+}
+
+// AI-REMOVED 2026-09-20:
+// Reason: 基地切换不再改变执行实体和仓库身份，因此不需要构造跨 ID topology migration。
+// Trigger: ST2-RQ-036 要求当前基地仅作为投影，并保留原 Worker、kernel 与 checkpoint 缓冲。
+// Evidence: createDenseRegionalDocument 已对所有基地使用稳定作用域 ID；trySwitchRegionalPresentation 只替换 FrameEmitter 与 Host 投影。
+// Replacement: createDensePresentationIdentity + DenseEngineBridge.switchPresentation
+// Risk: Low；真实文档变更仍使用稳定同 ID 的 createSimulationTopologyMigration。
+// Human Review: Required
+//
+// Original code:
+// function createDenseRegionalMigrationIdentity(options: {
+//   readonly documents: readonly WorldDocument[];
+//   readonly previousCurrentBaseId: string;
+//   readonly nextCurrentBaseId: string;
+// }): {
+//   readonly previousEntityIdByNextEntityId: Readonly<Record<string, string>>;
+//   readonly previousDeviceIdByNextDeviceId: Readonly<Record<string, string>>;
+// } {
+//   const previousEntityIdByNextEntityId: Record<string, string> = {};
+//   const previousDeviceIdByNextDeviceId: Record<string, string> = {};
+//   for (const document of options.documents) {
+//     for (const entityId of document.entityOrder) {
+//       const previousEntityId = resolveDenseRegionalEntityId(
+//         document.baseId,
+//         entityId,
+//         options.previousCurrentBaseId,
+//       );
+//       const nextEntityId = resolveDenseRegionalEntityId(
+//         document.baseId,
+//         entityId,
+//         options.nextCurrentBaseId,
+//       );
+//       if (previousEntityId === nextEntityId) continue;
+//       previousEntityIdByNextEntityId[nextEntityId] = previousEntityId;
+//       previousDeviceIdByNextDeviceId[`device:${nextEntityId}`] =
+//         `device:${previousEntityId}`;
+//     }
+//   }
+//
+//   const previousWarehouseDeviceId = `device:warehouse:${options.previousCurrentBaseId}`;
+//   const nextWarehouseDeviceId = `device:warehouse:${options.nextCurrentBaseId}`;
+//   if (previousWarehouseDeviceId !== nextWarehouseDeviceId) {
+//     previousDeviceIdByNextDeviceId[nextWarehouseDeviceId] = previousWarehouseDeviceId;
+//   }
+//   return {
+//     previousEntityIdByNextEntityId,
+//     previousDeviceIdByNextDeviceId,
+//   };
+// }
+
+function resolveDenseOperatingStatusDeviceIds(
+  executionTopology: CompiledSimulationTopology,
+  presentationIdentity: DensePresentationIdentity,
+): string[] {
+  const statusSourceByDeviceId = resolveDarkPipeStatusSourceByDeviceId(executionTopology);
+  const presentationDeviceIds = new Set(presentationIdentity.executionDeviceIds);
+  return [...new Set(presentationIdentity.executionDeviceIds.flatMap((deviceId) => {
+    const sourceDeviceId = statusSourceByDeviceId.get(deviceId);
+    return sourceDeviceId === undefined || presentationDeviceIds.has(sourceDeviceId)
+      ? []
+      : [sourceDeviceId];
+  }))];
 }
 
 function cloneWorldDocument(document: WorldDocument): WorldDocument {

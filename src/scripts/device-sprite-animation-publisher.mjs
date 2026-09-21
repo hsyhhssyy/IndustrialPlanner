@@ -13,6 +13,7 @@ import path from 'node:path';
 
 import sharp from 'sharp';
 import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from './building-asset-publish-config.mjs';
+import { resolveAssetScale } from './building-asset-image.mjs';
 
 function requireRecord(value, label) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -79,9 +80,10 @@ async function readSourceManifest(sourceRoot, maxTextureSize, resolution) {
   }
   const frameWidth = requirePositiveInteger(source.frameWidth, 'source manifest.frameWidth');
   const frameHeight = requirePositiveInteger(source.frameHeight, 'source manifest.frameHeight');
-  if (!Number.isFinite(resolution) || resolution <= 0 || resolution > 1) {
-    throw new Error('animation resolution must be greater than 0 and at most 1');
-  }
+  const sourceResolution = source.sourceResolution ?? 1;
+  const scale = resolveAssetScale(sourceResolution, resolution);
+  const physicalFrameWidth = requirePositiveInteger(frameWidth * sourceResolution, 'source physical frameWidth');
+  const physicalFrameHeight = requirePositiveInteger(frameHeight * sourceResolution, 'source physical frameHeight');
   const pixelFrameWidth = requirePositiveInteger(frameWidth * resolution, 'published pixel frameWidth');
   const pixelFrameHeight = requirePositiveInteger(frameHeight * resolution, 'published pixel frameHeight');
   const pageRows = requirePositiveInteger(source.pageRows, 'source manifest.pageRows');
@@ -106,6 +108,10 @@ async function readSourceManifest(sourceRoot, maxTextureSize, resolution) {
     const frameCount = requirePositiveInteger(sourceDefinition.frameCount, `sources.${name}.frameCount`);
     if (frameCount > rows * columns) {
       throw new Error(`sources.${name}.frameCount exceeds its grid capacity`);
+    }
+    if ((sourceDefinition.physicalFrameWidth ?? physicalFrameWidth) !== physicalFrameWidth
+      || (sourceDefinition.physicalFrameHeight ?? physicalFrameHeight) !== physicalFrameHeight) {
+      throw new Error(`sources.${name} physical frame dimensions differ`);
     }
     const frameDurationsMs = sourceDefinition.frameDurationsMs;
     if (frameDurationsMs !== undefined && (!Array.isArray(frameDurationsMs)
@@ -160,6 +166,10 @@ async function readSourceManifest(sourceRoot, maxTextureSize, resolution) {
   return Object.freeze({
     frameWidth,
     frameHeight,
+    physicalFrameWidth,
+    physicalFrameHeight,
+    sourceResolution,
+    scale,
     pageRows,
     pageColumns,
     frameDurationMs: 1000 / source.fps,
@@ -307,6 +317,7 @@ function extractFrame(sourceData, sourceWidth, sourceLeft, sourceTop, frameWidth
 }
 
 /** 每帧独立缩小，防止滤波读取相邻帧或污染分页尾部的透明空格。 */
+// AI-CORRECTION 2026-09-20: 输入帧已经是网站物理像素；这里只按 target/source 倍率生成目标页。
 async function resizePageFrames(page, frameWidth, frameHeight, resolution) {
   const width = frameWidth * resolution;
   const height = frameHeight * resolution;
@@ -366,7 +377,7 @@ async function publishOneAnimation({
   const stagingRoot = await mkdtemp(path.join(stagingRootParent, `device-animation-${spriteId}-`));
   const stagingAnimationDirectory = path.join(stagingRoot, 'animation');
   await mkdir(stagingAnimationDirectory, { recursive: true });
-  const unionAlpha = Buffer.alloc(sourceManifest.frameWidth * sourceManifest.frameHeight);
+  const unionAlpha = Buffer.alloc(sourceManifest.physicalFrameWidth * sourceManifest.physicalFrameHeight);
   let firstFrame = null;
 
   try {
@@ -383,8 +394,8 @@ async function publishOneAnimation({
         throw new Error(`Source escapes asset root: ${sourceFile}`);
       }
       const metadata = await sharp(sourceFile).metadata();
-      const expectedWidth = sourceDefinition.columns * sourceManifest.frameWidth;
-      const expectedHeight = sourceDefinition.rows * sourceManifest.frameHeight;
+      const expectedWidth = sourceDefinition.columns * sourceManifest.physicalFrameWidth;
+      const expectedHeight = sourceDefinition.rows * sourceManifest.physicalFrameHeight;
       if (metadata.format !== 'webp' || (metadata.pages ?? 1) !== 1) {
         throw new Error(`${spriteId}/${sourceDefinition.file} must be a static WebP`);
       }
@@ -403,8 +414,8 @@ async function publishOneAnimation({
         sourceDefinition,
         data,
         info.width,
-        sourceManifest.frameWidth,
-        sourceManifest.frameHeight,
+        sourceManifest.physicalFrameWidth,
+        sourceManifest.physicalFrameHeight,
       );
       for (const mapping of mappingsBySource.get(sourceDefinition.name)) {
         const { sourceLeft, sourceTop } = copyFrameToPage(
@@ -414,8 +425,8 @@ async function publishOneAnimation({
           sourceDefinition.columns,
           mapping.page,
           mapping.localFrameIndex,
-          sourceManifest.frameWidth,
-          sourceManifest.frameHeight,
+          sourceManifest.physicalFrameWidth,
+          sourceManifest.physicalFrameHeight,
           sourceManifest.frameTransform,
         );
         const alphaCoverage = mergeFrameAlpha(
@@ -424,8 +435,8 @@ async function publishOneAnimation({
           sourceLeft,
           sourceTop,
           unionAlpha,
-          sourceManifest.frameWidth,
-          sourceManifest.frameHeight,
+          sourceManifest.physicalFrameWidth,
+          sourceManifest.physicalFrameHeight,
           sourceManifest.frameTransform,
         );
         if (!alphaCoverage.hasTransparentPixel || !alphaCoverage.hasVisiblePixel) {
@@ -441,17 +452,17 @@ async function publishOneAnimation({
             info.width,
             sourceLeft,
             sourceTop,
-            sourceManifest.frameWidth,
-            sourceManifest.frameHeight,
+            sourceManifest.physicalFrameWidth,
+            sourceManifest.physicalFrameHeight,
             sourceManifest.frameTransform,
           );
         }
         await encodeCompletedPage(
           mapping.page,
           stagingAnimationDirectory,
-          sourceManifest.frameWidth,
-          sourceManifest.frameHeight,
-          resolution,
+          sourceManifest.physicalFrameWidth,
+          sourceManifest.physicalFrameHeight,
+          sourceManifest.scale,
         );
       }
     }
@@ -465,25 +476,29 @@ async function publishOneAnimation({
         }
       }
     }
-    const unionRgba = Buffer.alloc(sourceManifest.frameWidth * sourceManifest.frameHeight * 4);
+    const unionRgba = Buffer.alloc(sourceManifest.physicalFrameWidth * sourceManifest.physicalFrameHeight * 4);
     for (let pixel = 0; pixel < unionAlpha.length; pixel += 1) {
       unionRgba[pixel * 4 + 3] = unionAlpha[pixel];
     }
-    const raw = { width: sourceManifest.frameWidth, height: sourceManifest.frameHeight, channels: 4 };
+    const raw = { width: sourceManifest.physicalFrameWidth, height: sourceManifest.physicalFrameHeight, channels: 4 };
     const stagingStatic = path.join(stagingRoot, 'static.webp');
     const stagingStaticMask = path.join(stagingRoot, 'static-mask.webp');
-    await sharp(firstFrame, { raw })
-      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
-      .webp({ lossless: true, effort: 6 }).toFile(stagingStatic);
-    await sharp(createMaskBuffer(firstFrame, raw.width, raw.height), { raw })
-      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
-      .webp({ lossless: true, effort: 6 }).toFile(stagingStaticMask);
-    await sharp(createMaskBuffer(unionRgba, raw.width, raw.height), { raw })
-      .resize(raw.width * resolution, raw.height * resolution, { kernel: 'lanczos3' })
-      .webp({ lossless: true, effort: 6 }).toFile(path.join(stagingAnimationDirectory, 'mask.webp'));
+    const encodeStatic = async (pixels, file) => {
+      let pipeline = sharp(pixels, { raw });
+      if (sourceManifest.scale !== 1) pipeline = pipeline.resize(
+        sourceManifest.frameWidth * resolution,
+        sourceManifest.frameHeight * resolution,
+        { kernel: 'lanczos3' },
+      );
+      await pipeline.webp({ lossless: true, effort: 6 }).toFile(file);
+    };
+    await encodeStatic(firstFrame, stagingStatic);
+    await encodeStatic(createMaskBuffer(firstFrame, raw.width, raw.height), stagingStaticMask);
+    await encodeStatic(createMaskBuffer(unionRgba, raw.width, raw.height), path.join(stagingAnimationDirectory, 'mask.webp'));
     const outputManifest = {
       schemaVersion: 2,
       resolution,
+      sourceResolution: sourceManifest.sourceResolution,
       frameWidth: sourceManifest.frameWidth,
       frameHeight: sourceManifest.frameHeight,
       appliedSourceToPublishedTransform: sourceManifest.frameTransform,

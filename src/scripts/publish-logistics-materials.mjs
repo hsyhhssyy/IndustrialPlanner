@@ -1,14 +1,20 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
-import { publishedImageSize, resizeAssetRgba } from './building-asset-image.mjs';
+import { publishedImageSize, resizeAssetRgba, resolveAssetScale } from './building-asset-image.mjs';
 
 const TILE = 128;
 const PADDING = 2;
 
 /** 编码 sRGB 数值空间的 straight-alpha source-over，与 contract2 的离线规范一致。 */
 export function compositeLogisticsLayers(layers) {
-  const output = Buffer.alloc(TILE * TILE * 4);
+  // AI-CORRECTION 2026-09-20: 图层可以直接来自 64px 网站发布；合成尺寸由实际 RGBA 字节确定。
+  const pixelCount = layers[0]?.pixels.length / 4;
+  const tileSize = Math.sqrt(pixelCount);
+  if (!Number.isSafeInteger(tileSize) || layers.some(({ pixels }) => pixels.length !== pixelCount * 4)) {
+    throw new Error('Logistics layers must share one square RGBA canvas');
+  }
+  const output = Buffer.alloc(pixelCount * 4);
   for (let i = 0; i < output.length; i += 4) {
     let a = 0;
     const rgb = [0, 0, 0];
@@ -26,8 +32,13 @@ export function compositeLogisticsLayers(layers) {
 }
 
 /** 固定小图集及挤出边缘；运行时仅创建子纹理，不合成画布或 RenderTexture。 */
-export async function publishAtlas(directory, name, entries, manifest, resolution) {
-  const tileSize = publishedImageSize(TILE, TILE, resolution).width;
+export async function publishAtlas(directory, name, entries, manifest, resolution, sourceResolution = 1) {
+  const sourceTileSize = Math.sqrt(entries[0]?.[1].length / 4);
+  if (!Number.isSafeInteger(sourceTileSize) || sourceTileSize / sourceResolution !== TILE) {
+    throw new Error('Logistics atlas tile density differs');
+  }
+  const scale = resolveAssetScale(sourceResolution, resolution);
+  const tileSize = publishedImageSize(sourceTileSize, sourceTileSize, scale).width;
   const STRIDE = tileSize + PADDING * 2;
   const columns = Math.min(4, entries.length);
   const rows = Math.ceil(entries.length / columns);
@@ -35,7 +46,7 @@ export async function publishAtlas(directory, name, entries, manifest, resolutio
   const height = rows * STRIDE;
   const pixels = Buffer.alloc(width * height * 4);
   for (const [index, [key, sourceTile]] of entries.entries()) {
-    const { data: tile } = await resizeAssetRgba(sourceTile, TILE, TILE, resolution);
+    const { data: tile } = await resizeAssetRgba(sourceTile, sourceTileSize, sourceTileSize, scale);
     const left = index % columns * STRIDE;
     const top = Math.floor(index / columns) * STRIDE;
     for (let y = 0; y < STRIDE; y++) {

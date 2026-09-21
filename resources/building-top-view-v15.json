@@ -16,9 +16,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -354,9 +355,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -468,9 +469,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -484,7 +485,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "a8d900e56b8b5a926f1dbf8bc45a2ad3f68230fe892fcf47382dbc1d19322f8e",
+      "packageSha256": "57217c9275f9bc6169b158db1247cf9109176a2431a7897a50992764331fa7cf",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -505,9 +506,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -735,9 +737,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -851,9 +853,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -867,7 +869,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "b9e36c48c9cba8a75cc796b8afa7ca4a2d40bda5b8578324ea2065459d4b3723",
+      "packageSha256": "5b8d14f804578cd42f8d3c51fba6e944a248f8945781ad816790609d177835d1",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -888,9 +890,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -1118,9 +1121,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1234,9 +1237,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1250,7 +1253,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "b9e36c48c9cba8a75cc796b8afa7ca4a2d40bda5b8578324ea2065459d4b3723",
+      "packageSha256": "5b8d14f804578cd42f8d3c51fba6e944a248f8945781ad816790609d177835d1",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -1271,9 +1274,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -1392,9 +1396,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1505,9 +1509,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1521,7 +1525,7 @@
         }
       },
       "staticSource": "gas_pump_1.webp",
-      "packageSha256": "d2912c95f01a9b5d0fd1e7ba16e158016ea78278a63ff157c28808269415c0a6",
+      "packageSha256": "f45af7db06d4db0aa566729ff42df2dfb729f8e090888ebb47a67dffdca169a7",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -1542,9 +1546,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -1663,9 +1668,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1779,9 +1784,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -1795,7 +1800,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "e1bd41cd4bf69827362179e61613fa7e34343cf8a8d4b61707f7cfc32e17ed97",
+      "packageSha256": "3a5b78e203b908a3ff98b75d65060eb54026482342031607b0b39dbf82b2aaca",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -1816,9 +1821,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -1937,9 +1943,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2054,9 +2060,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2070,7 +2076,7 @@
         }
       },
       "staticSource": "gas_storager_1.webp",
-      "packageSha256": "000258733b7d959e503ee40549c3882f54d0f8295f39c60137af5db4ada8633c",
+      "packageSha256": "33dacde244ce1ecee778fde626e7f398feb272f7ccdf995ccd366abfd735c1b0",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -2091,9 +2097,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -2321,9 +2328,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2441,9 +2448,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2457,7 +2464,7 @@
         }
       },
       "staticSource": "item_port_grinder_1.webp",
-      "packageSha256": "e4f26d60079fcae199dd3e0baf0560a909e16c65b7aad7cc7ce845814035302a",
+      "packageSha256": "e268dbcf8848d447fa946cc2908956db081266c25dc0d09cc254a94e247031f5",
       "closeIdleMode": "hold-last",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
@@ -2479,9 +2486,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -2691,9 +2699,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2811,9 +2819,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -2827,7 +2835,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "04df3dbc0e2a8ccc7d1126230c5a664b998dca84a65f71df9ddd8e7f31d8a7e5",
+      "packageSha256": "a6163ade08ed1f59f112e2bac78e8aba346e3df0f4172c82a623bbfe0d30b1ae",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -2848,9 +2856,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -2969,9 +2978,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3091,9 +3100,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3107,7 +3116,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "6b6730c20b9e58393ef6137f309b2a5b336259ba15ce11e4deff443f377b931a",
+      "packageSha256": "b226f6517838ca88f26b278b4af4e5afda6f1b588a2465c6e0f99fb083a9010c",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -3128,9 +3137,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -3249,9 +3259,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3362,9 +3372,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3378,7 +3388,7 @@
         }
       },
       "staticSource": "item_port_loader_1.webp",
-      "packageSha256": "698948cb77ed73aff3cd8bdb5c824d0c4559823e34330b096317d247b40a2df0",
+      "packageSha256": "b1d80d94d3225f309d295a428a53f9c3ee186c4eebcfae34379302a23c6ac037",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -3399,9 +3409,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -3520,9 +3531,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3637,9 +3648,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3653,7 +3664,7 @@
         }
       },
       "staticSource": "item_port_log_hongs_bus_source.webp",
-      "packageSha256": "6160cbdb96cea00416107a95e0b271345c409f9b3962d04baba1eff8bd780a51",
+      "packageSha256": "1423d97db8e81fac99218b51180f337a506e55480809ef2969726428726d0b5f",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -3674,9 +3685,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -3795,9 +3807,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3912,9 +3924,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -3928,7 +3940,7 @@
         }
       },
       "staticSource": "item_port_log_hongs_bus.webp",
-      "packageSha256": "322cf3df6673445d025fb96cec849df39cb9490ec307aaaf5ec8eac8b0968634",
+      "packageSha256": "0df1eb48620e35f47a236c920c587527d52a6d6e9975ac0975160f6b9158fd1b",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -3949,9 +3961,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -4251,9 +4264,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -4371,9 +4384,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -4387,7 +4400,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "9c6562ed0c38987e3f1ba8774448f742903ee41bc4a1f0fa9deeb21a1cb995ec",
+      "packageSha256": "e6349f692e28c1a1b54ae7876c0bb42078ba07e0361a68921cfe6fb8d3adccfa",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -4408,9 +4421,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -4710,9 +4724,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -4830,9 +4844,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -4846,7 +4860,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "9c6562ed0c38987e3f1ba8774448f742903ee41bc4a1f0fa9deeb21a1cb995ec",
+      "packageSha256": "e6349f692e28c1a1b54ae7876c0bb42078ba07e0361a68921cfe6fb8d3adccfa",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -4867,9 +4881,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -4988,9 +5003,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5104,9 +5119,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5120,7 +5135,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "2cfa8dc6853fa770af9e90986c556d3f021eb03ea4293274125433738f6bc520",
+      "packageSha256": "cf2ba724d0116dfec3607bf32cfa64661ed1c26534f52495b32a57d9563416ce",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -5141,9 +5156,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -5299,9 +5315,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5415,9 +5431,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5431,7 +5447,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "d8cd70de791e60f0e9d67ae6655bd86baaa9f25928d252d3221c201324709bcf",
+      "packageSha256": "24d28df5a34904772907553f8c41a07e2ed54ef2cf0e312488d51a9cbd5823d8",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -5452,9 +5468,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -5573,9 +5590,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5689,9 +5706,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -5705,7 +5722,7 @@
         }
       },
       "closeIdleMode": "loop",
-      "packageSha256": "c07156caaa032764dc8da7441d2c452f0505b35f4175a4776205c8718e8b99d9",
+      "packageSha256": "6b734e71dea28dadc55c65b0a72ba8b0fd46e0d7587c0c75bd71318e19f91cae",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -5726,9 +5743,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -6028,9 +6046,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6148,9 +6166,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6164,7 +6182,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "53ebb3a1ae68a7f552c4b521ca808a1e2df170a94267921514fd38cdabf03672",
+      "packageSha256": "4cca638eb91d237304ec90e49a882e4e40be904ed4c58952a8c629ae215ea5e7",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -6185,9 +6203,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -6415,9 +6434,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6529,9 +6548,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6545,7 +6564,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "7434b93ecbb333a7cad16517d6157fd8f0896e0fffb9d06f08f5e2bba68a9d1d",
+      "packageSha256": "344aa0d9bc8241f18e4e12b0cce59021824d6670984382afcfe8774513ca9fe4",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -6566,9 +6585,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -6796,9 +6816,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6910,9 +6930,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -6926,7 +6946,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "7434b93ecbb333a7cad16517d6157fd8f0896e0fffb9d06f08f5e2bba68a9d1d",
+      "packageSha256": "344aa0d9bc8241f18e4e12b0cce59021824d6670984382afcfe8774513ca9fe4",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -6947,9 +6967,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -7323,9 +7344,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -7440,9 +7461,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -7456,7 +7477,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "1b141af56a68cebffe830fcac421a4d229106574f74932ed2bbfa9ea3260a508",
+      "packageSha256": "2f32d2d4379253c145e2abca304d0c25218823ed1d372fe77229daab1a29bcbd",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -7477,9 +7498,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -7853,9 +7875,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -7970,9 +7992,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -7990,7 +8012,7 @@
         "package": "buildings/sp_sub_hub_1/top-level4/package.json",
         "sourceArchiveSha256": null
       },
-      "packageSha256": "a980c32e7056067dc9a75072c657b947156c0347bca4c9f4bda4f3e8739403db"
+      "packageSha256": "c720901010cb8c64808bbebc51fc1cd7fa9eb18f361f226ae6ee0b8f44cd853c"
     },
     {
       "entityId": "storager_1",
@@ -8007,9 +8029,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -8237,9 +8260,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8350,9 +8373,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8366,7 +8389,7 @@
         }
       },
       "staticSource": "item_port_storager_1.webp",
-      "packageSha256": "c730d30d40ce537c40364727c41fe8b1c81f86d34baab6e867bcac8e32bb9503",
+      "packageSha256": "4bf71d1177d79f3b3bac38629641a12948f484fe3ca8c3408fb287f1c73669b2",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -8388,9 +8411,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -8509,9 +8533,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8629,9 +8653,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8645,7 +8669,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "35ea0ea8239b80fe224a4e0dac42ef0e4561d3b9774cd7c3ec45c4d000bee9e9",
+      "packageSha256": "4fa0a3aea70aca3c72e9dd5a35790f548a7c1c5efcf2c9a31590e6030d49024a",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -8666,9 +8690,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -8787,9 +8812,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8907,9 +8932,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -8923,7 +8948,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "35ea0ea8239b80fe224a4e0dac42ef0e4561d3b9774cd7c3ec45c4d000bee9e9",
+      "packageSha256": "4fa0a3aea70aca3c72e9dd5a35790f548a7c1c5efcf2c9a31590e6030d49024a",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -8944,9 +8969,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -9102,9 +9128,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9216,9 +9242,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9232,7 +9258,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "e38cecf5dcb67374b6b3f8760a472efe1629d6c8bbeacb91735db6b671fc1f8d",
+      "packageSha256": "ad700da29923fd1fe640051f54b005ee0e9d4e52b92728a0a95db3a8fc77cb90",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -9253,9 +9279,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -9411,9 +9438,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9525,9 +9552,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9541,7 +9568,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "61eaac98d8484c604bc4df74819eb06b2f4688ef7c8c242d1dc744c6074dddcb",
+      "packageSha256": "389786fb5f09558fe31f1bef6dc9fa0d24193c07617d95f84debb75c0f0fda9c",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -9562,9 +9589,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -9683,9 +9711,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9838,9 +9866,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -9854,7 +9882,7 @@
         }
       },
       "staticSource": "item_port_udpipe_loader_1.webp",
-      "packageSha256": "5bc3106ef20fc202bb095805e7fa3923d66144e2678ac7f44f7b3d5b004b7471",
+      "packageSha256": "a34829a26339ba6a1e7503e9095c78e9eeaae6b3a71c83b50e1026b61f4608bb",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -9876,9 +9904,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -9997,9 +10026,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10152,9 +10181,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10168,7 +10197,7 @@
         }
       },
       "staticSource": "item_port_udpipe_loader_2.webp",
-      "packageSha256": "ba61748506471a7e62ed9956b2d74e38396b8b0f9185781d507c502d20223a3a",
+      "packageSha256": "44912eb323635c6d2a9becb1142ab4757fe133a222a2ec6ade772f35f1b84a25",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -10190,9 +10219,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -10311,9 +10341,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10466,9 +10496,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10482,7 +10512,7 @@
         }
       },
       "staticSource": "item_port_udpipe_unloader_1.webp",
-      "packageSha256": "16067edf3c82d10b078439b38d6ffc7a7e3b1be4bd38dfd434d61cb1b3fef81e",
+      "packageSha256": "1050f5cee3bd53df52d4b03748a76d7acef3754b1c0f6de09a61c66b2fb13dcf",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -10504,9 +10534,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -10625,9 +10656,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10780,9 +10811,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -10796,7 +10827,7 @@
         }
       },
       "staticSource": "item_port_udpipe_unloader_2.webp",
-      "packageSha256": "b14a533fb527a0126cf356975c99489a6e46dfaff65f18e7bce5f02548f81f64",
+      "packageSha256": "fabe48143ba52be3f400d993708956aeae04a8f7e9ba2be96219f18992ec472d",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -10818,9 +10849,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -10939,9 +10971,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11052,9 +11084,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11068,7 +11100,7 @@
         }
       },
       "staticSource": "item_port_unloader_1.webp",
-      "packageSha256": "d2a4ca521a55ad41366568adb20f1c557ea7f56b2612fcd68eb121be3bd9ece2",
+      "packageSha256": "10cec299a1232d49af0f2d7d1bd50e071cccbdafded1510efa7e348a2f826c4b",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -11089,9 +11121,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -11210,9 +11243,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11323,9 +11356,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11339,7 +11372,7 @@
         }
       },
       "staticSource": "vaporizer_1.webp",
-      "packageSha256": "54dd48a24ef308ddcd2b0c2e261b94dcb8e4616454db30592a0841dc7628f1f2",
+      "packageSha256": "013357c2815dde2b22b35baac17fe674ae01ef1e3d58335d7dff3bb5ef870f07",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -11360,9 +11393,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -11662,9 +11696,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11776,9 +11810,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -11792,7 +11826,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "4d86b073742d3b5a12df17feedf3ce3acee185ca4da0f5503ae931c25870c62e",
+      "packageSha256": "01b572c8525a9d55ad9d6668d7263c5886f32522f34dd3bac5e3c53d1eb0170f",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -11813,9 +11847,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -12151,9 +12186,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12267,9 +12302,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12283,7 +12318,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "468d0ea4e94b7a561a3b81d22b1947699e1121ff5ae93db079b9bc7cbb0c99a3",
+      "packageSha256": "5f355d8693c442478fc92d32f807c8a7ccd43fc78dd709e9d0f22feeda0a8524",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -12304,9 +12339,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -12425,9 +12461,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12545,9 +12581,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12561,7 +12597,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "270d1a3b371c8be944533af68d7a9ed9841ca71ca4dfd0c74005eda7b80793da",
+      "packageSha256": "dd87ea4aa1d7cd96b3bf4686ab51d1f0f484b53e9d947030e9e4cc278111a136",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -12582,9 +12618,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -12703,9 +12740,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12823,9 +12860,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -12839,7 +12876,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "93101a8c69e53aec85800faf1e002116308397000eafb5763c0b52f67d02f1a2",
+      "packageSha256": "212190680315ea909917ba3cae0cb209e6e47ee764d2178dd95e19343677f2cf",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -12860,9 +12897,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -13126,9 +13164,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -13248,9 +13286,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -13264,7 +13302,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "e94791cdb7dd1a2187b0ee4846d8632797352e93e67f0a363fef15628aca1d8e",
+      "packageSha256": "76d3b4017d92dbafdb3027405fa45491347b3ddc1c4653c879d16668fe8d2287",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -13285,9 +13323,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -13623,9 +13662,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -13743,9 +13782,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -13759,7 +13798,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "55c0531b3a12eeb7a7f7d8879e88307f1047e7a22872b9bd176f540bac22709b",
+      "packageSha256": "5a15f70e89390418eab49c90a2ed788f7706508bfc1674442b0f66062140260f",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -13780,9 +13819,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -14118,9 +14158,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -14234,9 +14274,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -14250,7 +14290,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "6c679de35be2989b1c3b53c9bb242baebe43c1518050b31438d9addeb7f8f36a",
+      "packageSha256": "89142ca2874b4153a54a766f17b32630b236607e94d64bb00bc8af42cb16134d",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -14271,9 +14311,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -14609,9 +14650,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -14725,9 +14766,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -14741,7 +14782,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "1c7a9a87c233a5ccec3c7b9ad8ed5b3229ea666f003c07094bcc36c1867c1b7c",
+      "packageSha256": "7740677bacdf96fcdae78ddf598f7aa82a4e417fcc377a01203b6dad5840f8a2",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -14762,9 +14803,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -14992,9 +15034,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15106,9 +15148,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15125,7 +15167,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "cd1ad2e0a6c5176d4494a79f74cf49f86a4aa585937dacd45f4dc53db878ae5c",
+      "packageSha256": "f478e9f601b5cb8acbff49f61dc3eecf665e05d5cbd762c32f5dd4bee432e297",
       "closeIdleMode": "hold-last"
     },
     {
@@ -15143,9 +15185,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -15337,9 +15380,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15459,9 +15502,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15478,7 +15521,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "817d87351f9fae3bf9a73bc23dd270a2e5fabdf455a3d813007e016cbf34a495",
+      "packageSha256": "93dfc93e3bf9b2b8c29cbca36ef70f1ea7a0ed9278232a42bcf23e19d9130004",
       "closeIdleMode": "hold-last"
     },
     {
@@ -15496,9 +15539,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -15834,9 +15878,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15950,9 +15994,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -15969,7 +16013,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "468d0ea4e94b7a561a3b81d22b1947699e1121ff5ae93db079b9bc7cbb0c99a3",
+      "packageSha256": "5f355d8693c442478fc92d32f807c8a7ccd43fc78dd709e9d0f22feeda0a8524",
       "closeIdleMode": "hold-last"
     },
     {
@@ -15987,9 +16031,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -16108,9 +16153,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16118,7 +16163,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260916-full-building-release",
+          "taskId": "20260919-logistics-v10-refresh-4items",
           "version": "v1.5",
           "building": "log_conditioner",
           "tableBuildingId": "log_conditioner",
@@ -16199,7 +16244,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20260916-full-building-release",
+          "beautyTaskId": "20260919-logistics-v10-refresh-4items",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -16208,7 +16253,7 @@
           "liquidEffectsInBuildingBeauty": false,
           "omittedRingChild": "sanjiao: user-approved omission",
           "sourceModel": "A_logconditioner+1_001_01_dynamic_lod0",
-          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "lightingPreset": "render-parameter-comparison-v10-shader-static",
           "orientationAudit": {
             "status": "passed",
             "imageAxes": {
@@ -16221,9 +16266,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16240,7 +16285,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "b2841c9195a0196c44ca90dc2ba0216e4745d732da17c27d8a43deb304f9be58"
+      "packageSha256": "7853f2836d903f004d91303c4df9d286a76f38d2d7c31ed71ca5b35d5679b87b"
     },
     {
       "entityId": "log_connector",
@@ -16257,9 +16302,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -16378,9 +16424,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16388,7 +16434,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260916-full-building-release",
+          "taskId": "20260919-logistics-v10-refresh-4items",
           "version": "v1.5",
           "building": "log_connector",
           "tableBuildingId": "log_connector",
@@ -16469,7 +16515,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20260916-full-building-release",
+          "beautyTaskId": "20260919-logistics-v10-refresh-4items",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -16478,7 +16524,7 @@
           "liquidEffectsInBuildingBeauty": false,
           "omittedRingChild": "sanjiao: user-approved omission",
           "sourceModel": "A_connector+1_001_01_dynamic_lod0",
-          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "lightingPreset": "render-parameter-comparison-v10-shader-static",
           "orientationAudit": {
             "status": "passed",
             "imageAxes": {
@@ -16491,9 +16537,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16510,7 +16556,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "2fb30d1725d6baf4b3771fb7f87615663813de28be6d41c2b60e3bec2daaad97"
+      "packageSha256": "67df135f4c18bc4666da5f6ebaaf170dc07286dc56ba13e5e2b9d074d141555f"
     },
     {
       "entityId": "log_converger",
@@ -16527,9 +16573,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -16648,9 +16695,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16658,7 +16705,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260916-full-building-release",
+          "taskId": "20260919-logistics-v10-refresh-4items",
           "version": "v1.5",
           "building": "log_converger",
           "tableBuildingId": "log_converger",
@@ -16739,7 +16786,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20260916-full-building-release",
+          "beautyTaskId": "20260919-logistics-v10-refresh-4items",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -16748,7 +16795,7 @@
           "liquidEffectsInBuildingBeauty": false,
           "omittedRingChild": "sanjiao: user-approved omission",
           "sourceModel": "A_converger+1_001_01_dynamic_lod0",
-          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "lightingPreset": "render-parameter-comparison-v10-shader-static",
           "orientationAudit": {
             "status": "passed",
             "imageAxes": {
@@ -16761,9 +16808,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16780,7 +16827,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "686bad96ad880bc942db9a356da6e22b6a69b5d5e406e6a8a023ad2a5699200f"
+      "packageSha256": "7781a0641c120803c2280bc652e92852e3d8d9b8f877d19fd8149c6b55290c9b"
     },
     {
       "entityId": "log_splitter",
@@ -16797,9 +16844,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -16918,9 +16966,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -16928,7 +16976,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260916-full-building-release",
+          "taskId": "20260919-logistics-v10-refresh-4items",
           "version": "v1.5",
           "building": "log_splitter",
           "tableBuildingId": "log_splitter",
@@ -17009,7 +17057,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20260916-full-building-release",
+          "beautyTaskId": "20260919-logistics-v10-refresh-4items",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -17018,7 +17066,7 @@
           "liquidEffectsInBuildingBeauty": false,
           "omittedRingChild": "sanjiao: user-approved omission",
           "sourceModel": "A_splitter+1_001_01_dynamic_lod0",
-          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "lightingPreset": "render-parameter-comparison-v10-shader-static",
           "orientationAudit": {
             "status": "passed",
             "imageAxes": {
@@ -17031,9 +17079,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17050,7 +17098,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "85ca0895c858d964f945ee43a8c1db66b5f480073dfc8fa9f55ffc664f5f731d"
+      "packageSha256": "4e9486d8ea44b77246bb5f4bfd2afc7c75a4c6b9baa9832077d6adf2f2af7b3a"
     },
     {
       "entityId": "pipe_admission",
@@ -17067,9 +17115,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -17188,9 +17237,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17301,9 +17350,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17320,7 +17369,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "9e336aadf337eaded72978f5a2a466a87613d6750bedf9d5a1ce03804b14f00f"
+      "packageSha256": "3c11489727146c722becb421391451febc20bf3fa9ed82c28450387eb474cfc1"
     },
     {
       "entityId": "pipe_connector",
@@ -17337,9 +17386,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -17458,9 +17508,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17571,9 +17621,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17590,7 +17640,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "2a247e6ac42ca3ef5b0d9c263c8cce362875b27445486a61f49b1d29b2e8df96"
+      "packageSha256": "bd8e704d55bb96cee97b581a826a5f99106e2d94443ef095436abafc70d29621"
     },
     {
       "entityId": "pipe_converger",
@@ -17607,9 +17657,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -17728,9 +17779,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17841,9 +17892,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -17860,7 +17911,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "ec7019a9062dc58c675fa0bfff56222dac52aa1ccb647b59b6fd21856693fee9"
+      "packageSha256": "8349d24391ea402d6db0c3e3423fb7ee28c5920874505b042f1dce116110e327"
     },
     {
       "entityId": "pipe_splitter",
@@ -17877,9 +17928,10 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260917-100609-cst",
+          "releaseId": "v1.5-20260919-212522-cst",
           "sourceVersion": "v1.5",
-          "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+          "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+          "sourceResolution": 0.5
         },
         "spatial": {
           "schemaVersion": 1,
@@ -17998,9 +18050,9 @@
           },
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -18111,9 +18163,9 @@
           "individualFramesIncludedInZip": false,
           "textureProfile": {
             "id": "grid-textures-v1",
-            "pixelsPerCell": 128,
+            "pixelsPerCell": 64,
             "logicalPixelsPerCell": 128,
-            "resolution": 1.0,
+            "resolution": 0.5,
             "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
             "colorFilter": "premultiplied-alpha 2x2 box",
             "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
@@ -18130,7 +18182,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "4c33bf03600e969ec8e30179d1c35e7953829ac921f57a25fc38eb277f2d3139"
+      "packageSha256": "1ded553057838bcf06ecd6d65729144f32c17ba04e5b6f58cc4785a4f2571b63"
     }
   ],
   "sourceCoordinateTransform": {
@@ -18166,8 +18218,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

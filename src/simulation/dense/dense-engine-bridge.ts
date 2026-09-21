@@ -51,6 +51,11 @@ export interface DenseEngineBridge {
   requestPresentationCheckpoint(
     tickNumber: number,
   ): Promise<Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }>>;
+  switchPresentation(options: {
+    readonly tickNumber: number;
+    readonly presentationDeviceIds: readonly string[];
+    readonly operatingStatusDeviceIds: readonly string[];
+  }): Promise<Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }>>;
   ensureBufferedThrough(
     tickNumber: number,
   ): Promise<Extract<DenseWorkerResponse, { readonly type: "buffer-ready" }>>;
@@ -144,6 +149,20 @@ class LocalDenseEngineBridge implements DenseEngineBridge {
       ...this.createIdentity(),
       type: "request-presentation-checkpoint",
       tickNumber,
+    }), "presentation-checkpoint"));
+  }
+
+  public switchPresentation(options: {
+    readonly tickNumber: number;
+    readonly presentationDeviceIds: readonly string[];
+    readonly operatingStatusDeviceIds: readonly string[];
+  }): Promise<Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }>> {
+    return Promise.resolve(this.expectResponse(this.runtime.handleRequest({
+      ...this.createIdentity(),
+      type: "switch-presentation",
+      tickNumber: options.tickNumber,
+      presentationDeviceIds: options.presentationDeviceIds,
+      operatingStatusDeviceIds: options.operatingStatusDeviceIds,
     }), "presentation-checkpoint"));
   }
 
@@ -291,6 +310,20 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
       ...this.createIdentity(),
       type: "request-presentation-checkpoint",
       tickNumber,
+    }, "presentation-checkpoint");
+  }
+
+  public switchPresentation(options: {
+    readonly tickNumber: number;
+    readonly presentationDeviceIds: readonly string[];
+    readonly operatingStatusDeviceIds: readonly string[];
+  }): Promise<Extract<DenseWorkerResponse, { readonly type: "presentation-checkpoint" }>> {
+    return this.request({
+      ...this.createIdentity(),
+      type: "switch-presentation",
+      tickNumber: options.tickNumber,
+      presentationDeviceIds: options.presentationDeviceIds,
+      operatingStatusDeviceIds: options.operatingStatusDeviceIds,
     }, "presentation-checkpoint");
   }
 

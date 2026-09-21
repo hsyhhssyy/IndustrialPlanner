@@ -345,6 +345,7 @@ const UI: Record<string, string> = {
     "basePanel.runAllBasesHelp": "同时运行所有基地帮助",
     "basePanel.runAllBasesHelpLoadFailed": "帮助内容加载失败",
     "basePanel.runAllBasesHelpLoading": "帮助内容加载中…",
+    "basePanel.runAllBasesLegacyUnsupported": "传统解析器不支持同时运行所有基地。",
     "regionalResources.addResource": "添加资源",
     "regionalResources.infiniteProfile": "无穷",
     "regionalResources.infiniteProfileSummary": "全部地区自然资源无限供应",

@@ -1,6 +1,6 @@
 import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
+import { autorun, runInAction } from "mobx";
 
 import { createAppHost } from "@/app/host/app-host";
 import {
@@ -34,6 +34,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -222,6 +223,9 @@ function createWorkbenchStorageSnapshot(options: {
 }
 
 afterEach(() => {
+  runInAction(() => {
+    regionalSimulationUiState.reset();
+  });
   localStorage.clear();
   document.documentElement.removeAttribute("data-app-theme");
   document.documentElement.removeAttribute("style");
@@ -229,6 +233,41 @@ afterEach(() => {
 });
 
 describe("createAppHost", () => {
+  it("公开无副本且可观察的多基地 AppSettings 投影", () => {
+    const appHost = createAppHost(createWorkspace());
+    const observedValues: boolean[] = [];
+    const dispose = autorun(() => {
+      observedValues.push(appHost.state.settings.regionalMultiBaseEnabled);
+    });
+
+    try {
+      expect(appHost.internalState.settings).not.toHaveProperty("regionalMultiBaseEnabled");
+      expect(appHost.state.settings).toHaveProperty("regionalMultiBaseEnabled", false);
+
+      runInAction(() => {
+        regionalSimulationUiState.experimentalEnabled = true;
+      });
+      expect(appHost.state.settings.regionalMultiBaseEnabled).toBe(false);
+
+      runInAction(() => {
+        appHost.regionalSettings.asset = {
+          ...appHost.regionalSettings.asset,
+          multiBaseEnabled: true,
+        };
+      });
+      expect(appHost.state.settings.regionalMultiBaseEnabled).toBe(true);
+
+      runInAction(() => {
+        regionalSimulationUiState.experimentalEnabled = false;
+      });
+      expect(appHost.state.settings.regionalMultiBaseEnabled).toBe(false);
+      expect(observedValues).toEqual([false, false, true, false]);
+    } finally {
+      dispose();
+      appHost.dispose();
+    }
+  });
+
   it("projects the move entry source as a public move kind", () => {
     const appHost = createAppHost(createWorkspace());
 

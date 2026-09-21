@@ -3,6 +3,7 @@
   "frameWidth": 640,
   "frameHeight": 640,
   "fps": 30,
+  "sourceResolution": 0.5,
   "pageRows": 6,
   "pageColumns": 5,
   "sources": {
@@ -49,8 +50,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "e48fdb86fce94b4df0f88449b18a541a97a195d2d0952928fd985db459381abb"
+      "sha256": "25c87b14c44310fa1498e29145dcb985652569a9f981717835ba689f85670c81"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -95,8 +98,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "803a6126dba2e598213647716c1b6e54719f4e29ec728efbb64f67158d10ffd7"
+      "sha256": "9673e9c131270288e3d1ceafb10215062e3ef794850b9d65d0c6a64f9d3cbb3e"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -141,8 +146,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close/spritesheet_002.webp",
-      "sha256": "68aa27d9c9f3602911166f83fcd4e5979b187f21c6736048b66ed017c4364fa9"
+      "sha256": "322048383182c36bb064685b3579121e859442a307f24547c60f529d313027e8"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -187,8 +194,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close/spritesheet_003.webp",
-      "sha256": "433ce56a472d63f975ce0af040178da68d6c4203135599e367f64d00f18b0536"
+      "sha256": "0c29e6248e571808d3f7d847b6b20ed48dc84b9642cc1f425b9f11ee6f3c752e"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -218,8 +227,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close/spritesheet_004.webp",
-      "sha256": "53866423b3be66f56dd372bfc12581c64bb28d0f13dd43d4be050faa829ecafb"
+      "sha256": "fdd4a31fe652db63cffff09e01bffdf9324d73746d63863432f4d1a89dc10402"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -230,8 +241,10 @@
         33,
         34
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "e11acf799666da8fa864de3daea294743bdcdf14103eec58a42f26719f76fc54"
+      "sha256": "c582a7ddefbfbb7c85ad8eb68819e0b29fd0072a1639730b883a7bfb6f3b900a"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -276,8 +289,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "065a962cc12c08f3c3ec8ee9cae7df0d76c13f38722ef52c3a51233ff8fa9e2a"
+      "sha256": "6e28e97a5d7a05de3ab99957d3342780ddb24941d06a3f8ec3654c8d6a35692b"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -322,8 +337,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "90fe40df5660b6504537455b60cc3fe159e34cc491ce4fd40e988b8f5ff53ee8"
+      "sha256": "57f89f07e915a8b8dbecf41e2f3d94efaab1a8f1ea694baa724ac953d94836f9"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -353,8 +370,10 @@
         34,
         66
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open/spritesheet_002.webp",
-      "sha256": "f02a78fa5296d215bf0c853f52aeb5f7c8794e3cbbf00495b0604283d4e31231"
+      "sha256": "f502793f6f450fc9497b3d4efadec958e32f20469e6c0f3aef93e3ca311555ca"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -399,8 +418,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "2410c228561624bf8395d2020364ad0ec763de18e89654d68011c9b7729cd20c"
+      "sha256": "514e93c25a06df3a0dbf64c1640e3fa96f782fc04f17de72220d3cd012fc997e"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -445,8 +466,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "701a11fd92f5506407d740d588cf55e3921eca23c87ba75258d42f57e0c9e38c"
+      "sha256": "784413cf368d3bcab1110a04a2a6df2596c4cf2c6290f0dedddbd71f5df58a63"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -491,8 +514,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "5a8ab45e7cbadd730c74e5cdd31d4b48e8a748916baf19a9c33bc55644a5406a"
+      "sha256": "c4517b15c81f8949353669fe727ab55a5f28669df0ebcc8f53e74276f17ba6f5"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -537,8 +562,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "79ad02c265c51e03c610a9c3e2bb9953a78c2f54bff03ac0ae9438b63883c834"
+      "sha256": "6f362302baa8996f060d6d6a9cf47042ff94d12d44caeff46669f34b364cb42f"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -583,8 +610,10 @@
         34,
         33
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "32f7113af6934ac2bc80cd81f9b95087bc4db5a78394cdd7c1ed93fcc46201ea"
+      "sha256": "f3250126edbb415c6a62167fbd01b3dc71579e66980c2097b7bf6181078f01c9"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -608,8 +637,10 @@
         34,
         66
       ],
+      "physicalFrameWidth": 320,
+      "physicalFrameHeight": 320,
       "sourcePath": "buildings/seedcollector_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "1e1d137b6209c3332723a5488d5b8c0e92a2abc0be91c8d2d0cec0f5e4eb86bf"
+      "sha256": "642a2e121e6ed11e6df4c4bb8be5719375a6186cd82dad7c89c55080121cdfd1"
     }
   },
   "clips": {
@@ -713,8 +744,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260917-100609-cst",
+    "releaseId": "v1.5-20260919-212522-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "6bc977c0cef67151e180bf72f90116b2f505736519c14273dba9d97287d41f13"
+    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "sourceResolution": 0.5
   }
 }

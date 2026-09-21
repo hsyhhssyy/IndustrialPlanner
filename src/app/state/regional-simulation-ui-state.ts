@@ -7,6 +7,7 @@ import {
  * 区域多基地仿真的 App 层 UI 状态。
  * 实验性总开关由设置对话框控制器写入；基地面板开关只在 stop 状态可写。
  */
+/** AI-CORRECTION 2026-09-20: 此对象仅保留实验门控与展示计数；基地面板选择由 AppSettings.regionalMultiBaseEnabled 投影公开。 */
 class RegionalSimulationUiState {
   /** “允许多个基地同时运行”实验性设置；持久化到本地设置。 */
   public experimentalEnabled = readRegionalMultiBaseExperimentalEnabled();
@@ -40,6 +41,7 @@ class RegionalSimulationUiState {
     //
     // Original code:
     // this.allBasesEnabled = false;
+    // AI-CORRECTION 2026-09-20: 模式不再由 Action 或组合根复位；每次 Simulation.start 都从 AppSettings 固化独立会话模式。
     this.siblingBaseCount = 0;
   }
 }

@@ -6,6 +6,8 @@ export type AppLocale = "zh-CN" | "en-US";
 export interface AppSettings {
   readonly locale: AppLocale;
   readonly themeId: AppThemeId;
+  /** 用户为下一次受支持的仿真会话选择“同时运行所有基地”。 */
+  readonly regionalMultiBaseEnabled: boolean;
   // AI-REMOVED 2026-09-10:
   // Reason: 操作模式总开关已废弃，不再保留关闭分支
   // Trigger: 用户要求彻底移除 hypergryphOperationMode。

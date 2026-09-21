@@ -96,6 +96,12 @@ export type DenseWorkerRequest =
       readonly tickNumber: number;
     })
   | (DenseProtocolIdentity & {
+      readonly type: "switch-presentation";
+      readonly tickNumber: number;
+      readonly presentationDeviceIds: readonly string[];
+      readonly operatingStatusDeviceIds: readonly string[];
+    })
+  | (DenseProtocolIdentity & {
       readonly type: "ensure-buffered-through";
       readonly tickNumber: number;
     })

@@ -12,6 +12,9 @@ import urllib.request
 from pathlib import Path
 
 SITE_URL = "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/"
+SOURCE_RESOLUTION = 0.5
+SOURCE_PIXELS_PER_CELL = 64
+LOGICAL_PIXELS_PER_CELL = 128
 PROTOCOL_CORE_OPEN_IDLE_ONLY_SPRITE_IDS = frozenset({
     "item_port_sp_hub_1",
     "item_port_sp_sub_hub_1",
@@ -57,6 +60,26 @@ def fetch(name, base_url=SITE_URL):
 def verify(data, entry):
     if len(data) != entry["bytes"] or digest(data) != entry["sha256"]:
         raise ValueError(f"Integrity mismatch: {entry['path']}")
+
+
+def validate_texture_profile(value, label):
+    if (not isinstance(value, dict)
+            or value.get("pixelsPerCell") != SOURCE_PIXELS_PER_CELL
+            or value.get("logicalPixelsPerCell") != LOGICAL_PIXELS_PER_CELL
+            or value.get("resolution") != SOURCE_RESOLUTION):
+        raise ValueError(f"Unsupported 64px texture profile: {label}")
+    return value
+
+
+def validate_physical_rect(value, page, label):
+    if (not isinstance(value, list) or len(value) != 4
+            or not all(isinstance(number, (int, float)) and not isinstance(number, bool) for number in value)):
+        raise ValueError(f"Invalid physicalRect: {label}")
+    left, top, width, height = value
+    if (left < 0 or top < 0 or width <= 0 or height <= 0
+            or left + width > page["width"] or top + height > page["height"]):
+        raise ValueError(f"physicalRect exceeds its page: {label}")
+    return value
 
 
 def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=False):
@@ -105,8 +128,14 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
     originals = {}
     manifest = json.loads(download("assets-manifest.json"))
     release = json.loads(download("release.json"))
+    if (manifest.get("schemaVersion") != 2
+            or manifest.get("defaultPixelsPerCell") != SOURCE_PIXELS_PER_CELL
+            or manifest.get("preview") != {"pixelsPerCell": SOURCE_PIXELS_PER_CELL, "root": "./"}):
+        raise ValueError("Unsupported 64px asset manifest")
+    if release.get("schemaVersion") != 1:
+        raise ValueError("Unsupported release schema")
     for document in (manifest, release):
-        if document["schemaVersion"] != 1 or any(document[key] != index[key] for key in ("releaseId", "sourceVersion")):
+        if any(document.get(key) != index[key] for key in ("releaseId", "sourceVersion")):
             raise ValueError("Website release metadata differs from root index")
     buildings = {b["id"]: b for b in manifest["buildings"]}
     if manifest["buildingCount"] != len(buildings):
@@ -202,11 +231,21 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
             completed.append(name)
             if len(completed) % 100 == 0:
                 print(f"Verified {len(completed)}/{len(names)} source files", flush=True)
+    for name in sorted(names):
+        if not name.endswith(".json"):
+            continue
+        document = json.loads((source / name).read_text())
+        profile = document.get("textureProfile") if isinstance(document, dict) else None
+        if profile is not None:
+            validate_texture_profile(profile, name)
+        if name.endswith("/package.json") and profile is None:
+            raise ValueError(f"Missing 64px texture profile: {name}")
     if fetch("integrity.json.sha256", base_url) != anchor:
         raise ValueError("Website release changed during download")
     receipt = {
         "schemaVersion": 1, "siteUrl": base_url, "releaseId": index["releaseId"],
         "sourceVersion": index["sourceVersion"], "indexSha256": index_hash,
+        "sourceResolution": SOURCE_RESOLUTION,
         "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "entries": [{k: e[k] for k in ("entityId", "spriteId", "sourcePath", "animated")} for e in entries],
         "logistics": "logistics" in selected_buildings,
@@ -349,6 +388,9 @@ def prepare_metadata(batch):
     """无损读取网站 JSON 的大整数；将网站页面与已确认动画阶段关联到临时批次原件。"""
     batch = Path(batch).resolve()
     receipt = json.loads((batch / "source-receipt.json").read_text())
+    source_resolution = receipt.get("sourceResolution")
+    if source_resolution != SOURCE_RESOLUTION:
+        raise ValueError("Pinned source is not the supported 64px resolution")
     release = validate_path(receipt["releaseId"])
     if "/" in release:
         raise ValueError("Release ID must be a single directory name")
@@ -401,7 +443,9 @@ def prepare_metadata(batch):
         batch / "source-receipt.json",
         history / f"source-receipt{receipt_history_suffix}.json",
     )
-    provenance = {k: receipt[k] for k in ("siteUrl", "releaseId", "sourceVersion", "indexSha256")}
+    provenance = {k: receipt[k] for k in (
+        "siteUrl", "releaseId", "sourceVersion", "indexSha256", "sourceResolution"
+    )}
     mapping["historicalSource"] = {**mapping.get("historicalSource", {}), **{k: mapping.pop(k) for k in ("sourceArchive", "sourceArchiveSha256", "incrementalFixes", "orientationConflicts", "validationStatus") if k in mapping}}
     mapping["sourceSite"] = provenance
     selected = {e["entityId"] for e in receipt["entries"]}
@@ -417,7 +461,16 @@ def prepare_metadata(batch):
         spatial = json.loads((root / directory / "spatial.json").read_text())
         if package["schemaVersion"] != 1 or spatial["schemaVersion"] != 1 or spatial["imageAxes"] != {"x": "+sourceX", "y": "+sourceZ"}:
             raise ValueError(f"Unsupported view coordinates: {directory}")
+        validate_texture_profile(package.get("textureProfile"), f"{directory}/package.json")
+        validate_texture_profile(spatial.get("textureProfile"), f"{directory}/spatial.json")
         width, height = (spatial["framePixels"][key] for key in ("width", "height"))
+        physical_width_value = width * source_resolution
+        physical_height_value = height * source_resolution
+        if not all(isinstance(value, (int, float)) and value > 0 and value.is_integer()
+                   for value in (physical_width_value, physical_height_value)):
+            raise ValueError(f"View has fractional physical frame dimensions: {directory}")
+        physical_width = int(physical_width_value)
+        physical_height = int(physical_height_value)
         rect = spatial["footprintRectCells"]
         canvas = spatial["canvasCells"]
         entry["spriteOffset"] = {"x": -rect["left"], "y": rect["top"] + rect["height"] - canvas["height"], **canvas}
@@ -442,6 +495,8 @@ def prepare_metadata(batch):
             phase_root = f"{directory}/animations/{validate_path(phase)}"
             sheet = json.loads((root / phase_root / "spritesheet.json").read_text())
             animation = json.loads((root / phase_root / "animation.json").read_text())
+            validate_texture_profile(sheet.get("textureProfile"), f"{phase_root}/spritesheet.json")
+            validate_texture_profile(animation.get("textureProfile"), f"{phase_root}/animation.json")
             phase_static_flags.append(animation.get("static") is True)
             if animation.get("static") is True:
                 declared_static_phases.append(phase)
@@ -458,14 +513,30 @@ def prepare_metadata(batch):
                 source_hash = indexed[source_path]["sha256"]
                 if page.get("sha256", source_hash) != source_hash:
                     raise ValueError(f"Spritesheet digest differs: {source_path}")
-                if page["width"] % width or page["height"] % height:
-                    raise ValueError(f"Page is not an integer frame grid: {source_path}")
-                rows, columns = page["height"] // height, page["width"] // width
+                if page.get("resolution") != source_resolution:
+                    raise ValueError(f"Page resolution differs: {source_path}")
+                rows, columns = page.get("rows"), page.get("columns")
+                if (not isinstance(rows, int) or rows <= 0 or not isinstance(columns, int) or columns <= 0
+                        or page["width"] != columns * physical_width
+                        or page["height"] != rows * physical_height):
+                    raise ValueError(f"Page is not a physical frame grid: {source_path}")
                 # 部分交付的 rows 表示使用行数，页面仍保留透明尾行；按物理尺寸建源网格。
-                if not (0 < page.get("rows", rows) <= rows) or page.get("columns", columns) != columns or page["frameCount"] > page.get("rows", rows) * columns:
+                if page["frameCount"] > rows * columns:
                     raise ValueError(f"Page grid dimensions differ: {source_path}")
+                page_frames = sheet.get("frames", [])[page["frameStart"]:page["frameStart"] + page["frameCount"]]
+                if len(page_frames) != page["frameCount"]:
+                    raise ValueError(f"Page frame range differs: {source_path}")
+                for local_index, frame in enumerate(page_frames):
+                    physical_rect = validate_physical_rect(frame.get("physicalRect"), page, f"{source_path}#{local_index}")
+                    expected = [local_index % columns * physical_width,
+                                local_index // columns * physical_height,
+                                physical_width, physical_height]
+                    if physical_rect != expected or frame.get("page") != page["index"] or frame.get("localIndex") != local_index:
+                        raise ValueError(f"Physical frame grid differs: {source_path}#{local_index}")
                 sources[name] = {"file": f"{name}.webp", "rows": rows, "columns": columns,
-                                 "frameCount": page["frameCount"], "frameDurationsMs": durations, "sourcePath": source_path, "sha256": source_hash}
+                                 "frameCount": page["frameCount"], "frameDurationsMs": durations,
+                                 "physicalFrameWidth": physical_width, "physicalFrameHeight": physical_height,
+                                 "sourcePath": source_path, "sha256": source_hash}
                 ranges.append({"source": name, "startFrame": 0, "frameCount": page["frameCount"]})
             source_phases[phase] = ranges
         entry["animated"] = delivery_is_animated(package, phase_static_flags)
@@ -481,6 +552,7 @@ def prepare_metadata(batch):
             if len(frame_rates) != 1:
                 raise ValueError(f"Animation phases have different frame rates: {directory}")
             manifest = {"schemaVersion": 2, "frameWidth": width, "frameHeight": height, "fps": frame_rates.pop(),
+                        "sourceResolution": source_resolution,
                         "pageRows": min(previous.get("pageRows", 7), 4095 // height),
                         "pageColumns": min(previous.get("pageColumns", 5), 4095 // width),
                         "sources": delivery["sources"], "clips": delivery["clips"], "frameTransform": "flip-top-bottom", "coordinateTransform": "projectY = depth - 1 - sourceZ",
@@ -500,7 +572,9 @@ def prepare_metadata(batch):
             if phase is None:
                 raise ValueError(f"No declared static frame: {directory}")
             page = sources[source_phases[phase][0]["source"]]
-            statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"], "width": width, "height": height})
+            statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"],
+                            "width": width, "height": height, "physicalWidth": physical_width,
+                            "physicalHeight": physical_height, "sourceResolution": source_resolution})
     if receipt["logistics"]:
         directory = "buildings/logistics"
         collection = json.loads((root / directory / "collection.json").read_text())
@@ -517,7 +591,9 @@ def prepare_metadata(batch):
                           for entry in mapping["entries"] if entry["entityId"] in selected]
     if len(normalized_entries) != len(receipt["entries"]):
         raise ValueError("Normalized mapping coverage differs from pinned receipt")
-    plan = {"schemaVersion": 1, "sourceSite": provenance, "sourceRoot": source_root, "entries": normalized_entries, "views": views, "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
+    plan = {"schemaVersion": 1, "sourceSite": provenance, "sourceRoot": source_root,
+            "sourceResolution": source_resolution, "entries": normalized_entries, "views": views,
+            "animations": sorted(set(animations)), "statics": statics, "logistics": receipt["logistics"]}
     plan["scope"] = receipt.get("scope", "buildings")
     plan["receiptHistorySuffix"] = receipt_history_suffix
     (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")

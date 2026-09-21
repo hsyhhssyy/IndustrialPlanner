@@ -478,7 +478,8 @@ function resolveCompiledDeviceId(
   }
 
   return topology.ordering.deviceOrder.find((topologyDeviceId) =>
-    topology.devices[topologyDeviceId]?.sourceEntityId === deviceId,
+    topology.devices[topologyDeviceId]?.sourceEntityId === deviceId
+    || `device:${topology.devices[topologyDeviceId]?.sourceEntityId}` === deviceId,
   ) ?? null;
 }
 

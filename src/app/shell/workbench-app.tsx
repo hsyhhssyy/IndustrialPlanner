@@ -728,6 +728,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
               // Original code:
               // appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
               // AI-CORRECTION 2026-08-19: 上方旧注释所述“Action 已负责切回”不再有效；有效模式由组合根 reaction 负责。
+              // AI-CORRECTION 2026-09-20: 组合根 reaction 已移除；关闭实验门控会直接使 AppSettings 投影为 false，运行中的会话模式保持不变。
             }
           }
         }),
