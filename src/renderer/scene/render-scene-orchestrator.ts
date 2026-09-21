@@ -28,10 +28,7 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import { createMemorySnapshotCollector, type MemorySnapshotCollector } from "./memory-monitor"
 import { configureSceneRenderGroups } from "./render-group-policy"
-import {
-  Container,
-  UPDATE_PRIORITY,
-} from "pixi.js"
+import { Container } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { TexturePerfDiagnostics } from "../texture"
 import {
@@ -39,6 +36,7 @@ import {
   type PixiRenderDiagnosticsSnapshot,
 } from "../pixi-render-diagnostics"
 import type { RenderHost } from "../renderer-host"
+import type { RenderSurfaceContext } from "../render-surface-context"
 import {
   resolvePowerInteractionVisualState,
   type PowerInteractionVisualState,
@@ -117,14 +115,24 @@ import { LogisticsMaterialSceneState } from "./logistics-material-state"
 import { LogisticsBakedFlowScene } from "./logistics-baked-flow"
 import { BuildingEffectsScene, resolveBuildingEffectStatusKey } from "../building-effects"
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material"
+import type { RenderFrameTime } from "../surface"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
 const RENDER_PERF_LOG_WINDOW_MS = 10_000
 const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
-const PIXI_RENDER_START_PRIORITY = UPDATE_PRIORITY.LOW + 1
-const PIXI_RENDER_FINISH_PRIORITY = UPDATE_PRIORITY.LOW - 1
+// AI-REMOVED 2026-09-21:
+// Reason: Pixi render 的前后测量改由 RenderSurface 在 Host scheduler 的显式 render 调用两侧执行，不再依赖 Application ticker 优先级。
+// Trigger: ST2-RQ-037 第一阶段要求一个 Host 循环统一驱动全部 canvas。
+// Evidence: RenderSurfaceScene.beforeRender / afterRender 成为唯一 render 测量边界。
+// Replacement: src/renderer/surface/render-surface.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const PIXI_RENDER_START_PRIORITY = UPDATE_PRIORITY.LOW + 1
+// const PIXI_RENDER_FINISH_PRIORITY = UPDATE_PRIORITY.LOW - 1
 const RENDER_INVALIDATION_COLLECTION_TYPES: readonly EntityCollectionTypeValue[] = [
   EntityCollectionType.selection,
   EntityCollectionType.marquee,
@@ -258,6 +266,9 @@ interface AppWithLogisticsPlacementRuntime {
 }
 
 export interface RenderSceneOrchestrator {
+  sync(frameTime: RenderFrameTime): void;
+  beforeRender(): void;
+  afterRender(): void;
   destroy(): void;
 }
 
@@ -545,12 +556,12 @@ export function createRenderSceneOrchestrator(
   // 保留函数用于删除审计；禁止执行，避免与全局 decoration 重复扫描实体。
   void resolveLogisticsPortOccupancy;
 
-  const flushViewport = (): void => {
+  const syncFrame = (frameTime: RenderFrameTime): void => {
     const frameStartedAtMs = performance.now()
     diagnosticSession.beforeFrame(frameStartedAtMs)
     const frameProfiler = renderPerfDiagnostics.startFrame({
       startedAtMs: frameStartedAtMs,
-      tickerDeltaMs: renderHost.app.ticker.deltaMS,
+      tickerDeltaMs: frameTime.deltaMs,
     })
     pixiRenderDiagnostics.syncDebugState(frameProfiler !== null)
     activeFrameProfiler = frameProfiler
@@ -559,10 +570,6 @@ export function createRenderSceneOrchestrator(
       "viewport.readState",
       () => readViewportState(renderHost),
     )
-    const frameTime: RenderFrameTimeState = {
-      nowMs: renderHost.app.ticker.lastTime,
-      deltaMs: renderHost.app.ticker.deltaMS,
-    }
     const workspaceApp = renderHost.workspace.app!
     const effectiveCanvasTheme = measureRenderStage(
       frameProfiler,
@@ -581,9 +588,18 @@ export function createRenderSceneOrchestrator(
     measureRenderStage(frameProfiler, "viewport.applySize", () => {
       applyViewportSize(app, viewportState)
     })
-    measureRenderStage(frameProfiler, "simulation.advancePlayback", () => {
-      void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
-    })
+    // AI-REMOVED 2026-09-21:
+    // Reason: Simulation 是 Host 级时间输入，不能由每个 Surface scene 分别推进。
+    // Trigger: ST2-RQ-037 第一阶段要求多个 canvas 共用循环，且每帧最多推进一次 Simulation。
+    // Evidence: RenderScheduler.advanceHostFrame 在遍历 Surface 前只执行一次。
+    // Replacement: src/renderer/renderer-host.tsx createRenderScheduler.advanceHostFrame
+    // Risk: 若 Host scheduler 未启动，仿真和所有画布都会同时停止，符合统一 owner 语义。
+    // Human Review: Required
+    //
+    // Original code:
+    // measureRenderStage(frameProfiler, "simulation.advancePlayback", () => {
+    //   void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
+    // })
 
     if (!areRenderViewportStatesEqual(lastViewportState, viewportState)) {
       lastViewportState = viewportState
@@ -1009,16 +1025,37 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(configuredItemIconDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
-  app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
-  app.ticker.add(startPixiRenderMeasurement, undefined, PIXI_RENDER_START_PRIORITY)
-  app.ticker.add(finishPixiRenderMeasurement, undefined, PIXI_RENDER_FINISH_PRIORITY)
+  // AI-REMOVED 2026-09-21:
+  // Reason: Main scene 不再拥有私有 ticker listener；同步与 render 都由 Host scheduler 驱动。
+  // Trigger: ST2-RQ-037 第一阶段多画布统一调度。
+  // Evidence: RenderSurface.renderFrame 顺序调用 scene.sync、beforeRender、app.render、afterRender。
+  // Replacement: src/renderer/surface/render-surface.ts
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
+  // app.ticker.add(startPixiRenderMeasurement, undefined, PIXI_RENDER_START_PRIORITY)
+  // app.ticker.add(finishPixiRenderMeasurement, undefined, PIXI_RENDER_FINISH_PRIORITY)
 
   const host: RenderSceneOrchestrator = {
+    sync: syncFrame,
+    beforeRender: startPixiRenderMeasurement,
+    afterRender: finishPixiRenderMeasurement,
     destroy: () => {
       diagnosticSession.destroy()
-      app.ticker.remove(flushViewport)
-      app.ticker.remove(startPixiRenderMeasurement)
-      app.ticker.remove(finishPixiRenderMeasurement)
+      // AI-REMOVED 2026-09-21:
+      // Reason: Scene 已不再向 Application ticker 注册 listener，因此销毁时无需逐项移除。
+      // Trigger: ST2-RQ-037 第一阶段多画布统一调度。
+      // Evidence: 上方 ticker add 已由 RenderSurface 显式帧边界替代。
+      // Replacement: RenderSurfaceRegistry 在 dispose 时销毁 scene。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // app.ticker.remove(flushViewport)
+      // app.ticker.remove(startPixiRenderMeasurement)
+      // app.ticker.remove(finishPixiRenderMeasurement)
       disposeDocumentVersionSubscription()
       memoryCollector.stop()
       pixiRenderDiagnostics.destroy()
@@ -1093,7 +1130,7 @@ export function createRenderSceneOrchestrator(
   return host
 }
 
-function createRenderLayers(): RenderLayerMap {
+export function createRenderLayers(): RenderLayerMap {
   return {
     background: new Container(),
     entityLow: new Container(),
@@ -1183,7 +1220,7 @@ function formatCssRgbColor(color: number): string {
 }
 
 function createSpriteForDefinition(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
@@ -1515,9 +1552,148 @@ function addDraftPortToOccupancy(
   }
 }
 
+export interface EntitySpriteSceneSyncOptions {
+  readonly entities: readonly WorldEntity[];
+  readonly viewportState: RenderViewportState;
+  readonly viewportBounds: {
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly theme: AppTheme;
+  readonly frameTime: RenderFrameTime;
+  readonly logisticsMaterials: LogisticsMaterialFrameState;
+  readonly versions: RenderSpriteSyncVersions;
+  readonly committedDocumentVersion: number;
+  readonly gasInteractionVisualState?: GasInteractionVisualState;
+  readonly powerInteractionVisualState?: PowerInteractionVisualState;
+}
+
+export interface EntitySpriteScene {
+  readonly layers: RenderLayerMap;
+  attach(stage: Container): void;
+  sync(options: EntitySpriteSceneSyncOptions): void;
+  destroy(): void;
+}
+
+export function createEntitySpriteScene(
+  renderContext: RenderSurfaceContext,
+): EntitySpriteScene {
+  const layers = createRenderLayers()
+  const beltSubEntity = new Container()
+  const pipeSubEntity = new Container()
+  layers.logisticsBelt.addChild(beltSubEntity)
+  layers.logisticsPipe.addChild(pipeSubEntity)
+
+  const entityDefinitionMap = new Map(
+    renderContext.workspace.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  )
+  const entitySprites = new Map<string, RenderSprite>()
+  const entitySpriteDefinitionIds = new Map<string, string>()
+  const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
+  const cache: EntitySpriteSyncCache = {
+    documentVersion: -1,
+    committedDocumentVersion: -1,
+    inputs: new Map(),
+    viewportVersion: -1,
+    collectionVersion: -1,
+    presentationVersion: -1,
+    simulationVersion: -1,
+    layouts: new Map(),
+    visibility: new Map(),
+  }
+  let attachedStage: Container | null = null
+  let destroyed = false
+
+  return {
+    layers,
+    attach: (stage) => {
+      if (destroyed) {
+        throw new Error("Cannot attach a destroyed entity sprite scene.")
+      }
+      if (attachedStage === stage) {
+        return
+      }
+      if (attachedStage !== null) {
+        for (const layer of Object.values(layers)) {
+          attachedStage.removeChild(layer)
+        }
+      }
+      attachedStage = stage
+      stage.addChild(
+        layers.background,
+        layers.entityLow,
+        layers.entity,
+        layers.entityHigh,
+        layers.logisticsBelt,
+        layers.logisticsPipe,
+        layers.draft,
+        layers.overlay,
+      )
+    },
+    sync: (options) => {
+      if (destroyed) {
+        return
+      }
+      syncWorldEntitySprites({
+        renderHost: renderContext,
+        workspace: renderContext.workspace,
+        entities: options.entities,
+        entityDefinitionMap,
+        entitySprites,
+        entitySpriteDefinitionIds,
+        entitySpriteLayerKeys,
+        layers,
+        beltSubEntity,
+        pipeSubEntity,
+        viewportState: options.viewportState,
+        frameTime: options.frameTime,
+        viewportBounds: options.viewportBounds,
+        theme: options.theme,
+        profiler: null,
+        logisticsPortOccupancy: null,
+        logisticsMaterials: options.logisticsMaterials,
+        gasInteractionVisualState: options.gasInteractionVisualState ?? {
+          highlightedEntityIds: new Set(),
+        },
+        powerInteractionVisualState: options.powerInteractionVisualState ?? {
+          visiblePowerRangeEntityIds: new Set(),
+          highlightedEntityIds: new Set(),
+        },
+        versions: options.versions,
+        committedDocumentVersion: options.committedDocumentVersion,
+        cache,
+      })
+    },
+    destroy: () => {
+      if (destroyed) {
+        return
+      }
+      destroyed = true
+      for (const sprite of entitySprites.values()) {
+        sprite.destroy()
+      }
+      entitySprites.clear()
+      entitySpriteDefinitionIds.clear()
+      entitySpriteLayerKeys.clear()
+      cache.inputs.clear()
+      cache.layouts.clear()
+      cache.visibility.clear()
+      for (const layer of Object.values(layers)) {
+        layer.destroy({ children: true })
+      }
+      attachedStage = null
+    },
+  }
+}
+
 function syncWorldEntitySprites(options: {
-  renderHost: RenderHost;
-  workspace: RenderHost["workspace"];
+  renderHost: RenderSurfaceContext;
+  workspace: RenderSurfaceContext["workspace"];
   entities: readonly WorldEntity[];
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;

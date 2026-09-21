@@ -3,7 +3,7 @@ import type { LogisticsMaterialEntityState, LogisticsMaterialFrameState } from "
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/domain/shared/grid";
 import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
-import type { RenderHost } from "@/renderer/renderer-host";
+import type { RenderSurfaceContext } from "@/renderer/render-surface-context";
 
 export interface RenderViewportState {
   width: number;
@@ -30,14 +30,14 @@ export interface DecorationProfiler {
 export interface DecorationSyncContext {
   viewportState: RenderViewportState;
   viewportBounds: DecorationViewportBounds;
-  renderHost: RenderHost;
+  renderHost: RenderSurfaceContext;
   theme: AppTheme;
   nowMs: number;
   /** 已由高度特效接管的实际端口，加载完成后撤下旧虚影。 */
   buildingEffectPortKeys?: ReadonlySet<string>;
   logisticsMaterials?: LogisticsMaterialFrameState;
   createLogisticsMaterialView?: (
-    assets: Awaited<ReturnType<RenderHost["textureManager"]["acquireLogisticsDynamic"]>["ready"]>,
+    assets: Awaited<ReturnType<RenderSurfaceContext["textureManager"]["acquireLogisticsDynamic"]>["ready"]>,
     state: LogisticsMaterialEntityState,
     isCurrent: () => boolean,
   ) => Promise<{

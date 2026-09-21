@@ -15,7 +15,7 @@ import {
   LOGISTICS_KIND,
   type LogisticsKind,
 } from "@/domain/shared/logistics"
-import type { RenderHost } from "@/renderer/renderer-host"
+import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
@@ -98,7 +98,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   public constructor(
     entityId: string,
     definition: EntityDefinition,
-    protected readonly renderHost: RenderHost,
+    protected readonly renderHost: RenderSurfaceContext,
   ) {
     super(entityId, definition.id)
     this.spriteId = definition.spriteId

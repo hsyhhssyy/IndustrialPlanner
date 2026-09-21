@@ -29,7 +29,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { SimulationDeviceOperatingStatus } from "@/domain/simulation"
-import type { RenderHost } from "@/renderer/renderer-host"
+import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import {
   isBatchMove,
   shouldUseGroupedPreviewVisuals,
@@ -390,7 +390,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   public constructor(
     entityId: string,
     private readonly definition: EntityDefinition,
-    private readonly renderHost: RenderHost,
+    private readonly renderHost: RenderSurfaceContext,
   ) {
     super(entityId, definition.id)
 
@@ -2444,7 +2444,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
 function resolveDeviceDisplayName(
   definition: EntityDefinition,
-  app: RenderHost["workspace"]["app"],
+  app: RenderSurfaceContext["workspace"]["app"],
 ): string {
   const translated = app?.actions.translate(definition.nameKey);
 

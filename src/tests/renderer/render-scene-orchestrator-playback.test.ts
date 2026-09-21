@@ -353,7 +353,7 @@ describe("createRenderSceneOrchestrator", () => {
     orchestratorTestState.reset()
   })
 
-  it("passes raf delta ms to simulation playback advancement", () => {
+  it("leaves simulation playback advancement to the host scheduler", () => {
     const advancePlaybackByDeltaMs = vi.fn(async () => null)
     const ticker = {
       lastTime: 1200,
@@ -457,9 +457,8 @@ describe("createRenderSceneOrchestrator", () => {
     })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
-    const tickHandler = orchestratorTestState.getTickHandler()
 
-    expect(ticker.add).toHaveBeenCalledTimes(3)
+    expect(ticker.add).not.toHaveBeenCalled()
     expect(renderHost.app.stage.addChild).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -472,14 +471,12 @@ describe("createRenderSceneOrchestrator", () => {
       expect.anything(),
       expect.anything(),
     )
-    expect(tickHandler).not.toBeNull()
+    orchestrator.sync({ nowMs: 1200, deltaMs: 16.67 })
 
-    tickHandler?.()
-
-    expect(advancePlaybackByDeltaMs).toHaveBeenCalledWith(16.67)
+    expect(advancePlaybackByDeltaMs).not.toHaveBeenCalled()
 
     orchestrator.destroy()
-    expect(ticker.remove).toHaveBeenCalledTimes(3)
+    expect(ticker.remove).not.toHaveBeenCalled()
   })
 
   it("reuses entity layout while runtime, animation, and sprite visuals keep separate invalidation paths", () => {
@@ -599,14 +596,12 @@ describe("createRenderSceneOrchestrator", () => {
     })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
-    const tickHandler = orchestratorTestState.getTickHandler()
-
-    tickHandler?.()
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1200, deltaMs: 16.67 })
+    orchestrator.sync({ nowMs: 1216.67, deltaMs: 16.67 })
     runtimeTick = 11
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1233.34, deltaMs: 16.67 })
     orchestratorTestState.invalidateVisualSync("entity-a")
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1250.01, deltaMs: 16.67 })
 
     expect(orchestratorTestState.getLayoutSyncs()).toEqual(["entity-a", "entity-a"])
     expect(orchestratorTestState.getRuntimeSyncs()).toEqual(["entity-a"])
@@ -728,16 +723,14 @@ describe("createRenderSceneOrchestrator", () => {
     })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
-    const tickHandler = orchestratorTestState.getTickHandler()
-
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1200, deltaMs: 16.67 })
     entities = [
       {
         ...entities[0]!,
         definitionId: "device-b",
       },
     ]
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1216.67, deltaMs: 16.67 })
 
     expect(orchestratorTestState.getCreatedSprites()).toEqual([
       { kind: "generic", entityId: "preview-entity", definitionId: "device-a" },
@@ -868,13 +861,12 @@ describe("createRenderSceneOrchestrator", () => {
     })
 
     const orchestrator = createRenderSceneOrchestrator(renderHost)
-    const tickHandler = orchestratorTestState.getTickHandler()
     const stageLayers = stage.addChild.mock.calls[0] ?? []
     const logisticsBeltLayer = stageLayers[4] as { readonly children: readonly unknown[] }
     const beltSubEntity = logisticsBeltLayer.children[0]
     const draftLayer = stageLayers[6]
 
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1200, deltaMs: 16.67 })
     entities = [
       {
         id: beltEntityId,
@@ -885,7 +877,7 @@ describe("createRenderSceneOrchestrator", () => {
         tags: [],
       },
     ]
-    tickHandler?.()
+    orchestrator.sync({ nowMs: 1216.67, deltaMs: 16.67 })
 
     expect(orchestratorTestState.getCreatedSprites()).toEqual([
       { kind: "belt", entityId: beltEntityId, definitionId: "belt_straight_1x1" },

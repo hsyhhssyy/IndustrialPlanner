@@ -1,4 +1,4 @@
-import type { RenderAction, RenderContract } from "@/domain/renderer";
+import type { RenderAction, RenderContract, RenderQuery } from "@/domain/renderer";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 import { Application } from "pixi.js";
@@ -12,6 +12,12 @@ import {
 import {
   createTextureActions,
 } from "./texture/texture-manager";
+import type { RenderSurfaceContext } from "./render-surface-context";
+import {
+  createRenderScheduler,
+  createRenderSurface,
+  createRenderSurfaceRegistry,
+} from "./surface";
 import "./renderer-host.css";
 
 interface RenderHostDomElements {
@@ -20,7 +26,7 @@ interface RenderHostDomElements {
   marqueeGlowOverlay: HTMLDivElement;
 }
 
-export interface RenderHost extends RenderContract {
+export interface RenderHost extends RenderContract, RenderSurfaceContext {
   workspace: WorkspaceContract;
   app: Application;
   dom: RenderHostDomElements;
@@ -109,6 +115,7 @@ export async function createRenderHost(
     backgroundAlpha: 0,
     antialias: renderAntialias,
     autoDensity: true,
+    autoStart: false,
     resolution: renderResolution,
     preference: "webgl",
   });
@@ -118,9 +125,7 @@ export async function createRenderHost(
     textureConfig: null,
   };
   const rendererDom = createRendererContainer(app);
-  const blueprintPreviewManager = createBlueprintPreviewManager({
-    workspace,
-  });
+  const surfaceRegistry = createRenderSurfaceRegistry();
   const textureManager = createTextureActions({
     renderer: app.renderer,
     app: workspace.app,
@@ -128,10 +133,16 @@ export async function createRenderHost(
       internalState.textureConfig = textureConfig;
     },
   });
-  let orchestrator: RenderSceneOrchestrator | null = null;
-  const actions: RenderAction = {
-    ...blueprintPreviewManager.actions,
-  };
+  const actions = {} as RenderAction;
+  const queries = {} as RenderQuery;
+  const scheduler = createRenderScheduler({
+    listActiveSurfaces: surfaceRegistry.listActive,
+    advanceHostFrame: (frameTime) => {
+      void workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
+    },
+  });
+  let blueprintPreviewManager: ReturnType<typeof createBlueprintPreviewManager> | null = null;
+  let destroyed = false;
 
   const host: RenderHost = {
     workspace,
@@ -140,21 +151,71 @@ export async function createRenderHost(
     dom: rendererDom.dom,
     textureManager,
     internalState,
-    queries: blueprintPreviewManager.queries,
+    queries,
     actions,
     destroy: () => {
-      blueprintPreviewManager.destroy();
-      orchestrator?.destroy();
-      orchestrator = null;
-      textureManager.destroy();
-      app.destroy();
-      rendererDom.container.remove();
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+      scheduler.destroy();
+      try {
+        blueprintPreviewManager?.destroy();
+      } finally {
+        blueprintPreviewManager = null;
+        try {
+          surfaceRegistry.destroy();
+        } finally {
+          rendererDom.container.remove();
+          if (workspace.render === host) {
+            workspace.render = null;
+          }
+        }
+      }
     },
   };
 
-  orchestrator = createRenderSceneOrchestrator(host, textureManager.performanceDiagnostics);
+  blueprintPreviewManager = createBlueprintPreviewManager({
+    workspace,
+    surfaceRegistry,
+  });
+  Object.assign(actions, blueprintPreviewManager.actions);
+  Object.assign(queries, blueprintPreviewManager.queries);
 
-  workspace.render = host;
+  let mainSurfaceOwnsResources = false;
+  try {
+    const orchestrator: RenderSceneOrchestrator = createRenderSceneOrchestrator(
+      host,
+      textureManager.performanceDiagnostics,
+    );
+    surfaceRegistry.beginInitializing("main");
+    const mainSurface = createRenderSurface({
+      id: "main",
+      app,
+      scene: orchestrator,
+      destroyResources: () => {
+        textureManager.destroy();
+        app.destroy();
+      },
+    });
+    mainSurfaceOwnsResources = true;
+    if (!surfaceRegistry.activate(mainSurface)) {
+      throw new Error("Main render surface was disposed during initialization.");
+    }
 
-  return host;
+    workspace.render = host;
+    scheduler.start();
+    return host;
+  } catch (error) {
+    scheduler.destroy();
+    blueprintPreviewManager?.destroy();
+    blueprintPreviewManager = null;
+    surfaceRegistry.destroy();
+    if (!mainSurfaceOwnsResources) {
+      textureManager.destroy();
+      app.destroy();
+    }
+    rendererDom.container.remove();
+    throw error;
+  }
 }

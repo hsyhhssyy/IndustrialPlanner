@@ -12,8 +12,6 @@ import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometr
 import {
   getGridBoundingBox,
   getGridBoundsCenterCells,
-  getGridFootprintCenterCells,
-  resolveSpriteGridRect,
   type GridBounds,
 } from "@/shared/geometry/grid"
 // AI-REMOVED 2026-09-11:
@@ -33,20 +31,52 @@ import {
 //   resolveSpriteGridRect,
 //   type GridBounds,
 // } from "@/shared/geometry/grid"
-import {
-  createRegionOutlineSegments,
-  normalizeRegionRects,
-} from "@/shared/geometry/region-rects"
-
-import { Application, Container, Graphics, Sprite, Text, Texture, TilingSprite } from "pixi.js"
+// AI-CORRECTION 2026-09-21: getGridFootprintCenterCells 与 resolveSpriteGridRect 在 2026-09-11 后仍被旧 preview 自绘路径使用；本次迁移到共享 EntitySpriteScene 后才退出活动代码。
+// AI-REMOVED 2026-09-21:
+// Reason: 蓝图 preview 的区域、网格、实体与扫描线自绘路径已由共享 Sprite / Decoration 场景能力取代，专用依赖不再进入活动 bundle。
+// Trigger: ST2-RQ-037 第一阶段要求小画布复用主场景实现，不保留平行 renderer。
+// Evidence: createEntitySpriteScene、GridLineDecoration 与 RegionAnnotationDecoration 已覆盖原消费者；旧函数主体在本文件后部归档。
+// Replacement: ../scene + ./blueprint-preview-surface-context
+// Risk: Low；真实浏览器三档已验证共享场景绘制。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   createRegionOutlineSegments,
+//   normalizeRegionRects,
+// } from "@/shared/geometry/region-rects"
+//
+// import { Application, Container, Graphics, Sprite, Text, Texture, TilingSprite } from "pixi.js"
+//
+// import {
+//   resolveWorldGridMajorStrokeStyle,
+//   resolveWorldGridRenderState,
+//   resolveWorldGridStrokeStyle,
+// } from "../scene/decorations/GridLineDecoration"
+import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
+import { Application } from "pixi.js"
 
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import {
-  resolveWorldGridMajorStrokeStyle,
-  resolveWorldGridRenderState,
-  resolveWorldGridStrokeStyle,
-} from "../scene/decorations/GridLineDecoration"
+  createEntitySpriteScene,
+  createGridLineDecoration,
+  createRegionAnnotationBackgroundDecoration,
+  createRegionAnnotationOverlayDecoration,
+  type DecorationSyncContext,
+  type EntitySpriteScene,
+  type RenderViewportState,
+} from "../scene"
+import type { RenderSurfaceContext } from "../render-surface-context"
 import { createTextureActions } from "../texture/texture-manager"
+import {
+  createRenderSurface,
+  type RenderFrameTime,
+  type RenderSurfaceRegistry,
+} from "../surface"
+import {
+  createBlueprintPreviewSurfaceProjection,
+  type BlueprintPreviewSurfaceProjection,
+} from "./blueprint-preview-surface-context"
 
 const DEFAULT_BLUEPRINT_PREVIEW_WIDTH = 640
 const DEFAULT_BLUEPRINT_PREVIEW_HEIGHT = 360
@@ -54,38 +84,70 @@ const DEFAULT_BLUEPRINT_PREVIEW_ZOOM = 1
 const MIN_BLUEPRINT_PREVIEW_ZOOM = 0.1
 const MAX_BLUEPRINT_PREVIEW_ZOOM = 8
 const BLUEPRINT_PREVIEW_LIGHT_CANVAS_BACKGROUND_COLOR = 0xeef3f8
-const BLUEPRINT_PREVIEW_LIGHT_GRID_LINE_COLOR = 0x5c6773
 const BLUEPRINT_PREVIEW_PADDING_CELLS = 1
-const BLUEPRINT_PREVIEW_GRID_LINE_ALPHA = 0.30
-// Keep preview grid uniform: every cell boundary uses the same pixel-line stroke.
-const BLUEPRINT_PREVIEW_MAJOR_GRID_INTERVAL = 1
-const BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS = 400000
-const BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES = 2
-const BLUEPRINT_PREVIEW_SCANLINE_TINT = 0x8fd8ff
-const DEGREE_TO_RADIAN = Math.PI / 180
+// AI-REMOVED 2026-09-21:
+// Reason: Preview 专用网格与扫描线常量随平行绘制算法退出活动路径。
+// Trigger: ST2-RQ-037 第一阶段统一 Grid / Region / selection Decoration。
+// Evidence: Preview 使用共享 Decoration；旧自绘函数主体已在本文件后部归档。
+// Replacement: createGridLineDecoration + GenericDeviceSprite selection overlay
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const BLUEPRINT_PREVIEW_LIGHT_GRID_LINE_COLOR = 0x5c6773
+// const BLUEPRINT_PREVIEW_GRID_LINE_ALPHA = 0.30
+// // Keep preview grid uniform: every cell boundary uses the same pixel-line stroke.
+// const BLUEPRINT_PREVIEW_MAJOR_GRID_INTERVAL = 1
+// const BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS = 400000
+// const BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES = 2
+// const BLUEPRINT_PREVIEW_SCANLINE_TINT = 0x8fd8ff
+// const DEGREE_TO_RADIAN = Math.PI / 180
+const EMPTY_LOGISTICS_MATERIALS = {
+  entities: new Map(),
+  beltSeconds: 0,
+  animationEnabled: false,
+} as const
 
 interface PreviewState {
   readonly app: Application
   readonly blueprint: BlueprintDocument
   readonly canvas: HTMLCanvasElement
+  readonly entityScene: EntitySpriteScene
   readonly entityDefinitionMap: Map<string, EntityDefinition>
-  readonly gridGraphics: Graphics
-  readonly regionGraphics: Graphics
-  readonly regionLabels: Container
-  readonly spriteMap: Map<string, Sprite>
+  readonly gridDecoration: ReturnType<typeof createGridLineDecoration>
+  readonly regionBackgroundDecoration: ReturnType<typeof createRegionAnnotationBackgroundDecoration>
+  readonly regionOverlayDecoration: ReturnType<typeof createRegionAnnotationOverlayDecoration>
+  readonly projection: BlueprintPreviewSurfaceProjection
+  readonly renderContext: RenderSurfaceContext
   readonly textureManager: ReturnType<typeof createTextureActions>
-  readonly viewportContainer: Container
   readonly workspace: WorkspaceContract
   readonly viewportBounds: GridBounds | null
   readonly highlightedEntityId: string | null
-  /** AI-CORRECTION 2026-05-12: scanline overlay children added for inspector neighborhood highlight; destroyed together with the preview app on dispose. */
-  scanlineTiling: TilingSprite | null
-  scanlineMaskGraphics: Graphics | null
+  // AI-REMOVED 2026-09-21:
+  // Reason: PreviewState 改为持有共享 EntitySpriteScene / Decoration / Surface projection，不再拥有平行 Pixi 显示对象集合。
+  // Trigger: ST2-RQ-037 第一阶段统一小画布 Scene 与生命周期。
+  // Evidence: entityScene、gridDecoration、regionBackgroundDecoration、regionOverlayDecoration 与 projection 成为活动状态。
+  // Replacement: PreviewState.entityScene / gridDecoration / regionBackgroundDecoration / regionOverlayDecoration / projection
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly gridGraphics: Graphics
+  // readonly regionGraphics: Graphics
+  // readonly regionLabels: Container
+  // readonly spriteMap: Map<string, Sprite>
+  // readonly viewportContainer: Container
+  // /** AI-CORRECTION 2026-05-12: scanline overlay children added for inspector neighborhood highlight; destroyed together with the preview app on dispose. */
+  // scanlineTiling: TilingSprite | null
+  // scanlineMaskGraphics: Graphics | null
   bounds: GridBounds | null
+  presentationSignature: string | null
+  presentationVersion: number
   disposed: boolean
   handle: BlueprintPreviewHandle
   height: number
   viewport: BlueprintPreviewViewport
+  viewportVersion: number
   width: number
 }
 
@@ -101,13 +163,19 @@ interface RoundPixelsStageLike {
 
 export function createBlueprintPreviewManager(options: {
   workspace: WorkspaceContract
+  surfaceRegistry: RenderSurfaceRegistry
 }): BlueprintPreviewManager {
   const previewStates = new Map<BlueprintPreviewHandle, PreviewState>()
   let previewHandleSequence = 0
+  let destroyed = false
 
   const actions: RenderAction = {
     mountBlueprintPreview: async (mountOptions) => {
+      if (destroyed) {
+        throw new Error("Cannot mount a blueprint preview after manager destruction.")
+      }
       const handle = createBlueprintPreviewHandle(++previewHandleSequence)
+      options.surfaceRegistry.beginInitializing(handle)
       const width = normalizeBlueprintPreviewAxisSize(
         mountOptions.width,
         DEFAULT_BLUEPRINT_PREVIEW_WIDTH,
@@ -118,64 +186,141 @@ export function createBlueprintPreviewManager(options: {
       )
       const app = new Application()
       const resolution = resolveRenderResolutionFromApp(options.workspace.app)
+      let pendingTextureManager: ReturnType<typeof createTextureActions> | null = null
+      let pendingState: PreviewState | null = null
+      let surfaceOwnsResources = false
 
-      await app.init({
-        width,
-        height,
-        backgroundAlpha: 1,
-        backgroundColor: BLUEPRINT_PREVIEW_LIGHT_CANVAS_BACKGROUND_COLOR,
-        antialias: true,
-        autoDensity: true,
-        resolution,
-        preference: "webgl",
-      })
+      try {
+        await app.init({
+          width,
+          height,
+          backgroundAlpha: 1,
+          backgroundColor: BLUEPRINT_PREVIEW_LIGHT_CANVAS_BACKGROUND_COLOR,
+          antialias: true,
+          autoDensity: true,
+          autoStart: false,
+          resolution,
+          preference: "webgl",
+        })
 
-      ;(app.stage as unknown as RoundPixelsStageLike).roundPixels = true
+        ;(app.stage as unknown as RoundPixelsStageLike).roundPixels = true
 
-      const viewportContainer = new Container()
-      const gridGraphics = new Graphics({ roundPixels: true })
-      const regionGraphics = new Graphics({ roundPixels: true })
-      const regionLabels = new Container()
-      const textureManager = createTextureActions({
-        renderer: app.renderer,
-        app: null,
-      })
-      const entityDefinitionMap = createEntityDefinitionMap(options.workspace)
-      const state: PreviewState = {
-        app,
-        blueprint: mountOptions.blueprint,
-        canvas: app.canvas,
-        entityDefinitionMap,
-        gridGraphics,
-        regionGraphics,
-        regionLabels,
-        spriteMap: new Map(),
-        textureManager,
-        viewportContainer,
-        workspace: options.workspace,
-        viewportBounds: mountOptions.viewportBounds ?? null,
-        highlightedEntityId: mountOptions.highlightedEntityId ?? null,
-        scanlineTiling: null,
-        scanlineMaskGraphics: null,
-        bounds: null,
-        disposed: false,
-        handle,
-        height,
-        viewport: normalizeBlueprintPreviewViewport(mountOptions.viewport),
-        width,
+        const internalState: RenderSurfaceContext["internalState"] = {
+          textureConfig: null,
+        }
+        const textureManager = createTextureActions({
+          renderer: app.renderer,
+          app: null,
+          syncTextureConfigState: (textureConfig) => {
+            internalState.textureConfig = textureConfig
+          },
+        })
+        pendingTextureManager = textureManager
+        const entityDefinitionMap = createEntityDefinitionMap(options.workspace)
+        const bounds = resolveBlueprintPreviewBounds({
+          blueprint: mountOptions.blueprint,
+          entityDefinitionMap,
+          viewportBounds: mountOptions.viewportBounds ?? null,
+        })
+        const projection = createBlueprintPreviewSurfaceProjection({
+          workspace: options.workspace,
+          blueprint: mountOptions.blueprint,
+          bounds,
+          highlightedEntityId: mountOptions.highlightedEntityId ?? null,
+          renderContext: {
+            app,
+            textureManager,
+            internalState,
+          },
+        })
+        const entityScene = createEntitySpriteScene(projection.renderContext)
+        const gridDecoration = createGridLineDecoration()
+        const regionBackgroundDecoration = createRegionAnnotationBackgroundDecoration()
+        const regionOverlayDecoration = createRegionAnnotationOverlayDecoration()
+        const state: PreviewState = {
+          app,
+          blueprint: mountOptions.blueprint,
+          canvas: app.canvas,
+          entityScene,
+          entityDefinitionMap,
+          gridDecoration,
+          regionBackgroundDecoration,
+          regionOverlayDecoration,
+          projection,
+          renderContext: projection.renderContext,
+          textureManager,
+          workspace: projection.workspace,
+          viewportBounds: mountOptions.viewportBounds ?? null,
+          highlightedEntityId: mountOptions.highlightedEntityId ?? null,
+          bounds,
+          presentationSignature: null,
+          presentationVersion: 0,
+          disposed: false,
+          handle,
+          height,
+          viewport: normalizeBlueprintPreviewViewport(mountOptions.viewport),
+          viewportVersion: 0,
+          width,
+        }
+        pendingState = state
+
+        entityScene.layers.background.addChild(
+          regionBackgroundDecoration.container,
+          gridDecoration.container,
+        )
+        entityScene.layers.overlay.addChild(regionOverlayDecoration.container)
+        entityScene.attach(app.stage)
+        previewStates.set(handle, state)
+
+        applyBlueprintPreviewViewport(state)
+
+        const surface = createRenderSurface({
+          id: handle,
+          app,
+          scene: {
+            sync: (frameTime) => syncBlueprintPreviewFrame(state, frameTime),
+            destroy: () => destroyBlueprintPreviewScene(state),
+          },
+          destroyResources: () => {
+            state.textureManager.destroy()
+            state.app.destroy(
+              { removeView: false },
+              {
+                children: true,
+                context: true,
+              },
+            )
+          },
+        })
+        surfaceOwnsResources = true
+        const activated = options.surfaceRegistry.activate(surface)
+        if (!activated || destroyed) {
+          if (activated) {
+            options.surfaceRegistry.dispose(handle)
+          }
+          previewStates.delete(handle)
+          throw new Error(`Blueprint preview surface was disposed during initialization: ${handle}`)
+        }
+
+        return handle
+      } catch (error) {
+        previewStates.delete(handle)
+        options.surfaceRegistry.dispose(handle)
+        if (!surfaceOwnsResources) {
+          if (pendingState !== null) {
+            destroyBlueprintPreviewScene(pendingState)
+          }
+          pendingTextureManager?.destroy()
+          const initializedApp = app as Application & { renderer: Application["renderer"] | null }
+          if (initializedApp.renderer !== null && initializedApp.renderer !== undefined) {
+            app.destroy(
+              { removeView: false },
+              { children: true, context: true },
+            )
+          }
+        }
+        throw error
       }
-
-      viewportContainer.addChild(gridGraphics)
-      app.stage.addChild(viewportContainer)
-      previewStates.set(handle, state)
-
-      syncBlueprintPreviewSprites(state)
-      syncBlueprintPreviewRegions(state)
-      app.ticker.add(() => syncBlueprintPreviewRegionVisibility(state))
-      mountBlueprintPreviewHighlight(state)
-      applyBlueprintPreviewViewport(state)
-
-      return handle
     },
     updateBlueprintPreviewViewport: (handle, viewport) => {
       const state = previewStates.get(handle)
@@ -222,18 +367,18 @@ export function createBlueprintPreviewManager(options: {
     },
     disposeBlueprintPreview: (handle) => {
       disposeBlueprintPreviewState(previewStates.get(handle) ?? null)
-      previewStates.delete(handle)
     },
   }
 
   const queries: RenderQuery = {
-    getBlueprintPreviewCanvas: (handle) => previewStates.get(handle)?.canvas ?? null,
+    getBlueprintPreviewCanvas: (handle) => options.surfaceRegistry.get(handle)?.canvas ?? null,
   }
 
   return {
     actions,
     queries,
     destroy: () => {
+      destroyed = true
       for (const state of previewStates.values()) {
         disposeBlueprintPreviewState(state)
       }
@@ -248,22 +393,83 @@ export function createBlueprintPreviewManager(options: {
     }
 
     state.disposed = true
-    state.spriteMap.clear()
-    if (state.scanlineTiling !== null && !state.scanlineTiling.destroyed) {
-      state.scanlineTiling.destroy()
-    }
-    if (state.scanlineMaskGraphics !== null && !state.scanlineMaskGraphics.destroyed) {
-      state.scanlineMaskGraphics.destroy()
-    }
-    state.textureManager.destroy()
-    state.app.destroy(
-      { removeView: false },
-      {
-        children: true,
-        context: true,
-      },
-    )
+    previewStates.delete(state.handle)
+    options.surfaceRegistry.dispose(state.handle)
   }
+
+  function destroyBlueprintPreviewScene(state: PreviewState): void {
+    state.disposed = true
+    state.entityScene.layers.background.removeChild(state.gridDecoration.container)
+    state.entityScene.layers.background.removeChild(state.regionBackgroundDecoration.container)
+    state.entityScene.layers.overlay.removeChild(state.regionOverlayDecoration.container)
+    state.gridDecoration.destroy()
+    state.regionBackgroundDecoration.destroy()
+    state.regionOverlayDecoration.destroy()
+    state.entityScene.destroy()
+  }
+}
+
+function syncBlueprintPreviewFrame(
+  state: PreviewState,
+  frameTime: RenderFrameTime,
+): void {
+  if (state.disposed) {
+    return
+  }
+
+  const viewportState = readBlueprintPreviewViewportState(state)
+  const workspaceApp = state.workspace.app
+  if (workspaceApp === null) {
+    return
+  }
+  const presentationSignature = [
+    workspaceApp.state.settings.locale,
+    workspaceApp.state.settings.showRegionAnnotations,
+    workspaceApp.state.theme.id,
+  ].join("|")
+  if (presentationSignature !== state.presentationSignature) {
+    state.presentationSignature = presentationSignature
+    state.presentationVersion += 1
+  }
+  const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
+    workspaceApp.state.theme,
+    true,
+    false,
+  )
+  const versions = {
+    document: 0,
+    viewport: state.viewportVersion,
+    collections: 0,
+    presentation: state.presentationVersion,
+    simulation: 0,
+  }
+  const decorationContext: DecorationSyncContext = {
+    viewportState,
+    viewportBounds: {
+      left: 0,
+      top: 0,
+      width: state.width,
+      height: state.height,
+    },
+    renderHost: state.renderContext,
+    theme: effectiveCanvasTheme,
+    nowMs: frameTime.nowMs,
+    versions,
+  }
+
+  state.gridDecoration.sync(decorationContext)
+  state.regionBackgroundDecoration.sync(decorationContext)
+  state.regionOverlayDecoration.sync(decorationContext)
+  state.entityScene.sync({
+    entities: state.projection.entities,
+    viewportState,
+    viewportBounds: decorationContext.viewportBounds,
+    theme: effectiveCanvasTheme,
+    frameTime,
+    logisticsMaterials: EMPTY_LOGISTICS_MATERIALS,
+    versions,
+    committedDocumentVersion: 0,
+  })
 }
 
 function createBlueprintPreviewHandle(sequence: number): BlueprintPreviewHandle {
@@ -303,6 +509,16 @@ function createEntityDefinitionMap(
   )
 }
 
+// AI-REMOVED 2026-09-21:
+// Reason: 蓝图预览实体、区域与标签已迁入共享 EntitySpriteScene 和 RegionAnnotation Decoration，原始 Sprite/Graphics 平行实现退出活动路径。
+// Trigger: ST2-RQ-037 第一阶段要求主画布与小画布复用同一 Sprite / Decoration 实现。
+// Evidence: createEntitySpriteScene、createRegionAnnotationBackgroundDecoration、createRegionAnnotationOverlayDecoration 现由 PreviewState 持有并同步。
+// Replacement: createBlueprintPreviewSurfaceProjection + syncBlueprintPreviewFrame
+// Risk: 共享场景布局必须通过三档真实浏览器验证。
+// Human Review: Required
+//
+// Original code:
+/*
 function syncBlueprintPreviewSprites(state: PreviewState): void {
   const orderedEntities = state.blueprint.entityOrder
     .map((entityId) => state.blueprint.entities[entityId])
@@ -487,16 +703,61 @@ function applyBlueprintPreviewSpriteLayout(
   sprite.rotation = entity.rotation * DEGREE_TO_RADIAN
 }
 
+*/
+
+function resolveBlueprintPreviewBounds(options: {
+  readonly blueprint: BlueprintDocument
+  readonly entityDefinitionMap: Map<string, EntityDefinition>
+  readonly viewportBounds: GridBounds | null
+}): GridBounds | null {
+  if (options.viewportBounds !== null) {
+    return options.viewportBounds
+  }
+
+  const orderedEntities = options.blueprint.entityOrder
+    .map((entityId) => options.blueprint.entities[entityId])
+    .filter((entity): entity is WorldEntity => entity !== undefined)
+  const entityGeometry = resolveEntityGridGeometry({
+    entities: orderedEntities,
+    entityDefinitionMap: options.entityDefinitionMap,
+  })
+  const areas = entityGeometry?.entries.map(({ gridArea }) => gridArea) ?? []
+  areas.push(...options.blueprint.regions.flatMap((region) => region.rects.map((rect) => ({
+    position: { x: rect.x, y: rect.y },
+    footprint: { width: rect.width, height: rect.height },
+  }))))
+  return getGridBoundingBox(areas)
+}
+
 function applyBlueprintPreviewViewport(state: PreviewState): void {
   const fitScale = resolveBlueprintPreviewFitScale(state)
   const effectiveGridCellPixelSize = fitScale * state.viewport.zoom
+  const boundsCenter = state.bounds === null
+    ? { x: 0, y: 0 }
+    : getGridBoundsCenterCells(state.bounds)
+  const viewport = state.projection.viewport
+  viewport.center.x = boundsCenter.x - state.viewport.offsetX / effectiveGridCellPixelSize
+  viewport.center.y = boundsCenter.y - state.viewport.offsetY / effectiveGridCellPixelSize
+  viewport.clientRect.left = 0
+  viewport.clientRect.top = 0
+  viewport.clientRect.width = state.width
+  viewport.clientRect.height = state.height
+  viewport.gridCellPixelSize = effectiveGridCellPixelSize
+  viewport.gridSize = state.viewport.zoom
+  state.viewportVersion += 1
+}
 
-  state.viewportContainer.position.set(
-    state.width / 2 + state.viewport.offsetX,
-    state.height / 2 + state.viewport.offsetY,
-  )
-  state.viewportContainer.scale.set(effectiveGridCellPixelSize)
-  syncBlueprintPreviewGrid(state, effectiveGridCellPixelSize)
+function readBlueprintPreviewViewportState(state: PreviewState): RenderViewportState {
+  const viewport = state.projection.viewport
+  return {
+    width: state.width,
+    height: state.height,
+    resolution: state.app.renderer.resolution,
+    centerX: viewport.center.x,
+    centerY: viewport.center.y,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+    displayRotation: viewport.displayRotation,
+  }
 }
 
 function resolveBlueprintPreviewFitScale(state: PreviewState): number {
@@ -513,6 +774,16 @@ function resolveBlueprintPreviewFitScale(state: PreviewState): number {
   return Math.max(0.5, Math.min(widthScale, heightScale))
 }
 
+// AI-REMOVED 2026-09-21:
+// Reason: 小画布网格改由主场景同一个 GridLineDecoration 根据 Surface viewport 绘制。
+// Trigger: ST2-RQ-037 第一阶段要求适用 Decoration 共用，不保留预览专用绘制算法。
+// Evidence: PreviewState.gridDecoration 在 syncBlueprintPreviewFrame 中接收标准 DecorationSyncContext。
+// Replacement: createGridLineDecoration
+// Risk: 共享网格的缩放级别和基地边界需真实浏览器验证。
+// Human Review: Required
+//
+// Original code:
+/*
 function syncBlueprintPreviewGrid(
   state: PreviewState,
   effectiveGridCellPixelSize: number,
@@ -643,6 +914,18 @@ function drawBlueprintPreviewGridLines(options: {
   }
 }
 
+*/
+
+// AI-REMOVED 2026-09-21:
+// Reason: Inspector 目标高亮改由共享 Sprite collection overlay 绘制，不再维护预览专用扫描线对象和动画 listener。
+// Trigger: ST2-RQ-037 第一阶段要求 GenericDeviceSprite / DedicatedLogisticSprite 在小画布直接复用。
+// Evidence: createBlueprintPreviewSurfaceProjection 将 highlightedEntityId 投影到 selection collection，EntitySpriteScene 统一同步 overlay。
+// Replacement: blueprint-preview-surface-context.ts createPreviewCollections
+// Risk: 高亮样式由共享 Sprite 决定，需验证 Inspector 可读性。
+// Human Review: Required
+//
+// Original code:
+/*
 function mountBlueprintPreviewHighlight(state: PreviewState): void {
   if (state.highlightedEntityId === null) {
     return
@@ -725,15 +1008,26 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
     scanlineTiling.width = spriteWidth + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2
     scanlineTiling.height = spriteHeight + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2
     scanlineTiling.visible = true
+    state.scanlineTilePixelWidth = tilePixelWidth
 
-    state.app.ticker.add(() => {
-      if (state.disposed || scanlineTiling.destroyed) {
-        return
-      }
-
-      const phase = (Date.now() % BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS)
-        / BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS
-      scanlineTiling.tilePosition.x = phase * tilePixelWidth
-    })
+    // AI-REMOVED 2026-09-21:
+    // Reason: Inspector 扫描线动画与其他预览同步都由 Host scheduler 的统一 frame time 推进。
+    // Trigger: ST2-RQ-037 第一阶段多画布统一调度。
+    // Evidence: syncBlueprintPreviewFrame 使用同一 nowMs 更新 tilePosition。
+    // Replacement: syncBlueprintPreviewFrame
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // state.app.ticker.add(() => {
+    //   if (state.disposed || scanlineTiling.destroyed) {
+    //     return
+    //   }
+    //
+    //   const phase = (Date.now() % BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS)
+    //     / BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS
+    //   scanlineTiling.tilePosition.x = phase * tilePixelWidth
+    // })
   })
 }
+*/

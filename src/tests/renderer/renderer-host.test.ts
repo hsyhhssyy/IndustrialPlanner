@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { applicationState, createRenderSceneOrchestrator } = vi.hoisted(() => ({
   applicationState: {
@@ -11,6 +11,7 @@ const { applicationState, createRenderSceneOrchestrator } = vi.hoisted(() => ({
       generateTexture: vi.fn(),
     },
     destroy: vi.fn(),
+    render: vi.fn(),
   },
   createRenderSceneOrchestrator: vi.fn(),
 }))
@@ -22,6 +23,7 @@ vi.mock("pixi.js", () => {
     public readonly stage = applicationState.stage
     public readonly renderer = applicationState.renderer
     public readonly destroy = applicationState.destroy
+    public readonly render = applicationState.render
   }
 
   return {
@@ -37,6 +39,26 @@ import { createRenderHost } from "@/renderer/renderer-host"
 import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 
 describe("createRenderHost", () => {
+  beforeEach(() => {
+    applicationState.init.mockClear()
+    applicationState.destroy.mockClear()
+    applicationState.render.mockClear()
+    applicationState.stage.roundPixels = false
+    vi.stubGlobal("requestAnimationFrame", vi.fn(() => 1))
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    createRenderSceneOrchestrator.mockReset()
+    createRenderSceneOrchestrator.mockReturnValue({
+      sync: vi.fn(),
+      beforeRender: vi.fn(),
+      afterRender: vi.fn(),
+      destroy: vi.fn(),
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("enables autoDensity and roundPixels for high-dpr canvas rendering", async () => {
     const workspace = {
       state: {} as never,
@@ -70,6 +92,7 @@ describe("createRenderHost", () => {
       backgroundAlpha: 0,
       antialias: true,
       autoDensity: true,
+      autoStart: false,
       resolution: 3,
       preference: "webgl",
     })
@@ -93,11 +116,15 @@ describe("createRenderHost", () => {
       renderHost.textureManager.performanceDiagnostics,
     )
     expect(workspace.render).toBe(renderHost)
+    renderHost.destroy()
   })
 
   it("owns orchestrator, texture manager, and app teardown from host.destroy", async () => {
     const orchestratorDestroy = vi.fn()
     createRenderSceneOrchestrator.mockReturnValueOnce({
+      sync: vi.fn(),
+      beforeRender: vi.fn(),
+      afterRender: vi.fn(),
       destroy: orchestratorDestroy,
     })
 

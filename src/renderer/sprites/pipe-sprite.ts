@@ -1,6 +1,6 @@
 import { Sprite, Texture } from "pixi.js"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
-import type { RenderHost } from "@/renderer/renderer-host"
+import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color"
 import { DedicatedLogisticSprite } from "./dedicated-logistic-sprite"
 import type { RenderSpriteLayout, RenderSpriteSyncContext } from "./render-sprite"
@@ -11,7 +11,7 @@ export class PipeSprite extends DedicatedLogisticSprite {
   private blueprintFluidLoaded = false
   private readonly fluidKey: string
 
-  public constructor(entityId: string, definition: EntityDefinition, renderHost: RenderHost) {
+  public constructor(entityId: string, definition: EntityDefinition, renderHost: RenderSurfaceContext) {
     super(entityId, definition, renderHost)
     this.fluidKey = `texture-${definition.spriteId}_liquid`
   }

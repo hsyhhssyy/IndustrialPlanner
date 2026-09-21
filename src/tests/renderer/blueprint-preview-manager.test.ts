@@ -164,10 +164,52 @@ vi.mock("@/renderer/texture/texture-manager", () => ({
   })),
 }))
 
+vi.mock("@/renderer/scene", () => {
+  const createContainer = () => ({
+    children: [] as unknown[],
+    addChild(...children: unknown[]) {
+      this.children.push(...children)
+      return children[0]
+    },
+    removeChild(child: unknown) {
+      this.children = this.children.filter((candidate) => candidate !== child)
+      return child
+    },
+    destroy: vi.fn(),
+  })
+  const createDecoration = () => ({
+    container: createContainer(),
+    sync: vi.fn(),
+    destroy: vi.fn(),
+  })
+
+  return {
+    createEntitySpriteScene: vi.fn(() => ({
+      layers: {
+        background: createContainer(),
+        entityLow: createContainer(),
+        entity: createContainer(),
+        entityHigh: createContainer(),
+        logisticsBelt: createContainer(),
+        logisticsPipe: createContainer(),
+        draft: createContainer(),
+        overlay: createContainer(),
+      },
+      attach: vi.fn(),
+      sync: vi.fn(),
+      destroy: vi.fn(),
+    })),
+    createGridLineDecoration: vi.fn(createDecoration),
+    createRegionAnnotationBackgroundDecoration: vi.fn(createDecoration),
+    createRegionAnnotationOverlayDecoration: vi.fn(createDecoration),
+  }
+})
+
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { createBlueprintDocument } from "@/domain/document/blueprint-document"
 import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import { createBlueprintPreviewManager } from "@/renderer/blueprint-preview/blueprint-preview-manager"
+import { createRenderSurfaceRegistry } from "@/renderer/surface"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 beforeEach(() => {
@@ -206,6 +248,16 @@ describe("createBlueprintPreviewManager", () => {
           screenProfile: {
             devicePixelRatio: 2,
           },
+          settings: {
+            gameAlwaysShowGridLines: false,
+            gamePlayDeviceAnimations: true,
+            gameShowDeviceIcons: true,
+            gameShowDeviceNames: true,
+            gameUseBlueprintStyleDeviceImages: false,
+            locale: "zh-CN",
+            showGrassBackground: false,
+            showRegionAnnotations: true,
+          },
           theme: AYU_DARK_THEME,
         },
       },
@@ -213,7 +265,8 @@ describe("createBlueprintPreviewManager", () => {
       render: null,
       simulation: null,
     } as unknown as WorkspaceContract
-    const manager = createBlueprintPreviewManager({ workspace })
+    const surfaceRegistry = createRenderSurfaceRegistry()
+    const manager = createBlueprintPreviewManager({ workspace, surfaceRegistry })
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -264,6 +317,127 @@ describe("createBlueprintPreviewManager", () => {
     expect(applicationState.destroy).toHaveBeenCalledTimes(1)
   })
 
+  it("registers multiple preview canvases and disposes them independently", async () => {
+    textureManagerState.getTexture.mockImplementation((key?: string) => Promise.resolve(
+      key === "texture-scanline-45deg-50opacity"
+        ? { id: "scanline-texture", width: 64, height: 64 }
+        : { id: "texture" },
+    ))
+
+    const entityDefinition = {
+      id: "test-definition",
+      nameKey: "test-definition",
+      spriteId: "test-sprite",
+      footprint: { width: 2, height: 3 },
+      uiGroup: "hidden" as const,
+      displayOrder: 100,
+      tags: [],
+      requiresPower: false,
+      powerDemand: 0,
+      inspectors: [],
+      portGroups: [],
+      storageSlotGroups: [],
+      portStorageBindings: [],
+    }
+    const workspace = {
+      state: {} as never,
+      registry: {
+        entityDefinitions: [entityDefinition],
+      },
+      app: {
+        state: {
+          screenProfile: {
+            devicePixelRatio: 1,
+          },
+          settings: {
+            gameAlwaysShowGridLines: false,
+            gamePlayDeviceAnimations: true,
+            gameShowDeviceIcons: true,
+            gameShowDeviceNames: true,
+            gameUseBlueprintStyleDeviceImages: false,
+            locale: "zh-CN",
+            showGrassBackground: false,
+            showRegionAnnotations: true,
+          },
+          theme: AYU_LIGHT_THEME,
+        },
+      },
+      editor: null,
+      render: null,
+      simulation: null,
+    } as unknown as WorkspaceContract
+    const surfaceRegistry = createRenderSurfaceRegistry()
+    const manager = createBlueprintPreviewManager({ workspace, surfaceRegistry })
+    // AI-REMOVED 2026-09-14:
+    // Reason: 场景构造已批量固化为带版本的蓝图文件。
+    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+    // Replacement: src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/index.json
+    // Risk: Low；断言与被测动作不变。
+    // Human Review: Required
+    // Original code:
+    // {
+    //         selected: {
+    //           id: "selected",
+    //           definitionId: "test-definition",
+    //           position: { x: 5, y: 5 },
+    //           rotation: 0,
+    //           config: {},
+    //           tags: [],
+    //         },
+    //       }
+    const blueprint = createBlueprintDocument({
+      name: "Preview Highlight Test",
+      baseId: "preview-highlight-test",
+      initialGridPoint: { x: 0, y: 0 },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json").entities,
+      entityOrder: ["selected"],
+      slotLinks: [],
+    })
+
+    const firstHandle = await manager.actions.mountBlueprintPreview({
+      blueprint,
+      width: 240,
+      height: 160,
+      viewportBounds: {
+        left: 1,
+        top: 1,
+        width: 10,
+        height: 10,
+      },
+      highlightedEntityId: "selected",
+    })
+    const secondHandle = await manager.actions.mountBlueprintPreview({
+      blueprint,
+      width: 180,
+      height: 120,
+    })
+
+    expect(firstHandle).not.toBe(secondHandle)
+    expect(manager.queries.getBlueprintPreviewCanvas(firstHandle)).not.toBeNull()
+    expect(manager.queries.getBlueprintPreviewCanvas(secondHandle)).not.toBeNull()
+    expect(surfaceRegistry.listActive()).toHaveLength(2)
+
+    manager.actions.disposeBlueprintPreview(firstHandle)
+
+    expect(manager.queries.getBlueprintPreviewCanvas(firstHandle)).toBeNull()
+    expect(manager.queries.getBlueprintPreviewCanvas(secondHandle)).not.toBeNull()
+    expect(surfaceRegistry.listActive()).toHaveLength(1)
+
+    manager.destroy()
+    expect(surfaceRegistry.listActive()).toHaveLength(0)
+  })
+
+  // AI-REMOVED 2026-09-21:
+  // Reason: Inspector 高亮已由共享 GenericDeviceSprite selection overlay 实现，不再存在 preview 专用 scanline texture/mask 显示对象可供该测试断言。
+  // Trigger: ST2-RQ-037 第一阶段移除蓝图 preview 平行 renderer。
+  // Evidence: blueprint-preview-manager.ts 使用 highlightedEntityId 投影 selection collection；真实浏览器与多 Surface 生命周期回归通过。
+  // Replacement: 上方 multiple preview canvases 生命周期测试；GenericDeviceSprite 的 selection overlay 由既有 sprite 测试覆盖。
+  // Risk: Inspector 高亮视觉仍需真实浏览器保持验证。
+  // Human Review: Required
+  //
+  // Original code:
+  /*
   it("keeps the highlight graphics renderable so the scanline mask can draw", async () => {
     textureManagerState.getTexture.mockImplementation((key?: string) => Promise.resolve(
       key === "texture-scanline-45deg-50opacity"
@@ -370,4 +544,5 @@ describe("createBlueprintPreviewManager", () => {
 
     manager.actions.disposeBlueprintPreview(handle)
   })
+  */
 })
