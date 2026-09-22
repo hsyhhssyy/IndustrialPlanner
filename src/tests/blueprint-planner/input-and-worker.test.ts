@@ -16,6 +16,7 @@ describe("EDA 配方输入与工作线程", () => {
       targets: [{ id: "target", itemId: "item_copper_nugget", perMinute: 30 }],
       recipeChoices: { item_copper_nugget: "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic" },
     });
+    expect(request.options.evaluationsPerRound).toBe(50_000);
     const original = JSON.stringify(request);
     expect(request.plan.recipes.some((entry) => entry.recipeId === "r_miner_copper_ore_basic")).toBe(true);
     const normalized = normalizePlannerSources(registry, request);
@@ -27,6 +28,15 @@ describe("EDA 配方输入与工作线程", () => {
     expect(normalized.plan.infiniteItemIds).toEqual(expect.arrayContaining(["item_copper_ore", "item_liquid_water", "item_gas_inert"]));
     expect(network.nodes[0]!.inputs.find((flow) => flow.itemId === "item_liquid_water")?.perMinute).toBe(30);
     expect(JSON.stringify(request)).toBe(original);
+  });
+
+  it("将旧规划输入迁移到默认轮数，并拒绝非 1000 整数倍的每轮计算次数", () => {
+    const registry = createRegistryContract();
+    const request = readPlanningInput(registry, plant);
+    expect(request.options.evaluationsPerRound).toBe(50_000);
+    expect(() => createProductionNetwork(registry, {
+      ...request, options: { ...request.options, evaluationsPerRound: 1_500 },
+    })).toThrow("每轮计算次数必须是大于零的 1000 整数倍");
   });
 
   it("补算气体环境时保持已选气体生产配方", () => {
@@ -45,6 +55,7 @@ describe("EDA 配方输入与工作线程", () => {
       const candidate = await client.build(request, 0, 30_000);
       expect(client.threadId).toBeGreaterThan(0);
       expect(candidate.metrics.productionDeviceCount).toBe(3);
+      expect(candidate.search.evaluationLimit).toBe(request.options.evaluationsPerRound);
       await expect(client.build(request, 1, .001)).rejects.toBeInstanceOf(PlanningBudgetExhausted);
     } finally { await client.dispose(); }
   }, 60_000);

@@ -36,6 +36,7 @@ export interface BlueprintPlannerOptions {
   readonly byproducts: "destroy" | "output";
   readonly plantStartup: "preload" | "warehouse";
   readonly budgetMs: number;
+  readonly evaluationsPerRound: number;
 }
 
 export interface BlueprintPlannerRequest {

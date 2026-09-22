@@ -6,6 +6,7 @@ import type { PlannerWire } from "./model";
 export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "constrained-routing";
 
 /** 搜索控制属于规划器内部；生产界面仍使用 Domain 的时间预算。 */
+/** 订正 2026-09-22：生产界面现在同时配置每个独立搜索的局部评估次数，并由 Host 映射到 maxEvaluations。 */
 export interface PlannerSearchOptions {
   readonly maxEvaluations?: number;
   readonly outline?: { readonly width: number; readonly height: number };

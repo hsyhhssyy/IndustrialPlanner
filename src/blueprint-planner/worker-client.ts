@@ -10,7 +10,7 @@ export class PlannerWorkerClient {
   private pending: ((error: Error) => void) | null = null;
   private disposed = false;
 
-  build(request: BlueprintPlannerRequest, variant: number, budgetMs: number, signal: AbortSignal,
+  build(request: BlueprintPlannerRequest, variant: number, budgetMs: number, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string) => void): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
@@ -49,7 +49,8 @@ export class PlannerWorkerClient {
       worker.addEventListener("messageerror", messageFault);
       signal.addEventListener("abort", abort, { once: true });
       const timer = setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
-      try { worker.postMessage({ id, request, variant, budgetMs } satisfies PlannerWorkerRequest); }
+      try { worker.postMessage({ id, request, variant, budgetMs,
+        search: { maxEvaluations: evaluationsPerRound } } satisfies PlannerWorkerRequest); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }

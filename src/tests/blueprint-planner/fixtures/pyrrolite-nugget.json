@@ -222,7 +222,8 @@
       "solidOutput": "stash",
       "byproducts": "output",
       "plantStartup": "preload",
-      "budgetMs": 120000
+      "budgetMs": 120000,
+      "evaluationsPerRound": 50000
     }
   }
 }

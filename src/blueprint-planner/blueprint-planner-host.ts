@@ -22,8 +22,10 @@ interface PlannerTask {
   progress: BlueprintPlannerProgress;
   deadline: number;
   budgetMs: number;
+  evaluationsPerRound: number;
   attempt: number;
   best: { candidate: PlannerCandidate; report: SimulationBlueprintRunReport } | null;
+  savedCandidate: PlannerCandidate | null;
   result: BlueprintPlannerResult | null;
   saving: Promise<void> | null;
   pendingCandidate: PlannerCandidate | null;
@@ -82,6 +84,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract): Bluepr
         warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds,
         elapsedMs: elapsed(current),
       };
+      current.savedCandidate = candidate;
       publish(current, { status: "completed", message: "规划完毕，蓝图已保存到用户蓝图/自动规划", estimatedProgress: 1 });
     } catch (error) {
       publish(current, { status: "save-failed", message: errorMessage(error), estimatedProgress: null });
@@ -99,7 +102,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract): Bluepr
         publish(current, { candidateCount: current.attempt, message: `正在搜索第 ${current.attempt} 个布局` });
         try {
           const candidate = current.pendingCandidate ?? await candidateWorker.build(current.request, attempt,
-            Math.max(1, current.deadline - performance.now()), current.abort.signal, (phase, message) => publish(current, { phase, message, estimatedProgress: Math.min(0.95, 1 - Math.max(0, current.deadline - performance.now()) / current.budgetMs) }));
+            Math.max(1, current.deadline - performance.now()), current.evaluationsPerRound, current.abort.signal,
+            (phase, message) => publish(current, { phase, message, estimatedProgress: Math.min(0.95, 1 - Math.max(0, current.deadline - performance.now()) / current.budgetMs) }));
           checkBudget(current);
           const simulation = workspace.simulation;
           if (simulation === null) throw new Error("仿真服务不可用。");
@@ -138,12 +142,31 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract): Bluepr
     if (current.abort.signal.aborted || disposed) {
       publish(current, { status: "cancelled", message: "规划已取消", estimatedProgress: null });
       finishActive(current);
+    // AI-REMOVED 2026-09-22:
+    // Reason: 找到候选后自动保存会终止交互，用户无法在同一任务上手动追加无限轮计算。
+    // Trigger: 用户要求结果生成后手动保存，保存后按钮禁用，同时仍可继续规划下一轮。
+    // Evidence: 原分支直接调用 save(current)，save 成功后发布 completed；UI 只能显示“重新规划”。
+    // Replacement: 下方按“是否有未保存最佳候选”发布 waiting/completed，保存仅由 actions.save 触发。
+    // Risk: 结果现在必须由用户主动保存；关闭对话框不会自动落盘。
+    // Human Review: Required
+    //
+    // Original code:
+    // } else if (current.best !== null) {
+    //   current.saving = save(current);
+    //   await current.saving;
+    //   current.saving = null;
+    // } else {
+    //   publish(current, { status: "waiting", message: `本轮时间已用完；${lastFailure}。可以继续规划。`, estimatedProgress: null });
+    // }
+    } else if (current.best !== null && current.best.candidate !== current.savedCandidate) {
+      publish(current, { status: "waiting", message: "本轮规划完成；已找到新的最优结果，可以保存蓝图或继续规划。", estimatedProgress: null });
+      finishActive(current);
     } else if (current.best !== null) {
-      current.saving = save(current);
-      await current.saving;
-      current.saving = null;
+      publish(current, { status: "completed", message: "本轮规划完成；当前最优蓝图已保存，可以继续规划。", estimatedProgress: null });
+      finishActive(current);
     } else {
       publish(current, { status: "waiting", message: `本轮时间已用完；${lastFailure}。可以继续规划。`, estimatedProgress: null });
+      finishActive(current);
     }
   }
 
@@ -161,7 +184,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract): Bluepr
         const current: PlannerTask = {
           id, request: snapshot, abort: new AbortController(), startedAt, resumedAt: performance.now(), spentMs: 0,
           deadline: performance.now() + snapshot.options.budgetMs, budgetMs: snapshot.options.budgetMs,
-          attempt: 0, best: null, result: null, saving: null, pendingCandidate: null,
+          evaluationsPerRound: snapshot.options.evaluationsPerRound,
+          attempt: 0, best: null, savedCandidate: null, result: null, saving: null, pendingCandidate: null,
           progress: { taskId: id, status: "running", phase: "preparing", startedAt, elapsedMs: 0, estimatedProgress: 0,
             candidateCount: 0, validatedCandidateCount: 0, bestArea: null, message: null },
         };
@@ -170,13 +194,26 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract): Bluepr
         void run(current);
         return id;
       },
-      continuePlanning(taskId, additionalBudgetMs) {
-        if (task?.id !== taskId || task.progress.status !== "waiting") throw new Error("任务当前不能延长。");
+      continuePlanning(taskId, additionalBudgetMs, evaluationsPerRound) {
+        if (task?.id !== taskId || !["waiting", "completed"].includes(task.progress.status)) throw new Error("任务当前不能继续。");
         if (!Number.isFinite(additionalBudgetMs) || additionalBudgetMs <= 0) throw new Error("追加时间必须大于零。");
-        task.budgetMs = additionalBudgetMs;
-        task.deadline = performance.now() + task.budgetMs;
-        publish(task, { status: "running", message: "继续搜索布局", estimatedProgress: 0 });
-        void run(task);
+        if (!Number.isSafeInteger(evaluationsPerRound) || evaluationsPerRound < 1_000
+          || evaluationsPerRound % 1_000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+        const current = task;
+        current.budgetMs = additionalBudgetMs;
+        current.evaluationsPerRound = evaluationsPerRound;
+        current.deadline = performance.now() + current.budgetMs;
+        runInAction(() => { state.activeTaskId = current.id; state.revision++; });
+        publish(current, { status: "running", message: "继续搜索布局", estimatedProgress: 0 });
+        void run(current);
+      },
+      async save(taskId) {
+        if (task?.id !== taskId || task.progress.status !== "waiting" || task.best === null
+          || task.best.candidate === task.savedCandidate) throw new Error("当前没有可保存的新结果。");
+        const current = task;
+        runInAction(() => { state.activeTaskId = current.id; state.revision++; });
+        current.saving ??= save(current);
+        try { await current.saving; } finally { current.saving = null; }
       },
       cancel(taskId) {
         if (task?.id !== taskId || !["running", "waiting"].includes(task.progress.status)) return;

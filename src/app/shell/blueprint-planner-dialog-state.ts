@@ -13,7 +13,7 @@ export class BlueprintPlannerDialogController {
   viewTaskId: string | null = null;
   options: BlueprintPlannerOptions = {
     solidSupply: "external", fluidSupply: "external", warehouseBus: "straight",
-    solidOutput: "warehouse", byproducts: "output", plantStartup: "preload", budgetMs: 60_000,
+    solidOutput: "warehouse", byproducts: "output", plantStartup: "preload", budgetMs: 60_000, evaluationsPerRound: 50_000,
   };
 
   constructor() {
@@ -27,6 +27,10 @@ export class BlueprintPlannerDialogController {
         if (saved[key] !== undefined && choices[key].includes(saved[key]!)) this.options = { ...this.options, [key]: saved[key] };
       }
       if (typeof saved.budgetMs === "number" && Number.isFinite(saved.budgetMs) && saved.budgetMs > 0) this.options = { ...this.options, budgetMs: saved.budgetMs };
+      if (typeof saved.evaluationsPerRound === "number" && Number.isSafeInteger(saved.evaluationsPerRound)
+        && saved.evaluationsPerRound >= 1_000 && saved.evaluationsPerRound % 1_000 === 0) {
+        this.options = { ...this.options, evaluationsPerRound: saved.evaluationsPerRound };
+      }
     }
     makeAutoObservable(this, { plan: observable.ref }, { autoBind: true });
   }

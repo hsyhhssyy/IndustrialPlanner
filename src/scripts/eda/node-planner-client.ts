@@ -35,7 +35,8 @@ export class NodePlannerClient {
       };
       const timer = setTimeout(() => { finish(); void worker.terminate(); this.worker = null; reject(new PlanningBudgetExhausted()); }, budgetMs + 1500);
       worker.on("message", message); worker.on("error", fault); worker.on("exit", exit);
-      try { worker.postMessage({ id, request, variant, budgetMs, search }); }
+      try { worker.postMessage({ id, request, variant, budgetMs,
+        search: { maxEvaluations: request.options.evaluationsPerRound, ...search } }); }
       catch (error) { fault(error instanceof Error ? error : new Error(String(error))); }
     });
   }

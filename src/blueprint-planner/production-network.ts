@@ -83,6 +83,8 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
   if (plan.containsModules) throw new Error("包含模块的规划不能自动规划产线。");
   if (!Number.isFinite(plan.unresolvedPerMinute) || plan.unresolvedPerMinute < 0 || plan.unresolvedPerMinute > EPSILON) throw new Error("产线规划仍有未满足需求，请先补齐生产方案。");
   if (!Number.isFinite(options.budgetMs) || options.budgetMs <= 0) throw new Error("规划时间必须大于零。");
+  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1_000
+    || options.evaluationsPerRound % 1_000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
   if (!plan.targets.length || plan.targets.some((flow) => !Number.isFinite(flow.perMinute) || flow.perMinute <= 0)) {
     throw new Error("请提供有效的目标产物与产量。");
   }

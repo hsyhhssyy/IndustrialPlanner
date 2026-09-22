@@ -7,7 +7,7 @@ import { enterBlueprintPlacement } from "../input";
 import { DialogShell } from "./shared/dialog-shell";
 import styles from "./blueprint-planner-dialog.module.scss";
 
-const OPTION_FIELDS: readonly { key: Exclude<keyof BlueprintPlannerOptions, "budgetMs">; label: UiKey; choices: readonly [string, UiKey][] }[] = [
+const OPTION_FIELDS: readonly { key: Exclude<keyof BlueprintPlannerOptions, "budgetMs" | "evaluationsPerRound">; label: UiKey; choices: readonly [string, UiKey][] }[] = [
   { key: "solidSupply", label: "eda.solidSupply", choices: [["external", "eda.externalBelt"], ["warehouse", "eda.warehouseSupply"]] },
   { key: "fluidSupply", label: "eda.fluidSupply", choices: [["external", "eda.externalPipe"], ["conduit", "eda.conduitSupply"]] },
   { key: "warehouseBus", label: "eda.warehouseBus", choices: [["straight", "eda.straight"], ["free", "eda.free"]] },
@@ -29,12 +29,18 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   }, [controller.dialogState.visible]);
   const latest = planner?.queries.getTask() ?? null;
   const progress = latest?.taskId === controller.viewTaskId ? latest : null;
-  const result = useMemo(() => progress?.status === "completed" ? planner?.queries.getResult(progress.taskId) ?? null : null,
-    [planner, progress?.taskId, progress?.status]);
+  const plannerRevision = planner?.state.revision ?? 0;
+  const result = useMemo(() => {
+    void plannerRevision;
+    return progress === null ? null : planner?.queries.getResult(progress.taskId) ?? null;
+  }, [planner, plannerRevision, progress]);
   if (!controller.dialogState.visible) return null;
-  const busy = progress !== null && ["running", "waiting", "saving"].includes(progress.status);
+  const busy = progress !== null && ["running", "saving"].includes(progress.status);
   const compact = appHost.state.screenProfile.deviceClass === "mobile";
   const plan = controller.plan;
+  const validRoundSettings = Number.isFinite(controller.options.budgetMs) && controller.options.budgetMs > 0
+    && Number.isSafeInteger(controller.options.evaluationsPerRound) && controller.options.evaluationsPerRound >= 1_000
+    && controller.options.evaluationsPerRound % 1_000 === 0;
   const act = (action: () => void) => {
     setError(null);
     try { action(); } catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
@@ -80,13 +86,17 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             <fieldset className={styles.options} disabled={progress?.status === "running" || progress?.status === "saving"}>
               {OPTION_FIELDS.map((field) => <label key={field.key}>
                 <span>{t(field.label)}</span>
-                <select disabled={busy} value={controller.options[field.key]} onChange={(event) => controller.updateOptions({ [field.key]: event.target.value })}>
+                <select disabled={busy || progress !== null} value={controller.options[field.key]} onChange={(event) => controller.updateOptions({ [field.key]: event.target.value })}>
                   {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
                 </select>
               </label>)}
               <label><span>{t("eda.budget")}</span>
                 <input type="number" min="10" step="10" value={controller.options.budgetMs / 1000}
                   onChange={(event) => controller.updateOptions({ budgetMs: Number(event.target.value) * 1000 })} />
+              </label>
+              <label><span>{t("eda.evaluationsPerRound")}</span>
+                <input type="number" min="1000" step="1000" value={controller.options.evaluationsPerRound}
+                  onChange={(event) => controller.updateOptions({ evaluationsPerRound: Number(event.target.value) })} />
               </label>
             </fieldset>
             {plan.containsModules ? <p role="alert" className={styles.error}>{t("eda.modulesUnsupported")}</p> : null}
@@ -105,12 +115,21 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         </div>
         <footer className={styles.footer}>
           {progress?.status === "running" || progress?.status === "waiting" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("action.cancel")}</button> : null}
-          {progress?.status === "waiting" ? <button type="button" className={styles.primary} onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId, controller.options.budgetMs))}>{t("eda.continue")}</button> : null}
+          {progress !== null && ["waiting", "completed"].includes(progress.status) ? <button type="button"
+            disabled={!validRoundSettings}
+            onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId, controller.options.budgetMs, controller.options.evaluationsPerRound))}>{t("eda.continue")}</button> : null}
+          {progress?.bestArea !== null && progress?.bestArea !== undefined ? <button type="button" className={styles.primary}
+            disabled={progress.status !== "waiting"}
+            onClick={() => {
+              setError(null);
+              void planner?.actions.save(progress.taskId).catch((failure: unknown) => setError(String(failure)));
+            }}>{t("eda.save")}</button> : null}
           {progress?.status === "save-failed" ? <button type="button" className={styles.primary} onClick={() => {
             setError(null);
             void planner?.actions.retrySave(progress.taskId).catch((failure: unknown) => setError(String(failure)));
           }}>{t("eda.retrySave")}</button> : null}
-          {!busy && plan !== null ? <button type="button" disabled={plan.containsModules || planner === null || !Number.isFinite(controller.options.budgetMs) || controller.options.budgetMs <= 0}
+          {!busy && plan !== null && (progress === null || ["cancelled", "failed"].includes(progress.status)) ? <button type="button"
+            disabled={plan.containsModules || planner === null || !validRoundSettings}
             className={result === null ? styles.primary : undefined} onClick={start}>{t(progress === null ? "eda.start" : "eda.replan")}</button> : null}
           {result !== null ? <button type="button" className={styles.primary}
             onPointerUp={(event) => place(event.pointerType === "mouse" ? "mouse" : "touch")}

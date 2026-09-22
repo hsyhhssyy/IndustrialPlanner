@@ -9,7 +9,16 @@ export function readPlanningInput(registry: RegistryContract, value: unknown): B
   if (value === null || typeof value !== "object") throw new Error("规划配置必须是对象。");
   const input = value as Record<string, unknown>;
   if ("request" in input) return readPlanningInput(registry, input.request);
-  if ("plan" in input && "options" in input) return structuredClone(input) as unknown as BlueprintPlannerRequest;
+  if ("plan" in input && "options" in input) {
+    const request = structuredClone(input) as unknown as {
+      plan: BlueprintPlannerRequest["plan"];
+      options: Partial<BlueprintPlannerOptions>;
+    };
+    return { ...request, options: {
+      ...request.options,
+      evaluationsPerRound: request.options.evaluationsPerRound ?? 50_000,
+    } as BlueprintPlannerOptions };
+  }
   const state = normalizePlannerPersistedState(input.plannerState ?? input);
   if (state === null || !state.targets.length) throw new Error("规划配置必须包含 targets。");
   if (state.useModules) throw new Error("EDA 批量入口不支持包含模块的产线配置。");
@@ -21,7 +30,7 @@ export function readPlanningInput(registry: RegistryContract, value: unknown): B
   }, index);
   const options: BlueprintPlannerOptions = {
     solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
-    byproducts: "output", plantStartup: "preload", budgetMs: 60_000,
+    byproducts: "output", plantStartup: "preload", budgetMs: 60_000, evaluationsPerRound: 50_000,
     ...(typeof input.options === "object" && input.options !== null ? input.options : {}),
   };
   return { options, plan: createBlueprintPlannerPlan({ result, targets: state.targets, supplies: state.supplies,
