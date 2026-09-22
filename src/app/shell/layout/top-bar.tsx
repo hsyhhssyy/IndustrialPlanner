@@ -48,7 +48,16 @@ import {
   ACTIVITY_DEFINITIONS,
   resolveOngoingActivityDefinitions,
 } from "@/shared/registry/activity-availability";
-import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
+// AI-REMOVED 2026-09-22:
+// Reason: 多基地模式不再使用独立倍率白名单，顶栏始终提供完整速度档位。
+// Trigger: 用户撤销“多基地隐藏 x4/x16”需求，并要求所有模式均可使用完整速度。
+// Evidence: SIMULATION_SPEED_OPTIONS 已包含 x0.25/x1/x2/x4/x16，仿真层同步撤销区域倍率过滤。
+// Replacement: SimulationSpeedButtons 直接遍历 SIMULATION_SPEED_OPTIONS。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 
 const ACTIVITY_STATUS_REFRESH_INTERVAL_MS = 60_000;
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
@@ -170,14 +179,23 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   const currentSpeed = simulation?.state.simulationSpeed ?? 1;
   const isStarting = simulation?.state.runningState === "starting";
   const t = appHost.actions.translate;
-  // AI-CORRECTION 2026-09-20: 停止态预览下一次会话时读取 AppSettings；运行态只反映已经固化的会话模式。
-  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
-    && (simulation.state.runningState === "stop"
-      ? appHost.state.settings.regionalMultiBaseEnabled
-      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
-  const visibleSpeedOptions = regionalMultiBaseEnabled
-    ? SIMULATION_SPEED_OPTIONS.filter(isRegionalSimulationSpeed)
-    : SIMULATION_SPEED_OPTIONS;
+  // AI-REMOVED 2026-09-22:
+  // Reason: 多基地模式不再隐藏或禁止 x4/x16，速度按钮无需按会话模式筛选。
+  // Trigger: 用户撤销区域模式倍率限制，要求所有模式显示并使用完整速度档位。
+  // Evidence: Dense Host 已支持 x4 及以上的动态 standard tick rate，区域合图会话复用同一路径。
+  // Replacement: 下方直接遍历 SIMULATION_SPEED_OPTIONS。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // // AI-CORRECTION 2026-09-20: 停止态预览下一次会话时读取 AppSettings；运行态只反映已经固化的会话模式。
+  // const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
+  //   && (simulation.state.runningState === "stop"
+  //     ? appHost.state.settings.regionalMultiBaseEnabled
+  //     : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
+  // const visibleSpeedOptions = regionalMultiBaseEnabled
+  //   ? SIMULATION_SPEED_OPTIONS.filter(isRegionalSimulationSpeed)
+  //   : SIMULATION_SPEED_OPTIONS;
 
   const handleSpeedClick = (speed: number) => {
     if (simulation === null) return;
@@ -191,7 +209,7 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
 
   return (
     <>
-      {visibleSpeedOptions.map((speed) => (
+      {SIMULATION_SPEED_OPTIONS.map((speed) => (
         <button
           key={speed}
           aria-label={`${t("statusBar.speed")} ${formatSimulationSpeedLabel(speed)}`}

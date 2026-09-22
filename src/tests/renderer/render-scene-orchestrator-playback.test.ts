@@ -743,6 +743,158 @@ describe("createRenderSceneOrchestrator", () => {
     orchestrator.destroy()
   })
 
+  it("keeps pipes above belts when entity order is reversed", () => {
+    const entities = [
+      {
+        id: "pipe-entity",
+        definitionId: "pipe_straight_1x1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "belt-entity",
+        definitionId: "belt_straight_1x1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ]
+    const ticker = {
+      lastTime: 1200,
+      deltaMS: 16.67,
+      add: vi.fn(),
+      remove: vi.fn(),
+    }
+    const stage = {
+      addChild: vi.fn(),
+      addChildAt: vi.fn(),
+    }
+    const renderHost = createOrchestratorTestHost({
+      dom: {
+        placementGlowOverlay: document.createElement("div"),
+        blueprintGlowOverlay: document.createElement("div"),
+        marqueeGlowOverlay: document.createElement("div"),
+      },
+      app: {
+        stage,
+        renderer: {
+          width: 640,
+          height: 480,
+          resolution: 1,
+          resize: vi.fn(),
+        },
+        ticker,
+      },
+      internalState: {},
+      workspace: {
+        state: {} as never,
+        registry: {
+          entityDefinitions: [
+            {
+              id: "belt_straight_1x1",
+              spriteId: "belt_straight_1x1",
+              footprint: { width: 1, height: 1 },
+            },
+            {
+              id: "pipe_straight_1x1",
+              spriteId: "pipe_straight_1x1",
+              footprint: { width: 1, height: 1 },
+            },
+          ],
+          baseDefinitions: [],
+          recipeDefinitions: [],
+          queries: {
+            isBelt: (definitionId: string) => definitionId === "belt_straight_1x1",
+            isPipe: (definitionId: string) => definitionId === "pipe_straight_1x1",
+            isDedicatedLogisticsDevice: vi.fn((definitionId: string) =>
+              definitionId === "belt_straight_1x1"
+              || definitionId === "pipe_straight_1x1",
+            ),
+            resolveDedicatedLogisticsKind: vi.fn((definitionId: string) =>
+              definitionId === "belt_straight_1x1" ? "belt" : "pipe",
+            ),
+            isBeltFamily: vi.fn((definitionId: string) =>
+              definitionId === "belt_straight_1x1",
+            ),
+            isPipeFamily: vi.fn((definitionId: string) =>
+              definitionId === "pipe_straight_1x1",
+            ),
+          },
+        },
+        app: {
+          state: {
+            screenProfile: {
+              devicePixelRatio: 1,
+            },
+            settings: {
+              gameUseBlueprintStyleDeviceImages: false,
+            },
+            activeTool: "select",
+            toolInfo: {
+              marqueeType: "marquee",
+            },
+            theme: AYU_LIGHT_THEME,
+          },
+        },
+        editor: {
+          state: {
+            collections: createEmptyEditorCollections(),
+            viewport: {
+              clientRect: {
+                width: 640,
+                height: 480,
+              },
+              center: {
+                x: 0,
+                y: 0,
+              },
+              gridCellPixelSize: 16,
+            },
+          },
+          queries: {
+            listEntities: () => entities,
+          },
+        },
+        render: null,
+        simulation: null,
+      },
+    })
+
+    const orchestrator = createRenderSceneOrchestrator(renderHost)
+    const stageLayers = stage.addChild.mock.calls[0] ?? []
+    const beltLayer = stageLayers[4] as { readonly children: readonly unknown[] }
+    const pipeLayer = stageLayers[5] as { readonly children: readonly unknown[] }
+    const beltSubEntity = beltLayer.children[0]
+    const pipeSubEntity = pipeLayer.children[2]
+
+    orchestrator.sync({ nowMs: 1200, deltaMs: 16.67 })
+
+    expect(orchestratorTestState.getCreatedSprites()).toEqual([
+      { kind: "pipe", entityId: "pipe-entity", definitionId: "pipe_straight_1x1" },
+      { kind: "belt", entityId: "belt-entity", definitionId: "belt_straight_1x1" },
+    ])
+    expect(orchestratorTestState.getAttachedSprites()).toEqual([
+      {
+        kind: "pipe",
+        entityId: "pipe-entity",
+        definitionId: "pipe_straight_1x1",
+        entityLayer: pipeSubEntity,
+      },
+      {
+        kind: "belt",
+        entityId: "belt-entity",
+        definitionId: "belt_straight_1x1",
+        entityLayer: beltSubEntity,
+      },
+    ])
+    expect(stageLayers.indexOf(beltLayer)).toBeLessThan(stageLayers.indexOf(pipeLayer))
+
+    orchestrator.destroy()
+  })
+
   it("reattaches a logistics draft belt sprite when the same id becomes a formal belt entity", () => {
     const beltEntityId = "logistics-draft:belt:1:0"
     let entities: Array<{

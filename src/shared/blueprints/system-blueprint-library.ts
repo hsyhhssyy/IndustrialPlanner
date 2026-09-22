@@ -34,7 +34,19 @@ export interface SystemBlueprintRecord extends BlueprintLibraryRecord {
   readonly sourcePath: string;
 }
 
-export type SystemBlueprintDirectoryListing = BlueprintLibraryDirectoryListing;
+// AI-REMOVED 2026-09-22:
+// Reason: 直接别名到通用目录类型会把 SystemBlueprintRecord.sourcePath 从系统蓝图查询结果的静态类型中擦除。
+// Trigger: TypeScript 检查在 system-blueprint-public-assets.test.ts 读取 sourcePath 时报告 TS2339。
+// Evidence: readSystemBlueprintRecord 返回 SystemBlueprintRecord，buildFolderDirectoryListing 的 blueprints 运行时均包含 sourcePath。
+// Replacement: 下方收窄 blueprints 元素类型的 SystemBlueprintDirectoryListing 接口。
+// Risk: Low；仅恢复系统蓝图目录已有的实际返回类型，不改变运行时数据和通用用户蓝图 contract。
+// Human Review: Required
+//
+// Original code:
+// export type SystemBlueprintDirectoryListing = BlueprintLibraryDirectoryListing;
+export interface SystemBlueprintDirectoryListing extends BlueprintLibraryDirectoryListing {
+  readonly blueprints: readonly SystemBlueprintRecord[];
+}
 
 export interface SystemBlueprintLibrarySnapshot {
   readonly version: string;

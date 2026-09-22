@@ -31,6 +31,8 @@ function attachSimulationStub(
   workspace: WorkspaceContract,
   options: {
     state: SimulationRunState;
+    engineKind?: "legacy" | "dense-v2";
+    simulationMode?: "single-base" | "regional-multi-base";
     start?: ReturnType<typeof vi.fn>;
     pause?: ReturnType<typeof vi.fn>;
     resume?: ReturnType<typeof vi.fn>;
@@ -40,7 +42,7 @@ function attachSimulationStub(
 ) {
   const state = observable({
       runningState: options.state,
-      simulationMode: "single-base",
+      simulationMode: options.simulationMode ?? "single-base",
     simulationSpeed: 1,
     // AI-REMOVED 2026-09-12:
     // Reason: SimulationState 测试桩同步移除已退役的 diagnostics 字段。
@@ -72,7 +74,7 @@ function attachSimulationStub(
   }));
 
   workspace.simulation = {
-    engineKind: "legacy",
+    engineKind: options.engineKind ?? "legacy",
     state,
     topology: createSnapshotStore(null),
     queries: {
@@ -525,9 +527,13 @@ describe("TopBar", () => {
     expect(pause).not.toHaveBeenCalled();
   });
 
-  it("shows flat speed buttons beside the pause button while running", async () => {
+  it("shows every speed button while regional multi-base simulation is running", async () => {
     const workspace = createWorkspace();
-    const { setSimulationSpeed } = attachSimulationStub(workspace, { state: "start" });
+    const { setSimulationSpeed } = attachSimulationStub(workspace, {
+      state: "start",
+      engineKind: "dense-v2",
+      simulationMode: "regional-multi-base",
+    });
     const appHost = createAppHost(workspace);
 
     act(() => {

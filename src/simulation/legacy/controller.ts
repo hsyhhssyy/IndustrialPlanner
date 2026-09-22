@@ -9,7 +9,16 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 
-import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
+// AI-REMOVED 2026-09-22:
+// Reason: 区域模式不再使用专用倍率白名单，Legacy 遗留控制器也不应保留 x4/x16 拦截。
+// Trigger: 用户要求所有模式均可使用完整速度。
+// Evidence: Legacy 当前公开入口仍固定单基地；移除此白名单可统一内部速度契约且不改变区域运行中调速限制。
+// Replacement: setSimulationSpeed 的通用数值校验与既有 regional.active 运行态门禁。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import { compileSimulationTopology, createSimulationDocumentHash } from "../topology";
@@ -651,12 +660,21 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     if (!Number.isFinite(value) || value < 0) {
       return;
     }
-    if (
-      this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase
-      && !isRegionalSimulationSpeed(value)
-    ) {
-      return;
-    }
+    // AI-REMOVED 2026-09-22:
+    // Reason: x4/x16 不再是区域模式非法倍率，控制器不得按模式过滤完整速度集合。
+    // Trigger: 用户撤销“多基地禁止 x4/x16”需求。
+    // Evidence: 顶栏与 Dense Host 已统一开放完整速度；Legacy 遗留区域路径应保持同一契约。
+    // Replacement: 上方通用数值校验；下方仅保留区域运行中禁止即时换速的生命周期约束。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // if (
+    //   this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase
+    //   && !isRegionalSimulationSpeed(value)
+    // ) {
+    //   return;
+    // }
     if (this.regional.active && value !== this.stateReadWrite.simulationSpeed) {
       // 运行中区域提速/降速需重启重新预热；第一版仅在 stop 状态允许实际切换。
       return;

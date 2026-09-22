@@ -12,7 +12,8 @@ import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import type { AppContract } from "@/domain/app/app-contract";
 
 describe("区域多基地启动模式固化", () => {
-  it("Dense 启动时读取 AppSettings，并将区域模式不支持的倍率归一化为 x1", async () => {
+  // AI-CORRECTION 2026-09-22: 区域模式现与单基地共享完整速度集合，启动时必须保留 x4/x16。
+  it("Dense 启动时读取 AppSettings，并保留区域模式的完整倍率", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     const appSettings = { regionalMultiBaseEnabled: true };
@@ -53,8 +54,20 @@ describe("区域多基地启动模式固化", () => {
       // Original code:
       // host.actions.setRegionalMultiBaseEnabled(true);
       await host.actions.start();
-      expect(host.state.simulationSpeed).toBe(1);
+      // AI-REMOVED 2026-09-22:
+      // Reason: 区域模式不再把 x16 归一化为 x1。
+      // Trigger: 用户要求所有模式均可使用完整速度。
+      // Evidence: Dense 区域合图与单基地共用速率控制路径。
+      // Replacement: 下方断言保留 x16，并验证运行中可切换至 x4。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // expect(host.state.simulationSpeed).toBe(1);
+      expect(host.state.simulationSpeed).toBe(16);
       expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      host.actions.setSimulationSpeed(4);
+      expect(host.state.simulationSpeed).toBe(4);
       // AI-REMOVED 2026-09-20:
       // Reason: 倍率归一化已移到 Dense.start，旧测试通过已删除的 Action 反复切换模式。
       // Trigger: ST2-RQ-035 要求外部只能设置 AppSettings，并在启动边界固化模式。

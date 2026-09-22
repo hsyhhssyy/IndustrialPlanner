@@ -184,6 +184,8 @@ export function createBlueprintPreviewManager(options: {
         mountOptions.height,
         DEFAULT_BLUEPRINT_PREVIEW_HEIGHT,
       )
+      const viewport = normalizeBlueprintPreviewViewport(mountOptions.viewport)
+      const viewportBounds = mountOptions.viewportBounds ?? null
       const app = new Application()
       const resolution = resolveRenderResolutionFromApp(options.workspace.app)
       let pendingTextureManager: ReturnType<typeof createTextureActions> | null = null
@@ -220,13 +222,15 @@ export function createBlueprintPreviewManager(options: {
         const bounds = resolveBlueprintPreviewBounds({
           blueprint: mountOptions.blueprint,
           entityDefinitionMap,
-          viewportBounds: mountOptions.viewportBounds ?? null,
+          viewportBounds,
         })
         const projection = createBlueprintPreviewSurfaceProjection({
           workspace: options.workspace,
           blueprint: mountOptions.blueprint,
           bounds,
           highlightedEntityId: mountOptions.highlightedEntityId ?? null,
+          adaptiveDeviceLabels: viewportBounds === null,
+          initialUserZoom: viewport.zoom,
           renderContext: {
             app,
             textureManager,
@@ -250,7 +254,7 @@ export function createBlueprintPreviewManager(options: {
           renderContext: projection.renderContext,
           textureManager,
           workspace: projection.workspace,
-          viewportBounds: mountOptions.viewportBounds ?? null,
+          viewportBounds,
           highlightedEntityId: mountOptions.highlightedEntityId ?? null,
           bounds,
           presentationSignature: null,
@@ -258,7 +262,7 @@ export function createBlueprintPreviewManager(options: {
           disposed: false,
           handle,
           height,
-          viewport: normalizeBlueprintPreviewViewport(mountOptions.viewport),
+          viewport,
           viewportVersion: 0,
           width,
         }
@@ -425,6 +429,8 @@ function syncBlueprintPreviewFrame(
   const presentationSignature = [
     workspaceApp.state.settings.locale,
     workspaceApp.state.settings.showRegionAnnotations,
+    workspaceApp.state.settings.gameShowDeviceIcons,
+    workspaceApp.state.settings.gameShowDeviceNames,
     workspaceApp.state.theme.id,
   ].join("|")
   if (presentationSignature !== state.presentationSignature) {
@@ -736,6 +742,7 @@ function applyBlueprintPreviewViewport(state: PreviewState): void {
     ? { x: 0, y: 0 }
     : getGridBoundsCenterCells(state.bounds)
   const viewport = state.projection.viewport
+  state.projection.setUserZoom(state.viewport.zoom)
   viewport.center.x = boundsCenter.x - state.viewport.offsetX / effectiveGridCellPixelSize
   viewport.center.y = boundsCenter.y - state.viewport.offsetY / effectiveGridCellPixelSize
   viewport.clientRect.left = 0

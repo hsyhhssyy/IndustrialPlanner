@@ -80,7 +80,16 @@ import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 // Original code:
 // import { buildDeviceGasCoverage } from "../projection";
 
-import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
+// AI-REMOVED 2026-09-22:
+// Reason: Dense 多基地与单基地统一支持完整速度档位，不再需要区域倍率白名单。
+// Trigger: 用户撤销“多基地禁止 x4/x16”需求。
+// Evidence: Dense 区域会话使用同一 kernel 与动态 standard tick rate 路径，x4/x16 无需单独拦截。
+// Replacement: start 保留用户所选倍率；setSimulationSpeed 仅校验正数。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 import {
   admitWorldDocumentForSimulation,
   type UnknownWorldEntityDefinitionIssue,
@@ -388,12 +397,21 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       this.state.hasStarted = true;
       this.state.runningState = "starting";
       this.state.simulationMode = simulationMode;
-      if (
-        simulationMode === SIMULATION_MODE.regionalMultiBase
-        && !isRegionalSimulationSpeed(this.state.simulationSpeed)
-      ) {
-        this.state.simulationSpeed = 1;
-      }
+      // AI-REMOVED 2026-09-22:
+      // Reason: 多基地启动必须保留 x4/x16 等完整速度选择，不再把高倍率归一化为 x1。
+      // Trigger: 用户要求所有模式均可使用完整速度。
+      // Evidence: Dense 区域合图会话与单基地共用 Worker 速率控制和动态 standard tick rate。
+      // Replacement: 保留 start 前已写入的 simulationSpeed。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (
+      //   simulationMode === SIMULATION_MODE.regionalMultiBase
+      //   && !isRegionalSimulationSpeed(this.state.simulationSpeed)
+      // ) {
+      //   this.state.simulationSpeed = 1;
+      // }
     });
     if (this.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
       await this.startRegionalSimulation();
@@ -481,10 +499,19 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     if (!Number.isFinite(value) || value <= 0) {
       throw new Error(`Dense simulation speed must be positive; received ${value}.`);
     }
-    if (
-      this.state.simulationMode === SIMULATION_MODE.regionalMultiBase
-      && !isRegionalSimulationSpeed(value)
-    ) return;
+    // AI-REMOVED 2026-09-22:
+    // Reason: 区域模式与单基地模式使用相同速度集合，x4/x16 不再是非法倍率。
+    // Trigger: 用户撤销区域模式专用倍率限制。
+    // Evidence: 顶栏现始终展示完整档位，Host 必须与 UI 契约一致并实际接受选择。
+    // Replacement: 上方仅保留有限正数校验。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // if (
+    //   this.state.simulationMode === SIMULATION_MODE.regionalMultiBase
+    //   && !isRegionalSimulationSpeed(value)
+    // ) return;
     this.state.simulationSpeed = value;
     this.resetDenseRateSample();
     if (this.projection !== null) {

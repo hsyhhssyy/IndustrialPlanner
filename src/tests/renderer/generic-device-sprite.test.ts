@@ -657,6 +657,57 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
+  it("centers an icon-only device label on the footprint", async () => {
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: createLoadedTextureMock("device-texture"),
+      [MASK_KEY]: createLoadedTextureMock("device-mask-texture"),
+      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: false,
+    })
+    const sprite = new GenericDeviceSprite(
+      "icon-only-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 96,
+      height: 96,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(labelRoot?.visible).toBe(true)
+    expect(icon?.visible).toBe(true)
+    expect(icon?.x).toBe(64)
+    expect(icon?.y).toBe(72)
+    expect(text?.visible).toBe(false)
+  })
+
   it("hides both device icon and name for AvatarHidden devices", async () => {
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()

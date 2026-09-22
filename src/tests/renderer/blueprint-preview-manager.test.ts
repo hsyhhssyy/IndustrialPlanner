@@ -1,11 +1,15 @@
 import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { applicationState, textureManagerState } = vi.hoisted(() => ({
+const { applicationState, entitySceneState, textureManagerState } = vi.hoisted(() => ({
   applicationState: {
     initCalls: [] as unknown[],
     apps: [] as unknown[],
     destroy: vi.fn(),
+  },
+  entitySceneState: {
+    renderContexts: [] as unknown[],
+    syncCalls: [] as unknown[],
   },
   textureManagerState: {
     destroy: vi.fn(),
@@ -137,6 +141,8 @@ vi.mock("pixi.js", () => {
       applicationState.apps.push(this)
     }
 
+    public readonly render = vi.fn()
+
     public async init(options: unknown): Promise<void> {
       applicationState.initCalls.push(options)
     }
@@ -184,21 +190,26 @@ vi.mock("@/renderer/scene", () => {
   })
 
   return {
-    createEntitySpriteScene: vi.fn(() => ({
-      layers: {
-        background: createContainer(),
-        entityLow: createContainer(),
-        entity: createContainer(),
-        entityHigh: createContainer(),
-        logisticsBelt: createContainer(),
-        logisticsPipe: createContainer(),
-        draft: createContainer(),
-        overlay: createContainer(),
-      },
-      attach: vi.fn(),
-      sync: vi.fn(),
-      destroy: vi.fn(),
-    })),
+    createEntitySpriteScene: vi.fn((renderContext: unknown) => {
+      entitySceneState.renderContexts.push(renderContext)
+      return {
+        layers: {
+          background: createContainer(),
+          entityLow: createContainer(),
+          entity: createContainer(),
+          entityHigh: createContainer(),
+          logisticsBelt: createContainer(),
+          logisticsPipe: createContainer(),
+          draft: createContainer(),
+          overlay: createContainer(),
+        },
+        attach: vi.fn(),
+        sync: vi.fn((options: unknown) => {
+          entitySceneState.syncCalls.push(options)
+        }),
+        destroy: vi.fn(),
+      }
+    }),
     createGridLineDecoration: vi.fn(createDecoration),
     createRegionAnnotationBackgroundDecoration: vi.fn(createDecoration),
     createRegionAnnotationOverlayDecoration: vi.fn(createDecoration),
@@ -216,12 +227,219 @@ beforeEach(() => {
   applicationState.initCalls.length = 0
   applicationState.apps.length = 0
   applicationState.destroy.mockClear()
+  entitySceneState.renderContexts.length = 0
+  entitySceneState.syncCalls.length = 0
   textureManagerState.destroy.mockClear()
   textureManagerState.getTexture.mockReset()
   textureManagerState.getTexture.mockImplementation(() => Promise.resolve({ id: "texture" }))
 })
 
 describe("createBlueprintPreviewManager", () => {
+  it("derives adaptive blueprint and save-preview labels strictly from user zoom", async () => {
+    const entityDefinition = {
+      id: "test-definition",
+      nameKey: "test-definition",
+      spriteId: "test-sprite",
+      footprint: { width: 1, height: 1 },
+      uiGroup: "hidden" as const,
+      displayOrder: 100,
+      tags: [],
+      requiresPower: false,
+      powerDemand: 0,
+      inspectors: [],
+      portGroups: [],
+      storageSlotGroups: [],
+      portStorageBindings: [],
+    }
+    const workspace = {
+      state: {} as never,
+      registry: {
+        entityDefinitions: [entityDefinition],
+      },
+      app: {
+        state: {
+          screenProfile: {
+            devicePixelRatio: 1,
+          },
+          settings: {
+            gameAlwaysShowGridLines: false,
+            gamePlayDeviceAnimations: true,
+            gameShowDeviceIcons: false,
+            gameShowDeviceNames: true,
+            gameUseBlueprintStyleDeviceImages: false,
+            locale: "zh-CN",
+            showGrassBackground: false,
+            showRegionAnnotations: true,
+          },
+          theme: AYU_LIGHT_THEME,
+        },
+      },
+      editor: null,
+      render: null,
+      simulation: null,
+    } as unknown as WorkspaceContract
+    const surfaceRegistry = createRenderSurfaceRegistry()
+    const manager = createBlueprintPreviewManager({ workspace, surfaceRegistry })
+    const blueprint = createBlueprintDocument({
+      name: "Adaptive Label Test",
+      baseId: "adaptive-label-test",
+      initialGridPoint: { x: 0, y: 0 },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema6.json").entities,
+      entityOrder: ["entity-1"],
+      slotLinks: [],
+    })
+
+    const handle = await manager.actions.mountBlueprintPreview({
+      blueprint,
+      width: 240,
+      height: 160,
+      viewport: { zoom: 1 },
+    })
+    const settings = (
+      entitySceneState.renderContexts[0] as {
+        workspace: {
+          app: {
+            state: {
+              settings: {
+                gameShowDeviceIcons: boolean
+                gameShowDeviceNames: boolean
+              }
+            }
+          }
+        }
+      }
+    ).workspace.app.state.settings
+    const surface = surfaceRegistry.get(handle)
+
+    expect(surface).not.toBeNull()
+    expect(settings.gameShowDeviceIcons).toBe(true)
+    expect(settings.gameShowDeviceNames).toBe(false)
+
+    surface?.renderFrame({ nowMs: 1000, deltaMs: 16 })
+    const defaultPresentationVersion = (
+      entitySceneState.syncCalls.at(-1) as { versions: { presentation: number } }
+    ).versions.presentation
+
+    manager.actions.resizeBlueprintPreview(handle, 1200, 80)
+    surface?.renderFrame({ nowMs: 1016, deltaMs: 16 })
+
+    expect(settings.gameShowDeviceIcons).toBe(true)
+    expect(settings.gameShowDeviceNames).toBe(false)
+    expect(
+      (entitySceneState.syncCalls.at(-1) as { versions: { presentation: number } })
+        .versions.presentation,
+    ).toBe(defaultPresentationVersion)
+
+    manager.actions.updateBlueprintPreviewViewport(handle, { zoom: 1.000001 })
+    surface?.renderFrame({ nowMs: 1032, deltaMs: 16 })
+
+    expect(settings.gameShowDeviceNames).toBe(true)
+    expect(
+      (entitySceneState.syncCalls.at(-1) as { versions: { presentation: number } })
+        .versions.presentation,
+    ).toBe(defaultPresentationVersion + 1)
+
+    manager.actions.updateBlueprintPreviewViewport(handle, { zoom: 1 })
+    surface?.renderFrame({ nowMs: 1048, deltaMs: 16 })
+
+    expect(settings.gameShowDeviceNames).toBe(false)
+    expect(
+      (entitySceneState.syncCalls.at(-1) as { versions: { presentation: number } })
+        .versions.presentation,
+    ).toBe(defaultPresentationVersion + 2)
+
+    manager.destroy()
+  })
+
+  it("keeps Inspector fixed-neighborhood device labels disabled", async () => {
+    const entityDefinition = {
+      id: "test-definition",
+      nameKey: "test-definition",
+      spriteId: "test-sprite",
+      footprint: { width: 1, height: 1 },
+      uiGroup: "hidden" as const,
+      displayOrder: 100,
+      tags: [],
+      requiresPower: false,
+      powerDemand: 0,
+      inspectors: [],
+      portGroups: [],
+      storageSlotGroups: [],
+      portStorageBindings: [],
+    }
+    const workspace = {
+      state: {} as never,
+      registry: {
+        entityDefinitions: [entityDefinition],
+      },
+      app: {
+        state: {
+          screenProfile: {
+            devicePixelRatio: 1,
+          },
+          settings: {
+            gameShowDeviceIcons: true,
+            gameShowDeviceNames: true,
+            locale: "zh-CN",
+            showRegionAnnotations: true,
+          },
+          theme: AYU_LIGHT_THEME,
+        },
+      },
+      editor: null,
+      render: null,
+      simulation: null,
+    } as unknown as WorkspaceContract
+    const surfaceRegistry = createRenderSurfaceRegistry()
+    const manager = createBlueprintPreviewManager({ workspace, surfaceRegistry })
+    const blueprint = createBlueprintDocument({
+      name: "Inspector Label Test",
+      baseId: "inspector-label-test",
+      initialGridPoint: { x: 0, y: 0 },
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json").entities,
+      entityOrder: ["selected"],
+      slotLinks: [],
+    })
+
+    const handle = await manager.actions.mountBlueprintPreview({
+      blueprint,
+      width: 240,
+      height: 160,
+      viewport: { zoom: 2 },
+      viewportBounds: {
+        left: 1,
+        top: 1,
+        width: 10,
+        height: 10,
+      },
+      highlightedEntityId: "selected",
+    })
+    const settings = (
+      entitySceneState.renderContexts[0] as {
+        workspace: {
+          app: {
+            state: {
+              settings: {
+                gameShowDeviceIcons: boolean
+                gameShowDeviceNames: boolean
+              }
+            }
+          }
+        }
+      }
+    ).workspace.app.state.settings
+
+    expect(settings.gameShowDeviceIcons).toBe(false)
+    expect(settings.gameShowDeviceNames).toBe(false)
+
+    manager.actions.updateBlueprintPreviewViewport(handle, { zoom: 4 })
+
+    expect(settings.gameShowDeviceIcons).toBe(false)
+    expect(settings.gameShowDeviceNames).toBe(false)
+
+    manager.destroy()
+  })
+
   it("uses the light canvas background and grid line color regardless of active theme", async () => {
     const entityDefinition = {
       id: "test-definition",

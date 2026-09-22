@@ -182,6 +182,9 @@ export default defineConfig({
   ],
   server: {
     allowedHosts: [".hsyhhssyy.net"],
+    watch: {
+      ignored: ["**/.temp/**"],
+    },
   },
   preview: {
     allowedHosts: [".hsyhhssyy.net"],

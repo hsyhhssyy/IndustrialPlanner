@@ -1,6 +1,6 @@
 import { expect, test } from "./canvas-lock-audit";
 
-test("regional multi-base mode resolves conflicting speed and timeline UI", async ({
+test("regional multi-base mode keeps full speed controls and resolves timeline UI", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -53,20 +53,56 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
   await expect(tutorial.locator("p").last()).toHaveText("(点击任意位置关闭)");
   await tutorial.click({ position: { x: 4, y: 4 } });
 
-  await expect(page.getByRole("button", { name: "速率 x1" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "速率 x4" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "速率 x16" })).toHaveCount(0);
+  // AI-REMOVED 2026-09-22:
+  // Reason: 多基地模式不再回落 x1，也不再隐藏 x4/x16。
+  // Trigger: 用户要求所有模式均可使用完整速度。
+  // Evidence: 顶栏始终渲染完整速度集合，Dense Host 保留并接受高倍率。
+  // Replacement: 下方验证 x16 保持选中且 x4/x16 均可见。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // await expect(page.getByRole("button", { name: "速率 x1" })).toHaveAttribute("aria-pressed", "true");
+  // await expect(page.getByRole("button", { name: "速率 x4" })).toHaveCount(0);
+  // await expect(page.getByRole("button", { name: "速率 x16" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "速率 x16" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "速率 x4" })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "速率 x16" })).toHaveCount(1);
   await expect(page.locator('[data-ui-button-id="top-bar-timeline"]')).toBeDisabled();
   await expect(page.getByText("同时运行所有基地功能不能和时间轴功能同时使用", { exact: true })).toBeVisible();
+  // AI-REMOVED 2026-09-22:
+  // Reason: 多基地开关不再把先前选择的 x16 改写为 x1。
+  // Trigger: 用户撤销区域模式倍率归一化需求。
+  // Evidence: 上方按钮状态与 Dense simulationSpeed 均应继续保持 x16。
+  // Replacement: 下方 speed: 16 状态断言。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // await expect.poll(() => page.evaluate(() => ({
+  //   speed: window.__industrialPlannerAppHost?.workspace.simulation?.state.simulationSpeed,
+  //   timelineEnabled: window.__industrialPlannerAppHost?.workspace.simulation?.state.timeline.enabled,
+  //   timelineVisible: window.__industrialPlannerAppHost?.internalState.workbench.dialogState.timeline.visible,
+  // }))).toEqual({
+  //   speed: 1,
+  //   timelineEnabled: false,
+  //   timelineVisible: true,
+  // });
   await expect.poll(() => page.evaluate(() => ({
     speed: window.__industrialPlannerAppHost?.workspace.simulation?.state.simulationSpeed,
     timelineEnabled: window.__industrialPlannerAppHost?.workspace.simulation?.state.timeline.enabled,
     timelineVisible: window.__industrialPlannerAppHost?.internalState.workbench.dialogState.timeline.visible,
   }))).toEqual({
-    speed: 1,
+    speed: 16,
     timelineEnabled: false,
     timelineVisible: true,
   });
+
+  await page.getByRole("button", { name: "速率 x4" }).click();
+  await expect(page.getByRole("button", { name: "速率 x4" })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate(() =>
+    window.__industrialPlannerAppHost?.workspace.simulation?.state.simulationSpeed,
+  )).toBe(4);
 });
 
 test("legacy keeps regional multi-base disabled and explains the limitation", async ({

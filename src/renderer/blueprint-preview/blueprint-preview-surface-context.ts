@@ -27,6 +27,7 @@ export interface BlueprintPreviewSurfaceProjection {
   readonly workspace: WorkspaceContract
   readonly entities: readonly WorldEntity[]
   readonly viewport: MutableEditorViewportState
+  setUserZoom(userZoom: number): void
 }
 
 export function createBlueprintPreviewSurfaceProjection(options: {
@@ -34,6 +35,8 @@ export function createBlueprintPreviewSurfaceProjection(options: {
   readonly blueprint: BlueprintDocument
   readonly bounds: GridBounds | null
   readonly highlightedEntityId: string | null
+  readonly adaptiveDeviceLabels: boolean
+  readonly initialUserZoom: number
   readonly renderContext: Omit<RenderSurfaceContext, "workspace">
 }): BlueprintPreviewSurfaceProjection {
   const sourceApp = options.workspace.app
@@ -107,7 +110,14 @@ export function createBlueprintPreviewSurfaceProjection(options: {
     },
   } as unknown as EditorContract
 
-  const previewApp = createPreviewAppProjection(sourceApp)
+  const previewPresentation = {
+    userZoom: options.initialUserZoom,
+  }
+  const previewApp = createPreviewAppProjection(
+    sourceApp,
+    options.adaptiveDeviceLabels,
+    () => previewPresentation.userZoom,
+  )
   const surfaceWorkspace = new Proxy(options.workspace, {
     get: (target, property, receiver) => {
       if (property === "app") {
@@ -132,10 +142,17 @@ export function createBlueprintPreviewSurfaceProjection(options: {
     workspace: surfaceWorkspace,
     entities,
     viewport,
+    setUserZoom: (userZoom) => {
+      previewPresentation.userZoom = userZoom
+    },
   }
 }
 
-function createPreviewAppProjection(sourceApp: AppContract): AppContract {
+function createPreviewAppProjection(
+  sourceApp: AppContract,
+  adaptiveDeviceLabels: boolean,
+  readUserZoom: () => number,
+): AppContract {
   const settings = new Proxy(sourceApp.state.settings, {
     get: (target, property, receiver) => {
       switch (property) {
@@ -144,8 +161,9 @@ function createPreviewAppProjection(sourceApp: AppContract): AppContract {
         case "gamePlayDeviceAnimations":
           return false
         case "gameShowDeviceIcons":
+          return adaptiveDeviceLabels
         case "gameShowDeviceNames":
-          return false
+          return adaptiveDeviceLabels && readUserZoom() > 1
         case "gameUseBlueprintStyleDeviceImages":
           return true
         case "showGrassBackground":
