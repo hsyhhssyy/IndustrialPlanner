@@ -182,6 +182,21 @@ describe("base configuration problems", () => {
       createExpectedProblem("设置了不可能实现的无限资源", "runtime-water-pump"),
     ]);
   });
+
+  it("管道准入口限速超过 60/分钟按设备报错", () => {
+    const entities: WorldEntity[] = [
+      createAdmissionEntity("pipe-60", "pipe_admission", 60),
+      createAdmissionEntity("pipe-66", "pipe_admission", 66),
+      createAdmissionEntity("pipe-120", "pipe_admission", 120),
+      createAdmissionEntity("pipe-unlimited", "pipe_admission", null),
+      createAdmissionEntity("belt-120", "log_admission", 120),
+    ];
+
+    expect(collectProblems({ entities })).toEqual([
+      createAdmissionRateProblem("pipe-66", 66),
+      createAdmissionRateProblem("pipe-120", 120),
+    ]);
+  });
 });
 
 function collectProblems(options: {
@@ -197,6 +212,7 @@ function collectProblems(options: {
     slotLinks: options.slotLinks ?? [],
     multiBaseEnabled: options.multiBaseEnabled ?? false,
     runtimeInfiniteStorageEntityIds: options.runtimeInfiniteStorageEntityIds,
+    registryQueries: registry.queries,
   });
 }
 
@@ -310,6 +326,29 @@ function createExpectedProblem(message: string, entityId: string) {
     message,
     severity: "warning",
     tooltip: message,
+    entityId,
+  };
+}
+
+function createAdmissionEntity(
+  id: string,
+  definitionId: string,
+  perMinuteLimit: number | null,
+): WorldEntity {
+  return createEntity(id, definitionId, {
+    "portGroups[0].ports[0].admissionRule": {
+      itemId: "item_liquid_water",
+      limit: null,
+      perMinuteLimit,
+    },
+  });
+}
+
+function createAdmissionRateProblem(entityId: string, rate: number) {
+  return {
+    message: `管道准入口限速 ${rate}/分钟 超过 60/分钟`,
+    severity: "warning",
+    tooltip: "游戏内管道准入口的每分钟准入上限为 60，超过该值的配置不会生效，请把限速下调到 60 或以下。",
     entityId,
   };
 }

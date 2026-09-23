@@ -1,3 +1,4 @@
+import { LogisticsPipeReflectionScene } from './logistics-pipe-reflection'
 import type { RenderDiagnosticFrame } from "@/shared/render-diagnostics";
 import { createRenderDiagnosticSession } from "./render-diagnostic-session";
 import { createSnapshotSelector } from "@/shared/snapshot/snapshot-selector";
@@ -351,6 +352,7 @@ export function createRenderSceneOrchestrator(
   )
   const logisticsMaterialState = new LogisticsMaterialSceneState()
   const logisticsBakedFlow = new LogisticsBakedFlowScene()
+  const pipeReflection = new LogisticsPipeReflectionScene()
   const buildingEffects = new BuildingEffectsScene()
   const resolveBuildingEffectRingStatus = (entityId: string): number | undefined => {
     const status = renderHost.workspace.simulation?.queries.getDeviceOperatingStatus?.(entityId)
@@ -737,6 +739,7 @@ export function createRenderSceneOrchestrator(
       documentVersion: frameVersions.document,
       simulationVersion: frameVersions.simulation,
       presentationVersion: frameVersions.presentation,
+      collectionsVersion: frameVersions.collections,
       deltaMs: frameTime.deltaMs,
     })
     ctx.logisticsMaterials = logisticsMaterials
@@ -778,11 +781,24 @@ export function createRenderSceneOrchestrator(
       routes: logisticsMaterials.routes ?? new Map(),
       visibility: entitySpriteSyncCache.visibility,
       hidden: new Set(editorCollections[EntityCollectionType.ghost]),
-      version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}`,
+      effects: logisticsMaterials.effects,
+      reflection: logisticsMaterials.pipeWallReflection === true,
+      version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}:${logisticsMaterials.effectVersion}`,
       view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
         y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
         centerX: viewportState.centerX, centerY: viewportState.centerY,
         scale: viewportState.gridCellPixelSize, rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },
+    })
+
+    pipeReflection.sync({
+      enabled: logisticsMaterials.pipeWallReflection === true && renderHost.workspace.editor?.state.suppressPipes !== true,
+      assets: logisticsBakedFlow.dynamicAssets, routes: logisticsMaterials.routes ?? new Map(),
+      visible: (id) => entitySpriteSyncCache.visibility.get(id) === true && !editorCollections[EntityCollectionType.ghost].includes(id),
+      effects: logisticsMaterials.effects,
+      width: app.renderer.width / app.renderer.resolution, height: app.renderer.height / app.renderer.resolution, resolution: app.renderer.resolution,
+      view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2, y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
+        centerX: viewportState.centerX, centerY: viewportState.centerY, scale: viewportState.gridCellPixelSize,
+        rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },
     })
 
     measureRenderStage(frameProfiler, "buildingEffects.sync", () => {
@@ -919,6 +935,7 @@ export function createRenderSceneOrchestrator(
 
   const startPixiRenderMeasurement = (): void => {
     const frameProfiler = activeFrameProfiler
+    pipeReflection.render(app.renderer)
     pixiRenderDiagnostics.beforeRender(frameProfiler)
     frameProfiler?.startPixiRender()
   }
@@ -948,6 +965,16 @@ export function createRenderSceneOrchestrator(
   layers.logisticsBelt.addChild(beltCargoOverlayLayer)
 
   // 物流管道层级（从底到顶）
+  // AI-REMOVED 2026-09-23:
+  // Reason: 管壳反射必须采样后支架、流体及中支架，并位于标记之前。
+  // Trigger: 可选管壁反射与正常素材互斥。
+  // Evidence: 网站 sceneTransmission.order。
+  // Replacement: 下方 pipeReflection.scene 中的相同节点，层序不变。
+  // Risk: 需验证前景标记不参与反射；Human Review: Required
+  // Original code:
+  // layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
+  // layers.logisticsPipe.addChild(logisticsBakedFlow.container)
+  // AI-CORRECTION 2026-09-23: 默认保持原父节点，仅启用反射时由 pipeReflection 临时重组。
   layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
   layers.logisticsPipe.addChild(logisticsBakedFlow.container)
   layers.logisticsPipe.addChild(pipeSubEntity)
@@ -985,6 +1012,9 @@ export function createRenderSceneOrchestrator(
     marqueeOverlayLayer,
   )
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
+  pipeReflection.configure({ stage: app.stage,
+    lower: [grassBackgroundDecoration.container, layers.background, layers.entityLow, layers.entity, layers.entityHigh, layers.logisticsBelt],
+    pipes: layers.logisticsPipe, underPipe: [pipePortGhostDecoration.container, logisticsBakedFlow.container] })
   layers.background.addChild(regionBackgroundDecoration.container)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
@@ -1043,6 +1073,7 @@ export function createRenderSceneOrchestrator(
     beforeRender: startPixiRenderMeasurement,
     afterRender: finishPixiRenderMeasurement,
     destroy: () => {
+      pipeReflection.destroy()
       diagnosticSession.destroy()
       // AI-REMOVED 2026-09-21:
       // Reason: Scene 已不再向 Application ticker 注册 listener，因此销毁时无需逐项移除。
@@ -1124,6 +1155,7 @@ export function createRenderSceneOrchestrator(
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
       grassBackgroundDecoration.destroy()
+      pipeReflection.scene.destroy()
     },
   }
 
@@ -1343,6 +1375,7 @@ function createRenderPresentationSignature(renderHost: RenderHost): string {
     settings?.locale,
     settings?.themeId,
     settings?.gameUseBlueprintStyleDeviceImages,
+    settings?.gamePipeWallReflection,
     settings?.gameShowDeviceNames,
     settings?.gameShowDeviceIcons,
     settings?.gameAlwaysShowGridLines,

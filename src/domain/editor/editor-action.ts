@@ -29,6 +29,8 @@ export interface EditorAction {
 	setViewportDisplayRotation(displayRotation: GridRotation): void;
 	/**
 	 * 平滑聚焦到指定实体：在约 0.75s 内将视口中心平移到实体中心、缩放到 gridSize=1。
+	 * 订正（2026-09-23）：目标缩放已由 gridSize=1（100%）提升到 252% 档，即 gridSize = 2^(4/3) ≈ 2.5198；
+	 * 上一行原文描述的「缩放到 gridSize=1」不再是当前行为。
 	 * 若动画期间用户手动操作了视口，动画立即终止。
 	 */
 	focusOnEntity(entityId: string, options?: { duration?: number }): void;

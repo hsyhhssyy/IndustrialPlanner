@@ -358,12 +358,14 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       slotLinks: currentDocument.slotLinks,
       multiBaseEnabled,
       runtimeInfiniteStorageEntityIds,
+      registryQueries: appHost.workspace.registry.queries,
     }));
 
     return problems;
   }, [
     appHost.workspace.registry.entityDefinitions,
     appHost.workspace.registry.itemDefinitions,
+    appHost.workspace.registry.queries,
     currentDocument,
     currentBase,
     currentUnknownEntityProblems,

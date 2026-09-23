@@ -644,6 +644,42 @@ describe("createEditorHost", () => {
     expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
   });
 
+  it("聚焦设备时把视口推进到 252% 档位", () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const rafCallbacks = new Map<number, (now: number) => void>();
+    let rafIdCounter = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: (now: number) => void) => {
+      rafCallbacks.set(++rafIdCounter, callback);
+      return rafIdCounter;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+      rafCallbacks.delete(id);
+    });
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities(
+      getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema6.json")),
+    );
+    editorHost.internalDocument.setSnapshot(document);
+    const entityId = document.entityOrder[0]!;
+
+    const startedAt = performance.now();
+    editorHost.actions.focusOnEntity(entityId);
+
+    // 推进到动画结束：首帧 progress 即为 1，且不得再排队后续帧。
+    let frame = 0;
+    while (rafCallbacks.size > 0 && frame < 10) {
+      const callbacks = [...rafCallbacks.values()];
+      rafCallbacks.clear();
+      for (const callback of callbacks) callback(startedAt + 1000 + frame);
+      frame += 1;
+    }
+
+    expect(frame).toBe(1);
+    expect(editorHost.state.viewport.gridSize).toBeCloseTo(2 ** (4 / 3));
+  });
+
   it("连续拖动每秒只发布一次，等待期间的设置更新不会被覆盖", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const editor = createEditorHost(createWorkspace());

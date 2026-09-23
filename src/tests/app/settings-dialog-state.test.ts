@@ -57,6 +57,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(resolveGroupSettingIds("auxiliary-display")).toEqual([
       "game-always-show-grid-lines",
       "game-always-show-power-range",
+      "game-pipe-wall-reflection",
       "game-show-pipe-exact-fluid-position",
     ]);
     expect(resolveGroupSettingIds("activity")).toEqual([
@@ -147,6 +148,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-region-annotations": false,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
+        "game-pipe-wall-reflection": false,
         "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
@@ -653,6 +655,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-region-annotations": false,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,
+        "game-pipe-wall-reflection": false,
         "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,

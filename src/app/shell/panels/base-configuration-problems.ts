@@ -10,13 +10,23 @@ import {
   type WarehouseItemLinkInspectorDeclaration,
 } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type {
   SimulationDeviceRuntimeSlotItemReadModel,
 } from "@/domain/simulation/types/simulation-types";
+import { readAdmissionRule } from "@/shared/registry/admission-rule";
 
 const CHEAT_ITEM_PROBLEM = "使用了作弊物品";
 const MISSING_INFINITE_RESOURCE_PROBLEM = "设置了不存在的无限资源";
 const IMPOSSIBLE_INFINITE_RESOURCE_PROBLEM = "设置了不可能实现的无限资源";
+
+/**
+ * 游戏对管道准入口每分钟准入量的硬性上限。
+ *
+ * AI-CORRECTION 2026-09-23: 用户确认该值由游戏规定，超过它的限速不会生效。
+ * Inspector 的可调上限仍是 120/分钟，这里只用于标记无效配置。
+ */
+const PIPE_ADMISSION_RATE_MAX_PER_MINUTE = 60;
 
 // AI-REMOVED 2026-08-19:
 // Reason: 两类资源泵不再声明 warehouseItemLink inspector，也不再允许以仓库链接配置无限资源。
@@ -50,6 +60,7 @@ interface CollectBaseConfigurationProblemsOptions {
   readonly slotLinks: readonly SlotLinkDefinition[];
   readonly multiBaseEnabled: boolean;
   readonly runtimeInfiniteStorageEntityIds?: ReadonlySet<string>;
+  readonly registryQueries: RegistryQuery;
 }
 
 interface CollectRuntimeInfiniteStorageEntityIdsOptions {
@@ -119,7 +130,58 @@ export function collectBaseConfigurationProblems(
     }
   }
 
+  for (const entity of options.entities) {
+    const definition = definitionById.get(entity.definitionId);
+    if (definition === undefined) continue;
+    if (!isPipeAdmissionDefinition(definition.id, options.registryQueries)) continue;
+
+    const exceededRate = resolveExceededAdmissionRate(definition, entity);
+    if (exceededRate === null) continue;
+
+    problems.push(createAdmissionRateProblem(exceededRate, entity.id));
+  }
+
   return problems;
+}
+
+/** 管道准入口判定与 Inspector 保持同一口径：物流角色为准入口，且属于管道物流设备。 */
+function isPipeAdmissionDefinition(definitionId: string, registryQueries: RegistryQuery): boolean {
+  return registryQueries.resolveLogisticsRole(definitionId) === "admission"
+    && registryQueries.isPipeLogistics(definitionId);
+}
+
+/** 返回该设备已配置的、超过游戏上限的最大每分钟准入速率；未超限时返回 null。 */
+function resolveExceededAdmissionRate(
+  definition: EntityDefinition,
+  entity: WorldEntity,
+): number | null {
+  let exceeded: number | null = null;
+
+  for (let groupIndex = 0; groupIndex < definition.portGroups.length; groupIndex += 1) {
+    const group = definition.portGroups[groupIndex];
+    if (group === undefined) continue;
+
+    for (let portIndex = 0; portIndex < group.ports.length; portIndex += 1) {
+      const rule = readAdmissionRule(
+        entity.config[`portGroups[${groupIndex}].ports[${portIndex}].admissionRule`],
+      );
+      const rate = rule?.perMinuteLimit ?? null;
+      if (rate === null || rate <= PIPE_ADMISSION_RATE_MAX_PER_MINUTE) continue;
+
+      exceeded = exceeded === null ? rate : Math.max(exceeded, rate);
+    }
+  }
+
+  return exceeded;
+}
+
+function createAdmissionRateProblem(rate: number, entityId: string): BaseConfigurationProblem {
+  return {
+    message: `管道准入口限速 ${rate}/分钟 超过 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE}/分钟`,
+    severity: "warning",
+    tooltip: `游戏内管道准入口的每分钟准入上限为 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE}，超过该值的配置不会生效，请把限速下调到 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE} 或以下。`,
+    entityId,
+  };
 }
 
 export function collectRuntimeInfiniteStorageEntityIds(

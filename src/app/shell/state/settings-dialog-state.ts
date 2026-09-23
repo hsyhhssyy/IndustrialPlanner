@@ -509,6 +509,14 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "game-pipe-wall-reflection",
+        kind: "switch",
+        labelKey: "settingsField.game-pipe-wall-reflection",
+        descriptionKey: "settingsField.game-pipe-wall-reflectionDescription",
+        defaultValue: false,
+        editableWhen: { settingId: "game-use-blueprint-style-device-images", equals: false },
+      },
+      {
         id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
         kind: "switch",
         labelKey: "settingsField.game-show-pipe-exact-fluid-position",

@@ -391,6 +391,8 @@ const UI: Record<string, string> = {
     "settingsField.game-always-show-power-rangeDescription": "开启后总是显示所有供电桩的供电范围；关闭后仅在放置或单独移动相关设备时显示关联范围并高亮设备。",
     "settingsField.game-collapse-device-modes": "折叠设备模式",
     "settingsField.game-collapse-device-modesDescription": "将同一设备的多个变体折叠为一个按钮，并通过右侧端帽选择模式。",
+    "settingsField.game-pipe-wall-reflection": "管壁反射",
+    "settingsField.game-pipe-wall-reflectionDescription": "增强管壁的反射和透光效果，可能增加渲染开销。",
     "settingsField.game-show-pipe-exact-fluid-position": "显示管道具体物流情况",
     "settingsField.game-show-pipe-exact-fluid-positionDescription": "精确显示管道物品的当前所处位置。",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "物流允许以空地为起点",

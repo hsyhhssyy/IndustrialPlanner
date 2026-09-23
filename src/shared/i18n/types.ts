@@ -560,6 +560,8 @@ export type UiKey =
   | "settingsField.game-always-show-power-rangeDescription"
   | "settingsField.game-collapse-device-modes"
   | "settingsField.game-collapse-device-modesDescription"
+  | "settingsField.game-pipe-wall-reflection"
+  | "settingsField.game-pipe-wall-reflectionDescription"
   | "settingsField.game-show-pipe-exact-fluid-position"
   | "settingsField.game-show-pipe-exact-fluid-positionDescription"
   | "settingsField.game-arknights-allow-empty-logistics-endpoints"

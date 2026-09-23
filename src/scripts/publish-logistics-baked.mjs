@@ -11,7 +11,7 @@ const save = (file, value) => writeFile(file, `${JSON.stringify(value, null, 2)}
 
 /** 逐帧恢复源画布后缩放、裁切并重排；不同帧之间不参与滤波。数值场保留原始通道。 */
 export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, spriteDirectory, maskDirectory,
-  sourceResolution = 1, resolution, sourceSite }) {
+  sourceResolution = 1, resolution, sourceSite, fluidPlaybackDirectory }) {
   const source = JSON.parse(await readFile(path.join(sourceDirectory, 'logistics-baked.json'), 'utf8'));
   if (source.schemaVersion !== 2 || source.format !== 'logistics-spritesheet-v2'
     || source.fluidPlayback?.kind !== 'baked-spatial-field-v2' || source.pixelsPerCell !== 128
@@ -26,6 +26,11 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
   const manifest = {
     schemaVersion: 2, format: source.format, sourceResolution, resolution, pixelsPerCell: size, sourceSite,
     pages: {}, frames: {}, clips: source.clips,
+    tintableConveyor: source.tintableConveyor,
+    sceneTransmission: source.sceneTransmission && {
+      glassLinearRGB: source.sceneTransmission.glassLinearRGB,
+      reflectionEncodingScale: source.sceneTransmission.reflectionEncodingScale,
+    },
     staticResources: Object.fromEntries(Object.entries(source.staticResources).map(([key, resource]) => [key, resource.frame])),
     parametersByResourceId: Object.fromEntries(Object.entries(source.parametersByResourceId)
       .map(([key, value]) => [key, Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'number'))])),
@@ -46,11 +51,32 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     fluidPlayback: { referenceShader: source.fluidPlayback.referenceShader },
     endpointConnector: { composite: source.endpointConnector.composite, whitening: source.endpointConnector.whitening },
   };
+  // 当前播放器只支持双数值场。液体资源和 Shader 作为一个完整协议保留，不能混入新版 water-field。
+  const retainFluid = source.fluidPlayback.referenceShader.fragment.includes('uWater');
+  if (retainFluid) {
+    if (!fluidPlaybackDirectory) throw new Error('The water-field player requires an explicit supported fluid baseline');
+    const previous = JSON.parse(await readFile(path.join(fluidPlaybackDirectory, 'manifest.json'), 'utf8'));
+    if (previous.resolution !== resolution || previous.fluidPlayback.referenceShader.fragment.includes('uWater')) {
+      throw new Error('Unsupported retained fluid baseline');
+    }
+    manifest.fluidPlayback = previous.fluidPlayback;
+    manifest.cycle = previous.cycle;
+    manifest.fluidSourceSite = previous.fluidSourceSite ?? previous.sourceSite;
+    for (const id of ['fluid-data', 'gas-field']) {
+      const page = previous.pages[id];
+      if (!page?.data || path.basename(page.file) !== page.file) throw new Error(`Invalid fluid baseline: ${id}`);
+      const bytes = await readFile(path.join(fluidPlaybackDirectory, page.file));
+      if (digest(bytes) !== page.sha256) throw new Error(`Fluid baseline hash differs: ${id}`);
+      await writeFile(path.join(directory, page.file), bytes);
+      manifest.pages[id] = page;
+    }
+  }
   for (const key of ['fillCellsPerSecond', 'drainDuration', 'refillDuration', 'edgeWidth']) {
     if (!(manifest.cycle[key] > 0)) throw new Error(`Invalid fluid timing: ${key}`);
   }
   const originals = new Map();
   for (const [id, page] of Object.entries(source.pages)) {
+    if (retainFluid && page.group === 'fluid-field') continue;
     const file = path.resolve(sourceDirectory, page.file);
     if (!file.startsWith(`${path.resolve(sourceDirectory)}${path.sep}`)) throw new Error(`Unsafe baked source: ${page.file}`);
     const bytes = await readFile(file);
@@ -81,7 +107,7 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     }
   }
   const fullFrames = new Map();
-  const requiredFrames = new Set(Object.values(manifest.clips).flatMap((clip) => clip.frames));
+  const requiredFrames = new Set(Object.values(manifest.clips).flatMap((clip) => [...clip.frames, ...(clip.tintFrames ?? [])]));
   for (const frame of Object.values(manifest.staticResources)) requiredFrames.add(frame);
   manifest.staticResources = Object.fromEntries(Object.entries(manifest.staticResources).filter(([, frame]) => source.frames[frame]));
   for (const [key, frame] of Object.entries(source.frames)) {
@@ -123,7 +149,11 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
   }
   for (const [key, clip] of Object.entries(manifest.clips)) {
     if (clip.phaseSamples !== clip.frames.length || clip.frames.some((frame) => !manifest.frames[frame])) throw new Error(`Incomplete phase clip: ${key}`);
+    if (clip.tintFrames && (clip.tintFrames.length !== clip.phaseSamples || clip.tintFrames.some((frame) => !manifest.frames[frame]))) {
+      throw new Error(`Incomplete tint phase clip: ${key}`);
+    }
   }
+  if (source.tintableConveyor) await publishInteractionMasks(directory, manifest, fullFrames, 128 * sourceResolution);
   await save(path.join(directory, 'manifest.json'), manifest);
   const statics = { schemaVersion: 1, materialContractVersion: 2, pixelsPerCell: size, pages: {}, frames: {}, sourceSite };
   const get = (key) => {
@@ -165,4 +195,40 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     await sharp(mask, { raw: { width: size, height: size, channels: 4 } }).webp({ lossless: true }).toFile(path.join(maskDirectory, file));
   }
   return { frames: Object.keys(manifest.frames).length, pages: Object.keys(manifest.pages).length, resolution };
+}
+
+/** 状态纹理只在发布时生成；运行时与物流标记一样走普通 Sprite 批次。 */
+async function publishInteractionMasks(directory, manifest, fullFrames, size) {
+  const effects = ['hover', 'connectable', 'selected', 'preview', 'belt-connectable'];
+  const width = size * effects.length, height = size * 3;
+  const pixels = Buffer.alloc(width * height * 4);
+  for (const [row, shape] of ['straight', 'left', 'right'].entries()) {
+    const pipeMask = fullFrames.get(`static/pipe.${shape}.body-mask`);
+    const beltMask = fullFrames.get(`static/conveyor.${shape}.surface-tint`);
+    if (!pipeMask || !beltMask) throw new Error(`Missing interaction mask: ${shape}`);
+    for (const [column, effect] of effects.entries()) {
+      const mask = effect === 'belt-connectable' ? beltMask : pipeMask;
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const offset = ((row * size + y) * width + column * size + x) * 4;
+        const coverage = mask[(y * size + x) * 4 + 3] / 255;
+        // 整数散列给出稳定颗粒；斜纹和细网纹均限定在真实管身/带面覆盖内。
+        const noise = ((x * 73 + y * 151 + x * y * 19) % 101) / 100;
+        const alpha = effect === 'hover' ? ((x + y) % 6 < 2 ? .94 : .32)
+          : effect === 'connectable' ? ((x + y) % 6 < 3 ? .96 : .63)
+          : effect === 'belt-connectable' ? ((x + y) % 3 === 0 ? .38 : .07)
+          : .36 + noise * .48;
+        pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = 255;
+        pixels[offset + 3] = Math.round(255 * coverage * alpha);
+      }
+      const key = `ui/${effect}/${shape}`;
+      const targetSize = manifest.pixelsPerCell;
+      manifest.frames[key] = { page: 'interaction', rect: [column * targetSize, row * targetSize, targetSize, targetSize],
+        sourceSize: [targetSize, targetSize], spriteSourceSize: [0, 0, targetSize, targetSize] };
+    }
+  }
+  const scaled = await resizeAssetRgba(pixels, width, height, manifest.pixelsPerCell / size);
+  const bytes = await sharp(scaled.data, { raw: { width: scaled.width, height: scaled.height, channels: 4 } }).webp({ lossless: true }).toBuffer();
+  const file = `interaction-${digest(bytes).slice(0, 16)}.webp`;
+  await writeFile(path.join(directory, file), bytes);
+  manifest.pages.interaction = { file, width: scaled.width, height: scaled.height, data: false, filter: 'nearest', sha256: digest(bytes) };
 }

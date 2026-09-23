@@ -33,6 +33,7 @@ import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspecto
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { readAdmissionRule } from "@/shared/registry/admission-rule";
 import { matchesItemAcceptRule } from "./item-domain";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
@@ -513,24 +514,33 @@ function resolveAdmissionPortRow(
   };
 }
 
-function readAdmissionRule(value: unknown): EntityAdmissionRuleDefinition | null {
-  if (value === null || value === undefined || typeof value !== "object") {
-    return null;
-  }
-
-  const record = value as Record<string, unknown>;
-  const itemId = typeof record.itemId === "string" && record.itemId.length > 0
-    ? record.itemId
-    : null;
-  const limit = typeof record.limit === "number" && Number.isFinite(record.limit)
-    ? Math.max(0, Math.floor(record.limit))
-    : null;
-  const perMinuteLimit = typeof record.perMinuteLimit === "number" && Number.isFinite(record.perMinuteLimit)
-    ? Math.max(0, Math.floor(record.perMinuteLimit))
-    : null;
-
-  return { itemId, limit, perMinuteLimit };
-}
+// AI-REMOVED 2026-09-23:
+// Reason: 该解析语义已被基地问题检查复用，保留私有副本会让 perMinuteLimit 的解析规则在两处漂移。
+// Trigger: 新增“管道准入口限速超过 60/分钟”问题检查，需要读取同一 admissionRule 结构。
+// Evidence: src/app/shell/panels/base-configuration-problems.ts 现在同样解析 admissionRule.perMinuteLimit。
+// Replacement: src/shared/registry/admission-rule.ts 的 readAdmissionRule
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function readAdmissionRule(value: unknown): EntityAdmissionRuleDefinition | null {
+//   if (value === null || value === undefined || typeof value !== "object") {
+//     return null;
+//   }
+//
+//   const record = value as Record<string, unknown>;
+//   const itemId = typeof record.itemId === "string" && record.itemId.length > 0
+//     ? record.itemId
+//     : null;
+//   const limit = typeof record.limit === "number" && Number.isFinite(record.limit)
+//     ? Math.max(0, Math.floor(record.limit))
+//     : null;
+//   const perMinuteLimit = typeof record.perMinuteLimit === "number" && Number.isFinite(record.perMinuteLimit)
+//     ? Math.max(0, Math.floor(record.perMinuteLimit))
+//     : null;
+//
+//   return { itemId, limit, perMinuteLimit };
+// }
 
 function readAcceptRuleItemId(value: unknown): string | null {
   if (value === null || value === undefined || typeof value !== "object") {

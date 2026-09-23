@@ -431,6 +431,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.collapseDeviceModes = value;
         }),
       },
+      "game-pipe-wall-reflection": {
+        readValue: () => appHost.state.settings.gamePipeWallReflection,
+        writeValue: action((value) => {
+          if (typeof value === "boolean") appHost.internalState.settings.gamePipeWallReflection = value;
+        }),
+      },
       "game-show-pipe-exact-fluid-position": {
         readValue: () => appHost.state.settings.gameShowPipeExactFluidPosition,
         writeValue: action((value) => {

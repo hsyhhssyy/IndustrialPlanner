@@ -214,7 +214,9 @@ export function createEditorViewportActions({
       );
       const targetCenterX = entity.position.x + rotatedFootprint.width / 2;
       const targetCenterY = entity.position.y + rotatedFootprint.height / 2;
-      const targetGridSize = 1;
+      // 订正（2026-09-23）：聚焦目标缩放由固定 100% 提升到 252% 档，原「缩放到 gridSize=1」的行为不再成立。
+      // 252% 是级缩放的档位值（每档 ×2^(1/6)），对应 gridSize = 2^(4/3) ≈ 2.5198；不可写成 2.52，否则会脱离档位体系。
+      const targetGridSize = 2 ** (4 / 3);
 
       const duration = options?.duration ?? 750;
       const startCenterX = state.viewport.center.x;

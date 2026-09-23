@@ -285,6 +285,36 @@ describe("网站素材批次", () => {
         expect(await sharp(path.join(spriteDirectory, file)).metadata()).toMatchObject({ width: 64, height: 64 });
         expect(await sharp(path.join(maskDirectory, file)).metadata()).toMatchObject({ width: 64, height: 64 });
       }
+      // 新管壳可独立升级；旧液体 Shader、数值场、时序及来源必须成组保留。
+      output.pages['fluid-data'] = output.pages['fluid-field'];
+      output.pages['gas-field'] = output.pages['fluid-field'];
+      await writeFile(path.join(outputDirectory, 'baked/manifest.json'), JSON.stringify(output));
+      const tinted = Object.fromEntries(Object.entries(clips).map(([key, clip]) => [key,
+        key.startsWith('conveyor/') ? { ...clip, tintFrames: [`tint/${key}`] } : clip]));
+      const upgraded = { ...manifest, clips: tinted,
+        frames: { ...frames, ...Object.fromEntries(Object.keys(clips).map((key) => [`tint/${key}`, frame])),
+          ...Object.fromEntries(['straight', 'left', 'right'].flatMap((shape) =>
+            [`static/pipe.${shape}.body-mask`, `static/conveyor.${shape}.surface-tint`].map((key) => [key, frame]))) },
+        staticResources: { ...manifest.staticResources, ...Object.fromEntries(['straight', 'left', 'right'].flatMap((shape) =>
+          [`static/pipe.${shape}.body-mask`, `static/conveyor.${shape}.surface-tint`].map((key) => [key, { frame: key }]))) },
+        tintableConveyor: { straight: {}, left: {}, right: {} },
+        fluidPlayback: { kind: 'baked-spatial-field-v2', referenceShader: { vertex: 'new', fragment: 'uniform sampler2D uWater;' } },
+      };
+      await writeFile(path.join(sourceDirectory, 'logistics-baked.json'), JSON.stringify(upgraded));
+      const next = path.join(directory, 'next');
+      await publishLogisticsBaked({ sourceDirectory, outputDirectory: next, spriteDirectory, maskDirectory,
+        sourceResolution: .5, resolution: .5, sourceSite: { releaseId: 'new' }, fluidPlaybackDirectory: path.join(outputDirectory, 'baked') });
+      const published = JSON.parse(await readFile(path.join(next, 'baked/manifest.json'), 'utf8'));
+      expect(published.fluidPlayback).toEqual(output.fluidPlayback);
+      expect(published.fluidSourceSite.releaseId).toBe('fixture');
+      expect(published.sourceSite.releaseId).toBe('new');
+      expect(published.pages['fluid-data']).toEqual(output.pages['fluid-data']);
+      expect(published.pages).not.toHaveProperty('fluid-field');
+      expect(published.frames).toHaveProperty('tint/conveyor/straight/arrow');
+      expect(published.frames['ui/hover/left'].sourceSize).toEqual([64, 64]);
+      const retained = await readFile(path.join(next, 'baked', published.pages['fluid-data'].file));
+      expect(digest(retained)).toBe(output.pages['fluid-data'].sha256);
+
     });
   });
 

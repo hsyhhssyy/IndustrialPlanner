@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { LogisticsMaterialEntityState, LogisticsMaterialFrameState } from '@/shared/logistics-material';
 import type { LogisticsDynamicAssets } from '../texture';
 
@@ -9,8 +9,13 @@ export class LogisticsDynamicView {
   private readonly moving: { sprite: Sprite; clip: string; pass: 'arrow' | 'highlight' | 'pattern' | 'chevron' }[] = [];
   private previousState: LogisticsMaterialEntityState | null = null;
   private previousTime = Number.NaN;
+  private previousVisual = '';
+  private readonly colors: { sprite: Sprite; role: string }[] = [];
+  private shell: Sprite | null = null;
+  private overlay: Sprite | null = null;
+  private readonly head = new Graphics();
 
-  public constructor(private readonly assets: LogisticsDynamicAssets, state: LogisticsMaterialEntityState) {
+  public constructor(private readonly assets: LogisticsDynamicAssets, state: LogisticsMaterialEntityState, private readonly entityId = '') {
     this.root.pivot.set(64, 64);
     const add = (key: string) => {
       const sprite = new Sprite(this.texture(key));
@@ -25,13 +30,21 @@ export class LogisticsDynamicView {
       const sprite = add(frame);
       if (pass !== 'pattern') sprite.label = 'logistics-material-flow';
       this.moving.push({ sprite, clip, pass });
+      if (state.kind === 'belt') this.colors.push({ sprite, role: pass });
     };
     if (state.kind === 'belt') {
-      add(`static/conveyor.${state.shape}.base`);
+      const layers = assets.manifest.tintableConveyor?.[state.shape];
+      if (!layers) throw new Error('Missing tintable conveyor layers');
+      for (const role of ['surface', 'edge-glow', 'edge-core']) {
+        this.colors.push({ sprite: add(layers.static[role]!), role });
+      }
+      this.overlay = add(`ui/belt-connectable/${state.shape}`);
       animated('highlight'); animated('arrow');
     } else {
-      this.supports.push(add(`static/pipe.${state.shape}.support-middle`));
-      add(`static/pipe.${state.shape}.shell`);
+      // 正式管道中支架由路线场景放在反射层之前，虚影没有正式路线。
+      if (state.preview) this.supports.push(add(`static/pipe.${state.shape}.support-middle`));
+      this.shell = add(`static/pipe.${state.shape}.shell`);
+      this.overlay = add(`ui/hover/${state.shape}`);
       // AI-REMOVED 2026-09-20:
       // Reason: 网站 64px 烘焙协议已移除 pipe/straight/pattern，直管标识改为静态 Logo 图层。
       // Trigger: 导入 v1.5-20260919-212522-cst 时新版 clips 不再包含 pattern。
@@ -49,6 +62,23 @@ export class LogisticsDynamicView {
       }
       this.supports.push(add(`static/pipe.${state.shape}.support-front`));
     }
+    this.overlay.visible = false;
+    this.head.label = 'logistics-preview-head';
+    if (state.kind === 'belt') {
+      this.head.poly([16, 16, 112, 16, 64, 64]).fill(0xffeb80)
+        .poly([112, 16, 112, 112, 64, 64]).fill(0xffe268)
+        .poly([112, 112, 16, 112, 64, 64]).fill(0xeac143)
+        .poly([16, 112, 16, 16, 64, 64]).fill(0xf6d555);
+    } else {
+      this.head.poly([52, 26, 76, 26, 76, 65, 97, 65, 64, 100, 31, 65, 52, 65]).fill(0xffffff);
+    }
+    for (const [x, y, dx, dy] of [[5, 5, 1, 1], [123, 5, -1, 1], [5, 123, 1, -1], [123, 123, -1, -1]]) {
+      this.head.moveTo(x! + dx! * 22, y!).lineTo(x!, y!).lineTo(x!, y! + dy! * 22).stroke({ width: 4, color: 0xffdf73 });
+    }
+    this.head.visible = false;
+    this.head.pivot.set(64, 64); this.head.position.set(64, 64);
+    this.head.rotation = state.shape === 'straight' ? 0 : state.shape === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    this.root.addChild(this.head);
   }
 
   private texture(key: string): Texture {
@@ -58,8 +88,30 @@ export class LogisticsDynamicView {
   }
 
   public sync(state: LogisticsMaterialEntityState, frame: LogisticsMaterialFrameState): void {
-    const time = state.kind === 'belt' ? frame.beltSeconds : state.pipeFlow?.seconds ?? 0;
-    if (this.previousState === state && this.previousTime === time) return;
+    const time = state.kind === 'belt' || state.preview ? frame.beltSeconds : state.pipeFlow?.seconds ?? 0;
+    const effect = frame.effects?.get(this.entityId);
+    const reflected = frame.pipeWallReflection === true && !state.preview && !effect;
+    const head = state.preview === true && frame.previewHeadId === this.entityId;
+    const visual = `${effect}:${reflected}:${head}`;
+    if (this.previousState === state && this.previousTime === time && this.previousVisual === visual) return;
+    this.previousVisual = visual;
+    this.head.visible = head;
+    if (this.shell) this.shell.visible = !reflected;
+    if (this.overlay) {
+      this.overlay.visible = state.kind === 'belt' ? effect === 'connectable' : effect !== undefined;
+      if (this.overlay.visible) {
+        this.overlay.texture = this.texture(`ui/${state.kind === 'belt' ? 'belt-connectable' : effect === 'invalid' ? 'preview' : effect}/${state.shape}`);
+        this.overlay.tint = effect === 'selected' ? 0x67caff : effect === 'invalid' ? 0xff655d
+          : effect === 'connectable' || effect === 'hover' ? 0xfff4dc : 0xffffff;
+      }
+    }
+    for (const { sprite, role } of this.colors) {
+      const normal = this.assets.manifest.tintableConveyor![state.shape].defaultColors[role]!;
+      sprite.tint = effect === 'selected' ? role === 'surface' ? 0x51b8ed : 0xbcf0ff
+        : effect === 'preview' ? 0xffffff : effect === 'invalid' ? 0xff655d
+        : effect === 'connectable' && role.startsWith('edge') ? 0xfff7e3
+        : (Math.round(normal[0] * 255) << 16) | (Math.round(normal[1] * 255) << 8) | Math.round(normal[2] * 255);
+    }
     this.previousState = state; this.previousTime = time;
     for (const support of this.supports) support.visible = state.support;
     const id = state.kind === 'pipe' ? 'log_pipe_02_mid' : `grid_belt_01_${state.shape === 'straight' ? 'mid' : state.shape}`;
@@ -72,7 +124,7 @@ export class LogisticsDynamicView {
         : pass === 'pattern' ? q * p.staticDensity! : (q + p.flowSpeed! * time) * p.flowDensity!;
       const sequence = this.assets.manifest.clips[clip]!;
       const fraction = phase - Math.floor(phase);
-      sprite.texture = this.texture(sequence.frames[Math.round(fraction * sequence.phaseSamples) % sequence.phaseSamples]!);
+      sprite.texture = this.texture((state.kind === 'belt' ? sequence.tintFrames! : sequence.frames)[Math.round(fraction * sequence.phaseSamples) % sequence.phaseSamples]!);
     }
   }
 

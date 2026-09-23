@@ -1981,7 +1981,7 @@ describe("GenericDeviceSprite", () => {
     ))
   })
 
-  it("makes selected pipes opaque and adds a low-cost glow sprite", async () => {
+  it("keeps the static fallback opaque without the retired 3DTop selection glow", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
@@ -2033,17 +2033,25 @@ describe("GenericDeviceSprite", () => {
         AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
       ),
     })
-    expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({
-      texture: resolvedTexture,
-      visible: true,
-      x: 26,
-      y: 36,
-      width: 34.56,
-      height: 34.56,
-      rotation: Math.PI * 1.5,
-      tint: 0xd8f7ff,
-      alpha: 0.42,
-    })
+    // AI-REMOVED 2026-09-23:
+    // Reason: 3DTop 选中改为管身蓝色遮罩，旧扩大管壳的 glow 已退役。
+    // Trigger: 用户明确要求重做物流选中表现。
+    // Evidence: DedicatedLogisticSprite 在材质模式不再绘制旧 glow；真实动态效果由浏览器验证。
+    // Replacement: 下方旧 overlay 保持隐藏的断言。
+    // Risk: Low; Human Review: Required
+    // Original code:
+    // expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({
+    // texture: resolvedTexture,
+    // visible: true,
+    // x: 26,
+    // y: 36,
+    // width: 34.56,
+    // height: 34.56,
+    // rotation: Math.PI * 1.5,
+    // tint: 0xd8f7ff,
+    // alpha: 0.42,
+    // })
+    expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({ visible: false })
   })
 
   it("uses the preview blue tint for marquee candidates before apply", async () => {

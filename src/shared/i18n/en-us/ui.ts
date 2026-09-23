@@ -398,6 +398,8 @@ const UI: Record<string, string> = {
     "settingsField.game-always-show-power-rangeDescription": "When enabled, every power pole range is always visible. When disabled, related ranges and device highlights appear only while placing or moving a single relevant device.",
     "settingsField.game-collapse-device-modes": "Collapse Device Modes",
     "settingsField.game-collapse-device-modesDescription": "Collapse variants of the same device into one button and select modes from its right cap.",
+    "settingsField.game-pipe-wall-reflection": "Pipe Wall Reflections",
+    "settingsField.game-pipe-wall-reflectionDescription": "Enhance pipe wall reflections and transmission. May increase rendering cost.",
     "settingsField.game-show-pipe-exact-fluid-position": "Show Exact Pipe Fluid Position",
     "settingsField.game-show-pipe-exact-fluid-positionDescription": "Precisely show the current position of items inside pipes.",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "Allow Empty Logistics Starts",

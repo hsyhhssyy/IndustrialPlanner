@@ -2,6 +2,7 @@ import { Container, Geometry, GlProgram, Mesh, Shader, Sprite, Texture, UniformG
 import type { LogisticsBakedManifest, LogisticsPipeRoute } from '@/shared/logistics-baked';
 import { fluidColorToNumber, resolveFluidColor, type FluidColorRole } from '@/shared/fluid-color';
 import type { LogisticsDynamicAssets, LogisticsDynamicSession } from '../texture';
+import type { LogisticsMaterialEffect } from '@/shared/logistics-material';
 import { createLogisticsFlowGeometry, createLogisticsFlowIndices, resolveLogisticsEndpoint } from './logistics-baked-geometry';
 
 interface RouteView {
@@ -9,6 +10,7 @@ interface RouteView {
   mesh: Mesh<Geometry, Shader>;
   uniforms: UniformGroup;
   back: Container;
+  middle: Container;
   endpoints: Container;
   sprites: { id: string; sprite: Container }[];
   occupied: ReadonlySet<string> | null;
@@ -22,6 +24,7 @@ export class LogisticsBakedFlowScene {
   public readonly container = new Container();
   public readonly endpoints = new Container();
   private readonly back = new Container();
+  private readonly middle = new Container();
   public readonly fluid = new Container();
   private readonly routes = new Map<string, RouteView>();
   private session: LogisticsDynamicSession | null = null;
@@ -30,10 +33,11 @@ export class LogisticsBakedFlowScene {
 
   public constructor() {
     this.container.label = 'logistics-baked-routes'; this.fluid.label = 'logistics-material-flow';
-    this.endpoints.label = 'logistics-route-endpoints'; this.container.addChild(this.back, this.fluid);
+    this.endpoints.label = 'logistics-route-endpoints'; this.container.addChild(this.back, this.fluid, this.middle);
   }
 
   public get timing(): LogisticsBakedManifest['cycle'] | null { return this.assets?.manifest.cycle ?? null; }
+  public get dynamicAssets(): LogisticsDynamicAssets | null { return this.assets; }
 
   public sync(options: {
     enabled: boolean;
@@ -41,6 +45,8 @@ export class LogisticsBakedFlowScene {
     routes: ReadonlyMap<string, LogisticsPipeRoute>;
     visibility: ReadonlyMap<string, boolean>;
     hidden: ReadonlySet<string>;
+    effects?: ReadonlyMap<string, LogisticsMaterialEffect>;
+    reflection?: boolean;
     version: string;
     view: { x: number; y: number; centerX: number; centerY: number; scale: number; rotation: number };
   }): void {
@@ -65,7 +71,8 @@ export class LogisticsBakedFlowScene {
       if (!view) { view = this.createRoute(route, this.assets); this.routes.set(id, view); }
       const visible = (entityId: string) => options.visibility.get(entityId) === true && !options.hidden.has(entityId);
       if (view.visibilityVersion !== options.version || view.occupied !== route.occupied || view.exact !== route.exact) {
-        const indices = createLogisticsFlowIndices(route.segments, (entityId) => visible(entityId) && (!route.exact || route.occupied.has(entityId)));
+        const indices = createLogisticsFlowIndices(route.segments, (entityId) => visible(entityId)
+          && !options.effects?.has(entityId) && (!route.exact || route.occupied.has(entityId)));
         // AI-REMOVED 2026-09-14:
         // Reason: setDataWithSize 的实际实现将 size 再乘元素字节数，传 byteLength 会使 GPU 更新越界。
         // Trigger: 精确模式的真实截图仍连续填充前几格，没有保留占用空洞。
@@ -130,13 +137,16 @@ export class LogisticsBakedFlowScene {
     resources: { flow: uniforms, uData: texture('fluid-data').source, uFog: texture('gas-field').source } });
     const mesh = new Mesh({ geometry, shader }); mesh.label = 'logistics-material-flow';
     this.fluid.addChild(mesh);
-    const back = new Container(), endpoints = new Container();
-    this.back.addChild(back); this.endpoints.addChild(endpoints);
+    const back = new Container(), endpoints = new Container(), middle = new Container();
+    this.back.addChild(back); this.endpoints.addChild(endpoints); this.middle.addChild(middle);
     const sprites: RouteView['sprites'] = [];
     for (const segment of route.segments) if (segment.support) {
       const sprite = new Sprite(texture(`static/pipe.${segment.shape}.support-back`));
       sprite.anchor.set(.5); sprite.position.set(segment.x, segment.y); sprite.rotation = segment.rotation * Math.PI / 180;
       sprite.scale.set(1 / assets.manifest.pixelsPerCell); back.addChild(sprite); sprites.push({ id: segment.id, sprite });
+      const support = new Sprite(texture(`static/pipe.${segment.shape}.support-middle`));
+      support.anchor.set(.5); support.position.copyFrom(sprite.position); support.rotation = sprite.rotation;
+      support.scale.copyFrom(sprite.scale); middle.addChild(support); sprites.push({ id: segment.id, sprite: support });
     }
     if (!route.closed) for (const end of ['entry', 'exit'] as const) {
       const segment = end === 'entry' ? route.segments[0]! : route.segments[route.segments.length - 1]!;
@@ -147,12 +157,12 @@ export class LogisticsBakedFlowScene {
       }
       endpoints.addChild(holder); sprites.push({ id: segment.id, sprite: holder });
     }
-    return { route, mesh, uniforms, back, endpoints, sprites, occupied: null, exact: false, visibilityVersion: '', fluidId: null };
+    return { route, mesh, uniforms, back, middle, endpoints, sprites, occupied: null, exact: false, visibilityVersion: '', fluidId: null };
   }
 
   private destroyRoute(view: RouteView): void {
     view.mesh.geometry.destroy(); view.mesh.shader?.destroy(); view.mesh.destroy();
-    view.back.destroy({ children: true }); view.endpoints.destroy({ children: true });
+    view.back.destroy({ children: true }); view.middle.destroy({ children: true }); view.endpoints.destroy({ children: true });
   }
 
   public destroy(): void {

@@ -254,6 +254,9 @@ function normalizePersistedAppSettings(
     collapseDeviceModes: typeof persistedAppSettings.collapseDeviceModes === "boolean"
       ? persistedAppSettings.collapseDeviceModes
       : fallback.collapseDeviceModes,
+    gamePipeWallReflection: typeof persistedAppSettings.gamePipeWallReflection === "boolean"
+      ? persistedAppSettings.gamePipeWallReflection
+      : fallback.gamePipeWallReflection,
     gameShowPipeExactFluidPosition:
       typeof persistedAppSettings.gameShowPipeExactFluidPosition === "boolean"
         ? persistedAppSettings.gameShowPipeExactFluidPosition

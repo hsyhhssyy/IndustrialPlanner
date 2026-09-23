@@ -164,7 +164,15 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       await rm(path.join(outputDirectory, 'animations/logistics-contract2'), { recursive: true, force: true });
       logistics = await publishLogisticsBaked({ sourceDirectory: path.join(root, 'buildings/logistics'),
         outputDirectory: path.join(outputDirectory, 'logistics'), spriteDirectory, maskDirectory,
-        sourceResolution: plan.sourceResolution, resolution, sourceSite: plan.sourceSite });
+        sourceResolution: plan.sourceResolution, resolution, sourceSite: plan.sourceSite,
+        fluidPlaybackDirectory: path.join(projectRoot, path.relative(stage, outputDirectory), 'logistics/baked') });
+      const baked = await json(path.join(outputDirectory, 'logistics/baked/manifest.json'));
+      if (baked.fluidSourceSite) for (const id of ['fluid-data', 'gas-field']) {
+        const page = baked.pages[id];
+        const relative = `${path.relative(stage, outputDirectory)}/logistics/baked/${page.file}`;
+        plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => entry.path !== relative),
+          { path: relative, sha256: page.sha256 }];
+      }
     }
     const heights = includes('effects') ? await publishBuildingPortEffects({ sourceDirectory: root, outputDirectory: path.join(outputDirectory, 'port-effects'),
       viewSources: plan.views, sourceVersion: plan.sourceSite.sourceVersion,
@@ -172,7 +180,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
       sourceResolution: plan.sourceResolution, resolution }) : null;
     if (heights?.issues.length) throw new Error(`Height/effect bindings unresolved: ${JSON.stringify(heights.issues)}`);
     if (heights && (plan.scope === 'logistics' || plan.scope === 'entities')) {
-      plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/`)),
+      plan.retainedProducts = [...(plan.retainedProducts ?? []).filter((entry) => !entry.path.startsWith(`${path.relative(stage, outputDirectory)}/port-effects/`)),
         ...await retainWebsiteEffects(stage, outputDirectory, new Set(plan.views.map((view) => `${view.buildingId}/${view.view}`)))];
     }
     results.push({ resolution, outputDirectory: path.relative(stage, outputDirectory), logistics, registryFluidColors,
@@ -369,7 +377,10 @@ export async function validateWebsiteBatch(batch) {
         if (await fileHash(path.join(dynamicRoot, resource.file)) !== resource.sha256) throw new Error(`Baked product hash differs: ${resource.file}`);
       }
       for (const frame of Object.values(dynamic.frames)) verifyRect(frame.rect, dynamic.pages[frame.page]);
-      for (const clip of Object.values(dynamic.clips)) if (clip.frames.length !== clip.phaseSamples || clip.frames.some((key) => !dynamic.frames[key])) throw new Error('Baked clip references missing frame');
+      for (const clip of Object.values(dynamic.clips)) {
+        if (clip.frames.length !== clip.phaseSamples || [...clip.frames, ...(clip.tintFrames ?? [])].some((key) => !dynamic.frames[key])
+          || (clip.tintFrames && clip.tintFrames.length !== clip.phaseSamples)) throw new Error('Baked clip references missing frame');
+      }
     }
   }
   const products = [];

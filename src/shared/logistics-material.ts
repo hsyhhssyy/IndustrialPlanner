@@ -73,11 +73,16 @@ export interface LogisticsMaterialEntityState extends LogisticsMaterialPlacement
   // Original code:
   // readonly color: string;
   /** 虚影只取静态图集；实际管道共享所属运输组的时钟。 */
+  // AI-CORRECTION 2026-09-23: 3DTop 虚影共用相位图集和预览时钟，实际管道的运输组时钟保持不变。
   readonly preview?: true;
   readonly pipeFlow?: LogisticsPipeFlowState;
 }
 
 export interface LogisticsMaterialFrameState {
+  readonly effects?: ReadonlyMap<string, LogisticsMaterialEffect>;
+  readonly effectVersion?: number;
+  readonly previewHeadId?: string | null;
+  readonly pipeWallReflection?: boolean;
   readonly entities: ReadonlyMap<string, LogisticsMaterialEntityState>;
   readonly routes?: ReadonlyMap<string, LogisticsPipeRoute>;
   readonly beltSeconds: number;
@@ -91,6 +96,8 @@ export interface LogisticsMaterialFrameState {
   // readonly pipeSeconds: number;
   readonly animationEnabled: boolean;
 }
+
+export type LogisticsMaterialEffect = 'hover' | 'selected' | 'preview' | 'invalid' | 'connectable';
 
 export const LOGISTICS_STATIC_ARROW_PHASE = -0.0029871862169272845;
 export const LOGISTICS_MATERIAL_SHAPES: readonly LogisticsMaterialShape[] = ["straight", "left", "right"];

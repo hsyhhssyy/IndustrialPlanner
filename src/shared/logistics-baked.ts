@@ -14,7 +14,12 @@ export interface LogisticsBakedManifest {
     page: string; rect: [number, number, number, number];
     sourceSize: [number, number]; spriteSourceSize: [number, number, number, number];
   }>;
-  clips: Record<string, { phaseSamples: number; frames: string[] }>;
+  clips: Record<string, { phaseSamples: number; frames: string[]; tintFrames?: string[] }>;
+  tintableConveyor?: Record<LogisticsMaterialShape, {
+    static: Record<string, string>;
+    defaultColors: Record<string, [number, number, number]>;
+  }>;
+  sceneTransmission?: { glassLinearRGB: [number, number, number]; reflectionEncodingScale: number };
   staticResources: Record<string, string>;
   parametersByResourceId: Record<string, Record<string, number>>;
   // AI-REMOVED 2026-09-14:

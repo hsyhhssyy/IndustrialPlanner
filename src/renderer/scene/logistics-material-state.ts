@@ -18,6 +18,7 @@ import { LOGISTICS_STATIC_ARROW_PHASE,
   type LogisticsMaterialRoutePlacement } from '@/shared/logistics-material';
 import { PipeFluidPlayback, type LogisticsPipeRoute, type LogisticsBakedManifest, type PipeFluidInput } from '@/shared/logistics-baked';
 import { resolveLogisticsMaterialTopology } from './logistics-material-topology';
+import { resolveLogisticsEffects } from './logistics-interaction';
 
 /** 文档变化重建路线，仿真快照变化查询占用；逐帧只推进路线状态和共享时间。 */
 // AI-CORRECTION 2026-09-15: 仅正式实体输入变化重建正式路线；草稿变化只求解预览拓扑。
@@ -45,20 +46,43 @@ export class LogisticsMaterialSceneState {
   private wasStopped = true;
   private paused = true;
   private timing: LogisticsBakedManifest['cycle'] | null = null;
+  private interactionSignature = '';
+  private hoverId: string | null = null;
   private readonly frame = {
     entities: new Map<string, LogisticsMaterialEntityState>(), routes: new Map<string, LogisticsPipeRoute>(),
     beltSeconds: LOGISTICS_STATIC_ARROW_PHASE, animationEnabled: false,
+    effects: new Map() as LogisticsMaterialFrameState['effects'], effectVersion: 0,
+    previewHeadId: null as string | null, pipeWallReflection: false,
   };
 
   public setTiming(timing: LogisticsBakedManifest['cycle'] | null): void { this.timing = timing; }
 
   public sync(options: {
     workspace: WorkspaceContract; entities: readonly WorldEntity[]; definitions: ReadonlyMap<string, EntityDefinition>;
-    documentVersion: number; simulationVersion: number; presentationVersion: number; deltaMs: number;
+    documentVersion: number; simulationVersion: number; presentationVersion: number; deltaMs: number; collectionsVersion?: number;
   }): LogisticsMaterialFrameState {
     const { workspace } = options;
     const settings = workspace.app?.state.settings;
     const enabled = settings?.gameUseBlueprintStyleDeviceImages !== true;
+    const editor = workspace.editor;
+    const draft = editor?.queries.resolveLogisticsDraftState?.();
+    const signature = `${options.documentVersion}:${options.collectionsVersion}:${options.presentationVersion}`;
+    if (signature !== this.interactionSignature) {
+      this.interactionSignature = signature;
+      this.frame.effects = enabled && editor ? resolveLogisticsEffects({ entities: options.entities, definitions: options.definitions,
+        collections: editor.state.collections, hoverId: editor.state.hoverTarget?.entity?.id,
+        replacingId: draft?.replacingEntityId, invalidDraft: draft?.invalidReason != null }) : new Map();
+      this.frame.effectVersion++;
+      this.frame.previewHeadId = draft?.headDraftEntityId ?? null;
+    }
+    const hoverId = enabled ? editor?.state.hoverTarget?.entity?.id ?? null : null;
+    if (hoverId !== this.hoverId) {
+      const effects = new Map(this.frame.effects);
+      if (this.hoverId && effects.get(this.hoverId) === 'hover') effects.delete(this.hoverId);
+      if (hoverId && !effects.has(hoverId) && this.frame.entities.get(hoverId)?.kind === 'pipe') effects.set(hoverId, 'hover');
+      this.frame.effects = effects; this.frame.effectVersion++; this.hoverId = hoverId;
+    }
+    this.frame.pipeWallReflection = enabled && settings?.gamePipeWallReflection === true;
     const exact = settings?.gameShowPipeExactFluidPosition === true;
     const simulation = workspace.simulation;
     const seeking = simulation?.state.timeline?.isSeeking === true;

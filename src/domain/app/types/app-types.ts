@@ -32,6 +32,7 @@ export interface AppSettings {
   readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
   readonly collapseDeviceModes: boolean;
+  readonly gamePipeWallReflection: boolean;
   readonly gameShowPipeExactFluidPosition: boolean;
   readonly gameAlwaysShowGridLines: boolean;
   readonly gameAlwaysShowPowerRange: boolean;

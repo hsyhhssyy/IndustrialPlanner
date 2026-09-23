@@ -86,6 +86,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   collapseDeviceModes: true,
+  gamePipeWallReflection: false,
   gameShowPipeExactFluidPosition: false,
   gameAlwaysShowGridLines: true,
   gameAlwaysShowPowerRange: false,

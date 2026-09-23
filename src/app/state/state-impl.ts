@@ -97,6 +97,7 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   collapseDeviceModes: boolean;
+  gamePipeWallReflection: boolean;
   gameShowPipeExactFluidPosition: boolean;
   gameAlwaysShowGridLines: boolean;
   gameAlwaysShowPowerRange: boolean;
@@ -846,6 +847,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     collapseDeviceModes: true,
+    gamePipeWallReflection: false,
     gameShowPipeExactFluidPosition: false,
     gameAlwaysShowGridLines: true,
     gameAlwaysShowPowerRange: false,

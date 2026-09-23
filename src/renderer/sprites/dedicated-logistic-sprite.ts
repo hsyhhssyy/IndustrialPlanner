@@ -268,21 +268,21 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    this.drawScanlineOverlay(layout, context)
+    if (!this.isMaterialPresentation()) this.drawScanlineOverlay(layout, context)
   }
 
   protected drawSelectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    this.drawPipeSelectionGlow(layout, context)
+    if (!this.isMaterialPresentation()) this.drawPipeSelectionGlow(layout, context)
   }
 
   protected drawRelatedOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    this.drawScanlineOverlay(layout, context, false)
+    if (!this.isMaterialPresentation()) this.drawScanlineOverlay(layout, context, false)
   }
 
   protected onDestroy(): void {
@@ -552,7 +552,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
   private syncDynamicMaterial(context: RenderSpriteSyncContext): void {
     const allowed = this.isMaterialPresentation() && context.logisticsMaterials?.animationEnabled === true
-      && this.materialState?.preview !== true
+      && this.materialState !== null
       && context.logisticsMaterials.entities.has(this.entityId) && !this.isLogisticsSuppressed(context)
       && this.renderHost.textureManager.supportsLogisticsAnimation()
     if (!allowed) {
@@ -567,7 +567,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     void session.ready.then(async (assets) => {
       const { LogisticsDynamicView } = await import("./logistics-dynamic-view")
       if (this.disposed || generation !== this.dynamicGeneration || this.materialState === null) return
-      this.dynamicView = new LogisticsDynamicView(assets, this.materialState)
+      this.dynamicView = new LogisticsDynamicView(assets, this.materialState, this.entityId)
       this.dynamicView.root.visible = false
       this.getRootOfLayer("entity").addChild(this.dynamicView.root)
       this.invalidateVisualSync()
@@ -586,7 +586,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     root.position.set(centered.x, centered.y)
     root.scale.set(centered.width / 128, centered.height / 128)
     root.rotation = centered.rotation
-    root.tint = this.body.tint
+    root.tint = 0xffffff
     root.visible = this.isTextureReady && !this.isLogisticsSuppressed(context)
     this.dynamicView.sync(this.materialState, context.logisticsMaterials)
   }
