@@ -1,10 +1,20 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { SyncAssetEntry, SyncAssetSource } from "@/domain/sync";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
 import {
   findRegionalDarkPipeLinkForEndpoint,
+  // AI-REMOVED 2026-09-23:
+  // Reason: 覆盖判定必须包含暗管与仓库等所有本地槽位关系，不限暗管对暗管。
+  // Trigger: 用户要求任何影响链接数据的编辑覆盖停用的跨基地关系。
+  // Evidence: createWarehouseSlotLink 只改 slotLinks，可能不改实体 config。
+  // Replacement: bindInactiveDarkPipeLinkEdits 内比较当前端点涉及的 slotLinks。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // findDarkPipeSlotLinkForEntity,
   type RegionalDarkPipeEndpoint,
   type RegionalDarkPipeLink,
 } from "@/shared/dark-pipe-link";
@@ -77,6 +87,52 @@ export class RegionalSettingsController {
 
   public findDarkPipeLink(endpoint: RegionalDarkPipeEndpoint): RegionalDarkPipeLink | null {
     return findRegionalDarkPipeLinkForEndpoint(this.asset.darkPipeLinks, endpoint);
+  }
+
+  public bindInactiveDarkPipeLinkEdits(
+    editor: EditorContract,
+    isMultiBaseEnabled: () => boolean,
+  ): () => void {
+    let previousDocument = editor.document.getSnapshot();
+    return editor.document.subscribe((nextDocument) => {
+      const priorDocument = previousDocument;
+      previousDocument = nextDocument;
+      if (priorDocument.documentKey !== nextDocument.documentKey || isMultiBaseEnabled()) return;
+
+      for (const link of this.darkPipeLinks) {
+        const endpoint = link.inlet.baseId === nextDocument.baseId
+          ? link.inlet
+          : link.outlet.baseId === nextDocument.baseId
+            ? link.outlet
+            : null;
+        if (endpoint === null) continue;
+        const before = priorDocument.entities[endpoint.entityId];
+        const after = nextDocument.entities[endpoint.entityId];
+        const touchesEndpoint = (slotLink: typeof nextDocument.slotLinks[number]) =>
+          slotLink.source.entityId === endpoint.entityId
+          || slotLink.target.entityId === endpoint.entityId;
+        if (
+          before !== undefined
+          && (
+            after === undefined
+            || JSON.stringify(before.config) !== JSON.stringify(after.config)
+            // AI-REMOVED 2026-09-23:
+            // Reason: 只识别暗管对暗管链接会漏掉仓库槽位链接编辑。
+            // Trigger: 用户要求任何影响链接数据的编辑覆盖停用的跨基地关系。
+            // Evidence: createWarehouseSlotLink 不一定修改实体 config。
+            // Replacement: 下方比较端点关联的全部 slotLinks。
+            // Risk: Low
+            // Human Review: Required
+            // Original code:
+            // || findDarkPipeSlotLinkForEntity(nextDocument, endpoint.entityId) !== null
+            || JSON.stringify(priorDocument.slotLinks.filter(touchesEndpoint))
+              !== JSON.stringify(nextDocument.slotLinks.filter(touchesEndpoint))
+          )
+        ) {
+          this.removeDarkPipeLink(link.id);
+        }
+      }
+    });
   }
 
   public addDarkPipeLink(link: RegionalDarkPipeLink): boolean {

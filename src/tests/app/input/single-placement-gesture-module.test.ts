@@ -375,7 +375,17 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       EntityCollectionType.preview,
       { x: 18, y: 23 },
     );
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    // AI-REMOVED 2026-09-23:
+    // Reason: 鼠标预览移动后，放置锚点应同步到当前鼠标位置对应的网格。
+    // Trigger: Ctrl 连续放置后新虚影偏离已放置建筑。
+    // Evidence: moveCollectionCenterPointTo 使用当前鼠标位置，旧断言仍要求锚点保持初始值。
+    // Replacement: 下方对当前网格锚点的断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 18, y: 23 });
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 

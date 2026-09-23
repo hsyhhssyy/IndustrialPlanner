@@ -181,6 +181,40 @@ describe("QuickPlacePopup", () => {
     expect(document.activeElement).toBe(searchInput);
   });
 
+  it("distinguishes same-named variants in results and favorite slots", () => {
+    runInAction(() => {
+      appHost.internalState.workbench.quickPlaceFavoriteEntityIds = [
+        "furnance_1",
+        "furnance_1_liquid",
+      ];
+    });
+
+    act(() => {
+      root.render(<QuickPlacePopup appHost={appHost} />);
+    });
+
+    const results = Array.from(container.querySelectorAll<HTMLButtonElement>(".quick-place-device-button"));
+    const normalResult = results.find((button) => button.id.endsWith("-furnance_1"));
+    const liquidResult = results.find((button) => button.id.endsWith("-furnance_1_liquid"));
+    const favorites = Array.from(container.querySelectorAll<HTMLButtonElement>(".quick-place-favorite-slot"));
+    const normalBadge = normalResult?.querySelector<HTMLElement>(".quick-place-variant-badge");
+    const liquidBadge = liquidResult?.querySelector<HTMLElement>(".quick-place-variant-badge");
+
+    expect(normalResult?.querySelector(".quick-place-device-name")?.textContent).toBe(
+      liquidResult?.querySelector(".quick-place-device-name")?.textContent,
+    );
+    expect(normalResult?.getAttribute("aria-label")).toContain("基础模式");
+    expect(liquidResult?.getAttribute("aria-label")).toContain("液体模式");
+    expect(normalBadge?.dataset.entityVariantName).toBe("normal");
+    expect(liquidBadge?.dataset.entityVariantName).toBe("liquid");
+    expect(normalBadge?.style.maskImage).toContain("icon_port_normal.webp");
+    expect(liquidBadge?.style.maskImage).toContain("icon_port_liquid.webp");
+    expect(favorites[0]?.getAttribute("aria-label")).toContain("基础模式");
+    expect(favorites[1]?.getAttribute("aria-label")).toContain("液体模式");
+    expect(favorites[0]?.querySelector(".quick-place-variant-badge")).not.toBeNull();
+    expect(favorites[1]?.querySelector(".quick-place-variant-badge")).not.toBeNull();
+  });
+
   it("navigates filtered results without moving input focus and selects the active result with Enter", () => {
     const handleMouseTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap");
     runInAction(() => {

@@ -119,15 +119,16 @@ export class LogisticsBakedFlowScene {
     const rgba = () => new Float32Array([1, 1, 1, 1]);
     const uniforms = new UniformGroup({
       uTime: { value: 0, type: 'f32' }, uThickness: { value: 0, type: 'f32' }, uGas: { value: 0, type: 'f32' },
-      uResolution: { value: assets.manifest.resolution, type: 'f32' },
+      // 2026-09-23: 与 Pixi 全局 vec2 uResolution 分名，避免同名 float 在每次绘制时触发 glUniform2f 类型错误。
+      uMaterialResolution: { value: assets.manifest.resolution, type: 'f32' },
       uBounds: { value: new Float32Array([4, 5, .012, 0]), type: 'vec4<f32>' },
       uBody: { value: rgba(), type: 'vec4<f32>' }, uSkin: { value: rgba(), type: 'vec4<f32>' },
       uSkin2: { value: rgba(), type: 'vec4<f32>' }, uFoam: { value: rgba(), type: 'vec4<f32>' },
     });
     const source = assets.manifest.fluidPlayback.referenceShader;
     // 数值 mapping 必须取目标纹理的像素中心，不能线性插值 RG16；其他场仍使用双线性采样。
-    const fragment = source.fragment.replace('uniform sampler2D uData;', 'uniform float uResolution;\nuniform sampler2D uData;')
-      .replace('vec4 fm=tile(0.,mapUV);', 'vec4 fm=texture(uData,(floor((vec2(2.+vShape*132.,2.)+mapUV*128.)*uResolution)+.5)/(1024.*uResolution));');
+    const fragment = source.fragment.replace('uniform sampler2D uData;', 'uniform float uMaterialResolution;\nuniform sampler2D uData;')
+      .replace('vec4 fm=tile(0.,mapUV);', 'vec4 fm=texture(uData,(floor((vec2(2.+vShape*132.,2.)+mapUV*128.)*uMaterialResolution)+.5)/(1024.*uMaterialResolution));');
     if (fragment === source.fragment || !fragment.includes('floor((vec2(2.+vShape*132.')) throw new Error('Unsupported baked mapping shader');
     const texture = (key: string): Texture => {
       const result = assets.textures.get(key); if (!result) throw new Error(`Missing baked texture: ${key}`); return result;

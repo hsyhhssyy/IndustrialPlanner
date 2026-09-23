@@ -6,6 +6,8 @@ import type { LogisticsDynamicAssets } from '../texture';
 export class LogisticsDynamicView {
   public readonly root = new Container();
   private readonly supports: Sprite[] = [];
+  private middleSupport: Sprite | null = null;
+  private readonly markers: Sprite[] = [];
   private readonly moving: { sprite: Sprite; clip: string; pass: 'arrow' | 'highlight' | 'pattern' | 'chevron' }[] = [];
   private previousState: LogisticsMaterialEntityState | null = null;
   private previousTime = Number.NaN;
@@ -17,6 +19,7 @@ export class LogisticsDynamicView {
 
   public constructor(private readonly assets: LogisticsDynamicAssets, state: LogisticsMaterialEntityState, private readonly entityId = '') {
     this.root.pivot.set(64, 64);
+    this.root.label = `logistics-material:${entityId}`;
     const add = (key: string) => {
       const sprite = new Sprite(this.texture(key));
       sprite.anchor.set(.5); sprite.position.set(64, 64);
@@ -42,7 +45,7 @@ export class LogisticsDynamicView {
       animated('highlight'); animated('arrow');
     } else {
       // 正式管道中支架由路线场景放在反射层之前，虚影没有正式路线。
-      if (state.preview) this.supports.push(add(`static/pipe.${state.shape}.support-middle`));
+      this.middleSupport = add(`static/pipe.${state.shape}.support-middle`);
       this.shell = add(`static/pipe.${state.shape}.shell`);
       this.overlay = add(`ui/hover/${state.shape}`);
       // AI-REMOVED 2026-09-20:
@@ -56,13 +59,14 @@ export class LogisticsDynamicView {
       // Original code:
       // if (state.shape === 'straight') animated('pattern');
       animated('chevron');
-      if (state.shape === 'straight' && state.marker) {
-        add('static/pipe.straight.static-logo-glow');
-        add('static/pipe.straight.static-logo-core');
+      if (state.shape === 'straight') {
+        this.markers.push(add('static/pipe.straight.static-logo-glow'));
+        this.markers.push(add('static/pipe.straight.static-logo-core'));
       }
       this.supports.push(add(`static/pipe.${state.shape}.support-front`));
     }
     this.overlay.visible = false;
+    this.overlay.label = 'logistics-material-effect';
     this.head.label = 'logistics-preview-head';
     if (state.kind === 'belt') {
       this.head.poly([16, 16, 112, 16, 64, 64]).fill(0xffeb80)
@@ -114,6 +118,9 @@ export class LogisticsDynamicView {
     }
     this.previousState = state; this.previousTime = time;
     for (const support of this.supports) support.visible = state.support;
+    // 预览提交会复用 Sprite；支架和标识必须跟随新拓扑更新，不能固定在构造时。
+    if (this.middleSupport) this.middleSupport.visible = state.preview === true && state.support;
+    for (const marker of this.markers) marker.visible = state.marker;
     const id = state.kind === 'pipe' ? 'log_pipe_02_mid' : `grid_belt_01_${state.shape === 'straight' ? 'mid' : state.shape}`;
     const p = this.assets.manifest.parametersByResourceId[id]!;
     const start = state.start + 5;

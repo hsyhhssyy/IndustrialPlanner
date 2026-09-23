@@ -14,6 +14,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 const disposers: Array<() => void> = [];
@@ -89,6 +90,65 @@ describe("createHypergryphDarkPipeLinkGestureModule", () => {
     expect(appHost.state.activeTool).toBe("select");
     expect(appHost.state.toolInfo.darkPipeLink).toBeNull();
   });
+
+  it("keeps a disabled cross-base link until a config edit replaces it", () => {
+    const { appHost, editorHost } = createContext();
+    editorHost.internalDocument.setSnapshot(createDocument([entity("inlet", "udpipe_loader_1")]));
+    const endpoint = { baseId: editorHost.document.getSnapshot().baseId, entityId: "inlet" };
+    const regionalLink = createRegionalDarkPipeLink({
+      inlet: endpoint,
+      outlet: { baseId: "wuling_tianwangping_aid", entityId: "remote-outlet" },
+    });
+    expect(appHost.regionalSettings.addDarkPipeLink(regionalLink)).toBe(true);
+    expect(appHost.regionalSettings.findDarkPipeLink(endpoint)).toEqual(regionalLink);
+
+    editorHost.actions.patchEntityConfig("inlet", { "loader_buffer.slot_1.itemType": "item_test" });
+
+    expect(appHost.regionalSettings.findDarkPipeLink(endpoint)).toBeNull();
+  });
+
+  it("replaces a disabled cross-base link when a local link is created", () => {
+    const { appHost, editorHost } = createContext();
+    editorHost.internalDocument.setSnapshot(createDocument([
+      entity("inlet", "udpipe_loader_1"),
+      entity("outlet", "udpipe_unloader_1"),
+    ]));
+    const endpoint = { baseId: editorHost.document.getSnapshot().baseId, entityId: "inlet" };
+    const regionalLink = createRegionalDarkPipeLink({
+      inlet: endpoint,
+      outlet: { baseId: "wuling_tianwangping_aid", entityId: "remote-outlet" },
+    });
+    expect(appHost.regionalSettings.addDarkPipeLink(regionalLink)).toBe(true);
+
+    expect(editorHost.actions.createDarkPipeLink({ sourceEntityId: "inlet", targetEntityId: "outlet" })).toBe(true);
+
+    expect(appHost.regionalSettings.findDarkPipeLink(endpoint)).toBeNull();
+    expect(editorHost.document.getSnapshot().slotLinks).toHaveLength(1);
+  });
+
+  it("replaces a disabled cross-base link when the endpoint warehouse link changes", () => {
+    const { appHost, editorHost } = createContext();
+    editorHost.internalDocument.setSnapshot(createDocument([entity("outlet", "udpipe_unloader_1")]));
+    const endpoint = { baseId: editorHost.document.getSnapshot().baseId, entityId: "outlet" };
+    const regionalLink = createRegionalDarkPipeLink({
+      inlet: { baseId: "wuling_tianwangping_aid", entityId: "remote-inlet" },
+      outlet: endpoint,
+    });
+    expect(appHost.regionalSettings.addDarkPipeLink(regionalLink)).toBe(true);
+    const document = editorHost.document.getSnapshot();
+
+    editorHost.internalDocument.setSnapshot({
+      ...document,
+      slotLinks: [{
+        id: "warehouse-link:outlet",
+        linkType: "share-all",
+        source: { entityId: "outlet", storageSlotGroupId: "unloader_buffer", slotId: "slot_1" },
+        target: { entityId: "warehouse", storageSlotGroupId: "warehouse", slotId: "slot_1" },
+      }],
+    });
+
+    expect(appHost.regionalSettings.findDarkPipeLink(endpoint)).toBeNull();
+  });
 });
 
 function createContext(): {
@@ -108,6 +168,10 @@ function createContext(): {
   };
   const editorHost = createEditorHost(workspace);
   const appHost = createAppHost(workspace);
+  disposers.push(appHost.regionalSettings.bindInactiveDarkPipeLinkEdits(
+    editorHost,
+    () => appHost.state.settings.regionalMultiBaseEnabled,
+  ));
   disposers.push(() => appHost.dispose(), () => editorHost.dispose());
 
   return {
@@ -143,6 +207,7 @@ function entity(id: string, definitionId: string): WorldEntity {
 function enterDarkPipeLinkTool(appHost: AppHost): void {
   runInAction(() => {
     appHost.internalState.toolInfo.darkPipeLink = {
+      sourceBaseId: appHost.workspace.editor?.document.getSnapshot().baseId ?? "wuling_protocol_core",
       sourceEntityId: "inlet",
       sourceRole: "inlet",
       candidateEntityIds: ["outlet"],

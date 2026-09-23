@@ -559,7 +559,7 @@ export interface LogisticsPlacementRuntimeStateReadWrite {
 
 export interface ToolInfoReadWrite extends ToolInfo {
   marqueeType: MarqueeCollectionType;
-  darkPipeLink: DarkPipeLinkToolState | null;
+  darkPipeLink: (DarkPipeLinkToolState & { readonly sourceBaseId: string }) | null;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -810,7 +810,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
 
 class ToolInfoReadWriteImpl implements ToolInfoReadWrite {
   marqueeType: MarqueeCollectionType = EntityCollectionType.marquee;
-  darkPipeLink: DarkPipeLinkToolState | null = null;
+  darkPipeLink: ToolInfoReadWrite["darkPipeLink"] = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

@@ -130,6 +130,33 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
         return;
       }
 
+      // AI-REMOVED 2026-09-23:
+      // Reason: 基地切换同步逻辑需要覆盖所有文档切换路径，并更新渲染器候选高亮。
+      // Trigger: 同区域跨基地选点时，旧候选 ID 不属于新画布。
+      // Evidence: DarkPipeLinkSelectionDecoration 读取 candidateEntityIds 绘制候选高亮。
+      // Replacement: WorkbenchApp 的 editor.document 订阅。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // const linkState = appHost.internalState.toolInfo.darkPipeLink;
+      // if (linkState !== null && selectedBaseId !== linkState.sourceBaseId) {
+      //   const sourceBase = appHost.workspace.registry.baseDefinitions.find(
+      //     (base) => base.id === linkState.sourceBaseId,
+      //   );
+      //   const targetBase = appHost.workspace.registry.baseDefinitions.find(
+      //     (base) => base.id === selectedBaseId,
+      //   );
+      //   if (
+      //     !appHost.state.settings.regionalMultiBaseEnabled
+      //     || sourceBase === undefined
+      //     || targetBase === undefined
+      //     || sourceBase.tag !== targetBase.tag
+      //   ) {
+      //     appHost.internalActions.setActiveTool(linkState.returnTool === "dark-pipe-link"
+      //       ? "select"
+      //       : linkState.returnTool);
+      //   }
+      // }
       appHost.internalActions.closeDialog("base-select");
     } finally {
       setIsSubmitting(false);

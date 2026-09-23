@@ -1,5 +1,5 @@
 import { BlueprintPlannerDialog } from "./blueprint-planner-dialog";
-import { action } from "mobx";
+import { action, runInAction } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
@@ -101,6 +101,12 @@ import {
   preventNativeBrowserEvent,
 } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
+import {
+  DARK_PIPE_LINK_TOOL,
+  findDarkPipeSlotLinkForEntity,
+  listDarkPipeLinkCandidateEntityIds,
+  resolveDarkPipeRole,
+} from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/app/types/theme";
@@ -858,6 +864,66 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   useEffect(() => {
     migrationController.initialize();
   }, [migrationController]);
+
+  useEffect(() => {
+    const editor = appHost.workspace.editor;
+    if (editor === null) return;
+    return appHost.regionalSettings.bindInactiveDarkPipeLinkEdits(
+      editor,
+      () => appHost.state.settings.regionalMultiBaseEnabled,
+    );
+  }, [appHost]);
+
+  useEffect(() => {
+    const editor = appHost.workspace.editor;
+    if (editor === null) return;
+    let currentBaseId = editor.document.getSnapshot().baseId;
+    return editor.document.subscribe((document) => {
+      if (document.baseId === currentBaseId) return;
+      currentBaseId = document.baseId;
+      const selection = appHost.internalState.toolInfo.darkPipeLink;
+      if (selection === null) return;
+
+      const sourceBase = appHost.workspace.registry.baseDefinitions.find(
+        (base) => base.id === selection.sourceBaseId,
+      );
+      const targetBase = appHost.workspace.registry.baseDefinitions.find(
+        (base) => base.id === document.baseId,
+      );
+      if (
+        sourceBase === undefined
+        || targetBase === undefined
+        || (sourceBase.id !== targetBase.id && (
+          !appHost.state.settings.regionalMultiBaseEnabled
+          || appHost.workspace.simulation?.engineKind !== "dense-v2"
+          || sourceBase.tag !== targetBase.tag
+        ))
+      ) {
+        appHost.internalActions.setActiveTool(
+          selection.returnTool === DARK_PIPE_LINK_TOOL ? "select" : selection.returnTool,
+        );
+        return;
+      }
+
+      const sourceEntity = document.entities[selection.sourceEntityId];
+      if (document.baseId === selection.sourceBaseId && sourceEntity === undefined) {
+        appHost.internalActions.setActiveTool("select");
+        return;
+      }
+      const candidateEntityIds = sourceEntity !== undefined && document.baseId === selection.sourceBaseId
+        ? listDarkPipeLinkCandidateEntityIds({ document, sourceEntity })
+        : document.entityOrder.filter((entityId) => {
+            const entity = document.entities[entityId];
+            return entity !== undefined
+              && resolveDarkPipeRole(entity.definitionId) === (selection.sourceRole === "inlet" ? "outlet" : "inlet")
+              && findDarkPipeSlotLinkForEntity(document, entityId) === null
+              && appHost.regionalSettings.findDarkPipeLink({ baseId: document.baseId, entityId }) === null;
+          });
+      runInAction(() => {
+        appHost.internalState.toolInfo.darkPipeLink = { ...selection, candidateEntityIds };
+      });
+    });
+  }, [appHost]);
 
   useEffect(() => {
     const telemetryController = createAppTelemetryController({

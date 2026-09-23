@@ -179,6 +179,10 @@
   outline: none;
 }
 
+.quick-place-device-button.has-variant {
+  grid-template-columns: 32px minmax(0, 1fr) 24px;
+}
+
 .quick-place-device-icon {
   display: block;
   width: 28px;
@@ -189,6 +193,39 @@
 .quick-place-favorite-slot .quick-place-device-icon {
   width: clamp(30px, calc(var(--quick-place-favorite-slot-size) - 24px), 40px);
   height: clamp(30px, calc(var(--quick-place-favorite-slot-size) - 24px), 40px);
+}
+
+.quick-place-variant-badge {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background-color: var(--placement-variant-cap-solid);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.quick-place-favorite-slot .quick-place-variant-badge {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: var(--placement-variant-cap-solid);
+}
+
+.quick-place-variant-badge[data-entity-variant-name="liquid"],
+.quick-place-variant-badge[data-entity-variant-name="liquidtrans"] {
+  background-color: var(--placement-variant-cap-liquid);
+}
+
+.quick-place-variant-badge[data-entity-variant-name="gas"],
+.quick-place-variant-badge[data-entity-variant-name="gastrans"] {
+  background-color: var(--placement-variant-cap-gas);
 }
 
 .quick-place-device-name {

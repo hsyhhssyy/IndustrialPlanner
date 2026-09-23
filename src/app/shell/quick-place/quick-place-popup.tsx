@@ -15,6 +15,8 @@ import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
 
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { resolveEntityVariantName } from "@/shared/entity-variants";
 import {
   QUICK_PLACE_FAVORITE_LIMIT,
   QUICK_PLACE_SLOT_SHORTCUTS,
@@ -105,6 +107,15 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     () => new Map(entries.map((entry) => [entry.id, entry])),
     [entries],
   );
+  const variantById = useMemo(() => new Map(entries.map((entry) => {
+    const variantName = resolveEntityVariantName(entry.definition);
+    return [
+      entry.id,
+      variantName === null
+        ? undefined
+        : appHost.workspace.registry.entityVariantDefinitions[variantName],
+    ] as const;
+  })), [appHost, entries]);
   const filteredEntries = useMemo(
     () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery),
     [entries, runtime.searchQuery],
@@ -484,10 +495,11 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       >
         {favoriteSlots.map((deviceId, index) => {
           const entry = deviceId === null ? null : entryById.get(deviceId) ?? null;
+          const variant = entry === null ? undefined : variantById.get(entry.id);
           const shortcut = QUICK_PLACE_SLOT_SHORTCUTS[index];
           const label = entry === null
             ? `${t("workbench.quickPlace.emptyFavorite")} ${shortcut}`
-            : `${shortcut} ${entry.name}`;
+            : `${shortcut} ${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
 
           return (
             <button
@@ -554,6 +566,14 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
                   src={entry.iconSrc}
                 />
               )}
+              {variant === undefined ? null : (
+                <span
+                  aria-hidden="true"
+                  className={cm(styles, "quick-place-variant-badge")}
+                  data-entity-variant-name={variant.variantName}
+                  style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
+                />
+              )}
             </button>
           );
         })}
@@ -598,54 +618,73 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             <div className={cm(styles, "quick-place-empty-results")}>
               {t("workbench.quickPlace.emptyResults")}
             </div>
-          ) : filteredEntries.map((entry) => (
-            <button
-              aria-selected={activeResultId === entry.id}
-              className={cm(
-                styles,
-                "quick-place-device-button",
-                activeResultId === entry.id && "is-active",
-              )}
-              draggable
-              id={`${deviceListId}-${entry.id}`}
-              key={entry.id}
-              onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
-              onDragEnd={handleMenuDragEnd}
-              onPointerDown={handleSelectablePointerDown}
-              onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
-              ref={(element) => {
-                if (element === null) {
-                  deviceButtonRefs.current.delete(entry.id);
-                } else {
-                  deviceButtonRefs.current.set(entry.id, element);
-                }
-              }}
-              role="option"
-              onDragStart={(event) => {
-                favoriteDropHandledRef.current = false;
-                setDraggingFavoriteIndex(null);
-                writeDragPayload(event, {
-                  source: "menu",
-                  deviceId: entry.id,
-                });
-              }}
-              title={entry.name}
-              type="button"
-            >
-              <img
-                alt=""
-                className={cm(styles, "quick-place-device-icon")}
-                draggable={false}
-                src={entry.iconSrc}
-              />
-              <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
-            </button>
-          ))}
+          ) : filteredEntries.map((entry) => {
+            const variant = variantById.get(entry.id);
+            const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
+            return (
+              <button
+                aria-label={label}
+                aria-selected={activeResultId === entry.id}
+                className={cm(
+                  styles,
+                  "quick-place-device-button",
+                  activeResultId === entry.id && "is-active",
+                  variant !== undefined && "has-variant",
+                )}
+                draggable
+                id={`${deviceListId}-${entry.id}`}
+                key={entry.id}
+                onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
+                onDragEnd={handleMenuDragEnd}
+                onPointerDown={handleSelectablePointerDown}
+                onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
+                ref={(element) => {
+                  if (element === null) {
+                    deviceButtonRefs.current.delete(entry.id);
+                  } else {
+                    deviceButtonRefs.current.set(entry.id, element);
+                  }
+                }}
+                role="option"
+                onDragStart={(event) => {
+                  favoriteDropHandledRef.current = false;
+                  setDraggingFavoriteIndex(null);
+                  writeDragPayload(event, {
+                    source: "menu",
+                    deviceId: entry.id,
+                  });
+                }}
+                title={label}
+                type="button"
+              >
+                <img
+                  alt=""
+                  className={cm(styles, "quick-place-device-icon")}
+                  draggable={false}
+                  src={entry.iconSrc}
+                />
+                <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
+                {variant === undefined ? null : (
+                  <span
+                    aria-hidden="true"
+                    className={cm(styles, "quick-place-variant-badge")}
+                    data-entity-variant-name={variant.variantName}
+                    style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>
   );
 });
+
+function resolveQuickPlaceVariantIconStyle(iconPath: string): CSSProperties {
+  const maskImage = `url("${createPublicAssetUrl(iconPath)}")`;
+  return { maskImage, WebkitMaskImage: maskImage };
+}
 
 function closeQuickPlace(appHost: AppHost): void {
   runInAction(() => {

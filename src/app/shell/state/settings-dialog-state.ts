@@ -393,6 +393,14 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.displayDescription",
     items: [
       {
+        id: "game-pipe-wall-reflection",
+        kind: "switch",
+        labelKey: "settingsField.game-pipe-wall-reflection",
+        descriptionKey: "settingsField.game-pipe-wall-reflectionDescription",
+        defaultValue: false,
+        editableWhen: { settingId: "game-use-blueprint-style-device-images", equals: false },
+      },
+      {
         id: "game-use-blueprint-style-device-images",
         kind: "switch",
         labelKey: "settingsField.game-use-blueprint-style-device-images",
@@ -508,14 +516,21 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-always-show-power-rangeDescription",
         defaultValue: false,
       },
-      {
-        id: "game-pipe-wall-reflection",
-        kind: "switch",
-        labelKey: "settingsField.game-pipe-wall-reflection",
-        descriptionKey: "settingsField.game-pipe-wall-reflectionDescription",
-        defaultValue: false,
-        editableWhen: { settingId: "game-use-blueprint-style-device-images", equals: false },
-      },
+      // AI-REMOVED 2026-09-23:
+      // Reason: 管壁反射属于画面材质设置。
+      // Trigger: 用户要求移入“显示”分组。
+      // Evidence: 本次明确的设置分组要求。
+      // Replacement: 本文件 display 分组中的同 ID 设置。
+      // Risk: Low; Human Review: Required
+      // Original code:
+      // {
+      // id: "game-pipe-wall-reflection",
+      // kind: "switch",
+      // labelKey: "settingsField.game-pipe-wall-reflection",
+      // descriptionKey: "settingsField.game-pipe-wall-reflectionDescription",
+      // defaultValue: false,
+      // editableWhen: { settingId: "game-use-blueprint-style-device-images", equals: false },
+      // },
       {
         id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
         kind: "switch",

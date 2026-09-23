@@ -792,10 +792,12 @@ export function createRenderSceneOrchestrator(
 
     pipeReflection.sync({
       enabled: logisticsMaterials.pipeWallReflection === true && renderHost.workspace.editor?.state.suppressPipes !== true,
+      version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}:${logisticsMaterials.effectVersion}`,
       assets: logisticsBakedFlow.dynamicAssets, routes: logisticsMaterials.routes ?? new Map(),
       visible: (id) => entitySpriteSyncCache.visibility.get(id) === true && !editorCollections[EntityCollectionType.ghost].includes(id),
       effects: logisticsMaterials.effects,
-      width: app.renderer.width / app.renderer.resolution, height: app.renderer.height / app.renderer.resolution, resolution: app.renderer.resolution,
+      width: app.renderer.width, height: app.renderer.height, resolution: app.renderer.resolution,
+      backgroundColor: resolveAppThemeColorNumber(effectiveCanvasTheme, 'in-canvas-bg'),
       view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2, y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
         centerX: viewportState.centerX, centerY: viewportState.centerY, scale: viewportState.gridCellPixelSize,
         rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },

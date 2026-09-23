@@ -601,6 +601,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           if (event.button === 0 && !event.longPress) {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: event.modifiers.ctrl || event.modifiers.shift,
+              currentMousePosition: event.position,
             });
             return { status: "handled" };
           }
@@ -625,6 +626,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: context.appHost.internalState.runtime.singlePlacementContinuous,
+              currentMousePosition: null,
             });
             return { status: "handled" };
           }
@@ -666,6 +668,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: context.appHost.internalState.runtime.singlePlacementContinuous,
+              currentMousePosition: lastMousePosition,
             });
             return { status: "handled" };
           }
@@ -1112,6 +1115,11 @@ export function driveMousePlacementPreview(options: {
       EntityCollectionType.preview,
     );
 
+    const currentGridPoint = options.editor.queries.findGridCellForClientPixelPoint(options.position);
+    if (currentGridPoint !== null) {
+      options.appHost.internalState.runtime.placementAnchor = currentGridPoint;
+    }
+
     if (afterRect !== null && !areGridRectsEqual(beforeRect, afterRect)) {
       options.appHost.internalActions.alignCanvasFloatingToolbar();
     }
@@ -1127,6 +1135,7 @@ function applyPlacementOperation(
   editor: EditorContract,
   options: {
     keepPlacement?: boolean;
+    currentMousePosition?: GesturePosition | null;
   } = {},
 ): void {
   const continuation = options.keepPlacement
@@ -1139,7 +1148,12 @@ function applyPlacementOperation(
       return;
     }
 
-    if (continuation !== null && continuePlacementOperation(appHost, editor, continuation)) {
+    if (continuation !== null && continuePlacementOperation(
+      appHost,
+      editor,
+      continuation,
+      options.currentMousePosition ?? null,
+    )) {
       return;
     }
   } catch {
@@ -1460,13 +1474,18 @@ function capturePlacementContinuationSnapshot(
   anchor: GridPoint;
   deviceId: string;
   pointerMode: "mouse" | "touch";
+  position: GridPoint;
   rotation: GridRotation;
 } | null {
   const deviceId = appHost.internalState.runtime.singlePlacementDeviceId;
   const anchor = appHost.internalState.runtime.placementAnchor;
   const pointerMode = appHost.internalState.runtime.singlePlacementPointerMode;
+  const previewEntityId = editor.state.collections.preview[0] ?? null;
+  const previewEntity = previewEntityId === null
+    ? null
+    : editor.queries.getEntityById(previewEntityId);
 
-  if (deviceId === null || anchor === null || pointerMode === null) {
+  if (deviceId === null || anchor === null || pointerMode === null || previewEntity === null) {
     return null;
   }
 
@@ -1474,6 +1493,7 @@ function capturePlacementContinuationSnapshot(
     anchor: { ...anchor },
     deviceId,
     pointerMode,
+    position: { ...previewEntity.position },
     rotation: resolveSinglePlacementPreviewRotation(editor),
   };
 }
@@ -1485,8 +1505,10 @@ function continuePlacementOperation(
     anchor: GridPoint;
     deviceId: string;
     pointerMode: "mouse" | "touch";
+    position: GridPoint;
     rotation: GridRotation;
   },
+  currentMousePosition: GesturePosition | null,
 ): boolean {
   const result = finalizePlacementEnter({
     appHost,
@@ -1503,6 +1525,35 @@ function continuePlacementOperation(
   }
 
   restorePlacementPreviewRotation(appHost, editor, continuation.rotation);
+  const previewEntityId = editor.state.collections.preview[0] ?? null;
+  const previewEntity = previewEntityId === null
+    ? null
+    : editor.queries.getEntityById(previewEntityId);
+  if (previewEntity === null) {
+    return false;
+  }
+
+  // 连续放置复用刚提交的实际位置；鼠标移动后 placementAnchor 仍是首次创建 draft 的锚点。
+  // AI-CORRECTION 2026-09-23: 鼠标移动现同步 placementAnchor；鼠标连续放置用绝对指针位置回正，原位置仅供触控或无画布指针时恢复。
+  if (
+    continuation.pointerMode === "mouse"
+    && currentMousePosition !== null
+    && isClientPointInsideViewport(editor, currentMousePosition)
+  ) {
+    editor.actions.moveCollectionCenterPointTo(
+      EntityCollectionType.preview,
+      currentMousePosition,
+    );
+  } else {
+    editor.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: previewEntity.position,
+      endGridPoint: continuation.position,
+    });
+  }
+  if (continuation.pointerMode === "touch") {
+    appHost.internalActions.alignCanvasFloatingToolbar();
+  }
   return true;
 }
 

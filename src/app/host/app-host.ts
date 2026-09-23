@@ -31,6 +31,15 @@ import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
 import { regionalSimulationUiState } from "../state/regional-simulation-ui-state";
+// AI-REMOVED 2026-09-23:
+// Reason: AppHost 构造时正式入口尚未创建 Editor，无法在此注册文档订阅。
+// Trigger: 跨基地暗管停用后的配置编辑必须覆盖已保存关系。
+// Evidence: main.tsx 先 createAppHost，后 createEditorHost。
+// Replacement: RegionalSettingsController.bindInactiveDarkPipeLinkEdits，由 WorkbenchApp 挂载。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { findDarkPipeSlotLinkForEntity } from "@/shared/dark-pipe-link";
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 生命周期和状态已由独立顶层 sync 模块拥有。
 // Trigger: 用户要求 app 不再实例化或驱动同步客户端。
@@ -280,6 +289,47 @@ export function createAppHost(
   }));
   cleanupDiscardableV2LocalStorageBeforeV3Boot();
   disposers.push(hookLocalstorage(host));
+  // AI-REMOVED 2026-09-23:
+  // Reason: 正式启动顺序中 Editor 尚未赋值，订阅在此不会创建。
+  // Trigger: 停用的跨基地链接应在本地链接或端点配置编辑后被覆盖。
+  // Evidence: main.tsx 的 createEditorHost 调用晚于 createAppHost。
+  // Replacement: RegionalSettingsController.bindInactiveDarkPipeLinkEdits，由 WorkbenchApp 挂载。
+  // Risk: 初始化后、工作台挂载前无用户编辑入口。
+  // Human Review: Required
+  // Original code:
+  // const editorDocument = workspace.editor?.document;
+  // if (editorDocument !== undefined) {
+  //   let previousDocument = editorDocument.getSnapshot();
+  //   disposers.push(editorDocument.subscribe((nextDocument) => {
+  //     const priorDocument = previousDocument;
+  //     previousDocument = nextDocument;
+  //     if (
+  //       priorDocument.documentKey !== nextDocument.documentKey
+  //       || host.state.settings.regionalMultiBaseEnabled
+  //     ) return;
+  //
+  //     for (const link of regionalSettings.darkPipeLinks) {
+  //       const endpoint = link.inlet.baseId === nextDocument.baseId
+  //         ? link.inlet
+  //         : link.outlet.baseId === nextDocument.baseId
+  //           ? link.outlet
+  //           : null;
+  //       if (endpoint === null) continue;
+  //       const before = priorDocument.entities[endpoint.entityId];
+  //       const after = nextDocument.entities[endpoint.entityId];
+  //       if (
+  //         before !== undefined
+  //         && (
+  //           after === undefined
+  //           || JSON.stringify(before.config) !== JSON.stringify(after.config)
+  //           || findDarkPipeSlotLinkForEntity(nextDocument, endpoint.entityId) !== null
+  //         )
+  //       ) {
+  //         regionalSettings.removeDarkPipeLink(link.id);
+  //       }
+  //     }
+  //   }));
+  // }
   disposers.push(hookThemeApplicator(host));
   // AI-REMOVED 2026-07-29:
   // Reason: AppHost 不再主动挂载 WebDAV 服务。

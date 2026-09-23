@@ -33,6 +33,7 @@ describe("WorkbenchSettingsDialogController", () => {
       "system-theme",
     ]);
     expect(resolveGroupSettingIds("display")).toEqual([
+      "game-pipe-wall-reflection",
       "game-use-blueprint-style-device-images",
       "game-show-grass-background",
       "game-show-device-names",
@@ -57,7 +58,12 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(resolveGroupSettingIds("auxiliary-display")).toEqual([
       "game-always-show-grid-lines",
       "game-always-show-power-range",
-      "game-pipe-wall-reflection",
+      // AI-REMOVED 2026-09-23:
+      // Reason: 随设置迁入 display 更新分组约束。
+      // Trigger: 用户明确要求；Evidence: display 分组定义。
+      // Replacement: 上方 display 断言；Risk: Low; Human Review: Required
+      // Original code:
+      // "game-pipe-wall-reflection",
       "game-show-pipe-exact-fluid-position",
     ]);
     expect(resolveGroupSettingIds("activity")).toEqual([
