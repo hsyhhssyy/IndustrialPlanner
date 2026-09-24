@@ -155,6 +155,7 @@ function renderInspector(options: {
         entity={options.entity}
         index={buildProductionPlanningIndex(options.workspace.registry)}
         runtimeStatus={null}
+        runtimeSample={null}
         t={(key) => key}
       />,
     );

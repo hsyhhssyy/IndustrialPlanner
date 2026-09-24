@@ -3,6 +3,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
+import type { InspectorRuntimeSample } from "./selection-inspector-model";
 import {
   hasActivityTags,
   isRecipeAvailableByActivity,
@@ -40,6 +41,7 @@ function collectPowerProblems(
   entity: WorldEntity,
   definition: EntityDefinition,
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+  runtimeSample: InspectorRuntimeSample | null,
 ): DeviceProblem[] {
   const problems: DeviceProblem[] = [];
   const editor = appHost.workspace.editor;
@@ -55,7 +57,15 @@ function collectPowerProblems(
     }
 
     // 地图电力不足（基地级大停电）
-    const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
+    // AI-REMOVED 2026-09-24:
+    // Reason: 停电状态必须与设备供电状态来自同一次运行态采样。
+    // Trigger: 统一 Inspector 运行态快照。
+    // Evidence: SelectionInspectorSlot 已采集 documentStatus。
+    // Replacement: runtimeSample.documentStatus。
+    // Risk: Low
+    // Human Review: Required
+    // Original code: const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
+    const docStatus = runtimeSample?.documentStatus;
     if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
       problems.push({
         message: "电力不足",
@@ -147,14 +157,16 @@ export const ProblemInspector = observer(function ProblemInspector({
   entity,
   definition,
   runtimeStatus,
+  runtimeSample,
 }: {
   appHost: AppHost;
   entity: WorldEntity;
   definition: EntityDefinition;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
 }) {
   const placementProblems = collectPlacementProblems(appHost, entity);
-  const powerProblems = collectPowerProblems(appHost, entity, definition, runtimeStatus);
+  const powerProblems = collectPowerProblems(appHost, entity, definition, runtimeStatus, runtimeSample);
   const recipeProblems = collectRecipeProblems(runtimeStatus);
   const manualActivityRecipeProblems = collectManualActivityRecipeProblems(appHost, entity, definition);
 

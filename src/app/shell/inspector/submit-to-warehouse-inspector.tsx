@@ -9,6 +9,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
 import { useSimulationRecipePresentation } from "./use-simulation-recipe-presentation";
+import type { InspectorRuntimeSample } from "./selection-inspector-model";
 
 export const SUBMIT_TO_WAREHOUSE_INSPECTOR_KEY = "submit-to-warehouse";
 const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
@@ -19,6 +20,7 @@ export interface SubmitToWarehouseInspectorProps {
   entity: WorldEntity;
   definition: EntityDefinition;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
   translate: (key: string) => string;
 }
 
@@ -27,13 +29,14 @@ export function SubmitToWarehouseInspector({
   entity,
   definition,
   runtimeStatus,
+  runtimeSample,
   translate,
 }: SubmitToWarehouseInspectorProps) {
   const registry = appHost.workspace.registry;
   const storedRecipes = (entity.config?.channelRecipes as Record<string, string> | undefined) ?? {};
   const submitRuntimeStatus = resolveSubmitChannelStatus(runtimeStatus);
   const presentation = useSimulationRecipePresentation(
-    appHost,
+    runtimeSample,
     submitRuntimeStatus?.isProgressing === true,
   );
   const submitChannel = definition.recipeChannels.find(

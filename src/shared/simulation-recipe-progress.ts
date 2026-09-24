@@ -7,8 +7,14 @@ import type {
 export interface SimulationRecipeProgressPresentationInput {
   readonly channelStatus: SimulationDeviceRuntimeChannelRecipeStatus | null;
   readonly documentStatus: SimulationDocumentRuntimeReadModel | null;
-  readonly simulationState: SimulationState | null;
+  readonly simulationState: SimulationRecipePresentationState | null;
   readonly elapsedWallSeconds: number;
+}
+
+export interface SimulationRecipePresentationState {
+  readonly runningState: SimulationState["runningState"];
+  readonly simulationSpeed: SimulationState["simulationSpeed"];
+  readonly timeline: Pick<SimulationState["timeline"], "isSeeking">;
 }
 
 export function resolvePresentedRecipeProgressSeconds(

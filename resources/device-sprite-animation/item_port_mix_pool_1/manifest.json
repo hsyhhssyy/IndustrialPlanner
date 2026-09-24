@@ -41,7 +41,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_000.webp",
-      "sha256": "f13b1bb017648a326a4af93eef04c02dedb2e0dfa3297f731f60954a21f71908"
+      "sha256": "1e1b2bd70128ae7e2e89a3f9fa8833921cec920e87ebdc49f8f8f64bb8b7e825"
     },
     "close_001": {
       "file": "close_001.webp",
@@ -77,7 +77,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_001.webp",
-      "sha256": "95acc0b0c46c0ba63456ee69daf07333c84bf94990bc0d9e2e54b4952ccb87bf"
+      "sha256": "d970abbc9be2fb12ffffb4f3e972ea59f358d726a8678162ce032be8cd4942cc"
     },
     "close_002": {
       "file": "close_002.webp",
@@ -113,7 +113,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_002.webp",
-      "sha256": "98b606773ac33bbe204ea803d772d34a0982dd111cc84b3fadd00173b9d35c05"
+      "sha256": "f37ae6c1c4f3f925a9a454b0e28787f9b58b75178ed1b3cc20e17285ed00cb3f"
     },
     "close_003": {
       "file": "close_003.webp",
@@ -149,7 +149,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_003.webp",
-      "sha256": "e01ef3b6db05c8e3ba765ae0ae44e1fd105045acc2b4dcf5516ed5feab6f486a"
+      "sha256": "ee096f5e5d87008f6011e6917c190102d2e0cd86a44286410111dd965f9437de"
     },
     "close_004": {
       "file": "close_004.webp",
@@ -185,7 +185,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_004.webp",
-      "sha256": "b8318130afe54d227358477296ecf2dade8430d5fdd6e7b6e481838e6f7b0aa5"
+      "sha256": "fc14b4c39385a83c1bbd152ec88faf4cdaffa07a7e0c7a83a88f93d86da0a524"
     },
     "close_005": {
       "file": "close_005.webp",
@@ -221,7 +221,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_005.webp",
-      "sha256": "662bdc0163a4dd04a367647763423b7756a574dbbf8101a1e275d18abee37f7b"
+      "sha256": "572c0c09d067c822fd442a86ef0e24ca7e2c2ced569dc3113a388eb1f0525c20"
     },
     "close_006": {
       "file": "close_006.webp",
@@ -257,7 +257,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_006.webp",
-      "sha256": "ec48ec1f84227893becf606ffb5a85a7b24fc0acd542cd569664abba8b9a3438"
+      "sha256": "3eb64aaae27fce5ab054e504fd298823884d193ea85d196b445bc4f57ee2aadc"
     },
     "close_007": {
       "file": "close_007.webp",
@@ -293,7 +293,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_007.webp",
-      "sha256": "2a39e4e0a23c03a0c33c5d4172bf6d95ceabe2a738ee73d2ba3746f91d22fe34"
+      "sha256": "211360eab0d10acd043c8dcbbdff29b19f4d90dc771c45faf5df7b3a07fb18b8"
     },
     "close_008": {
       "file": "close_008.webp",
@@ -329,7 +329,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_008.webp",
-      "sha256": "85e899c1ee8fb90080d4d4125ba1be6decc363ccf63f02d8d95491e3000078e9"
+      "sha256": "59a38866c25200d8ec04b2a7779c930da439b4ae5c685301b11ed8a50d0cdb2d"
     },
     "close_009": {
       "file": "close_009.webp",
@@ -362,7 +362,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close/spritesheet_009.webp",
-      "sha256": "c42b8909eee737b084c419c872e034962fd17af9afb09422f3fed3bf8fc3d237"
+      "sha256": "9ce552944b1caa3c4b6d6e1de3d423594be335858135510bea2cfa5fb84aa37f"
     },
     "close_idle_000": {
       "file": "close_idle_000.webp",
@@ -376,7 +376,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/close_idle/spritesheet_000.webp",
-      "sha256": "08bda2b83a4dd586bbe983720c6d1c8d4e7ceef505e23fe939e90abfe741206f"
+      "sha256": "534db9bbc64a44739a477e2ed7003addcf0150b4e9879e033459fcf2b4e59580"
     },
     "open_000": {
       "file": "open_000.webp",
@@ -412,7 +412,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_000.webp",
-      "sha256": "c9123975425bea41959e44e0d092527b1f0d261bccf6fccec522da14c2ae0f56"
+      "sha256": "0d66bd14ca3b78f1e98c92e1f106d025f5e8ab9b696272bbb90ad25301fdc4c0"
     },
     "open_001": {
       "file": "open_001.webp",
@@ -448,7 +448,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_001.webp",
-      "sha256": "2a278aea0ebdb612f8e20b1468cda6021f81817be94a610281d5acc467f8ba6e"
+      "sha256": "75301574217b76dae222890ef051b981b01fcf45519baed7ceae401e26fb31eb"
     },
     "open_002": {
       "file": "open_002.webp",
@@ -484,7 +484,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_002.webp",
-      "sha256": "334daa3752c77503d1a4389592ad5f4e86dddfffc2b9238693859ef0f548fe9e"
+      "sha256": "389203ae0ac603466dfab91b45a4f1379ca2bf814132ebc044322a20de0dd7d3"
     },
     "open_003": {
       "file": "open_003.webp",
@@ -520,7 +520,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_003.webp",
-      "sha256": "f77707694df7aa4d826e61c1a506219a90a12156bd8de00d53506f24d5983796"
+      "sha256": "0e11794610f668c03a9229388c27d43eb0e176be2036d3249e1fe5ea013ec46d"
     },
     "open_004": {
       "file": "open_004.webp",
@@ -556,7 +556,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_004.webp",
-      "sha256": "def69b0a86854ae3c5b8688b98220ce7da43a24cc5de9fc20de14bb7b85cfee6"
+      "sha256": "6a698833da547bde69c9543de1ec7ae01a007c6134c250db1dac4aa0789f5be5"
     },
     "open_005": {
       "file": "open_005.webp",
@@ -592,7 +592,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_005.webp",
-      "sha256": "fea31c4d295f5281c751bd46908cc19510f0b2e3ea7e867704a7e95d06898b8d"
+      "sha256": "6a29deb5bfabb2ffb1c22bd6e131143452730d90710891e7b5e030d7acef97fa"
     },
     "open_006": {
       "file": "open_006.webp",
@@ -628,7 +628,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_006.webp",
-      "sha256": "1f2002885d03bb76aa871b93e95f1dfaedf87ed85a1fec875c62530ac713e29b"
+      "sha256": "1eacbd502dcf36795b916658c4b4dd1f6362990f8b0b13f418b7d5dd9b42669c"
     },
     "open_007": {
       "file": "open_007.webp",
@@ -664,7 +664,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_007.webp",
-      "sha256": "78674a9bf342de64686a711cfc61d1941f50dcedb3643fe9fec69d65d2e515ea"
+      "sha256": "1aebec748bd08db6d9584b747510e5424151050f9a0673427979098fb73ea35b"
     },
     "open_008": {
       "file": "open_008.webp",
@@ -700,7 +700,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_008.webp",
-      "sha256": "cac003a8e7a3340b67eafa57199205abbf8abcad9a656f1a2bdf7a636a53d181"
+      "sha256": "4acf7b3642a88920429551a2d46abea3d9ae540fa70c926040f1b75d65928b5d"
     },
     "open_009": {
       "file": "open_009.webp",
@@ -731,7 +731,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open/spritesheet_009.webp",
-      "sha256": "c86f9696ee4dc48ad1a26c059313863b8c06b513f5c23346cf0ebe2c8bb3f420"
+      "sha256": "d645dbc2c33f42818616c53dccc7fea8962a763704c3a23b6e57c191a0f2e1f3"
     },
     "open_idle_000": {
       "file": "open_idle_000.webp",
@@ -767,7 +767,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_000.webp",
-      "sha256": "4089dba0e7259fc48adc4d0877c2e1176eb27695d4e63db0d3b140830325fba3"
+      "sha256": "e4ec97790b0984e8b7743a0e1bd91a8e647bf544c0875adfacbb9c9d46f4c410"
     },
     "open_idle_001": {
       "file": "open_idle_001.webp",
@@ -803,7 +803,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_001.webp",
-      "sha256": "43b4870b902d65819e7f2c401c38c1398fd8fe78d12b9e9c255cfb7d406ff068"
+      "sha256": "b923a52bd50f750abd5b73e963465f8ec5e38a306a64aaa9895b214b26d875f8"
     },
     "open_idle_002": {
       "file": "open_idle_002.webp",
@@ -839,7 +839,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_002.webp",
-      "sha256": "a9dab5f306723731f55aaba3c2904c967a0ec0b1d40983387439b2be197fb382"
+      "sha256": "7a5b1672ded0e9f18f02bd9c6bd57457d11b805a1b063d4e993cbc372ee4f019"
     },
     "open_idle_003": {
       "file": "open_idle_003.webp",
@@ -875,7 +875,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_003.webp",
-      "sha256": "f03fae6de89dbf73d416a0ca76a76261720285446d0eefe67e31018340a21e9c"
+      "sha256": "0311512a214d0f29b5a03577e84a87659c6fa6e6c65ab4bb7cbb1fa7f622f952"
     },
     "open_idle_004": {
       "file": "open_idle_004.webp",
@@ -911,7 +911,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_004.webp",
-      "sha256": "45387b7ba3452c93214d9e04ca4dcb78915bb5b0ff78423b62264283c5b6f34e"
+      "sha256": "1940921753163f054d6a19db75a36360537a57bb17007a449de884c042842b9f"
     },
     "open_idle_005": {
       "file": "open_idle_005.webp",
@@ -947,7 +947,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_005.webp",
-      "sha256": "ae79323f7fd3945515982abaa5f5b4558bcf446e5921dc059f5e8c1ca1ae4c7c"
+      "sha256": "ad46c6e4fc8a58e76c265f6e210a4f77da7492ebdff0532a84577949e595b682"
     },
     "open_idle_006": {
       "file": "open_idle_006.webp",
@@ -983,7 +983,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_006.webp",
-      "sha256": "59e2ed790ca11bccab4fbb5059843ab76f3e1915e02fbe505a1b878c8f47b95a"
+      "sha256": "59395a9617f8e959c75fe9480f06bee2d7077b51535971f5dbfc74c57bb45e17"
     },
     "open_idle_007": {
       "file": "open_idle_007.webp",
@@ -1018,7 +1018,7 @@
       "physicalFrameWidth": 448,
       "physicalFrameHeight": 320,
       "sourcePath": "buildings/mix_pool_1/top/animations/open_idle/spritesheet_007.webp",
-      "sha256": "034ffa0799129b7b73b066f99e5b2a6040ee804d102fb88d4dc607e654184877"
+      "sha256": "5ad25fa279c60f32e95d3513ff8ce417edd2aea9867ac813ae4076e1f80146ec"
     }
   },
   "clips": {
@@ -1192,9 +1192,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260919-212522-cst",
+    "releaseId": "v1.5-20260923-223150-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
     "sourceResolution": 0.5
   }
 }

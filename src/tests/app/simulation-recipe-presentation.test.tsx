@@ -5,6 +5,7 @@ import {
   resetSimulationRecipePresentationClock,
   type SimulationRecipePresentationClockState,
 } from "@/app/shell/inspector/use-simulation-recipe-presentation";
+import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
 
 describe("配方单帧展示时钟", () => {
   it("暂停期间不计入恢复后的 elapsed", () => {
@@ -39,6 +40,64 @@ describe("配方单帧展示时钟", () => {
     expect(
       (nextFrame.nowMs - (nextFrame.observedAtMs ?? Number.NaN)) / 1000,
     ).toBeCloseTo(0.08, 5);
+  });
+
+  it("同一份新 tick 样本同时推进基数与重置插值时钟", () => {
+    const simulationState = {
+      runningState: "start" as const,
+      simulationSpeed: 1,
+      timeline: { isSeeking: false },
+    };
+    const oldDocumentStatus = {
+      tickNumber: 11,
+      standardTickRate: 20,
+      tickRate: 4,
+      totalPowerDemand: 0,
+      currentPowerGeneration: 0,
+      isPowerOutage: false,
+      baseBatteryJoules: 0,
+      baseBatteryCapacity: 0,
+    };
+    const oldChannelStatus = {
+      channelId: "main",
+      recipeId: "recipe:test",
+      progressSeconds: 2,
+      desiredSeconds: 10,
+      isProgressing: true,
+      state: "running" as const,
+    };
+    const oldClock: SimulationRecipePresentationClockState = {
+      presentationKey: "device:11:20:4:1",
+      active: true,
+      nowMs: 1190,
+      observedAtMs: 1000,
+    };
+    const previous = resolvePresentedRecipeProgressSeconds({
+      channelStatus: oldChannelStatus,
+      documentStatus: oldDocumentStatus,
+      simulationState,
+      elapsedWallSeconds: (oldClock.nowMs - oldClock.observedAtMs!) / 1000,
+    });
+    const nextClock = resetSimulationRecipePresentationClock(oldClock, {
+      presentationKey: "device:16:20:4:1",
+      active: true,
+      sampledAtMs: 1200,
+    });
+    const nextFrame = advanceSimulationRecipePresentationClock(nextClock, {
+      presentationKey: nextClock.presentationKey,
+      active: true,
+      nowMs: 1216,
+    });
+    const current = resolvePresentedRecipeProgressSeconds({
+      channelStatus: { ...oldChannelStatus, progressSeconds: 2.25 },
+      documentStatus: { ...oldDocumentStatus, tickNumber: 16 },
+      simulationState,
+      elapsedWallSeconds: (nextFrame.nowMs - nextFrame.observedAtMs!) / 1000,
+    });
+
+    expect(previous).toBeCloseTo(2.19);
+    expect(nextClock.observedAtMs).toBe(1200);
+    expect(current).toBeGreaterThan(previous!);
   });
 });
 

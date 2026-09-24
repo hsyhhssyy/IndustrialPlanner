@@ -84,6 +84,25 @@ export const BLUEPRINT_CANVAS_THEME_COLOR_PATCH = {
 } satisfies AppThemeColorPatch;
 
 const GRASS_CANVAS_THEME_COLOR_PATCH = {
+  "in-canvas-toolbar-button-border": "rgb(255 255 255 / 0.38)",
+  "in-canvas-toolbar-button-bg": "rgb(18 22 20 / 0.84)",
+  "in-canvas-toolbar-button-hover-border": "rgb(255 255 255 / 0.68)",
+  "in-canvas-toolbar-button-hover-bg": "rgb(32 38 34 / 0.94)",
+  "in-canvas-toolbar-button-text": "#ffffff",
+  "in-canvas-toolbar-shadow": "rgb(0 0 0 / 0.4)",
+  "in-canvas-toolbar-active-border": "#82d4ff",
+  "in-canvas-toolbar-active-bg": "rgb(18 22 20 / 0.92)",
+  "in-canvas-toolbar-active-text": "#ffffff",
+  "in-canvas-toolbar-label-text": "#ffffff",
+  "in-canvas-toolbar-label-shadow": "rgb(0 0 0 / 0.8)",
+  "in-canvas-gesture-panel-border": "rgb(255 255 255 / 0.38)",
+  "in-canvas-gesture-panel-bg": "rgb(18 22 20 / 0.92)",
+  "in-canvas-gesture-panel-shadow": "rgb(0 0 0 / 0.4)",
+  "in-canvas-gesture-button-border": "rgb(255 255 255 / 0.38)",
+  "in-canvas-gesture-button-bg": "rgb(18 22 20 / 0.84)",
+  "in-canvas-gesture-button-hover-border": "rgb(255 255 255 / 0.68)",
+  "in-canvas-gesture-button-hover-bg": "rgb(32 38 34 / 0.94)",
+  "in-canvas-gesture-events-border": "rgb(255 255 255 / 0.24)",
   "renderer-port-chevron": "#ffffff",
 } satisfies AppThemeColorPatch;
 

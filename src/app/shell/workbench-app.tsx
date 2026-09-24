@@ -859,6 +859,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
     appHost.state.theme,
     appHost.state.settings.gameUseBlueprintStyleDeviceImages,
+    appHost.state.settings.showGrassBackground,
   );
 
   useEffect(() => {

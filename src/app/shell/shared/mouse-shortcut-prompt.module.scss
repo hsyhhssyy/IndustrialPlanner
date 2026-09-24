@@ -6,7 +6,7 @@
   width: var(--mouse-shortcut-prompt-size);
   height: var(--mouse-shortcut-prompt-size);
   flex: 0 0 auto;
-  color: var(--text-0);
+  color: var(--input-prompt-color, var(--text-0));
   vertical-align: middle;
 }
 

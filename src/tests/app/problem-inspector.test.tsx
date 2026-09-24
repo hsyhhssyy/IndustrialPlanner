@@ -9,6 +9,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import type { SimulationDocumentRuntimeReadModel } from "@/domain/simulation/types/simulation-types";
 import { ProblemInspector, PROBLEM_INSPECTOR_KEY } from "@/app/shell/inspector/problem-inspector";
+import type { InspectorRuntimeSample } from "@/app/shell/inspector/selection-inspector-model";
 
 function createMockEntity(overrides: Partial<WorldEntity> = {}): WorldEntity {
   return {
@@ -75,6 +76,22 @@ function createMockAppHost(options: {
   } as unknown as AppHost;
 }
 
+function createRuntimeSample(appHost: AppHost): InspectorRuntimeSample | null {
+  const documentStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus() ?? null;
+  if (documentStatus === null) return null;
+  return {
+    entityId: "test-entity-1",
+    documentStatus,
+    activeGasItemIds: null,
+    simulationState: {
+      runningState: "start",
+      simulationSpeed: 1,
+      timeline: { isSeeking: false },
+    },
+    sampledAtMs: 0,
+  };
+}
+
 function renderInspector(component: React.ReactElement) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -117,6 +134,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={null}
@@ -145,6 +163,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={null}
@@ -168,6 +187,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={null}
@@ -194,6 +214,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -219,6 +240,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -243,6 +265,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -280,6 +303,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -316,6 +340,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -351,6 +376,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -386,6 +412,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -421,6 +448,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -445,6 +473,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -498,6 +527,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}
@@ -543,6 +573,7 @@ describe("ProblemInspector", () => {
     const { container, root } = renderInspector(
       <ProblemInspector
         appHost={appHost}
+        runtimeSample={createRuntimeSample(appHost)}
         entity={createMockEntity()}
         definition={createMockDefinition()}
         runtimeStatus={runtimeStatus}

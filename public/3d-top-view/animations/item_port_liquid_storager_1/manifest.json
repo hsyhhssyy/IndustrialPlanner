@@ -7,9 +7,9 @@
   "appliedSourceToPublishedTransform": "flip-top-bottom",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260919-212522-cst",
+    "releaseId": "v1.5-20260923-223150-cst",
     "sourceVersion": "v1.5",
-    "indexSha256": "cb3315410bff92126a18295b596957af956da685a1e52052e48144ea98dd53c0",
+    "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
     "sourceResolution": 0.5
   },
   "maskFile": "mask.webp",

@@ -27,6 +27,7 @@ import {
 import {
   InspectorDataScopeContext,
   type InspectorDataScope,
+  type InspectorRuntimeSample,
 } from "./selection-inspector-model";
 
 import { SelectionInspectorActionStrip } from "./selection-inspector-action-strip";
@@ -72,6 +73,7 @@ interface InspectorSlotState {
   selectedDefinition: EntityDefinition;
   inspectors: InspectorDescriptor[];
   simulationRuntimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
   showSimulationRuntimeInspector: boolean;
   debugEntityJson: string | null;
 }
@@ -133,6 +135,7 @@ function renderRecipeStatusInspector(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
   translate: Translate;
 }) {
   const registry = options.appHost.workspace.registry;
@@ -157,6 +160,7 @@ function renderRecipeStatusInspector(options: {
       channelIds={channelIds}
       channels={options.definition.recipeChannels}
       runtimeStatus={options.runtimeStatus}
+      runtimeSample={options.runtimeSample}
       index={index}
       t={options.translate}
       appHost={options.appHost}
@@ -172,6 +176,7 @@ function renderInspector(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
   translate: Translate;
 }) {
   switch (options.declaration.type) {
@@ -182,6 +187,14 @@ function renderInspector(options: {
       ) {
         return null;
       }
+      // AI-REMOVED 2026-09-24:
+      // Reason: SlotConfigInspector 已从同一次父层采样取得 runtimeStatus，无需额外 prop。
+      // Trigger: 本次统一 Inspector 运行态采样时误传无用参数。
+      // Evidence: SlotConfigInspector 仅读取设备槽位运行态。
+      // Replacement: runtimeStatus prop。
+      // Risk: Low
+      // Human Review: Required
+      // Original code: runtimeSample={options.runtimeSample}
       return (
         <SlotConfigInspector
           appHost={options.appHost}
@@ -193,6 +206,14 @@ function renderInspector(options: {
         />
       );
     case INSPECTOR_TYPE.logisticsItem:
+      // AI-REMOVED 2026-09-24:
+      // Reason: LogisticsItemInspector 已从同一次父层采样取得 runtimeStatus，无需额外 prop。
+      // Trigger: 本次统一 Inspector 运行态采样时误传无用参数。
+      // Evidence: LogisticsItemInspector 仅读取设备槽位运行态。
+      // Replacement: runtimeStatus prop。
+      // Risk: Low
+      // Human Review: Required
+      // Original code: runtimeSample={options.runtimeSample}
       return (
         <LogisticsItemInspector
           appHost={options.appHost}
@@ -240,6 +261,7 @@ function renderInspector(options: {
           entity={options.entity}
           definition={options.definition}
           runtimeStatus={options.runtimeStatus}
+          runtimeSample={options.runtimeSample}
           translate={options.translate}
         />
       );
@@ -255,6 +277,7 @@ function renderInspector(options: {
           entity={options.entity}
           definition={options.definition}
           runtimeStatus={options.runtimeStatus}
+          runtimeSample={options.runtimeSample}
         />
       );
     case INSPECTOR_TYPE.portOutputConfig:
@@ -516,6 +539,25 @@ export function SelectionInspectorSlot({
         setScopeByInspectorId((current) => Object.keys(current).length === 0 ? current : {});
       }
 
+      const needsGasEnvironment = appHost.workspace.registry.recipeDefinitions.some((recipe) =>
+        recipe.machineId === selectedDefinition.id && recipe.requiredGasDiffusion,
+      );
+      const runtimeSample: InspectorRuntimeSample | null = showSimulationRuntimeInspector && simulation !== null
+        ? {
+            entityId: selectedEntity.id,
+            documentStatus: simulation.queries.getDocumentRuntimeStatus(),
+            activeGasItemIds: needsGasEnvironment
+              ? simulation.queries.getDeviceActiveGasItemIds(selectedEntity.id)
+              : null,
+            simulationState: {
+              runningState: simulation.state.runningState,
+              simulationSpeed: simulation.state.simulationSpeed,
+              timeline: { isSeeking: simulation.state.timeline.isSeeking },
+            },
+            sampledAtMs: performance.now(),
+          }
+        : null;
+
       setSlotState({
         selectedEntity,
         selectedDefinition,
@@ -523,6 +565,7 @@ export function SelectionInspectorSlot({
         simulationRuntimeStatus: showSimulationRuntimeInspector
           ? simulation?.queries.getDeviceRuntimeStatus(selectedEntity.id) ?? null
           : null,
+        runtimeSample,
         showSimulationRuntimeInspector,
         debugEntityJson: appHost.state.settings.debugMode
           ? JSON.stringify(selectedEntity, null, 2)
@@ -588,6 +631,7 @@ export function SelectionInspectorSlot({
               entity: slotState.selectedEntity,
               definition: slotState.selectedDefinition,
               runtimeStatus: slotState.simulationRuntimeStatus,
+              runtimeSample: slotState.runtimeSample,
               translate,
             });
 

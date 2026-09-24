@@ -16,6 +16,7 @@ import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
 import { useSimulationRecipePresentation } from "./use-simulation-recipe-presentation";
+import type { InspectorRuntimeSample } from "./selection-inspector-model";
 
 export const SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY =
   "simulation-recipe-status-runtime-inspector";
@@ -62,6 +63,7 @@ export interface SimulationRecipeStatusRuntimeInspectorProps {
   /** 设备声明的全部 recipe channel 定义 */
   channels: readonly RecipeChannelDefinition[];
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  runtimeSample: InspectorRuntimeSample | null;
   index: ProductionPlanningIndex;
   t: (key: string) => string;
   appHost?: AppHost;
@@ -74,6 +76,7 @@ export function SimulationRecipeStatusRuntimeInspector({
   channelIds,
   channels,
   runtimeStatus,
+  runtimeSample,
   index,
   t,
   appHost,
@@ -82,7 +85,7 @@ export function SimulationRecipeStatusRuntimeInspector({
 }: SimulationRecipeStatusRuntimeInspectorProps) {
   const shouldAnimate = Object.values(runtimeStatus?.channelRecipes ?? {})
     .some((status) => status?.isProgressing === true);
-  const presentation = useSimulationRecipePresentation(appHost, shouldAnimate);
+  const presentation = useSimulationRecipePresentation(runtimeSample, shouldAnimate);
   const resolveProgressPercent = (
     status: SimulationDeviceRuntimeChannelRecipeStatus | null,
   ): number | null => resolveChannelProgressPercent(
@@ -107,7 +110,16 @@ export function SimulationRecipeStatusRuntimeInspector({
     if (!needsGasEnv) return null;
 
     // 通过 SimulationQuery 获取设备当前完全处于的气体
-    const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
+    // AI-CORRECTION 2026-09-24: 气体结果现在由父层在同一次运行态采样中取得，此处只读取采样值。
+    // AI-REMOVED 2026-09-24:
+    // Reason: Inspector 气体状态必须与设备配方状态来自同一次运行态采样。
+    // Trigger: 修复多个 Inspector 分别读取仿真投影造成的时序不一致。
+    // Evidence: SelectionInspectorSlot 已在一次采样中收集 activeGasItemIds。
+    // Replacement: runtimeSample.activeGasItemIds。
+    // Risk: Low
+    // Human Review: Required
+    // Original code: const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
+    const gasItemIds = runtimeSample?.activeGasItemIds ?? null;
     const isInGas = gasItemIds !== null && gasItemIds.length > 0;
     const gasNames = gasItemIds?.map((itemId) => {
       const gasItem = index.itemById.get(itemId);

@@ -602,6 +602,8 @@
 }
 
 .canvas-right-dock-toolbar {
+  --input-prompt-color: var(--in-canvas-toolbar-button-text);
+
   position: absolute;
   top: calc(
     var(--top-bar-height, 48px)
@@ -638,8 +640,28 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
+  // AI-REMOVED 2026-09-24:
+  // Reason: 参考图是沿文字和图标轮廓扩散的暗影，不是矩形卡片。
+  // Trigger: 用户要求复刻游戏衬底，明确否定矩形背景。
+  // Evidence: 游戏截图右侧提示无硬边；本轮矩形衬底偏离参考样式。
+  // Replacement: 下方按钮与快捷键行共用的 drop-shadow。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // padding: 4px 8px;
+  // border-radius: 4px;
+  // background: var(--in-canvas-toolbar-button-bg);
   color: var(--in-canvas-toolbar-button-text);
   pointer-events: none;
+}
+
+.canvas-right-dock-toolbar-button,
+.canvas-right-dock-toolbar-shortcut {
+  // 仅对前景轮廓投下近景阴影和柔和暗晕，背景仍透出原始地面纹理。
+  filter:
+    drop-shadow(0 1px 1px var(--in-canvas-toolbar-label-shadow))
+    drop-shadow(0 0 4px var(--in-canvas-toolbar-label-shadow));
 }
 
 .canvas-right-dock-toolbar-shortcut-prompt {
@@ -769,6 +791,7 @@
 }
 
 // 快捷键模式下的标签外发光
+// AI-CORRECTION 2026-09-24: 草地上的同色外发光会模糊字形，改用主题阴影色衬托文字。
 .canvas-right-dock-toolbar-label--glow {
   min-width: 0;
   white-space: nowrap;
@@ -778,7 +801,7 @@
   color: var(--in-canvas-toolbar-label-text);
   text-shadow:
     0 1px 2px var(--in-canvas-toolbar-label-shadow),
-    0 0 8px var(--in-canvas-toolbar-label-text);
+    0 0 8px var(--in-canvas-toolbar-label-shadow);
 }
 
 .canvas-bottom-left-toolbar {

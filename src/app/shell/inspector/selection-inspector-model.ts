@@ -8,6 +8,16 @@ import type {
   SlotLinkDefinition,
   WorldEntity,
 } from "@/domain/document/world-document";
+import type { SimulationDocumentRuntimeReadModel } from "@/domain/simulation/types/simulation-types";
+import type { SimulationRecipePresentationState } from "@/shared/simulation-recipe-progress";
+
+export interface InspectorRuntimeSample {
+  readonly entityId: string;
+  readonly documentStatus: SimulationDocumentRuntimeReadModel | null;
+  readonly activeGasItemIds: readonly string[] | null;
+  readonly simulationState: SimulationRecipePresentationState;
+  readonly sampledAtMs: number;
+}
 
 /** inspector 渲染时所在的宿主容器 */
 export type InspectorRenderMode = "dock" | "dialog";

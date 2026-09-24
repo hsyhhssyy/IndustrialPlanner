@@ -136,6 +136,7 @@ function renderInspector(
         definition={definition}
         entity={entity}
         runtimeStatus={runtimeStatus}
+        runtimeSample={null}
         translate={(key) => key}
       />,
     );
