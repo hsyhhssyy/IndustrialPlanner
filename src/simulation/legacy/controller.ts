@@ -52,7 +52,15 @@ import type { SimulationStateReadWrite } from "../contracts";
 import type { SimulationWorkerBridge, TimelineWorkerBridge } from "./bridge-contract";
 import { LegacyTimelineController } from "./timeline";
 import { LegacyPlaybackController } from "./playback";
-import { LegacyRegionalController } from "./regional";
+// AI-REMOVED 2026-09-25:
+// Reason: Legacy 产品入口已固定单基地，区域控制器不可达。
+// Trigger: 清理退役的 Legacy 多基地产品实现。
+// Evidence: SimulationActionImpl.start 只执行 refreshFromCurrentDocument。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { LegacyRegionalController } from "./regional";
 import {
   logger,
   cloneWorldDocument,
@@ -152,7 +160,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 
   private readonly timeline: LegacyTimelineController;
   private readonly playback: LegacyPlaybackController;
-  private readonly regional: LegacyRegionalController;
+  // AI-REMOVED 2026-09-25:
+  // Reason: Legacy 已无多基地产品入口。
+  // Trigger: 清理不可达的区域控制器状态。
+  // Evidence: start 始终写入 SIMULATION_MODE.singleBase。
+  // Replacement: 单基地 playback 与 timeline。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // private readonly regional: LegacyRegionalController;
 
   private readonly workspace: WorkspaceContract;
 
@@ -183,7 +199,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 // Original code:
 //   private readonly getRegionalDarkPipeLinks: SimulationActionImplOptions["getRegionalDarkPipeLinks"];
 
-  private readonly regionalWorkerMode: "auto" | "runtime";
+  // AI-REMOVED 2026-09-25:
+  // Reason: 此字段仅用于构造退役区域控制器；Blueprint 客户端直接使用 options.regionalWorkerMode。
+  // Trigger: 清理 Legacy 多基地产品装配。
+  // Evidence: 构造器中该字段无其他有效读取。
+  // Replacement: BlueprintExecutionClient 构造参数。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // private readonly regionalWorkerMode: "auto" | "runtime";
 
   // AI-REMOVED 2026-08-28:
   // Reason: 该代码仅服务已归档的 Playwright 区域蓝图 Runner，新 Blueprint Runner 直接驱动区域仿真 session。
@@ -252,7 +276,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 // Human Review: Required
 // Original code:
 //     this.getRegionalDarkPipeLinks = options.getRegionalDarkPipeLinks;
-    this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
+    // AI-REMOVED 2026-09-25:
+    // Reason: regionalWorkerMode 字段已移除。
+    // Trigger: 清理 Legacy 区域控制器装配。
+    // Evidence: BlueprintExecutionClient 已直接消费 options.regionalWorkerMode。
+    // Replacement: 上方 BlueprintExecutionClient 构造参数。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
 // Trigger: Host / legacy 控制器重构。
@@ -266,7 +298,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.playback = new LegacyPlaybackController({
       stateReadWrite: this.stateReadWrite, presentation: this.presentation, topology: this.topology, bridge: this.bridge,
       getPerfEnabled: this.getPerfEnabled,
-      isRegionalActive: () => this.regional.active,
+      // AI-REMOVED 2026-09-25:
+      // Reason: Legacy playback 不再区分不可达的区域会话。
+      // Trigger: 清理多基地残留回调。
+      // Evidence: Legacy start 固定 singleBase。
+      // Replacement: LegacyPlaybackController 的单基地逻辑。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // isRegionalActive: () => this.regional.active,
       isTopologyRefreshing: () => this.topologyRefreshQueue !== null,
       syncTimelineCursorFromPlayback: (options) => this.timeline.syncTimelineCursorFromPlayback(options),
       checkTimelineSafetySync: (tick) => this.timeline.checkTimelineSafetySync(tick),
@@ -279,22 +319,30 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
       createTimelineBridge: this.createTimelineBridge, start: () => this.start(),
       compiledSource: this.compiledSource, playback: this.playback,
     });
-    this.regional = new LegacyRegionalController({
-      workspace: this.workspace, stateReadWrite: this.stateReadWrite, presentation: this.presentation, topology: this.topology,
-      getRegionalResourceSettings: this.getRegionalResourceSettings,
-// AI-REMOVED 2026-09-25:
-// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
-// Trigger: REQ-038 及用户授权修改 main。
-// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
-// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
-// Risk: Legacy 单基地和区域启动保护需回归。
-// Human Review: Required
-// Original code:
-//       getRegionalDarkPipeLinks: this.getRegionalDarkPipeLinks,
-      getActiveActivityIds: this.getActiveActivityIds,
-      regionalWorkerMode: this.regionalWorkerMode, playback: this.playback,
-      recoverFromStartFailure: (error) => this.recoverFromStartFailure(error),
-    });
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 产品入口不再创建区域会话，控制器无需构造不可达的对象。
+    // Trigger: 清理退役的 Legacy 多基地实现。
+    // Evidence: start 只调用单基地拓扑启动。
+    // Replacement: LegacyPlaybackController 与 LegacyTimelineController。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.regional = new LegacyRegionalController({
+    //   workspace: this.workspace, stateReadWrite: this.stateReadWrite, presentation: this.presentation, topology: this.topology,
+    //   getRegionalResourceSettings: this.getRegionalResourceSettings,
+    // AI-REMOVED 2026-09-25:
+    // Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+    // Trigger: REQ-038 及用户授权修改 main。
+    // Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+    // Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+    // Risk: Legacy 单基地和区域启动保护需回归。
+    // Human Review: Required
+    // Original code:
+    //       getRegionalDarkPipeLinks: this.getRegionalDarkPipeLinks,
+    //   getActiveActivityIds: this.getActiveActivityIds,
+    //   regionalWorkerMode: this.regionalWorkerMode, playback: this.playback,
+    //   recoverFromStartFailure: (error) => this.recoverFromStartFailure(error),
+    // });
   }
 
   public getPerformanceDiagnostics(): SimulationPerformanceDiagnosticsReadModel {
@@ -387,9 +435,17 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.timeline.cancelPendingResume();
     this.stateReadWrite.runningState = "pause";
     this.playback.completeTopologyPresentationBoundary(true);
-    if (this.regional.active) {
-      this.regional.pause();
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域会话已无产品启动入口。
+    // Trigger: 清理暂停动作的无效分支。
+    // Evidence: start 固定 singleBase。
+    // Replacement: 上方单基地 playback 暂停处理。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.regional.active) {
+    //   this.regional.pause();
+    // }
   });
 
   public readonly resume: SimulationAction["resume"] = action(() => {
@@ -400,11 +456,20 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     if (this.timeline.resumePendingPresentation()) return;
 
     this.stateReadWrite.runningState = "start";
-    if (this.regional.active) {
-      this.regional.resume();
-    } else {
-      this.playback.ensurePlaybackHotQueue();
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域恢复分支不可达。
+    // Trigger: 清理退役多基地残留。
+    // Evidence: start 固定 singleBase。
+    // Replacement: this.playback.ensurePlaybackHotQueue()。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.regional.active) {
+    //   this.regional.resume();
+    // } else {
+    //   this.playback.ensurePlaybackHotQueue();
+    // }
+    this.playback.ensurePlaybackHotQueue();
   });
 
   public readonly stop: SimulationAction["stop"] = action(() => {
@@ -430,14 +495,22 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
   };
 
   private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
-    if (this.regional.active) {
-      const topology = this.topology.getSnapshot();
-      return {
-        status: "started",
-        topologyId: topology?.topologyId ?? null,
-        diagnostics: topology?.diagnostics ?? [],
-      };
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域会话不可达，刷新始终编译单基地文档。
+    // Trigger: 清理无效拓扑刷新分支。
+    // Evidence: SimulationActionImpl.start 固定 singleBase。
+    // Replacement: 下方单基地刷新路径。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.regional.active) {
+    //   const topology = this.topology.getSnapshot();
+    //   return {
+    //     status: "started",
+    //     topologyId: topology?.topologyId ?? null,
+    //     diagnostics: topology?.diagnostics ?? [],
+    //   };
+    // }
     const playbackTickRequestCompletion = this.playback.pendingRequest;
     if (playbackTickRequestCompletion !== null) {
       await playbackTickRequestCompletion;
@@ -715,10 +788,19 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     // ) {
     //   return;
     // }
-    if (this.regional.active && value !== this.stateReadWrite.simulationSpeed) {
-      // 运行中区域提速/降速需重启重新预热；第一版仅在 stop 状态允许实际切换。
-      return;
-    }
+    // AI-CORRECTION 2026-09-25: 上方旧订正中提及的 regional.active 门禁随 Legacy 多基地入口一并移除。
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域运行态不可达，运行中调速门禁不再有适用对象。
+    // Trigger: 清理退役 Legacy 多基地分支。
+    // Evidence: start 始终使用 singleBase。
+    // Replacement: 下方单基地速度更新路径。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.regional.active && value !== this.stateReadWrite.simulationSpeed) {
+    //   // 运行中区域提速/降速需重启重新预热；第一版仅在 stop 状态允许实际切换。
+    //   return;
+    // }
 
     this.stateReadWrite.simulationSpeed = value;
     if (value === 0) {
@@ -897,8 +979,17 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
    * 以及失败后残留热队列造成 playbackDiag 空转（notReady=100%）。
    * 传入 error 时覆盖 runtimeStatus 为 error，否则保留各失败分支已设置的具体错误信息。
    */
+  /** AI-CORRECTION 2026-09-25: Legacy 多基地启动入口已归档，此处仅处理单基地 start 失败。 */
   private recoverFromStartFailure(error?: unknown): void {
-    this.regional.disposeRegionalSession();
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域会话不可达，无会话需要清理。
+    // Trigger: 清理退役多基地产品代码。
+    // Evidence: start 固定 singleBase，控制器不再构造 regional。
+    // Replacement: 下方单基地 playback 清理。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.regional.disposeRegionalSession();
     this.playback.resetPlaybackHotQueue();
     runInAction(() => {
       this.stateReadWrite.runningState = "stop";
@@ -916,7 +1007,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
   }
 
   private clearPlaybackProgress(): void {
-    this.regional.disposeRegionalSession();
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域会话不可达，停止路径无需清理会话。
+    // Trigger: 清理退役多基地残留。
+    // Evidence: start 固定 singleBase。
+    // Replacement: 下方单基地拓扑与播放状态清理。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.regional.disposeRegionalSession();
     this.topologyRevision += 1;
     this.playback.completeTopologyPresentationBoundary(false);
     this.timeline.stopTimelineWorker();

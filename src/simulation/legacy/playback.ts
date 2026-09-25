@@ -19,6 +19,7 @@ import type {
 // Trigger: Host / legacy 控制器重构。
 // Evidence: 公共 Query 与子控制器已接管对应职责，原 import 或状态入口不再需要。
 // Replacement: LegacyPlaybackContext.isRegionalActive
+// AI-CORRECTION 2026-09-25: Legacy 多基地入口退役后 isRegionalActive 也已移除；单基地播放直接运行。
 // Risk: Low
 // Human Review: Required
 // Original code:
@@ -71,7 +72,15 @@ interface LegacyPlaybackContext {
   readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   readonly bridge: SimulationWorkerBridge;
   readonly getPerfEnabled: (() => boolean) | undefined;
-  isRegionalActive(): boolean;
+  // AI-REMOVED 2026-09-25:
+  // Reason: Legacy 只启动单基地仿真，播放控制不再接收区域会话状态。
+  // Trigger: 清理退役 Legacy 多基地路径。
+  // Evidence: SimulationActionImpl.start 固定 singleBase。
+  // Replacement: 单基地播放流程。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // isRegionalActive(): boolean;
   isTopologyRefreshing(): boolean;
   syncTimelineCursorFromPlayback(options?: { retargetWindow?: boolean }): void;
   checkTimelineSafetySync(tickNumber: number): Promise<void>;
@@ -409,9 +418,17 @@ export class LegacyPlaybackController {
 
   /** 低于低水位时补到容量上限；任意时刻最多一个范围请求在途。 */
   public ensurePlaybackHotQueue(): void {
-    if (this.context.isRegionalActive()) {
-      return;
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域会话不可达，热队列无需跳过区域模式。
+    // Trigger: 清理退役 Legacy 多基地分支。
+    // Evidence: start 始终使用 singleBase。
+    // Replacement: 下方单基地热队列准入。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.context.isRegionalActive()) {
+    //   return;
+    // }
     const currentSnapshot = this.context.presentation.currentSnapshot;
     if (
       currentSnapshot === null
@@ -511,11 +528,19 @@ export class LegacyPlaybackController {
     ) {
       return;
     }
-    if (this.context.isRegionalActive()) {
-      // 区域快照由区域会话管理缓存；没有单基地 Worker 呈现确认可回传。
-      this.pendingPlaybackAckTickNumber = null;
-      return;
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 区域快照路径不可达，呈现确认始终回传单基地 Worker。
+    // Trigger: 清理退役 Legacy 多基地分支。
+    // Evidence: start 固定 singleBase。
+    // Replacement: 下方 acknowledgePresentedTick。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.context.isRegionalActive()) {
+    //   // 区域快照由区域会话管理缓存；没有单基地 Worker 呈现确认可回传。
+    //   this.pendingPlaybackAckTickNumber = null;
+    //   return;
+    // }
 
     const generation = this.playbackHotQueueGeneration;
     const tickNumber = this.pendingPlaybackAckTickNumber;

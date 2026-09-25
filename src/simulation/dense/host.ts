@@ -1108,17 +1108,25 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     const regionBases = this.workspace.registry.baseDefinitions.filter(
       (definition) => definition.tag === currentBase.tag,
     );
-    if (regionBases.length < 2) {
-      return this.failRegionalStart(
-        `区域 ${currentBase.tag} 至少需要两个基地才能启动多基地仿真。`,
-        {
-          code: "insufficient-regional-bases",
-          currentBaseId: sourceDocument.baseId,
-          regionBaseCount: regionBases.length,
-          regionTag: currentBase.tag,
-        },
-      );
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Dense 合图和投影均支持一份基地文档，数量下限来自已退役的多 Worker 区域屏障。
+    // Trigger: 单基地草稿箱在已开启区域模式时仍需启动仿真。
+    // Evidence: createDenseRegionalDocument 仅拒绝空集合，且单基地合图已有测试覆盖。
+    // Replacement: createDenseRegionalDocument 的非空文档校验；下方仍保留五基地上限。
+    // Risk: 单基地区域合图需验证启动、投影和仓库行为。
+    // Human Review: Required
+    // Original code:
+    // if (regionBases.length < 2) {
+    //   return this.failRegionalStart(
+    //     `区域 ${currentBase.tag} 至少需要两个基地才能启动多基地仿真。`,
+    //     {
+    //       code: "insufficient-regional-bases",
+    //       currentBaseId: sourceDocument.baseId,
+    //       regionBaseCount: regionBases.length,
+    //       regionTag: currentBase.tag,
+    //     },
+    //   );
+    // }
     if (regionBases.length > 5) {
       return this.failRegionalStart(
         `区域 ${currentBase.tag} 包含 ${regionBases.length} 个基地，超过 5 个上限。`,

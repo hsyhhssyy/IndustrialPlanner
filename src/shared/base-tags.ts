@@ -1,4 +1,5 @@
 const MAX_PIPE_LOGISTICS_TAG_PREFIX = "maxPipeLogistics=";
+export const ALL_REGION_ENTITIES_BASE_TAG = "allRegionEntities";
 
 /**
  * 从基地 tags 中解析最大管道物流数。

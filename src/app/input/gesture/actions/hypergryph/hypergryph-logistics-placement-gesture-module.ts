@@ -2,7 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import {
-  canCurrentBaseAcceptWulingOnlyEntities,
+  hasPlaceableEntityDefinitionInCurrentBase,
   canPlaceEntityDefinitionInCurrentBase,
 } from "@/app/placement-zone-availability";
 import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
@@ -150,7 +150,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         scope: { inputLayers: ["canvas"], activeTools: ["select", "logistics-placement"] },
         triggerPolicy: { kind: "allow-any-additional-modifiers" },
         handle(_event, context) {
-          if (kind === LOGISTICS_KIND.pipe && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+          if (kind === LOGISTICS_KIND.pipe && !hasPlaceableEntityDefinitionInCurrentBase(context.appHost, "pipeLogistics")) {
             return { status: "ignored" };
           }
           const editor = context.workspace.editor;
@@ -244,7 +244,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         });
 
         if (group === "beltLogistics" || group === "pipeLogistics") {
-          if (group === "pipeLogistics" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+          if (group === "pipeLogistics" && !hasPlaceableEntityDefinitionInCurrentBase(context.appHost, "pipeLogistics")) {
             return { status: "ignored" };
           }
 
@@ -290,7 +290,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
-            && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)
+            && !hasPlaceableEntityDefinitionInCurrentBase(context.appHost, "pipeLogistics")
           ) {
             return { status: "ignored" };
           }
@@ -310,7 +310,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
-            && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)
+            && !hasPlaceableEntityDefinitionInCurrentBase(context.appHost, "pipeLogistics")
           ) {
             return { status: "ignored" };
           }
@@ -1378,7 +1378,7 @@ function handleLogisticsDeviceShortcutIndex(options: {
     return { status: "ignored" };
   }
 
-  if (group === "pipeLogistics" && !canCurrentBaseAcceptWulingOnlyEntities(options.appHost)) {
+  if (group === "pipeLogistics" && !hasPlaceableEntityDefinitionInCurrentBase(options.appHost, "pipeLogistics")) {
     return { status: "ignored" };
   }
 

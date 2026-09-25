@@ -3,7 +3,15 @@ import { action, runInAction } from "mobx";
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 
 import type { WorldDocument } from "@/domain/document/world-document";
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+// AI-REMOVED 2026-09-25:
+// Reason: Legacy 时间轴只运行单基地模式，不再读取区域模式枚举。
+// Trigger: 清理退役 Legacy 多基地分支。
+// Evidence: SimulationActionImpl.start 固定 singleBase。
+// Replacement: 下方直接启用时间轴。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
@@ -275,9 +283,17 @@ export class LegacyTimelineController {
   private readonly timelineCheckpointMetadataByTickNumber = new Map<number, TimelineCheckpointMetadata>();
 
   public readonly enableTimeline: SimulationAction["enableTimeline"] = async () => {
-    if (this.context.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
-      return;
-    }
+    // AI-REMOVED 2026-09-25:
+    // Reason: Legacy 多基地模式没有产品入口，时间轴门禁永不命中。
+    // Trigger: 清理退役 Legacy 多基地代码。
+    // Evidence: start 固定 singleBase，外部 Action 也不能设置区域模式。
+    // Replacement: 下方正常启用时间轴。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (this.context.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
+    //   return;
+    // }
     runInAction(() => {
       this.context.stateReadWrite.timeline.enabled = true;
       this.context.stateReadWrite.timeline.readiness = "preparing";

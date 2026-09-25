@@ -1103,9 +1103,9 @@ describe("ST2-RQ-023 dense host regressions", () => {
     }
   });
 
-  it("records a structured error when dense regional startup is rejected", async () => {
+  it("starts a one-base dense regional session for the draft box", async () => {
     const registry = createRegistryContract();
-    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const currentDocument = createWorldDocument({ baseId: "draft_box" });
     registry.baseDefinitions = registry.baseDefinitions.filter((definition) =>
       definition.id === currentDocument.baseId
     );
@@ -1125,21 +1125,10 @@ describe("ST2-RQ-023 dense host regressions", () => {
       setRegionalMultiBaseSetting(workspace, true);
       await host.actions.start();
 
-      expect(host.state.runningState).toBe("stop");
-      expect(host.internalState.runtimeStatus).toMatchObject({
-        mode: "error",
-        error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
-      });
-      expect(consoleError).toHaveBeenCalledWith(
-        "[industrial-planner:dense-simulation-runtime] Dense regional simulation start rejected.",
-        {
-          code: "insufficient-regional-bases",
-          currentBaseId: "wuling_protocol_core",
-          regionBaseCount: 1,
-          regionTag: "武陵",
-          error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
-        },
-      );
+      expect(host.state.runningState).toBe("start");
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      expect(host.queries.getWarehouseStats()).not.toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
     } finally {
       host.dispose();
       consoleError.mockRestore();

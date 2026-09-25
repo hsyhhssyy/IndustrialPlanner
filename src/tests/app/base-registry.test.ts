@@ -55,10 +55,10 @@ describe("createRegistryContract", () => {
       expect(definition.outerRing.right % 5).toBe(0);
       expect(definition.outerRing.bottom % 5).toBe(0);
       expect(definition.outerRing.left % 5).toBe(0);
-      expect([5, 10]).toContain(definition.outerRing.top);
-      expect([5, 10]).toContain(definition.outerRing.right);
-      expect([5, 10]).toContain(definition.outerRing.bottom);
-      expect([5, 10]).toContain(definition.outerRing.left);
+      expect([5, 10, 20]).toContain(definition.outerRing.top);
+      expect([5, 10, 20]).toContain(definition.outerRing.right);
+      expect([5, 10, 20]).toContain(definition.outerRing.bottom);
+      expect([5, 10, 20]).toContain(definition.outerRing.left);
 
       // AI-REMOVED 2026-05-10:
       // Reason: 用户澄清约束是 outerRing 每个方向的格数分别必须是 5 的整数倍，不是外扩总面积满足 5 整除。
@@ -83,6 +83,18 @@ describe("createRegistryContract", () => {
       //
       // expect(expansionArea % 5).toBe(0);
     }
+  });
+
+  it("registers one 320×320 draft base with a 20-cell outer ring", () => {
+    const draftBases = BASE_DEFINITIONS.filter((definition) => definition.tag === "草稿箱");
+    expect(draftBases).toHaveLength(1);
+    expect(draftBases[0]).toMatchObject({
+      id: "draft_box",
+      name: "草稿箱",
+      placeableArea: { width: 320, height: 320 },
+      outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      tags: ["allRegionEntities"],
+    });
   });
 
   it("classifies dedicated and general logistics devices by definition id", () => {

@@ -271,7 +271,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
 function groupBaseDefinitionsByTag(
   baseDefinitions: readonly BaseDefinition[],
 ): Array<{ tag: string; bases: BaseDefinition[] }> {
-  const TAG_ORDER: Record<string, number> = { "四号谷地": 0, "武陵": 1 };
+  const TAG_ORDER: Record<string, number> = { "四号谷地": 0, "武陵": 1, "草稿箱": 100 };
   const groups: Array<{ tag: string; bases: BaseDefinition[] }> = [];
   const groupByTag = new Map<string, BaseDefinition[]>();
 

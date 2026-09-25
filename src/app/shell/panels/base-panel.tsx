@@ -11,6 +11,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 // Original code:
 // import { runInAction } from "mobx";
 // AI-CORRECTION 2026-08-19: runInAction 仍用于 effect 更新 siblingBaseCount；只移除了模式副本同步用途。
+// AI-CORRECTION 2026-09-25: siblingBaseCount 已移除；runInAction 仍用于本面板其他状态更新。
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { createPortal } from "react-dom";
@@ -100,14 +101,22 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
   ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
   const currentBaseName = currentBase?.name ?? currentBaseId;
   const [regionalHelpTutorialVisible, setRegionalHelpTutorialVisible] = useState(false);
-  useEffect(() => {
-    const siblings = appHost.workspace.registry.baseDefinitions.filter((definition) =>
-      definition.tag === currentBase?.tag,
-    ).length - 1;
-    runInAction(() => {
-      regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
-    });
-  }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
+  // AI-REMOVED 2026-09-25:
+  // Reason: Dense 支持单基地合图，基地数量不再决定区域开关是否可用。
+  // Trigger: 草稿箱只有一个基地且需要继承全局区域模式选择。
+  // Evidence: createDenseRegionalDocument 支持单份文档。
+  // Replacement: Dense Host 启动时从当前地区基地集合决定合图内容。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // useEffect(() => {
+  //   const siblings = appHost.workspace.registry.baseDefinitions.filter((definition) =>
+  //     definition.tag === currentBase?.tag,
+  //   ).length - 1;
+  //   runInAction(() => {
+  //     regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
+  //   });
+  // }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
   const warehouseStats = useWarehouseStats(appHost, active);
   const pinnedItems = useWarehousePinnedItems(appHost);
   const warehouseEntries = buildWarehouseStatsEntries({
@@ -563,7 +572,15 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                 checked={multiBaseEnabled}
                 disabled={
                   !regionalMultiBaseSupported
-                  || regionalSimulationUiState.siblingBaseCount < 1
+                  // AI-REMOVED 2026-09-25:
+                  // Reason: Dense 单基地合图可用，开关不再受同地区基地数量限制。
+                  // Trigger: 草稿箱单基地启动。
+                  // Evidence: Dense regional document 仅要求至少一份基地文档。
+                  // Replacement: !regionalMultiBaseSupported 与运行态门禁。
+                  // Risk: Low
+                  // Human Review: Required
+                  // Original code:
+                  // || regionalSimulationUiState.siblingBaseCount < 1
                   || appHost.workspace.simulation?.state.runningState !== "stop"
                 }
                 onChange={(event) => {

@@ -173,7 +173,7 @@ describe("区域多基地启动模式固化", () => {
     }
   });
 
-  it("区域启动准入拒绝时写入结构化错误日志并保留运行态原因", async () => {
+  it("区域模式在仅有一个基地时仍能启动", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     registry.baseDefinitions = registry.baseDefinitions.filter((definition) =>
@@ -186,7 +186,10 @@ describe("区域多基地启动模式固化", () => {
       editor: {
         document: createSnapshotStore(currentDocument),
         state: {} as never,
-        queries: {} as never,
+        queries: {
+          readLatestBaseDocuments: async (baseIds: readonly string[]) =>
+            baseIds.map((baseId) => createWorldDocument({ baseId })),
+        } as never,
         actions: {} as never,
       },
       render: null,
@@ -203,21 +206,9 @@ describe("区域多基地启动模式固化", () => {
     try {
       await host.actions.start();
 
-      expect(host.state.runningState).toBe("stop");
-      expect(host.internalState.runtimeStatus).toMatchObject({
-        mode: "error",
-        error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
-      });
-      expect(consoleError).toHaveBeenCalledWith(
-        "[industrial-planner:dense-simulation-runtime] Dense regional simulation start rejected.",
-        {
-          code: "insufficient-regional-bases",
-          currentBaseId: "wuling_protocol_core",
-          regionBaseCount: 1,
-          regionTag: "武陵",
-          error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
-        },
-      );
+      expect(host.state.runningState).toBe("start");
+      expect(host.state.simulationMode).toBe(SIMULATION_MODE.regionalMultiBase);
+      expect(consoleError).not.toHaveBeenCalled();
     } finally {
       host.dispose();
       consoleError.mockRestore();

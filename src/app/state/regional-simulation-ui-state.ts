@@ -8,6 +8,7 @@ import {
  * 实验性总开关由设置对话框控制器写入；基地面板开关只在 stop 状态可写。
  */
 /** AI-CORRECTION 2026-09-20: 此对象仅保留实验门控与展示计数；基地面板选择由 AppSettings.regionalMultiBaseEnabled 投影公开。 */
+/** AI-CORRECTION 2026-09-25: 单基地可启动 Dense 区域模式，展示计数已移除；此对象只保留实验门控。 */
 class RegionalSimulationUiState {
   /** “允许多个基地同时运行”实验性设置；持久化到本地设置。 */
   public experimentalEnabled = readRegionalMultiBaseExperimentalEnabled();
@@ -22,8 +23,16 @@ class RegionalSimulationUiState {
   // Original code:
   // /** “同时运行所有基地”基地面板开关，默认关闭，应用重载即复位。 */
   // public allBasesEnabled = false;
-  /** 当前区域其他基地数量。 */
-  public siblingBaseCount = 0;
+  // AI-REMOVED 2026-09-25:
+  // Reason: Dense 单基地合图可用，界面不再需要同地区其他基地数量。
+  // Trigger: 草稿箱只有一个基地且区域模式仍可启动。
+  // Evidence: BasePanel 的唯一读取点已移除。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // /** 当前区域其他基地数量。 */
+  // public siblingBaseCount = 0;
 
   public constructor() {
     makeAutoObservable(this);
@@ -42,7 +51,15 @@ class RegionalSimulationUiState {
     // Original code:
     // this.allBasesEnabled = false;
     // AI-CORRECTION 2026-09-20: 模式不再由 Action 或组合根复位；每次 Simulation.start 都从 AppSettings 固化独立会话模式。
-    this.siblingBaseCount = 0;
+    // AI-REMOVED 2026-09-25:
+    // Reason: siblingBaseCount 状态已移除。
+    // Trigger: Dense 单基地合图不再需要同地区基地数门禁。
+    // Evidence: BasePanel 不再读取此状态。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.siblingBaseCount = 0;
   }
 }
 

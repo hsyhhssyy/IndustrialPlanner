@@ -1,7 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
+import { hasPlaceableEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
@@ -481,7 +481,7 @@ function enterMarqueeMode(options: {
 function resolveMarqueeTopLeftButtonIds(appHost: AppHost) {
   return MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) => {
     if (buttonId === "canvas-top-left-corner-toolbar-button-toggle-pipe") {
-      return canCurrentBaseAcceptWulingOnlyEntities(appHost);
+      return hasPlaceableEntityDefinitionInCurrentBase(appHost, "pipeLogistics");
     }
     return true;
   });
