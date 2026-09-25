@@ -1565,6 +1565,8 @@ function compileDocumentSlotLinks(options: {
   const baseId = options.document.baseId;
 
   for (const link of [...options.document.slotLinks].sort((left, right) => left.id.localeCompare(right.id))) {
+    // 远端引用只能由区域合图解引用；单文档编译不得将同名远端实体当作本地实体。
+    if (!isLocalSlotLink(link, baseId)) continue;
     const sourceSlotIds = resolveDocumentLinkEndpointSlotIds({
       endpoint: link.source,
       endpointRole: "source",
@@ -2361,3 +2363,4 @@ function deepMergeJson(left: unknown, right: unknown): unknown {
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+import { isLocalSlotLink } from "@/shared/slot-link";

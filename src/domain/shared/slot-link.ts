@@ -13,6 +13,8 @@ export interface SlotLinkDefinition {
 }
 
 export interface CacheLinkEndpointDefinition {
+  /** 缺省为所属世界文档；当前仅暗管 target 可引用同区域的其他基地。 */
+  readonly baseId?: string;
   /** 该槽位对应的设备的ID **/
   readonly entityId: string;
   /** 端点绑定的存储槽组 ID */

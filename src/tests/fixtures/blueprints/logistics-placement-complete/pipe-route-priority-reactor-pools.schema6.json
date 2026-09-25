@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "5f891452-55db-49fe-9677-7893dbf54264",
+  "version": "fixture-v1",
+  "name": "物流测试",
+  "description": "",
+  "baseId": "stm_hongs_3",
+  "initialGridPoint": {
+    "x": 7,
+    "y": 9
+  },
+  "entities": {
+    "mix_pool_1:1": {
+      "id": "mix_pool_1:1",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 3,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {
+        "recipeChannelAutomaticModeEnabled": true
+      },
+      "tags": []
+    },
+    "mix_pool_1:2": {
+      "id": "mix_pool_1:2",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 5,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {
+        "recipeChannelAutomaticModeEnabled": true
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "mix_pool_1:1",
+    "mix_pool_1:2"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-09-24T05:55:45.605Z",
+  "updatedAt": "2026-09-24T05:55:45.605Z"
+}

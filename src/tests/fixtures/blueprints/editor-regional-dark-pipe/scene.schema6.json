@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "req038-regional-link-editing",
+  "version": "fixture-v1",
+  "name": "区域暗管编辑与互斥",
+  "description": "同名端点用于两个基地；保留旁侧出口仓库链接以验证清理范围。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 12,
+        "y": 12
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 8
+      },
+      "tags": []
+    },
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 20,
+        "y": 12
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "other-outlet": {
+      "id": "other-outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 28,
+        "y": 12
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "inlet",
+    "outlet",
+    "other-outlet"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-outlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "outlet",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    },
+    {
+      "id": "warehouse-other-outlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "other-outlet",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

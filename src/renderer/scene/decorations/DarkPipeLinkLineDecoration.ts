@@ -28,7 +28,7 @@ export function createDarkPipeLinkLineDecoration(): DecorationLayer {
       const documentSnapshot = ctx.renderHost.workspace.editor?.document?.getSnapshot?.() ?? null;
       const editor = ctx.renderHost.workspace.editor;
       if (editor === null || documentSnapshot === null
-        || !documentSnapshot.slotLinks.some(link => isDarkPipeSlotLink(link, documentSnapshot.entities))) {
+        || !documentSnapshot.slotLinks.some(link => isDarkPipeSlotLink(link, documentSnapshot.entities, documentSnapshot.baseId))) {
         const redraw = shouldSync([]);
         ctx.profiler?.count("darkPipeLinkLine.redraws", redraw ? 1 : 0);
         if (redraw) graphics.clear();
@@ -43,7 +43,7 @@ export function createDarkPipeLinkLineDecoration(): DecorationLayer {
       const segments: Array<{ start: ViewportPoint; end: ViewportPoint }> = [];
 
       for (const link of documentSnapshot.slotLinks) {
-        if (!isDarkPipeSlotLink(link, documentSnapshot.entities)) {
+        if (!isDarkPipeSlotLink(link, documentSnapshot.entities, documentSnapshot.baseId)) {
           continue;
         }
 

@@ -315,6 +315,10 @@ vi.mock("@/renderer/scene/decorations/PipePortGhostDecoration", () => ({
   createPipePortGhostDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/RegionalDarkPipeLinkDecoration", () => ({
+  createRegionalDarkPipeLinkDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 import { createRenderSceneOrchestrator } from "@/renderer/scene/render-scene-orchestrator"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { AYU_LIGHT_THEME } from "@/app/theme"
@@ -325,6 +329,12 @@ function createOrchestratorTestHost(seed: {
   readonly internalState: Record<string, unknown>,
   readonly workspace: unknown,
 }): RenderHost {
+  // REQ-038：沿用本文件既有编排测试布景，补齐新 Editor 查询契约；断言不变。
+  const workspace = seed.workspace as RenderHost["workspace"]
+  Object.assign(workspace.editor!.queries, {
+    subscribeBaseDocuments: () => () => undefined,
+    getRegionalDarkPipeLinks: () => [],
+  })
   const textureManager = {
     supportsLogisticsAnimation: vi.fn(() => false),
     acquireLogisticsDynamic: vi.fn(() => {

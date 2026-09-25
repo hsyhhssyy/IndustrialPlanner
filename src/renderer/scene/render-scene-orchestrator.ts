@@ -106,6 +106,7 @@ import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInserti
 import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
+import { createRegionalDarkPipeLinkDecoration } from "./decorations/RegionalDarkPipeLinkDecoration"
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
 import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
@@ -320,6 +321,7 @@ export function createRenderSceneOrchestrator(
 // Original code:
 //   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
+  const regionalDarkPipeLinkDecoration = createRegionalDarkPipeLinkDecoration()
   const darkPipeLinkSelectionDecoration = createDarkPipeLinkSelectionDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
   const beltCargoDecoration = createBeltCargoDecoration()
@@ -470,6 +472,9 @@ export function createRenderSceneOrchestrator(
       documentVersion += 1
       committedDocumentVersion += 1
     })
+  const disposeRegionalDocumentSubscription = renderHost.workspace.editor?.queries.subscribeBaseDocuments(() => {
+    presentationVersion += 1
+  }) ?? (() => undefined)
   const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
     app,
     (snap) => {
@@ -906,6 +911,7 @@ export function createRenderSceneOrchestrator(
 
     measureRenderStage(frameProfiler, "decoration.darkPipeLinkLine", () => {
       darkPipeLinkLineDecoration.sync(ctx)
+      regionalDarkPipeLinkDecoration.sync(ctx, renderHost.workspace.editor?.queries.getRegionalDarkPipeLinks() ?? [])
     })
 
     measureRenderStage(frameProfiler, "decoration.beltPortInsertion", () => {
@@ -1045,6 +1051,7 @@ export function createRenderSceneOrchestrator(
 // Original code:
 //   pipeFlowLayer.addChild(pipeFlowDecoration.container)
   darkPipeLinkLineLayer.addChild(darkPipeLinkLineDecoration.container)
+  darkPipeLinkLineLayer.addChild(regionalDarkPipeLinkDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
@@ -1090,6 +1097,7 @@ export function createRenderSceneOrchestrator(
       // app.ticker.remove(startPixiRenderMeasurement)
       // app.ticker.remove(finishPixiRenderMeasurement)
       disposeDocumentVersionSubscription()
+      disposeRegionalDocumentSubscription()
       memoryCollector.stop()
       pixiRenderDiagnostics.destroy()
 
@@ -1143,6 +1151,7 @@ export function createRenderSceneOrchestrator(
 // Original code:
 //       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()
+      regionalDarkPipeLinkDecoration.destroy()
       darkPipeLinkSelectionDecoration.destroy()
       beltPortInsertionDecoration.destroy()
       beltCargoDecoration.destroy()
@@ -1383,6 +1392,7 @@ function createRenderPresentationSignature(renderHost: RenderHost): string {
     settings?.gameAlwaysShowGridLines,
     settings?.gameAlwaysShowPowerRange,
     settings?.showGrassBackground,
+    settings?.regionalMultiBaseEnabled,
     appState?.activeTool,
     appState?.moveKind,
     appState?.toolInfo?.marqueeType,

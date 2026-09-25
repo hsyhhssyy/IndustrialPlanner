@@ -1273,7 +1273,15 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
       const regionalDocument = createDenseRegionalDocument({
         documents: admissions.map((admission) => admission.document),
         registry: this.workspace.registry,
-        darkPipeLinks: this.options.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [],
+        // AI-REMOVED 2026-09-25:
+        // Reason: Dense 合图直接解析已准备的区域文档。
+        // Trigger: REQ-038 出口文档权威。
+        // Evidence: createDenseRegionalDocument 不再接收外部关系表。
+        // Replacement: dense-regional-document.ts。
+        // Risk: 旧资产需先迁移。
+        // Human Review: Required
+        // Original code:
+        // darkPipeLinks: this.options.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [],
       });
       startStage = "compile-regional-topology";
       const regionalTopology = compileSimulationTopology({

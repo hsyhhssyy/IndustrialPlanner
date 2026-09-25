@@ -2772,6 +2772,96 @@ describe("物流绘制模式", () => {
     });
   });
 
+  it("mouse 先尝试最近输入端口的两种 R 线序，再连接更远的合法输入端口", () => {
+    const editorHost = createEditorHost(createWorkspace());
+    try {
+      const blueprint = loadBlueprintFromFile(
+        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+      );
+      const blockedCell = createTestEntity("blocked-near-port", "pipe_straight_1x1", 7, 8);
+      editorHost.internalDocument.setSnapshot({
+        ...createDummyWorldDocument(),
+        baseId: blueprint.baseId,
+        entities: { ...blueprint.entities, [blockedCell.id]: blockedCell },
+        entityOrder: [...blueprint.entityOrder, blockedCell.id],
+        slotLinks: blueprint.slotLinks,
+      });
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "pipe",
+        source: {
+          type: "device",
+          entityId: "mix_pool_1:1",
+          pointerGridPoint: { x: 7, y: 6 },
+        },
+      });
+      const result = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint: { x: 6, y: 9 },
+        autoCreateSplittersAndConvergers: false,
+        routeMode: {
+          type: "single-bend",
+          routeOrder: "vertical-first",
+          allowTemporaryOrderFlip: true,
+        },
+      });
+
+      expect(result).toMatchObject({ canApply: true, invalidReason: null });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.target).toMatchObject({
+        entityId: "mix_pool_1:2",
+        portId: "in_e_3",
+        insideGridPoint: { x: 8, y: 9 },
+      });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.some((cell) =>
+        cell.gridPoint.x === 7 && cell.gridPoint.y === 8
+      )).toBe(false);
+    } finally {
+      editorHost.dispose();
+    }
+  });
+
+  it("mouse 从空地起笔也先尝试最近入口，两种线序受阻后连接更远入口", () => {
+    const editorHost = createEditorHost(createWorkspace());
+    try {
+      const blueprint = loadBlueprintFromFile(
+        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+      );
+      const blockedCell = createTestEntity("blocked-near-port", "pipe_straight_1x1", 7, 8);
+      editorHost.internalDocument.setSnapshot({
+        ...createDummyWorldDocument(),
+        baseId: blueprint.baseId,
+        entities: { ...blueprint.entities, [blockedCell.id]: blockedCell },
+        entityOrder: [...blueprint.entityOrder, blockedCell.id],
+        slotLinks: blueprint.slotLinks,
+      });
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "pipe",
+        source: { type: "empty-cell", gridPoint: { x: 9, y: 8 } },
+      });
+      const result = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint: { x: 6, y: 9 },
+        autoCreateSplittersAndConvergers: false,
+        routeMode: {
+          type: "single-bend",
+          routeOrder: "vertical-first",
+          allowTemporaryOrderFlip: true,
+        },
+      });
+
+      expect(result).toMatchObject({ canApply: true, invalidReason: null });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.target).toMatchObject({
+        entityId: "mix_pool_1:2",
+        portId: "in_e_3",
+        insideGridPoint: { x: 8, y: 9 },
+      });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual([
+        { x: 9, y: 8 }, { x: 8, y: 8 },
+      ]);
+    } finally {
+      editorHost.dispose();
+    }
+  });
+
 });
 
 // ---------------------------------------------------------------------------

@@ -36,7 +36,15 @@ import type {
 } from "../contracts";
 
 import type {
-  CreateSimulationHostOptions,
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//   CreateSimulationHostOptions,
   SimulationInternalAction,
 } from "@/simulation/contracts";
 import type { LegacyPresentationState } from "./state";
@@ -115,7 +123,15 @@ interface SimulationActionImplOptions {
   getDebugDataEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
   getRegionalResourceSettings?: (regionTag: string) => readonly import("../contracts").RegionalResourceSupplySetting[];
-  getRegionalDarkPipeLinks?: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//   getRegionalDarkPipeLinks?: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
   regionalWorkerMode?: "auto" | "runtime";
 }
 
@@ -157,7 +173,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
 
   private readonly getRegionalResourceSettings: SimulationActionImplOptions["getRegionalResourceSettings"];
 
-  private readonly getRegionalDarkPipeLinks: SimulationActionImplOptions["getRegionalDarkPipeLinks"];
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//   private readonly getRegionalDarkPipeLinks: SimulationActionImplOptions["getRegionalDarkPipeLinks"];
 
   private readonly regionalWorkerMode: "auto" | "runtime";
 
@@ -219,7 +243,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.getDebugDataEnabled = options.getDebugDataEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
     this.getRegionalResourceSettings = options.getRegionalResourceSettings;
-    this.getRegionalDarkPipeLinks = options.getRegionalDarkPipeLinks;
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//     this.getRegionalDarkPipeLinks = options.getRegionalDarkPipeLinks;
     this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
@@ -250,7 +282,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     this.regional = new LegacyRegionalController({
       workspace: this.workspace, stateReadWrite: this.stateReadWrite, presentation: this.presentation, topology: this.topology,
       getRegionalResourceSettings: this.getRegionalResourceSettings,
-      getRegionalDarkPipeLinks: this.getRegionalDarkPipeLinks,
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//       getRegionalDarkPipeLinks: this.getRegionalDarkPipeLinks,
       getActiveActivityIds: this.getActiveActivityIds,
       regionalWorkerMode: this.regionalWorkerMode, playback: this.playback,
       recoverFromStartFailure: (error) => this.recoverFromStartFailure(error),

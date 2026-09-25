@@ -64,7 +64,8 @@ function collectPowerProblems(
     // Replacement: runtimeSample.documentStatus。
     // Risk: Low
     // Human Review: Required
-    // Original code: const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
+    // Original code:
+    // const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
     const docStatus = runtimeSample?.documentStatus;
     if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
       problems.push({

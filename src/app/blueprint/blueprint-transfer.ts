@@ -67,21 +67,25 @@ export function downloadBlueprintDocumentForTransfer(blueprint: BlueprintDocumen
 
 function toPortableBlueprintDocument(blueprint: BlueprintDocument): BlueprintDocument {
   return {
+    ...createBlueprintDocument({
+      blueprintId: blueprint.blueprintId,
+      version: blueprint.version,
+      name: blueprint.name,
+      description: blueprint.description,
+      baseId: blueprint.baseId,
+      initialGridPoint: {
+        ...blueprint.initialGridPoint,
+      },
+      entities: cloneBlueprintEntities(blueprint.entities),
+      entityOrder: [...blueprint.entityOrder],
+      slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
+      regions: blueprint.regions.map(cloneRegionAnnotation),
+      createdAt: blueprint.createdAt,
+      updatedAt: blueprint.updatedAt,
+    }),
     schemaVersion: blueprint.schemaVersion,
-    blueprintId: blueprint.blueprintId,
-    version: blueprint.version,
     name: blueprint.name,
     description: blueprint.description,
-    baseId: blueprint.baseId,
-    initialGridPoint: {
-      ...blueprint.initialGridPoint,
-    },
-    entities: cloneBlueprintEntities(blueprint.entities),
-    entityOrder: [...blueprint.entityOrder],
-    slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
-    regions: blueprint.regions.map(cloneRegionAnnotation),
-    createdAt: blueprint.createdAt,
-    updatedAt: blueprint.updatedAt,
   };
 }
 

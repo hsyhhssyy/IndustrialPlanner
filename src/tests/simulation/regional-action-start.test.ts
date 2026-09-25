@@ -8,7 +8,17 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
-import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+// AI-REMOVED 2026-09-25:
+// Reason: 仿真输入已改为出口文档关系，不再接受 App getter。
+// Trigger: REQ-038 移除 CreateSimulationHostOptions.getRegionalDarkPipeLinks。
+// Evidence: main 装配与两种引擎已停止读取该 getter。
+// Replacement: 本用例 regional-outlet.world.schema6.json。
+// Risk: Low；保留 Legacy 单基地行为断言。
+// Human Review: Required
+// Original code:
+// import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
+import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema6.json";
 import type { AppContract } from "@/domain/app/app-contract";
 
 describe("区域多基地启动模式固化", () => {
@@ -216,7 +226,7 @@ describe("区域多基地启动模式固化", () => {
 
   it("Legacy 忽略多基地设置并始终启动单基地会话", async () => {
     const registry = createRegistryContract();
-    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    const currentDocument = normalizeWorldDocument(regionalOutletJson)!;
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(),
       registry,
@@ -232,15 +242,31 @@ describe("区域多基地启动模式固化", () => {
       sync: null,
       blueprintPlanner: null,
     };
-    const link = createRegionalDarkPipeLink({
-      inlet: { baseId: currentDocument.baseId, entityId: "inlet" },
-      outlet: { baseId: "wuling_tianwangping_aid", entityId: "outlet" },
-    });
+// AI-REMOVED 2026-09-25:
+// Reason: 仿真输入已改为出口文档关系，不再接受 App getter。
+// Trigger: REQ-038 移除 CreateSimulationHostOptions.getRegionalDarkPipeLinks。
+// Evidence: main 装配与两种引擎已停止读取该 getter。
+// Replacement: 本用例 regional-outlet.world.schema6.json。
+// Risk: Low；保留 Legacy 单基地行为断言。
+// Human Review: Required
+// Original code:
+//     const link = createRegionalDarkPipeLink({
+//       inlet: { baseId: currentDocument.baseId, entityId: "inlet" },
+//       outlet: { baseId: "wuling_tianwangping_aid", entityId: "outlet" },
+//     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const host = createSimulationHost(workspace, {
       engineKind: "legacy",
       workerMode: "runtime",
-      getRegionalDarkPipeLinks: () => [link],
+// AI-REMOVED 2026-09-25:
+// Reason: 仿真输入已改为出口文档关系，不再接受 App getter。
+// Trigger: REQ-038 移除 CreateSimulationHostOptions.getRegionalDarkPipeLinks。
+// Evidence: main 装配与两种引擎已停止读取该 getter。
+// Replacement: 本用例 regional-outlet.world.schema6.json。
+// Risk: Low；保留 Legacy 单基地行为断言。
+// Human Review: Required
+// Original code:
+//       getRegionalDarkPipeLinks: () => [link],
     });
 
     try {

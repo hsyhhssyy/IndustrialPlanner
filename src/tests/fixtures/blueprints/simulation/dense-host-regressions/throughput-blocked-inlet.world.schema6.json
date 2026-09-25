@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 6,
+  "documentKey": "req038-throughput-blocked-inlet",
+  "baseId": "wuling_protocol_core",
+  "meta": {
+    "id": "req038-throughput-inlet",
+    "name": "跨基地暗管inlet",
+    "createdAt": "2026-09-25T00:00:00.000Z",
+    "updatedAt": "2026-09-25T00:00:00.000Z"
+  },
+  "entities": {
+    "source": {
+      "id": "source",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 500
+      },
+      "tags": []
+    },
+    "input-pipe": {
+      "id": "input-pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "input-meter": {
+      "id": "input-meter",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 4,
+        "y": 1
+      },
+      "rotation": 270,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_liquid_xiranite",
+          "limit": null,
+          "perMinuteLimit": null
+        }
+      },
+      "tags": []
+    },
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 500
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source",
+    "input-pipe",
+    "input-meter",
+    "inlet"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "documentSettings": {
+    "viewport": {
+      "center": {
+        "x": 0,
+        "y": 0
+      },
+      "gridSize": 1,
+      "displayRotation": 0
+    },
+    "powerMode": "infinite"
+  }
+}

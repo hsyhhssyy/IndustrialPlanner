@@ -139,6 +139,7 @@ export function resolvePlacementValidations(options: {
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
   drafts?: readonly WorldEntity[];
+  ignoredEntityIds?: ReadonlySet<string>;
 }): Record<string, EntityPlacementValidationResult> {
   const definitionMap = new Map(
     options.workspace.registry.entityDefinitions.map((definition) => [
@@ -150,6 +151,7 @@ export function resolvePlacementValidations(options: {
     document: options.document,
     state: options.state,
     drafts: options.drafts ?? options.state.drafts,
+    ignoredEntityIds: options.ignoredEntityIds,
     definitionMap,
     registry: options.workspace.registry,
   });
@@ -225,8 +227,10 @@ function resolveValidationEntries(options: {
   drafts: readonly WorldEntity[];
   definitionMap: ReadonlyMap<string, EntityDefinition>;
   registry: WorkspaceContract["registry"];
+  ignoredEntityIds?: ReadonlySet<string>;
 }): PlacementValidationEntry[] {
-  const ghostEntityIds = new Set(options.state.collections[EntityCollectionType.ghost]);
+  const ghostEntityIds = options.ignoredEntityIds
+    ?? new Set(options.state.collections[EntityCollectionType.ghost]);
   const entities = [
     ...resolveOrderedDocumentEntities(options.document),
     ...resolveBaseBuiltinEntities({
@@ -1083,15 +1087,18 @@ function applyCachedOverlapReasons(options: {
   document: WorldDocument; state: EditorStateReadWrite; workspace: WorkspaceContract;
   entries: readonly PlacementValidationEntry[];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+  ignoredEntityIds?: ReadonlySet<string>;
 }): void {
   const { document, state, workspace } = options;
   const registry = workspace.registry;
-  const ghostKey = JSON.stringify(state.collections[EntityCollectionType.ghost]);
+  const ignoredEntityIds = options.ignoredEntityIds
+    ?? new Set(state.collections[EntityCollectionType.ghost]);
+  const ghostKey = JSON.stringify([...ignoredEntityIds].sort());
   let cached = placementOverlapCaches.get(state);
   if (!cached || cached.entities !== document.entities || cached.entityOrder !== document.entityOrder
     || cached.baseId !== document.baseId || cached.definitions !== registry.entityDefinitions
     || cached.bases !== registry.baseDefinitions || cached.ghostKey !== ghostKey) {
-    const entries = resolveValidationEntries({ document, state, registry, drafts: [],
+    const entries = resolveValidationEntries({ document, state, registry, drafts: [], ignoredEntityIds,
       definitionMap: new Map(registry.entityDefinitions.map((definition) => [definition.id, definition])) });
     const reasons = new Map<string, EntityPlacementValidationReason[]>(entries.map((entry) => [entry.entity.id, []]));
     applyOverlapReasons({ entries, registry, reasonsByEntityId: reasons });

@@ -1,5 +1,5 @@
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
+import { BLUEPRINT_SCHEMA_VERSION, createBlueprintDocument } from "@/domain/document/blueprint-document";
 import { createUuid } from "@/domain/shared/uuid";
 import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
@@ -714,19 +714,21 @@ function normalizeBlueprintDocument(
   }
 
   return {
-    schemaVersion: migration.schemaVersion,
-    blueprintId: value.blueprintId,
-    version: value.version,
-    name,
+    ...createBlueprintDocument({
+      blueprintId: value.blueprintId,
+      version: value.version,
+      name,
+      description,
+      baseId: value.baseId,
+      initialGridPoint: value.initialGridPoint,
+      entities: migration.entities,
+      entityOrder: [...migration.entityOrder],
+      slotLinks: [...migration.slotLinks],
+      regions: migration.regions,
+      createdAt,
+      updatedAt,
+    }),
     description,
-    baseId: value.baseId,
-    initialGridPoint: value.initialGridPoint,
-    entities: migration.entities,
-    entityOrder: [...migration.entityOrder],
-    slotLinks: [...migration.slotLinks],
-    regions: migration.regions,
-    createdAt,
-    updatedAt,
   };
 }
 

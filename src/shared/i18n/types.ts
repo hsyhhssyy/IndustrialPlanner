@@ -1,6 +1,8 @@
 import type { AppLocale } from "@/domain/app/types/app-types";
 
 export type UiKey =
+  | "canvas.regionalDarkPipe"
+  | "canvas.regionalDarkPipeSaveFailed"
   | "eda.title"
   | "eda.toolbar"
   | "eda.planThisLine"
@@ -515,6 +517,7 @@ export type UiKey =
   | "basePanel.runAllBasesHelpLoading"
   | "basePanel.runAllBasesLegacyUnsupported"
   | "regionalResources.addResource"
+  | "regionalResources.fixedInfiniteSupply"
   | "regionalResources.infiniteProfile"
   | "regionalResources.infiniteProfileSummary"
   | "regionalResources.perMinute"

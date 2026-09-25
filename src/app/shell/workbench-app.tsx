@@ -104,6 +104,7 @@ import type { AppHost } from "@/app/host/app-host";
 import {
   DARK_PIPE_LINK_TOOL,
   findDarkPipeSlotLinkForEntity,
+  findRegionalDarkPipeLinkForEndpoint,
   listDarkPipeLinkCandidateEntityIds,
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
@@ -866,14 +867,23 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     migrationController.initialize();
   }, [migrationController]);
 
-  useEffect(() => {
-    const editor = appHost.workspace.editor;
-    if (editor === null) return;
-    return appHost.regionalSettings.bindInactiveDarkPipeLinkEdits(
-      editor,
-      () => appHost.state.settings.regionalMultiBaseEnabled,
-    );
-  }, [appHost]);
+// AI-REMOVED 2026-09-25:
+// Reason: 停用期间配置覆盖由文档管理边界维护，不再修改 App 关系表。
+// Trigger: REQ-038 文档权威与 Editor 统一生命周期。
+// Evidence: 建链、入口断开与后台出口历史已接入 Editor。
+// Replacement: src/editor/dark-pipe-link-lifecycle.ts。
+// Risk: 旧资产迁移与关闭模式编辑需要回归。
+// Human Review: Required
+// Original code:
+//   useEffect(() => {
+//     const editor = appHost.workspace.editor;
+//     if (editor === null) return;
+//     return appHost.regionalSettings.bindInactiveDarkPipeLinkEdits(
+//       editor,
+//       () => appHost.state.settings.regionalMultiBaseEnabled,
+//     );
+//   }, [appHost]);
+
 
   useEffect(() => {
     const editor = appHost.workspace.editor;
@@ -918,7 +928,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
             return entity !== undefined
               && resolveDarkPipeRole(entity.definitionId) === (selection.sourceRole === "inlet" ? "outlet" : "inlet")
               && findDarkPipeSlotLinkForEntity(document, entityId) === null
-              && appHost.regionalSettings.findDarkPipeLink({ baseId: document.baseId, entityId }) === null;
+              && findRegionalDarkPipeLinkForEndpoint(editor.queries.getRegionalDarkPipeLinks(), { baseId: document.baseId, entityId }) === null;
           });
       runInAction(() => {
         appHost.internalState.toolInfo.darkPipeLink = { ...selection, candidateEntityIds };

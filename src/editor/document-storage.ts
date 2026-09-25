@@ -8,58 +8,180 @@ import {
   saveToIndexedDb,
 } from "@/shared/storage";
 import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
-import { runInAction } from "mobx";
+import { reaction, runInAction } from "mobx";
 
 import { createLogger } from "@/shared/logging/logger";
 import type { EditorHost } from "./editor-host";
 import { ensureProtocolCoreEntity } from "./ensure-protocol-core";
+import { EditorDocumentRepository } from "./document-repository";
+import type { EditorStateReadWrite } from "./state-impl";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
+import { trySaveToIndexedDb } from "@/shared/storage/browser-storage";
+import { emitStorageChange } from "@/shared/storage/storage-change-event";
 
 const logger = createLogger("document-storage");
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
+const documentStorageFlushers = new WeakMap<EditorHost, () => Promise<void>>();
+
+/** 跨文档事务开始前，等待初始化及已排队的自动保存，避免旧快照随后覆盖事务。 */
+export async function flushEditorDocumentStorage(editorHost: EditorHost): Promise<void> {
+  await documentStorageFlushers.get(editorHost)?.();
+}
 
 export const WORLD_DOCUMENT_DATABASE_LOCATION = {
   databaseName: DOCUMENT_DATABASE_NAME,
   storeName: WORD_DOCUMENT_STORE_NAME,
 };
 
+export function createEditorDocumentRepository(options: {
+  readonly document: SnapshotStoreReadWrite<WorldDocument>;
+  readonly state: EditorStateReadWrite;
+  readonly workspace: WorkspaceContract;
+}): EditorDocumentRepository {
+  return new EditorDocumentRepository({
+    activeDocument: options.document,
+    read: async (baseId) => ensureProtocolCoreEntity({
+      document: await resolveLatestWorldDocumentForBase({
+        baseId,
+        latestDocumentIdByBaseId: options.state.internalPersistState.latestDocumentIdByBaseId,
+      }) ?? createWorldDocument({ baseId }),
+      queries: options.workspace.registry.queries,
+    }),
+    write: async (document, origin = "local") => {
+      const saved = await trySaveToIndexedDb(createWordDocumentLocation(document.documentKey), document);
+      if (saved) emitStorageChange({
+        assetType: "world-document", assetId: document.documentKey, origin, timestamp: Date.now(),
+      });
+      return saved;
+    },
+    reportError: (error) => logger.error("Editor document persistence failed.", { error: String(error) }),
+  });
+}
+
 export function hookDocumentStorage(editorHost: EditorHost): () => void {
+  const repository = editorHost.internalDocuments;
   let disposed = false;
-  let unsubscribeDocument: (() => void) | null = null;
-  let writeQueue = Promise.resolve();
-
-  const enqueueWrite = (
-    document: WorldDocument,
-  ): void => {
-    writeQueue = writeQueue
-      .catch(() => undefined)
-      .then(() => writeWorldDocument(document));
-  };
-
-  void (async () => {
-    const initialDocument = await resolveInitialDocument(editorHost);
-
-    if (disposed) {
-      return;
-    }
-
-    rememberLatestWorldDocument(editorHost, initialDocument);
-    editorHost.internalDocument.setSnapshot(initialDocument);
-    enqueueWrite(initialDocument);
-
-    unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
-      rememberLatestWorldDocument(editorHost, document);
-      enqueueWrite(document);
+  let scopeSerial = 0;
+  let scopeKey = "";
+  const reconcileScope = (): void => {
+    const active = editorHost.internalDocument.getSnapshot();
+    const enabled = editorHost.workspace.app?.state.settings.regionalMultiBaseEnabled === true;
+    const bases = editorHost.workspace.registry.baseDefinitions;
+    const region = bases.find((base) => base.id === active.baseId)?.tag;
+    const baseIds = enabled && region !== undefined
+      ? bases.filter((base) => base.tag === region).map((base) => base.id)
+      : [active.baseId];
+    const key = baseIds.join("\u0000");
+    if (key === scopeKey) return;
+    scopeKey = key;
+    repository.setScope(baseIds);
+    const serial = ++scopeSerial;
+    void (async () => {
+      await repository.ready();
+      if (disposed || serial !== scopeSerial) return;
+      // AI-REMOVED 2026-09-24:
+      // Reason: 首次建表竞态已由共享 IndexedDB 开库边界处理，预载不应等待无关文档的保存。
+      // Trigger: REQ-038 首次保存失败导致整个区域预载被阻断。
+      // Evidence: 真实浏览器捕获并发升级后缺少 worddocument 的 NotFoundError。
+      // Replacement: browser-storage.ts openIndexedDbStores；下方 retain 仍在释放缓存前等待保存。
+      // Risk: Low；预载读取不发布当前画布，释放仍受持久化结果约束。
+      // Human Review: Required
+      //
+      // Original code:
+      // await repository.flush();
+      // if (disposed || serial !== scopeSerial) return;
+      if (enabled) await repository.readMany(baseIds);
+      if (disposed || serial !== scopeSerial) return;
+      await repository.retain(baseIds, () => serial === scopeSerial);
+    })().catch((error: unknown) => {
+      if (!disposed && serial === scopeSerial) {
+        scopeKey = "";
+        logger.error("Failed to prepare regional documents.", { error: String(error) });
+      }
     });
-  })();
-
+  };
+  const unsubscribe = editorHost.internalDocument.subscribe((document, context) => {
+    repository.observeActive(document, context.origin);
+    if (context.origin !== "initial") {
+      rememberLatestWorldDocument(editorHost, document);
+      reconcileScope();
+    }
+  });
+  void repository.initialize(() => resolveInitialDocument(editorHost));
+  const stopModeReaction = reaction(
+    () => editorHost.workspace.app?.state.settings.regionalMultiBaseEnabled === true,
+    reconcileScope,
+  );
+  documentStorageFlushers.set(editorHost, () => repository.flush());
   return () => {
     disposed = true;
-    unsubscribeDocument?.();
-    unsubscribeDocument = null;
+    scopeSerial += 1;
+    stopModeReaction();
+    unsubscribe();
+    documentStorageFlushers.delete(editorHost);
+    repository.dispose();
   };
 }
+
+// AI-REMOVED 2026-09-24:
+// Reason: 单活动文档专用保存队列由 Editor 区域文档管理统一接管。
+// Trigger: REQ-038 要求驻留文档、切换复用和跨文档保存不能互相覆盖。
+// Evidence: 原 writeQueue 只订阅当前文档，后台修改无法共享顺序控制。
+// Replacement: EditorDocumentRepository 与上方 hookDocumentStorage。
+// Risk: 保存顺序、初始化和关闭时未保存内容必须通过真实浏览器验证。
+// Human Review: Required
+//
+// Original code:
+// export function hookDocumentStorage(editorHost: EditorHost): () => void {
+//   let disposed = false;
+//   let unsubscribeDocument: (() => void) | null = null;
+//   let writeQueue = Promise.resolve();
+//
+//   const enqueueWrite = (
+//     document: WorldDocument,
+//   ): void => {
+//     writeQueue = writeQueue
+//       .catch(() => undefined)
+//       .then(() => writeWorldDocument(document));
+//   };
+//
+//   const initialization = (async () => {
+//     const initialDocument = await resolveInitialDocument(editorHost);
+//
+//     if (disposed) {
+//       return;
+//     }
+//
+//     rememberLatestWorldDocument(editorHost, initialDocument);
+//     editorHost.internalDocument.setSnapshot(initialDocument);
+//     enqueueWrite(initialDocument);
+//
+//     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
+//       rememberLatestWorldDocument(editorHost, document);
+//       enqueueWrite(document);
+//     });
+//   })();
+//
+//   documentStorageFlushers.set(editorHost, async () => {
+//     await initialization;
+//     let pending: Promise<void>;
+//     do {
+//       pending = writeQueue;
+//       await pending;
+//     } while (pending !== writeQueue);
+//   });
+//
+//   return () => {
+//     disposed = true;
+//     unsubscribeDocument?.();
+//     unsubscribeDocument = null;
+//     documentStorageFlushers.delete(editorHost);
+//   };
+// }
+//
 
 async function resolveInitialDocument(
   editorHost: EditorHost,

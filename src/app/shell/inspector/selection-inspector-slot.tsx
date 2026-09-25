@@ -53,6 +53,7 @@ import { MeteredConsumptionInspector } from "./metered-consumption-inspector";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import {
   findDarkPipeSlotLinkForEntity,
+  findRegionalDarkPipeLinkForEndpoint,
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
@@ -194,7 +195,8 @@ function renderInspector(options: {
       // Replacement: runtimeStatus prop。
       // Risk: Low
       // Human Review: Required
-      // Original code: runtimeSample={options.runtimeSample}
+      // Original code:
+      // runtimeSample={options.runtimeSample}
       return (
         <SlotConfigInspector
           appHost={options.appHost}
@@ -213,7 +215,8 @@ function renderInspector(options: {
       // Replacement: runtimeStatus prop。
       // Risk: Low
       // Human Review: Required
-      // Original code: runtimeSample={options.runtimeSample}
+      // Original code:
+      // runtimeSample={options.runtimeSample}
       return (
         <LogisticsItemInspector
           appHost={options.appHost}
@@ -345,7 +348,13 @@ function isWarehouseItemLinkSuppressedByDarkPipeLink(options: {
     return false;
   }
 
-  return findDarkPipeSlotLinkForEntity(documentSnapshot, options.entity.id) !== null;
+  return findDarkPipeSlotLinkForEntity(documentSnapshot, options.entity.id) !== null
+    || (options.appHost.state.settings.regionalMultiBaseEnabled
+      && options.appHost.workspace.simulation?.engineKind === "dense-v2"
+      && findRegionalDarkPipeLinkForEndpoint(options.appHost.workspace.editor?.queries.getRegionalDarkPipeLinks() ?? [], {
+        baseId: documentSnapshot.baseId,
+        entityId: options.entity.id,
+      }) !== null);
 }
 
 // AI-REMOVED 2026-05-31:

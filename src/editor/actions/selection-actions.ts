@@ -1348,10 +1348,11 @@ export function createEditorSelectionActions({
             ),
             // AI-CORRECTION 2026-06-10: 删除实体时同步清理关联的 slotLinks，
             // 否则同名新设备会被旧链接自动连上。
+            // 订正（2026-09-25）：只清理当前基地端点；远端同名实体不属于此次删除。
             slotLinks: documentSnapshot.slotLinks.filter(
               (slotLink) =>
-                !deletedEntityIds.has(slotLink.source.entityId)
-                && !deletedEntityIds.has(slotLink.target.entityId),
+                !(isLocalSlotLinkEndpoint(slotLink.source, documentSnapshot.baseId) && deletedEntityIds.has(slotLink.source.entityId))
+                && !(isLocalSlotLinkEndpoint(slotLink.target, documentSnapshot.baseId) && deletedEntityIds.has(slotLink.target.entityId)),
             ),
           }),
         });
@@ -1984,3 +1985,4 @@ function doGridRectsIntersect(a: GridRect, b: GridRect): boolean {
     && a.y < b.y + b.height
     && a.y + a.height > b.y;
 }
+import { isLocalSlotLinkEndpoint } from "@/shared/slot-link";

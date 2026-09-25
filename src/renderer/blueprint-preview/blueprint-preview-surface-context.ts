@@ -103,6 +103,9 @@ export function createBlueprintPreviewSurfaceProjection(options: {
       canCreateLogisticsDraftStartHere: () => false,
       listBaseDocumentSummaries: async () => [],
       readLatestBaseDocuments: async () => [],
+      // 蓝图不携带跨基地关系，预览没有区域文档集合或后台订阅。
+      getRegionalDarkPipeLinks: () => [],
+      subscribeBaseDocuments: () => () => undefined,
       findRegionEntityIds: () => [],
     },
     actions: {

@@ -1,4 +1,7 @@
 import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { RegionalDarkPipeEndpoint, RegionalDarkPipeLink } from "@/domain/shared/dark-pipe-link";
+import { isLocalSlotLink } from "./slot-link";
+export type { RegionalDarkPipeEndpoint, RegionalDarkPipeLink } from "@/domain/shared/dark-pipe-link";
 import type {
   CacheLinkEndpointDefinition,
   SlotLinkDefinition,
@@ -18,16 +21,23 @@ import type {
 
 export type DarkPipeRole = "inlet" | "outlet";
 
-export interface RegionalDarkPipeEndpoint {
-  readonly baseId: string;
-  readonly entityId: string;
-}
-
-export interface RegionalDarkPipeLink {
-  readonly id: string;
-  readonly inlet: RegionalDarkPipeEndpoint;
-  readonly outlet: RegionalDarkPipeEndpoint;
-}
+// AI-REMOVED 2026-09-25:
+// Reason: 关系类型成为 Editor 的公共查询结果，统一迁入 Domain。
+// Trigger: REQ-038 D02、D03 已获用户确认。
+// Evidence: EditorQuery.getRegionalDarkPipeLinks 需要闭合的 Domain 类型引用。
+// Replacement: src/domain/shared/dark-pipe-link.ts。
+// Risk: Low；属性和只读语义保持不变。
+// Human Review: Required
+// Original code:
+// export interface RegionalDarkPipeEndpoint {
+//   readonly baseId: string;
+//   readonly entityId: string;
+// }
+// export interface RegionalDarkPipeLink {
+//   readonly id: string;
+//   readonly inlet: RegionalDarkPipeEndpoint;
+//   readonly outlet: RegionalDarkPipeEndpoint;
+// }
 
 export const DARK_PIPE_LINK_TOOL: ActiveTool = "dark-pipe-link";
 
@@ -134,11 +144,29 @@ function encodeRegionalDarkPipeEndpoint(endpoint: RegionalDarkPipeEndpoint): str
   return `${encodeURIComponent(endpoint.baseId)}:${encodeURIComponent(endpoint.entityId)}`;
 }
 
+/** 出口文档是唯一保存位置；保留悬空目标供检查器诊断，不猜测另一份镜像关系。 */
+export function listDocumentRegionalDarkPipeLinks(documents: readonly WorldDocument[]): RegionalDarkPipeLink[] {
+  return documents.flatMap((document) => document.slotLinks.flatMap((link) => {
+    if (link.linkType !== "share-all"
+      || (link.source.baseId !== undefined && link.source.baseId !== document.baseId)
+      || link.target.baseId === undefined || link.target.baseId === document.baseId
+      || link.source.storageSlotGroupId !== DARK_PIPE_OUTLET_STORAGE_GROUP_ID
+      || link.target.storageSlotGroupId !== DARK_PIPE_INLET_STORAGE_GROUP_ID
+      || link.source.slotId !== DARK_PIPE_SLOT_ID || link.target.slotId !== DARK_PIPE_SLOT_ID) return [];
+    return [{
+      id: link.id,
+      outlet: { baseId: document.baseId, entityId: link.source.entityId },
+      inlet: { baseId: link.target.baseId, entityId: link.target.entityId },
+    }];
+  }));
+}
+
 export function isDarkPipeSlotLink(
   link: SlotLinkDefinition,
   entities: Readonly<Record<string, WorldEntity>>,
+  baseId?: string,
 ): boolean {
-  if (link.linkType !== "share-all") {
+  if (link.linkType !== "share-all" || !isLocalSlotLink(link, baseId)) {
     return false;
   }
 
@@ -157,11 +185,11 @@ export function isDarkPipeSlotLink(
 }
 
 export function findDarkPipeSlotLinkForEntity(
-  document: Pick<WorldDocument, "entities" | "slotLinks">,
+  document: Pick<WorldDocument, "entities" | "slotLinks"> & Partial<Pick<WorldDocument, "baseId">>,
   entityId: string,
 ): SlotLinkDefinition | null {
   return document.slotLinks.find((link) =>
-    isDarkPipeSlotLink(link, document.entities)
+    isDarkPipeSlotLink(link, document.entities, document.baseId)
     && (link.source.entityId === entityId || link.target.entityId === entityId),
   ) ?? null;
 }
@@ -171,6 +199,51 @@ export function isEntityInDarkPipeLink(
   entityId: string,
 ): boolean {
   return findDarkPipeSlotLinkForEntity(document, entityId) !== null;
+}
+
+/** 暗管直连独占出口：本地建链、跨基地建链与执行文档规范化共用同一规则。 */
+export function filterDarkPipeOutletWarehouseLinks(
+  slotLinks: WorldDocument["slotLinks"],
+  outletEntityId: string,
+  baseId?: string,
+): WorldDocument["slotLinks"] {
+  return slotLinks.filter((link) => !(
+    link.linkType === "share-all"
+    && isLocalSlotLink(link, baseId)
+    && link.source.entityId === outletEntityId
+    && link.source.storageSlotGroupId === DARK_PIPE_OUTLET_BUFFER_STORAGE_GROUP_ID
+    && link.source.slotId === DARK_PIPE_SLOT_ID
+    && (link.target.entityId === "warehouse" || link.target.entityId.startsWith("warehouse:"))
+    && link.target.storageSlotGroupId === "warehouse"
+  ));
+}
+
+/** 只清理本次参与建链的端点，保留文档内其他设备和配置。 */
+export function prepareDarkPipeLinkDocument(
+  document: WorldDocument,
+  endpointEntityIds: readonly string[],
+): WorldDocument {
+  let slotLinks = document.slotLinks;
+  const entities = { ...document.entities };
+  let changed = false;
+  for (const entityId of endpointEntityIds) {
+    const entity = entities[entityId];
+    if (entity === undefined || resolveDarkPipeRole(entity.definitionId) === null) continue;
+    if (Object.keys(entity.config).length > 0) {
+      entities[entityId] = { ...entity, config: {} };
+      changed = true;
+    }
+    if (resolveDarkPipeRole(entity.definitionId) === "outlet") {
+      const filtered = filterDarkPipeOutletWarehouseLinks(slotLinks, entityId, document.baseId);
+      if (filtered.length !== slotLinks.length) {
+        slotLinks = filtered;
+        changed = true;
+      }
+    }
+  }
+  return changed
+    ? { ...document, entities, slotLinks, meta: { ...document.meta, updatedAt: new Date().toISOString() } }
+    : document;
 }
 
 export function listDarkPipeLinkCandidateEntityIds(options: {

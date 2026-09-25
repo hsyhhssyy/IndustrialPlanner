@@ -4,6 +4,7 @@ import type {
   WorldEntity,
 } from "@/domain/document/world-document";
 import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
+import { isLocalSlotLinkEndpoint } from "./slot-link";
 
 export interface UnknownWorldEntityDefinitionIssue {
   readonly entityId: string;
@@ -33,7 +34,7 @@ export function collectUnknownWorldEntityDefinitionIssues(options: {
       entityId: entity.id,
       definitionId: entity.definitionId,
       position: { ...entity.position },
-      relatedSlotLinkCount: countRelatedSlotLinks(options.document.slotLinks, entity.id),
+      relatedSlotLinkCount: countRelatedSlotLinks(options.document.slotLinks, entity.id, options.document.baseId),
       origin: isBaseBuiltinEntityId(entity.id)
         ? "base-builtin" as const
         : "document" as const,
@@ -74,8 +75,8 @@ export function admitWorldDocumentForSimulation(options: {
         (entityId) => !excludedEntityIds.has(entityId),
       ),
       slotLinks: options.document.slotLinks.filter((slotLink) =>
-        !excludedEntityIds.has(slotLink.source.entityId)
-        && !excludedEntityIds.has(slotLink.target.entityId)
+        !(isLocalSlotLinkEndpoint(slotLink.source, options.document.baseId) && excludedEntityIds.has(slotLink.source.entityId))
+        && !(isLocalSlotLinkEndpoint(slotLink.target, options.document.baseId) && excludedEntityIds.has(slotLink.target.entityId))
       ),
     },
     issues,
@@ -86,9 +87,10 @@ export function admitWorldDocumentForSimulation(options: {
 function countRelatedSlotLinks(
   slotLinks: readonly SlotLinkDefinition[],
   entityId: string,
+  baseId: string,
 ): number {
   return slotLinks.filter((slotLink) =>
-    slotLink.source.entityId === entityId
-    || slotLink.target.entityId === entityId
+    (isLocalSlotLinkEndpoint(slotLink.source, baseId) && slotLink.source.entityId === entityId)
+    || (isLocalSlotLinkEndpoint(slotLink.target, baseId) && slotLink.target.entityId === entityId)
   ).length;
 }

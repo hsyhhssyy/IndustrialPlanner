@@ -44,7 +44,15 @@ export function createLegacySimulationHost(
     getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
     getRegionalResourceSettings: options.getRegionalResourceSettings,
-    getRegionalDarkPipeLinks: options.getRegionalDarkPipeLinks,
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: src/simulation/legacy/regional.ts 从最新文档派生关系。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//     getRegionalDarkPipeLinks: options.getRegionalDarkPipeLinks,
     regionalWorkerMode: options.workerMode ?? "auto",
   });
   const actions: SimulationContract["actions"] = actionImpl;

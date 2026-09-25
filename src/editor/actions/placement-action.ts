@@ -1,4 +1,4 @@
-import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { createBlueprintDocument, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { DraftEntity } from "../draft-entity";
@@ -132,6 +132,8 @@ export function createEditorPlacementActions({
       blueprint: BlueprintDocument,
       centerGridPoint: GridPoint,
     ) => {
+      // 外部调用也经过蓝图公共边界；先移除跨基地引用，再重映射实体 ID。
+      blueprint = createBlueprintDocument(blueprint);
       state.regionAnnotations.moveFeedback = null;
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);

@@ -1,3 +1,4 @@
+import { listDocumentRegionalDarkPipeLinks } from "@/shared/dark-pipe-link";
 import { runInAction } from "mobx";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -12,7 +13,15 @@ import { appendSimulationBaseBuiltinEntities, prepareCurrentSimulationDocument }
 import type {
   CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
-  CreateSimulationHostOptions,
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: 本文件 listDocumentRegionalDarkPipeLinks(latestDocuments)。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//   CreateSimulationHostOptions,
   RuntimeTickSnapshot,
   RegionalResourceSupplySetting,
 } from "../contracts";
@@ -71,7 +80,15 @@ interface LegacyRegionalContext {
   readonly presentation: LegacyPresentationState;
   readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   readonly getRegionalResourceSettings: ((regionTag: string) => readonly RegionalResourceSupplySetting[]) | undefined;
-  readonly getRegionalDarkPipeLinks: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: 本文件 listDocumentRegionalDarkPipeLinks(latestDocuments)。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//   readonly getRegionalDarkPipeLinks: CreateSimulationHostOptions["getRegionalDarkPipeLinks"];
   readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   readonly regionalWorkerMode: "auto" | "runtime";
   readonly playback: LegacyPlaybackController;
@@ -151,25 +168,33 @@ export class LegacyRegionalController {
       return;
     }
 
-    const regionalDarkPipeLinks = this.context.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [];
-    if (regionalDarkPipeLinks.length > 0) {
-      runInAction(() => {
-        this.context.stateReadWrite.runtimeStatus = {
-          ...this.context.stateReadWrite.runtimeStatus,
-          mode: "error",
-          error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
-        };
-      });
-      logger.error("Regional simulation start rejected.", {
-        code: "legacy-regional-dark-pipe-unsupported",
-        currentBaseId: sourceDocument.baseId,
-        regionTag: currentBase.tag,
-        darkPipeLinkCount: regionalDarkPipeLinks.length,
-        error: this.context.stateReadWrite.runtimeStatus.error,
-      });
-      this.context.recoverFromStartFailure();
-      return;
-    }
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地关系已迁入出口世界文档，移除 App 关系权威的装配和接口。
+// Trigger: REQ-038 及用户授权修改 main。
+// Evidence: Editor 文档集合与 listDocumentRegionalDarkPipeLinks 已统一提供当前关系。
+// Replacement: 本方法读取 latestDocuments 后从文档派生并执行同一拒绝逻辑。
+// Risk: Legacy 单基地和区域启动保护需回归。
+// Human Review: Required
+// Original code:
+//     const regionalDarkPipeLinks = this.context.getRegionalDarkPipeLinks?.(currentBase.tag) ?? [];
+//     if (regionalDarkPipeLinks.length > 0) {
+//       runInAction(() => {
+//         this.context.stateReadWrite.runtimeStatus = {
+//           ...this.context.stateReadWrite.runtimeStatus,
+//           mode: "error",
+//           error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+//         };
+//       });
+//       logger.error("Regional simulation start rejected.", {
+//         code: "legacy-regional-dark-pipe-unsupported",
+//         currentBaseId: sourceDocument.baseId,
+//         regionTag: currentBase.tag,
+//         darkPipeLinkCount: regionalDarkPipeLinks.length,
+//         error: this.context.stateReadWrite.runtimeStatus.error,
+//       });
+//       this.context.recoverFromStartFailure();
+//       return;
+//     }
 
     const regionDefinitions = baseDefinitions.filter((definition) => definition.tag === currentBase.tag);
     if (regionDefinitions.length > 5) {
@@ -236,6 +261,25 @@ export class LegacyRegionalController {
       const latestDocuments = await editor.queries.readLatestBaseDocuments(
         regionDefinitions.map((definition) => definition.id),
       );
+      const regionalDarkPipeLinks = listDocumentRegionalDarkPipeLinks(latestDocuments);
+      if (regionalDarkPipeLinks.length > 0) {
+        runInAction(() => {
+          this.context.stateReadWrite.runtimeStatus = {
+            ...this.context.stateReadWrite.runtimeStatus,
+            mode: "error",
+            error: "跨基地暗管仅支持 Dense 引擎；Legacy 区域仿真无法启动。",
+          };
+        });
+        logger.error("Regional simulation start rejected.", {
+          code: "legacy-regional-dark-pipe-unsupported",
+          currentBaseId: sourceDocument.baseId,
+          regionTag: currentBase.tag,
+          darkPipeLinkCount: regionalDarkPipeLinks.length,
+          error: this.context.stateReadWrite.runtimeStatus.error,
+        });
+        this.context.recoverFromStartFailure();
+        return;
+      }
       const currentCompiledDocument = prepareCurrentSimulationDocument({
         document: sourceDocument,
         workspace: this.context.workspace,

@@ -440,126 +440,135 @@ describe("createEditorHost", () => {
     expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
   });
 
-  it("creates and removes one-to-one dark pipe slot links", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         ...createTestEntity("inlet", "udpipe_loader_2", 0, 0),
-    //         config: {
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-    //           "storageSlotGroups[0].slots[0].initialCount": 8,
-    //         },
-    //       },
-    //       {
-    //         ...createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
-    //         config: {
-    //           "links[0].id": "",
-    //           "links[0].linkType": "share-all",
-    //           "links[0].source.entityId": "outlet",
-    //           "links[0].source.storageSlotGroupId": "unloader_buffer",
-    //           "links[0].source.slotId": "slot_1",
-    //           "links[0].target.entityId": "warehouse",
-    //           "links[0].target.storageSlotGroupId": "warehouse",
-    //           "links[0].target.slotId": "item_liquid_water",
-    //           "storageSlotGroups[0].slots[0].ignoreStock": true,
-    //         },
-    //       },
-    //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-02-variant-1.schema6.json")));
-    editorHost.internalDocument.setSnapshot(document);
-
-    expect(editorHost.actions.createDarkPipeLink({
-      sourceEntityId: "inlet",
-      targetEntityId: "outlet",
-    })).toBe(true);
-
-    const linked = editorHost.document.getSnapshot();
-    expect(linked.slotLinks).toEqual([{
-      id: "dark-pipe-link:outlet:inlet",
-      linkType: "share-all",
-      source: {
-        entityId: "outlet",
-        storageSlotGroupId: "transport_input",
-        slotId: "slot_1",
-      },
-      target: {
-        entityId: "inlet",
-        storageSlotGroupId: "loader_buffer",
-        slotId: "slot_1",
-      },
-    }]);
-    expect(linked.entities.outlet?.config).toEqual({});
-    expect(linked.entities.inlet?.config).toEqual({});
-    expect(editorHost.actions.createDarkPipeLink({
-      sourceEntityId: "inlet",
-      targetEntityId: "outlet",
-    })).toBe(false);
-
-    expect(editorHost.actions.removeDarkPipeLink("outlet")).toBe(true);
-    const unlinked = editorHost.document.getSnapshot();
-    expect(unlinked.slotLinks).toEqual([]);
-    expect(unlinked.entities.inlet?.config).toEqual({});
-    expect(unlinked.entities.outlet?.config).toEqual({});
-  });
-
-  it("removes only the selected outlet warehouse link when creating a dark pipe link", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("inlet", "udpipe_loader_1", 0, 0),
-    //       createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
-    //       createTestEntity("other-outlet", "udpipe_unloader_1", 16, 0),
-    //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-03-variant-1.schema6.json")));
-    document.slotLinks = ["outlet", "other-outlet"].map((entityId) => ({
-      id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
-      linkType: "share-all" as const,
-      source: {
-        entityId,
-        storageSlotGroupId: "unloader_buffer",
-        slotId: "slot_1",
-      },
-      target: {
-        entityId: "warehouse",
-        storageSlotGroupId: "warehouse",
-        slotId: "item_liquid_water",
-      },
-    }));
-    editorHost.internalDocument.setSnapshot(document);
-
-    expect(editorHost.actions.createDarkPipeLink({
-      sourceEntityId: "outlet",
-      targetEntityId: "inlet",
-    })).toBe(true);
-
-    const linked = editorHost.document.getSnapshot();
-    expect(linked.slotLinks.map((slotLink) => slotLink.id)).toEqual([
-      "warehouse-link:other-outlet:unloader_buffer:slot_1",
-      "dark-pipe-link:outlet:inlet",
-    ]);
-    expect(linked.slotLinks.filter((slotLink) =>
-      slotLink.source.entityId === "outlet"
-      && slotLink.source.storageSlotGroupId === "transport_input"
-      && slotLink.source.slotId === "slot_1",
-    )).toHaveLength(1);
-  });
+// AI-REMOVED 2026-09-25:
+// Reason: 这两个同步暗管动作测试由真实持久化与原生交互测试替代。
+// Trigger: REQ-038 将关系权威迁入出口文档，Editor Action 改为异步持久化。
+// Evidence: 旧测试直接调用同步 Action / App 资产，不能覆盖 IndexedDB 与后台文档。
+// Replacement: src/tests/e2e/editor-regional-dark-pipe.test.ts
+// Risk: 需以真实浏览器回归确认交互、互斥与关闭模式覆盖。
+// Human Review: Required
+// Original code:
+//   it("creates and removes one-to-one dark pipe slot links", () => {
+//     const workspace = createWorkspace();
+//     const editorHost = createEditorHost(workspace);
+//     // AI-REMOVED 2026-09-14:
+//     // Reason: 场景构造已批量固化为带版本的蓝图文件。
+//     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+//     // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+//     // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
+//     // Risk: Low；断言与被测动作不变。
+//     // Human Review: Required
+//     // Original code:
+//     // [
+//     //       {
+//     //         ...createTestEntity("inlet", "udpipe_loader_2", 0, 0),
+//     //         config: {
+//     //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+//     //           "storageSlotGroups[0].slots[0].initialCount": 8,
+//     //         },
+//     //       },
+//     //       {
+//     //         ...createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
+//     //         config: {
+//     //           "links[0].id": "",
+//     //           "links[0].linkType": "share-all",
+//     //           "links[0].source.entityId": "outlet",
+//     //           "links[0].source.storageSlotGroupId": "unloader_buffer",
+//     //           "links[0].source.slotId": "slot_1",
+//     //           "links[0].target.entityId": "warehouse",
+//     //           "links[0].target.storageSlotGroupId": "warehouse",
+//     //           "links[0].target.slotId": "item_liquid_water",
+//     //           "storageSlotGroups[0].slots[0].ignoreStock": true,
+//     //         },
+//     //       },
+//     //     ]
+//     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-02-variant-1.schema6.json")));
+//     editorHost.internalDocument.setSnapshot(document);
+//
+//     expect(editorHost.actions.createDarkPipeLink({
+//       sourceEntityId: "inlet",
+//       targetEntityId: "outlet",
+//     })).toBe(true);
+//
+//     const linked = editorHost.document.getSnapshot();
+//     expect(linked.slotLinks).toEqual([{
+//       id: "dark-pipe-link:outlet:inlet",
+//       linkType: "share-all",
+//       source: {
+//         entityId: "outlet",
+//         storageSlotGroupId: "transport_input",
+//         slotId: "slot_1",
+//       },
+//       target: {
+//         entityId: "inlet",
+//         storageSlotGroupId: "loader_buffer",
+//         slotId: "slot_1",
+//       },
+//     }]);
+//     expect(linked.entities.outlet?.config).toEqual({});
+//     expect(linked.entities.inlet?.config).toEqual({});
+//     expect(editorHost.actions.createDarkPipeLink({
+//       sourceEntityId: "inlet",
+//       targetEntityId: "outlet",
+//     })).toBe(false);
+//
+//     expect(editorHost.actions.removeDarkPipeLink("outlet")).toBe(true);
+//     const unlinked = editorHost.document.getSnapshot();
+//     expect(unlinked.slotLinks).toEqual([]);
+//     expect(unlinked.entities.inlet?.config).toEqual({});
+//     expect(unlinked.entities.outlet?.config).toEqual({});
+//   });
+//
+//   it("removes only the selected outlet warehouse link when creating a dark pipe link", () => {
+//     const workspace = createWorkspace();
+//     const editorHost = createEditorHost(workspace);
+//     // AI-REMOVED 2026-09-14:
+//     // Reason: 场景构造已批量固化为带版本的蓝图文件。
+//     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+//     // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+//     // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
+//     // Risk: Low；断言与被测动作不变。
+//     // Human Review: Required
+//     // Original code:
+//     // [
+//     //       createTestEntity("inlet", "udpipe_loader_1", 0, 0),
+//     //       createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
+//     //       createTestEntity("other-outlet", "udpipe_unloader_1", 16, 0),
+//     //     ]
+//     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-03-variant-1.schema6.json")));
+//     document.slotLinks = ["outlet", "other-outlet"].map((entityId) => ({
+//       id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
+//       linkType: "share-all" as const,
+//       source: {
+//         entityId,
+//         storageSlotGroupId: "unloader_buffer",
+//         slotId: "slot_1",
+//       },
+//       target: {
+//         entityId: "warehouse",
+//         storageSlotGroupId: "warehouse",
+//         slotId: "item_liquid_water",
+//       },
+//     }));
+//     editorHost.internalDocument.setSnapshot(document);
+//
+//     expect(editorHost.actions.createDarkPipeLink({
+//       sourceEntityId: "outlet",
+//       targetEntityId: "inlet",
+//     })).toBe(true);
+//
+//     const linked = editorHost.document.getSnapshot();
+//     expect(linked.slotLinks.map((slotLink) => slotLink.id)).toEqual([
+//       "warehouse-link:other-outlet:unloader_buffer:slot_1",
+//       "dark-pipe-link:outlet:inlet",
+//     ]);
+//     expect(linked.slotLinks.filter((slotLink) =>
+//       slotLink.source.entityId === "outlet"
+//       && slotLink.source.storageSlotGroupId === "transport_input"
+//       && slotLink.source.slotId === "slot_1",
+//     )).toHaveLength(1);
+//   });
+//
 
   it("clamps viewport center to the current base warning bounds while panning", () => {
     const workspace = createWorkspace();

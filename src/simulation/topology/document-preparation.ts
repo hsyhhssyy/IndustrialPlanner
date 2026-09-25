@@ -2,6 +2,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+import { isLocalSlotLinkEndpoint } from "@/shared/slot-link";
 
 export function prepareCurrentSimulationDocument(options: {
   readonly document: WorldDocument;
@@ -36,8 +37,8 @@ export function prepareCurrentSimulationDocument(options: {
         !invalidEntityIds.has(entityId),
       ),
       slotLinks: options.document.slotLinks.filter((slotLink) =>
-        !invalidEntityIds.has(slotLink.source.entityId)
-        && !invalidEntityIds.has(slotLink.target.entityId),
+        !(isLocalSlotLinkEndpoint(slotLink.source, options.document.baseId) && invalidEntityIds.has(slotLink.source.entityId))
+        && !(isLocalSlotLinkEndpoint(slotLink.target, options.document.baseId) && invalidEntityIds.has(slotLink.target.entityId)),
       ),
     },
   });

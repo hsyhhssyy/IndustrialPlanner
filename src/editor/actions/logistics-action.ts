@@ -18,7 +18,7 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import { cloneEntityConfig } from "../entity-config-clone";
-import { syncPlacementValidationState } from "../placement-validation";
+import { resolvePlacementValidations, syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import {
@@ -85,12 +85,14 @@ interface OrdinaryLogisticsConnectionInfo {
 }
 
 interface DeviceRouteCandidate {
-  readonly source: DevicePortEndpoint;
+  readonly source: LogisticsDraftEndpoint;
   readonly target: DevicePortEndpoint;
   readonly routeOrder: LogisticsRouteOrder;
   readonly points: readonly GridPoint[];
   readonly lengthScore: number;
   readonly bendScore: number;
+  readonly targetDistanceScore: number;
+  readonly routeOrderPriority: number;
   readonly signature: string;
 }
 
@@ -231,17 +233,24 @@ export function createEditorLogisticsActions(
         baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
-      if (
-        options.routeMode.type === "single-bend"
-        && draft.source.type === "device-port"
-        && draft.source.fixedSource !== true
-        && cursorTarget !== null
-      ) {
-        const deviceRoute = resolveDeviceToDeviceRoute({
+      if (options.routeMode.type === "single-bend") {
+        const targetEntity = findTopEntityAtGridPoint({
+          gridPoint: options.pointerGridPoint,
+          document: currentDocument,
+          drafts: [],
+          entityDefinitionMap: logisticsContext.entityDefinitionMap,
+          registryQueries: logisticsContext.workspace.registry.queries,
+          baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
+          skipLogisticsKind: draft.kind === LOGISTICS_KIND.belt
+            ? LOGISTICS_KIND.pipe
+            : LOGISTICS_KIND.belt,
+        });
+        const deviceRoute = resolveRouteToDevice({
           context: logisticsContext,
           draft,
-          sourceEntityId: draft.source.entityId,
-          targetEndpoint: cursorTarget,
+          sourceEndpoint: draft.source,
+          targetEntityId: targetEntity?.id ?? null,
+          pointerGridPoint: options.pointerGridPoint,
           preferredRouteOrder: options.routeMode.routeOrder,
           autoCreateSplittersAndConvergers:
             options.autoCreateSplittersAndConvergers ?? true,
@@ -253,7 +262,7 @@ export function createEditorLogisticsActions(
             kind: draft.kind,
             source: deviceRoute.source,
             target: deviceRoute.target,
-            routeOrder: options.routeMode.routeOrder,
+            routeOrder: deviceRoute.routeOrder,
             points: deviceRoute.points,
             replacingEntityId: draft.replacingEntityId,
             allowEmptyTarget: options.allowEmptyTarget ?? true,
@@ -417,6 +426,13 @@ export function createEditorLogisticsActions(
 
       const preview = logisticsContext.state.collections[EntityCollectionType.preview];
       if (preview.length === 0) {
+        return false;
+      }
+      // AI-CORRECTION 2026-09-24: 物流路径自身可连接不等于所有管道节可放置；红色预览不得提交。
+      const invalidPlacement = new Set(
+        logisticsContext.state.collections[EntityCollectionType.invalidPlacement],
+      );
+      if (preview.some((entityId) => invalidPlacement.has(entityId))) {
         return false;
       }
 
@@ -858,7 +874,7 @@ function rebuildLogisticsDraft(options: {
   // Original code:
   // const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
   // let invalidatedByExtendingConverger = false;
-  const effectiveInvalidReason = resolveInvalidReason({
+  let effectiveInvalidReason = resolveInvalidReason({
     context: options.context,
     kind: options.kind,
     cells,
@@ -913,7 +929,7 @@ function rebuildLogisticsDraft(options: {
   // options.context.state.internalTransientState.convergerEntityGridKey = nextConvergerGridKey;
 
   // AI-CORRECTION 2026-09-15: 上述历史拦截已删除；每次预览直接采用当前拓扑与路径的校验、设备替换结果。
-  const canApply = effectiveInvalidReason === null;
+  let canApply = effectiveInvalidReason === null;
   const draftBuildResult = createDraftEntities({
     context: options.context,
     kind: options.kind,
@@ -924,6 +940,24 @@ function rebuildLogisticsDraft(options: {
     previousPreviewDraftIds,
   });
   const draftIds = draftBuildResult.draftIds;
+
+  // AI-CORRECTION 2026-09-24: 放置校验的红色重叠必须参与物流草稿的合法性判断。
+  const placementValidationByEntityId = resolvePlacementValidations({
+    document: currentDocument,
+    state: options.context.state,
+    workspace: options.context.workspace,
+    drafts: draftBuildResult.draftEntities,
+    ignoredEntityIds: new Set([
+      ...autoDraftPlan.replacingEntityIds,
+      ...(options.replacingEntityId === null ? [] : [options.replacingEntityId]),
+    ]),
+  });
+  if (draftBuildResult.draftEntities.some((entity) =>
+    placementValidationByEntityId[entity.id]?.canPlace !== true
+  )) {
+    canApply = false;
+    effectiveInvalidReason ??= "unknown";
+  }
 
   options.context.state.drafts = [
     ...options.context.state.drafts.filter((entity) =>
@@ -937,7 +971,11 @@ function rebuildLogisticsDraft(options: {
     ? null
     : draftBuildResult.draftIdByGridKey.get(gridPointKey(headCell.gridPoint)) ?? null;
   logisticsHead.replace(headDraftEntityId === null ? [] : [headDraftEntityId]);
-  ghost.replace([...autoDraftPlan.replacingEntityIds]);
+  // AI-CORRECTION 2026-09-24: 起点已有物流段也会在提交时被替换，放置校验须同步忽略该旧段。
+  ghost.replace([...new Set([
+    ...autoDraftPlan.replacingEntityIds,
+    ...(options.replacingEntityId === null ? [] : [options.replacingEntityId]),
+  ])]);
 
   options.context.state.internalTransientState.logisticsDraft = {
     kind: options.kind,
@@ -1022,6 +1060,7 @@ function createDraftEntities(options: {
   currentDocument: WorldDocument;
   previousPreviewDrafts: readonly DraftEntity[];
   previousPreviewDraftIds: ReadonlySet<string>;
+  draftBatchCounter?: number;
 }): DraftEntityBuildResult {
   const reservedIds = new Set<string>([
     ...Object.keys(options.currentDocument.entities),
@@ -1033,7 +1072,8 @@ function createDraftEntities(options: {
       .filter((entity) => !options.previousPreviewDraftIds.has(entity.id))
       .map((entity) => entity.id),
   ]);
-  const batchCounter = options.context.nextDraftCounter();
+  // AI-CORRECTION 2026-09-24: 候选试算不得推进正式草稿编号；仅实际重建时领取新批次号。
+  const batchCounter = options.draftBatchCounter ?? options.context.nextDraftCounter();
   const draftEntities: DraftEntity[] = [];
   const draftIdByGridKey = new Map<string, string>();
 
@@ -1406,55 +1446,95 @@ function flipRouteOrder(routeOrder: LogisticsRouteOrder): LogisticsRouteOrder {
   return routeOrder === "vertical-first" ? "horizontal-first" : "vertical-first";
 }
 
-function resolveDeviceToDeviceRoute(options: {
+function resolveRouteToDevice(options: {
   context: LogisticsActionContext;
   draft: LogisticsDraftReadonlyState;
-  sourceEntityId: string;
-  targetEndpoint: DevicePortEndpoint;
+  sourceEndpoint: LogisticsDraftEndpoint;
+  targetEntityId: string | null;
+  pointerGridPoint: GridPoint;
   preferredRouteOrder: LogisticsRouteOrder;
   autoCreateSplittersAndConvergers: boolean;
 }): DeviceRouteCandidate | null {
+  if (options.targetEntityId === null) {
+    return null;
+  }
   const currentDocument = options.context.document.getSnapshot();
-  const sourceEntity = findEntityById({
-    entityId: options.sourceEntityId,
-    document: currentDocument,
-    drafts: [],
-    baseDefinitions: options.context.workspace.registry.baseDefinitions,
-  });
   const targetEntity = findEntityById({
-    entityId: options.targetEndpoint.entityId,
+    entityId: options.targetEntityId,
     document: currentDocument,
     drafts: [],
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
-  if (sourceEntity === null || targetEntity === null) {
+  if (targetEntity === null) {
+    return null;
+  }
+  if (isOrdinaryLogisticsDefinitionId(
+    targetEntity.definitionId,
+    options.draft.kind,
+    options.context.workspace.registry.queries,
+  )) {
     return null;
   }
 
-  const sourceDefinition = options.context.entityDefinitionMap.get(sourceEntity.definitionId);
-  if (sourceDefinition === undefined) {
+  const targetDefinition = options.context.entityDefinitionMap.get(targetEntity.definitionId);
+  if (targetDefinition === undefined) {
     return null;
   }
 
-  const sourceEndpoints = resolveDevicePortEndpoints({
-    entity: sourceEntity,
-    definition: sourceDefinition,
+  const sourceEntity = options.sourceEndpoint.type === "device-port"
+    ? findEntityById({
+        entityId: options.sourceEndpoint.entityId,
+        document: currentDocument,
+        drafts: [],
+        baseDefinitions: options.context.workspace.registry.baseDefinitions,
+      })
+    : null;
+  const sourceDefinition = sourceEntity === null
+    ? null
+    : options.context.entityDefinitionMap.get(sourceEntity.definitionId) ?? null;
+  if (options.sourceEndpoint.type === "device-port" && sourceDefinition === null) {
+    return null;
+  }
+  const availableSourceEndpoints = sourceEntity !== null && sourceDefinition !== null
+    ? resolveDevicePortEndpoints({
+        entity: sourceEntity,
+        definition: sourceDefinition,
+        kind: options.draft.kind,
+        direction: "output",
+        pointerGridPoint: targetEntity.position,
+      })
+    : [];
+  const fixedSourceEndpoint = options.sourceEndpoint.type === "device-port"
+    && options.sourceEndpoint.fixedSource === true
+    ? options.sourceEndpoint
+    : null;
+  const sourceEndpoints: readonly LogisticsDraftEndpoint[] = options.sourceEndpoint.type !== "device-port"
+    ? [options.sourceEndpoint]
+    : fixedSourceEndpoint !== null
+      ? availableSourceEndpoints.filter((endpoint) =>
+        endpoint.portGroupId === fixedSourceEndpoint.portGroupId
+        && endpoint.portId === fixedSourceEndpoint.portId
+      ).map((endpoint) => ({ ...endpoint, fixedSource: true as const }))
+      : availableSourceEndpoints;
+  const targetEndpoints = resolveDevicePortEndpoints({
+    entity: targetEntity,
+    definition: targetDefinition,
     kind: options.draft.kind,
-    direction: "output",
-    pointerGridPoint: targetEntity.position,
+    direction: "input",
+    pointerGridPoint: options.pointerGridPoint,
   });
-  const targetEndpoints = [options.targetEndpoint];
   const routeOrders = [
     options.preferredRouteOrder,
     flipRouteOrder(options.preferredRouteOrder),
   ] as const;
   const candidates: DeviceRouteCandidate[] = [];
+  let fallbackCandidate: DeviceRouteCandidate | null = null;
 
   for (const sourceEndpoint of sourceEndpoints) {
     for (const targetEndpoint of targetEndpoints) {
       for (const routeOrder of routeOrders) {
         const points = generateSingleBendPathPoints({
-          start: sourceEndpoint.outsideGridPoint,
+          start: resolveSourceStartGridPoint(sourceEndpoint),
           target: targetEndpoint.outsideGridPoint,
           routeOrder,
         });
@@ -1487,73 +1567,128 @@ function resolveDeviceToDeviceRoute(options: {
           target: targetEndpoint,
           allowEmptyTarget: true,
         }) ?? autoDraftPlan.invalidReason;
-        if (candidateInvalidReason !== null) {
-          continue;
-        }
-
-        candidates.push({
+        const candidate: DeviceRouteCandidate = {
           source: sourceEndpoint,
           target: targetEndpoint,
           routeOrder,
           points,
           lengthScore: points.length,
           bendScore: countPathBends(points),
+          targetDistanceScore: Math.abs(targetEndpoint.insideGridPoint.x - options.pointerGridPoint.x)
+            + Math.abs(targetEndpoint.insideGridPoint.y - options.pointerGridPoint.y),
+          routeOrderPriority: routeOrder === options.preferredRouteOrder ? 0 : 1,
           signature: [
-            sourceEndpoint.entityId,
-            sourceEndpoint.portGroupId,
-            sourceEndpoint.portId,
+            sourceEndpoint.type === "device-port"
+              ? [sourceEndpoint.entityId, sourceEndpoint.portGroupId, sourceEndpoint.portId].join(":")
+              : [sourceEndpoint.type, resolveSourceStartGridPoint(sourceEndpoint).x,
+                  resolveSourceStartGridPoint(sourceEndpoint).y].join(":"),
             targetEndpoint.entityId,
             targetEndpoint.portGroupId,
             targetEndpoint.portId,
             routeOrder,
           ].join("|"),
-        });
+        };
+        if (fallbackCandidate === null || compareDeviceRouteCandidates(candidate, fallbackCandidate) < 0) {
+          fallbackCandidate = candidate;
+        }
+        if (candidateInvalidReason !== null || !areCandidateLogisticsCellsPlaceable({
+          context: options.context,
+          kind: options.draft.kind,
+          cells,
+          cellOverridesByGridKey: autoDraftPlan.cellOverridesByGridKey,
+          replacingEntityIds: [
+            ...autoDraftPlan.replacingEntityIds,
+            ...(options.draft.replacingEntityId === null ? [] : [options.draft.replacingEntityId]),
+          ],
+          document: currentDocument,
+        })) {
+          continue;
+        }
+
+        candidates.push(candidate);
       }
     }
   }
 
   if (candidates.length === 0) {
-    return null;
+    return fallbackCandidate;
   }
 
   candidates.sort(compareDeviceRouteCandidates);
-  const best = candidates[0];
-  if (best === undefined) {
-    return null;
-  }
-
-  const bestCandidates = candidates.filter((candidate) =>
-    candidate.lengthScore === best.lengthScore
-    && candidate.bendScore === best.bendScore
-  );
-  const signature = [
-    options.sourceEntityId,
-    options.targetEndpoint.entityId,
-    options.targetEndpoint.portGroupId,
-    options.targetEndpoint.portId,
-    best.lengthScore,
-    best.bendScore,
-    ...bestCandidates.map((candidate) => candidate.signature),
-  ].join(";");
-  const state = options.context.state.internalTransientState;
-
-  if (state.logisticsDeviceRouteCycleSignature === signature) {
-    if (options.preferredRouteOrder !== options.draft.routeOrder) {
-      state.logisticsDeviceRouteCycleIndex = (state.logisticsDeviceRouteCycleIndex + 1)
-        % bestCandidates.length;
-    }
-  } else {
-    state.logisticsDeviceRouteCycleSignature = signature;
-    state.logisticsDeviceRouteCycleIndex = 0;
-  }
-
-  return bestCandidates[state.logisticsDeviceRouteCycleIndex % bestCandidates.length] ?? best;
+  // AI-REMOVED 2026-09-24:
+  // Reason: 旧轮转仅比较全局最短路线，可能跳过鼠标附近仍可用的输入端口。
+  // Trigger: 鼠标模式要求先按目标端口格距、再按当前 R 方向尝试合法路线。
+  // Evidence: 反应池 (7,6)/(8,6) 到 (6,9) 的两条回归用例；旧排序先选择穿源设备路径。
+  // Replacement: compareDeviceRouteCandidates 按端口距离和 R 方向排序，返回首个合法候选。
+  // Risk: 同代价候选不再由 R 跨端口轮转；同距端口顺序未规定。
+  // Human Review: Required
+  //
+  // Original code:
+  // const best = candidates[0];
+  // if (best === undefined) {
+  //   return null;
+  // }
+  // const bestCandidates = candidates.filter((candidate) =>
+  //   candidate.lengthScore === best.lengthScore
+  //   && candidate.bendScore === best.bendScore
+  // );
+  // const signature = [
+  //   options.sourceEntityId,
+  //   options.targetEndpoint.entityId,
+  //   options.targetEndpoint.portGroupId,
+  //   options.targetEndpoint.portId,
+  //   best.lengthScore,
+  //   best.bendScore,
+  //   ...bestCandidates.map((candidate) => candidate.signature),
+  // ].join(";");
+  // const state = options.context.state.internalTransientState;
+  // if (state.logisticsDeviceRouteCycleSignature === signature) {
+  //   if (options.preferredRouteOrder !== options.draft.routeOrder) {
+  //     state.logisticsDeviceRouteCycleIndex = (state.logisticsDeviceRouteCycleIndex + 1)
+  //       % bestCandidates.length;
+  //   }
+  // } else {
+  //   state.logisticsDeviceRouteCycleSignature = signature;
+  //   state.logisticsDeviceRouteCycleIndex = 0;
+  // }
+  // return bestCandidates[state.logisticsDeviceRouteCycleIndex % bestCandidates.length] ?? best;
+  return candidates[0] ?? fallbackCandidate;
 }
 
 function compareDeviceRouteCandidates(left: DeviceRouteCandidate, right: DeviceRouteCandidate): number {
-  return left.lengthScore - right.lengthScore
+  return left.targetDistanceScore - right.targetDistanceScore
+    || left.routeOrderPriority - right.routeOrderPriority
+    || left.lengthScore - right.lengthScore
     || left.bendScore - right.bendScore
     || left.signature.localeCompare(right.signature);
+}
+
+function areCandidateLogisticsCellsPlaceable(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  cells: readonly LogisticsPathCell[];
+  cellOverridesByGridKey: ReadonlyMap<string, AutoDraftCellOverride>;
+  replacingEntityIds: readonly string[];
+  document: WorldDocument;
+}): boolean {
+  const draftEntities = createDraftEntities({
+    context: options.context,
+    kind: options.kind,
+    cells: options.cells,
+    cellOverridesByGridKey: options.cellOverridesByGridKey,
+    currentDocument: options.document,
+    previousPreviewDrafts: [],
+    previousPreviewDraftIds: new Set(),
+    draftBatchCounter: 0,
+  }).draftEntities;
+  const validationByEntityId = resolvePlacementValidations({
+    document: options.document,
+    state: options.context.state,
+    workspace: options.context.workspace,
+    drafts: draftEntities,
+    ignoredEntityIds: new Set(options.replacingEntityIds),
+  });
+  return draftEntities.every((entity) => validationByEntityId[entity.id]?.canPlace === true);
 }
 
 function countPathBends(points: readonly GridPoint[]): number {

@@ -6,7 +6,7 @@ test("recipe item tooltip escapes inspector clipping without changing layout", a
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto("/");
 
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const appHost = window.__industrialPlannerAppHost;
     const editor = appHost?.workspace.editor;
     if (appHost === undefined || editor === null || editor === undefined) {
@@ -31,7 +31,7 @@ test("recipe item tooltip escapes inspector clipping without changing layout", a
 
     const entityId = "e2e-recipe-tooltip";
     const currentDocument = editor.document.getSnapshot();
-    editor.actions.applySynchronizedDocument({
+    await editor.actions.applySynchronizedDocument({
       ...currentDocument,
       entities: {
         ...currentDocument.entities,

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
+  "fixtureRevision": 2,
   "schemaVersion": 6,
   "source": "src/tests/simulation/dense-host-regressions.test.ts",
   "migratedAt": "2026-09-14",
@@ -95,6 +95,59 @@
         "version": "fixture-v1"
       }
     ]
-  }
+  },
+  "worldDocuments": [
+    {
+      "parameters": {
+        "endpoint": "inlet"
+      },
+      "file": "regional-inlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    },
+    {
+      "parameters": {
+        "endpoint": "outlet"
+      },
+      "file": "regional-outlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    },
+    {
+      "parameters": {
+        "scenario": "throughput",
+        "endpoint": "inlet"
+      },
+      "file": "throughput-inlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    },
+    {
+      "parameters": {
+        "scenario": "throughput",
+        "endpoint": "outlet"
+      },
+      "file": "throughput-outlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    },
+    {
+      "parameters": {
+        "scenario": "throughput",
+        "endpoint": "blocked-outlet"
+      },
+      "file": "throughput-blocked-outlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    },
+    {
+      "parameters": {
+        "scenario": "throughput",
+        "endpoint": "blocked-inlet"
+      },
+      "file": "throughput-blocked-inlet.world.schema6.json",
+      "documentKind": "world-document",
+      "version": "fixture-v1"
+    }
+  ]
 }
-

@@ -68,13 +68,30 @@ reaction(
   },
   { fireImmediately: true },
 );
-const editorHost = createEditorHost(workspace);
-editorHost.document.subscribe((document) => {
-  appHost.regionalSettings.pruneDarkPipeLinksForBase(
-    document.baseId,
-    new Set(Object.keys(document.entities)),
-  );
-});
+// AI-REMOVED 2026-09-25:
+// Reason: 旧 App 清理订阅已归档，不再需要组合根的 Editor 局部引用。
+// Trigger: M01 接入后的 ESLint unused-vars 错误。
+// Evidence: Editor 初始化仍通过 workspace 发布契约，下方没有活动引用。
+// Replacement: 下方 createEditorHost(workspace) 初始化调用。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const editorHost = createEditorHost(workspace);
+createEditorHost(workspace);
+// AI-REMOVED 2026-09-25:
+// Reason: Editor 区域文档负责关系生命周期，App 资产仅保留旧记录迁移入口。
+// Trigger: REQ-038 出口文档权威。
+// Evidence: D01～D11 契约及 Editor 文档集合已接入。
+// Replacement: src/editor/editor-host.ts 区域关系维护及旧资产迁移。
+// Risk: 旧关系迁移、后台删除与仿真启动须回归。
+// Human Review: Required
+// Original code:
+// editorHost.document.subscribe((document) => {
+//   appHost.regionalSettings.pruneDarkPipeLinksForBase(
+//     document.baseId,
+//     new Set(Object.keys(document.entities)),
+//   );
+// });
 await createSyncHost(workspace, {
   assetSources: [
     ...createModuleBalancingSyncSources(appHost),
@@ -92,8 +109,16 @@ const simulationHost = createSimulationHost(workspace, {
   }),
   getRegionalResourceSettings: (regionTag) =>
     appHost.regionalSettings.getRegionResources(regionTag),
-  getRegionalDarkPipeLinks: (regionTag) =>
-    appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
+// AI-REMOVED 2026-09-25:
+// Reason: Dense 改为从世界文档解析跨基地关系，移除 App getter 装配。
+// Trigger: REQ-038 出口文档权威。
+// Evidence: D01～D11 契约及 Editor 文档集合已接入。
+// Replacement: src/simulation/dense/dense-regional-document.ts。
+// Risk: 旧关系迁移、后台删除与仿真启动须回归。
+// Human Review: Required
+// Original code:
+//   getRegionalDarkPipeLinks: (regionTag) =>
+//     appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
 });
 
 createBlueprintPlannerHost(workspace);

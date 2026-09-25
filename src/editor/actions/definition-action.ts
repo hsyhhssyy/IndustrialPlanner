@@ -4,6 +4,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
+import { isLocalSlotLinkEndpoint } from "@/shared/slot-link";
 
 type EditorDefinitionActions = Pick<EditorAction, "replaceEntityDefinition">;
 
@@ -38,8 +39,8 @@ export function createEditorDefinitionActions({
               [entityId]: replaceDefinition(documentEntity, nextDefinitionId),
             },
             slotLinks: documentSnapshot.slotLinks.filter((slotLink) =>
-              slotLink.source.entityId !== entityId
-              && slotLink.target.entityId !== entityId,
+              !(isLocalSlotLinkEndpoint(slotLink.source, documentSnapshot.baseId) && slotLink.source.entityId === entityId)
+              && !(isLocalSlotLinkEndpoint(slotLink.target, documentSnapshot.baseId) && slotLink.target.entityId === entityId),
             ),
           }),
         });

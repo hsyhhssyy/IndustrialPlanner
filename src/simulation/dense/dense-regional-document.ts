@@ -9,10 +9,13 @@ import {
   DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
   DARK_PIPE_SLOT_ID,
   findDarkPipeSlotLinkForEntity,
+  filterDarkPipeOutletWarehouseLinks,
+  listDocumentRegionalDarkPipeLinks,
   resolveDarkPipeRole,
   type RegionalDarkPipeEndpoint,
   type RegionalDarkPipeLink,
 } from "@/shared/dark-pipe-link";
+import { isLocalSlotLink } from "@/shared/slot-link";
 
 const MINIMUM_BASE_PARTITION_GAP = 1_024;
 
@@ -24,7 +27,15 @@ const MINIMUM_BASE_PARTITION_GAP = 1_024;
 export function createDenseRegionalDocument(options: {
   readonly documents: readonly WorldDocument[];
   readonly registry: RegistryContract;
-  readonly darkPipeLinks?: readonly RegionalDarkPipeLink[];
+  // AI-REMOVED 2026-09-25:
+  // Reason: 跨基地关系统一从出口文档解析，不再接受第二份 App 关系数据。
+  // Trigger: REQ-038 文档权威。
+  // Evidence: listDocumentRegionalDarkPipeLinks 已从 slotLinks 派生关系。
+  // Replacement: 下方 appendRegionalDarkPipeLinks 调用。
+  // Risk: 调用方和场景测试需要迁移。
+  // Human Review: Required
+  // Original code:
+  // readonly darkPipeLinks?: readonly RegionalDarkPipeLink[];
 }): WorldDocument {
   const orderedDocuments = [...options.documents];
   const rootDocument = orderedDocuments[0];
@@ -64,6 +75,8 @@ export function createDenseRegionalDocument(options: {
       entityOrder.push(compositeEntityId);
     }
     for (const link of document.slotLinks) {
+      // 外部引用在全部基地合图后统一解析；单基地执行不启用外部关系。
+      if (!isLocalSlotLink(link, document.baseId)) continue;
       slotLinks.push({
         ...link,
         id: resolveDenseRegionalEntityId(
@@ -77,7 +90,7 @@ export function createDenseRegionalDocument(options: {
   }
 
   appendRegionalDarkPipeLinks({
-    links: options.darkPipeLinks ?? [],
+    links: orderedDocuments.length > 1 ? listDocumentRegionalDarkPipeLinks(orderedDocuments) : [],
     documentsByBaseId,
     entities,
     slotLinks,
@@ -170,6 +183,11 @@ function appendRegionalDarkPipeLinks(options: {
       throw new Error(`Dense regional dark-pipe link "${link.id}" could not resolve its composite endpoints.`);
     }
 
+    // 旧存档或独立同步到达的文档可能仍携带仓库来源；执行图遵守同一出口互斥规则。
+    const exclusiveLinks = filterDarkPipeOutletWarehouseLinks(options.slotLinks, sourceEntityId);
+    options.slotLinks.length = 0;
+    for (const slotLink of exclusiveLinks) options.slotLinks.push(slotLink);
+
     options.slotLinks.push({
       id: link.id,
       linkType: "share-all",
@@ -235,6 +253,7 @@ function remapLinkEndpoint(
 ): SlotLinkDefinition["source"] {
   return {
     ...endpoint,
+    baseId: undefined,
     entityId: isWarehouseEndpoint(endpoint.entityId)
       ? endpoint.entityId
       : createRegionalEntityId(baseId, endpoint.entityId),

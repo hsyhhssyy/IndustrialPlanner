@@ -118,7 +118,8 @@ export function SimulationRecipeStatusRuntimeInspector({
     // Replacement: runtimeSample.activeGasItemIds。
     // Risk: Low
     // Human Review: Required
-    // Original code: const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
+    // Original code:
+    // const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
     const gasItemIds = runtimeSample?.activeGasItemIds ?? null;
     const isInGas = gasItemIds !== null && gasItemIds.length > 0;
     const gasNames = gasItemIds?.map((itemId) => {

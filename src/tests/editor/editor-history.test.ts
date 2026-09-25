@@ -13,6 +13,8 @@ import { createRegistryContract } from "@/registry";
 import { saveToIndexedDb } from "@/shared/storage";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
+let editorToDispose: ReturnType<typeof createEditorHost> | null = null;
+
 function createWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
@@ -26,9 +28,25 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
-afterEach(() => {
-  localStorage.clear();
-  vi.unstubAllGlobals();
+afterEach(async () => {
+  const editor = editorToDispose;
+  editorToDispose = null;
+  try {
+    if (editor !== null) {
+      // 先停止监听，再等待所有保存；数据库替身在整个清理期间保持有效。
+      editor.dispose();
+      const results = await Promise.allSettled([
+        editor.internalHistory.flush(),
+        editor.internalDocuments.flush(),
+      ]);
+      for (const result of results) {
+        if (result.status === "rejected") throw result.reason;
+      }
+    }
+  } finally {
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  }
 });
 
 describe("editor document history", () => {
@@ -36,6 +54,7 @@ describe("editor document history", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const editor = createEditorHost(createWorkspace());
+    editorToDispose = editor;
     editor.internalDocument.setSnapshot(createDummyWorldDocument());
 
     editor.actions.patchEntityConfig("dummy-entity-2", {
@@ -132,6 +151,7 @@ describe("editor document history", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const editor = createEditorHost(createWorkspace());
+    editorToDispose = editor;
     editor.internalDocument.setSnapshot(createDummyWorldDocument());
 
     editor.actions.patchEntityConfig("dummy-entity-2", {
@@ -153,6 +173,7 @@ describe("editor document history", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const editor = createEditorHost(createWorkspace());
+    editorToDispose = editor;
     const document = createDummyWorldDocument();
 
     editor.internalDocument.setSnapshot(document);
@@ -160,7 +181,7 @@ describe("editor document history", () => {
       foo: "bar",
     });
 
-    await flushAsyncWork();
+    await editor.internalHistory.flush();
 
     const persistedState = await readEditorHistoryState(document.documentKey);
 
@@ -275,10 +296,19 @@ describe("editor document history", () => {
   });
 });
 
-async function flushAsyncWork(): Promise<void> {
-  for (let index = 0; index < 6; index += 1) {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  }
-}
+// AI-REMOVED 2026-09-25:
+// Reason: 固定等待六轮定时器不能保证历史保存队列完成，且没有覆盖其他用例的清理。
+// Trigger: 同文件前序用例的异步历史写入污染后续用例的 IndexedDB，游标期望 1、实际 2。
+// Evidence: 单独运行通过、整文件失败；写入追踪确认后续用例读到了前序用例的 foo=baz 历史。
+// Replacement: EditorHistoryRuntime.flush()；上方 afterEach 停止监听、排空队列后恢复环境。
+// Risk: Low；原行为断言保留，使用实际完成信号替代定时猜测。
+// Human Review: Required
+//
+// Original code:
+// async function flushAsyncWork(): Promise<void> {
+//   for (let index = 0; index < 6; index += 1) {
+//     await new Promise((resolve) => {
+//       setTimeout(resolve, 0);
+//     });
+//   }
+// }

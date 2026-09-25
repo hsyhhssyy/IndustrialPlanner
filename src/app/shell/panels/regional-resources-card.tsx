@@ -5,6 +5,7 @@ import type { AppHost } from "@/app/host/app-host";
 import {
   normalizeRegionalPerMinute,
   resolveConfigurableRegionalResourceItems,
+  resolveFixedInfiniteRegionalResourceItemIds,
   type RegionalResourceSetting,
 } from "@/app/regional-settings";
 import {
@@ -41,9 +42,13 @@ export const RegionalResourcesCard = observer(function RegionalResourcesCard({
     () => resolveConfigurableRegionalResourceItems(appHost.workspace.registry.itemDefinitions),
     [appHost.workspace.registry.itemDefinitions],
   );
+  const fixedInfiniteItemIds = useMemo(
+    () => resolveFixedInfiniteRegionalResourceItemIds(appHost.workspace.registry.itemDefinitions),
+    [appHost.workspace.registry.itemDefinitions],
+  );
   const itemById = useMemo(
-    () => new Map(configurableItems.map((item) => [item.id, item])),
-    [configurableItems],
+    () => new Map(appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item])),
+    [appHost.workspace.registry.itemDefinitions],
   );
   const configuredItemIds = new Set(resources.map((resource) => resource.itemId));
   const selectableProfiles = versionProfiles.filter((profile) => profile.regionTag === regionTag);
@@ -196,6 +201,26 @@ export const RegionalResourcesCard = observer(function RegionalResourcesCard({
             );
           })}
         </div>
+        {fixedInfiniteItemIds.length > 0 ? (
+          <div className={cm(styles, "regional-resources-fixed-supply")}>
+            <span className={cm(styles, "regional-resources-fixed-items")}>
+              {fixedInfiniteItemIds.map((itemId) => {
+                const item = itemById.get(itemId);
+                if (item === undefined) {
+                  return null;
+                }
+                return (
+                  <span className={cm(styles, "regional-resources-fixed-item")} key={itemId}>
+                    {t(item.nameKey)} <strong>∞</strong>
+                  </span>
+                );
+              })}
+            </span>
+            <span className={cm(styles, "regional-resources-fixed-label")}>
+              {t("regionalResources.fixedInfiniteSupply")}
+            </span>
+          </div>
+        ) : null}
       </article>
       <RegionalResourceProfileDialog
         loadFailed={profileLoadFailed}

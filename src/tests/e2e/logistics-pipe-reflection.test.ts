@@ -27,9 +27,9 @@ for (const themeId of ['ayu-light', 'ayu-dark']) {
       }, themeId);
       await page.goto('http://127.0.0.1:4174/');
       await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.render);
-      await page.evaluate((scene) => {
+      await page.evaluate(async (scene) => {
         const editor = window.__industrialPlannerAppHost!.workspace.editor!;
-        editor.actions.applySynchronizedDocument({ ...editor.document.getSnapshot(), ...scene });
+        await editor.actions.applySynchronizedDocument({ ...editor.document.getSnapshot(), ...scene });
         editor.actions.focusOnEntity('p1', { duration: 0 });
       }, fixture);
       await page.waitForFunction(() => {

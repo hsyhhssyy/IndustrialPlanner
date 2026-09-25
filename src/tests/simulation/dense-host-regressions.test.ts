@@ -16,7 +16,18 @@ import {
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { createDenseRegionalDocument } from "@/simulation/dense/dense-regional-document";
 import { resolveDarkPipeStatusSourceByDeviceId } from "@/simulation/projection";
-import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+// AI-REMOVED 2026-09-25:
+// Reason: 关系夹具已包含在世界文档。
+// Trigger: REQ-038 将关系权威迁入出口文档，Editor Action 改为异步持久化。
+// Evidence: 旧测试直接调用同步 Action / App 资产，不能覆盖 IndexedDB 与后台文档。
+// Replacement: normalizeWorldDocument
+// Risk: 需以真实浏览器回归确认交互、互斥与关闭模式覆盖。
+// Human Review: Required
+// Original code:
+// import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
+import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
+import regionalInletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-inlet.world.schema6.json";
+import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema6.json";
 import { compileSimulationTopology } from "@/simulation/topology";
 import {
   DENSE_STANDARD_TICK_RATE_PER_SECOND,
@@ -92,27 +103,46 @@ describe("ST2-RQ-023 dense host regressions", () => {
   it("materializes cross-base dark-pipe links into the dense composite document", () => {
     const currentBaseId = "wuling_protocol_core";
     const remoteBaseId = "wuling_tianwangping_aid";
-    const inlet = createEntity("inlet", "udpipe_loader_1", 0, 0, 180);
-    const outlet = createEntity("outlet", "udpipe_unloader_1", 0, 0, 180);
-    const currentDocument = {
-      ...createWorldDocument({ baseId: currentBaseId }),
-      entities: { inlet },
-      entityOrder: [inlet.id],
-    };
-    const remoteDocument = {
-      ...createWorldDocument({ baseId: remoteBaseId }),
-      entities: { outlet },
-      entityOrder: [outlet.id],
-    };
-    const link = createRegionalDarkPipeLink({
-      inlet: { baseId: currentBaseId, entityId: inlet.id },
-      outlet: { baseId: remoteBaseId, entityId: outlet.id },
-    });
+// AI-REMOVED 2026-09-25:
+// Reason: 跨基地链接现在来自版本化世界文档，不能作为独立 App 资产传入。
+// Trigger: REQ-038 将关系权威迁入出口文档，Editor Action 改为异步持久化。
+// Evidence: 旧测试直接调用同步 Action / App 资产，不能覆盖 IndexedDB 与后台文档。
+// Replacement: regional-inlet.world.schema6.json / regional-outlet.world.schema6.json
+// Risk: 需以真实浏览器回归确认交互、互斥与关闭模式覆盖。
+// Human Review: Required
+// Original code:
+//     const inlet = createEntity("inlet", "udpipe_loader_1", 0, 0, 180);
+//     const outlet = createEntity("outlet", "udpipe_unloader_1", 0, 0, 180);
+//     const currentDocument = {
+//       ...createWorldDocument({ baseId: currentBaseId }),
+//       entities: { inlet },
+//       entityOrder: [inlet.id],
+//     };
+//     const remoteDocument = {
+//       ...createWorldDocument({ baseId: remoteBaseId }),
+//       entities: { outlet },
+//       entityOrder: [outlet.id],
+//     };
+//     const link = createRegionalDarkPipeLink({
+//       inlet: { baseId: currentBaseId, entityId: inlet.id },
+//       outlet: { baseId: remoteBaseId, entityId: outlet.id },
+//     });
+    const currentDocument = normalizeWorldDocument(regionalInletJson)!;
+    const remoteDocument = normalizeWorldDocument(regionalOutletJson)!;
+    const link = remoteDocument.slotLinks[0]!;
 
     const composite = createDenseRegionalDocument({
       documents: [currentDocument, remoteDocument],
       registry: createRegistryContract(),
-      darkPipeLinks: [link],
+// AI-REMOVED 2026-09-25:
+// Reason: Dense 直接从文档收集关系，移除已废弃参数。
+// Trigger: REQ-038 将关系权威迁入出口文档，Editor Action 改为异步持久化。
+// Evidence: 旧测试直接调用同步 Action / App 资产，不能覆盖 IndexedDB 与后台文档。
+// Replacement: documents 参数中的出口 slotLinks
+// Risk: 需以真实浏览器回归确认交互、互斥与关闭模式覆盖。
+// Human Review: Required
+// Original code:
+//       darkPipeLinks: [link],
     });
 
     expect(composite.slotLinks).toContainEqual({

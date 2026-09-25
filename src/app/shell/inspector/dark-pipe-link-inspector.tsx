@@ -2,6 +2,8 @@ import LucideLink2 from "~icons/lucide/link-2";
 import LucideUnlink2 from "~icons/lucide/unlink-2";
 import { runInAction } from "mobx";
 import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { useEditorDocumentSnapshot } from "../hooks";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -18,6 +20,7 @@ import {
   // Original code:
   // createRegionalDarkPipeLink,
   findDarkPipeSlotLinkForEntity,
+  findRegionalDarkPipeLinkForEndpoint,
   listDarkPipeLinkCandidateEntityIds,
   resolveDarkPipeLinkedEntityId,
   resolveDarkPipeRole,
@@ -36,7 +39,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 
-export function DarkPipeLinkInspector({
+export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
   appHost,
   entity,
   definition,
@@ -66,7 +69,7 @@ export function DarkPipeLinkInspector({
   // translate: (key: string) => string;
 }) {
   const editor = appHost.workspace.editor;
-  const documentSnapshot = editor?.document?.getSnapshot() ?? null;
+  const documentSnapshot = useEditorDocumentSnapshot(editor, snapshot => snapshot);
   const darkPipeToolState = appHost.internalState.toolInfo;
   const role = resolveDarkPipeRole(definition.id);
   const currentLink = documentSnapshot === null ? null : findDarkPipeSlotLinkForEntity(documentSnapshot, entity.id);
@@ -75,7 +78,7 @@ export function DarkPipeLinkInspector({
     : { baseId: documentSnapshot.baseId, entityId: entity.id };
   const currentRegionalLink = currentEndpoint === null
     ? null
-    : appHost.regionalSettings.findDarkPipeLink(currentEndpoint);
+    : findRegionalDarkPipeLinkForEndpoint(editor?.queries.getRegionalDarkPipeLinks() ?? [], currentEndpoint);
   const currentRegionalEndpointRole = currentRegionalLink === null || currentEndpoint === null
     ? null
     : currentRegionalLink.inlet.baseId === currentEndpoint.baseId
@@ -246,21 +249,39 @@ export function DarkPipeLinkInspector({
     appHost.internalActions.setActiveTool(returnTool === DARK_PIPE_LINK_TOOL ? "select" : returnTool);
   };
 
-  const removeLink = () => {
-    if (editor === null || currentLink === null) {
+  const removeLink = async () => {
+    if (editor === null || (currentLink === null && activeRegionalLink === null)
+      || appHost.regionalSettings.darkPipeLinkSaving) {
       return;
     }
 
-    editor.actions.removeDarkPipeLink(entity.id);
-    if (isSelectingThisEntity) {
-      cancelSelection();
+    runInAction(() => {
+      appHost.regionalSettings.darkPipeLinkSaving = true;
+      appHost.regionalSettings.darkPipeLinkSaveFailed = false;
+    });
+    try {
+      const removed = await editor.actions.removeDarkPipeLink(entity.id);
+      runInAction(() => {
+        appHost.regionalSettings.darkPipeLinkSaveFailed = !removed;
+        if (removed && isSelectingThisEntity) cancelSelection();
+      });
+    } finally {
+      runInAction(() => { appHost.regionalSettings.darkPipeLinkSaving = false; });
     }
   };
-  const removeRegionalLink = () => {
-    if (activeRegionalLink !== null) {
-      appHost.regionalSettings.removeDarkPipeLink(activeRegionalLink.id);
-    }
-  };
+  // AI-REMOVED 2026-09-25:
+  // Reason: 断链统一修改出口文档，不再修改 App 关系资产。
+  // Trigger: REQ-038 D08。
+  // Evidence: Editor Action 已支持从入口反查后台出口。
+  // Replacement: removeLink。
+  // Risk: Low；异步失败保留原关系并显示既有错误提示。
+  // Human Review: Required
+  // Original code:
+  // const removeRegionalLink = () => {
+  //   if (activeRegionalLink !== null) {
+  //     appHost.regionalSettings.removeDarkPipeLink(activeRegionalLink.id);
+  //   }
+  // };
 
   const regionalCounterpartBase = regionalCounterpart === null
     ? null
@@ -296,14 +317,10 @@ export function DarkPipeLinkInspector({
         <button
           className={cm(styles, hasActiveLink ? "dark-pipe-link-button is-danger" : "dark-pipe-link-button")}
           data-dark-pipe-link-action={hasActiveLink ? "remove" : "create"}
-          disabled={!hasActiveLink && !isSelectingThisEntity && !canCreate}
+          disabled={appHost.regionalSettings.darkPipeLinkSaving || (!hasActiveLink && !isSelectingThisEntity && !canCreate)}
           onClick={() => {
-            if (currentLink !== null) {
-              removeLink();
-              return;
-            }
-            if (activeRegionalLink !== null) {
-              removeRegionalLink();
+            if (currentLink !== null || activeRegionalLink !== null) {
+              void removeLink();
               return;
             }
             if (isSelectingThisEntity) {
@@ -321,7 +338,7 @@ export function DarkPipeLinkInspector({
       </div>
     </InspectorCollapsiblePanel>
   );
-}
+});
 
 
 // AI-REMOVED 2026-09-23:

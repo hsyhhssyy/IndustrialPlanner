@@ -53,3 +53,4 @@ export {
 	SIMULATION_MODES,
 } from "./simulation-mode";
 export type { SimulationMode } from "./simulation-mode";
+export type { RegionalDarkPipeEndpoint, RegionalDarkPipeLink } from "./dark-pipe-link";

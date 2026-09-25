@@ -275,6 +275,14 @@ export async function applyIndexedDbTransactionMutations<TValue>(
   location: IndexedDbDatabaseLocation,
   batches: readonly IndexedDbStoreMutationBatch<TValue>[],
   codec: JsonStorageCodec<TValue> = {},
+  options: {
+    readonly signal?: AbortSignal;
+    readonly expectedValues?: readonly {
+      readonly storeName: string;
+      readonly key: IDBValidKey;
+      readonly value: TValue | null;
+    }[];
+  } = {},
 ): Promise<boolean> {
   const activeBatches = batches.filter((batch) => batch.operations.length > 0);
 
@@ -282,22 +290,47 @@ export async function applyIndexedDbTransactionMutations<TValue>(
     return true;
   }
 
+  if (options.signal?.aborted) return false;
+  const storeNames = Array.from(new Set([
+    ...activeBatches.map((batch) => batch.storeName),
+    ...(options.expectedValues ?? []).map((entry) => entry.storeName),
+  ]));
   const database = await openIndexedDbStores(
     location,
-    activeBatches.map((batch) => batch.storeName),
+    storeNames,
   );
 
   if (database === null) {
     return false;
   }
 
+  let transaction: IDBTransaction | null = null;
+  let completion: Promise<void> | null = null;
+  const abort = () => {
+    try { transaction?.abort(); } catch { /* 已完成的事务无需再次中止。 */ }
+  };
   try {
-    const transaction = database.transaction(
-      Array.from(new Set(activeBatches.map((batch) => batch.storeName))),
+    if (options.signal?.aborted) return false;
+    transaction = database.transaction(
+      storeNames,
       "readwrite",
     );
-    const completion = waitForTransaction(transaction);
+    completion = waitForTransaction(transaction);
+    // 请求与事务可能先后失败，立即接住事务拒绝，仍由下方等待最终结果。
+    void completion.catch(() => undefined);
+    options.signal?.addEventListener("abort", abort, { once: true });
     const serialize = getCodec(codec).serialize;
+
+    for (const expected of options.expectedValues ?? []) {
+      const actual = await waitForRequest<unknown>(
+        transaction.objectStore(expected.storeName).get(expected.key),
+      );
+      if (actual !== (expected.value === null ? undefined : serialize(expected.value))) {
+        abort();
+        await completion.catch(() => undefined);
+        return false;
+      }
+    }
 
     for (const batch of activeBatches) {
       const objectStore = transaction.objectStore(batch.storeName);
@@ -318,8 +351,12 @@ export async function applyIndexedDbTransactionMutations<TValue>(
 
     return true;
   } catch {
+    // 序列化、请求或外部取消失败时，禁止提交已经排入事务的部分写入。
+    abort();
+    await completion?.catch(() => undefined);
     return false;
   } finally {
+    options.signal?.removeEventListener("abort", abort);
     database.close();
   }
 }
@@ -416,28 +453,37 @@ async function openIndexedDbStores(
 
   try {
     const uniqueStoreNames = Array.from(new Set(storeNames.filter((storeName) => storeName.trim() !== "")));
-    const database = await openDatabase(
+    let database = await openDatabase(
       location.databaseName,
       location.version,
     );
 
-    const missingStoreNames = uniqueStoreNames.filter((storeName) => (
-      !database.objectStoreNames.contains(storeName)
-    ));
+    while (true) {
+      const missingStoreNames = uniqueStoreNames.filter((storeName) => (
+        !database.objectStoreNames.contains(storeName)
+      ));
 
-    if (missingStoreNames.length === 0) {
-      return database;
+      if (missingStoreNames.length === 0) {
+        return database;
+      }
+
+      // 缺少对象仓库时，通过一次版本升级补建，避免调用方手动管理初始化流程。
+      // 订正（2026-09-24）：并发请求可能使用同一升级版本但创建不同仓库，必须复核实际仓库并继续补建。
+      const nextVersion = database.version + 1;
+      database.close();
+
+      try {
+        database = await openDatabase(
+          location.databaseName,
+          nextVersion,
+          missingStoreNames,
+        );
+      } catch (error) {
+        // 其他页面或 Worker 已推进版本时，读取最新 schema 后再判断；其他错误仍交给原失败边界。
+        if (!(error instanceof DOMException) || error.name !== "VersionError") throw error;
+        database = await openDatabase(location.databaseName);
+      }
     }
-
-    // 缺少对象仓库时，通过一次版本升级补建，避免调用方手动管理初始化流程。
-    const nextVersion = database.version + 1;
-    database.close();
-
-    return await openDatabase(
-      location.databaseName,
-      nextVersion,
-      missingStoreNames,
-    );
   } catch {
     return null;
   }
@@ -476,7 +522,10 @@ function openDatabase(
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      const database = request.result;
+      // 自动补建仓库也可能来自其他页面；关闭连接会等待已启动的事务完成，不阻塞后续升级。
+      database.onversionchange = () => database.close();
+      resolve(database);
     };
   });
 }

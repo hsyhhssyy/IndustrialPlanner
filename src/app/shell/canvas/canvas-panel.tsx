@@ -282,6 +282,13 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
           {renderContainer ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
           {renderContainer ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
+          {appHost.state.settings.regionalMultiBaseEnabled
+            && appHost.state.activeTool === "dark-pipe-link"
+            && appHost.regionalSettings.darkPipeLinkSaveFailed ? (
+              <div className={cm(styles, "canvas-dark-pipe-error")} role="alert">
+                {t("canvas.regionalDarkPipeSaveFailed")}
+              </div>
+            ) : null}
           {showGestureDiagnosticsWindow ? (
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
           ) : null}

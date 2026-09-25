@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 6,
+  "documentKey": "req038-inlet",
+  "baseId": "wuling_protocol_core",
+  "meta": {
+    "id": "req038-inlet",
+    "name": "跨基地暗管inlet",
+    "createdAt": "2026-09-25T00:00:00.000Z",
+    "updatedAt": "2026-09-25T00:00:00.000Z"
+  },
+  "entities": {
+    "inlet": {
+      "id": "inlet",
+      "definitionId": "udpipe_loader_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "inlet"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "documentSettings": {
+    "viewport": {
+      "center": {
+        "x": 0,
+        "y": 0
+      },
+      "gridSize": 1,
+      "displayRotation": 0
+    },
+    "powerMode": "infinite"
+  }
+}

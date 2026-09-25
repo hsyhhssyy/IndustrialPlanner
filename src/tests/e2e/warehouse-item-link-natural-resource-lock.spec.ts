@@ -218,7 +218,7 @@ async function installNaturalResourceWarehouseLink(page: Page): Promise<void> {
       throw new Error("AppHost/editor unavailable");
     }
     const currentDocument = editor.document.getSnapshot();
-    editor.actions.applySynchronizedDocument({
+    await editor.actions.applySynchronizedDocument({
       ...currentDocument,
       entities: { ...currentDocument.entities, ...blueprint.entities },
       entityOrder: [

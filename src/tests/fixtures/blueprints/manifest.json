@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 5,
-  "updatedAt": "2026-09-21",
+  "fixtureRevision": 7,
+  "updatedAt": "2026-09-25",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json",
@@ -2122,6 +2122,13 @@
       "unknownDefinitionIds": []
     },
     {
+      "file": "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
       "file": "src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema6.json",
       "role": "test-scene",
       "schemaVersion": 6,
@@ -3260,6 +3267,13 @@
       "role": "system-blueprint",
       "schemaVersion": 6,
       "version": "v1.3.0",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/editor-regional-dark-pipe/scene.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
       "unknownDefinitionIds": []
     }
   ],

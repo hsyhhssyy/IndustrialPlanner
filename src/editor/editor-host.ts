@@ -12,7 +12,8 @@ import { applyWorldDocumentViewportSettings, createViewportPersistence } from ".
 import { freezeSnapshot } from "@/shared/snapshot/freeze-snapshot";
 import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { selectDocumentEntities } from "@/shared/snapshot/world-document-selection";
-import { hookDocumentStorage } from "./document-storage";
+import { createEditorDocumentRepository, hookDocumentStorage } from "./document-storage";
+import type { EditorDocumentRepository } from "./document-repository";
 import {
   createEditorDocumentWriter,
   EditorDocumentWriter,
@@ -22,6 +23,8 @@ import { createEditorQueries } from "./queries";
 import { syncPlacementValidationState } from "./placement-validation";
 import { syncPoweredEntityCollection } from "./actions/powered-collection";
 import { hookLocalstorage } from "./storage-hook";
+import { hookLegacyDarkPipeMigration } from "./legacy-dark-pipe-migration";
+import { hookDarkPipeLinkLifecycle, normalizeEditedDarkPipeLinks } from "./dark-pipe-link-lifecycle";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 
 // state 和 document 都是外部使用的，editor组件内部使用internal来获取可写的state和document
@@ -29,6 +32,7 @@ export interface EditorHost extends EditorContract {
   internalDocument: SnapshotStoreReadWrite<WorldDocument>;
   internalDocumentWriter: EditorDocumentWriter;
   internalHistory: EditorHistoryRuntime;
+  internalDocuments: EditorDocumentRepository;
   workspace: WorkspaceContract;
   internalState: EditorStateReadWrite;
   dispose: () => void;
@@ -47,10 +51,15 @@ export function createEditorHost(
     return publishedDocument;
   });
   const editorState = createEditorStateReadWrite();
+  const internalDocuments = createEditorDocumentRepository({
+    document: internalDocument, state: editorState, workspace,
+  });
   const internalHistory = new EditorHistoryRuntime(editorState.history);
   const internalDocumentWriter = createEditorDocumentWriter({
     document: internalDocument,
     history: internalHistory,
+    normalizeEdit: (before, after) => normalizeEditedDarkPipeLinks(before, after,
+      workspace.app?.state.settings.regionalMultiBaseEnabled === true),
   });
   const viewportPersistence = createViewportPersistence({
     document: internalDocument,
@@ -60,13 +69,16 @@ export function createEditorHost(
   const actions: EditorContract["actions"] = createEditorActions({
     document: internalDocument,
     documentWriter: internalDocumentWriter,
+    documents: internalDocuments,
     history: internalHistory,
     state: editorState,
     workspace,
     persistViewportSettings: viewportPersistence.schedule,
+    flushViewportSettings: viewportPersistence.flush,
   });
   const queries: EditorContract["queries"] = createEditorQueries({
     document: internalDocument,
+    documents: internalDocuments,
     state: editorState,
     workspace,
   });
@@ -97,6 +109,7 @@ export function createEditorHost(
     },
     state: publicState,
     internalDocument,
+    internalDocuments,
     internalDocumentWriter,
     internalHistory,
     workspace,
@@ -118,6 +131,8 @@ export function createEditorHost(
   disposers.push(hookPoweredCollection(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
+  disposers.push(hookLegacyDarkPipeMigration(host));
+  disposers.push(hookDarkPipeLinkLifecycle(host));
 
   return host;
 }

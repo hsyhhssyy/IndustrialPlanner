@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 // Replacement: InspectorRuntimeSample import。
 // Risk: Low
 // Human Review: Required
-// Original code: import type { AppHost } from "@/app/host/app-host";
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
 // AI-REMOVED 2026-09-24:
 // Reason: Hook 返回的仿真展示状态只需要进度计算用到的三个字段。
 // Trigger: 统一 Inspector 运行态采样，冻结运行、速度和时间轴读取值。
@@ -15,7 +16,8 @@ import { useEffect, useState } from "react";
 // Replacement: SimulationRecipePresentationState import。
 // Risk: Low
 // Human Review: Required
-// Original code: import type { SimulationState } from "@/domain/simulation/types/simulation-types";
+// Original code:
+// import type { SimulationState } from "@/domain/simulation/types/simulation-types";
 import type {
   SimulationDocumentRuntimeReadModel,
 } from "@/domain/simulation/types/simulation-types";

@@ -15,6 +15,7 @@ import type {
 import {
   readEditorHistoryState,
   writeEditorHistoryState,
+  type PersistedEditorHistoryState,
 } from "./history-storage";
 
 /** 每张地图最多保留的历史记录条数 */
@@ -23,6 +24,9 @@ const MAX_HISTORY_PER_DOCUMENT = 100;
 export class EditorHistoryRuntime {
   private loadSerial = 0;
   private writeQueue = Promise.resolve();
+  private requestedDocumentKey: string | null = null;
+  private readonly documents = new Map<string, PersistedEditorHistoryState>();
+  private readonly loads = new Map<string, Promise<PersistedEditorHistoryState>>();
 
   public constructor(
     private readonly state: EditorHistoryStateReadWrite,
@@ -30,22 +34,21 @@ export class EditorHistoryRuntime {
 
   public loadDocumentHistory(documentKey: string): void {
     const serial = ++this.loadSerial;
+    this.requestedDocumentKey = documentKey;
 
     runInAction(() => {
       this.state.isReady = false;
     });
 
     void (async () => {
-      const persistedState = await readEditorHistoryState(documentKey);
+      const persistedState = await this.readDocumentHistory(documentKey);
 
       if (serial !== this.loadSerial) {
         return;
       }
 
-      const records = normalizeRecordList(
-        persistedState?.records ?? [],
-        documentKey,
-      );
+      // 磁盘记录只在首次加载时规范化；驻留历史保留原 sequence 与 cursor。
+      const records = persistedState.records;
       const headSequence = resolveHeadSequence(records);
       const cursorSequence = Math.min(
         headSequence,
@@ -54,7 +57,7 @@ export class EditorHistoryRuntime {
 
       runInAction(() => {
         this.state.documentKey = documentKey;
-        this.state.records.replace(records);
+        this.state.records.replace([...records]);
         this.state.cursorSequence = cursorSequence;
         this.state.headSequence = headSequence;
         this.state.lastRecordId = records.at(-1)?.id ?? null;
@@ -63,16 +66,38 @@ export class EditorHistoryRuntime {
     })();
   }
 
+  /** 跨文档事务提交前准备出口历史，不改变当前历史面板。 */
+  public async prepareDocumentHistory(documentKey: string): Promise<void> {
+    await this.readDocumentHistory(documentKey);
+  }
+
+  /** 等待历史读取（含迁移写回）及保存完成；等待期间追加的写入也必须排空。 */
+  public async flush(): Promise<void> {
+    let pending: Promise<void>;
+    do {
+      pending = this.writeQueue;
+      await pending;
+      await Promise.all(this.loads.values());
+    } while (pending !== this.writeQueue || this.loads.size > 0);
+  }
+
   public record(options: {
     documentKey: string;
     action: EditorHistoryActionDescriptor;
     delta: EditorHistoryDocumentDelta;
   }): EditorHistoryRecord {
-    this.loadSerial += 1;
+    this.requestedDocumentKey ??= options.documentKey;
+    const isActive = this.requestedDocumentKey === options.documentKey;
+    if (isActive) this.loadSerial += 1;
+    const previous = this.documents.get(options.documentKey);
+    const cursor = previous?.cursorSequence
+      ?? (this.state.documentKey === options.documentKey ? this.state.cursorSequence : 0);
+    const records = previous?.records
+      ?? (this.state.documentKey === options.documentKey ? [...this.state.records] : []);
 
-    const nextSequence = this.state.cursorSequence + 1;
-    const recordsBeforeCursor = this.state.records.filter((record) =>
-      record.sequence <= this.state.cursorSequence,
+    const nextSequence = cursor + 1;
+    const recordsBeforeCursor = records.filter((record) =>
+      record.sequence <= cursor,
     );
     const record: EditorHistoryRecord = {
       schemaVersion: 2,
@@ -93,16 +118,21 @@ export class EditorHistoryRuntime {
       ? nextRecords.slice(nextRecords.length - MAX_HISTORY_PER_DOCUMENT)
       : nextRecords;
 
-    runInAction(() => {
-      this.state.documentKey = options.documentKey;
-      this.state.records.replace(trimmedRecords);
-      this.state.cursorSequence = nextSequence;
-      this.state.headSequence = nextSequence;
-      this.state.lastRecordId = record.id;
-      this.state.isReady = true;
-    });
+    if (isActive) {
+      runInAction(() => {
+        this.state.documentKey = options.documentKey;
+        this.state.records.replace(trimmedRecords);
+        this.state.cursorSequence = nextSequence;
+        this.state.headSequence = nextSequence;
+        this.state.lastRecordId = record.id;
+        this.state.isReady = true;
+      });
+    }
 
-    this.enqueuePersist();
+    this.enqueuePersistSnapshot({
+      schemaVersion: 3, documentKey: options.documentKey,
+      cursorSequence: nextSequence, records: trimmedRecords,
+    });
 
     return record;
   }
@@ -175,9 +205,37 @@ export class EditorHistoryRuntime {
       records: this.state.records.map((record) => record),
     };
 
+    this.enqueuePersistSnapshot(snapshot);
+  }
+
+  private enqueuePersistSnapshot(snapshot: PersistedEditorHistoryState): void {
+    this.documents.set(snapshot.documentKey, snapshot);
     this.writeQueue = this.writeQueue
       .catch(() => undefined)
       .then(() => writeEditorHistoryState(snapshot));
+  }
+
+  private async readDocumentHistory(documentKey: string): Promise<PersistedEditorHistoryState> {
+    const cached = this.documents.get(documentKey);
+    if (cached !== undefined) return cached;
+    const pending = this.loads.get(documentKey);
+    if (pending !== undefined) return pending;
+    const load = (async () => {
+      await this.writeQueue;
+      const persisted = await readEditorHistoryState(documentKey);
+      const latest = this.documents.get(documentKey);
+      if (latest !== undefined) return latest;
+      const records = normalizeRecordList(persisted?.records ?? [], documentKey);
+      const head = resolveHeadSequence(records);
+      const snapshot: PersistedEditorHistoryState = {
+        schemaVersion: 3, documentKey, records,
+        cursorSequence: Math.min(head, Math.max(0, persisted?.cursorSequence ?? head)),
+      };
+      this.documents.set(documentKey, snapshot);
+      return snapshot;
+    })().finally(() => this.loads.delete(documentKey));
+    this.loads.set(documentKey, load);
+    return load;
   }
 }
 

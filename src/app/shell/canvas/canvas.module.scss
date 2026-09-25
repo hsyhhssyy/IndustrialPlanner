@@ -16,6 +16,22 @@
   box-shadow: inset 0 0 0 1px var(--in-canvas-focus-ring);
 }
 
+.canvas-dark-pipe-error {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  z-index: 3;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font-size: 12px;
+  pointer-events: none;
+}
+
 .canvas-viewport-surface,
 .renderer-host {
   display: block;

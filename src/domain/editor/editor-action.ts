@@ -44,8 +44,10 @@ export interface EditorAction {
 	createDarkPipeLink(options: {
 		sourceEntityId: string;
 		targetEntityId: string;
-	}): boolean;
-	removeDarkPipeLink(entityId: string): boolean;
+		sourceBaseId?: string;
+		targetBaseId?: string;
+	}): Promise<boolean>;
+	removeDarkPipeLink(entityId: string): Promise<boolean>;
 	/**
 	 * 为指定设备槽位创建仓库物品链接（写入 document.slotLinks）。
 	 * target.entityId 固定为 "warehouse"，编译器在运行时解析 baseId。
@@ -153,8 +155,11 @@ export interface EditorAction {
 	loadLatestBaseDocument(baseId: string): Promise<boolean>;
 	/**
 	 * 应用同步模块下载的当前文档快照；不写入 undo/redo 历史。
+	 * 订正（2026-09-25，REQ-038）：支持后台基地，通过 Editor 保存队列应用并持久化。
 	 */
-	applySynchronizedDocument(document: WorldDocument): void;
+	applySynchronizedDocument(document: WorldDocument): Promise<void>;
+	/** 删除远端墓碑对应基地的本地文档及驻留版本，等待此前保存完成。 */
+	removeSynchronizedBaseDocument(baseId: string): Promise<void>;
 	/**
 	 * 静默写入 documentSettings 的部分字段（silent 模式，不进入 undo/redo）。
 	 * 适用于 powerMode、viewport 等不需要触发全量重编译的文档设置变更。

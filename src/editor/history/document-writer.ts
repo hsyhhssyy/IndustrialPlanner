@@ -44,6 +44,7 @@ export interface EditorDocumentWriter {
 export function createEditorDocumentWriter(options: {
   document: SnapshotStoreReadWrite<WorldDocument>;
   history: EditorHistoryRuntime;
+  normalizeEdit?: (before: WorldDocument, after: WorldDocument) => WorldDocument;
 }): EditorDocumentWriter {
   const writeDocument = (
     nextDocument: WorldDocument,
@@ -51,6 +52,8 @@ export function createEditorDocumentWriter(options: {
     mode: EditorDocumentWriteMode,
   ): WorldDocument | null => {
     const currentDocument = options.document.getSnapshot();
+    // 历史重放恢复已记录的关系；只有新的用户编辑需要重新判断覆盖。
+    if (mode === "record") nextDocument = options.normalizeEdit?.(currentDocument, nextDocument) ?? nextDocument;
     const documentToWrite = mode === "record"
       ? stampWorldDocumentUpdatedAt(nextDocument)
       : nextDocument;

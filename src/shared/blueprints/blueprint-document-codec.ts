@@ -1,4 +1,4 @@
-import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { createBlueprintDocument, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
 export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | null {
@@ -41,19 +41,24 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
   );
 
   return {
+    ...createBlueprintDocument({
+      blueprintId: value.blueprintId,
+      version: value.version,
+      name: value.name,
+      description: value.description,
+      baseId: value.baseId,
+      initialGridPoint: value.initialGridPoint,
+      entities: migration.entities,
+      entityOrder: validEntityOrder,
+      slotLinks: [...migration.slotLinks],
+      regions: migration.regions,
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+    }),
+    // 保留解码器既有文本语义；公共生成边界只负责过滤外部引用及复制内部端点。
     schemaVersion: migration.schemaVersion,
-    blueprintId: value.blueprintId,
-    version: value.version,
     name: value.name,
     description: value.description,
-    baseId: value.baseId,
-    initialGridPoint: value.initialGridPoint,
-    entities: migration.entities,
-    entityOrder: validEntityOrder,
-    slotLinks: [...migration.slotLinks],
-    regions: migration.regions,
-    createdAt: value.createdAt,
-    updatedAt: value.updatedAt,
   };
 }
 

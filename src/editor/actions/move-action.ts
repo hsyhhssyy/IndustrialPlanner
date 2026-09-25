@@ -187,8 +187,8 @@ export function createEditorMoveActions({
             slotLinks: definitionChangedEntityIds.size === 0
               ? documentSnapshot.slotLinks
               : documentSnapshot.slotLinks.filter((slotLink) =>
-                !definitionChangedEntityIds.has(slotLink.source.entityId)
-                && !definitionChangedEntityIds.has(slotLink.target.entityId),
+                !(isLocalSlotLinkEndpoint(slotLink.source, documentSnapshot.baseId) && definitionChangedEntityIds.has(slotLink.source.entityId))
+                && !(isLocalSlotLinkEndpoint(slotLink.target, documentSnapshot.baseId) && definitionChangedEntityIds.has(slotLink.target.entityId)),
               ),
           }),
         });
@@ -329,3 +329,4 @@ function cloneEntity(entity: WorldEntity | DraftEntity): WorldEntity {
     tags: [...entity.tags],
   };
 }
+import { isLocalSlotLinkEndpoint } from "@/shared/slot-link";

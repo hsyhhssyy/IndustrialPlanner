@@ -1,5 +1,27 @@
 import { expect, test } from "./canvas-lock-audit";
 
+test("fixed infinite resources remain visible outside the editable regional list", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "基地" }).click();
+
+  const fixedSupply = page.getByText("仓库固定无限供应", { exact: true }).locator("..");
+  const card = fixedSupply.locator("xpath=ancestor::article");
+  await expect(fixedSupply).toBeVisible();
+  await expect(fixedSupply).toContainText(/清水\s*∞/);
+  await expect(fixedSupply).toContainText(/沉积酸\s*∞/);
+  await expect(fixedSupply.locator("button, input")).toHaveCount(0);
+
+  const regionTag = await card.locator("h3").locator("..").locator("span").innerText();
+  await page.evaluate((tag) => {
+    window.__industrialPlannerAppHost?.regionalSettings.setRegionResources(tag, []);
+  }, regionTag);
+  await expect.poll(() => page.evaluate((tag) =>
+    window.__industrialPlannerAppHost?.regionalSettings.getRegionResources(tag),
+  regionTag)).toEqual([]);
+  await expect(card.getByRole("button", { name: "移除资源" })).toHaveCount(0);
+  await expect(fixedSupply).toBeVisible();
+});
+
 test("regional multi-base mode keeps full speed controls and resolves timeline UI", async ({
   page,
 }) => {

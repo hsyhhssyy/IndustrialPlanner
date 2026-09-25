@@ -501,7 +501,37 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
-  it("管道从已有管道起笔分叉-开启自动分流器时(51,3)应生成管道分流器", async () => {
+  it("反应池内侧端口(7,6)布设到(6,9)时自动选合法管道线序", async () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS);
+    enterPipeLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
+    await moveToCell(appHost, editorHost, { x: 6, y: 9 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 6, y: 9 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_cw_1x1",
+      position: { x: 8, y: 8 },
+      rotation: 270,
+    });
+  });
+
+  it("反应池外侧端口(8,6)布设到(6,9)时自动选合法管道线序", async () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS);
+    enterPipeLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 8, y: 6 }, nextPointerId++);
+    await moveToCell(appHost, editorHost, { x: 6, y: 9 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 6, y: 9 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_cw_1x1",
+      position: { x: 8, y: 8 },
+      rotation: 270,
+    });
+  });
+
+  it("管道从已有管道起笔分叉-开启自动分流器时穿过液燃炉应显示红色且拒绝落盘", async () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = true;
@@ -511,16 +541,31 @@ describe("物流布设模式完全测试集", () => {
     // (51,3) 起笔，向 (51,2) 移动（液燃炉方向）
     clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
     await moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    const entitiesBeforeConfirm = editorHost.document.getSnapshot().entities;
+    expect(editorHost.queries.resolveLogisticsDraftState()?.canApply).toBe(false);
+    expect(editorHost.state.collections["preview"].some((entityId) =>
+      editorHost.state.collections["invalid-placement"].includes(entityId)
+    )).toBe(true);
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
 
     // (51,3) 应生成 pipe_splitter
-    expectEntityAt(editorHost, {
-      definitionId: "pipe_splitter",
-      position: { x: 51, y: 3 },
-    });
+    // AI-CORRECTION 2026-09-24: 路线穿过液燃炉，占用格冲突；此处应预览红色且点击不得落盘。
+    // AI-REMOVED 2026-09-24:
+    // Reason: 原断言把穿越设备的红色无效路径当作可提交路径。
+    // Trigger: 用户明确要求此用例改为确认红色。
+    // Evidence: (51,2) 的预览格与液燃炉重叠，invalid-placement 非空，canApply=false。
+    // Replacement: 本用例上方的预览与落盘断言。
+    // Risk: Low。
+    // Human Review: Required
+    // Original code:
+    // expectEntityAt(editorHost, {
+    //   definitionId: "pipe_splitter",
+    //   position: { x: 51, y: 3 },
+    // });
   });
 
-  it("管道从已有管道起笔分叉-关闭自动分流器时(51,3)应生成弯道", async () => {
+  it("管道从已有管道起笔分叉-关闭自动分流器时穿过液燃炉应显示红色且拒绝落盘", async () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
@@ -529,14 +574,29 @@ describe("物流布设模式完全测试集", () => {
 
     clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
     await moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    const entitiesBeforeConfirm = editorHost.document.getSnapshot().entities;
+    expect(editorHost.queries.resolveLogisticsDraftState()?.canApply).toBe(false);
+    expect(editorHost.state.collections["preview"].some((entityId) =>
+      editorHost.state.collections["invalid-placement"].includes(entityId)
+    )).toBe(true);
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
 
     // 关闭自动分流器时，(51,3) 应转为 pipe_turn_ccw_1x1 弯道
-    expectEntityAt(editorHost, {
-      definitionId: "pipe_turn_ccw_1x1",
-      position: { x: 51, y: 3 },
-      rotation: 270,
-    });
+    // AI-CORRECTION 2026-09-24: 禁用自动分流器不改变设备占用规则；红色路线不得落盘。
+    // AI-REMOVED 2026-09-24:
+    // Reason: 原断言把穿越设备的红色无效路径当作可提交路径。
+    // Trigger: 用户明确要求此用例改为确认红色。
+    // Evidence: (51,2) 的预览格与液燃炉重叠，invalid-placement 非空，canApply=false。
+    // Replacement: 本用例上方的预览与落盘断言。
+    // Risk: Low。
+    // Human Review: Required
+    // Original code:
+    // expectEntityAt(editorHost, {
+    //   definitionId: "pipe_turn_ccw_1x1",
+    //   position: { x: 51, y: 3 },
+    //   rotation: 270,
+    // });
   });
 
   it("连续布设管道绕回穿越已有直管时(2,2)应生成管道桥接器", async () => {
@@ -1217,6 +1277,10 @@ const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = loadBlueprintFrom
 // };
 const USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema6.json",
+);
+
+const USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS: BlueprintDocument = loadBlueprintFromFile(
+  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
 );
 
 function createWorkspace(): WorkspaceContract {

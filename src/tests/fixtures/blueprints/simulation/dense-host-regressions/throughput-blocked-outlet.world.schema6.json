@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 6,
+  "documentKey": "req038-throughput-blocked-outlet",
+  "baseId": "wuling_tianwangping_aid",
+  "meta": {
+    "id": "req038-throughput-blocked-outlet",
+    "name": "跨基地暗管outlet",
+    "createdAt": "2026-09-25T00:00:00.000Z",
+    "updatedAt": "2026-09-25T00:00:00.000Z"
+  },
+  "entities": {
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 500
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "outlet"
+  ],
+  "slotLinks": [
+    {
+      "id": "regional-dark-pipe:wuling_protocol_core:inlet:wuling_tianwangping_aid:outlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "outlet",
+        "storageSlotGroupId": "transport_input",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "inlet",
+        "baseId": "wuling_protocol_core",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "documentSettings": {
+    "viewport": {
+      "center": {
+        "x": 0,
+        "y": 0
+      },
+      "gridSize": 1,
+      "displayRotation": 0
+    },
+    "powerMode": "infinite"
+  }
+}

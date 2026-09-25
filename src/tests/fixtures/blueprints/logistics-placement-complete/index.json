@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 2,
-  "upgradedAt": "2026-09-16",
+  "fixtureRevision": 3,
+  "upgradedAt": "2026-09-24",
   "blueprints": [
     {
       "file": "bridge-crossing.schema6.json",
@@ -74,6 +74,15 @@
       "schemaVersion": 6,
       "version": "v1.3.0",
       "blueprintId": "833b49ea-c832-470f-be0b-043b16890b8f"
+    },
+    {
+      "file": "pipe-route-priority-reactor-pools.schema6.json",
+      "sourceConstant": "USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS",
+      "sourceSchemaVersion": 6,
+      "sourceVersion": "",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "blueprintId": "5f891452-55db-49fe-9677-7893dbf54264"
     },
     {
       "file": "pipe-branch.schema6.json",

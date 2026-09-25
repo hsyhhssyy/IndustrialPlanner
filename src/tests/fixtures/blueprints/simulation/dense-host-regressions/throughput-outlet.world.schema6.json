@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 6,
+  "documentKey": "req038-throughput-outlet",
+  "baseId": "wuling_tianwangping_aid",
+  "meta": {
+    "id": "req038-throughput-outlet",
+    "name": "跨基地暗管outlet",
+    "createdAt": "2026-09-25T00:00:00.000Z",
+    "updatedAt": "2026-09-25T00:00:00.000Z"
+  },
+  "entities": {
+    "outlet": {
+      "id": "outlet",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "output-pipe": {
+      "id": "output-pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink": {
+      "id": "sink",
+      "definitionId": "liquid_storager_1",
+      "position": {
+        "x": 14,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "outlet",
+    "output-pipe",
+    "sink"
+  ],
+  "slotLinks": [
+    {
+      "id": "regional-dark-pipe:wuling_protocol_core:inlet:wuling_tianwangping_aid:outlet",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "outlet",
+        "storageSlotGroupId": "transport_input",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "inlet",
+        "baseId": "wuling_protocol_core",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "documentSettings": {
+    "viewport": {
+      "center": {
+        "x": 0,
+        "y": 0
+      },
+      "gridSize": 1,
+      "displayRotation": 0
+    },
+    "powerMode": "infinite"
+  }
+}

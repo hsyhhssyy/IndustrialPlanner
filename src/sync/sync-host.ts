@@ -1554,22 +1554,40 @@ function createWorldDocumentAdapter(
       //   value: createWorldDocumentWebDavValue(document),
       //   deletedAt: null,
       // }));
-      const currentDocument = workspace.editor?.document.getSnapshot();
-      if (
-        currentDocument !== undefined
-        && scope?.includeAssetIds?.length === 1
-        && scope.includeAssetIds[0] === currentDocument.baseId
-      ) {
-        return [{
-          id: currentDocument.baseId,
-          value: createWorldDocumentRemoteValue(currentDocument),
-          deletedAt: null,
-        }];
-      }
-
-      const documentsByBase = await listLatestWorldDocumentsByBase({});
-      if (currentDocument !== undefined) {
-        documentsByBase.set(currentDocument.baseId, currentDocument);
+      // AI-REMOVED 2026-09-25:
+      // Reason: 仅覆盖活动文档会导出后台基地的旧存储版本，初始化时还可能覆盖已恢复文档。
+      // Trigger: REQ-038 D04，Editor 统一拥有最新版本。
+      // Evidence: 原快捷路径读取未等待初始化的 editor.document，后台版本不在查询范围。
+      // Replacement: listBaseDocumentSummaries + readLatestBaseDocuments，均等待 Editor 初始化。
+      // Risk: Low；无 Editor 的独立同步场景沿用持久化读取。
+      // Human Review: Required
+      // Original code:
+      // const currentDocument = workspace.editor?.document.getSnapshot();
+      // if (
+      //   currentDocument !== undefined
+      //   && scope?.includeAssetIds?.length === 1
+      //   && scope.includeAssetIds[0] === currentDocument.baseId
+      // ) {
+      //   return [{
+      //     id: currentDocument.baseId,
+      //     value: createWorldDocumentRemoteValue(currentDocument),
+      //     deletedAt: null,
+      //   }];
+      // }
+      // const documentsByBase = await listLatestWorldDocumentsByBase({});
+      // if (currentDocument !== undefined) {
+      //   documentsByBase.set(currentDocument.baseId, currentDocument);
+      // }
+      const editor = workspace.editor;
+      const documentsByBase = new Map<string, WorldDocument>();
+      if (editor === null) {
+        for (const [baseId, document] of await listLatestWorldDocumentsByBase({})) documentsByBase.set(baseId, document);
+      } else {
+        const summaries = await editor.queries.listBaseDocumentSummaries();
+        const baseIds = summaries.filter((summary) => summary.documentKey !== null
+          && (scope?.includeAssetIds === undefined || scope.includeAssetIds.includes(summary.baseId)))
+          .map((summary) => summary.baseId);
+        for (const document of await editor.queries.readLatestBaseDocuments(baseIds)) documentsByBase.set(document.baseId, document);
       }
 
       return Array.from(documentsByBase.values()).flatMap((document) =>
@@ -1595,16 +1613,19 @@ function createWorldDocumentAdapter(
     // writeLocal: async (entry) => await withRemoteApply(async () => {
     writeLocal: async (entry) => {
       const editor = workspace.editor;
-      const currentDocument = editor?.document.getSnapshot();
       // AI-CORRECTION 2026-08-14: writeLocal 支持远端墓碑（deletedAt 非空）：
       // 删除该基地（entry.id 为远端资产 baseId）在本机的全部文档副本。
       // 触发场景：远端墓碑下载、以及冲突弹框中上传条目被决议为“用远端”（放弃本地新增）。
       // 原实现忽略 deletedAt，墓碑落地只推进 touch 不删本地，导致“已同步但本地仍在”的假象。
       if (entry.deletedAt !== null) {
-        const documents = await listWorldDocuments();
-        for (const document of documents) {
-          if (document.baseId === entry.id) {
-            await deleteWorldDocument(document.documentKey);
+        if (editor !== null) {
+          await editor.actions.removeSynchronizedBaseDocument(entry.id);
+        } else {
+          const documents = await listWorldDocuments();
+          for (const document of documents) {
+            if (document.baseId === entry.id) {
+              await deleteWorldDocument(document.documentKey);
+            }
           }
         }
         onSynchronizedDocumentChange(entry.id, null);
@@ -1634,10 +1655,22 @@ function createWorldDocumentAdapter(
       // ) {
       //   editor.actions.applySynchronizedDocument(localValue);
       // }
-      const latestDocumentsByBase = await listLatestWorldDocumentsByBase({});
-      const existingDocument = currentDocument?.baseId === entry.id
-        ? currentDocument
-        : latestDocumentsByBase.get(entry.id) ?? await readWorldDocument(entry.id);
+      // AI-REMOVED 2026-09-25:
+      // Reason: 后台同步同样需要保留 Editor 缓存中的本机身份和视口。
+      // Trigger: REQ-038 D09。
+      // Evidence: 旧路径仅对当前基地采用内存身份。
+      // Replacement: Editor 最新文档查询。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // const currentDocument = editor?.document.getSnapshot();
+      // const latestDocumentsByBase = await listLatestWorldDocumentsByBase({});
+      // const existingDocument = currentDocument?.baseId === entry.id
+      //   ? currentDocument
+      //   : latestDocumentsByBase.get(entry.id) ?? await readWorldDocument(entry.id);
+      const existingDocument = editor !== null
+        ? (await editor.queries.readLatestBaseDocuments([entry.id]))[0] ?? null
+        : (await listLatestWorldDocumentsByBase({})).get(entry.id) ?? await readWorldDocument(entry.id);
       const localValue = preserveLocalWorldDocumentIdentity(
         {
           ...entry.value,
@@ -1646,14 +1679,25 @@ function createWorldDocumentAdapter(
         },
         existingDocument,
       );
-      await writeWorldDocument(localValue);
+      // AI-REMOVED 2026-09-25:
+      // Reason: 持久化与缓存应用必须进入同一个保存队列。
+      // Trigger: 后台同步与旧自动保存不能互相覆盖。
+      // Evidence: 原实现先绕过 Editor 写磁盘，再仅更新当前文档。
+      // Replacement: await editor.actions.applySynchronizedDocument。
+      // Risk: Low；失败向同步服务传播，不能报告同步成功。
+      // Human Review: Required
+      // Original code:
+      // await writeWorldDocument(localValue);
+      // onSynchronizedDocumentChange(entry.id, localValue);
+      // if (
+      //   editor !== null
+      //   && currentDocument?.baseId === entry.id
+      // ) {
+      //   editor.actions.applySynchronizedDocument(localValue);
+      // }
+      if (editor !== null) await editor.actions.applySynchronizedDocument(localValue);
+      else await writeWorldDocument(localValue);
       onSynchronizedDocumentChange(entry.id, localValue);
-      if (
-        editor !== null
-        && currentDocument?.baseId === entry.id
-      ) {
-        editor.actions.applySynchronizedDocument(localValue);
-      }
     },
     // AI-REMOVED 2026-08-12:
     // Reason: 上方 writeLocal 已不再由 withRemoteApply 包裹。
