@@ -1690,6 +1690,7 @@ describe("GenericDeviceSprite", () => {
       visible: true,
       tint: 0x666666,
       mask: null,
+      texture: { id: "/textures/scanline-45deg-50opacity.webp" },
     })
     expect(overlayRoot?.children).toHaveLength(3)
   })
@@ -1728,9 +1729,9 @@ describe("GenericDeviceSprite", () => {
       marqueeIds: ["dummy-blueprint-marquee"],
       previewIds: [],
     })
-    Object.assign(context.workspace, {
-      app: createRenderContextAppStub(renderHost),
-    })
+    const app = createRenderContextAppStub(renderHost)
+    Object.assign(app.state, { activeTool: "marquee" })
+    Object.assign(context.workspace, { app })
 
     sprite.syncLayout({
       x: 16,
@@ -1762,10 +1763,10 @@ describe("GenericDeviceSprite", () => {
       y: 40,
       width: 48,
       height: 32,
-      tint: 0x666666,
+      tint: 0xffffff,
       mask: null,
       texture: {
-        id: "/textures/scanline-45deg-50opacity.webp",
+        id: "/textures/blueprint-overlay-tile.webp",
       },
     })
   })
@@ -2295,7 +2296,7 @@ describe("GenericDeviceSprite", () => {
     expect(scanlineTiling?.mask).toBe(previewMask)
   })
 
-  it("uses the selection overlay for a single-device batch move preview", async () => {
+  it.each([1, 2])("uses the blueprint overlay for a %i-device batch move preview", async (previewCount) => {
     const resolvedTexture = createLoadedTextureMock("batch-move-device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("batch-move-device-mask-texture")
     const entityLayer = createLayerStub()
@@ -2323,7 +2324,9 @@ describe("GenericDeviceSprite", () => {
 
     const context = createRenderContextStub({
       selectionIds: [],
-      previewIds: ["batch-move-preview-entity"],
+      previewIds: previewCount === 1
+        ? ["batch-move-preview-entity"]
+        : ["batch-move-preview-entity", "second-batch-move-preview-entity"],
       activeTool: "move",
       moveKind: "batch",
     })
@@ -2331,18 +2334,77 @@ describe("GenericDeviceSprite", () => {
     sprite.syncLayout(createBeltLayout(), context)
     await flushMicrotasks(8)
     sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
 
     const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
-      children?: Array<{ visible?: boolean }>;
+      children?: Array<{ visible?: boolean; strokeCalls?: unknown[] }>;
     } | undefined
 
     expect(overlayRoot?.children?.[0]?.visible).toBe(false)
     expect(overlayRoot?.children?.[1]?.visible).toBe(true)
+    expect(overlayRoot?.children?.some((child) => child.strokeCalls?.length)).toBe(false)
 
     const selectionEffectRoot = overlayRoot?.children?.[1] as {
       children?: RenderedSpriteSnapshot[];
     } | undefined
-    expect(selectionEffectRoot?.children?.[0]?.tint).toBe(0xffffff)
+    expect(selectionEffectRoot?.children?.[0]).toMatchObject({
+      tint: 0xffffff,
+      texture: { id: "/textures/blueprint-overlay-tile.webp" },
+    })
+  })
+
+  it.each([1, 2])("uses the blueprint overlay for %i selected devices in marquee mode", async (selectionCount) => {
+    const entityId = "marquee-selected-device"
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: createLoadedTextureMock("marquee-selected-device-texture"),
+      [MASK_KEY]: createLoadedTextureMock("marquee-selected-device-mask"),
+    })
+    const sprite = new GenericDeviceSprite(entityId, createEntityDefinitionStub(), renderHost as never)
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: selectionCount === 1 ? [entityId] : [entityId, "second-marquee-selected-device"],
+      previewIds: [],
+      activeTool: "marquee",
+    })
+    sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
+    sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
+
+    const selectionEffectRoot = resolveSelectionEffectRoot(overlayLayer)
+    const selectionTiling = selectionEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: Array<{ strokeCalls?: unknown[] }>;
+    } | undefined
+    expect(selectionEffectRoot?.visible).toBe(true)
+    expect(overlayRoot?.children?.some((child) => child.strokeCalls?.length)).toBe(false)
+    expect(selectionTiling).toMatchObject({
+      tint: 0xffffff,
+      texture: { id: "/textures/blueprint-overlay-tile.webp" },
+    })
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [entityId],
+      previewIds: [],
+      activeTool: "select",
+    }))
+    expect(overlayRoot?.children?.find((child) => child.strokeCalls)?.strokeCalls).toContainEqual({
+      width: 2,
+      color: 0xffa500,
+    })
   })
 
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {

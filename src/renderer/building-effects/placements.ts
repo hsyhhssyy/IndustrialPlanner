@@ -3,7 +3,16 @@ import type { EntityDefinition } from '@/domain/registry/types/entity-definition
 import { resolveRotatedPortGeometry } from '@/shared/geometry/port';
 import type { LogisticsMaterialFrameState } from '@/shared/logistics-material';
 import { getRotatedGridFootprint } from '@/shared/geometry/grid';
-import { isDarkPipeDefinitionId } from '@/shared/dark-pipe-link';
+// AI-REMOVED 2026-09-25:
+// Reason: 端口 on/off 特效不再按暗管类型选择流体播放门控。
+// Trigger: 用户明确要求未接管道的 off 与已接管道的 on 始终播放。
+// Evidence: 特效清单中两种资源均为 loop；原门控使 off 必定停在静态帧。
+// Replacement: resolveBuildingEffectScene 只按连接状态选择资源，BuildingEffectsScene.sync 使用场景时钟。
+// Risk: Low；空管和断开端口也持续播放。
+// Human Review: Required
+//
+// Original code:
+// import { isDarkPipeDefinitionId } from '@/shared/dark-pipe-link';
 import type {
   BuildingEffectsManifest,
   BuildingHeightView,
@@ -42,10 +51,19 @@ export function selectEffectVariant(view: BuildingHeightView, definition: Entity
   return selected.length === 1 ? selected[0] : undefined;
 }
 
-export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][string], timeMs: number | null): number {
-  if (timeMs === null) {
-    return Math.min(Math.max(0, resource.playback.staticFrame), Math.max(0, resource.frames.length - 1));
-  }
+export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][string], timeMs: number): number {
+  // AI-REMOVED 2026-09-25:
+  // Reason: 所有端口特效都使用持续推进的场景时钟，null 静态帧路径已不可达。
+  // Trigger: 用户明确要求 on/off 在连接和断开状态下始终播放。
+  // Evidence: 唯一运行时调用方 BuildingEffectsScene.sync 现直接传入 nowMs。
+  // Replacement: 下方按 timeMs 解析动画帧。
+  // Risk: Low；保留 manifest.staticFrame 仅供素材数据契约使用。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (timeMs === null) {
+  //   return Math.min(Math.max(0, resource.playback.staticFrame), Math.max(0, resource.frames.length - 1));
+  // }
   const duration = resource.frames.reduce((sum, frame) => sum + frame.durationMs, 0);
   let remaining = resource.playback.mode === 'loop' && duration > 0
     ? Math.max(0, timeMs) % duration : Math.min(Math.max(0, timeMs), duration);
@@ -56,18 +74,27 @@ export function resolveEffectFrame(resource: BuildingEffectsManifest['effects'][
   return Math.max(0, resource.frames.length - 1);
 }
 
-export function resolveEffectPlaybackTimeMs(
-  effect: Pick<EffectPlacement, 'animationFluidEntityId'>,
-  materials: LogisticsMaterialFrameState | undefined,
-  nowMs: number,
-): number | null {
-  if (effect.animationFluidEntityId === undefined) return nowMs;
-  if (effect.animationFluidEntityId === null) return null;
-  const fluidState = materials?.entities.get(effect.animationFluidEntityId);
-  return fluidState === undefined || fluidState.fluidItemId === null
-    ? null
-    : (fluidState.pipeFlow?.seconds ?? 0) * 1000;
-}
+// AI-REMOVED 2026-09-25:
+// Reason: 流体占用与运输组时钟不能再决定端口 on/off 特效是否播放。
+// Trigger: 用户明确要求 on/off 两种特效始终播放。
+// Evidence: 未接管道时 animationFluidEntityId 为 null，旧函数必定返回 null。
+// Replacement: BuildingEffectsScene.sync 直接传入 options.nowMs 给 resolveEffectFrame。
+// Risk: Low；动画相位从运输组时钟改为场景时钟。
+// Human Review: Required
+//
+// Original code:
+// export function resolveEffectPlaybackTimeMs(
+//   effect: Pick<EffectPlacement, 'animationFluidEntityId'>,
+//   materials: LogisticsMaterialFrameState | undefined,
+//   nowMs: number,
+// ): number | null {
+//   if (effect.animationFluidEntityId === undefined) return nowMs;
+//   if (effect.animationFluidEntityId === null) return null;
+//   const fluidState = materials?.entities.get(effect.animationFluidEntityId);
+//   return fluidState === undefined || fluidState.fluidItemId === null
+//     ? null
+//     : (fluidState.pipeFlow?.seconds ?? 0) * 1000;
+// }
 
 export function selectRingEffectPlacements(
   candidates: readonly RingEffectPlacement[],
@@ -158,13 +185,32 @@ export function resolveBuildingEffectScene(options: {
         other.entityId !== entity.id && other.dx === -match.dx && other.dy === -match.dy
         && (other.kind & match.kind) !== 0 && (other.direction === 'bidirectional' || other.direction !== port.role));
       const connected = connectedPort !== undefined;
-      const animationFluidEntityId = isDarkPipeDefinitionId(definition.id)
-        ? connectedPort?.entityId ?? null
-        : undefined;
+      // AI-REMOVED 2026-09-25:
+      // Reason: 相邻管道 ID 仅服务旧流体门控，端口特效现在统一按场景时钟播放。
+      // Trigger: 用户明确要求断开的 off 与连接的 on 都持续播放。
+      // Evidence: 连接状态已由 connected 决定素材绑定，不需要流体实体 ID。
+      // Replacement: 下方 add 只保存资源与位置；连接状态仍用于选择 on/off。
+      // Risk: Low；不再与管道流体相位同步。
+      // Human Review: Required
+      //
+      // Original code:
+      // const animationFluidEntityId = isDarkPipeDefinitionId(definition.id)
+      //   ? connectedPort?.entityId ?? null
+      //   : undefined;
       const id = `${entity.id}:${key}:${port.role}:${port.index}`;
       const add = (resourceId: string | null, suffix: string) => {
         if (!resourceId || !options.manifest.effects[resourceId]) return;
-        result.effects.push({ id: id + suffix, resourceId, animationFluidEntityId,
+        // AI-REMOVED 2026-09-25:
+        // Reason: 特效放置项不再保存流体播放门控字段。
+        // Trigger: 用户要求端口 on/off 特效始终播放。
+        // Evidence: BuildingEffectsScene.sync 已统一使用场景时钟。
+        // Replacement: 下方不含 animationFluidEntityId 的放置项。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // result.effects.push({ id: id + suffix, resourceId, animationFluidEntityId,
+        result.effects.push({ id: id + suffix, resourceId,
           x, y, rotation: entity.rotation + port.yaw,
           baseY: port.position[1], epsilon: view.epsilon, ring: false });
         result.portKeys.set(id + suffix, match.key);

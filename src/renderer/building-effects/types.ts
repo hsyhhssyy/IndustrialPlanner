@@ -69,8 +69,17 @@ export interface SurfacePlacement {
 export interface EffectPlacement {
   id: string;
   resourceId: string;
-  /** undefined 表示使用场景时钟；string/null 表示由相邻管道是否存在可见流体驱动或保持静态帧。 */
-  animationFluidEntityId?: string | null;
+  // AI-REMOVED 2026-09-25:
+  // Reason: 端口 on/off 特效统一使用场景时钟，不再需要相邻管道流体门控字段。
+  // Trigger: 用户明确要求已连接与未连接端口特效始终播放。
+  // Evidence: resolveBuildingEffectScene 仅按连接状态选资源，BuildingEffectsScene.sync 直接传入 nowMs。
+  // Replacement: BuildingEffectsScene.sync 的场景时钟播放。
+  // Risk: Low；删除后其他调用方不能按流体状态冻结特效。
+  // Human Review: Required
+  //
+  // Original code:
+  // /** undefined 表示使用场景时钟；string/null 表示由相邻管道是否存在可见流体驱动或保持静态帧。 */
+  // animationFluidEntityId?: string | null;
   x: number;
   y: number;
   rotation: number;

@@ -9,7 +9,16 @@ import { decodeHeight, fieldBounds, rasterizeHeightTile, HEIGHT_TILE_PIXELS, til
 import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
-  resolveEffectPlaybackTimeMs,
+  // AI-REMOVED 2026-09-25:
+  // Reason: 端口特效统一使用场景时钟，流体门控函数已移除。
+  // Trigger: 用户明确要求 on/off 动画始终播放。
+  // Evidence: 原函数对未连接的 off 返回 null，无法推进帧。
+  // Replacement: 下方 on/off 循环播放断言。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // resolveEffectPlaybackTimeMs,
   selectRingEffectPlacements,
 } from '@/renderer/building-effects/placements';
 import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
@@ -156,7 +165,17 @@ describe('建筑高度与端口特效', () => {
     ['udpipe_unloader_1', [{ id: 'pipe-1', x: 3, y: 1 }]],
     ['udpipe_loader_2', [{ id: 'pipe-1', x: -1, y: 1 }, { id: 'pipe-2', x: -1, y: 3 }]],
     ['udpipe_unloader_2', [{ id: 'pipe-1', x: 3, y: 3 }, { id: 'pipe-2', x: 3, y: 1 }]],
-  ] as const)('%s 的每个箭头动画由相邻管道流体状态驱动', (definitionId, pipePositions) => {
+  // AI-REMOVED 2026-09-25:
+  // Reason: 旧测试标题描述的流体驱动行为与新的持续播放要求冲突。
+  // Trigger: 用户明确要求未接管道的 off 和已接管道的 on 始终播放。
+  // Evidence: 端口特效资源都声明为 loop。
+  // Replacement: 下方 on/off 资源与场景时钟推进断言。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // ] as const)('%s 的每个箭头动画由相邻管道流体状态驱动', (definitionId, pipePositions) => {
+  ] as const)('%s 的每个端口按连接状态选择 on/off 并持续播放', (definitionId, pipePositions) => {
     const target: WorldEntity = { ...entity, id: 'dark-pipe', definitionId };
     const pipes = pipePositions.map(({ id, x, y }) => ({
       ...entity,
@@ -170,12 +189,43 @@ describe('建筑高度与端口特效', () => {
 
     expect(connected.issues).toEqual([]);
     expect(targetEffects).toHaveLength(pipePositions.length);
-    expect(new Set(targetEffects.map((effect) => effect.animationFluidEntityId))).toEqual(
-      new Set(pipePositions.map(({ id }) => id)),
-    );
+    // AI-REMOVED 2026-09-25:
+    // Reason: 特效不再存储相邻管道 ID，播放不依赖管道流体。
+    // Trigger: 用户要求 on/off 始终播放。
+    // Evidence: EffectPlacement 已移除 animationFluidEntityId。
+    // Replacement: 下方分别验证 on/off 资源及帧推进。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(new Set(targetEffects.map((effect) => effect.animationFluidEntityId))).toEqual(
+    //   new Set(pipePositions.map(({ id }) => id)),
+    // );
+    for (const effect of targetEffects) {
+      expect(effect.resourceId).toContain('pipeon');
+      const resource = manifest.effects[effect.resourceId]!;
+      expect(resource.playback.mode).toBe('loop');
+      expect(resolveEffectFrame(resource, 100)).toBeGreaterThan(resolveEffectFrame(resource, 0));
+    }
 
     const disconnected = resolveBuildingEffectScene({ manifest, definitions, entities: [target] });
-    expect(disconnected.effects.every((effect) => effect.animationFluidEntityId === null)).toBe(true);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 未连接端口也应持续播放 off，不能保留静态帧标志。
+    // Trigger: 用户明确要求 off 动画始终播放。
+    // Evidence: 断开端口原 animationFluidEntityId=null 被播放函数解释为静态帧。
+    // Replacement: 下方验证 off 资源为 loop 并按时钟前进。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(disconnected.effects.every((effect) => effect.animationFluidEntityId === null)).toBe(true);
+    expect(disconnected.effects).toHaveLength(pipePositions.length);
+    for (const effect of disconnected.effects) {
+      expect(effect.resourceId).toContain('pipeoff');
+      const resource = manifest.effects[effect.resourceId]!;
+      expect(resource.playback.mode).toBe('loop');
+      expect(resolveEffectFrame(resource, 100)).toBeGreaterThan(resolveEffectFrame(resource, 0));
+    }
   });
 
   it('按明确状态过滤环，重复绑定只绘制一次；模式切换保留对应变体', () => {
@@ -198,32 +248,50 @@ describe('建筑高度与端口特效', () => {
     resource.playback.mode = 'loop';
     resource.playback.staticFrame = 2;
     expect([0, 24, 25, 99, 100, 199, 200].map((time) => resolveEffectFrame(resource, time))).toEqual([0, 0, 1, 1, 2, 2, 0]);
-    expect(resolveEffectFrame(resource, null)).toBe(2);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 端口特效不再支持 null 时钟冻结到 staticFrame。
+    // Trigger: 用户明确要求 on/off 动画始终播放。
+    // Evidence: 唯一运行时调用方只传入 nowMs。
+    // Replacement: 上方按时间推进和循环的断言。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(resolveEffectFrame(resource, null)).toBe(2);
   });
 
-  it('暗管箭头只在相邻管道存在可见流体时使用该运输组时钟', () => {
-    const pipeState = {
-      kind: 'pipe' as const,
-      shape: 'straight' as const,
-      rotation: 0,
-      start: 0,
-      support: false,
-      marker: false,
-      fluidItemId: null as string | null,
-      pipeFlow: { seconds: 2.5, flowing: false },
-    };
-    const materials = {
-      entities: new Map([['pipe', pipeState]]),
-      beltSeconds: 0,
-      animationEnabled: true,
-    };
-
-    expect(resolveEffectPlaybackTimeMs({}, materials, 1234)).toBe(1234);
-    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: null }, materials, 1234)).toBeNull();
-    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBeNull();
-    pipeState.fluidItemId = 'item_liquid_water';
-    expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBe(2500);
-  });
+  // AI-REMOVED 2026-09-25:
+  // Reason: 原测试固定了“断开或空管冻结端口特效”的错误行为。
+  // Trigger: 用户明确要求 on/off 两种端口特效始终播放。
+  // Evidence: 上方测试已验证两种资源按场景时钟循环推进；流体门控函数已移除。
+  // Replacement: 上方四种暗管型号的 on/off 播放测试。
+  // Risk: Low；不再测试按流体运输组相位同步。
+  // Human Review: Required
+  //
+  // Original code:
+  // it('暗管箭头只在相邻管道存在可见流体时使用该运输组时钟', () => {
+  //   const pipeState = {
+  //     kind: 'pipe' as const,
+  //     shape: 'straight' as const,
+  //     rotation: 0,
+  //     start: 0,
+  //     support: false,
+  //     marker: false,
+  //     fluidItemId: null as string | null,
+  //     pipeFlow: { seconds: 2.5, flowing: false },
+  //   };
+  //   const materials = {
+  //     entities: new Map([['pipe', pipeState]]),
+  //     beltSeconds: 0,
+  //     animationEnabled: true,
+  //   };
+  //
+  //   expect(resolveEffectPlaybackTimeMs({}, materials, 1234)).toBe(1234);
+  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: null }, materials, 1234)).toBeNull();
+  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBeNull();
+  //   pipeState.fluidItemId = 'item_liquid_water';
+  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBe(2500);
+  // });
 
   it('所有已发布高度数值文件和特效颜色页完整且编码合法', async () => {
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();

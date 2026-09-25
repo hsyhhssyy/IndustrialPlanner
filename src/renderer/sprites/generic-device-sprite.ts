@@ -85,6 +85,8 @@ const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
 
 const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp");
+// 美术站遮罩专题的可平铺覆盖纹理；SHA-256: 4ec51651bceeb207556d734ac52af69fb06373a337c8a8fa1c205c0d1958f941。
+const BLUEPRINT_SELECTION_TEXTURE_PATH = createPublicAssetUrl("textures/blueprint-overlay-tile.webp");
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
@@ -341,6 +343,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected readonly selectionTiling: TilingSprite;
   private selectionTexture: Texture | null = null;
   private selectionTextureLoadStarted = false;
+  private selectionVisualMode: "scanline" | "blueprint" = "scanline";
 
   /** 蓝图模式下框选特效的矩形遮罩，替代 selectionMask 纹理遮罩 */
   private readonly selectionRectMask: Graphics;
@@ -613,7 +616,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (this.scanlineTiling.visible) {
       this.scanlineTiling.tilePosition.x = phase * tilePixelSize
     }
-    if (this.selectionTiling.visible) {
+    if (this.selectionTiling.visible && this.selectionVisualMode === "scanline") {
       this.selectionTiling.tilePosition.x = phase * tilePixelSize
     }
   }
@@ -805,7 +808,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // }
 
     // 加载扫描线纹理（与 preview 共用同一纹理）
-    this.loadScanlineTexture();
+    // AI-CORRECTION 2026-09-25: 批量选择及其移动预览改用蓝图遮罩；关联高亮仍使用扫描线。
+    const useBlueprintSelectionMask = drawFocusBorder && (
+      context.workspace.app?.state.activeTool === "marquee"
+      || context.workspace.app?.state.moveKind === "batch"
+    );
+    this.selectionVisualMode = useBlueprintSelectionMask ? "blueprint" : "scanline";
+    if (useBlueprintSelectionMask) {
+      this.loadBlueprintSelectionTexture();
+    } else {
+      this.loadScanlineTexture();
+    }
 
     const useBlueprintStyle = readSimplifiedDeviceIconPreference(context.workspace.app);
     const tilePixelSize = this.scanlineTexture?.width ?? 64;
@@ -816,14 +829,21 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.rotation = 0;
     this.selectionTiling.width = layout.width;
     this.selectionTiling.height = layout.height;
+    this.selectionTiling.texture = useBlueprintSelectionMask
+      ? this.selectionTexture ?? Texture.EMPTY
+      : this.scanlineTexture ?? Texture.EMPTY;
     // AI-CORRECTION 2026-08-25: 蓝图样式的选中扫描线与预览扫描线统一使用中性灰；普通精灵继续使用白色。
-    this.selectionTiling.tint = useBlueprintStyle
+    // AI-CORRECTION 2026-09-25: 蓝图遮罩保留素材自身的蓝色，仅扫描线使用上述灰色或白色着色。
+    this.selectionTiling.tint = useBlueprintSelectionMask
+      ? 0xffffff
+      : useBlueprintStyle
       ? BLUEPRINT_SCANLINE_TINT
       : DEFAULT_SCANLINE_TINT;
 
     // 扫描线水平滚动（复用 SCANLINE_SCROLL_INTERVAL_MS 周期）
+    // AI-CORRECTION 2026-09-25: 蓝图遮罩是静态平铺素材，只有扫描线继续滚动。
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
-    this.selectionTiling.tilePosition.x = phase * tilePixelSize;
+    this.selectionTiling.tilePosition.x = useBlueprintSelectionMask ? 0 : phase * tilePixelSize;
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     if (useBlueprintStyle) {
@@ -836,7 +856,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 线框（足迹布局，不含 spriteOffset）
     // AI-CORRECTION 2026-08-26: selection/marquee 保留线框；供电、气体关联目标仅保留同强度扫描线。
-    if (drawFocusBorder) {
+    // AI-CORRECTION 2026-09-25: 批量选择及其移动预览由蓝图遮罩标记焦点，不再绘制橙色线框。
+    if (drawFocusBorder && !useBlueprintSelectionMask) {
       const strokeLayout = this.currentFootprintLayout ?? layout;
       this.drawCollectionOverlayStroke({
         layout: { x: strokeLayout.x, y: strokeLayout.y, width: strokeLayout.width, height: strokeLayout.height, rotation: layout.rotation },
@@ -993,9 +1014,34 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       this.scanlineTexture = texture;
       this.scanlineTiling.texture = texture;
-      this.selectionTiling.texture = texture;
+      if (this.selectionVisualMode === "scanline") {
+        this.selectionTiling.texture = texture;
+      }
+      this.invalidateVisualSync();
     }).catch(() => {
       // 扫描线纹理加载失败，无伤大雅
+    });
+  }
+
+  private loadBlueprintSelectionTexture(): void {
+    if (this.selectionTextureLoadStarted) {
+      return;
+    }
+
+    this.selectionTextureLoadStarted = true;
+    void Assets.load<Texture>(BLUEPRINT_SELECTION_TEXTURE_PATH).then((texture) => {
+      if (this.disposed) {
+        return;
+      }
+
+      this.selectionTexture = texture;
+      if (this.selectionVisualMode === "blueprint") {
+        this.selectionTiling.texture = texture;
+      }
+      this.invalidateVisualSync();
+    }).catch(() => {
+      // 蓝图遮罩资源加载失败时仍保留选中线框。
+      // AI-CORRECTION 2026-09-25: 批量蓝图模式不再绘制线框，素材加载失败时仅保留设备本体。
     });
   }
 
