@@ -71,6 +71,7 @@ function createCache(options: {
   // failName?: string; maxSize?: number; resolution?: number; budgetBytes?: number;
   failName?: string; maxSize?: number; resolution?: number;
   uploadFailName?: string; beforeLoad?: (path: string) => Promise<void>;
+  sharedAnimationId?: string;
 } = {}) {
   const sources: Texture[] = [];
   const requests: string[] = [];
@@ -92,7 +93,9 @@ function createCache(options: {
     },
     loadManifest: async (path) => {
       requests.push(path);
-      return { ...manifest, resolution: options.resolution ?? 1 };
+      return { ...manifest, resolution: options.resolution ?? 1,
+        ...(options.sharedAnimationId && path.includes("/variant/")
+          ? { sharedAnimationId: options.sharedAnimationId } : {}) };
     },
     loadTexture: async (path, resolution) => {
       requests.push(path);
@@ -145,6 +148,33 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe("device animation textures", () => {
+
+  it("变体清单引用基础动画时共用页面、遮罩及驻留生命周期", async () => {
+    const context = createCache({ sharedAnimationId: "base" });
+    try {
+      const variant = (await context.cache.get("variant", definition))!;
+      const base = (await context.cache.get("base", definition))!;
+      variant.setVisible(true);
+      base.setVisible(true);
+      await flushMicrotasks();
+      await waitForPreparedPages(context.cache);
+      expect(variant.mask).toBe(base.mask);
+      expect(context.cache.getStats().residency).toMatchObject({
+        visibleSessions: 2, visibleAssets: 1,
+        assets: [{ spriteId: "base", visibleInstances: 2 }],
+      });
+      expect(context.requests.filter((path) => path.endsWith("/mask.webp"))).toEqual([
+        expect.stringContaining("/base/mask.webp"),
+      ]);
+      expect(context.requests.some((path) => path.includes("/variant/") && path.endsWith(".webp"))).toBe(false);
+      const frame = base.commitFrame("open", 0)!;
+      variant.destroy();
+      await flushMicrotasks();
+      expect(base.commitFrame("open", 0)).toBe(frame);
+      expect(frame.source.destroyed).toBe(false);
+      expect(context.unloads).toHaveLength(0);
+    } finally { context.dispose(); }
+  });
 
   it("在尚未播放时预上传可见类型的全部阶段，同类实例共享且切换不重复上传", async () => {
     const context = createCache();

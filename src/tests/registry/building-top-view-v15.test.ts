@@ -48,6 +48,7 @@ const collection = JSON.parse(await readFile(path.resolve("resources/building-to
   sourceCoordinateTransform: unknown;
   entries: ImportedBuilding[];
 };
+const bodyAliases = JSON.parse(await readFile(path.resolve("public/3d-top-view/body-aliases.json"), "utf8")) as Record<string, string>;
 
 describe("v1.5 建筑素材发布", () => {
   it("使用当前设备 ID 关联颜色资源与高度特效视图", async () => {
@@ -114,8 +115,9 @@ describe("v1.5 建筑素材发布", () => {
     });
     const width = entry.spriteOffset.width * 128;
     const height = entry.spriteOffset.height * 128;
+    const bodyId = bodyAliases[entry.spriteId] ?? entry.spriteId;
     for (const directory of ["sprites", "sprite-masks"]) {
-      const image = await sharp(path.resolve(`public/3d-top-view/${directory}/${entry.spriteId}.webp`)).metadata();
+      const image = await sharp(path.resolve(`public/3d-top-view/${directory}/${bodyId}.webp`)).metadata();
       expect([image.width, image.height]).toEqual([width * BUILDING_ASSET_PUBLISH_RESOLUTIONS[0], height * BUILDING_ASSET_PUBLISH_RESOLUTIONS[0]]);
     }
     if (!entry.animated) {
@@ -126,21 +128,24 @@ describe("v1.5 建筑素材发布", () => {
     }
     const directory = path.resolve(`public/3d-top-view/animations/${entry.spriteId}`);
     const manifest = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8"));
+    expect(manifest.sharedAnimationId).toBe(bodyAliases[entry.spriteId]);
     expect(manifest.sourceSite.indexSha256).toBe(entry.sourceMetadata.sourceSite.indexSha256);
     const animation = normalizeDeviceSpriteAnimationDefinition(entity?.spriteAnimation, manifest);
     expect(animation.resolution).toBe(BUILDING_ASSET_PUBLISH_RESOLUTIONS[0]);
     expect([animation.frameWidth, animation.frameHeight]).toEqual([width, height]);
+    const pageDirectory = bodyAliases[entry.spriteId]
+      ? path.resolve(`public/3d-top-view/animations/${bodyId}`) : directory;
     for (const clip of Object.values(animation.clips)) {
       expect(clip.frameEndTimesMs).toHaveLength(clip.frameCount);
       expect(clip.frameEndTimesMs.at(-1)).toBe(clip.durationMs);
       for (const page of clip.pages) {
-        const image = await sharp(path.join(directory, page.file)).metadata();
+        const image = await sharp(path.join(pageDirectory, page.file)).metadata();
         expect([image.width, image.height]).toEqual([page.columns * width * animation.resolution, page.rows * height * animation.resolution]);
         expect(image.hasAlpha).toBe(true);
         expect(Math.max(image.width ?? 0, image.height ?? 0)).toBeLessThan(4096);
       }
     }
-    const mask = await sharp(path.join(directory, animation.maskFile)).metadata();
+    const mask = await sharp(path.join(pageDirectory, animation.maskFile)).metadata();
     expect([mask.width, mask.height]).toEqual([width * animation.resolution, height * animation.resolution]);
   });
 

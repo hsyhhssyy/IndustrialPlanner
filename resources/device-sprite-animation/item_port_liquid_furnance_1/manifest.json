@@ -45,7 +45,7 @@
       ],
       "physicalFrameWidth": 192,
       "physicalFrameHeight": 192,
-      "sourcePath": "buildings/furnance_1/top/animations/close/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top-liquid/animations/close/spritesheet_000.webp",
       "sha256": "b0a459b199d2aa2310f888b9bde8cd68fb0c956f564ae6669193e8ba90710b1e"
     },
     "close_idle_000": {
@@ -59,7 +59,7 @@
       ],
       "physicalFrameWidth": 192,
       "physicalFrameHeight": 192,
-      "sourcePath": "buildings/furnance_1/top/animations/close_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top-liquid/animations/close_idle/spritesheet_000.webp",
       "sha256": "3b8cd4320444d6986b64ffc7191aaf5b064d3020b2ab651cc3bb4fda1e05be6b"
     },
     "open_000": {
@@ -108,7 +108,7 @@
       ],
       "physicalFrameWidth": 192,
       "physicalFrameHeight": 192,
-      "sourcePath": "buildings/furnance_1/top/animations/open/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top-liquid/animations/open/spritesheet_000.webp",
       "sha256": "bc4700bf85bd445649a694bcdc9c640ca9a2ba25eff0cc5704886f6bf3a22ec9"
     },
     "open_idle_000": {
@@ -192,7 +192,7 @@
       ],
       "physicalFrameWidth": 192,
       "physicalFrameHeight": 192,
-      "sourcePath": "buildings/furnance_1/top/animations/open_idle/spritesheet_000.webp",
+      "sourcePath": "buildings/furnance_1/top-liquid/animations/open_idle/spritesheet_000.webp",
       "sha256": "86605ac286b93fda9da9448a55458c34cba2889c2c423cbfe282525ad2f85f96"
     }
   },
@@ -242,9 +242,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260923-223150-cst",
-    "sourceVersion": "v1.5",
-    "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+    "releaseId": "v1.5-20260924-20260926-021358-cst",
+    "sourceVersion": "v1.5-20260924",
+    "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
     "sourceResolution": 0.5
   }
 }

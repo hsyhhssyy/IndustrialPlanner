@@ -8,6 +8,13 @@ export interface BaseOuterRingDefinition {
   left: number;
 }
 
+export interface BaseSubAreaDefinition {
+  readonly id: string;
+  readonly position: GridPoint;
+  readonly placeableArea: GridRectSize;
+  readonly outerRing: BaseOuterRingDefinition;
+}
+
 export interface BaseBuiltinEntityDefinition {
   readonly id: string;
   readonly definitionId: string;
@@ -21,6 +28,7 @@ export interface BaseDefinition {
   name: string;
   placeableArea: GridRectSize;
   outerRing: BaseOuterRingDefinition;
+  readonly subAreas?: readonly BaseSubAreaDefinition[];
   tag: string;
   /** 语义标签，如 "maxPipeLogistics=128"。新增于 2026-07-25。 */
   tags: string[];

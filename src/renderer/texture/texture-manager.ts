@@ -72,6 +72,7 @@ class TextureActionsImpl implements TextureActions {
   private textureConfig: RenderTextureConfig
 
   private readonly texturePromisesByKey = new Map<string, Promise<Texture>>()
+  private bodyAliases: Promise<Record<string, string>> | null = null
   private readonly trackedBitmapTextures = new Set<Texture>()
   private readonly disposeResolutionReaction: (() => void) | null
   private readonly renderer: Renderer
@@ -215,7 +216,7 @@ class TextureActionsImpl implements TextureActions {
   }
 
   private async resolveTexture(key: string): Promise<Texture> {
-    const paths = this.resolveCandidatePaths(key)
+    const paths = await this.resolveCandidatePaths(key)
 
     if (paths.length === 0) {
       return this.createFallbackTexture()
@@ -238,13 +239,34 @@ class TextureActionsImpl implements TextureActions {
     return this.createFallbackTexture()
   }
 
-  private resolveCandidatePaths(key: string): string[] {
+  private async resolveBodySpriteId(spriteId: string): Promise<string> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(spriteId)) throw new Error(`Invalid device sprite ID: ${spriteId}`)
+    this.bodyAliases ??= (async () => {
+      const response = await fetch(createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/body-aliases.json`), { credentials: "same-origin" })
+      if (!response.ok) throw new Error(`Body alias request failed with ${response.status}`)
+      const value: unknown = await response.json()
+      if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid body alias map")
+      const aliases = value as Record<string, unknown>
+      for (const [alias, target] of Object.entries(aliases)) {
+        if (!/^[a-zA-Z0-9_-]+$/.test(alias) || typeof target !== "string"
+          || !/^[a-zA-Z0-9_-]+$/.test(target) || alias === target || target in aliases) {
+          throw new Error(`Invalid body alias: ${alias}`)
+        }
+      }
+      return aliases as Record<string, string>
+    })()
+    const aliases = await this.bodyAliases
+    return aliases[spriteId] ?? spriteId
+  }
+
+  private async resolveCandidatePaths(key: string): Promise<string[]> {
     if (key === BELT_CARGO_BOX_TEXTURE_KEY) {
       return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/logistics/cargo/empty-box.webp`)]
     }
 
     if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
-      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`)]
+      const id = await this.resolveBodySpriteId(key.slice(PREFIX_DEVICE_SPRITE.length))
+      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprites/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_BLUEPRINT_SPRITE)) {
@@ -283,7 +305,7 @@ class TextureActionsImpl implements TextureActions {
     }
 
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
-      const id = key.slice(PREFIX_DEVICE_MASKS.length)
+      const id = await this.resolveBodySpriteId(key.slice(PREFIX_DEVICE_MASKS.length))
       // AI-REMOVED 2026-08-31:
       // Reason: top-view mask 已完成 WebP-only 迁移，同名 PNG 不是 active WebP 的等价回退。
       // Trigger: 用户要求删除 PNG 回退并移除 PWA 重复下载。

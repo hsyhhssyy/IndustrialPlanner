@@ -16,6 +16,7 @@ import {
 } from "@/domain/registry/types/base-definition";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import { createRegistryContract } from "@/registry";
+import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
 
 const TEST_BUILTIN_BASE_ID = "test_builtin_base";
 const TEST_OUTER_RING_BASE_ID = "test_outer_ring_base";
@@ -202,6 +203,54 @@ describe("placement validation", () => {
     expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(1);
+  });
+
+  it("accepts the detached draft box outer area and blocks the gap", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
+      createEntity("subarea-pipe", "pipe_straight_1x1", -50, -50),
+      createEntity("gap-pipe", "pipe_straight_1x1", -30, -30),
+    ], "draft_box"));
+
+    expect(editorHost.queries.getEntityPlacementValidation("subarea-pipe").canPlace).toBe(true);
+    expect(editorHost.queries.getEntityPlacementValidation("gap-pipe").reasons.map((reason) =>
+      reason.code,
+    )).toContain("outside-base");
+  });
+
+  it("keeps core-only buildings out of the detached zero-core area", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
+      createEntity("core-only", "log_hongs_bus", -50, -50),
+    ], "draft_box"));
+
+    expect(editorHost.queries.getEntityPlacementValidation("core-only").reasons.map((reason) =>
+      reason.code,
+    )).toContain("outside-base");
+  });
+
+  it("restricts a tagged building to its named subarea", () => {
+    const workspace = createWorkspace();
+    workspace.registry.entityDefinitions = workspace.registry.entityDefinitions.map((definition) =>
+      definition.id === "pipe_straight_1x1"
+        ? {
+          ...definition,
+          tags: [...definition.tags, `${BASE_AREA_ONLY_TAG_PREFIX}draft_box_upper_left`],
+        }
+        : definition
+    );
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
+      createEntity("subarea-pipe", "pipe_straight_1x1", -50, -50),
+      createEntity("main-pipe", "pipe_straight_1x1", 10, 10),
+    ], "draft_box"));
+
+    expect(editorHost.queries.getEntityPlacementValidation("subarea-pipe").canPlace).toBe(true);
+    expect(editorHost.queries.getEntityPlacementValidation("main-pipe").reasons.map((reason) =>
+      reason.code,
+    )).toContain("outside-base");
   });
 
   it("keeps 1x1 overlap invalid so the renderer can show only the red frame", () => {

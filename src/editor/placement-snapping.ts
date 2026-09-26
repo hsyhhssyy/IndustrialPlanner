@@ -3,6 +3,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 import { rotateGridEdge } from "@/shared/geometry/port";
 
 export type OuterRingEdgeSnapEdge = "top" | "right" | "bottom" | "left";
@@ -96,7 +97,6 @@ export function resolveOuterRingEdgeSnap(options: {
     return null;
   }
 
-  const geometry = resolveOuterRingSnapGeometry(options.baseDefinition);
   const rawFootprint = getRotatedGridFootprint(options.definition.footprint, options.rotation);
   const rawCenter = resolveRectCenter({
     position: options.position,
@@ -105,18 +105,20 @@ export function resolveOuterRingEdgeSnap(options: {
   const edges = options.preferredEdge === undefined || options.preferredEdge === null
     ? OUTER_RING_EDGE_SNAP_EDGES
     : [options.preferredEdge];
-  const candidates = edges.flatMap((edge) => {
-    const candidate = resolveOuterRingEdgeSnapCandidate({
-      definition: options.definition,
-      geometry,
-      edge,
-      position: options.position,
-      rawCenter,
-      enforceCenterDistance: true,
-    });
+  const candidates = resolveBaseAreas(options.baseDefinition).flatMap((area) =>
+    edges.flatMap((edge) => {
+      const candidate = resolveOuterRingEdgeSnapCandidate({
+        definition: options.definition,
+        geometry: { outerRect: area.outerRect, edgeDepths: area.outerRing },
+        edge,
+        position: options.position,
+        rawCenter,
+        enforceCenterDistance: true,
+      });
 
-    return candidate === null ? [] : [candidate];
-  });
+      return candidate === null ? [] : [candidate];
+    })
+  );
 
   if (candidates.length === 0) {
     return null;
@@ -144,18 +146,28 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     return null;
   }
 
-  const geometry = resolveOuterRingSnapGeometry(options.baseDefinition);
   const currentFootprint = getRotatedGridFootprint(
     options.definition.footprint,
     options.rotation,
   );
-  const currentEdge = resolveCurrentOuterRingSnapEdge({
-    definition: options.definition,
-    geometry,
-    position: options.position,
-    rotation: options.rotation,
-    footprint: currentFootprint,
-  });
+  const currentArea = resolveBaseAreas(options.baseDefinition).map((area) => {
+    const geometry: OuterRingSnapGeometry = {
+      outerRect: area.outerRect,
+      edgeDepths: area.outerRing,
+    };
+    return {
+      geometry,
+      edge: resolveCurrentOuterRingSnapEdge({
+        definition: options.definition,
+        geometry,
+        position: options.position,
+        rotation: options.rotation,
+        footprint: currentFootprint,
+      }),
+    };
+  }).find((area) => area.edge !== null);
+
+  const currentEdge = currentArea?.edge ?? null;
 
   if (currentEdge === null) {
     return null;
@@ -165,7 +177,7 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     edge: currentEdge,
     position: options.position,
     footprint: currentFootprint,
-    outerRect: geometry.outerRect,
+    outerRect: currentArea!.geometry.outerRect,
     angle: options.angle,
   });
 
@@ -175,7 +187,7 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
 
   return resolveOuterRingEdgeSnapCandidate({
     definition: options.definition,
-    geometry,
+    geometry: currentArea!.geometry,
     edge: targetEdge,
     position: options.position,
     rawCenter: resolveRectCenter({
@@ -219,26 +231,34 @@ function snapRectToOuterRingEdge(options: {
   }
 }
 
-function resolveOuterRingSnapGeometry(
-  baseDefinition: BaseDefinition,
-): OuterRingSnapGeometry {
-  const outerRing = baseDefinition.outerRing;
-
-  return {
-    outerRect: {
-      x: -outerRing.left,
-      y: -outerRing.top,
-      width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-      height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-    },
-    edgeDepths: {
-      top: outerRing.top,
-      right: outerRing.right,
-      bottom: outerRing.bottom,
-      left: outerRing.left,
-    },
-  };
-}
+// AI-REMOVED 2026-09-26:
+// Reason: 单一吸附矩形无法处理分离分区的外边界。
+// Trigger: 草稿箱新增左上角分区。
+// Evidence: resolveBaseAreas 提供每块区域的独立 outerRect 与外扩深度。
+// Replacement: resolveOuterRingEdgeSnap 与 rotateOuterRingEdgeSnappedPlacement 内的逐区域计算。
+// Risk: 多区域间吸附按距离选最近候选；需检查边界交叠的未来配置。
+// Human Review: Required
+// Original code:
+// function resolveOuterRingSnapGeometry(
+//   baseDefinition: BaseDefinition,
+// ): OuterRingSnapGeometry {
+//   const outerRing = baseDefinition.outerRing;
+//
+//   return {
+//     outerRect: {
+//       x: -outerRing.left,
+//       y: -outerRing.top,
+//       width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+//       height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+//     },
+//     edgeDepths: {
+//       top: outerRing.top,
+//       right: outerRing.right,
+//       bottom: outerRing.bottom,
+//       left: outerRing.left,
+//     },
+//   };
+// }
 
 function resolveOuterRingEdgeSnapCandidate(options: {
   readonly definition: EntityDefinition;

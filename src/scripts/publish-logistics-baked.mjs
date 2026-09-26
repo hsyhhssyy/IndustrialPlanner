@@ -68,11 +68,12 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
   }
   const cargoOutputDirectory = path.join(outputDirectory, 'cargo');
   await mkdir(cargoOutputDirectory, { recursive: true });
-  const cargoOutputBytes = scale === 1 ? cargoBytes : await (async () => {
+  let cargoOutputBytes = cargoBytes;
+  if (scale !== 1) {
     const resized = await resizeAssetRgba(cargoDecoded.data, cargoDecoded.info.width, cargoDecoded.info.height, scale);
-    return sharp(resized.data, { raw: { width: resized.width, height: resized.height, channels: 4 } })
+    cargoOutputBytes = await sharp(resized.data, { raw: { width: resized.width, height: resized.height, channels: 4 } })
       .webp({ lossless: true }).toBuffer();
-  })();
+  }
   await writeFile(path.join(cargoOutputDirectory, 'empty-box.webp'), cargoOutputBytes);
   manifest.cargoBox = { file: 'cargo/empty-box.webp', width: 128 * resolution, height: 128 * resolution,
     visibleFootprintCells: cargo.visibleFootprintCells, sha256: digest(cargoOutputBytes) };

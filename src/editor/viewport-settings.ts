@@ -3,6 +3,7 @@ import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
 export const DEFAULT_VIEWPORT_GRID_SIZE = 1;
 
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 
 const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
 const BASE_WARNING_PADDING_CELLS = 2;
@@ -81,10 +82,23 @@ function resolveBaseWarningBounds(baseDefinition: BaseDefinition): {
   minY: number;
   maxY: number;
 } | null {
-  const minX = -baseDefinition.outerRing.left - BASE_WARNING_PADDING_CELLS;
-  const minY = -baseDefinition.outerRing.top - BASE_WARNING_PADDING_CELLS;
-  const maxX = baseDefinition.placeableArea.width + baseDefinition.outerRing.right + BASE_WARNING_PADDING_CELLS;
-  const maxY = baseDefinition.placeableArea.height + baseDefinition.outerRing.bottom + BASE_WARNING_PADDING_CELLS;
+  // AI-REMOVED 2026-09-26:
+  // Reason: 视口限制只考虑主区域时无法定位左上角分区。
+  // Trigger: 草稿箱不连续建造区。
+  // Evidence: resolveBaseOuterBounds 返回全部分区的外接范围。
+  // Replacement: 下方按共享外接范围计算警告边界。
+  // Risk: 外接范围内的空地可被视口居中，但仍不能放置。
+  // Human Review: Required
+  // Original code:
+  // const minX = -baseDefinition.outerRing.left - BASE_WARNING_PADDING_CELLS;
+  // const minY = -baseDefinition.outerRing.top - BASE_WARNING_PADDING_CELLS;
+  // const maxX = baseDefinition.placeableArea.width + baseDefinition.outerRing.right + BASE_WARNING_PADDING_CELLS;
+  // const maxY = baseDefinition.placeableArea.height + baseDefinition.outerRing.bottom + BASE_WARNING_PADDING_CELLS;
+  const outerBounds = resolveBaseOuterBounds(baseDefinition);
+  const minX = outerBounds.x - BASE_WARNING_PADDING_CELLS;
+  const minY = outerBounds.y - BASE_WARNING_PADDING_CELLS;
+  const maxX = outerBounds.x + outerBounds.width + BASE_WARNING_PADDING_CELLS;
+  const maxY = outerBounds.y + outerBounds.height + BASE_WARNING_PADDING_CELLS;
 
   if (
     !Number.isFinite(minX)

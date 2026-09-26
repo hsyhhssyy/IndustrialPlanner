@@ -94,6 +94,12 @@ describe("createRegistryContract", () => {
       placeableArea: { width: 320, height: 320 },
       outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       tags: ["allRegionEntities"],
+      subAreas: [{
+        id: "draft_box_upper_left",
+        position: { x: -50, y: -50 },
+        placeableArea: { width: 0, height: 0 },
+        outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+      }],
     });
   });
 

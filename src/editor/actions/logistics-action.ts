@@ -15,6 +15,7 @@ import type {
   MoveLogisticsDraftEndOptions,
 } from "@/domain/shared/logistics";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+import { isGridPointInBaseAreas, resolveBaseAreas } from "@/shared/geometry/base-areas";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import { cloneEntityConfig } from "../entity-config-clone";
@@ -1210,19 +1211,28 @@ function resolveInvalidReason(options: {
     context: options.context,
   });
   if (baseDefinition !== null) {
-    const placeableRect = {
-      x: 0,
-      y: 0,
-      width: baseDefinition.placeableArea.width,
-      height: baseDefinition.placeableArea.height,
-    };
-    const outerRing = baseDefinition.outerRing;
-    const outerRingRect = {
-      x: -outerRing.left,
-      y: -outerRing.top,
-      width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-      height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-    };
+    const baseAreas = resolveBaseAreas(baseDefinition);
+    // AI-REMOVED 2026-09-26:
+    // Reason: 单矩形会允许物流跨越主基地与分区之间的空地。
+    // Trigger: 草稿箱增加不连续分区。
+    // Evidence: isGridPointInBaseArea 按每块区域独立判断。
+    // Replacement: 下方逐格调用共享区域几何。
+    // Risk: Low。
+    // Human Review: Required
+    // Original code:
+    // const placeableRect = {
+    //   x: 0,
+    //   y: 0,
+    //   width: baseDefinition.placeableArea.width,
+    //   height: baseDefinition.placeableArea.height,
+    // };
+    // const outerRing = baseDefinition.outerRing;
+    // const outerRingRect = {
+    //   x: -outerRing.left,
+    //   y: -outerRing.top,
+    //   width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+    //   height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+    // };
 
     for (const cell of options.cells) {
       const p = cell.gridPoint;
@@ -1230,21 +1240,13 @@ function resolveInvalidReason(options: {
       // 传送带：检查 placeableArea 边界
       if (
         options.kind === LOGISTICS_KIND.belt
-        && (p.x < placeableRect.x
-          || p.y < placeableRect.y
-          || p.x >= placeableRect.x + placeableRect.width
-          || p.y >= placeableRect.y + placeableRect.height)
+        && !isGridPointInBaseAreas(baseAreas, p, "placeable")
       ) {
         return "outside-base";
       }
 
       // 任何类型：检查 outerRing 边界
-      if (
-        p.x < outerRingRect.x
-        || p.y < outerRingRect.y
-        || p.x >= outerRingRect.x + outerRingRect.width
-        || p.y >= outerRingRect.y + outerRingRect.height
-      ) {
+      if (!isGridPointInBaseAreas(baseAreas, p, "outer")) {
         return "outside-base";
       }
     }

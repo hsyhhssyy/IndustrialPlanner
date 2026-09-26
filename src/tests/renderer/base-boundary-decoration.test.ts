@@ -67,8 +67,10 @@ import { createRegistryContract } from "@/registry"
 import {
   createBaseBoundaryDecoration,
   resolveBaseBoundaryGridRect,
+  resolveBaseBoundaryGridRects,
   resolveBaseBoundaryStrokeWidth,
   resolveBaseOuterGridRect,
+  resolveBaseOuterGridRects,
   resolveExpandedGridRect,
 } from "@/renderer/scene/decorations/BaseBoundaryDecoration"
 import type { DecorationSyncContext } from "@/renderer/scene/decorations/DecorationSyncContext"
@@ -132,6 +134,20 @@ describe("BaseBoundaryDecoration", () => {
       width: 50,
       height: 50,
     })
+  })
+
+  it("draws the detached zero-core draft area using its outer boundary", () => {
+    const draftBox = createRegistryContract().baseDefinitions.find(
+      (definition) => definition.id === "draft_box",
+    )!
+    expect(resolveBaseBoundaryGridRects(draftBox)).toEqual([
+      { x: 0, y: 0, width: 320, height: 320 },
+      { x: -60, y: -60, width: 20, height: 20 },
+    ])
+    expect(resolveBaseOuterGridRects(draftBox)).toEqual([
+      { x: -20, y: -20, width: 360, height: 360 },
+      { x: -60, y: -60, width: 20, height: 20 },
+    ])
   })
 
   it("expands a grid rect symmetrically for the out-of-bounds warning ring", () => {

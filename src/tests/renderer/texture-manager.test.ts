@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from "mobx"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { loadTexture } = vi.hoisted(() => ({
   loadTexture: vi.fn<(path: string) => Promise<unknown>>(),
@@ -18,8 +18,13 @@ vi.mock("pixi.js", () => ({
 
 import { createTextureActions, isFallbackTexture } from "@/renderer/texture/texture-manager"
 
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({}) })))
+})
+
 afterEach(() => {
   loadTexture.mockReset()
+  vi.unstubAllGlobals()
 })
 
 class ScreenProfileState {
@@ -31,6 +36,21 @@ class ScreenProfileState {
 }
 
 describe("TextureActions", () => {
+  it("变体单帧图和静态遮罩共用基础版路径", async () => {
+    const bitmapTexture = createLoadedTextureMock("shared-body")
+    loadTexture.mockResolvedValue(bitmapTexture)
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ variant: "base" }) })))
+    const manager = createTextureActions({ renderer: {} as never, app: null })
+
+    await manager.getTexture("device-sprite-variant")
+    await manager.getTexture("device-masks-variant")
+
+    expect(loadTexture).toHaveBeenNthCalledWith(1, "/3d-top-view/sprites/base.webp")
+    expect(loadTexture).toHaveBeenNthCalledWith(2, "/3d-top-view/sprite-masks/base.webp")
+    expect(fetch).toHaveBeenCalledTimes(1)
+    manager.destroy()
+  })
+
   it("loads and caches textures by unified resource key", async () => {
     const bodyKey = "device-sprite-item_port_storager_1"
     const bitmapTexture = createLoadedTextureMock("device-body")

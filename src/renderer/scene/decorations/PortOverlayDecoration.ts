@@ -6,7 +6,8 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
 import { resolveStrongPortOverlayEntityIds } from "@/renderer/move-visual-policy";
-import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 import {
   FluidDomain,
   ItemDomainFlag,
@@ -86,7 +87,16 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly direction: LogisticsPortDirection;
   readonly queries: RegistryQuery;
   readonly occupiedDraftPortKeys?: ReadonlySet<string>;
-  readonly basePlaceableArea?: GridRectSize;
+  // AI-REMOVED 2026-09-26:
+  // Reason: 只传主基地尺寸会漏报分区端口，并把空隙当作可连接范围。
+  // Trigger: 草稿箱新增独立分区。
+  // Evidence: 分区占地必须保留每块矩形的原点。
+  // Replacement: basePlaceableRects。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // readonly basePlaceableArea?: GridRectSize;
+  readonly basePlaceableRects?: readonly GridRect[];
 }): PortOverlayEntry[] {
   const occupancy = createPortOccupancyIndex(options);
   const candidates: PortOverlayCandidate[] = [];
@@ -125,8 +135,8 @@ export function resolveLogisticsPortOverlayEntries(options: {
         entities: options.entities,
         entityDefinitionMap: options.entityDefinitionMap,
         queries: options.queries,
-        basePlaceableArea: endpointKind === LOGISTICS_KIND.belt
-          ? options.basePlaceableArea
+        basePlaceableRects: endpointKind === LOGISTICS_KIND.belt
+          ? options.basePlaceableRects
           : undefined,
       })) {
         continue;
@@ -329,7 +339,9 @@ export function createPortOverlayDecoration(): DecorationLayer {
           direction,
           queries: ctx.renderHost.workspace.registry.queries,
           occupiedDraftPortKeys: resolveOccupiedDraftPortKeys(draft),
-          basePlaceableArea: currentBase?.placeableArea,
+          basePlaceableRects: currentBase === undefined
+            ? undefined
+            : resolveBaseAreas(currentBase).map((area) => area.placeableRect),
         });
       } else {
         entries = resolveSelectedPortOverlayEntries({
@@ -399,16 +411,42 @@ function canLegallyLeadLogisticsFromPort(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   queries: RegistryQuery;
-  basePlaceableArea?: GridRectSize;
+  // AI-REMOVED 2026-09-26:
+  // Reason: 端口合法范围从单区域尺寸改为多区域完整矩形。
+  // Trigger: 草稿箱分离建造区。
+  // Evidence: 全部区域的 placeableRect 含各自位置。
+  // Replacement: basePlaceableRects。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // basePlaceableArea?: GridRectSize;
+  basePlaceableRects?: readonly GridRect[];
 }): boolean {
   const point = options.endpoint.outsideGridPoint;
+  // AI-REMOVED 2026-09-26:
+  // Reason: 单矩形点判定只接受从原点开始的主区域。
+  // Trigger: 不连续分区端口提示。
+  // Evidence: 新分区坐标为负，旧检查立即拒绝。
+  // Replacement: 下方逐矩形点包含判定。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // if (
+  //   options.basePlaceableArea !== undefined
+  //   && (
+  //     point.x < 0
+  //     || point.y < 0
+  //     || point.x >= options.basePlaceableArea.width
+  //     || point.y >= options.basePlaceableArea.height
+  //   )
+  // ) {
+  //   return false;
+  // }
   if (
-    options.basePlaceableArea !== undefined
-    && (
-      point.x < 0
-      || point.y < 0
-      || point.x >= options.basePlaceableArea.width
-      || point.y >= options.basePlaceableArea.height
+    options.basePlaceableRects !== undefined
+    && !options.basePlaceableRects.some((rect) =>
+      point.x >= rect.x && point.y >= rect.y
+      && point.x < rect.x + rect.width && point.y < rect.y + rect.height
     )
   ) {
     return false;

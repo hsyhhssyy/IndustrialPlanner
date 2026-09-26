@@ -506,9 +506,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -878,7 +878,7 @@
     {
       "entityId": "furnance_1_liquid",
       "spriteId": "item_port_liquid_furnance_1",
-      "package": "buildings/furnance_1/top/package.json",
+      "package": "buildings/furnance_1/top-liquid/package.json",
       "sourcePath": "furnance_1/top-liquid",
       "spriteOffset": {
         "x": 0,
@@ -890,9 +890,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -1131,13 +1131,13 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260919-all-devices-belt-disabled-rerender",
+          "taskId": "complete-shared-modes-20260925",
           "version": "v1.5",
           "building": "furnance_1",
           "tableBuildingId": "furnance_1",
           "displayName": "精炼炉",
-          "view": "top",
-          "mode": "normal",
+          "view": "top-liquid",
+          "mode": "liquid",
           "rendererTemplate": "normal__0",
           "canvasCells": [
             3,
@@ -1233,6 +1233,11 @@
             },
             "evidence": "fixed camera basis verified at three aspect ratios"
           },
+          "variantDisplayName": "液体模式",
+          "sharedRenderedFramesFrom": "top",
+          "sourceRendererTemplateCount": 1,
+          "modeSelectionSource": "FactoryMachineCrafterTable.modeMap",
+          "rendererTemplateFallback": "normal__0",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -1253,7 +1258,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "400541cedcbc93a8d3a7851fc52c7f220ec60de6d70adae74d6147ed1c4f6152",
+      "packageSha256": "c75dab410ad05281d82ae0521fda7ba97d9aa134682c01badbf67d059c02aaaf",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -2486,9 +2491,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -3961,9 +3966,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -4409,7 +4414,7 @@
     {
       "entityId": "planter_1_liquid",
       "spriteId": "item_port_hydro_planter_1",
-      "package": "buildings/planter_1/top/package.json",
+      "package": "buildings/planter_1/top-liquid/package.json",
       "sourcePath": "planter_1/top-liquid",
       "spriteOffset": {
         "x": 0,
@@ -4421,9 +4426,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -4734,13 +4739,13 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260923-v12-unreviewed-building-batch",
+          "taskId": "complete-shared-modes-20260925",
           "version": "v1.5",
           "building": "planter_1",
           "tableBuildingId": "planter_1",
           "displayName": "种植机",
-          "view": "top",
-          "mode": "normal",
+          "view": "top-liquid",
+          "mode": "liquid",
           "rendererTemplate": "normal__0",
           "canvasCells": [
             5,
@@ -4840,6 +4845,11 @@
             "mode": "transparent",
             "source": "authored material slots; transparent glass faces excluded, AlphaTest slots retained"
           },
+          "variantDisplayName": "液体模式",
+          "sharedRenderedFramesFrom": "top",
+          "sourceRendererTemplateCount": 1,
+          "modeSelectionSource": "FactoryMachineCrafterTable.modeMap",
+          "rendererTemplateFallback": "normal__0",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -4860,7 +4870,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "e1fd7aab959929c8f8896a352caef9fab58b393f68e4d485c2d25078d58daa94",
+      "packageSha256": "78e9fba95eddb0cdfc508d276dc190a1c02fc2292e9c2380e1526f75d8b37eb7",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -6203,9 +6213,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -6573,8 +6583,8 @@
     {
       "entityId": "shaper_1_gas",
       "spriteId": "shaper_1_gas",
-      "package": "buildings/shaper_1/top/package.json",
-      "sourcePath": "shaper_1/top",
+      "package": "buildings/shaper_1/top-gas/package.json",
+      "sourcePath": "shaper_1/top-gas",
       "spriteOffset": {
         "x": 0,
         "y": 0,
@@ -6585,9 +6595,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -6826,14 +6836,14 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260919-all-devices-belt-disabled-rerender",
+          "taskId": "complete-shared-modes-20260925",
           "version": "v1.5",
           "building": "shaper_1",
           "tableBuildingId": "shaper_1",
           "displayName": "塑形机",
-          "view": "top",
-          "mode": "normal",
-          "rendererTemplate": "normal__0",
+          "view": "top-gas",
+          "mode": "gas",
+          "rendererTemplate": "gas__0",
           "canvasCells": [
             3,
             3
@@ -6926,6 +6936,10 @@
             },
             "evidence": "fixed camera basis verified at three aspect ratios"
           },
+          "variantDisplayName": "气体模式",
+          "sharedRenderedFramesFrom": "top",
+          "sourceRendererTemplateCount": 2,
+          "modeSelectionSource": "FactoryMachineCrafterTable.modeMap",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -6946,7 +6960,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "d0527f45de9f9a230f9a62457f387d774a9ba0d9db3b74bc6a128369bb62a790",
+      "packageSha256": "dc05dbe6a53c676703c79125f626eee020c900eb23685812bd3cc685ba27e519",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -8411,9 +8425,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -8678,7 +8692,7 @@
     {
       "entityId": "transmuter_1_liquidtrans",
       "spriteId": "transmuter_1_liquidtrans",
-      "package": "buildings/transmuter_1/top/package.json",
+      "package": "buildings/transmuter_1/top-liquidtrans/package.json",
       "sourcePath": "transmuter_1/top-liquidtrans",
       "spriteOffset": {
         "x": -1,
@@ -8690,9 +8704,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -8822,14 +8836,14 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260919-all-devices-belt-disabled-rerender",
+          "taskId": "complete-shared-modes-20260925",
           "version": "v1.5",
           "building": "transmuter_1",
           "tableBuildingId": "transmuter_1",
           "displayName": "液气转化机",
-          "view": "top",
-          "mode": "gastrans",
-          "rendererTemplate": "gastrans__0",
+          "view": "top-liquidtrans",
+          "mode": "liquidtrans",
+          "rendererTemplate": "liquidtrans__0",
           "canvasCells": [
             7,
             5
@@ -8928,6 +8942,10 @@
             "source": "authored material slots; transparent glass faces excluded, AlphaTest slots retained"
           },
           "materialAcceptance": "approximate-liquid-preview",
+          "variantDisplayName": "液体转化模式",
+          "sharedRenderedFramesFrom": "top",
+          "sourceRendererTemplateCount": 2,
+          "modeSelectionSource": "FactoryMachineCrafterTable.modeMap",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -8948,7 +8966,7 @@
         }
       },
       "closeIdleMode": "hold-last",
-      "packageSha256": "e1e2482cc7c98c963c1cb6e6694b8f1e556fcf6aaa0ab94fb9816fa4e44b8ead",
+      "packageSha256": "7c0da43a563ae5b843e4263eee20be4db28696c5770ce32bfdbdce3d1971b1e5",
       "historicalSource": {
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
@@ -8969,9 +8987,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -9279,9 +9297,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -11847,9 +11865,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -12618,9 +12636,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -15527,7 +15545,7 @@
     {
       "entityId": "filling_pd_mc_1_liquid",
       "spriteId": "item_port_liquid_filling_pd_mc_1",
-      "package": "buildings/filling_powder_mc_1/top/package.json",
+      "package": "buildings/filling_powder_mc_1/top-gasliquid/package.json",
       "sourcePath": "filling_powder_mc_1/top-gasliquid",
       "spriteOffset": {
         "x": 0,
@@ -15539,9 +15557,9 @@
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260923-223150-cst",
-          "sourceVersion": "v1.5",
-          "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+          "releaseId": "v1.5-20260924-20260926-021358-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -15888,14 +15906,14 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20260919-all-devices-belt-disabled-rerender",
+          "taskId": "complete-shared-modes-20260925",
           "version": "v1.5",
           "building": "filling_powder_mc_1",
           "tableBuildingId": "filling_powder_mc_1",
           "displayName": "灌装机",
-          "view": "top",
-          "mode": "normal",
-          "rendererTemplate": "normal__0",
+          "view": "top-gasliquid",
+          "mode": "gasliquid",
+          "rendererTemplate": "gasliquid__0",
           "canvasCells": [
             6,
             4
@@ -15990,6 +16008,10 @@
             },
             "evidence": "fixed camera basis verified at three aspect ratios"
           },
+          "variantDisplayName": "气液模式",
+          "sharedRenderedFramesFrom": "top",
+          "sourceRendererTemplateCount": 3,
+          "modeSelectionSource": "FactoryMachineCrafterTable.modeMap",
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -16013,7 +16035,7 @@
         "package": "buildings_frontend_v1.5.zip",
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
-      "packageSha256": "2c88846b0890eefd53562fe5f7e78099590c8a3ae0beac6a4d8cab6e80b54192",
+      "packageSha256": "5cbeaa58cb7e71fccdc8162c49fd00206238ae6011e3c13c7fb2782cc774ee03",
       "closeIdleMode": "hold-last"
     },
     {
@@ -18218,9 +18240,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260923-223150-cst",
-    "sourceVersion": "v1.5",
-    "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+    "releaseId": "v1.5-20260924-20260926-021358-cst",
+    "sourceVersion": "v1.5-20260924",
+    "indexSha256": "69ad320b71a1c3f240bd69b0b5b75dc752546ca48a45609abb532c012bc0ca80",
     "sourceResolution": 0.5
   }
 }

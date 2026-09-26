@@ -1,12 +1,13 @@
 import { Container, Graphics, Sprite, Texture, TilingSprite } from "pixi.js";
 import type { GridRect } from "@/domain/shared/grid";
+import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 import {
   resolveDisplayRotationRadians,
   resolveViewportPointFromWorldPoint,
 } from "@/shared/geometry/viewport-transform";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
-  resolveBaseOuterGridRect,
+  resolveBaseOuterGridRects,
   resolveCurrentBaseDefinition,
   resolveExpandedGridRect,
 } from "./BaseBoundaryDecoration";
@@ -130,12 +131,24 @@ export function createGrassBackgroundDecoration(
     });
   }
 
-  function syncGroundInstances(bounds: GridRect, nextLayoutKey: string): void {
+  function syncGroundInstances(
+    outerRects: readonly GridRect[],
+    nextLayoutKey: string,
+  ): void {
     if (layoutKey === nextLayoutKey) return;
     layoutKey = nextLayoutKey;
-    const placements = createGrassGroundLayout(bounds);
+    // AI-REMOVED 2026-09-26:
+    // Reason: 按外接框散布装饰会在分离区域的空地浪费候选计算。
+    // Trigger: 草稿箱增加不连续建造区。
+    // Evidence: 每块外扩区域都能单独使用确定性世界坐标种子生成。
+    // Replacement: 下方逐区域生成并按稳定 ID 去重。
+    // Risk: 相交分区的装饰绘制顺序以区域声明顺序为准。
+    // Human Review: Required
+    // Original code:
+    // const placements = createGrassGroundLayout(bounds);
     const retainedIds = new Set<string>();
-    for (const placement of placements) {
+    for (const placement of outerRects.flatMap((rect) => createGrassGroundLayout(rect))) {
+      if (retainedIds.has(placement.id)) continue;
       retainedIds.add(placement.id);
       let instance = instances.get(placement.id);
       if (instance === undefined) {
@@ -160,7 +173,19 @@ export function createGrassBackgroundDecoration(
         instances.delete(id);
       }
     }
-    groundMask.clear().rect(bounds.x, bounds.y, bounds.width, bounds.height).fill(0xffffff);
+    // AI-REMOVED 2026-09-26:
+    // Reason: 外接矩形遮罩会把分区之间的空地绘成基地草地。
+    // Trigger: 草稿箱加入不连续分区。
+    // Evidence: outerRects 保留每块实际外扩边界。
+    // Replacement: 下方分别填充各区域遮罩。
+    // Risk: Low。
+    // Human Review: Required
+    // Original code:
+    // groundMask.clear().rect(bounds.x, bounds.y, bounds.width, bounds.height).fill(0xffffff);
+    groundMask.clear();
+    for (const rect of outerRects) {
+      groundMask.rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff);
+    }
   }
 
   function hideBackgroundLayers(): void {
@@ -188,23 +213,47 @@ export function createGrassBackgroundDecoration(
       }
 
       const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      // AI-REMOVED 2026-09-26:
+      // Reason: 单个外扩矩形无法保留分离区域间的空地。
+      // Trigger: 草稿箱新增独立分区。
+      // Evidence: resolveBaseOuterGridRects 与 resolveBaseOuterBounds 分别提供实际区域与视口外接框。
+      // Replacement: 下方 outerGridRects、outerGridRect、warningGridRects。
+      // Risk: Low。
+      // Human Review: Required
+      // Original code:
+      // const outerGridRect = baseDefinition === null
+      //   ? null
+      //   : resolveBaseOuterGridRect(baseDefinition);
+      // const warningGridRect = outerGridRect === null
+      //   ? null
+      //   : resolveExpandedGridRect(
+      //     outerGridRect,
+      //     BASE_OUTER_WARNING_PADDING_CELLS,
+      //   );
+      // if (outerGridRect === null || warningGridRect === null) {
+      //   hideBackgroundLayers();
+      //   return;
+      // }
+      const outerGridRects = baseDefinition === null
+        ? []
+        : resolveBaseOuterGridRects(baseDefinition);
       const outerGridRect = baseDefinition === null
         ? null
-        : resolveBaseOuterGridRect(baseDefinition);
-      const warningGridRect = outerGridRect === null
-        ? null
-        : resolveExpandedGridRect(
-          outerGridRect,
-          BASE_OUTER_WARNING_PADDING_CELLS,
-        );
+        : resolveBaseOuterBounds(baseDefinition);
+      const warningGridRects = outerGridRects.map((rect) =>
+        resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS)
+      );
 
-      if (outerGridRect === null || warningGridRect === null) {
+      if (outerGridRect === null || outerGridRects.length === 0
+        || warningGridRects.some((rect) => rect === null)) {
         hideBackgroundLayers();
         return;
       }
 
       const showGrass = app.state.settings.showGrassBackground;
-      const nextLayoutKey = [outerGridRect.x, outerGridRect.y, outerGridRect.width, outerGridRect.height].join(":");
+      const nextLayoutKey = outerGridRects.flatMap((rect) =>
+        [rect.x, rect.y, rect.width, rect.height]
+      ).join(":");
       const syncKey = [
         nextLayoutKey, baseDefinition?.tag, showGrass, textureRevision,
         ctx.viewportState.centerX, ctx.viewportState.centerY,
@@ -221,28 +270,56 @@ export function createGrassBackgroundDecoration(
       const warningFillColor = isBlueWarning ? WARNING_FILL_COLOR_BLUE : WARNING_FILL_COLOR_RED;
       const warningScanlineTint = isBlueWarning ? WARNING_SCANLINE_TINT_BLUE : WARNING_SCANLINE_TINT_RED;
 
-      const outerLayout = resolveMarqueeGridRectLayout({
-        gridRect: outerGridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        displayRotation: ctx.viewportState.displayRotation,
-      });
-      const warningLayout = resolveMarqueeGridRectLayout({
-        gridRect: warningGridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        displayRotation: ctx.viewportState.displayRotation,
-      });
+      // AI-REMOVED 2026-09-26:
+      // Reason: 单区域布局无法分别绘制两个独立外扩警告环。
+      // Trigger: 草稿箱新增不连续分区。
+      // Evidence: outerGridRects 逐项对应 warningGridRects。
+      // Replacement: 下方 layouts 数组。
+      // Risk: Low。
+      // Human Review: Required
+      // Original code:
+      // const outerLayout = resolveMarqueeGridRectLayout({
+      //   gridRect: outerGridRect,
+      //   viewportBounds: ctx.viewportBounds,
+      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      //   displayRotation: ctx.viewportState.displayRotation,
+      // });
+      // const warningLayout = resolveMarqueeGridRectLayout({
+      //   gridRect: warningGridRect,
+      //   viewportBounds: ctx.viewportBounds,
+      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      //   displayRotation: ctx.viewportState.displayRotation,
+      // });
+      // if (outerLayout === null || warningLayout === null) {
+      //   hideBackgroundLayers();
+      //   return;
+      // }
+      const layouts = outerGridRects.map((rect, index) => ({
+        outer: resolveMarqueeGridRectLayout({
+          gridRect: rect,
+          viewportBounds: ctx.viewportBounds,
+          viewportCenter: {
+            x: ctx.viewportState.centerX,
+            y: ctx.viewportState.centerY,
+          },
+          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
+        }),
+        warning: resolveMarqueeGridRectLayout({
+          gridRect: warningGridRects[index]!,
+          viewportBounds: ctx.viewportBounds,
+          viewportCenter: {
+            x: ctx.viewportState.centerX,
+            y: ctx.viewportState.centerY,
+          },
+          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
+        }),
+      }));
 
-      if (outerLayout === null || warningLayout === null) {
+      if (layouts.some((layout) => layout.outer === null || layout.warning === null)) {
         hideBackgroundLayers();
         return;
       }
@@ -265,29 +342,49 @@ export function createGrassBackgroundDecoration(
 
       warningScanlineSprite.tint = warningScanlineTint;
 
-      warningFill
-        .clear()
-        .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
-        .fill({
-          color: warningFillColor,
-          alpha: WARNING_FILL_ALPHA,
-        })
-        .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
-        .cut();
-
-      warningMask
-        .clear()
-        .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
-        .fill({ color: 0xffffff })
-        .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
-        .cut();
+      // AI-REMOVED 2026-09-26:
+      // Reason: 警告图层必须围绕每个独立区域绘制，不能使用共同外接框。
+      // Trigger: 草稿箱增加左上角分区。
+      // Evidence: desktop 草地截图可见两块草地与空隙各自独立。
+      // Replacement: 下方对 layouts 逐项绘制 warningFill 与 warningMask。
+      // Risk: Low。
+      // Human Review: Required
+      // Original code:
+      // warningFill
+      //   .clear()
+      //   .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
+      //   .fill({ color: warningFillColor, alpha: WARNING_FILL_ALPHA })
+      //   .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
+      //   .cut();
+      // warningMask
+      //   .clear()
+      //   .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
+      //   .fill({ color: 0xffffff })
+      //   .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
+      //   .cut();
+      warningFill.clear();
+      warningMask.clear();
+      for (const layout of layouts) {
+        const outer = layout.outer!;
+        const warning = layout.warning!;
+        warningFill
+          .rect(warning.x, warning.y, warning.width, warning.height)
+          .fill({ color: warningFillColor, alpha: WARNING_FILL_ALPHA })
+          .rect(outer.x, outer.y, outer.width, outer.height)
+          .cut();
+        warningMask
+          .rect(warning.x, warning.y, warning.width, warning.height)
+          .fill({ color: 0xffffff })
+          .rect(outer.x, outer.y, outer.width, outer.height)
+          .cut();
+      }
 
       grassSprite.visible = showGrass && isGrassTextureReady;
       ground.visible = grassSprite.visible;
       visibleInstanceCount = 0;
       if (showGrass) {
         requestGroundTexture(GRASS_GROUND_BASE_TEXTURE_KEY);
-        syncGroundInstances(outerGridRect, nextLayoutKey);
+        syncGroundInstances(outerGridRects, nextLayoutKey);
       }
       if (grassSprite.visible) {
         ground.position.set(gridOriginPixelPoint.x, gridOriginPixelPoint.y);

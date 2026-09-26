@@ -13,6 +13,7 @@ import { publishDeviceSprite, publishDeviceSpriteAnimations } from './sync-devic
 // Original code: import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
 import { publishLogisticsBaked } from './publish-logistics-baked.mjs';
 import { publishBuildingPortEffects } from './publish-building-port-effects.mjs';
+import { buildingBodyPairs, sharePublishedBuildingBodies } from './share-building-body-assets.mjs';
 import { stageRegistryFluidColors, verifyRegistryFluidColors } from './sync-registry-fluid-colors.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -189,6 +190,10 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     results.push({ resolution, outputDirectory: path.relative(stage, outputDirectory), logistics, registryFluidColors,
       heightViews: heights && Object.keys(heights.views).length, sharedEffects: heights && Object.keys(heights.effects).length });
   }
+  if (includes('animations') && plan.entries.length) for (const { outputDirectory } of targets) {
+    await sharePublishedBuildingBodies(outputDirectory, collection, selectedEntityIds,
+      path.join(projectRoot, path.relative(stage, outputDirectory)), root);
+  }
   await save(path.join(batch, `publish-result.${category}.json`), results);
   await save(path.join(batch, 'import-plan.json'), plan);
   if (category === 'all') return validateWebsiteBatch(batch);
@@ -363,20 +368,36 @@ export async function validateWebsiteBatch(batch) {
     });
   }
   for (const { outputDirectory: root, resolution } of targets) {
+    const aliases = await fileHash(path.join(root, 'body-aliases.json'))
+      ? await json(path.join(root, 'body-aliases.json')) : {};
     for (const selected of plan.entries) {
       const entry = collection.entries.find((candidate) => candidate.entityId === selected.entityId);
       const { width, height } = entry.sourceMetadata.spatial.framePixels;
-      for (const folder of ['sprites', 'sprite-masks']) await verifyImage(root, `${folder}/${entry.spriteId}.webp`, width * resolution, height * resolution);
+      const sharedId = aliases[entry.spriteId];
+      if (sharedId !== undefined && (!buildingBodyPairs(collection).some(({ base, variant }) =>
+        base.spriteId === sharedId && variant.spriteId === entry.spriteId) || aliases[sharedId])) {
+        throw new Error(`Invalid body sharing target: ${entry.spriteId}`);
+      }
+      const bodyId = sharedId ?? entry.spriteId;
+      for (const folder of ['sprites', 'sprite-masks']) await verifyImage(root, `${folder}/${bodyId}.webp`, width * resolution, height * resolution);
       if (!entry.animated) continue;
       const directory = path.join(root, 'animations', entry.spriteId);
       const manifest = await json(path.join(directory, 'manifest.json'));
       const definition = definitions.entityDefinitions.find((candidate) => candidate.id === entry.entityId);
       const animation = animationProtocol.normalizeDeviceSpriteAnimationDefinition(definition.spriteAnimation, manifest);
+      if (manifest.sharedAnimationId !== sharedId) throw new Error(`Animation/body sharing differs: ${entry.spriteId}`);
       if (animation.resolution !== resolution || manifest.sourceResolution !== plan.sourceResolution
         || manifest.sourceSite.indexSha256 !== receipt.indexSha256) throw new Error(`Animation provenance differs: ${entry.spriteId}`);
-      await verifyImage(directory, animation.maskFile, width * resolution, height * resolution);
+      const pageDirectory = sharedId ? path.join(root, 'animations', sharedId) : directory;
+      if (sharedId) {
+        const canonical = await json(path.join(pageDirectory, 'manifest.json'));
+        const copy = { ...manifest };
+        delete copy.sharedAnimationId;
+        if (JSON.stringify(copy) !== JSON.stringify(canonical)) throw new Error(`Shared animation manifest differs: ${entry.spriteId}`);
+      }
+      await verifyImage(pageDirectory, animation.maskFile, width * resolution, height * resolution);
       for (const clip of Object.values(animation.clips)) for (const page of clip.pages) {
-        await verifyImage(directory, page.file, page.columns * width * resolution, page.rows * height * resolution);
+        await verifyImage(pageDirectory, page.file, page.columns * width * resolution, page.rows * height * resolution);
       }
     }
     const effectsRoot = path.join(root, 'port-effects');
@@ -447,6 +468,18 @@ export async function validateWebsiteBatch(batch) {
   if (stagedSources.length) throw new Error(`Website source payload must remain in the temporary batch: ${stagedSources[0]}`);
   const application = [];
   for (const file of stagedFiles) application.push({ path: file, sha256: await fileHash(within(stage, file)), previousSha256: await fileHash(within(projectRoot, file)) });
+  for (const { outputDirectory } of targets) for (const selected of plan.entries) {
+    const prefix = path.relative(stage, outputDirectory);
+    for (const folder of ['sprites', 'sprite-masks', 'animations']) {
+      const relativeRoot = `${prefix}/${folder}`;
+      const previous = folder === 'animations'
+        ? (await filesInIfPresent(within(projectRoot, `${relativeRoot}/${selected.spriteId}`))).map((file) => `${relativeRoot}/${selected.spriteId}/${file}`)
+        : [`${relativeRoot}/${selected.spriteId}.webp`];
+      for (const relative of previous) if (!stagedFiles.includes(relative) && await fileHash(within(projectRoot, relative))) {
+        application.push({ path: relative, sha256: null, previousSha256: await fileHash(within(projectRoot, relative)) });
+      }
+    }
+  }
   if (plan.logistics) for (const { outputDirectory } of targets) {
     for (const directory of ['logistics', 'animations/logistics-contract2']) {
       const managedRoot = path.relative(stage, path.join(outputDirectory, directory));

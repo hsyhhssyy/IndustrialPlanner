@@ -2,6 +2,7 @@ import { Graphics } from "pixi.js";
 
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { GridRect } from "@/domain/shared/grid";
+import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -53,6 +54,14 @@ export function resolveBaseBoundaryGridRect(
   return isValidGridRect(gridRect) ? gridRect : null;
 }
 
+export function resolveBaseBoundaryGridRects(baseDefinition: BaseDefinition): GridRect[] {
+  return resolveBaseAreas(baseDefinition).map((area) =>
+    area.placeableRect.width > 0 && area.placeableRect.height > 0
+      ? area.placeableRect
+      : area.outerRect
+  ).filter(isValidGridRect);
+}
+
 export function resolveBaseOuterGridRect(
   baseDefinition: BaseDefinition,
 ): GridRect | null {
@@ -70,6 +79,10 @@ export function resolveBaseOuterGridRect(
   };
 
   return isValidGridRect(gridRect) ? gridRect : null;
+}
+
+export function resolveBaseOuterGridRects(baseDefinition: BaseDefinition): GridRect[] {
+  return resolveBaseAreas(baseDefinition).map((area) => area.outerRect).filter(isValidGridRect);
 }
 
 export function resolveExpandedGridRect(
@@ -102,8 +115,9 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      const gridRects = baseDefinition === null ? [] : resolveBaseBoundaryGridRects(baseDefinition);
       const redraw = shouldRedraw([
-        baseDefinition?.placeableArea.width, baseDefinition?.placeableArea.height,
+        ...gridRects.flatMap((rect) => [rect.x, rect.y, rect.width, rect.height]),
         ctx.viewportBounds.left, ctx.viewportBounds.top,
         ctx.viewportBounds.width, ctx.viewportBounds.height,
         ctx.viewportState.centerX, ctx.viewportState.centerY,
@@ -117,33 +131,51 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
         return;
       }
 
-      const gridRect = resolveBaseBoundaryGridRect(baseDefinition);
-      if (gridRect === null) {
-        return;
-      }
-
-      const layout = resolveMarqueeGridRectLayout({
-        gridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        displayRotation: ctx.viewportState.displayRotation,
-      });
-
-      if (layout === null) {
-        return;
-      }
-
-      graphics
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .stroke({
+      // AI-REMOVED 2026-09-26:
+      // Reason: 单条边界只能绘制主区域，0×0 分区还需要绘制自身外边界。
+      // Trigger: 草稿箱新增不连续分区。
+      // Evidence: resolveBaseBoundaryGridRects 返回主核心与零核心分区的可见轮廓。
+      // Replacement: 下方遍历全部轮廓。
+      // Risk: Low。
+      // Human Review: Required
+      // Original code:
+      // const gridRect = resolveBaseBoundaryGridRect(baseDefinition);
+      // if (gridRect === null) {
+      //   return;
+      // }
+      // const layout = resolveMarqueeGridRectLayout({
+      //   gridRect,
+      //   viewportBounds: ctx.viewportBounds,
+      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      //   displayRotation: ctx.viewportState.displayRotation,
+      // });
+      // if (layout === null) {
+      //   return;
+      // }
+      // graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
+      //   width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
+      //   color: BASE_BOUNDARY_STROKE_COLOR,
+      //   alpha: BASE_BOUNDARY_STROKE_ALPHA,
+      // });
+      for (const gridRect of gridRects) {
+        const layout = resolveMarqueeGridRectLayout({
+          gridRect,
+          viewportBounds: ctx.viewportBounds,
+          viewportCenter: {
+            x: ctx.viewportState.centerX,
+            y: ctx.viewportState.centerY,
+          },
+          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
+        });
+        if (layout === null) continue;
+        graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
           width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
           color: BASE_BOUNDARY_STROKE_COLOR,
           alpha: BASE_BOUNDARY_STROKE_ALPHA,
         });
+      }
     },
 
     destroy(): void {

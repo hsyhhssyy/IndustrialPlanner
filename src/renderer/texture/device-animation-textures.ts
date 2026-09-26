@@ -281,6 +281,8 @@ export class DeviceAnimationTextureCache {
     readonly signature: string;
     readonly promise: Promise<DeviceAnimationAsset | null>;
   }>();
+  private readonly manifests = new Map<string, Promise<unknown>>();
+  private readonly sharedIds = new Map<string, Promise<string>>();
   private readonly reportedErrors = new Set<string>();
   private readonly sessions = new Set<DeviceAnimationTextureSession>();
   private readonly resolvedAssets = new Set<DeviceAnimationAsset>();
@@ -350,15 +352,23 @@ export class DeviceAnimationTextureCache {
       this.report(spriteId, error);
       return null;
     }
+    let assetId: string;
+    try {
+      assetId = await this.resolveSharedAssetId(spriteId, definition);
+    } catch (error) {
+      this.report(spriteId, error);
+      return null;
+    }
+    if (this.destroyed) return null;
     const signature = getDeviceSpriteAnimationSignature(definition);
-    const existing = this.entries.get(spriteId);
+    const existing = this.entries.get(assetId);
     if (existing !== undefined && existing.signature !== signature) {
-      this.report(spriteId, new Error("Conflicting animation definitions share one spriteId"));
+      this.report(spriteId, new Error("Conflicting animation definitions share one animation asset"));
       return null;
     }
     const entry = existing ?? {
       signature,
-      promise: this.load(spriteId, definition).catch((error: unknown) => {
+      promise: this.load(assetId, definition).catch((error: unknown) => {
         if (!this.destroyed) {
           this.report(spriteId, error);
         }
@@ -366,7 +376,7 @@ export class DeviceAnimationTextureCache {
       }),
     };
     if (existing === undefined) {
-      this.entries.set(spriteId, entry);
+      this.entries.set(assetId, entry);
     }
     const asset = await entry.promise;
     if (this.destroyed || asset === null || asset.unavailable) {
@@ -465,7 +475,43 @@ export class DeviceAnimationTextureCache {
     }
     this.resolvedAssets.clear();
     this.entries.clear();
+    this.manifests.clear();
+    this.sharedIds.clear();
     this.reportedErrors.clear();
+  }
+
+  private loadManifest(spriteId: string): Promise<unknown> {
+    const existing = this.manifests.get(spriteId);
+    if (existing) return existing;
+    const root = `3d-top-view/animations/${spriteId}`;
+    const loading = this.options.loadManifest(createPublicAssetUrl(`${root}/manifest.json`));
+    this.manifests.set(spriteId, loading);
+    return loading;
+  }
+
+  private resolveSharedAssetId(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<string> {
+    const existing = this.sharedIds.get(spriteId);
+    if (existing) return existing;
+    const resolving = (async () => {
+      const manifest = await this.loadManifest(spriteId);
+      if (manifest === null || typeof manifest !== "object") throw new Error("Invalid animation manifest");
+      const sharedId: unknown = "sharedAnimationId" in manifest ? manifest.sharedAnimationId : undefined;
+      if (sharedId === undefined) return spriteId;
+      if (typeof sharedId !== "string") throw new Error("sharedAnimationId must be a sprite ID");
+      validateDeviceSpriteAnimationId(sharedId);
+      if (sharedId === spriteId) throw new Error("Animation cannot share itself");
+      const sharedManifest = await this.loadManifest(sharedId);
+      if (sharedManifest === null || typeof sharedManifest !== "object"
+        || "sharedAnimationId" in sharedManifest) throw new Error("Shared animation target must be canonical");
+      const local = normalizeDeviceSpriteAnimationDefinition(definition, manifest);
+      const canonical = normalizeDeviceSpriteAnimationDefinition(definition, sharedManifest);
+      if (JSON.stringify(local) !== JSON.stringify(canonical)) {
+        throw new Error("Shared animation playback or geometry differs");
+      }
+      return sharedId;
+    })();
+    this.sharedIds.set(spriteId, resolving);
+    return resolving;
   }
 
   public async retainPage(page: DeviceAnimationPageRuntime, owner: symbol): Promise<boolean> {
@@ -712,7 +758,7 @@ export class DeviceAnimationTextureCache {
     registryDefinition: DeviceSpriteAnimationDefinition,
   ): Promise<DeviceAnimationAsset | null> {
     const root = `3d-top-view/animations/${spriteId}`;
-    const manifest = await this.options.loadManifest(createPublicAssetUrl(`${root}/manifest.json`));
+    const manifest = await this.loadManifest(spriteId);
     const definition = normalizeDeviceSpriteAnimationDefinition(registryDefinition, manifest);
     const maskUrl = createPublicAssetUrl(`${root}/${definition.maskFile}`);
     const mask = await this.options.loadTexture(maskUrl, definition.resolution);

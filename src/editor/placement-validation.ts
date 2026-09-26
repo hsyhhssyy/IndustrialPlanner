@@ -21,6 +21,8 @@ import {
 } from "@/domain/registry/types/base-definition";
 import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { resolveBaseAreas } from "@/shared/geometry/base-areas";
+import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
 import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
@@ -183,6 +185,12 @@ export function resolvePlacementValidations(options: {
     registry: options.workspace.registry,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
+  applyBaseAreaOnlyReasons({
+    entries,
+    document: options.document,
+    registry: options.workspace.registry,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
   // AI-REMOVED 2026-09-16:
   // Reason: 正式基地的碰撞结果不应随虚影移动重复计算。
   // Trigger: 用户要求同时优化视口与虚影移动。
@@ -307,12 +315,22 @@ function applyOutsideBaseReasons(options: {
     return;
   }
 
-  const baseGridRect: GridRect = {
-    x: 0,
-    y: 0,
-    width: baseDefinition.placeableArea.width,
-    height: baseDefinition.placeableArea.height,
-  };
+  const baseAreas = resolveBaseAreas(baseDefinition);
+
+  // AI-REMOVED 2026-09-26:
+  // Reason: 单矩形不能表达草稿箱不连续分区。
+  // Trigger: 新增位于主基地左上方的独立外扩区域。
+  // Evidence: resolveBaseAreas 给出主区域与全部分区的几何事实。
+  // Replacement: 下方逐区域完整包含判定。
+  // Risk: Low；原有主区域仍由同一字段生成。
+  // Human Review: Required
+  // Original code:
+  // const baseGridRect: GridRect = {
+  //   x: 0,
+  //   y: 0,
+  //   width: baseDefinition.placeableArea.width,
+  //   height: baseDefinition.placeableArea.height,
+  // };
 
   for (const entry of options.entries) {
     if (isBaseBuiltinEntityId(entry.entity.id)) {
@@ -326,7 +344,9 @@ function applyOutsideBaseReasons(options: {
       continue;
     }
 
-    if (!isGridRectContainedBy(baseGridRect, entry.gridRect)) {
+    if (!baseAreas.some((area) =>
+      isGridRectContainedBy(area.placeableRect, entry.gridRect)
+    )) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }
@@ -387,20 +407,32 @@ function applyOutsideOuterRingReasons(options: {
     return;
   }
 
-  const outerRing = baseDefinition.outerRing;
-  const outerRingGridRect: GridRect = {
-    x: -outerRing.left,
-    y: -outerRing.top,
-    width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-    height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-  };
+  const baseAreas = resolveBaseAreas(baseDefinition);
+
+  // AI-REMOVED 2026-09-26:
+  // Reason: 原外扩矩形只覆盖主区域，无法识别分离分区及中间空地。
+  // Trigger: 草稿箱新增独立的 0×0 核心与四边各 10 格外扩。
+  // Evidence: resolveBaseAreas 生成每块区域各自的 outerRect。
+  // Replacement: 下方逐区域完整包含判定。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // const outerRing = baseDefinition.outerRing;
+  // const outerRingGridRect: GridRect = {
+  //   x: -outerRing.left,
+  //   y: -outerRing.top,
+  //   width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+  //   height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+  // };
 
   for (const entry of options.entries) {
     if (isBaseBuiltinEntityId(entry.entity.id)) {
       continue;
     }
 
-    if (!isGridRectContainedBy(outerRingGridRect, entry.gridRect)) {
+    if (!baseAreas.some((area) =>
+      isGridRectContainedBy(area.outerRect, entry.gridRect)
+    )) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }
@@ -420,12 +452,22 @@ function applyInsideBaseForbiddenReasons(options: {
     return;
   }
 
-  const baseGridRect: GridRect = {
-    x: 0,
-    y: 0,
-    width: baseDefinition.placeableArea.width,
-    height: baseDefinition.placeableArea.height,
-  };
+  const baseAreas = resolveBaseAreas(baseDefinition);
+
+  // AI-REMOVED 2026-09-26:
+  // Reason: 内部禁放规则需要覆盖所有分区的可建造核心。
+  // Trigger: 基地支持多块建造区。
+  // Evidence: resolveBaseAreas 统一提供主区域与分区核心矩形。
+  // Replacement: 下方逐区域相交判定。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // const baseGridRect: GridRect = {
+  //   x: 0,
+  //   y: 0,
+  //   width: baseDefinition.placeableArea.width,
+  //   height: baseDefinition.placeableArea.height,
+  // };
 
   for (const entry of options.entries) {
     if (isBaseBuiltinEntityId(entry.entity.id)) {
@@ -434,7 +476,37 @@ function applyInsideBaseForbiddenReasons(options: {
     if (!entry.definition.tags.includes("InnerRingNotAllowed")) {
       continue;
     }
-    if (areGridRectsIntersecting(baseGridRect, entry.gridRect)) {
+    if (baseAreas.some((area) =>
+      areGridRectsIntersecting(area.placeableRect, entry.gridRect)
+    )) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+  }
+}
+
+function applyBaseAreaOnlyReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  registry: WorkspaceContract["registry"];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const baseDefinition = resolveCurrentBaseDefinition({
+    baseId: options.document.baseId,
+    registry: options.registry,
+  });
+  if (baseDefinition === null) return;
+
+  const areas = resolveBaseAreas(baseDefinition);
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+    const areaTag = entry.definition.tags.find((tag) =>
+      tag.startsWith(BASE_AREA_ONLY_TAG_PREFIX)
+    );
+    if (areaTag === undefined) continue;
+    const requiredAreaId = areaTag.slice(BASE_AREA_ONLY_TAG_PREFIX.length);
+    const requiredArea = areas.find((area) => area.id === requiredAreaId);
+    if (requiredArea === undefined
+      || !isGridRectContainedBy(requiredArea.outerRect, entry.gridRect)) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }

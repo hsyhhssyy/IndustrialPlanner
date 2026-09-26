@@ -51,7 +51,7 @@ describe("PortOverlayDecoration 端口语义", () => {
       queries: registry.queries,
       kind: "belt",
       direction: "output",
-      basePlaceableArea: { width: 64, height: 64 },
+      basePlaceableRects: [{ x: 0, y: 0, width: 64, height: 64 }],
     });
 
     expect(outputChevronKeys(entries)).toEqual([

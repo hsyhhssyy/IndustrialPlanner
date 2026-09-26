@@ -3,6 +3,7 @@ import type { AppTheme } from "@/domain/app/types/theme";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
+import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 import {
   resolveViewportAxisPixelPosition,
   resolveViewportPointFromWorldPoint,
@@ -12,12 +13,13 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
-  resolveBaseOuterGridRect,
+  resolveBaseOuterGridRects,
   resolveCurrentBaseDefinition,
   resolveExpandedGridRect,
 } from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
 
 const WORLD_GRID_LINE_ALPHA = 0.30;
 // Reason: 固定 1.5px 线宽无法表达 REQ-059 的分级降级规则。
@@ -879,6 +881,9 @@ function drawGridIntersectionDots(options: {
 
 export function createGridLineDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  const areaMask = new Graphics();
+  areaMask.renderable = true;
+  graphics.addChild(areaMask);
   let lastDocumentVersion = -1;
   let lastViewportVersion = -1;
   let lastCollectionVersion = -1;
@@ -937,7 +942,27 @@ export function createGridLineDecoration(): DecorationLayer {
       const baseDefinition = resolveCurrentBaseDefinition(ctx)
       const baseOuterGridRect = baseDefinition === null
         ? null
-        : resolveBaseOuterGridRect(baseDefinition)
+        : resolveBaseOuterBounds(baseDefinition)
+      const baseOuterGridRects = baseDefinition === null
+        ? []
+        : resolveBaseOuterGridRects(baseDefinition)
+      areaMask.clear();
+      areaMask.visible = baseOuterGridRects.length > 1;
+      graphics.mask = baseOuterGridRects.length > 1 ? areaMask : null;
+      for (const rect of baseOuterGridRects) {
+        const warningRect = resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS);
+        if (warningRect === null) continue;
+        const layout = resolveMarqueeGridRectLayout({
+          gridRect: warningRect,
+          viewportBounds: ctx.viewportBounds,
+          viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
+        });
+        if (layout !== null) {
+          areaMask.rect(layout.x, layout.y, layout.width, layout.height).fill(0xffffff);
+        }
+      }
       const baseWarningGridRect = baseOuterGridRect === null
         ? null
         : resolveExpandedGridRect(

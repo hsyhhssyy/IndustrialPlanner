@@ -198,6 +198,12 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     name: "草稿箱",
     placeableArea: { width: 320, height: 320 },
     outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+    subAreas: [{
+      id: "draft_box_upper_left",
+      position: { x: -50, y: -50 },
+      placeableArea: { width: 0, height: 0 },
+      outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+    }],
     tag: "草稿箱",
     tags: [ALL_REGION_ENTITIES_BASE_TAG],
   },
