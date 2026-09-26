@@ -1,4 +1,5 @@
 import { createBlueprintPlannerHost } from "./blueprint-planner";
+import { createAudioHost } from "./audio";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
@@ -45,6 +46,7 @@ const workspace : WorkspaceContract = {
   state: createWorkspaceState(),
   registry: registry,
   app: null,
+  audio: null,
   editor: null,
   render: null,
   simulation: null,
@@ -122,6 +124,20 @@ const simulationHost = createSimulationHost(workspace, {
 });
 
 createBlueprintPlannerHost(workspace);
+
+const audioHost = createAudioHost(workspace, {
+  readEnabled: () => appHost.internalState.settings.gamePlayDeviceAudio,
+});
+const disposeAudio = () => {
+  window.removeEventListener("pagehide", handleAudioPageHide);
+  audioHost.destroy();
+};
+const handleAudioPageHide = (event: PageTransitionEvent) => {
+  // BFCache 保留工作台；后台暂停与恢复由 Audio 的 visibilitychange 订阅负责。
+  if (!event.persisted) disposeAudio();
+};
+window.addEventListener("pagehide", handleAudioPageHide);
+if (import.meta.hot) import.meta.hot.dispose(disposeAudio);
 
 // AI-REMOVED 2026-09-20:
 // Reason: 多基地是下一次仿真会话的启动设置，不应由组合根持续同步为 SimulationMode。

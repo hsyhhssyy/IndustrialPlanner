@@ -30,7 +30,15 @@ import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blue
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
-import { DeviceAudioController } from "../audio";
+// AI-REMOVED 2026-09-26:
+// Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+// Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+// Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+// Replacement: src/main.tsx 与 src/audio/audio-host.ts
+// Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+// Human Review: Required
+// Original code:
+// import { DeviceAudioController } from "../audio";
 import { regionalSimulationUiState } from "../state/regional-simulation-ui-state";
 // AI-REMOVED 2026-09-23:
 // Reason: AppHost 构造时正式入口尚未创建 Editor，无法在此注册文档订阅。
@@ -54,7 +62,15 @@ import { regionalSimulationUiState } from "../state/regional-simulation-ui-state
 // import { WebDavSyncAppController } from "../sync/webdav-sync-app-controller";
 
 export interface AppHost extends AppContract {
-  deviceAudio: DeviceAudioController;
+  // AI-REMOVED 2026-09-26:
+  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+  // Replacement: WorkspaceContract.audio
+  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+  // Human Review: Required
+  // Original code:
+  // deviceAudio: DeviceAudioController;
   workspace: WorkspaceContract;
   gestureAdapter: GestureAdapter;
   gestureActionRouter: GestureActionRouter<AppHost>;
@@ -88,7 +104,15 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
-  const deviceAudio = new DeviceAudioController(workspace, () => internalState.settings.gamePlayDeviceAudio);
+  // AI-REMOVED 2026-09-26:
+  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+  // Replacement: src/main.tsx 的 createAudioHost
+  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+  // Human Review: Required
+  // Original code:
+  // const deviceAudio = new DeviceAudioController(workspace, () => internalState.settings.gamePlayDeviceAudio);
   const regionalSettings = new RegionalSettingsController(workspace.registry);
   const host = {
     workspace,
@@ -205,7 +229,15 @@ export function createAppHost(
     saveBlueprintDialog,
     overlapEntityMenu,
     regionalSettings,
-    deviceAudio,
+    // AI-REMOVED 2026-09-26:
+    // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+    // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+    // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+    // Replacement: WorkspaceContract.audio
+    // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+    // Human Review: Required
+    // Original code:
+    // deviceAudio,
     encyclopediaPicker,
     recipePicker,
   });
@@ -262,7 +294,15 @@ export function createAppHost(
   Object.assign(host, {
     internalActions,
     dispose: () => {
-      deviceAudio.dispose();
+      // AI-REMOVED 2026-09-26:
+      // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+      // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+      // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+      // Replacement: src/main.tsx 的 disposeAudio 与 AudioContract.destroy
+      // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+      // Human Review: Required
+      // Original code:
+      // deviceAudio.dispose();
       blueprintFolderDialog.close();
       blueprintPlannerDialog.close();
       blueprintPreview.close();

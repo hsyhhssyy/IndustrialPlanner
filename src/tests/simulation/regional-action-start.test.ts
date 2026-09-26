@@ -43,6 +43,7 @@ describe("区域多基地启动模式固化", () => {
       render: null,
       simulation: null,
       sync: null,
+      audio: null,
       blueprintPlanner: null,
     };
 
@@ -132,6 +133,7 @@ describe("区域多基地启动模式固化", () => {
       render: null,
       simulation: null,
       sync: null,
+      audio: null,
       blueprintPlanner: null,
     };
 
@@ -195,6 +197,7 @@ describe("区域多基地启动模式固化", () => {
       render: null,
       simulation: null,
       sync: null,
+      audio: null,
       blueprintPlanner: null,
     };
 
@@ -231,6 +234,7 @@ describe("区域多基地启动模式固化", () => {
       render: null,
       simulation: null,
       sync: null,
+      audio: null,
       blueprintPlanner: null,
     };
 // AI-REMOVED 2026-09-25:

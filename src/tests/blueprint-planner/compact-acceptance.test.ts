@@ -25,7 +25,7 @@ it.each([
   const before = JSON.stringify(request);
   const registry = createRegistryContract();
   const workspace: WorkspaceContract = { state: createWorkspaceState(), registry,
-    app: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null };
+    app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
   const planner = new NodePlannerClient();
   const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
   try {

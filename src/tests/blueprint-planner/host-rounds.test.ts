@@ -76,7 +76,7 @@ describe("EDA Host 多轮规划", () => {
     };
     const simulation = { actions: { stop: vi.fn(), runBlueprint: vi.fn().mockResolvedValue(report) } };
     const workspace = {
-      registry: createRegistryContract(), simulation, blueprintPlanner: null,
+      registry: createRegistryContract(), simulation, audio: null, blueprintPlanner: null,
       state: {}, app: null, editor: null, render: null, sync: null,
     } as unknown as WorkspaceContract;
     const host = createBlueprintPlannerHost(workspace);

@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseDeviceAudioManifest } from "@/app/audio/audio-manifest";
-import { resolveCommittedAudio } from "@/app/audio/device-audio-controller";
-import { selectDeviceAudioGains } from "@/app/audio/audio-spatial-mix";
+import { parseDeviceAudioManifest } from "@/audio/audio-manifest";
+import { resolveCommittedAudio } from "@/audio/device-audio-controller";
+import { selectDeviceAudioGains } from "@/audio/audio-spatial-mix";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { EditorHistoryRecord } from "@/domain/editor/editor-history";
 import { createWorldDocumentDelta } from "@/editor/history";

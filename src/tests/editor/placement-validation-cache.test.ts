@@ -10,7 +10,7 @@ describe("移动预览的静态碰撞缓存", () => {
   it("跟随虚影移动、原件隐藏、取消及正式提交失效，不保留旧位置的重叠结果", () => {
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(), registry: createRegistryContract(),
-      app: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null,
+      app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null,
     };
     const editor = createEditorHost(workspace);
     const previewOverlap = () => editor.queries.getEntityPlacementValidation(

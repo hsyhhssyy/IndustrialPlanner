@@ -120,6 +120,7 @@ function createTimelineReadinessWorkspace(
       },
     },
     sync: null,
+    audio: null,
     blueprintPlanner: null,
   };
 }
@@ -221,6 +222,7 @@ describe("TimelineDialog", () => {
         },
       },
       sync: null,
+      audio: null,
       blueprintPlanner: null,
     };
     appHost = createAppHost(workspace);

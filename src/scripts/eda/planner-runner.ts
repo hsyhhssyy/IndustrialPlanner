@@ -22,7 +22,7 @@ import { edaOutputPath } from "./artifact-paths";
 /** 常驻执行器只复用 Registry、Host 和 Worker；每次规划仍拥有独立的输入、预算和仿真世界。 */
 export class PlannerBatchSession {
   readonly workspace: WorkspaceContract = { state: createWorkspaceState(), registry: createRegistryContract(), app: null,
-    editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null };
+    editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
   readonly simulation = createSimulationHost(this.workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
   readonly planner = new NodePlannerClient();
   busy = false;

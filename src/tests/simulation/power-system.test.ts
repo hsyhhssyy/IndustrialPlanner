@@ -627,6 +627,7 @@ function createEditorTestWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    audio: null,
     blueprintPlanner: null,
   };
 }
@@ -725,6 +726,7 @@ function createHeadlessWorkspace(
     render: null,
     simulation: null,
     sync: null,
+    audio: null,
     blueprintPlanner: null,
   };
 }

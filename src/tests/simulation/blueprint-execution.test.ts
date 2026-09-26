@@ -25,7 +25,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("独立蓝图执行 [%s]", (engineKind) 
   function createHost() {
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(), registry: createRegistryContract(),
-      app: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null,
+      app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null,
     };
     return { workspace, host: createSimulationHost(workspace, { engineKind, workerMode: "runtime" }) };
   }

@@ -433,6 +433,7 @@ function createRunnerWorkspace(registry: RegistryContract): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    audio: null,
     blueprintPlanner: null,
   };
 }

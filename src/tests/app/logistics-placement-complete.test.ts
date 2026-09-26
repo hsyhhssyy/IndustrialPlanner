@@ -1292,6 +1292,7 @@ function createWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
     sync: null,
+    audio: null,
     blueprintPlanner: null,
   };
 }

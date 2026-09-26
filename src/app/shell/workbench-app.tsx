@@ -869,7 +869,28 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     appHost.state.settings.showGrassBackground,
   );
 
-  useEffect(() => appHost.deviceAudio.mount(), [appHost]);
+  // AI-REMOVED 2026-09-26:
+  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
+  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
+  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
+  // Replacement: src/main.tsx 装配 Audio；本 effect 只转发真实手势。
+  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
+  // Human Review: Required
+  // Original code:
+  // useEffect(() => appHost.deviceAudio.mount(), [appHost]);
+  useEffect(() => {
+    const unlock = (event: Event) => {
+      if (event.isTrusted) appHost.workspace.audio?.actions.unlock();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    window.addEventListener("click", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      window.removeEventListener("click", unlock);
+    };
+  }, [appHost]);
   useEffect(() => pwaController.bindDeviceAudio(() => appHost.internalState.settings.gamePlayDeviceAudio), [appHost, pwaController]);
 
   useEffect(() => {

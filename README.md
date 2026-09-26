@@ -111,6 +111,7 @@ npm run test:blueprint  # 运行蓝图仿真测试
 - `src/editor`：编辑器状态、放置校验、选区、历史、物流草稿和文档操作。
 - `src/simulation`：仿真主机、Worker 协议、拓扑编译和运行时阶段。
 - `src/renderer`：Pixi 渲染、贴图、装饰层和蓝图预览。
+- `src/audio`：设备音效映射、按需加载与解码、播放生命周期和视口距离混音。
 - `src/registry`：建筑、物品、配方等注册表定义。
 - `src/domain`：跨模块契约、状态类型和动作/查询接口。
 - `src/shared`：存储、主题、几何、浏览器环境判断、蓝图库和公共工具。
