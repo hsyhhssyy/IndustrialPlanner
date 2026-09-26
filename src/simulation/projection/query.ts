@@ -37,11 +37,21 @@ export interface SimulationQueryContext {
   beforeReadDebugData?(): void;
 }
 
+interface RuntimeSlotLayoutEntry {
+  readonly compiledSlotId: string;
+  readonly groupIndex: number;
+  readonly storageGroupId: string;
+  readonly slotId: string;
+  readonly viewRole: SimulationDeviceRuntimeSlotItemReadModel["viewRole"];
+}
+
 export function createSimulationQueries(context: SimulationQueryContext): SimulationQuery {
   // 帧级缓存：topology 在同一帧内引用不变，shareCapSlotIds 只需计算一次。
   // BeltCargoDecoration 等 decoration 每帧对多个 entity 调用此方法时命中缓存。
   let cachedTopology: CompiledSimulationTopology | null = null;
   let cachedShareCapSlotIds: Set<string> | null = null;
+  const cachedRuntimeSlotLayouts = new Map<string, readonly RuntimeSlotLayoutEntry[]>();
+  const cachedRuntimeDeviceIds = new Map<string, string | null>();
   let cachedOperatingTopology: CompiledSimulationTopology | null = null;
   let cachedOperatingPresentation: SimulationPresentationProjection | null = null;
   let cachedOperatingTickNumber: number | null = null;
@@ -151,11 +161,15 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
       if (topology !== cachedTopology) {
         cachedTopology = topology;
         cachedShareCapSlotIds = topology === null ? null : resolveShareCapSlotIds(topology);
+        cachedRuntimeSlotLayouts.clear();
+        cachedRuntimeDeviceIds.clear();
       }
       if (presentation === null) return null;
       return resolveDeviceRuntimeStatus({
         topology, deviceId, presentation, shareCapSlotIds: cachedShareCapSlotIds,
         runtimeCanProgress: context.state.runtimeStatus.mode === "running",
+        slotLayouts: cachedRuntimeSlotLayouts,
+        compiledDeviceIds: cachedRuntimeDeviceIds,
       });
     },
     getPipeFluidItemId: (deviceId) => {
@@ -341,13 +355,19 @@ function resolveDeviceRuntimeStatus(options: {
   presentation: SimulationPresentationProjection;
   shareCapSlotIds: Set<string> | null;
   runtimeCanProgress: boolean;
+  slotLayouts: Map<string, readonly RuntimeSlotLayoutEntry[]>;
+  compiledDeviceIds: Map<string, string | null>;
 }): SimulationDeviceRuntimeStatusReadModel | null {
   const currentTickNumber = options.presentation.tickNumber;
   if (options.topology === null || currentTickNumber === null) {
     return null;
   }
 
-  const compiledDeviceId = resolveCompiledDeviceId(options.topology, options.deviceId);
+  let compiledDeviceId = options.compiledDeviceIds.get(options.deviceId);
+  if (compiledDeviceId === undefined) {
+    compiledDeviceId = resolveCompiledDeviceId(options.topology, options.deviceId);
+    options.compiledDeviceIds.set(options.deviceId, compiledDeviceId);
+  }
   if (compiledDeviceId === null) {
     return null;
   }
@@ -458,6 +478,7 @@ function resolveDeviceRuntimeStatus(options: {
       compiledDeviceId,
       presentation: options.presentation,
       shareCapSlotIds: options.shareCapSlotIds,
+      slotLayouts: options.slotLayouts,
     }),
   };
 }
@@ -502,14 +523,61 @@ function resolveDeviceRuntimeSlotItems(options: {
   compiledDeviceId: string;
   presentation: SimulationPresentationProjection;
   shareCapSlotIds: Set<string> | null;
+  slotLayouts: Map<string, readonly RuntimeSlotLayoutEntry[]>;
 }): SimulationDeviceRuntimeSlotItemReadModel[] {
+  let layout = options.slotLayouts.get(options.compiledDeviceId);
+  if (layout === undefined) {
+    layout = compileDeviceRuntimeSlotLayout(options);
+    options.slotLayouts.set(options.compiledDeviceId, layout);
+  }
+  const slotItems: SimulationDeviceRuntimeSlotItemReadModel[] = [];
+  const itemIndexesByGroup: Array<number | undefined> = [];
+  for (const slot of layout) {
+    const snapshot = options.presentation.getSlot(slot.compiledSlotId);
+    if (snapshot === null) continue;
+    const itemIndex = itemIndexesByGroup[slot.groupIndex];
+    if (itemIndex === undefined) {
+      const item: SimulationDeviceRuntimeSlotItemReadModel = {
+        // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
+        storageGroupId: slot.storageGroupId,
+        slotId: slot.slotId,
+        viewRole: slot.viewRole,
+        itemType: snapshot.itemType,
+        count: Math.max(0, snapshot.count),
+        reserved: Math.max(0, snapshot.reserved),
+        ignoreStock: snapshot.ignoreStock,
+      };
+      itemIndexesByGroup[slot.groupIndex] = slotItems.length;
+      slotItems.push(item);
+    } else {
+      const existing = slotItems[itemIndex]!;
+      slotItems[itemIndex] = {
+        storageGroupId: slot.storageGroupId,
+        slotId: slot.slotId,
+        viewRole: slot.viewRole,
+        itemType: existing.itemType ?? snapshot.itemType,
+        count: Math.max(existing.count, snapshot.count),
+        reserved: Math.max(existing.reserved, snapshot.reserved),
+        ignoreStock: existing.ignoreStock || snapshot.ignoreStock,
+      };
+    }
+  }
+  return slotItems;
+}
+
+function compileDeviceRuntimeSlotLayout(options: {
+  topology: CompiledSimulationTopology;
+  compiledDeviceId: string;
+  shareCapSlotIds: Set<string> | null;
+}): readonly RuntimeSlotLayoutEntry[] {
   const device = options.topology.devices[options.compiledDeviceId];
   if (device === undefined) {
     return [];
   }
 
   const shareCapSlotIds = options.shareCapSlotIds ?? new Set<string>();
-  const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
+  const groupIndexes = new Map<string, number>();
+  const layout: RuntimeSlotLayoutEntry[] = [];
   for (const nodeId of device.nodeIds) {
     const node = options.topology.nodes[nodeId];
     if (node === undefined) {
@@ -518,8 +586,7 @@ function resolveDeviceRuntimeSlotItems(options: {
 
     for (const compiledSlotId of node.slotIds) {
       const compiledSlot = options.topology.slots[compiledSlotId];
-      const slotSnapshot = options.presentation.getSlot(compiledSlotId);
-      if (compiledSlot === undefined || slotSnapshot === null) {
+      if (compiledSlot === undefined) {
         continue;
       }
 
@@ -529,19 +596,79 @@ function resolveDeviceRuntimeSlotItems(options: {
       const realSlotKey = isShareCapSlot
         ? compiledSlotId
         : `${storageGroupId}:${sourceSlotId}`;
-      const existing = slotItemsByRealSlotKey.get(realSlotKey);
-      slotItemsByRealSlotKey.set(realSlotKey, {
+      let groupIndex = groupIndexes.get(realSlotKey);
+      if (groupIndex === undefined) {
+        groupIndex = groupIndexes.size;
+        groupIndexes.set(realSlotKey, groupIndex);
+      }
+      layout.push({
+        compiledSlotId,
+        groupIndex,
         // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
         storageGroupId,
         slotId: sourceSlotId,
         viewRole: isShareCapSlot ? node.viewRole : "single-view",
-        itemType: existing?.itemType ?? slotSnapshot.itemType,
-        count: Math.max(existing?.count ?? 0, slotSnapshot.count),
-        reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),
-        ignoreStock: (existing?.ignoreStock ?? false) || slotSnapshot.ignoreStock,
       });
     }
   }
 
-  return [...slotItemsByRealSlotKey.values()];
+  return layout;
 }
+
+// AI-REMOVED 2026-09-25:
+// Reason: 节点遍历、真实槽位分组和展示元数据仅依赖拓扑，不应在每次设备查询中重建。
+// Trigger: Dense 性能退化优化，要求运行结果完全一致。
+// Evidence: after-index-cache CPU profile 中 resolveDeviceRuntimeSlotItems 占 2.71 秒；重复分组还产生临时 Map 和字符串。
+// Replacement: compileDeviceRuntimeSlotLayout 按 topology 缓存布局；resolveDeviceRuntimeSlotItems 逐次读取实时值。
+// Risk: 缓存依赖 topology 引用变化；拓扑更新时必须清空，输出顺序仍按首个可见槽位确定。
+// Human Review: Required
+//
+// Original code:
+// function resolveDeviceRuntimeSlotItems(options: {
+//   topology: CompiledSimulationTopology;
+//   compiledDeviceId: string;
+//   presentation: SimulationPresentationProjection;
+//   shareCapSlotIds: Set<string> | null;
+// }): SimulationDeviceRuntimeSlotItemReadModel[] {
+//   const device = options.topology.devices[options.compiledDeviceId];
+//   if (device === undefined) {
+//     return [];
+//   }
+//
+//   const shareCapSlotIds = options.shareCapSlotIds ?? new Set<string>();
+//   const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
+//   for (const nodeId of device.nodeIds) {
+//     const node = options.topology.nodes[nodeId];
+//     if (node === undefined) {
+//       continue;
+//     }
+//
+//     for (const compiledSlotId of node.slotIds) {
+//       const compiledSlot = options.topology.slots[compiledSlotId];
+//       const slotSnapshot = options.presentation.getSlot(compiledSlotId);
+//       if (compiledSlot === undefined || slotSnapshot === null) {
+//         continue;
+//       }
+//
+//       const isShareCapSlot = shareCapSlotIds.has(compiledSlotId);
+//       const storageGroupId = compiledSlot.sourceStorageSlotGroupId ?? "synthetic";
+//       const sourceSlotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
+//       const realSlotKey = isShareCapSlot
+//         ? compiledSlotId
+//         : `${storageGroupId}:${sourceSlotId}`;
+//       const existing = slotItemsByRealSlotKey.get(realSlotKey);
+//       slotItemsByRealSlotKey.set(realSlotKey, {
+//         // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
+//         storageGroupId,
+//         slotId: sourceSlotId,
+//         viewRole: isShareCapSlot ? node.viewRole : "single-view",
+//         itemType: existing?.itemType ?? slotSnapshot.itemType,
+//         count: Math.max(existing?.count ?? 0, slotSnapshot.count),
+//         reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),
+//         ignoreStock: (existing?.ignoreStock ?? false) || slotSnapshot.ignoreStock,
+//       });
+//     }
+//   }
+//
+//   return [...slotItemsByRealSlotKey.values()];
+// }

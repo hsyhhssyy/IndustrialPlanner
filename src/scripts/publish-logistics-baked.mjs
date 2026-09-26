@@ -51,6 +51,31 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     fluidPlayback: { referenceShader: source.fluidPlayback.referenceShader },
     endpointConnector: { composite: source.endpointConnector.composite, whitening: source.endpointConnector.whitening },
   };
+  const cargoDirectory = path.join(sourceDirectory, 'composite_cube_1_001_01/top/static');
+  const cargoSource = JSON.parse(await readFile(path.join(cargoDirectory, 'manifest.json'), 'utf8'));
+  const cargo = cargoSource.cargo;
+  const cargoResource = cargoSource.resources?.[cargo?.resource];
+  if (cargo?.resource !== 'static/cargo.empty-box' || cargoSource.textureProfile?.resolution !== sourceResolution
+    || cargoResource?.file !== 'cargo-empty-box.webp' || cargoResource.resolution !== sourceResolution
+    || cargoResource.width !== 128 * sourceResolution || cargoResource.height !== 128 * sourceResolution
+    || cargo.visibleFootprintCells?.[0] !== 0.5 || cargo.visibleFootprintCells?.[1] !== 0.5
+    || cargo.itemIconBaked !== false) throw new Error('Unsupported cargo box delivery');
+  const cargoBytes = await readFile(path.join(cargoDirectory, cargoResource.file));
+  if (digest(cargoBytes) !== cargoResource.sha256) throw new Error('Cargo box source hash differs');
+  const cargoDecoded = await sharp(cargoBytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (cargoDecoded.info.width !== cargoResource.width || cargoDecoded.info.height !== cargoResource.height) {
+    throw new Error('Cargo box source dimensions differ');
+  }
+  const cargoOutputDirectory = path.join(outputDirectory, 'cargo');
+  await mkdir(cargoOutputDirectory, { recursive: true });
+  const cargoOutputBytes = scale === 1 ? cargoBytes : await (async () => {
+    const resized = await resizeAssetRgba(cargoDecoded.data, cargoDecoded.info.width, cargoDecoded.info.height, scale);
+    return sharp(resized.data, { raw: { width: resized.width, height: resized.height, channels: 4 } })
+      .webp({ lossless: true }).toBuffer();
+  })();
+  await writeFile(path.join(cargoOutputDirectory, 'empty-box.webp'), cargoOutputBytes);
+  manifest.cargoBox = { file: 'cargo/empty-box.webp', width: 128 * resolution, height: 128 * resolution,
+    visibleFootprintCells: cargo.visibleFootprintCells, sha256: digest(cargoOutputBytes) };
   // 当前播放器只支持双数值场。液体资源和 Shader 作为一个完整协议保留，不能混入新版 water-field。
   const retainFluid = source.fluidPlayback.referenceShader.fragment.includes('uWater');
   if (retainFluid) {

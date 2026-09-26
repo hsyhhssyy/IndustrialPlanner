@@ -11,7 +11,7 @@ import { publishedImageSize, publishEffectFrames, resizeAssetRgba } from "../../
 // @ts-expect-error Node 发布入口由真实文件测试验证。
 import { publishDeviceSprite } from "../../scripts/sync-device-sprites.mjs";
 // @ts-expect-error Node 批次入口由真实文件测试验证。
-import { applyWebsiteBatch, deferWebsiteLogistics, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
+import { applyWebsiteBatch, deferWebsiteLogistics, retainWebsitePortEffects, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
 // @ts-expect-error Node 端口发布器直接复用。
 import { resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
 // @ts-expect-error Node 物流发布器直接复用。
@@ -31,6 +31,34 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
+  it("外观批次保留当前端口特效的原字节及来源身份", async () => {
+    await fixture(async (directory) => {
+      const batch = path.join(directory, "batch");
+      const current = path.join(directory, "current");
+      const index = JSON.stringify({ files: [] });
+      const sourceSite = { releaseId: "fixture", indexSha256: digest(index) };
+      await mkdir(path.join(batch, "site"), { recursive: true });
+      await writeFile(path.join(batch, "site/integrity.json"), index);
+      await writeFile(path.join(batch, "source-receipt.json"), JSON.stringify({ ...sourceSite, files: [] }));
+      await writeFile(path.join(batch, "import-plan.json"), JSON.stringify({ sourceSite, sourceRoot: "site" }));
+      const effects = "public/3d-top-view/port-effects";
+      await mkdir(path.join(current, effects), { recursive: true });
+      await writeFile(path.join(current, effects, "manifest.json"), "old manifest");
+      await writeFile(path.join(current, effects, "height.rgba.bin"), "old height");
+
+      await retainWebsitePortEffects(batch, current);
+      const plan = JSON.parse(await readFile(path.join(batch, "import-plan.json"), "utf8"));
+      expect(plan.deferredCategories).toEqual(["effects"]);
+      expect(plan.retainedProducts).toEqual(expect.arrayContaining([
+        { path: `${effects}/manifest.json`, sha256: digest("old manifest") },
+        { path: `${effects}/height.rgba.bin`, sha256: digest("old height") },
+      ]));
+      expect(await readFile(path.join(batch, "stage", effects, "manifest.json"), "utf8"))
+        .toBe("old manifest");
+      await expect(retainWebsitePortEffects(batch, current)).rejects.toThrow("already retained");
+    });
+  });
+
   it("暂缓物流时同时排除原件和发布图，并保留共享清单中的既有高度", async () => {
     await fixture(async (directory) => {
       const batch = path.join(directory, "batch");
@@ -211,6 +239,15 @@ describe("网站素材批次", () => {
         background: { r: 1, g: 2, b: 3, alpha: 1 } } }).webp({ lossless: true }).toBuffer();
       await writeFile(path.join(sourceDirectory, "baked/static.webp"), page);
       await writeFile(path.join(sourceDirectory, "baked/fluid-field.webp"), field);
+      const cargoDirectory = path.join(sourceDirectory, "composite_cube_1_001_01/top/static");
+      await mkdir(cargoDirectory, { recursive: true });
+      await writeFile(path.join(cargoDirectory, "cargo-empty-box.webp"), page);
+      await writeFile(path.join(cargoDirectory, "manifest.json"), JSON.stringify({
+        textureProfile: { resolution: 0.5 },
+        cargo: { resource: "static/cargo.empty-box", visibleFootprintCells: [0.5, 0.5], itemIconBaked: false },
+        resources: { "static/cargo.empty-box": { file: "cargo-empty-box.webp", width: 64, height: 64,
+          resolution: 0.5, sha256: digest(page) } },
+      }));
       const staticNames = [
         ...["straight", "left", "right"].flatMap((shape) => [
           `conveyor.${shape}.static`,
@@ -276,6 +313,9 @@ describe("网站素材批次", () => {
       expect(output.staticResources).toHaveProperty("pipe.straight.static-logo-glow");
       expect(output.pages["static-0"]).toMatchObject({ width: 64, height: 64, filter: "linear" });
       expect(output.pages["fluid-field"]).toMatchObject({ width: 4, height: 4, filter: "nearest", data: true });
+      expect(output.cargoBox).toMatchObject({ file: "cargo/empty-box.webp", width: 64, height: 64,
+        visibleFootprintCells: [0.5, 0.5] });
+      expect(await readFile(path.join(outputDirectory, "cargo/empty-box.webp"))).toEqual(page);
       expect(await sharp(path.join(outputDirectory, "baked", output.pages["static-0"].file)).metadata())
         .toMatchObject({ width: 64, height: 64 });
       expect(await sharp(path.join(outputDirectory, "static/baked-static.webp")).metadata())

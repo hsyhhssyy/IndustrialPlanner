@@ -74,6 +74,8 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       );
       const before = readSimulationSnapshot(host);
       const beforeJson = JSON.stringify(before);
+      const beforeRuntimeStatus = host.queries.getDeviceRuntimeStatus("storage");
+      const beforeRuntimeStatusJson = JSON.stringify(beforeRuntimeStatus);
       host.actions.pause();
       await host.actions.patchRuntimeSlot({
         entityId: "storage", storageGroupId: "storage_slot_1", slotId: "slot_1",
@@ -83,6 +85,8 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
         expect.objectContaining({ itemType: "item_copper_ore", count: 11 }),
       );
       expect(JSON.stringify(before)).toBe(beforeJson);
+      expect(JSON.stringify(beforeRuntimeStatus)).toBe(beforeRuntimeStatusJson);
+      expect(host.queries.getDeviceRuntimeStatus("storage")).not.toBe(beforeRuntimeStatus);
       expect(host.queries.getDeviceRuntimeStatus("missing")).toBeNull();
       expect(host.queries.getDeviceOperatingStatus("missing")).toBeNull();
       expect(host.queries.getPipeFluidItemId("missing")).toBeNull();

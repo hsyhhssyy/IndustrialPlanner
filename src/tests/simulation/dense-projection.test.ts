@@ -19,6 +19,11 @@ import {
   compileDenseTopologyLayout,
 } from "@/simulation/dense/dense-topology";
 import { DenseRuntimeState } from "@/simulation/dense/dense-runtime-state";
+import { DenseSimulationKernel } from "@/simulation/dense/dense-simulation-kernel";
+import { DenseFrameEmitter } from "@/simulation/dense/dense-frame-emitter";
+import { createDenseRegionalDocument } from "@/simulation/dense/dense-regional-document";
+import { createDensePresentationIdentity } from "@/simulation/dense/dense-presentation-identity";
+import { compileSimulationTopology } from "@/simulation/topology/compiler";
 
 // AI-REMOVED 2026-09-14:
 // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -69,6 +74,93 @@ function createDenseProjectionBlueprint(): BlueprintDocument {
 }
 
 describe("ST2-RQ-023 dense projection", () => {
+  it("投影索引与路由键缓存保留增量更新、删除、历史恢复和基地隔离语义", () => {
+    const registry = createRegistryContract();
+    const documents = ["wuling_protocol_core", "wuling_tianwangping_aid"].map((baseId) => ({
+      ...createWorldDocumentFromBlueprint(createDenseProjectionBlueprint()),
+      baseId,
+    }));
+    const executionDocument = createDenseRegionalDocument({ documents, registry });
+    const executionTopology = compileSimulationTopology({
+      document: executionDocument,
+      registry,
+      simulationMode: "regional-multi-base",
+      poweredEntityIds: new Set(executionDocument.entityOrder),
+    });
+    const layout = compileDenseTopologyLayout(executionTopology, registry);
+    const kernel = new DenseSimulationKernel(executionTopology, layout, registry);
+
+    for (const document of documents) {
+      const topology = compileSimulationTopology({
+        document,
+        registry,
+        simulationMode: "single-base",
+        poweredEntityIds: new Set(document.entityOrder),
+      });
+      const identity = createDensePresentationIdentity({
+        baseId: document.baseId,
+        presentationTopology: topology,
+        executionTopology,
+      });
+      const emitter = new DenseFrameEmitter(
+        executionTopology, layout, DENSE_TEST_SESSION, identity.executionDeviceIds,
+      );
+      const initial = emitter.emitInitial(kernel);
+      const projection = new DenseProjectionStore(layout.dictionary, DENSE_TEST_SESSION, identity);
+      projection.apply(initial);
+      const before = projection.materializeSnapshot();
+      expect(Object.keys(before.slots)).toEqual(topology.ordering.slotOrder);
+      expect(Object.keys(before.devices)).toEqual(topology.ordering.deviceOrder);
+      expect(Object.keys(before.nodes)).toEqual(topology.ordering.nodeOrder);
+      for (const slotId of topology.ordering.slotOrder) {
+        expect(before.slots[slotId]).toEqual(projection.getSlot(slotId));
+        expect(before.slots[slotId]?.slotId).toBe(slotId);
+      }
+      for (const deviceId of topology.ordering.deviceOrder) {
+        expect(before.devices[deviceId]).toEqual(projection.getDevice(deviceId));
+        expect(before.devices[deviceId]?.deviceId).toBe(deviceId);
+      }
+      for (const nodeId of topology.ordering.nodeOrder) {
+        expect(before.nodes[nodeId]).toEqual(projection.getNode(nodeId));
+        expect(before.nodes[nodeId]?.nodeId).toBe(nodeId);
+      }
+
+      const executionPrefix = `device:dense-base:${document.baseId}:source-storage:node:`;
+      const visibleKey = initial.routingCursorKeys.find((key) => key.startsWith(executionPrefix))!;
+      expect(visibleKey).toBeDefined();
+      const publicKey = `device:source-storage:node:${visibleKey.slice(executionPrefix.length)}`;
+      const remoteBaseId = documents.find((candidate) => candidate.baseId !== document.baseId)!.baseId;
+      const hiddenKey = layout.dictionary.routingCursorKeys.find((key) =>
+        key.startsWith(`device:dense-base:${remoteBaseId}:source-storage:node:`)
+      )!;
+      expect(hiddenKey).toBeDefined();
+      expect(before.routingCursors[publicKey]).toBe(0);
+
+      projection.apply({
+        ...initial,
+        frameSequence: 2,
+        routingCursorKeys: [visibleKey, hiddenKey],
+        routingCursorValues: Float64Array.of(7, 11),
+      });
+      const updated = projection.materializeSnapshot();
+      expect(updated.routingCursors[publicKey]).toBe(7);
+      expect(Object.keys(updated.routingCursors)).toEqual(Object.keys(before.routingCursors));
+      expect(before.routingCursors[publicKey]).toBe(0);
+      expect(projection.materializeSnapshot()).toEqual(updated);
+
+      projection.apply({
+        ...initial,
+        frameSequence: 3,
+        routingCursorKeys: [],
+        routingCursorValues: new Float64Array(),
+        removedRoutingCursorKeys: [visibleKey],
+      });
+      expect(projection.materializeSnapshot().routingCursors).not.toHaveProperty(publicKey);
+      projection.replaceCheckpoint({ ...initial, frameSequence: 4 });
+      expect(projection.materializeSnapshot()).toEqual(before);
+    }
+  });
+
   it("runs a real blueprint through the explicitly selected dense-v2 host", async () => {
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。

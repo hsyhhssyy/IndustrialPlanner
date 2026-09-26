@@ -130,6 +130,9 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   if (plan.deferredCategories?.includes('logistics') && ['all', 'logistics', 'effects'].includes(category)) {
     throw new Error('Deferred logistics batch is already assembled; validate/apply it, or prepare a new batch before republishing shared manifests');
   }
+  if (plan.deferredCategories?.includes('effects') && ['all', 'effects'].includes(category)) {
+    throw new Error('Port effects are retained for this batch');
+  }
   const registryFluidColors = includes('logistics') && plan.logistics
     ? await stageRegistryFluidColors({
       profileFile: path.join(root, 'buildings/logistics/fluid-profiles.json'),
@@ -220,6 +223,32 @@ async function retainWebsiteEffects(stage, outputDirectory, selectedViews) {
   next.heightMax = Math.max(...fields.map((field) => field.max));
   await save(within(stage, `${prefix}/manifest.json`), next);
   return [...retained.values()];
+}
+
+/** 本批只更新外观时，把当前端口特效逐文件固定为 retained 产物。 */
+export async function retainWebsitePortEffects(batch, destinationRoot = projectRoot) {
+  batch = path.resolve(batch);
+  const plan = await json(path.join(batch, 'import-plan.json'));
+  if (plan.deferredCategories?.includes('effects')) throw new Error('Port effects are already retained');
+  await verifyOriginals(batch, plan);
+  const stage = path.join(batch, 'stage');
+  const retained = [];
+  for (const { outputDirectory } of resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'))) {
+    const relativeRoot = `${path.relative(stage, outputDirectory)}/port-effects`;
+    const currentRoot = within(destinationRoot, relativeRoot);
+    const stagedRoot = within(stage, relativeRoot);
+    if ((await filesInIfPresent(stagedRoot)).length) throw new Error(`Port effects already staged: ${relativeRoot}`);
+    for (const file of await filesIn(currentRoot)) {
+      const relative = `${relativeRoot}/${file}`;
+      await mkdir(path.dirname(within(stage, relative)), { recursive: true });
+      await copyFile(within(destinationRoot, relative), within(stage, relative));
+      retained.push({ path: relative, sha256: await fileHash(within(stage, relative)) });
+    }
+  }
+  plan.retainedProducts = [...(plan.retainedProducts ?? []), ...retained];
+  plan.deferredCategories = [...(plan.deferredCategories ?? []), 'effects'];
+  await save(path.join(batch, 'import-plan.json'), plan);
+  console.log(`Retained ${retained.length} current port-effect files`);
 }
 
 /** 从已发布但尚未应用的批次中排除物流新交付，共享高度清单保留当前未导入的视图。 */
@@ -372,6 +401,15 @@ export async function validateWebsiteBatch(batch) {
       const dynamic = await json(path.join(dynamicRoot, 'manifest.json'));
       if (dynamic.schemaVersion !== 2 || dynamic.format !== 'logistics-spritesheet-v2'
         || dynamic.sourceResolution !== plan.sourceResolution || dynamic.resolution !== resolution) throw new Error('Invalid baked manifest');
+      if (dynamic.cargoBox?.file !== 'cargo/empty-box.webp'
+        || dynamic.cargoBox.width !== 128 * resolution || dynamic.cargoBox.height !== 128 * resolution
+        || dynamic.cargoBox.visibleFootprintCells?.[0] !== 0.5
+        || dynamic.cargoBox.visibleFootprintCells?.[1] !== 0.5) throw new Error('Invalid cargo box delivery');
+      const logisticsRoot = path.join(root, 'logistics');
+      await verifyImage(logisticsRoot, dynamic.cargoBox.file, dynamic.cargoBox.width, dynamic.cargoBox.height);
+      if (await fileHash(path.join(logisticsRoot, dynamic.cargoBox.file)) !== dynamic.cargoBox.sha256) {
+        throw new Error('Cargo box product hash differs');
+      }
       for (const resource of Object.values(dynamic.pages)) {
         await verifyImage(dynamicRoot, resource.file, resource.width, resource.height, resource.data ? 'rgba' : false);
         if (await fileHash(path.join(dynamicRoot, resource.file)) !== resource.sha256) throw new Error(`Baked product hash differs: ${resource.file}`);
@@ -513,8 +551,9 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, batch] = process.argv.slice(2);
-  const commands = { publish: publishWebsiteBatch, 'defer-logistics': deferWebsiteLogistics, validate: validateWebsiteBatch, apply: applyWebsiteBatch, restore: restoreWebsiteBatch,
+  const commands = { publish: publishWebsiteBatch, 'defer-logistics': deferWebsiteLogistics,
+    'retain-effects': retainWebsitePortEffects, validate: validateWebsiteBatch, apply: applyWebsiteBatch, restore: restoreWebsiteBatch,
     ...Object.fromEntries(['static', 'animations', 'logistics', 'effects'].map((category) => [`publish-${category}`, (directory) => publishWebsiteBatch(directory, category)])) };
-  if (!commands[command] || !batch || process.argv.length !== 4) throw new Error('Usage: node src/scripts/import-building-assets.mjs <publish[-static|-animations|-logistics|-effects]|defer-logistics|validate|apply|restore> <batch-directory>');
+  if (!commands[command] || !batch || process.argv.length !== 4) throw new Error('Usage: node src/scripts/import-building-assets.mjs <publish[-static|-animations|-logistics|-effects]|defer-logistics|retain-effects|validate|apply|restore> <batch-directory>');
   await commands[command](batch);
 }

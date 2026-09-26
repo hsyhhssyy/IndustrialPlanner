@@ -40,6 +40,7 @@ const PREFIX_BLUEPRINT_AVATAR = "blueprint-avatar-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
+const BELT_CARGO_BOX_TEXTURE_KEY = "belt-cargo-box"
 const TOP_VIEW_ASSET_ROOT = "3d-top-view"
 const fallbackTextures = new WeakSet<Texture>()
 
@@ -238,6 +239,10 @@ class TextureActionsImpl implements TextureActions {
   }
 
   private resolveCandidatePaths(key: string): string[] {
+    if (key === BELT_CARGO_BOX_TEXTURE_KEY) {
+      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/logistics/cargo/empty-box.webp`)]
+    }
+
     if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
       return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`)]
     }

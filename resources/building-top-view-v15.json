@@ -879,7 +879,7 @@
       "entityId": "furnance_1_liquid",
       "spriteId": "item_port_liquid_furnance_1",
       "package": "buildings/furnance_1/top/package.json",
-      "sourcePath": "furnance_1/top",
+      "sourcePath": "furnance_1/top-liquid",
       "spriteOffset": {
         "x": 0,
         "y": 0,
@@ -4410,7 +4410,7 @@
       "entityId": "planter_1_liquid",
       "spriteId": "item_port_hydro_planter_1",
       "package": "buildings/planter_1/top/package.json",
-      "sourcePath": "planter_1/top",
+      "sourcePath": "planter_1/top-liquid",
       "spriteOffset": {
         "x": 0,
         "y": 0,
@@ -8679,7 +8679,7 @@
       "entityId": "transmuter_1_liquidtrans",
       "spriteId": "transmuter_1_liquidtrans",
       "package": "buildings/transmuter_1/top/package.json",
-      "sourcePath": "transmuter_1/top",
+      "sourcePath": "transmuter_1/top-liquidtrans",
       "spriteOffset": {
         "x": -1,
         "y": 0,
@@ -15528,7 +15528,7 @@
       "entityId": "filling_pd_mc_1_liquid",
       "spriteId": "item_port_liquid_filling_pd_mc_1",
       "package": "buildings/filling_powder_mc_1/top/package.json",
-      "sourcePath": "filling_powder_mc_1/top",
+      "sourcePath": "filling_powder_mc_1/top-gasliquid",
       "spriteOffset": {
         "x": 0,
         "y": 0,

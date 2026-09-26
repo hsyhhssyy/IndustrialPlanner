@@ -38,6 +38,7 @@ import {
 import {
   createInsetItemIconTexture,
   ITEM_ICON_TEXTURE_INSET_PX,
+  isFallbackTexture,
 } from "@/renderer/texture"
 
 import type { DecorationLayer } from "./DecorationLayer"
@@ -56,6 +57,7 @@ import {
 } from "./BeltVisualGeometry"
 
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
+const BELT_CARGO_BOX_TEXTURE_KEY = "belt-cargo-box"
 const BOX_ICON_SIZE_RATIO = 0.72
 // AI-REMOVED 2026-08-20:
 // Reason: 传送带私有裁边常量会让三个物品图标入口继续产生不一致。
@@ -353,10 +355,15 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
       const boxTextureSize = Math.max(1, Math.round(boxSize))
+      ensureTexture(ctx, BELT_CARGO_BOX_TEXTURE_KEY)
+      const publishedBoxTexture = resolvedTextures.get(BELT_CARGO_BOX_TEXTURE_KEY)
+      const activeBoxTexture = publishedBoxTexture && !isFallbackTexture(publishedBoxTexture)
+        ? publishedBoxTexture : null
 
       // 共享 box 纹理：只在 zoom 变化时重新烘焙
       // AI-CORRECTION 2026-08-19: 纹理按整数像素尺寸分桶，主体显示尺寸仍使用精确世界比例，避免连续缩放反复重建纹理。
-      if (sharedBoxTextureSize !== boxTextureSize) {
+      // AI-CORRECTION 2026-09-26: 网站烘焙盒子加载后直接复用源纹理；原有绘制只用于加载期间的首帧。
+      if (!activeBoxTexture && sharedBoxTextureSize !== boxTextureSize) {
         const boxCornerRadius = boxTextureSize * BOX_CORNER_RADIUS_RATIO
         const temp = new Graphics({ roundPixels: true })
         temp
@@ -438,6 +445,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const syncOptions = {
         entries,
         boxSize,
+        boxSpriteSize: activeBoxTexture ? boxSize * 2 : boxSize,
         ensureCargoView,
         cargoViews,
         sharedCargoLayer,
@@ -445,7 +453,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
         insetTextures,
         itemIconMap,
         resolvedTextures,
-        sharedBoxTexture: sharedBoxTexture!,
+        sharedBoxTexture: activeBoxTexture ?? sharedBoxTexture!,
         profiler: ctx.profiler,
       }
       if (ctx.profiler) {
@@ -1048,6 +1056,7 @@ function resolveBeltCargoClipExtensionRect(options: {
 function syncBeltCargoViews(options: {
   entries: readonly BeltCargoRenderEntry[];
   boxSize: number;
+  boxSpriteSize: number;
   ensureCargoView: (index: number) => BeltCargoView;
   cargoViews: readonly BeltCargoView[];
   sharedCargoLayer: Container;
@@ -1092,13 +1101,14 @@ function syncBeltCargoViews(options: {
 
     // 共享 box 纹理：缩放不变时仅设 texture，无 clear / redraw 开销
     // AI-CORRECTION 2026-08-19: 同一整数纹理桶内的缩放会复用 texture，仅同步精确世界比例对应的 Sprite 宽高。
+    // AI-CORRECTION 2026-09-26: 烘焙源图占一格画布、可见盒子占半格，因此 Sprite 画布宽度是目标盒宽的两倍。
     if (view.box.texture !== options.sharedBoxTexture) {
       view.box.texture = options.sharedBoxTexture
-      view.box.width = options.boxSize
-      view.box.height = options.boxSize
-    } else if (view.box.width !== options.boxSize || view.box.height !== options.boxSize) {
-      view.box.width = options.boxSize
-      view.box.height = options.boxSize
+      view.box.width = options.boxSpriteSize
+      view.box.height = options.boxSpriteSize
+    } else if (view.box.width !== options.boxSpriteSize || view.box.height !== options.boxSpriteSize) {
+      view.box.width = options.boxSpriteSize
+      view.box.height = options.boxSpriteSize
     }
 
     const tIcon = performance.now()

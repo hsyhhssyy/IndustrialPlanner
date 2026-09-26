@@ -332,10 +332,21 @@ export class DenseFrameDeltaEncoder {
 
 export class DenseProjectionStore implements DenseProjectionReadModel {
   private readonly lookup: DenseTopologyLookup;
+  private readonly presentationSlotIndexes: ReadonlyMap<string, number>;
+  private readonly presentationDeviceIndexes: ReadonlyMap<string, number>;
+  private readonly presentationNodeIndexes: ReadonlyMap<string, number>;
   private readonly slots: Array<RuntimeTickSnapshot["slots"][string] | null>;
   private readonly devices: Array<RuntimeDeviceSnapshot | null>;
   private readonly nodes: Array<RuntimeNodeSnapshot | null>;
   private readonly routingCursors: Record<string, number> = {};
+  // 身份映射在当前投影生命周期内固定；包括不可见键的 null 结果也只解析一次。
+  private readonly presentationRoutingKeys = new Map<string, string | null>();
+  // 按 delta 分类失效；已返回的只读记录保留旧值，后续帧不会原地修改它们。
+  private materializedSlots: RuntimeTickSnapshot["slots"] | null = null;
+  private materializedDevices: RuntimeTickSnapshot["devices"] | null = null;
+  private materializedNodes: RuntimeTickSnapshot["nodes"] | null = null;
+  private materializedRoutingCursors: RuntimeTickSnapshot["routingCursors"] | null = null;
+  private materializedComponentDomain: RuntimeTickSnapshot["transportComponentDomain"] | null = null;
   private readonly transportComponentDomain: Record<string, string | null> = {};
   private readonly presentationIdentity: DensePresentationIdentity | null;
   private readonly presentationDeviceIds: ReadonlySet<string> | null;
@@ -373,6 +384,15 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   ) {
     assertSessionIdentity(session);
     this.lookup = createDenseTopologyLookup(dictionary);
+    this.presentationSlotIndexes = createPresentationIndex(
+      this.lookup.slotIndexById, presentationIdentity?.executionSlotIdByPresentationId,
+    );
+    this.presentationDeviceIndexes = createPresentationIndex(
+      this.lookup.deviceIndexById, presentationIdentity?.executionDeviceIdByPresentationId,
+    );
+    this.presentationNodeIndexes = createPresentationIndex(
+      this.lookup.nodeIndexById, presentationIdentity?.executionNodeIdByPresentationId,
+    );
     this.slots = Array.from({ length: dictionary.slotIds.length }, () => null);
     this.devices = Array.from({ length: dictionary.deviceIds.length }, () => null);
     this.nodes = Array.from({ length: dictionary.nodeIds.length }, () => null);
@@ -462,6 +482,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
 
   public replaceCheckpoint(delta: DenseFrameDelta): void {
     this.validateDelta(delta, { allowBackwards: true, requireFullCoverage: true });
+    this.materializedSlots = null;
+    this.materializedDevices = null;
+    this.materializedNodes = null;
+    this.materializedRoutingCursors = null;
+    this.materializedComponentDomain = null;
     this.slots.fill(null);
     this.devices.fill(null);
     this.nodes.fill(null);
@@ -518,22 +543,42 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   public getSlot(slotId: string): RuntimeTickSnapshot["slots"][string] | null {
-    if (this.presentationSlotIds !== null && !this.presentationSlotIds.has(slotId)) {
-      return null;
-    }
-    const executionSlotId = this.presentationIdentity
-      ?.executionSlotIdByPresentationId.get(slotId) ?? slotId;
-    const index = this.lookup.slotIndexById.get(executionSlotId);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 将固定的可见性检查和两次 ID 查找合成为一次公开 ID 索引查找。
+    // Trigger: Dense 性能退化；设备报告逐槽调用本方法。
+    // Evidence: CPU profile after-index-cache；映射仅依赖当前 projection 的 identity 与 dictionary。
+    // Replacement: presentationSlotIndexes，由构造函数一次生成。
+    // Risk: Low；索引只含可见 ID，外部基地槽位仍返回 null。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.presentationSlotIds !== null && !this.presentationSlotIds.has(slotId)) {
+    //   return null;
+    // }
+    // const executionSlotId = this.presentationIdentity
+    //   ?.executionSlotIdByPresentationId.get(slotId) ?? slotId;
+    // const index = this.lookup.slotIndexById.get(executionSlotId);
+    const index = this.presentationSlotIndexes.get(slotId);
     return index === undefined ? null : this.slots[index] ?? null;
   }
 
   public getDevice(deviceId: string): RuntimeDeviceSnapshot | null {
-    if (this.presentationDeviceIds !== null && !this.presentationDeviceIds.has(deviceId)) {
-      return null;
-    }
-    const executionDeviceId = this.presentationIdentity
-      ?.executionDeviceIdByPresentationId.get(deviceId) ?? deviceId;
-    const index = this.lookup.deviceIndexById.get(executionDeviceId);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 固定身份映射无需逐设备重复解析。
+    // Trigger: Dense 性能优化。
+    // Evidence: identity 与 dictionary 在 projection 生命周期内固定。
+    // Replacement: presentationDeviceIndexes。
+    // Risk: Low；远端状态查询仍使用 getOperatingStatusDevice 的执行索引。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.presentationDeviceIds !== null && !this.presentationDeviceIds.has(deviceId)) {
+    //   return null;
+    // }
+    // const executionDeviceId = this.presentationIdentity
+    //   ?.executionDeviceIdByPresentationId.get(deviceId) ?? deviceId;
+    // const index = this.lookup.deviceIndexById.get(executionDeviceId);
+    const index = this.presentationDeviceIndexes.get(deviceId);
     return index === undefined ? null : this.devices[index] ?? null;
   }
 
@@ -543,12 +588,22 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   public getNode(nodeId: string): RuntimeNodeSnapshot | null {
-    if (this.presentationNodeIds !== null && !this.presentationNodeIds.has(nodeId)) {
-      return null;
-    }
-    const executionNodeId = this.presentationIdentity
-      ?.executionNodeIdByPresentationId.get(nodeId) ?? nodeId;
-    const index = this.lookup.nodeIndexById.get(executionNodeId);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 固定身份映射无需逐节点重复解析。
+    // Trigger: Dense 性能优化。
+    // Evidence: identity 与 dictionary 在 projection 生命周期内固定。
+    // Replacement: presentationNodeIndexes。
+    // Risk: Low；索引只含可见节点。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.presentationNodeIds !== null && !this.presentationNodeIds.has(nodeId)) {
+    //   return null;
+    // }
+    // const executionNodeId = this.presentationIdentity
+    //   ?.executionNodeIdByPresentationId.get(nodeId) ?? nodeId;
+    // const index = this.lookup.nodeIndexById.get(executionNodeId);
+    const index = this.presentationNodeIndexes.get(nodeId);
     return index === undefined ? null : this.nodes[index] ?? null;
   }
 
@@ -609,7 +664,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       isPowerOutage: this.currentIsPowerOutage,
       baseBatteryJoules: this.baseBatteryJoulesValue,
       baseBatteryCapacity: this.baseBatteryCapacityValue,
-      slots: this.presentationIdentity === null
+      slots: this.materializedSlots ??= (this.presentationIdentity === null
         ? materializeIndexedRecord(
             this.dictionary.slotIds,
             this.slots,
@@ -618,13 +673,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           )
         : materializeProjectedIndexedRecord({
             presentationIds: this.presentationIdentity.topology.ordering.slotOrder,
-            executionIdByPresentationId:
-              this.presentationIdentity.executionSlotIdByPresentationId,
-            executionIds: this.dictionary.slotIds,
+            indexByPresentationId: this.presentationSlotIndexes,
             values: this.slots,
             kind: "slot",
-          }),
-      devices: this.presentationIdentity === null
+          })),
+      devices: this.materializedDevices ??= (this.presentationIdentity === null
         ? materializeIndexedRecord(
             this.dictionary.deviceIds,
             this.devices,
@@ -633,13 +686,11 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           )
         : materializeProjectedIndexedRecord({
             presentationIds: this.presentationIdentity.topology.ordering.deviceOrder,
-            executionIdByPresentationId:
-              this.presentationIdentity.executionDeviceIdByPresentationId,
-            executionIds: this.dictionary.deviceIds,
+            indexByPresentationId: this.presentationDeviceIndexes,
             values: this.devices,
             kind: "device",
-          }),
-      nodes: this.presentationIdentity === null
+          })),
+      nodes: this.materializedNodes ??= (this.presentationIdentity === null
         ? materializeIndexedRecord(
             this.dictionary.nodeIds,
             this.nodes,
@@ -648,22 +699,24 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           )
         : materializeProjectedIndexedRecord({
             presentationIds: this.presentationIdentity.topology.ordering.nodeOrder,
-            executionIdByPresentationId:
-              this.presentationIdentity.executionNodeIdByPresentationId,
-            executionIds: this.dictionary.nodeIds,
+            indexByPresentationId: this.presentationNodeIndexes,
             values: this.nodes,
             kind: "node",
-          }),
+          })),
       transfers: this.getTransfers().map((transfer) => ({ ...transfer })),
-      routingCursors: this.presentationIdentity === null
+      routingCursors: this.materializedRoutingCursors ??= (this.presentationIdentity === null
         ? filterRecordByDevicePrefix(this.routingCursors, this.presentationDeviceIds)
-        : projectRoutingCursorRecord(this.routingCursors, this.presentationIdentity),
-      transportComponentDomain: this.presentationIdentity === null
+        : projectRoutingCursorRecord(
+            this.routingCursors,
+            this.presentationIdentity,
+            this.presentationRoutingKeys,
+          )),
+      transportComponentDomain: this.materializedComponentDomain ??= (this.presentationIdentity === null
         ? filterRecordByKey(this.transportComponentDomain, this.presentationComponentIds)
         : projectTransportComponentRecord(
             this.transportComponentDomain,
             this.presentationIdentity,
-          ),
+          )),
       diagnostics: this.diagnostics.map((diagnostic) => ({ ...diagnostic })),
       gasDiffusions: this.getGasDiffusions().map((diffusion) => ({
         ...diffusion,
@@ -889,6 +942,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   private applySlotChanges(delta: DenseFrameDelta): void {
+    if (delta.changedSlotIndexes.length > 0) this.materializedSlots = null;
     for (let offset = 0; offset < delta.changedSlotIndexes.length; offset += 1) {
       const slotIndex = delta.changedSlotIndexes[offset]!;
       const slotId = requireArrayEntry(this.dictionary.slotIds, slotIndex, "slot");
@@ -913,6 +967,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   private applyDeviceChanges(delta: DenseFrameDelta): void {
+    if (delta.changedDeviceIndexes.length > 0) this.materializedDevices = null;
     for (let offset = 0; offset < delta.changedDeviceIndexes.length; offset += 1) {
       const deviceIndex = delta.changedDeviceIndexes[offset]!;
       const expectedId = requireArrayEntry(this.dictionary.deviceIds, deviceIndex, "device");
@@ -929,6 +984,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   private applyNodeChanges(delta: DenseFrameDelta): void {
+    if (delta.changedNodeIndexes.length > 0) this.materializedNodes = null;
     for (let offset = 0; offset < delta.changedNodeIndexes.length; offset += 1) {
       const nodeIndex = delta.changedNodeIndexes[offset]!;
       const expectedId = requireArrayEntry(this.dictionary.nodeIds, nodeIndex, "node");
@@ -945,6 +1001,9 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   private applyRoutingCursorChanges(delta: DenseFrameDelta): void {
+    if (delta.routingCursorKeys.length > 0 || delta.removedRoutingCursorKeys.length > 0) {
+      this.materializedRoutingCursors = null;
+    }
     for (const key of delta.removedRoutingCursorKeys) {
       delete this.routingCursors[key];
     }
@@ -954,6 +1013,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   }
 
   private applyComponentChanges(delta: DenseFrameDelta): void {
+    if (delta.changedComponentIndexes.length > 0) this.materializedComponentDomain = null;
     for (let offset = 0; offset < delta.changedComponentIndexes.length; offset += 1) {
       const componentId = requireArrayEntry(
         this.dictionary.componentIds,
@@ -1176,22 +1236,54 @@ function materializeIndexedRecord<T>(
   return result;
 }
 
+function createPresentationIndex(
+  executionIndexById: ReadonlyMap<string, number>,
+  executionIdByPresentationId: ReadonlyMap<string, string> | undefined,
+): ReadonlyMap<string, number> {
+  if (executionIdByPresentationId === undefined) return executionIndexById;
+  const indexes = new Map<string, number>();
+  for (const [presentationId, executionId] of executionIdByPresentationId) {
+    const index = executionIndexById.get(executionId);
+    if (index !== undefined) indexes.set(presentationId, index);
+  }
+  return indexes;
+}
+
 function materializeProjectedIndexedRecord<T>(options: {
   readonly presentationIds: readonly string[];
-  readonly executionIdByPresentationId: ReadonlyMap<string, string>;
-  readonly executionIds: readonly string[];
+  readonly indexByPresentationId: ReadonlyMap<string, number>;
   readonly values: readonly (T | null)[];
   readonly kind: string;
 }): Record<string, T> {
-  const executionIndexById = new Map(
-    options.executionIds.map((id, index) => [id, index] as const),
-  );
+  // AI-REMOVED 2026-09-25:
+  // Reason: 拓扑 ID 索引在投影生命周期内固定，不应在每次物化槽、设备和节点时重建。
+  // Trigger: Dense 性能退化调查。
+  // Evidence: materializeSnapshot 每帧调用本函数三次；DenseProjectionStore.lookup 已持有相同索引。
+  // Replacement: options.executionIndexById 复用 DenseProjectionStore.lookup。
+  // AI-CORRECTION 2026-09-25: 进一步在构造时合成为 indexByPresentationId，逐帧只查一次索引。
+  // Risk: Low；索引随新投影构造，拓扑切换不共享旧索引。
+  // Human Review: Required
+  //
+  // Original code:
+  // const executionIndexById = new Map(
+  //   options.executionIds.map((id, index) => [id, index] as const),
+  // );
   const result: Record<string, T> = {};
   for (const presentationId of options.presentationIds) {
-    const executionId = options.executionIdByPresentationId.get(presentationId);
-    const executionIndex = executionId === undefined
-      ? undefined
-      : executionIndexById.get(executionId);
+    // AI-REMOVED 2026-09-25:
+    // Reason: 两级固定身份映射已在投影构造时合并。
+    // Trigger: Dense 快照物化性能优化。
+    // Evidence: CPU profile after-index-cache 中本函数占 2.68 秒。
+    // Replacement: options.indexByPresentationId。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const executionId = options.executionIdByPresentationId.get(presentationId);
+    // const executionIndex = executionId === undefined
+    //   ? undefined
+    //   : executionIndexById.get(executionId);
+    const executionIndex = options.indexByPresentationId.get(presentationId);
     const value = executionIndex === undefined ? undefined : options.values[executionIndex];
     if (value === null || value === undefined) {
       throw new Error(
@@ -1206,11 +1298,16 @@ function materializeProjectedIndexedRecord<T>(options: {
 function projectRoutingCursorRecord<T>(
   values: Readonly<Record<string, T>>,
   identity: DensePresentationIdentity,
+  presentationKeys: Map<string, string | null>,
 ): Record<string, T> {
   const result: Record<string, T> = {};
-  for (const [executionKey, value] of Object.entries(values)) {
-    const presentationKey = projectDenseRoutingKey(identity, executionKey);
-    if (presentationKey !== null) result[presentationKey] = value;
+  for (const executionKey of Object.keys(values)) {
+    let presentationKey = presentationKeys.get(executionKey);
+    if (presentationKey === undefined) {
+      presentationKey = projectDenseRoutingKey(identity, executionKey);
+      presentationKeys.set(executionKey, presentationKey);
+    }
+    if (presentationKey !== null) result[presentationKey] = values[executionKey]!;
   }
   return result;
 }
