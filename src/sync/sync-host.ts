@@ -1520,6 +1520,9 @@ function createWorldDocumentAdapter(
     // directoryPath: (documentKey) => `documents/${encodeURIComponent(documentKey)}`,
     indexPath: "documents/by-base/index.json",
     directoryPath: (baseId) => `documents/by-base/${encodeURIComponent(baseId)}`,
+    deleteRemoteOnlyOnUseLocal: (baseId) => !workspace.registry.baseDefinitions.some(
+      (definition) => definition.id === baseId,
+    ),
     // AI-REMOVED 2026-09-09:
     // Reason: 浏览器复现证明同步未启动，世界文档 hash 开关与故障无关。
     // Trigger: Cloudflare migration E2E 夹具使用过时 provider key。

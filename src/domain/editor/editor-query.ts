@@ -18,9 +18,12 @@ import type {
 	EntityPlacementValidationResult,
 } from "./types/editor-types";
 import type { EditorBaseDocumentSummary } from "./editor-document";
+import type { EditorHistoryRecord } from "./editor-history";
 import type { RegionalDarkPipeLink } from "../shared/dark-pipe-link";
 
 export interface EditorQuery {
+	/** 仅通知新提交的本地编辑；不回放加载、远端同步、撤销或重做。 */
+	subscribeCommittedEdits(listener: (record: EditorHistoryRecord) => void): () => void;
 	getEntityById(entityId: string): WorldEntity | null;
 	listEntities(): readonly WorldEntity[];
 	listPowerRangeProvidersCoveringGridRect(gridRect: GridRect): readonly WorldEntity[];

@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, reaction, runInAction } from "mobx";
 
 import { isRootPublicAssetBaseUrl } from "@/shared/browser/public-asset-url";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
@@ -36,7 +36,7 @@ export interface PwaProgress {
   readonly totalFiles: number;
 }
 
-export type PwaProgressTask = "animation" | "core";
+export type PwaProgressTask = "animation" | "audio" | "core";
 
 export type PwaDeviceAnimationStatus =
   | "idle"
@@ -112,6 +112,43 @@ type PwaServiceWorkerMessage =
   };
 
 export class PwaController {
+  public deviceAudioRequested = false;
+  public deviceAudioStatus: PwaDeviceAnimationStatus = "idle";
+  public deviceAudioProgress: PwaProgress | null = null;
+
+  public bindDeviceAudio(readEnabled: () => boolean): () => void {
+    const dispose = reaction(() => [readEnabled(), this.offlinePreference, this.offlineStatus,
+      this.deviceAnimationStatus] as const, ([enabled]) => {
+      this.deviceAudioRequested = enabled;
+      if (!this.canCacheDeviceAudio) {
+        this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_CANCEL" });
+        this.deviceAudioProgress = null;
+        this.deviceAudioStatus = "idle";
+      } else this.requestDeviceAudioDownload();
+    }, { fireImmediately: true });
+    return () => {
+      dispose();
+      this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_CANCEL" });
+    };
+  }
+
+  private get canCacheDeviceAudio(): boolean {
+    return this.deviceAudioRequested && this.isOfflineModeAccepted
+      && isServiceWorkerSupported() && isRootPublicAssetBaseUrl()
+      && !hasBlockingPwaStatus(this.offlineStatus)
+      && this.offlineStatus !== "checking-update" && this.offlineStatus !== "error"
+      && this.deviceAnimationStatus !== "downloading" && this.deviceAnimationStatus !== "checking-update";
+  }
+
+  public retryDeviceAudioDownload(): void {
+    this.deviceAudioStatus = "idle";
+    this.requestDeviceAudioDownload();
+  }
+
+  private requestDeviceAudioDownload(): void {
+    if (!this.canCacheDeviceAudio || this.deviceAudioStatus === "complete" || this.deviceAudioStatus === "downloading") return;
+    if (this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_START" })) this.deviceAudioStatus = "downloading";
+  }
   public deviceAnimationErrorMessage: string | null = null;
   public deviceAnimationStatus: PwaDeviceAnimationStatus = "idle";
   public deviceAnimationsRequested = false;
@@ -549,7 +586,7 @@ export class PwaController {
   }
 
   private postMessageToActiveServiceWorker(message: {
-    readonly type: "PWA_ANIMATION_CACHE_CANCEL" | "PWA_ANIMATION_CACHE_START";
+    readonly type: "PWA_ANIMATION_CACHE_CANCEL" | "PWA_ANIMATION_CACHE_START" | "PWA_AUDIO_CACHE_START" | "PWA_AUDIO_CACHE_CANCEL";
   }): boolean {
     if (!isServiceWorkerRuntimeSupported()) {
       return false;
@@ -719,6 +756,7 @@ export class PwaController {
   }
 
   private handleOnline(): void {
+    this.requestDeviceAudioDownload();
     if (!this.deviceAnimationsRequested
       || !this.shouldGateDeviceAnimations
       || this.deviceAnimationStatus === "complete"
@@ -762,6 +800,21 @@ export class PwaController {
     const message = parseServiceWorkerMessage(event.data);
 
     if (message === null) {
+      return;
+    }
+
+    if ("task" in message && message.task === "audio") {
+      if (!this.canCacheDeviceAudio) {
+        this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_CANCEL" });
+        return;
+      }
+      if (message.type === "PWA_PRECACHE_PROGRESS") {
+        this.deviceAudioProgress = { ...message };
+        this.deviceAudioStatus = "downloading";
+      } else {
+        this.deviceAudioProgress = null;
+        this.deviceAudioStatus = message.type === "PWA_PRECACHE_DONE" ? "complete" : "error";
+      }
       return;
     }
 
@@ -961,6 +1014,7 @@ async function cleanupDevelopmentPwaState(): Promise<void> {
       .filter((cacheName) =>
         cacheName.startsWith("industrial-planner-precache-")
         || cacheName.startsWith("industrial-planner-animation-precache-")
+        || cacheName.startsWith("industrial-planner-audio-precache-")
       )
       .map((cacheName) => caches.delete(cacheName)),
   );
@@ -1020,7 +1074,7 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
     && typeof value.completedBytes === "number"
     && typeof value.completedFiles === "number"
     && typeof value.currentUrl === "string"
-    && (value.task === "animation" || value.task === "core")
+    && (value.task === "animation" || value.task === "audio" || value.task === "core")
     && typeof value.totalBytes === "number"
     && typeof value.totalFiles === "number") {
     return value as PwaServiceWorkerMessage;
@@ -1028,7 +1082,7 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
 
   if (value.type === "PWA_PRECACHE_DONE"
     && typeof value.cacheName === "string"
-    && (value.task === "animation" || value.task === "core")
+    && (value.task === "animation" || value.task === "audio" || value.task === "core")
     && typeof value.totalBytes === "number"
     && typeof value.totalFiles === "number") {
     return value as PwaServiceWorkerMessage;
@@ -1037,7 +1091,7 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
   if (value.type === "PWA_PRECACHE_ERROR"
     && typeof value.cacheName === "string"
     && typeof value.message === "string"
-    && (value.task === "animation" || value.task === "core")) {
+    && (value.task === "animation" || value.task === "audio" || value.task === "core")) {
     return value as PwaServiceWorkerMessage;
   }
 

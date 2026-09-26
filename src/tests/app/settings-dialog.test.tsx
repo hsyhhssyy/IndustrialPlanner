@@ -13,9 +13,9 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 
-const LEGACY_ENGINE_LAUNCH_PREFERENCE: SimulationEngineLaunchPreference = {
-  activeDenseEnabled: false,
-  desiredDenseEnabled: false,
+const DENSE_ENGINE_LAUNCH_PREFERENCE: SimulationEngineLaunchPreference = {
+  activeDenseEnabled: true,
+  desiredDenseEnabled: true,
   needsRestart: false,
 };
 
@@ -174,7 +174,7 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
-          simulationEngineLaunchPreference={LEGACY_ENGINE_LAUNCH_PREFERENCE}
+          simulationEngineLaunchPreference={DENSE_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });
@@ -222,7 +222,7 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
-          simulationEngineLaunchPreference={LEGACY_ENGINE_LAUNCH_PREFERENCE}
+          simulationEngineLaunchPreference={DENSE_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });

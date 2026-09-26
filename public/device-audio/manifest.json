@@ -1,0 +1,1856 @@
+{
+  "schemaVersion": 1,
+  "sourceVersion": "v1.5-20260924",
+  "clips": {
+    "0126acbc5de31d5a32882e440752c67e5e53557b2591b5bfc0515b075bbadf35": {
+      "path": "device-audio/0126acbc5de31d5a32882e440752c67e5e53557b2591b5bfc0515b075bbadf35.mp3",
+      "bytes": 148268
+    },
+    "02e6eaef647fac97bd11e62ca182a0c27711c963e85049c9808785c927c55b32": {
+      "path": "device-audio/02e6eaef647fac97bd11e62ca182a0c27711c963e85049c9808785c927c55b32.mp3",
+      "bytes": 84740
+    },
+    "065be1868720487b34fc04f6aeafd95d0891d871b0be7c02486b03b243ff52a5": {
+      "path": "device-audio/065be1868720487b34fc04f6aeafd95d0891d871b0be7c02486b03b243ff52a5.mp3",
+      "bytes": 254732
+    },
+    "08f8d0fcb1d62098bd4f48c7ba13108c27376a49328eab6bdc9dc2390741b1ec": {
+      "path": "device-audio/08f8d0fcb1d62098bd4f48c7ba13108c27376a49328eab6bdc9dc2390741b1ec.mp3",
+      "bytes": 49436
+    },
+    "0fde3cd813a286f3032dfdb1709ba1d3f11303de76618440b7541c3a1dc717f8": {
+      "path": "device-audio/0fde3cd813a286f3032dfdb1709ba1d3f11303de76618440b7541c3a1dc717f8.mp3",
+      "bytes": 66428
+    },
+    "14cbd5c0837791d19b5dc0e7dc47951fbe75ce955906b1e4e057c819bf27143e": {
+      "path": "device-audio/14cbd5c0837791d19b5dc0e7dc47951fbe75ce955906b1e4e057c819bf27143e.mp3",
+      "bytes": 171212
+    },
+    "1b20c0f97cb6fb266d53d2193bf8af8aba3aef407750ddf15f34c2d62cabc45b": {
+      "path": "device-audio/1b20c0f97cb6fb266d53d2193bf8af8aba3aef407750ddf15f34c2d62cabc45b.mp3",
+      "bytes": 71420
+    },
+    "271a3ffe560f7f038124627485a26203e4a7405cbce7660a3487e48ed2be4150": {
+      "path": "device-audio/271a3ffe560f7f038124627485a26203e4a7405cbce7660a3487e48ed2be4150.mp3",
+      "bytes": 185804
+    },
+    "28a3865913167c107cc4a422b61e365630cdca3075c86849acd51af581e6149f": {
+      "path": "device-audio/28a3865913167c107cc4a422b61e365630cdca3075c86849acd51af581e6149f.mp3",
+      "bytes": 79028
+    },
+    "331ba1a1aeba3f7e345d8b0561c852858c82cf3bcec802341c5db0c3634c2aba": {
+      "path": "device-audio/331ba1a1aeba3f7e345d8b0561c852858c82cf3bcec802341c5db0c3634c2aba.mp3",
+      "bytes": 56660
+    },
+    "33cab87143fc3ca1d1e8afac946f1a9e6751179fb7ffc629c6c6095fd919144e": {
+      "path": "device-audio/33cab87143fc3ca1d1e8afac946f1a9e6751179fb7ffc629c6c6095fd919144e.mp3",
+      "bytes": 67700
+    },
+    "35b9db58d874e9c510d0bc51f15bd17f9e2769aeac15247c043645036ef04c3a": {
+      "path": "device-audio/35b9db58d874e9c510d0bc51f15bd17f9e2769aeac15247c043645036ef04c3a.mp3",
+      "bytes": 171356
+    },
+    "37df32c5356f396a62ad8a6d478abbc7020f38f3f14a0bf892a404811ee1dd82": {
+      "path": "device-audio/37df32c5356f396a62ad8a6d478abbc7020f38f3f14a0bf892a404811ee1dd82.mp3",
+      "bytes": 23708
+    },
+    "380dc2364f7bd8597d37a95b3bfb744f4dcee56750b61fe6f3b153f83498efb5": {
+      "path": "device-audio/380dc2364f7bd8597d37a95b3bfb744f4dcee56750b61fe6f3b153f83498efb5.mp3",
+      "bytes": 57572
+    },
+    "3905b52156500268034067cc1c6a71d7d87255f4a15b59db03670d67f156f22e": {
+      "path": "device-audio/3905b52156500268034067cc1c6a71d7d87255f4a15b59db03670d67f156f22e.mp3",
+      "bytes": 54668
+    },
+    "39e73a1042ada8a9ba9b4df58544954aebe5dcc8d2cb81d2ad21bf2e336b0a3b": {
+      "path": "device-audio/39e73a1042ada8a9ba9b4df58544954aebe5dcc8d2cb81d2ad21bf2e336b0a3b.mp3",
+      "bytes": 66236
+    },
+    "3ab0def71cff633bf5f13f51778c0b6447796c4f9977278c5aaa5a113cacc620": {
+      "path": "device-audio/3ab0def71cff633bf5f13f51778c0b6447796c4f9977278c5aaa5a113cacc620.mp3",
+      "bytes": 325532
+    },
+    "3ff6fd125f19cb9bf7731615051c7cb8dabe096467338fb17cce7c58bb6b2e5f": {
+      "path": "device-audio/3ff6fd125f19cb9bf7731615051c7cb8dabe096467338fb17cce7c58bb6b2e5f.mp3",
+      "bytes": 579788
+    },
+    "4149d803c50ede5f458aba172ad16b1d36eb672ec446a9aa048e02163ffc5dd0": {
+      "path": "device-audio/4149d803c50ede5f458aba172ad16b1d36eb672ec446a9aa048e02163ffc5dd0.mp3",
+      "bytes": 74876
+    },
+    "42e82961e3d6df238689afb1832915470d44b83faaef0a19145763c5395d96e4": {
+      "path": "device-audio/42e82961e3d6df238689afb1832915470d44b83faaef0a19145763c5395d96e4.mp3",
+      "bytes": 174212
+    },
+    "449734010d4d3af5fda3698d508cd076031c5ddf26d9c1ff8374b81ed8315b89": {
+      "path": "device-audio/449734010d4d3af5fda3698d508cd076031c5ddf26d9c1ff8374b81ed8315b89.mp3",
+      "bytes": 679436
+    },
+    "484264c85cc2a781ed907d54fc8b90ca2a19a0de588cdbf82d592b476806664b": {
+      "path": "device-audio/484264c85cc2a781ed907d54fc8b90ca2a19a0de588cdbf82d592b476806664b.mp3",
+      "bytes": 99836
+    },
+    "4a601688ccdca100f3c3768f68879632f31bf642eefa99edb633b3d84fd31777": {
+      "path": "device-audio/4a601688ccdca100f3c3768f68879632f31bf642eefa99edb633b3d84fd31777.mp3",
+      "bytes": 102980
+    },
+    "52f51661a26a3cee6d3cd89a5de0dd974ad891cdf839626cc0468fcf37a27089": {
+      "path": "device-audio/52f51661a26a3cee6d3cd89a5de0dd974ad891cdf839626cc0468fcf37a27089.mp3",
+      "bytes": 75812
+    },
+    "56b0feb73981727e5c27b109e15b0ec46529d328ecff3ef7b0d07927f5c01be2": {
+      "path": "device-audio/56b0feb73981727e5c27b109e15b0ec46529d328ecff3ef7b0d07927f5c01be2.mp3",
+      "bytes": 214628
+    },
+    "5cba60200c62e25e1aac21dcebeedd24e6bafe26a43c21e7f3eea2f09e9b5464": {
+      "path": "device-audio/5cba60200c62e25e1aac21dcebeedd24e6bafe26a43c21e7f3eea2f09e9b5464.mp3",
+      "bytes": 277196
+    },
+    "5da07aaf502c62794080ed0c6e5ac0733ac96309fa5c571865717b02d205a324": {
+      "path": "device-audio/5da07aaf502c62794080ed0c6e5ac0733ac96309fa5c571865717b02d205a324.mp3",
+      "bytes": 348956
+    },
+    "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024": {
+      "path": "device-audio/5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024.mp3",
+      "bytes": 20540
+    },
+    "6bd3e9c64804340d24b7d276856c702e67376d9beb88cb5da538a8c36a2ff316": {
+      "path": "device-audio/6bd3e9c64804340d24b7d276856c702e67376d9beb88cb5da538a8c36a2ff316.mp3",
+      "bytes": 77228
+    },
+    "6e01f2fbdd738858082266a54586608f17d00e9b114224d8831633152b3b67bc": {
+      "path": "device-audio/6e01f2fbdd738858082266a54586608f17d00e9b114224d8831633152b3b67bc.mp3",
+      "bytes": 87092
+    },
+    "6e1c9de66876fd8a812984ac128ebc85cb9d453a326de032c218e054fbe12e1f": {
+      "path": "device-audio/6e1c9de66876fd8a812984ac128ebc85cb9d453a326de032c218e054fbe12e1f.mp3",
+      "bytes": 90500
+    },
+    "71ac23d7bff00f562769cbedc0898fd230cd77d68a39130a2b42c348427dcb23": {
+      "path": "device-audio/71ac23d7bff00f562769cbedc0898fd230cd77d68a39130a2b42c348427dcb23.mp3",
+      "bytes": 340076
+    },
+    "76e5d26fb35881755b652ae6e642669c2ad9a93fc8705d5a71594eade4f00f5e": {
+      "path": "device-audio/76e5d26fb35881755b652ae6e642669c2ad9a93fc8705d5a71594eade4f00f5e.mp3",
+      "bytes": 133292
+    },
+    "770467750c122f59099a5c4d474ccfbd30d994c268f486ddbb1466e9d5936ca1": {
+      "path": "device-audio/770467750c122f59099a5c4d474ccfbd30d994c268f486ddbb1466e9d5936ca1.mp3",
+      "bytes": 176492
+    },
+    "82cd3e2648a88a1cad91024153f7f14ef92ea2e22617176e03a18f2aec149233": {
+      "path": "device-audio/82cd3e2648a88a1cad91024153f7f14ef92ea2e22617176e03a18f2aec149233.mp3",
+      "bytes": 80444
+    },
+    "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8": {
+      "path": "device-audio/83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8.mp3",
+      "bytes": 22556
+    },
+    "893f1c4a456ba205cabc9e59b13b7fd5d803ebf3e3ae1a31c4a72b0c8b2b8132": {
+      "path": "device-audio/893f1c4a456ba205cabc9e59b13b7fd5d803ebf3e3ae1a31c4a72b0c8b2b8132.mp3",
+      "bytes": 95804
+    },
+    "8f1a081f77e3b58097f7562639ca2cc9716559c16cbbe30a5f47c302986b9915": {
+      "path": "device-audio/8f1a081f77e3b58097f7562639ca2cc9716559c16cbbe30a5f47c302986b9915.mp3",
+      "bytes": 31460
+    },
+    "8fc8c32286c9b8c64a5d6571d740cacdcc46fd1c514d98a85bcd70802a0214e7": {
+      "path": "device-audio/8fc8c32286c9b8c64a5d6571d740cacdcc46fd1c514d98a85bcd70802a0214e7.mp3",
+      "bytes": 90908
+    },
+    "9015c57fef0ac6875209aa394c1cc1a6a9b6f88296bd2cd9c5676c495abe7ff7": {
+      "path": "device-audio/9015c57fef0ac6875209aa394c1cc1a6a9b6f88296bd2cd9c5676c495abe7ff7.mp3",
+      "bytes": 138812
+    },
+    "936c736cf84abfebac0ff051033be67ff3001cec8012fbc87ae61ea17559ec31": {
+      "path": "device-audio/936c736cf84abfebac0ff051033be67ff3001cec8012fbc87ae61ea17559ec31.mp3",
+      "bytes": 94508
+    },
+    "947aeca4c209f16a96e7302283eaafe5a6e22660cb09d993617b450c2dcd0f96": {
+      "path": "device-audio/947aeca4c209f16a96e7302283eaafe5a6e22660cb09d993617b450c2dcd0f96.mp3",
+      "bytes": 105572
+    },
+    "95e4bc18588f01ae963797797d96754556ab329ffd5208e83d5884e812b25551": {
+      "path": "device-audio/95e4bc18588f01ae963797797d96754556ab329ffd5208e83d5884e812b25551.mp3",
+      "bytes": 147548
+    },
+    "95f1bf78f97ad856b73efac29580c2df75877c91bc1910290bdae0a635b94528": {
+      "path": "device-audio/95f1bf78f97ad856b73efac29580c2df75877c91bc1910290bdae0a635b94528.mp3",
+      "bytes": 74684
+    },
+    "9d034fa7ad2d06ddfabcc270c57db1e1f74469df53eb489f86896afb90e1eb39": {
+      "path": "device-audio/9d034fa7ad2d06ddfabcc270c57db1e1f74469df53eb489f86896afb90e1eb39.mp3",
+      "bytes": 63116
+    },
+    "9fa236c5bc91079eef55ef63a672c4d142812d8f014518ea75c84ffa453e94d1": {
+      "path": "device-audio/9fa236c5bc91079eef55ef63a672c4d142812d8f014518ea75c84ffa453e94d1.mp3",
+      "bytes": 47180
+    },
+    "a3570fc9a9d62ff220597001aaa7fbb111519bb1868a930e10e96dd6e7603465": {
+      "path": "device-audio/a3570fc9a9d62ff220597001aaa7fbb111519bb1868a930e10e96dd6e7603465.mp3",
+      "bytes": 113516
+    },
+    "a6f86b47f0fb1d83cf2f62015e28cb0f18b90578cc53d9a33fd37cf41c52d3db": {
+      "path": "device-audio/a6f86b47f0fb1d83cf2f62015e28cb0f18b90578cc53d9a33fd37cf41c52d3db.mp3",
+      "bytes": 110516
+    },
+    "ad556480cd848a2214f426be43fc57894142e4c266c2673e99217e59036b0ff3": {
+      "path": "device-audio/ad556480cd848a2214f426be43fc57894142e4c266c2673e99217e59036b0ff3.mp3",
+      "bytes": 91844
+    },
+    "aef41dddd0c2f4ea7d601f733a66eb4a774ee7370a2d04cb23e043abc85e577d": {
+      "path": "device-audio/aef41dddd0c2f4ea7d601f733a66eb4a774ee7370a2d04cb23e043abc85e577d.mp3",
+      "bytes": 161612
+    },
+    "b28353d78c3aee13a11327b806d22f02a2dbe738928dcab5a30cb7d049b39686": {
+      "path": "device-audio/b28353d78c3aee13a11327b806d22f02a2dbe738928dcab5a30cb7d049b39686.mp3",
+      "bytes": 52484
+    },
+    "b31a2ba34da3337a77a99d5ba424dbd53dbaa9d639938ae94132b23b332073d1": {
+      "path": "device-audio/b31a2ba34da3337a77a99d5ba424dbd53dbaa9d639938ae94132b23b332073d1.mp3",
+      "bytes": 65228
+    },
+    "b437d1cbdd0f0a46bab5e0444520b5c64f33da9833d9f3d2514efb024dd95203": {
+      "path": "device-audio/b437d1cbdd0f0a46bab5e0444520b5c64f33da9833d9f3d2514efb024dd95203.mp3",
+      "bytes": 106484
+    },
+    "b600018da3782db030f08da57438aaa30c85418d65e501bcb4f6b15f505ca977": {
+      "path": "device-audio/b600018da3782db030f08da57438aaa30c85418d65e501bcb4f6b15f505ca977.mp3",
+      "bytes": 147092
+    },
+    "b6cc335d0d6a25c3bb45399f13e3f2f1b7f400762427503f3310d70cc5a91257": {
+      "path": "device-audio/b6cc335d0d6a25c3bb45399f13e3f2f1b7f400762427503f3310d70cc5a91257.mp3",
+      "bytes": 177284
+    },
+    "b84fb0e3ba44a7e63f5ab2760b340b62440a1e074288ca79bc2cc6b0156819fd": {
+      "path": "device-audio/b84fb0e3ba44a7e63f5ab2760b340b62440a1e074288ca79bc2cc6b0156819fd.mp3",
+      "bytes": 218780
+    },
+    "b93954f9d75a940a1f14aee4d6062dba3495cc025c4151d04bb47663e59e86d0": {
+      "path": "device-audio/b93954f9d75a940a1f14aee4d6062dba3495cc025c4151d04bb47663e59e86d0.mp3",
+      "bytes": 129836
+    },
+    "bbc1d0567e991c8e0fca680f110212c1341e9a890889f832da9b9b3ff7caac44": {
+      "path": "device-audio/bbc1d0567e991c8e0fca680f110212c1341e9a890889f832da9b9b3ff7caac44.mp3",
+      "bytes": 190796
+    },
+    "bc6a53f0fe91817cff1dcc5dcc21aacbd86eefe9d359a2511869408008ab2891": {
+      "path": "device-audio/bc6a53f0fe91817cff1dcc5dcc21aacbd86eefe9d359a2511869408008ab2891.mp3",
+      "bytes": 145388
+    },
+    "cc5e976c094c446939527a3c6eab68ec43876ef4f646bbb452dcfdb5a402de15": {
+      "path": "device-audio/cc5e976c094c446939527a3c6eab68ec43876ef4f646bbb452dcfdb5a402de15.mp3",
+      "bytes": 78860
+    },
+    "ceacd3f1e943cab76d63d170f70860523686545cd3d026824f1d7776f86d70b8": {
+      "path": "device-audio/ceacd3f1e943cab76d63d170f70860523686545cd3d026824f1d7776f86d70b8.mp3",
+      "bytes": 77396
+    },
+    "d1be9ded7b48a43e71e0a44e78f82ec86d5df9db20d103c11804b3f52536cf61": {
+      "path": "device-audio/d1be9ded7b48a43e71e0a44e78f82ec86d5df9db20d103c11804b3f52536cf61.mp3",
+      "bytes": 77444
+    },
+    "d268cba07153e37c04d0bf3002a85ef2ae2ca9a1f423f4d6023c519704f323db": {
+      "path": "device-audio/d268cba07153e37c04d0bf3002a85ef2ae2ca9a1f423f4d6023c519704f323db.mp3",
+      "bytes": 114764
+    },
+    "d50eebf81915b53901dcc27e3f76fbfafb7fa6c6bc532d7467f93b4e9f188084": {
+      "path": "device-audio/d50eebf81915b53901dcc27e3f76fbfafb7fa6c6bc532d7467f93b4e9f188084.mp3",
+      "bytes": 119732
+    },
+    "d6ccb08b242eb0bc00a7d02fd1140b7b55318aa039fed7ac82f6bee689763b63": {
+      "path": "device-audio/d6ccb08b242eb0bc00a7d02fd1140b7b55318aa039fed7ac82f6bee689763b63.mp3",
+      "bytes": 4364
+    },
+    "e34e66481cd9b0d04d2c0188df4fe97b471c4d4a0f54d03b0eb33d114a3ff2b5": {
+      "path": "device-audio/e34e66481cd9b0d04d2c0188df4fe97b471c4d4a0f54d03b0eb33d114a3ff2b5.mp3",
+      "bytes": 350900
+    },
+    "e38994e38a029eeb65caa1c0c8eb8b07bf17638a1245f72ff8e18a6bb7e97ec7": {
+      "path": "device-audio/e38994e38a029eeb65caa1c0c8eb8b07bf17638a1245f72ff8e18a6bb7e97ec7.mp3",
+      "bytes": 76556
+    },
+    "f4c17a373c2af8aac24f5e5bd6fab361295b6daca9e4a3583119218328325111": {
+      "path": "device-audio/f4c17a373c2af8aac24f5e5bd6fab361295b6daca9e4a3583119218328325111.mp3",
+      "bytes": 255068
+    },
+    "f5bbcd0492599045fb44dad415e7e4968119ef167e468f41b9b0c3635e9ce8f3": {
+      "path": "device-audio/f5bbcd0492599045fb44dad415e7e4968119ef167e468f41b9b0c3635e9ce8f3.mp3",
+      "bytes": 89180
+    },
+    "f7fac3f64aa8714b6624b369e8f1e35d233267785356cf89d84c94d9b3e77c24": {
+      "path": "device-audio/f7fac3f64aa8714b6624b369e8f1e35d233267785356cf89d84c94d9b3e77c24.mp3",
+      "bytes": 82316
+    }
+  },
+  "definitions": {
+    "cmpt_mc_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 3111582072,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2711807168,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "e38994e38a029eeb65caa1c0c8eb8b07bf17638a1245f72ff8e18a6bb7e97ec7",
+        "eventId": 4159572534,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.903,
+        "duration": 3.903
+      },
+      "working": {
+        "clip": "e34e66481cd9b0d04d2c0188df4fe97b471c4d4a0f54d03b0eb33d114a3ff2b5",
+        "eventId": 729098873,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 14.936,
+        "duration": 14.936
+      },
+      "idle": {
+        "clip": "a6f86b47f0fb1d83cf2f62015e28cb0f18b90578cc53d9a33fd37cf41c52d3db",
+        "eventId": 1367028231,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 11.1,
+        "duration": 11.1
+      }
+    },
+    "dismantler_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "b31a2ba34da3337a77a99d5ba424dbd53dbaa9d639938ae94132b23b332073d1",
+        "eventId": 1271445578,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.61,
+        "duration": 3.61
+      },
+      "working": {
+        "clip": "3ff6fd125f19cb9bf7731615051c7cb8dabe096467338fb17cce7c58bb6b2e5f",
+        "eventId": 3434661377,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 31.386,
+        "duration": 31.386
+      }
+    },
+    "dumper_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 969299470,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2481048402,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "39e73a1042ada8a9ba9b4df58544954aebe5dcc8d2cb81d2ad21bf2e336b0a3b",
+        "eventId": 3280101576,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.502,
+        "duration": 4.502
+      },
+      "working": {
+        "clip": "35b9db58d874e9c510d0bc51f15bd17f9e2769aeac15247c043645036ef04c3a",
+        "eventId": 3701414907,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 8.0,
+        "duration": 8.0
+      }
+    },
+    "filling_pd_mc_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2040332840,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3047204400,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "33cab87143fc3ca1d1e8afac946f1a9e6751179fb7ffc629c6c6095fd919144e",
+        "eventId": 3440891422,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.594,
+        "duration": 3.594
+      },
+      "working": {
+        "clip": "aef41dddd0c2f4ea7d601f733a66eb4a774ee7370a2d04cb23e043abc85e577d",
+        "eventId": 1319291401,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 7.75,
+        "duration": 7.75
+      },
+      "idle": {
+        "clip": "6e01f2fbdd738858082266a54586608f17d00e9b114224d8831633152b3b67bc",
+        "eventId": 3922486199,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 7.4,
+        "duration": 7.4
+      }
+    },
+    "filling_pd_mc_1_liquid": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2040332840,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3047204400,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "33cab87143fc3ca1d1e8afac946f1a9e6751179fb7ffc629c6c6095fd919144e",
+        "eventId": 3440891422,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.594,
+        "duration": 3.594
+      },
+      "working": {
+        "clip": "aef41dddd0c2f4ea7d601f733a66eb4a774ee7370a2d04cb23e043abc85e577d",
+        "eventId": 1319291401,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 7.75,
+        "duration": 7.75
+      },
+      "idle": {
+        "clip": "6e01f2fbdd738858082266a54586608f17d00e9b114224d8831633152b3b67bc",
+        "eventId": 3922486199,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 7.4,
+        "duration": 7.4
+      }
+    },
+    "furnance_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1090846031,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2400088953,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "331ba1a1aeba3f7e345d8b0561c852858c82cf3bcec802341c5db0c3634c2aba",
+        "eventId": 2463216435,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.699,
+        "duration": 3.699
+      },
+      "working": {
+        "clip": "b600018da3782db030f08da57438aaa30c85418d65e501bcb4f6b15f505ca977",
+        "eventId": 3493243882,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 7.07,
+        "duration": 7.07
+      },
+      "idle": {
+        "clip": "95e4bc18588f01ae963797797d96754556ab329ffd5208e83d5884e812b25551",
+        "eventId": 2150306304,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 11.1,
+        "duration": 11.1
+      }
+    },
+    "furnance_1_liquid": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1090846031,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2400088953,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "331ba1a1aeba3f7e345d8b0561c852858c82cf3bcec802341c5db0c3634c2aba",
+        "eventId": 2463216435,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.699,
+        "duration": 3.699
+      },
+      "working": {
+        "clip": "b600018da3782db030f08da57438aaa30c85418d65e501bcb4f6b15f505ca977",
+        "eventId": 3493243882,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 7.07,
+        "duration": 7.07
+      },
+      "idle": {
+        "clip": "95e4bc18588f01ae963797797d96754556ab329ffd5208e83d5884e812b25551",
+        "eventId": 2150306304,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 11.1,
+        "duration": 11.1
+      }
+    },
+    "gas_pump_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "28a3865913167c107cc4a422b61e365630cdca3075c86849acd51af581e6149f",
+        "eventId": 3090552590,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 5.317,
+        "duration": 5.317
+      },
+      "working": {
+        "clip": "f4c17a373c2af8aac24f5e5bd6fab361295b6daca9e4a3583119218328325111",
+        "eventId": 2318275181,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 15.037,
+        "duration": 15.037
+      }
+    },
+    "gas_reactor_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "02e6eaef647fac97bd11e62ca182a0c27711c963e85049c9808785c927c55b32",
+        "eventId": 3799906164,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.932,
+        "duration": 4.932
+      }
+    },
+    "gas_storager_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "1b20c0f97cb6fb266d53d2193bf8af8aba3aef407750ddf15f34c2d62cabc45b",
+        "eventId": 183010341,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.824,
+        "duration": 3.824
+      },
+      "working": {
+        "clip": "d6ccb08b242eb0bc00a7d02fd1140b7b55318aa039fed7ac82f6bee689763b63",
+        "eventId": 3235737868,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "grinder_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2143610006,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1709434538,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "0fde3cd813a286f3032dfdb1709ba1d3f11303de76618440b7541c3a1dc717f8",
+        "eventId": 1867712504,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 2.992,
+        "duration": 2.992
+      },
+      "working": {
+        "clip": "56b0feb73981727e5c27b109e15b0ec46529d328ecff3ef7b0d07927f5c01be2",
+        "eventId": 4189276867,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 8.9,
+        "duration": 8.9
+      }
+    },
+    "liquid_cleaner_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 827570103,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1118712465,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "cc5e976c094c446939527a3c6eab68ec43876ef4f646bbb452dcfdb5a402de15",
+        "eventId": 114084012,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.887,
+        "duration": 3.887
+      },
+      "working": {
+        "clip": "271a3ffe560f7f038124627485a26203e4a7405cbce7660a3487e48ed2be4150",
+        "eventId": 674672818,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 13.174,
+        "duration": 13.174
+      }
+    },
+    "liquid_purifier_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "95f1bf78f97ad856b73efac29580c2df75877c91bc1910290bdae0a635b94528",
+        "eventId": 2811887969,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.877,
+        "duration": 3.877
+      }
+    },
+    "liquid_purifier_1_gas": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "95f1bf78f97ad856b73efac29580c2df75877c91bc1910290bdae0a635b94528",
+        "eventId": 2811887969,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.877,
+        "duration": 3.877
+      }
+    },
+    "liquid_storager_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1215062438,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2073985402,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "9d034fa7ad2d06ddfabcc270c57db1e1f74469df53eb489f86896afb90e1eb39",
+        "eventId": 2096410393,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.845,
+        "duration": 3.845
+      }
+    },
+    "loader_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1376577148,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1308079804,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_admission": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_connector": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1726675596,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1346617932,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_converger": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 3226295914,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3127615190,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_hongs_bus": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_hongs_bus_source": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "log_splitter": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1631973820,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1909592316,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "miner_2": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2594950780,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2686381756,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "ad556480cd848a2214f426be43fc57894142e4c266c2673e99217e59036b0ff3",
+        "eventId": 2386520307,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.556,
+        "duration": 4.556
+      },
+      "working": {
+        "clip": "065be1868720487b34fc04f6aeafd95d0891d871b0be7c02486b03b243ff52a5",
+        "eventId": 3645213525,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 12.333,
+        "duration": 12.333
+      },
+      "idle": {
+        "clip": "8fc8c32286c9b8c64a5d6571d740cacdcc46fd1c514d98a85bcd70802a0214e7",
+        "eventId": 1399380619,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 6.167,
+        "duration": 6.167
+      }
+    },
+    "miner_3": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2594950780,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2686381756,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "484264c85cc2a781ed907d54fc8b90ca2a19a0de588cdbf82d592b476806664b",
+        "eventId": 1404942228,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.784,
+        "duration": 4.784
+      },
+      "working": {
+        "clip": "5cba60200c62e25e1aac21dcebeedd24e6bafe26a43c21e7f3eea2f09e9b5464",
+        "eventId": 1126141632,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 12.267,
+        "duration": 12.267
+      },
+      "idle": {
+        "clip": "ceacd3f1e943cab76d63d170f70860523686545cd3d026824f1d7776f86d70b8",
+        "eventId": 2366104498,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 5.933,
+        "duration": 5.933
+      }
+    },
+    "miner_4": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 3576194354,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1463241710,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "4a601688ccdca100f3c3768f68879632f31bf642eefa99edb633b3d84fd31777",
+        "eventId": 1374282465,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 5.076,
+        "duration": 5.076
+      },
+      "working": {
+        "clip": "d268cba07153e37c04d0bf3002a85ef2ae2ca9a1f423f4d6023c519704f323db",
+        "eventId": 1871248999,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.9,
+        "duration": 4.9
+      }
+    },
+    "mix_pool_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2665619973,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 100135627,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "947aeca4c209f16a96e7302283eaafe5a6e22660cb09d993617b450c2dcd0f96",
+        "eventId": 295885913,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 5.367,
+        "duration": 5.367
+      },
+      "working": {
+        "clip": "a3570fc9a9d62ff220597001aaa7fbb111519bb1868a930e10e96dd6e7603465",
+        "eventId": 296733588,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 5.517,
+        "duration": 5.517
+      }
+    },
+    "mix_pool_2": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "4149d803c50ede5f458aba172ad16b1d36eb672ec446a9aa048e02163ffc5dd0",
+        "eventId": 1317844331,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.647,
+        "duration": 4.647
+      },
+      "working": {
+        "clip": "9015c57fef0ac6875209aa394c1cc1a6a9b6f88296bd2cd9c5676c495abe7ff7",
+        "eventId": 4066127002,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 7.0,
+        "duration": 7.0
+      }
+    },
+    "planter_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2543564531,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3006510709,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "08f8d0fcb1d62098bd4f48c7ba13108c27376a49328eab6bdc9dc2390741b1ec",
+        "eventId": 4273874887,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 2.459,
+        "duration": 2.459
+      },
+      "working": {
+        "clip": "71ac23d7bff00f562769cbedc0898fd230cd77d68a39130a2b42c348427dcb23",
+        "eventId": 151069158,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 20.093,
+        "duration": 20.093
+      },
+      "idle": {
+        "clip": "0126acbc5de31d5a32882e440752c67e5e53557b2591b5bfc0515b075bbadf35",
+        "eventId": 512088996,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 11.1,
+        "duration": 11.1
+      }
+    },
+    "planter_1_liquid": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2543564531,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3006510709,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "08f8d0fcb1d62098bd4f48c7ba13108c27376a49328eab6bdc9dc2390741b1ec",
+        "eventId": 4273874887,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 2.459,
+        "duration": 2.459
+      },
+      "working": {
+        "clip": "71ac23d7bff00f562769cbedc0898fd230cd77d68a39130a2b42c348427dcb23",
+        "eventId": 151069158,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 20.093,
+        "duration": 20.093
+      },
+      "idle": {
+        "clip": "0126acbc5de31d5a32882e440752c67e5e53557b2591b5bfc0515b075bbadf35",
+        "eventId": 512088996,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 11.1,
+        "duration": 11.1
+      }
+    },
+    "power_diffuser_1": {
+      "build": {
+        "clip": "8f1a081f77e3b58097f7562639ca2cc9716559c16cbbe30a5f47c302986b9915",
+        "eventId": 1163719606,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.6,
+        "duration": 1.6
+      },
+      "remove": {
+        "clip": "37df32c5356f396a62ad8a6d478abbc7020f38f3f14a0bf892a404811ee1dd82",
+        "eventId": 3654253642,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      }
+    },
+    "power_sta_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 96719448,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3085500960,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "3905b52156500268034067cc1c6a71d7d87255f4a15b59db03670d67f156f22e",
+        "eventId": 209059331,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 2.904,
+        "duration": 2.904
+      },
+      "working": {
+        "clip": "76e5d26fb35881755b652ae6e642669c2ad9a93fc8705d5a71594eade4f00f5e",
+        "eventId": 1125985113,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 6.781,
+        "duration": 6.781
+      }
+    },
+    "seedcol_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2258412057,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 194827719,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "380dc2364f7bd8597d37a95b3bfb744f4dcee56750b61fe6f3b153f83498efb5",
+        "eventId": 3833731869,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 2.736,
+        "duration": 2.736
+      },
+      "working": {
+        "clip": "3ab0def71cff633bf5f13f51778c0b6447796c4f9977278c5aaa5a113cacc620",
+        "eventId": 1815229760,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 19.5,
+        "duration": 19.5
+      },
+      "idle": {
+        "clip": "b6cc335d0d6a25c3bb45399f13e3f2f1b7f400762427503f3310d70cc5a91257",
+        "eventId": 3055192626,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 10.4,
+        "duration": 10.4
+      }
+    },
+    "shaper_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2360843274,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 631939574,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "9fa236c5bc91079eef55ef63a672c4d142812d8f014518ea75c84ffa453e94d1",
+        "eventId": 4206227296,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.09,
+        "duration": 3.09
+      },
+      "working": {
+        "clip": "770467750c122f59099a5c4d474ccfbd30d994c268f486ddbb1466e9d5936ca1",
+        "eventId": 2902423039,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 10.5,
+        "duration": 10.5
+      }
+    },
+    "shaper_1_gas": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2360843274,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 631939574,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "9fa236c5bc91079eef55ef63a672c4d142812d8f014518ea75c84ffa453e94d1",
+        "eventId": 4206227296,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.09,
+        "duration": 3.09
+      },
+      "working": {
+        "clip": "770467750c122f59099a5c4d474ccfbd30d994c268f486ddbb1466e9d5936ca1",
+        "eventId": 2902423039,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 10.5,
+        "duration": 10.5
+      }
+    },
+    "sp_hub_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1105976536,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3941697952,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "d50eebf81915b53901dcc27e3f76fbfafb7fa6c6bc532d7467f93b4e9f188084",
+        "eventId": 3854970476,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 8.625,
+        "duration": 8.625
+      },
+      "working": {
+        "clip": "5da07aaf502c62794080ed0c6e5ac0733ac96309fa5c571865717b02d205a324",
+        "eventId": 428505561,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 22.818,
+        "duration": 22.818
+      }
+    },
+    "sp_sub_hub_1": {
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3941697952,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "storager_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 2905089398,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3064400650,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "f7fac3f64aa8714b6624b369e8f1e35d233267785356cf89d84c94d9b3e77c24",
+        "eventId": 1987966184,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.553,
+        "duration": 4.553
+      }
+    },
+    "thickener_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 653430922,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 1887012726,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "d1be9ded7b48a43e71e0a44e78f82ec86d5df9db20d103c11804b3f52536cf61",
+        "eventId": 1316913412,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.931,
+        "duration": 3.931
+      },
+      "working": {
+        "clip": "b84fb0e3ba44a7e63f5ab2760b340b62440a1e074288ca79bc2cc6b0156819fd",
+        "eventId": 4038246015,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 8.656,
+        "duration": 8.656
+      },
+      "idle": {
+        "clip": "42e82961e3d6df238689afb1832915470d44b83faaef0a19145763c5395d96e4",
+        "eventId": 256757089,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 10.2,
+        "duration": 10.2
+      }
+    },
+    "tools_asm_mc_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 3029898067,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 2723169621,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "b28353d78c3aee13a11327b806d22f02a2dbe738928dcab5a30cb7d049b39686",
+        "eventId": 2700954835,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.133,
+        "duration": 3.133
+      },
+      "working": {
+        "clip": "bc6a53f0fe91817cff1dcc5dcc21aacbd86eefe9d359a2511869408008ab2891",
+        "eventId": 967502406,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 7.9,
+        "duration": 7.9
+      },
+      "idle": {
+        "clip": "b437d1cbdd0f0a46bab5e0444520b5c64f33da9833d9f3d2514efb024dd95203",
+        "eventId": 2070749700,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 10.839,
+        "duration": 10.839
+      }
+    },
+    "transmuter_1_gastrans": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "6bd3e9c64804340d24b7d276856c702e67376d9beb88cb5da538a8c36a2ff316",
+        "eventId": 1415161554,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.944,
+        "duration": 3.944
+      }
+    },
+    "transmuter_1_liquidtrans": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "6bd3e9c64804340d24b7d276856c702e67376d9beb88cb5da538a8c36a2ff316",
+        "eventId": 1415161554,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.944,
+        "duration": 3.944
+      }
+    },
+    "transmuter_2_gastrans": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "52f51661a26a3cee6d3cd89a5de0dd974ad891cdf839626cc0468fcf37a27089",
+        "eventId": 1771493039,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.022,
+        "duration": 4.022
+      }
+    },
+    "transmuter_2_solidtrans": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "52f51661a26a3cee6d3cd89a5de0dd974ad891cdf839626cc0468fcf37a27089",
+        "eventId": 1771493039,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 4.022,
+        "duration": 4.022
+      }
+    },
+    "udpipe_loader_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "udpipe_loader_2": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "udpipe_unloader_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "udpipe_unloader_2": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "unloader_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 555287265,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3249438175,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      }
+    },
+    "vaporizer_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "6e1c9de66876fd8a812984ac128ebc85cb9d453a326de032c218e054fbe12e1f",
+        "eventId": 1212463411,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 5.094,
+        "duration": 5.094
+      },
+      "working": {
+        "clip": "bbc1d0567e991c8e0fca680f110212c1341e9a890889f832da9b9b3ff7caac44",
+        "eventId": 3241476625,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 15.832,
+        "duration": 15.832
+      }
+    },
+    "water_pump_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 3559294087,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 850958881,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "b93954f9d75a940a1f14aee4d6062dba3495cc025c4151d04bb47663e59e86d0",
+        "eventId": 250036031,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 5.981,
+        "duration": 5.981
+      },
+      "working": {
+        "clip": "14cbd5c0837791d19b5dc0e7dc47951fbe75ce955906b1e4e057c819bf27143e",
+        "eventId": 3645768482,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 10.68,
+        "duration": 10.68
+      }
+    },
+    "winder_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 100119430,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3186648282,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "82cd3e2648a88a1cad91024153f7f14ef92ea2e22617176e03a18f2aec149233",
+        "eventId": 3586254768,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.9,
+        "duration": 3.9
+      },
+      "working": {
+        "clip": "f5bbcd0492599045fb44dad415e7e4968119ef167e468f41b9b0c3635e9ce8f3",
+        "eventId": 2615966035,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 5.1,
+        "duration": 5.1
+      },
+      "idle": {
+        "clip": "936c736cf84abfebac0ff051033be67ff3001cec8012fbc87ae61ea17559ec31",
+        "eventId": 287838765,
+        "loop": true,
+        "loopStart": 0.0,
+        "loopEnd": 10.305,
+        "duration": 10.305
+      }
+    },
+    "xiranite_oven_1": {
+      "build": {
+        "clip": "83e1f0d14b842058144cf142df99379e0970a4f7fc202afff3b9e093b6aef9f8",
+        "eventId": 1127497802,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.1,
+        "duration": 1.1
+      },
+      "remove": {
+        "clip": "5dc48314465da0bdbcfa94bd1e178e7d6d3a54a4fcf39284a925cdaa97d67024",
+        "eventId": 3625993014,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 1.0,
+        "duration": 1.0
+      },
+      "uiOpen": {
+        "clip": "893f1c4a456ba205cabc9e59b13b7fd5d803ebf3e3ae1a31c4a72b0c8b2b8132",
+        "eventId": 2252021652,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 3.851,
+        "duration": 3.851
+      },
+      "working": {
+        "clip": "449734010d4d3af5fda3698d508cd076031c5ddf26d9c1ff8374b81ed8315b89",
+        "eventId": 1867477576,
+        "loop": false,
+        "loopStart": 0.0,
+        "loopEnd": 36.607,
+        "duration": 36.607
+      }
+    }
+  }
+}

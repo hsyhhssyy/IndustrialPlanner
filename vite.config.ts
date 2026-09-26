@@ -138,7 +138,7 @@ export default defineConfig({
       },
       injectManifest: {
         // 高度与物流数值图均使用原始 RGBA；动画目录中的数据图随既有动画分区离线下载。
-        globPatterns: ["**/*.{js,css,html,webp,svg,json,webmanifest,md}", "3d-top-view/**/*.rgba.bin"],
+        globPatterns: ["**/*.{js,css,html,webp,svg,json,webmanifest,md,mp3}", "3d-top-view/**/*.rgba.bin"],
         globIgnores: [
           "**/sw.js",
           "**/workbox-*.js",

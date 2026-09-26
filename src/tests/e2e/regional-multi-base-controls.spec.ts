@@ -31,7 +31,16 @@ test("regional multi-base mode keeps full speed controls and resolves timeline U
       selectedGroupId: "experimental",
       values: {
         "other-experimental-features": true,
-        "experimental-dense-simulation-engine": true,
+        // AI-REMOVED 2026-09-26:
+        // Reason: Dense 已是默认引擎，旧 key 不再影响启动选择。
+        // Trigger: 求解器开关反转并移入调试分组。
+        // Evidence: 新启动偏好只读取 debug-legacy-simulation-engine。
+        // Replacement: 下方显式关闭 Legacy 开关。
+        // Risk: Low。
+        // Human Review: Required
+        // Original code:
+        // "experimental-dense-simulation-engine": true,
+        "debug-legacy-simulation-engine": false,
       },
     }));
     localStorage.setItem("v3-experimental-regional-multi-base", "true");

@@ -81,6 +81,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
   gamePlayDeviceAnimations: false,
+  gamePlayDeviceAudio: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
   gameUseInspectorPanel: false,

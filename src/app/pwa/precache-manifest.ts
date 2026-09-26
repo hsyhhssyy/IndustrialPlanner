@@ -8,6 +8,7 @@ export interface PrecacheEntry {
 }
 
 export interface PartitionedPrecacheEntries {
+  readonly audioEntries: readonly PrecacheEntry[];
   readonly animationEntries: readonly PrecacheEntry[];
   readonly coreEntries: readonly PrecacheEntry[];
 }
@@ -33,20 +34,30 @@ export function partitionPrecacheEntries(
   scope: string,
 ): PartitionedPrecacheEntries {
   const animationEntries: PrecacheEntry[] = [];
+  const audioEntries: PrecacheEntry[] = [];
   const coreEntries: PrecacheEntry[] = [];
 
   for (const entry of entries) {
     if (isDeviceAnimationAssetUrl(entry.url, scope)) {
       animationEntries.push(entry);
+    } else if (isDeviceAudioAssetUrl(entry.url, scope)) {
+      audioEntries.push(entry);
     } else {
       coreEntries.push(entry);
     }
   }
 
   return {
+    audioEntries,
     animationEntries,
     coreEntries,
   };
+}
+
+export function isDeviceAudioAssetUrl(value: string | URL, scope: string): boolean {
+  const base = new URL(scope);
+  const url = value instanceof URL ? value : new URL(value, base);
+  return url.origin === base.origin && url.pathname.startsWith(new URL("device-audio/", base).pathname);
 }
 
 export function isDeviceAnimationAssetUrl(value: string | URL, scope: string): boolean {

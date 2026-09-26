@@ -5,6 +5,7 @@ import {
   createRuntimePrecacheCacheUrl,
   hashPrecacheEntries,
   isDeviceAnimationAssetUrl,
+  isDeviceAudioAssetUrl,
   normalizePrecacheEntries,
   partitionPrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -90,9 +91,22 @@ describe("precache manifest helpers", () => {
     ];
 
     expect(partitionPrecacheEntries(entries, scope)).toEqual({
+      audioEntries: [],
       animationEntries: [entries[1], entries[2]],
       coreEntries: [entries[0]],
     });
+  });
+
+  it("keeps audio optional and scoped independently from core and animation resources", () => {
+    const scope = "https://planner.example.com/tools/current/";
+    const entries = ["index.html", "device-audio/manifest.json", "device-audio/hash.mp3", "3d-top-view/animations/page.webp"]
+      .map((url) => ({ url, revision: "1" }));
+    expect(partitionPrecacheEntries(entries, scope)).toEqual({
+      coreEntries: [entries[0]], audioEntries: [entries[1], entries[2]], animationEntries: [entries[3]],
+    });
+    expect(isDeviceAudioAssetUrl("device-audio/hash.mp3?revision=1", scope)).toBe(true);
+    expect(isDeviceAudioAssetUrl("https://other.example.com/tools/current/device-audio/hash.mp3", scope)).toBe(false);
+    expect(isDeviceAudioAssetUrl("/device-audio/hash.mp3", scope)).toBe(false);
   });
 
   it("matches only the animation directory inside the current service-worker scope", () => {

@@ -19,12 +19,12 @@ describe("base areas", () => {
       },
       {
         id: "draft_box_upper_left",
-        placeableRect: { x: -50, y: -50, width: 0, height: 0 },
-        outerRect: { x: -60, y: -60, width: 20, height: 20 },
+        placeableRect: { x: -60, y: -60, width: 0, height: 0 },
+        outerRect: { x: -80, y: -80, width: 40, height: 40 },
       },
     ]);
     expect(resolveBaseOuterBounds(draftBox)).toEqual({
-      x: -60, y: -60, width: 400, height: 400,
+      x: -80, y: -80, width: 420, height: 420,
     });
   });
 

@@ -880,6 +880,8 @@ function createContext(
         },
       } as unknown as WorkspaceContract,
       appHost: {
+        // AppHost 新增音频服务；此既有路由夹具仅验证主动打开属性的动作派发。
+        deviceAudio: { playInspector: vi.fn() },
         state: {
           settings: {
             // AI-REMOVED 2026-09-10:

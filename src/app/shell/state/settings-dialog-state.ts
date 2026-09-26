@@ -891,17 +891,26 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.experimental-blueprint-plannerDescription",
         defaultValue: false,
       },
-      {
-        id: "experimental-dense-simulation-engine",
-        kind: "switch",
-        labelKey: "settingsField.experimental-dense-simulation-engine",
-        descriptionKey: "settingsField.experimental-dense-simulation-engineDescription",
-        defaultValue: false,
-        editableWhen: {
-          settingId: "other-experimental-features",
-          equals: true,
-        },
-      },
+      // AI-REMOVED 2026-09-26:
+      // Reason: 旧选项表示启用 Dense，调试选项现表示启用 Legacy。
+      // Trigger: 用户要求默认 Dense，并将旧版求解器开关移到调试分组。
+      // Evidence: 本分组的设置会受实验性总开关禁用和归零，语义不符。
+      // Replacement: 下方 debug 分组的 debug-legacy-simulation-engine。
+      // Risk: 原本启用 Dense 的用户升级后使用默认 Dense。
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   id: "experimental-dense-simulation-engine",
+      //   kind: "switch",
+      //   labelKey: "settingsField.experimental-dense-simulation-engine",
+      //   descriptionKey: "settingsField.experimental-dense-simulation-engineDescription",
+      //   defaultValue: false,
+      //   editableWhen: {
+      //     settingId: "other-experimental-features",
+      //     equals: true,
+      //   },
+      // },
       {
         id: DEVICE_ANIMATIONS_SETTING_ID,
         kind: "switch",
@@ -918,6 +927,14 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
             equals: false,
           },
         ],
+      },
+      {
+        id: "game-play-device-audio",
+        kind: "switch",
+        labelKey: "settingsField.game-play-device-audio",
+        descriptionKey: "settingsField.game-play-device-audioDescription",
+        defaultValue: false,
+        editableWhen: { settingId: EXPERIMENTAL_FEATURES_SETTING_ID, equals: true },
       },
       {
         id: "sync-provider",
@@ -967,6 +984,14 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.other-debug-mode",
         descriptionKey: "settingsField.other-debug-modeDescription",
         defaultValue: false,
+      },
+      {
+        id: "debug-legacy-simulation-engine",
+        kind: "switch",
+        labelKey: "settingsField.debug-legacy-simulation-engine",
+        descriptionKey: "settingsField.debug-legacy-simulation-engineDescription",
+        defaultValue: false,
+        editableWhen: { settingId: "other-debug-mode", equals: true },
       },
       {
         id: "debug-simulation-worker-detailed-report",

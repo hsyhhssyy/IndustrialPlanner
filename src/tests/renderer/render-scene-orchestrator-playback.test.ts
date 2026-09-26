@@ -333,6 +333,7 @@ function createOrchestratorTestHost(seed: {
   const workspace = seed.workspace as RenderHost["workspace"]
   Object.assign(workspace.editor!.queries, {
     subscribeBaseDocuments: () => () => undefined,
+    subscribeCommittedEdits: () => () => undefined,
     getRegionalDarkPipeLinks: () => [],
   })
   const textureManager = {

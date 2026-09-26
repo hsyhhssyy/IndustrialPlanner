@@ -113,6 +113,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       }
 
       const revealInspector = () => {
+        context.appHost.deviceAudio.playInspector();
         if (context.appHost.state.settings.gameUseInspectorPanel) {
           context.appHost.internalActions.setRightDockActiveTab("selection");
           if (!context.appHost.internalState.workbench.rightDockOpen) {

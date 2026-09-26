@@ -10,6 +10,20 @@ import {
 import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
+  it("keeps device audio independent of animation and image style, persists it and honors the experimental master", () => {
+    const controller = new WorkbenchSettingsDialogController();
+    expect(controller.getValue("game-play-device-audio")).toBe(false);
+    expect(controller.isSettingEditable("game-play-device-audio")).toBe(false);
+    controller.updateSwitchValue("other-experimental-features", true);
+    controller.updateSwitchValue("game-play-device-audio", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
+    expect(controller.isSettingEditable("game-play-device-audio")).toBe(true);
+    expect(controller.getValue("game-play-device-audio")).toBe(true);
+    const restored = new WorkbenchSettingsDialogController();
+    expect(restored.getValue("game-play-device-audio")).toBe(true);
+    restored.updateSwitchValue("other-experimental-features", false);
+    expect(restored.getValue("game-play-device-audio")).toBe(false);
+  });
   afterEach(() => {
     localStorage.clear();
   });
@@ -163,9 +177,11 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": true,
         "game-play-device-animations": false,
+        "game-play-device-audio": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
+        "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": true,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
           ? { "debug-force-flatten-blueprint-version": false }
@@ -174,7 +190,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
         "experimental-blueprint-planner": false,
-        "experimental-dense-simulation-engine": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
@@ -431,7 +446,8 @@ describe("WorkbenchSettingsDialogController", () => {
       selectedGroupId: "experimental",
       values: {
         "other-experimental-features": false,
-        "experimental-dense-simulation-engine": true,
+        "other-debug-mode": true,
+        "debug-legacy-simulation-engine": true,
       },
     }));
 
@@ -478,22 +494,18 @@ describe("WorkbenchSettingsDialogController", () => {
       expect(controller.getValue(setting.id)).toBe(setting.defaultValue);
       expect(controller.isSettingEditable(setting.id)).toBe(false);
     }
-    expect(
-      JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")
-        .values["experimental-dense-simulation-engine"],
-    ).toBe(false);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
 
     controller.updateSelectValue("sync-provider", "cloudflare");
     expect(syncProvider).toBe("none");
 
     controller.updateSwitchValue("other-experimental-features", true);
-    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
     controller.updateSwitchValue("game-play-device-animations", true);
     controller.updateSelectValue("sync-provider", "cloudflare");
     controller.updateSwitchValue("experimental-regional-multi-base", true);
     controller.updateSwitchValue("experimental-virtual-mouse-pointer", true);
 
-    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(true);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
     expect(gamePlayDeviceAnimations).toBe(true);
     expect(syncProvider).toBe("cloudflare");
     expect(regionalMultiBase).toBe(true);
@@ -509,21 +521,29 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(syncProvider).toBe("none");
     expect(regionalMultiBase).toBe(false);
     expect(virtualMousePointer).toBe(false);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
   });
 
-  it("allows the dense simulation engine preference only under the experimental master switch", () => {
+  it("places the legacy solver switch under debug mode, independent of experimental features", () => {
     const controller = new WorkbenchSettingsDialogController();
+    const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
+    const debugGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "debug");
 
-    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(false);
-    expect(controller.isSettingEditable("experimental-dense-simulation-engine")).toBe(false);
+    expect(experimentalGroup?.items.some((setting) => setting.id === "debug-legacy-simulation-engine")).toBe(false);
+    expect(debugGroup?.items.some((setting) => setting.id === "debug-legacy-simulation-engine")).toBe(true);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(false);
+    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(false);
 
-    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
-    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(false);
+    controller.updateSwitchValue("debug-legacy-simulation-engine", true);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(false);
 
-    controller.updateSwitchValue("other-experimental-features", true);
-    expect(controller.isSettingEditable("experimental-dense-simulation-engine")).toBe(true);
-    controller.updateSwitchValue("experimental-dense-simulation-engine", true);
-    expect(controller.getValue("experimental-dense-simulation-engine")).toBe(true);
+    controller.updateSwitchValue("other-debug-mode", true);
+    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(true);
+    controller.updateSwitchValue("debug-legacy-simulation-engine", true);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
+    controller.updateSwitchValue("other-debug-mode", false);
+    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(false);
+    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
   });
 
   it("locks device icons on when simplified device icons are enabled", () => {
@@ -670,9 +690,11 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-inspector-panel": false,
         "game-use-blueprint-style-device-images": false,
         "game-play-device-animations": false,
+        "game-play-device-audio": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
+        "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": false,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
           ? { "debug-force-flatten-blueprint-version": false }
@@ -681,7 +703,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
         "experimental-blueprint-planner": false,
-        "experimental-dense-simulation-engine": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",

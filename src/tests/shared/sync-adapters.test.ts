@@ -1032,6 +1032,69 @@ describe("sync-adapters", () => {
     expect(clearedTouch).toBe(true);
   });
 
+  it("deletes an unknown remote-only base when use-local is chosen", async () => {
+    const client = new MemoryStorageClient();
+    type BaseEntry = {
+      id: string;
+      value: { entities: Record<string, { x: number }> };
+      deletedAt: string | null;
+    };
+    let entries: BaseEntry[] = [{
+      id: "unknown-base",
+      value: { entities: { machine: { x: 1 } } },
+      deletedAt: null,
+    }];
+    const writeLocal = vi.fn(async (entry: BaseEntry) => {
+      entries = entry.deletedAt === null
+        ? [...entries.filter((candidate) => candidate.id !== entry.id), entry]
+        : entries.filter((candidate) => candidate.id !== entry.id);
+    });
+    const adapter = createPatchCollectionWithRevisionAdapter({
+      id: "world-documents",
+      indexPath: "documents/by-base/index.json",
+      directoryPath: (id) => `documents/by-base/${id}`,
+      listLocal: async () => entries,
+      writeLocal,
+      deleteRemoteOnlyOnUseLocal: (id) => id === "unknown-base",
+    });
+
+    await syncAdapter(adapter, client);
+    entries = [];
+    writeLocal.mockClear();
+
+    const run = await createAdapterRun(adapter, client);
+    const item = run.outcome.items[0];
+    expect(item).toMatchObject({
+      adapterId: "world-documents",
+      assetId: "unknown-base",
+      kind: "download",
+      localValue: null,
+    });
+    expect(entries).toHaveLength(1);
+    await item!.applyLocalRestore();
+    await item!.applyUpload();
+
+    const liveIndex = JSON.parse(client.files.get("documents/by-base/index.json") ?? "null") as {
+      entries: Record<string, { deletedAt: string | null }>;
+    };
+    expect(liveIndex.entries["unknown-base"]?.deletedAt).toBeNull();
+    expect(writeLocal).toHaveBeenCalledTimes(1);
+
+    await run.outcome.finalize();
+
+    const deletedIndex = JSON.parse(client.files.get("documents/by-base/index.json") ?? "null") as {
+      entries: Record<string, { deletedAt: string | null }>;
+    };
+    expect(deletedIndex.entries["unknown-base"]?.deletedAt).toEqual(expect.any(String));
+    expect(entries).toHaveLength(0);
+    expect(writeLocal).toHaveBeenCalledTimes(2);
+
+    const nextRun = await createAdapterRun(adapter, client);
+    expect(nextRun.outcome.items).toHaveLength(0);
+    expect(nextRun.outcome.result.status).toBe("idle");
+    await nextRun.outcome.finalize();
+  });
+
   it("does not read unchanged patch asset bodies during full plan classification", async () => {
     const client = new MemoryStorageClient();
     const originalReadTextFile = client.readTextFile.bind(client);

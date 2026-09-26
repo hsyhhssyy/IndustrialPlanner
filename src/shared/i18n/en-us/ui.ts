@@ -170,6 +170,7 @@ const UI: Record<string, string> = {
     "syncConflict.kind.conflict": "Conflict (both changed)",
     "syncConflict.remoteUpdatedAt": "Remote upload time: {time}",
     "syncConflict.unknownTime": "Unknown",
+    "syncConflict.useLocalDeleteUnknownBase": "Use Mine (delete remote base if no local copy existed)",
     "syncConflict.apply": "Apply All Choices",
     "syncConflict.batchUseLocal": "Use Mine for All",
     "syncConflict.batchUseRemote": "Use Remote for All",
@@ -454,6 +455,8 @@ const UI: Record<string, string> = {
     "settingsField.game-use-blueprint-style-device-images": "Use Blueprint Appearance",
     "settingsField.game-use-blueprint-style-device-imagesDescription": "Display devices with the blueprint appearance; this does not improve performance.",
     "settingsField.game-play-device-animations": "Play Device Animations",
+    "settingsField.game-play-device-audio": "Play Device Sounds",
+    "settingsField.game-play-device-audioDescription": "Play construction, removal, properties and operation sounds, prioritizing devices near the center of the view.",
     "settingsField.game-play-device-animationsDescription": "Animate supported devices when experimental features are enabled; blueprint style always uses static blueprint sprites.",
     "settingsField.game-play-device-animations-warning-confirm": "Confirm",
     "settingsField.game-play-device-animations-warning-message": "Enabling animations requires an additional download of about 200 MB of animation resources and uses approximately 2 GB to 4 GB of video memory at runtime. It is not recommended on lower-performance computers or mobile devices. Turning this option off does not remove downloaded animation resources, and reopening it later will resume the download.",
@@ -467,11 +470,24 @@ const UI: Record<string, string> = {
     "settingsField.other-experimental-features-warning-confirm": "Enable Experimental Features",
     "settingsField.other-experimental-features-warning-message": "Experimental features are extremely unstable. Enabling them may corrupt your data or cause data loss. In the worst case, you may need to reset the website to continue using its features. Are you sure you want to enable experimental features?",
     "settingsField.other-experimental-features-warning-title": "Warning",
-    "settingsField.experimental-dense-simulation-engine": "Use New Solver (Reload Required)",
-    "settingsField.experimental-dense-simulation-engineDescription": "Use the experimental new solver after reloading the page. The current simulation will not switch immediately.",
-    "settingsField.experimental-dense-simulation-engine-restart-pending": "Takes Effect After Reload",
-    "settingsField.experimental-dense-simulation-engine-restart-pendingDescription": "This page is still using the solver selected at startup. Reload the page to apply the current setting.",
-    "settingsField.experimental-dense-simulation-engine-reload-confirm": "Reloading will stop the current simulation session, and its runtime state will not be restored. Continue?",
+    // AI-REMOVED 2026-09-26:
+    // Reason: The old text enabled Dense; the debug switch now enables Legacy.
+    // Trigger: Default to Dense and move the Legacy switch to Debug.
+    // Evidence: The old label and description describe the opposite behavior.
+    // Replacement: settingsField.debug-legacy-simulation-engine entries below.
+    // Risk: Low.
+    // Human Review: Required
+    // Original code:
+    // "settingsField.experimental-dense-simulation-engine": "Use New Solver (Reload Required)",
+    // "settingsField.experimental-dense-simulation-engineDescription": "Use the experimental new solver after reloading the page. The current simulation will not switch immediately.",
+    // "settingsField.experimental-dense-simulation-engine-restart-pending": "Takes Effect After Reload",
+    // "settingsField.experimental-dense-simulation-engine-restart-pendingDescription": "This page is still using the solver selected at startup. Reload the page to apply the current setting.",
+    // "settingsField.experimental-dense-simulation-engine-reload-confirm": "Reloading will stop the current simulation session, and its runtime state will not be restored. Continue?",
+    "settingsField.debug-legacy-simulation-engine": "Use Legacy Solver (Reload Required)",
+    "settingsField.debug-legacy-simulation-engineDescription": "When debug mode is on, reload to use the legacy solver. Turn this option or debug mode off, then reload to use the new solver.",
+    "settingsField.debug-legacy-simulation-engine-restart-pending": "Takes Effect After Reload",
+    "settingsField.debug-legacy-simulation-engine-restart-pendingDescription": "This page is still using the solver selected at startup. Reload the page to apply the current setting.",
+    "settingsField.debug-legacy-simulation-engine-reload-confirm": "Reloading will stop the current simulation session, and its runtime state will not be restored. Continue?",
     "settingsAction.reload-and-apply": "Reload and Apply",
     "webDavConfig.enabled": "Enable WebDAV Sync",
     "webDavConfig.enabledDescription": "Sync base documents, blueprints, module balancing data, and production planning data across your devices through WebDAV.",

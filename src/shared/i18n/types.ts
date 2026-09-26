@@ -172,6 +172,7 @@ export type UiKey =
   | "syncConflict.kind.conflict"
   | "syncConflict.remoteUpdatedAt"
   | "syncConflict.unknownTime"
+  | "syncConflict.useLocalDeleteUnknownBase"
   | "syncConflict.apply"
   | "syncConflict.batchUseLocal"
   | "syncConflict.batchUseRemote"
@@ -616,6 +617,8 @@ export type UiKey =
   | "settingsField.game-use-blueprint-style-device-images"
   | "settingsField.game-use-blueprint-style-device-imagesDescription"
   | "settingsField.game-play-device-animations"
+  | "settingsField.game-play-device-audio"
+  | "settingsField.game-play-device-audioDescription"
   | "settingsField.game-play-device-animationsDescription"
   | "settingsField.game-play-device-animations-warning-confirm"
   | "settingsField.game-play-device-animations-warning-message"
@@ -631,11 +634,24 @@ export type UiKey =
   | "settingsField.other-experimental-features-warning-confirm"
   | "settingsField.other-experimental-features-warning-message"
   | "settingsField.other-experimental-features-warning-title"
-  | "settingsField.experimental-dense-simulation-engine"
-  | "settingsField.experimental-dense-simulation-engineDescription"
-  | "settingsField.experimental-dense-simulation-engine-restart-pending"
-  | "settingsField.experimental-dense-simulation-engine-restart-pendingDescription"
-  | "settingsField.experimental-dense-simulation-engine-reload-confirm"
+  // AI-REMOVED 2026-09-26:
+  // Reason: 旧 key 对应启用 Dense，已由调试模式下启用 Legacy 替代。
+  // Trigger: 默认求解器反转，选项移至调试分组。
+  // Evidence: 旧 key 的语义与新开关相反。
+  // Replacement: 下方 settingsField.debug-legacy-simulation-engine 系列 key。
+  // Risk: Low。
+  // Human Review: Required
+  // Original code:
+  // | "settingsField.experimental-dense-simulation-engine"
+  // | "settingsField.experimental-dense-simulation-engineDescription"
+  // | "settingsField.experimental-dense-simulation-engine-restart-pending"
+  // | "settingsField.experimental-dense-simulation-engine-restart-pendingDescription"
+  // | "settingsField.experimental-dense-simulation-engine-reload-confirm"
+  | "settingsField.debug-legacy-simulation-engine"
+  | "settingsField.debug-legacy-simulation-engineDescription"
+  | "settingsField.debug-legacy-simulation-engine-restart-pending"
+  | "settingsField.debug-legacy-simulation-engine-restart-pendingDescription"
+  | "settingsField.debug-legacy-simulation-engine-reload-confirm"
   | "settingsAction.reload-and-apply"
   | "webDavConfig.enabled"
   | "webDavConfig.enabledDescription"

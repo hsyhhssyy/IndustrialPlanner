@@ -77,6 +77,7 @@ export function createEditorHost(
     flushViewportSettings: viewportPersistence.flush,
   });
   const queries: EditorContract["queries"] = createEditorQueries({
+    history: internalHistory,
     document: internalDocument,
     documents: internalDocuments,
     state: editorState,
@@ -114,6 +115,7 @@ export function createEditorHost(
     internalHistory,
     workspace,
     dispose: () => {
+      internalHistory.dispose();
       viewportPersistence?.dispose();
       while (disposers.length > 0) {
         disposers.pop()?.();

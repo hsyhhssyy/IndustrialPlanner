@@ -77,6 +77,27 @@ describe("SyncConflictDialog", () => {
         remoteDeletedAt: null,
         remoteUpdatedAt: "2026-07-29T10:31:00.000Z",
       },
+      {
+        adapterId: "world-documents",
+        assetId: "wuling_xiranflow_cloudseeder",
+        localValue: null,
+        remoteValue: { name: "remote-c" },
+        localHash: "",
+        remoteHash: "remote-hash-c",
+        remoteDeletedAt: null,
+        remoteUpdatedAt: "2026-07-29T10:32:00.000Z",
+        kind: "download",
+      },
+      {
+        adapterId: "world-documents",
+        assetId: "base-empty-name",
+        localValue: { name: "local-d" },
+        remoteValue: { name: "remote-d" },
+        localHash: "local-hash-d",
+        remoteHash: "remote-hash-d",
+        remoteDeletedAt: null,
+        remoteUpdatedAt: "2026-07-29T10:33:00.000Z",
+      },
     ]);
     const sync: SyncContract = {
       state,
@@ -96,6 +117,7 @@ describe("SyncConflictDialog", () => {
       "syncConflict.type.base": "基地",
       "syncConflict.type.blueprint": "蓝图",
       "syncConflict.nameUnavailable": "名称不可用",
+      "syncConflict.useLocalDeleteUnknownBase": "使用我的（本机原无此基地时，删除远端）",
     }[key] ?? key);
     const appHost = {
       workspace: {
@@ -103,6 +125,9 @@ describe("SyncConflictDialog", () => {
           baseDefinitions: [{
             id: "base-a",
             name: "天王坪援建点",
+          }, {
+            id: "base-empty-name",
+            name: " ",
           }],
         },
       },
@@ -152,8 +177,16 @@ describe("SyncConflictDialog", () => {
       "button[aria-label='action.close']",
     )).toBeNull();
     expect(dialog?.textContent).toContain("基地 - 天王坪援建点");
+    expect(dialog?.textContent).toContain("基地 - wuling_xiranflow_cloudseeder");
+    expect(dialog?.textContent).toContain("基地 - 名称不可用");
+    expect(dialog?.textContent).toContain("蓝图 - 名称不可用");
     expect(dialog?.textContent).not.toContain("world-documents");
     expect(dialog?.textContent).not.toContain("base-a");
+    expect(dialog?.textContent).not.toContain("base-empty-name");
+    const unknownBaseFieldset = Array.from(
+      dialog?.querySelectorAll("fieldset") ?? [],
+    ).find((fieldset) => fieldset.textContent?.includes("wuling_xiranflow_cloudseeder"));
+    expect(unknownBaseFieldset?.textContent).toContain("使用我的（本机原无此基地时，删除远端）");
     expect(document.querySelector("input[value='pause']")).toBeNull();
 
     await act(async () => {
@@ -213,6 +246,16 @@ describe("SyncConflictDialog", () => {
       {
         adapterId: "world-documents",
         assetId: "base-a",
+        resolution: "use-remote",
+      },
+      {
+        adapterId: "world-documents",
+        assetId: "wuling_xiranflow_cloudseeder",
+        resolution: "use-remote",
+      },
+      {
+        adapterId: "world-documents",
+        assetId: "base-empty-name",
         resolution: "use-remote",
       },
     ]);

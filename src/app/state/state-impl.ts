@@ -92,6 +92,7 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
   gamePlayDeviceAnimations: boolean;
+  gamePlayDeviceAudio: boolean;
   gameShowDeviceNames: boolean;
   gameShowDeviceIcons: boolean;
   gameUseInspectorPanel: boolean;
@@ -842,6 +843,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,
     gamePlayDeviceAnimations: false,
+    gamePlayDeviceAudio: false,
     gameShowDeviceNames: true,
     gameShowDeviceIcons: false,
     gameUseInspectorPanel: false,

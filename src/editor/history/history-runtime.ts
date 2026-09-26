@@ -22,6 +22,16 @@ import {
 const MAX_HISTORY_PER_DOCUMENT = 100;
 
 export class EditorHistoryRuntime {
+  private readonly committedEditListeners = new Set<(record: EditorHistoryRecord) => void>();
+
+  public subscribeCommittedEdits(listener: (record: EditorHistoryRecord) => void): () => void {
+    this.committedEditListeners.add(listener);
+    return () => { this.committedEditListeners.delete(listener); };
+  }
+
+  public dispose(): void {
+    this.committedEditListeners.clear();
+  }
   private loadSerial = 0;
   private writeQueue = Promise.resolve();
   private requestedDocumentKey: string | null = null;
@@ -134,6 +144,14 @@ export class EditorHistoryRuntime {
       cursorSequence: nextSequence, records: trimmedRecords,
     });
 
+    // 展示订阅失败不能回滚已提交文档，也不能阻断其他订阅。
+    for (const listener of [...this.committedEditListeners]) {
+      try {
+        listener(record);
+      } catch (error) {
+        console.error("Committed edit listener failed", error);
+      }
+    }
     return record;
   }
 

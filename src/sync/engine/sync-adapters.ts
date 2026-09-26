@@ -265,6 +265,8 @@ export interface PatchCollectionWithRevisionAdapterOptions<TValue> {
     scope?: SyncAdapterScope,
   ) => Promise<readonly PatchWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: PatchWithRevisionEntry<TValue>) => Promise<void>;
+  /** 仅在用户对远端独有资产明确选择“使用我的”时，将本地缺席解释为远端删除。 */
+  readonly deleteRemoteOnlyOnUseLocal?: (assetId: string) => boolean;
   // AI-REMOVED 2026-09-09:
   // Reason: 真实浏览器复现证明迁移回写失败源于同步 provider 未激活，此开关不解决当前故障且会引入额外 hash 成本。
   // Trigger: Cloudflare schema migration E2E 夹具仍写旧 provider key，现代激活状态为 disabled。
@@ -601,6 +603,8 @@ interface CreatePlanItemOptions<TValue> {
   readonly remoteDeletedAt: string | null;
   readonly remoteUpdatedAt: string | null;
   readonly writeLocal: (value: TValue, deletedAt: string | null) => Promise<void>;
+  /** 远端独有且本地无值时，“使用我的”的显式处理；默认保持原有跳过语义。 */
+  readonly onUseLocalWithoutLocalValue?: () => Promise<void>;
   /** 远端墓碑落地（二段删除）；不提供则该 asset 不支持墓碑下载。 */
   readonly applyRemoteTombstone: ((remoteDeletedAt: string) => Promise<void>) | null;
   /** 读取远端资产（决策翻转为“用远端”时执行下载）。 */
@@ -677,6 +681,12 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
       return;
     }
 
+    // AI-CORRECTION 2026-09-26: 未注册基地的远端独有文档由用户选择“使用我的”时，
+    // 本地缺席代表删除远端；具体墓碑与本地清理在适配器提供的回调中登记。
+    if (localValue === null && options.onUseLocalWithoutLocalValue !== undefined) {
+      await options.onUseLocalWithoutLocalValue();
+      return;
+    }
     if (localValue === null || localHash === null) {
       logger.warn(`${adapterId}/${assetId}: use-local but local value not found → skipping`);
       return;
@@ -2717,6 +2727,8 @@ async function syncPatchCollectionWithRevision<TValue>(
       continue;
     }
 
+    const deleteOnUseLocal = options.deleteRemoteOnlyOnUseLocal?.(entryId) === true;
+
     const item = createPlanItem<TValue>({
       session,
       collection,
@@ -2735,6 +2747,29 @@ async function syncPatchCollectionWithRevision<TValue>(
       writeLocal: async (value, deletedAt) => {
         await options.writeLocal({ id: entryId, value, deletedAt });
       },
+      onUseLocalWithoutLocalValue: deleteOnUseLocal
+        ? async () => {
+          const deletedAt = new Date().toISOString();
+          const targetContentHash = await createSyncContentHash(session, collection, null);
+          const remoteEntry = remoteIndexState.entries[entryId];
+          transaction.recordUpload({
+            adapterId: options.id,
+            assetId: entryId,
+            params: {
+              collection,
+              assetId: entryId,
+              deletedAt,
+              targetContentHash,
+              baseRevision: remoteEntry?.revision ?? remoteIndexState.revision,
+              baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+            },
+          });
+          transaction.stageDeletion(options.id, entryId, async () => {
+            await options.writeLocal({ id: entryId, value: remoteState.value, deletedAt });
+          });
+          transaction.stageTouch(createSyncAssetKey(collection, entryId), null);
+        }
+        : undefined,
       applyRemoteTombstone: null,
       readRemoteValue: async () =>
         await readRemoteAssetValue(session, collection, entryId, options.normalizeRemote),

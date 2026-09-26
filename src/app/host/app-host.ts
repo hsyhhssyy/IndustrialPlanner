@@ -30,6 +30,7 @@ import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blue
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
+import { DeviceAudioController } from "../audio";
 import { regionalSimulationUiState } from "../state/regional-simulation-ui-state";
 // AI-REMOVED 2026-09-23:
 // Reason: AppHost 构造时正式入口尚未创建 Editor，无法在此注册文档订阅。
@@ -53,6 +54,7 @@ import { regionalSimulationUiState } from "../state/regional-simulation-ui-state
 // import { WebDavSyncAppController } from "../sync/webdav-sync-app-controller";
 
 export interface AppHost extends AppContract {
+  deviceAudio: DeviceAudioController;
   workspace: WorkspaceContract;
   gestureAdapter: GestureAdapter;
   gestureActionRouter: GestureActionRouter<AppHost>;
@@ -86,6 +88,7 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const deviceAudio = new DeviceAudioController(workspace, () => internalState.settings.gamePlayDeviceAudio);
   const regionalSettings = new RegionalSettingsController(workspace.registry);
   const host = {
     workspace,
@@ -202,6 +205,7 @@ export function createAppHost(
     saveBlueprintDialog,
     overlapEntityMenu,
     regionalSettings,
+    deviceAudio,
     encyclopediaPicker,
     recipePicker,
   });
@@ -258,6 +262,7 @@ export function createAppHost(
   Object.assign(host, {
     internalActions,
     dispose: () => {
+      deviceAudio.dispose();
       blueprintFolderDialog.close();
       blueprintPlannerDialog.close();
       blueprintPreview.close();

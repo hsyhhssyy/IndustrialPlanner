@@ -174,6 +174,21 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
                 .replace("{type}", typeLabel)
                 .replace("{name}", itemName);
               const kindLabel = resolveConflictItemKindLabel(item.kind, t);
+              const localChoiceDeletesBase = item.adapterId === "world-documents"
+                && item.kind === "download"
+                // AI-REMOVED 2026-09-26:
+                // Reason: 弹窗状态的 SyncConflictItem 不包含 localValue，直接访问无法通过类型检查。
+                // Trigger: TypeScript TS2339；本次未知基地删除提示。
+                // Evidence: SyncStateImpl.requestConflictResolutions 仅保存 adapterId、assetId、kind、remoteUpdatedAt。
+                // Replacement: 条目类型与注册表缺席共同确定提示，并在文案中保留条件说明。
+                // Risk: 弹窗无法直接区分同步前是否存在本地文档；提示采用条件表达。
+                // Human Review: Required
+                //
+                // Original code:
+                // && item.localValue === null
+                && !appHost.workspace.registry.baseDefinitions.some(
+                  (definition) => definition.id === item.assetId,
+                );
 
               return (
                 <fieldset
@@ -225,7 +240,9 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
                           type="radio"
                           value={resolution}
                         />
-                        <span>{t(resolveResolutionLabel(resolution))}</span>
+                        <span>{t(resolution === "use-local" && localChoiceDeletesBase
+                          ? "syncConflict.useLocalDeleteUnknownBase"
+                          : resolveResolutionLabel(resolution))}</span>
                       </label>
                     ))}
                   </div>
@@ -445,5 +462,8 @@ function resolveConflictItemName(options: {
       return t("syncConflict.currentPlan");
   }
 
-  return name?.trim() || t("syncConflict.nameUnavailable");
+  return name?.trim()
+    || (adapterId === "world-documents" && name === undefined && assetId.trim() !== ""
+      ? assetId
+      : t("syncConflict.nameUnavailable"));
 }

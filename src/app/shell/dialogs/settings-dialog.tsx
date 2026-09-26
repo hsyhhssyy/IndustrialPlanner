@@ -1142,6 +1142,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                     const hasSettingGuide = CONFIG_GUIDE_SETTING_DOC_FILES.has(`${setting.id}.md`);
 
                     // 调试分组：调试模式关闭时隐藏除调试模式开关外的所有项
+                    // AI-CORRECTION 2026-09-26: 此过滤仅作用于设置项；下方待刷新操作在关闭调试模式后仍可见。
                     if (isDebugGroup && index > 0 && !controller.getValue("other-debug-mode")) {
                       return [];
                     }
@@ -1278,6 +1279,14 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "other" && (
                   <>
+                    {/* AI-REMOVED 2026-09-26:
+                    Reason: 求解器开关已移入调试分组，刷新入口与其同组显示。
+                    Trigger: 用户要求旧版求解器开关归属调试分组。
+                    Evidence: 调试分组始终可见，可在关闭调试模式后继续显示待刷新提示。
+                    Replacement: 下方 debug 分组的 SettingsActionCard。
+                    Risk: Low。
+                    Human Review: Required
+                    Original code:
                     {!experimentalEnabled && simulationEngineLaunchPreference.needsRestart ? (
                       <SettingsActionCard
                         buttonLabel={t("settingsAction.reload-and-apply")}
@@ -1286,6 +1295,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                         title={t("settingsField.experimental-dense-simulation-engine-restart-pending")}
                       />
                     ) : null}
+                    */}
                     {/*
                       AI-REMOVED 2026-06-15:
                       Reason: 全部重置操作需要与普通设置项使用同一张卡片，避免按钮脱离设置列表。
@@ -1330,6 +1340,14 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "experimental" && (
                   <>
+                    {/* AI-REMOVED 2026-09-26:
+                    Reason: 求解器选项不再属于实验性功能。
+                    Trigger: 用户要求移入调试分组。
+                    Evidence: 旧刷新入口在实验性分组内，与新版归属不符。
+                    Replacement: 下方 debug 分组的 SettingsActionCard。
+                    Risk: Low。
+                    Human Review: Required
+                    Original code:
                     {simulationEngineLaunchPreference.needsRestart ? (
                       <SettingsActionCard
                         buttonLabel={t("settingsAction.reload-and-apply")}
@@ -1338,6 +1356,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                         title={t("settingsField.experimental-dense-simulation-engine-restart-pending")}
                       />
                     ) : null}
+                    */}
                     {controller.getValue("sync-provider") === "webdav" ? (
                       <WebDavSyncStatusCard
                         enabled={sync?.state.settings.enabled === true
@@ -1363,11 +1382,22 @@ export const SettingsDialog = observer(function SettingsDialog({
                     />
                   </>
                 )}
-                {group.id === "debug"
-                  && controller.getValue("other-debug-mode") === true
-                  && migrationController !== undefined ? (
-                    <V2MigrationSettingsCard controller={migrationController} />
-                  ) : null}
+                {group.id === "debug" && (
+                  <>
+                    {simulationEngineLaunchPreference.needsRestart ? (
+                      <SettingsActionCard
+                        buttonLabel={t("settingsAction.reload-and-apply")}
+                        description={t("settingsField.debug-legacy-simulation-engine-restart-pendingDescription")}
+                        onClick={handleReloadSimulationEngine}
+                        title={t("settingsField.debug-legacy-simulation-engine-restart-pending")}
+                      />
+                    ) : null}
+                    {controller.getValue("other-debug-mode") === true
+                      && migrationController !== undefined ? (
+                        <V2MigrationSettingsCard controller={migrationController} />
+                      ) : null}
+                  </>
+                )}
               </section>
             ))}
           </div>
@@ -1397,11 +1427,11 @@ export const SettingsDialog = observer(function SettingsDialog({
       <ConfirmResetDialog
         confirmDialogState={reloadSimulationEngineConfirmDialogState}
         confirmLabelKey="settingsAction.reload-and-apply"
-        confirmMessageKey="settingsField.experimental-dense-simulation-engine-reload-confirm"
+        confirmMessageKey="settingsField.debug-legacy-simulation-engine-reload-confirm"
         onCancel={handleReloadSimulationEngineCancel}
         onConfirm={handleReloadSimulationEngineConfirm}
         t={t}
-        titleKey="settingsField.experimental-dense-simulation-engine-restart-pending"
+        titleKey="settingsField.debug-legacy-simulation-engine-restart-pending"
       />
     )}
     {clearStorageConfirmDialogState.visible && (

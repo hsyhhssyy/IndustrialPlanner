@@ -70,9 +70,10 @@ export const PwaGateway = observer(function PwaGateway({
   //   return null;
   // }
 
-  const pwaProgress = pwaController.progress;
+  const pwaProgress = pwaController.deviceAudioProgress ?? pwaController.progress;
   const pwaStatus = pwaController.offlineStatus;
   const shouldShowProgress = pwaProgress !== null && (
+    (pwaProgress.task === "audio" && pwaController.deviceAudioStatus === "downloading") ||
     (pwaProgress.task === "core" && (
       pwaStatus === "installing"
       || pwaStatus === "updating"
@@ -127,7 +128,7 @@ export const PwaGateway = observer(function PwaGateway({
             <ProgressToast
               copy={copy}
               progress={pwaProgress}
-              title={pwaProgress.task === "animation"
+              title={pwaProgress.task === "audio" ? copy.audioProgress : pwaProgress.task === "animation"
                 ? copy.animationProgress
                 : pwaStatus === "updating"
                   ? copy.updateProgress
@@ -241,6 +242,18 @@ export const PwaGateway = observer(function PwaGateway({
           notice={pwaController.fullscreenNotice}
           onClose={pwaController.closeFullscreenNotice}
         />
+      ) : null}
+      {pwaController.deviceAudioStatus === "error" ? (
+        <OverlayStackLayer kind="system" layerId="pwa:audio-error" visible>
+          {({ zIndex }) => (
+            <section className={cm(styles, "pwa-gateway-toast pwa-gateway-toast-error")} role="alert" style={{ zIndex }}>
+              <strong>{copy.audioErrorTitle}</strong>
+              <button className={cm(styles, "pwa-gateway-primary-button")} onClick={pwaController.retryDeviceAudioDownload} type="button">
+                {copy.retry}
+              </button>
+            </section>
+          )}
+        </OverlayStackLayer>
       ) : null}
     </>
   );
@@ -393,6 +406,8 @@ function resolveUpdaterVersion(cacheName: string): string {
 }
 
 interface PwaGatewayCopy {
+  readonly audioErrorTitle: string;
+  readonly audioProgress: string;
   readonly animationErrorTitle: string;
   readonly animationProgress: string;
   readonly applyUpdate: string;
@@ -431,6 +446,8 @@ interface PwaGatewayCopy {
 const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewayCopy> = {
   "zh-CN": {
     animationErrorTitle: "动画资源下载失败",
+    audioErrorTitle: "音效资源下载失败",
+    audioProgress: "正在下载音效资源",
     animationProgress: "正在下载动画资源",
     applyUpdate: "更新",
     desktopInstallBody: "可以把应用安装为独立窗口，之后从桌面或启动器直接打开。",
@@ -471,6 +488,8 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
   },
   "en-US": {
     animationErrorTitle: "Animation download failed",
+    audioErrorTitle: "Sound download failed",
+    audioProgress: "Downloading sound resources",
     animationProgress: "Downloading animation resources",
     applyUpdate: "Update",
     desktopInstallBody: "Install the app as a standalone window and open it from your launcher.",

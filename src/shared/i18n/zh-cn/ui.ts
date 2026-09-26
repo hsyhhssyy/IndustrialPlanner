@@ -170,6 +170,7 @@ const UI: Record<string, string> = {
     "syncConflict.kind.conflict": "冲突（双方都有改动）",
     "syncConflict.remoteUpdatedAt": "远端上传时间：{time}",
     "syncConflict.unknownTime": "未知",
+    "syncConflict.useLocalDeleteUnknownBase": "使用我的（本机原无此基地时，删除远端）",
     "syncConflict.apply": "应用全部选择",
     "syncConflict.batchUseLocal": "全部使用我的",
     "syncConflict.batchUseRemote": "全部使用远端",
@@ -447,6 +448,8 @@ const UI: Record<string, string> = {
     "settingsField.game-use-blueprint-style-device-images": "使用蓝图外观",
     "settingsField.game-use-blueprint-style-device-imagesDescription": "使用蓝图外观显示设备，不会提高性能。",
     "settingsField.game-play-device-animations": "播放设备动画",
+    "settingsField.game-play-device-audio": "播放设备音效",
+    "settingsField.game-play-device-audioDescription": "播放设备的建造、拆除、属性和运行音效，优先听取画面中心附近的设备。",
     "settingsField.game-play-device-animationsDescription": "实验性功能开启后，播放支持动画的设备图片；蓝图样式始终使用静态蓝图精灵。",
     "settingsField.game-play-device-animations-warning-confirm": "确定",
     "settingsField.game-play-device-animations-warning-message": "启用动画需要额外下载约 200 MB 的动画资源，并且运行时会消耗约 2 GB 到 4 GB 显存。不推荐电脑性能不够的管理员或者使用手机的管理员开启。关闭该选项不会清除已下载的动画资源，后续再打开时可以继续下载。",
@@ -460,11 +463,24 @@ const UI: Record<string, string> = {
     "settingsField.other-experimental-features-warning-confirm": "开启实验性功能",
     "settingsField.other-experimental-features-warning-message": "实验性功能极度不稳定，开启这些功能可能会损坏您的数据或者导致数据丢失，最严重的情况下，您可能必须重置网站才能继续使用本网站的功能。请确认是否开启实验性功能。",
     "settingsField.other-experimental-features-warning-title": "警告",
-    "settingsField.experimental-dense-simulation-engine": "使用新版求解器(需刷新网页)",
-    "settingsField.experimental-dense-simulation-engineDescription": "刷新网页后使用实验性的新版求解器，当前仿真不会立即切换。",
-    "settingsField.experimental-dense-simulation-engine-restart-pending": "重新加载后生效",
-    "settingsField.experimental-dense-simulation-engine-restart-pendingDescription": "本页面仍在使用启动时选择的求解器。重新加载页面后才会应用当前设置。",
-    "settingsField.experimental-dense-simulation-engine-reload-confirm": "重新加载将停止当前仿真会话，运行状态不会恢复。是否继续？",
+    // AI-REMOVED 2026-09-26:
+    // Reason: 旧文案表示启用新版求解器，现为调试模式下启用旧版求解器。
+    // Trigger: 用户要求默认 Dense、旧版开关移入调试分组。
+    // Evidence: 旧开关名称和描述方向相反。
+    // Replacement: 下方 settingsField.debug-legacy-simulation-engine 系列文案。
+    // Risk: Low。
+    // Human Review: Required
+    // Original code:
+    // "settingsField.experimental-dense-simulation-engine": "使用新版求解器(需刷新网页)",
+    // "settingsField.experimental-dense-simulation-engineDescription": "刷新网页后使用实验性的新版求解器，当前仿真不会立即切换。",
+    // "settingsField.experimental-dense-simulation-engine-restart-pending": "重新加载后生效",
+    // "settingsField.experimental-dense-simulation-engine-restart-pendingDescription": "本页面仍在使用启动时选择的求解器。重新加载页面后才会应用当前设置。",
+    // "settingsField.experimental-dense-simulation-engine-reload-confirm": "重新加载将停止当前仿真会话，运行状态不会恢复。是否继续？",
+    "settingsField.debug-legacy-simulation-engine": "使用旧版求解器（需刷新网页）",
+    "settingsField.debug-legacy-simulation-engineDescription": "调试模式开启时，刷新网页后使用旧版求解器；关闭此选项或调试模式后，刷新网页将使用新版求解器。",
+    "settingsField.debug-legacy-simulation-engine-restart-pending": "重新加载后生效",
+    "settingsField.debug-legacy-simulation-engine-restart-pendingDescription": "本页面仍在使用启动时选择的求解器。重新加载页面后才会应用当前设置。",
+    "settingsField.debug-legacy-simulation-engine-reload-confirm": "重新加载将停止当前仿真会话，运行状态不会恢复。是否继续？",
     "settingsAction.reload-and-apply": "重新加载并应用",
     "webDavConfig.enabled": "启用 WebDAV 同步",
     "webDavConfig.enabledDescription": "通过 WebDAV 在你的设备之间同步基地、蓝图、模块配平与生产规划数据。",

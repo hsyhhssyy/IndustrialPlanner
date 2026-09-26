@@ -243,6 +243,9 @@ function normalizePersistedAppSettings(
     gamePlayDeviceAnimations: typeof persistedAppSettings.gamePlayDeviceAnimations === "boolean"
       ? persistedAppSettings.gamePlayDeviceAnimations
       : fallback.gamePlayDeviceAnimations,
+    gamePlayDeviceAudio: typeof persistedAppSettings.gamePlayDeviceAudio === "boolean"
+      ? persistedAppSettings.gamePlayDeviceAudio
+      : fallback.gamePlayDeviceAudio,
     gameShowDeviceNames,
     gameShowDeviceIcons,
     gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"

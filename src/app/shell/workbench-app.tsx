@@ -532,6 +532,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           pwaController.setDeviceAnimationsEnabled(value);
         }),
       },
+      "game-play-device-audio": {
+        readValue: () => appHost.internalState.settings.gamePlayDeviceAudio,
+        writeValue: action((value) => {
+          if (typeof value === "boolean") appHost.internalState.settings.gamePlayDeviceAudio = value;
+        }),
+      },
       "game-use-inspector-panel": {
         readValue: () => appHost.state.settings.gameUseInspectorPanel,
         writeValue: action((value) => {
@@ -862,6 +868,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     appHost.state.settings.gameUseBlueprintStyleDeviceImages,
     appHost.state.settings.showGrassBackground,
   );
+
+  useEffect(() => appHost.deviceAudio.mount(), [appHost]);
+  useEffect(() => pwaController.bindDeviceAudio(() => appHost.internalState.settings.gamePlayDeviceAudio), [appHost, pwaController]);
 
   useEffect(() => {
     migrationController.initialize();

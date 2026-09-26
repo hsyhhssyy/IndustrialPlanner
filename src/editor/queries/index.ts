@@ -11,6 +11,7 @@ export function createEditorQueries(
   context: EditorQueriesContext,
 ): EditorQuery {
   return {
+    subscribeCommittedEdits: (listener) => context.history.subscribeCommittedEdits(listener),
     ...createEditorDocumentQueries(context),
     ...createEditorEntityQueries(context),
     ...createEditorLogisticsQueries(context),

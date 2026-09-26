@@ -5,6 +5,7 @@ import {
   createRuntimePrecacheCacheUrl,
   hashPrecacheEntries as hashManifestPrecacheEntries,
   isDeviceAnimationAssetUrl,
+  isDeviceAudioAssetUrl,
   normalizePrecacheEntries,
   partitionPrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -38,7 +39,7 @@ type PrecacheInstallProgress = {
   completedFiles: number;
 };
 
-type PrecacheTaskKind = "animation" | "core";
+type PrecacheTaskKind = "animation" | "audio" | "core";
 
 type AnimationDownloadTask = {
   readonly abortController: AbortController;
@@ -56,6 +57,7 @@ type AnimationCompleteMarker = {
 };
 
 type PwaClientMessage =
+  | { readonly type: "PWA_AUDIO_CACHE_START" | "PWA_AUDIO_CACHE_CANCEL" }
   | { readonly type: "PWA_ANIMATION_CACHE_CANCEL" }
   | { readonly type: "PWA_ANIMATION_CACHE_START" }
   | { readonly type: "PWA_SKIP_WAITING" };
@@ -107,6 +109,7 @@ const ANIMATION_COMPLETE_MARKER_VERSION = 1;
 const RAW_PRECACHE_ENTRIES = self.__WB_MANIFEST;
 const PRECACHE_ENTRIES = normalizePrecacheEntries(RAW_PRECACHE_ENTRIES);
 const {
+  audioEntries: AUDIO_ENTRIES,
   animationEntries: ANIMATION_ENTRIES,
   coreEntries: CORE_ENTRIES,
 } = partitionPrecacheEntries(PRECACHE_ENTRIES, self.registration.scope);
@@ -114,6 +117,9 @@ const CORE_MANIFEST_HASH = hashPrecacheEntries(CORE_ENTRIES);
 const ANIMATION_MANIFEST_HASH = hashPrecacheEntries(ANIMATION_ENTRIES);
 const CACHE_NAME = `industrial-planner-precache-${CORE_MANIFEST_HASH}`;
 const ANIMATION_CACHE_NAME = `industrial-planner-animation-precache-${ANIMATION_MANIFEST_HASH}`;
+const AUDIO_CACHE_PREFIX = "industrial-planner-audio-precache-";
+const AUDIO_CACHE_NAME = `${AUDIO_CACHE_PREFIX}${hashPrecacheEntries(AUDIO_ENTRIES)}`;
+let audioDownload: { abort: AbortController; promise: Promise<void> } | null = null;
 const INDEX_CACHE_URL = createCacheUrl("index.html");
 const PRECACHE_METADATA_CACHE_URL = createCacheUrl("__industrial_planner_precache_metadata__.json");
 const ANIMATION_COMPLETE_MARKER_CACHE_URL = createCacheUrl("__industrial_planner_animation_complete__.json");
@@ -131,6 +137,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   const message = event.data as PwaClientMessage | undefined;
+  if (message?.type === "PWA_AUDIO_CACHE_START") {
+    event.waitUntil(startAudioPrecache());
+    return;
+  }
+  if (message?.type === "PWA_AUDIO_CACHE_CANCEL") {
+    audioDownload?.abort.abort();
+    return;
+  }
 
   if (message?.type === "PWA_SKIP_WAITING") {
     event.waitUntil(self.skipWaiting());
@@ -283,6 +297,67 @@ async function startAnimationPrecache(): Promise<void> {
   return promise;
 }
 
+async function startAudioPrecache(): Promise<void> {
+  if (audioDownload) {
+    if (!audioDownload.abort.signal.aborted) return audioDownload.promise;
+    await audioDownload.promise;
+  }
+  const abort = new AbortController();
+  const promise = (async () => {
+    try {
+      const cacheNames = await caches.keys();
+      const cache = await caches.open(AUDIO_CACHE_NAME);
+      await installOptionalPrecacheEntries("audio", AUDIO_ENTRIES, AUDIO_CACHE_NAME,
+        AUDIO_CACHE_PREFIX, cache, cacheNames, abort.signal, () => abort.signal.throwIfAborted());
+      abort.signal.throwIfAborted();
+      await Promise.all(cacheNames.filter((name) => name.startsWith(AUDIO_CACHE_PREFIX) && name !== AUDIO_CACHE_NAME)
+        .map((name) => caches.delete(name)));
+      await broadcastMessage({ type: "PWA_PRECACHE_DONE", task: "audio", cacheName: AUDIO_CACHE_NAME,
+        totalFiles: AUDIO_ENTRIES.length, totalBytes: calculateTotalBytes(AUDIO_ENTRIES) });
+    } catch (error) {
+      if (!abort.signal.aborted) await broadcastMessage({ type: "PWA_PRECACHE_ERROR", task: "audio",
+        cacheName: AUDIO_CACHE_NAME, message: error instanceof Error ? error.message : "Audio download failed" });
+    } finally {
+      if (audioDownload?.abort === abort) audioDownload = null;
+    }
+  })();
+  audioDownload = { abort, promise };
+  return promise;
+}
+
+/** 可选资源共用校验和文件级续传；生命周期及完整包策略由各自调用方拥有。 */
+async function installOptionalPrecacheEntries(
+  task: "animation" | "audio", entries: readonly PrecacheEntry[], cacheName: string,
+  cachePrefix: string, cache: Cache, existingCaches: readonly string[], signal: AbortSignal,
+  assertActive: () => void,
+): Promise<void> {
+  const reusable = await openReusablePrecacheCaches(existingCaches, cachePrefix);
+  const cached: PrecacheEntry[] = [];
+  const missing: PrecacheEntry[] = [];
+  const progress: PrecacheInstallProgress = { completedBytes: 0, completedFiles: 0 };
+  const totalBytes = calculateTotalBytes(entries);
+  for (const entry of entries) {
+    assertActive();
+    const bytes = await tryReusePrecachedEntry(entry, cache, reusable);
+    if (bytes === null) missing.push(entry);
+    else {
+      cached.push(entry);
+      await reportPrecacheProgress(task, cacheName, entry, bytes, progress, totalBytes, entries.length);
+    }
+  }
+  await writePrecacheMetadata(cache, cached);
+  await downloadPrecacheEntries(missing, cache, async (entry, bytes) => {
+    assertActive();
+    if (bytes === null) throw new Error(`Required ${task} resource is unavailable: ${entry.url}`);
+    cached.push(entry);
+    await writePrecacheMetadata(cache, cached);
+    await reportPrecacheProgress(task, cacheName, entry, bytes, progress, totalBytes, entries.length);
+  }, signal);
+  assertActive();
+  if (cached.length !== entries.length) throw new Error(`Incomplete ${task} package`);
+  await writePrecacheMetadata(cache, cached);
+}
+
 function cancelAnimationPrecache(): void {
   animationDownloadTask?.abortController.abort(
     new DOMException("Animation download cancelled", "AbortError"),
@@ -294,7 +369,8 @@ async function installAnimationPrecache(taskId: number, signal: AbortSignal): Pr
   const cache = await caches.open(ANIMATION_CACHE_NAME);
   const totalFiles = ANIMATION_ENTRIES.length;
   const totalBytes = calculateTotalBytes(ANIMATION_ENTRIES);
-  const cachedEntries: PrecacheEntry[] = [];
+  // AI-REMOVED 2026-09-26: 已移至 installOptionalPrecacheEntries；原因及风险见下方记录。
+  // const cachedEntries: PrecacheEntry[] = [];
   const progress: PrecacheInstallProgress = {
     completedBytes: 0,
     completedFiles: 0,
@@ -304,62 +380,74 @@ async function installAnimationPrecache(taskId: number, signal: AbortSignal): Pr
   await broadcastAnimationProgress(progress, totalBytes, totalFiles, "");
 
   try {
-    const reusableCaches = await openReusablePrecacheCaches(
-      cacheNamesBeforeDownload,
-      "industrial-planner-animation-precache-",
-    );
-    const entriesToDownload: PrecacheEntry[] = [];
-
-    for (const entry of ANIMATION_ENTRIES) {
-      throwIfAnimationTaskInactive(taskId, signal);
-      const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
-
-      if (reusedBytes === null) {
-        entriesToDownload.push(entry);
-        continue;
-      }
-
-      cachedEntries.push(entry);
-      await reportPrecacheProgress(
-        "animation",
-        ANIMATION_CACHE_NAME,
-        entry,
-        reusedBytes,
-        progress,
-        totalBytes,
-        totalFiles,
-      );
-    }
-
-    await writePrecacheMetadata(cache, cachedEntries);
-    await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
-      throwIfAnimationTaskInactive(taskId, signal);
-
-      if (downloadedBytes === null) {
-        throw new Error(`Required animation resource is unavailable: ${entry.url}`);
-      }
-
-      cachedEntries.push(entry);
-      await writePrecacheMetadata(cache, cachedEntries);
-      await reportPrecacheProgress(
-        "animation",
-        ANIMATION_CACHE_NAME,
-        entry,
-        downloadedBytes,
-        progress,
-        totalBytes,
-        totalFiles,
-      );
-    }, signal);
-    throwIfAnimationTaskInactive(taskId, signal);
-
-    await writePrecacheMetadata(cache, cachedEntries);
-
-    if (cachedEntries.length !== ANIMATION_ENTRIES.length) {
-      throw new Error(
-        `Animation package is incomplete: expected ${ANIMATION_ENTRIES.length}, got ${cachedEntries.length}`,
-      );
-    }
+  // AI-REMOVED 2026-09-26:
+  // Reason: 动画和音频共用可续传、校验及进度下载流程。
+  // Trigger: 独立可选音频离线包。
+  // Evidence: 两种资源均使用同一 PrecacheEntry 与哈希验证。
+  // Replacement: installOptionalPrecacheEntries。
+  // Risk: 需回归动画取消、续传。
+  // Human Review: Required
+  // Original code:
+  //     const reusableCaches = await openReusablePrecacheCaches(
+  //       cacheNamesBeforeDownload,
+  //       "industrial-planner-animation-precache-",
+  //     );
+  //     const entriesToDownload: PrecacheEntry[] = [];
+  //
+  //     for (const entry of ANIMATION_ENTRIES) {
+  //       throwIfAnimationTaskInactive(taskId, signal);
+  //       const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
+  //
+  //       if (reusedBytes === null) {
+  //         entriesToDownload.push(entry);
+  //         continue;
+  //       }
+  //
+  //       cachedEntries.push(entry);
+  //       await reportPrecacheProgress(
+  //         "animation",
+  //         ANIMATION_CACHE_NAME,
+  //         entry,
+  //         reusedBytes,
+  //         progress,
+  //         totalBytes,
+  //         totalFiles,
+  //       );
+  //     }
+  //
+  //     await writePrecacheMetadata(cache, cachedEntries);
+  //     await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
+  //       throwIfAnimationTaskInactive(taskId, signal);
+  //
+  //       if (downloadedBytes === null) {
+  //         throw new Error(`Required animation resource is unavailable: ${entry.url}`);
+  //       }
+  //
+  //       cachedEntries.push(entry);
+  //       await writePrecacheMetadata(cache, cachedEntries);
+  //       await reportPrecacheProgress(
+  //         "animation",
+  //         ANIMATION_CACHE_NAME,
+  //         entry,
+  //         downloadedBytes,
+  //         progress,
+  //         totalBytes,
+  //         totalFiles,
+  //       );
+  //     }, signal);
+  //     throwIfAnimationTaskInactive(taskId, signal);
+  //
+  //     await writePrecacheMetadata(cache, cachedEntries);
+  //
+  //     if (cachedEntries.length !== ANIMATION_ENTRIES.length) {
+  //       throw new Error(
+  //         `Animation package is incomplete: expected ${ANIMATION_ENTRIES.length}, got ${cachedEntries.length}`,
+  //       );
+  //     }
+  //
+    await installOptionalPrecacheEntries("animation", ANIMATION_ENTRIES, ANIMATION_CACHE_NAME,
+      "industrial-planner-animation-precache-", cache, cacheNamesBeforeDownload, signal,
+      () => throwIfAnimationTaskInactive(taskId, signal));
 
     await writeAnimationCompleteMarker(cache, totalBytes, totalFiles);
     await cleanupObsoleteAnimationCaches();
@@ -780,6 +868,12 @@ async function activatePrecache(): Promise<void> {
 
 async function resolvePrecachedResponse(request: Request): Promise<Response> {
   const requestUrl = new URL(request.url);
+
+  if (isDeviceAudioAssetUrl(requestUrl, self.registration.scope)) {
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    const cached = await cache.match(createRuntimePrecacheCacheUrl(requestUrl, self.registration.scope));
+    return cached ?? fetch(request);
+  }
 
   if (isDeviceAnimationAssetUrl(requestUrl, self.registration.scope)) {
     return resolveAnimationPrecachedResponse(request);
