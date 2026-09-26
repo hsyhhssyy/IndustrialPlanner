@@ -177,9 +177,9 @@
   "clipSelection": "website-status-driven-phases",
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260923-223150-cst",
-    "sourceVersion": "v1.5",
-    "indexSha256": "a036cbcb972392309d7be728ee062453d160193f44f27b7ef4e57441c1dde6dd",
+    "releaseId": "v1.5-20260924-20260926-134224-cst",
+    "sourceVersion": "v1.5-20260924",
+    "indexSha256": "4169796e8720e6a93fc0c473c45e3a0a1cc3df5d66272f67415cddb3b99c6f9d",
     "sourceResolution": 0.5
   }
 }
