@@ -116,7 +116,10 @@ it("混合物流设施通过真实 Worker 布线和 Dense 2 tick/s 产量验收"
   expect(result.records[0]!.constraints).toEqual({ placementErrors: [], excessiveOperatingInputs: [] });
   expect(result.records[0]!.itemPolicies).toEqual(input().options.itemPolicies);
   expect(result.records[0]!.measuredOutputs?.map(output => output.perMinute)).toEqual([60, 60]);
-  expect(result.records[0]!.artifactPath).toContain(".temp/eda/success/");
+  // AI-CORRECTION 2026-10-06: 原断言内嵌 POSIX 分隔符，Windows 上 edaOutputPath 返回反斜杠路径必然失败；改为按分隔符归一后比较，预期语义不变。
+  const artifactPath = result.records[0]!.artifactPath;
+  expect(artifactPath).toBeDefined();
+  expect(artifactPath!.replaceAll("\\", "/")).toContain(".temp/eda/success/");
 }, 120_000);
 
 it.each([

@@ -288,3 +288,15 @@ export {
   normalizePlannerSessionState,
   savePlannerState,
 } from "@/shared/storage/planner-storage";
+
+export type {
+  PlannerStoredCapacity,
+} from "@/shared/storage/planner-capacity-storage";
+
+export {
+  clearPlannerCapacity,
+  loadPlannerCapacity,
+  plannerCapacitySignature,
+  resolveCalibratedWorkers,
+  savePlannerCapacity,
+} from "@/shared/storage/planner-capacity-storage";

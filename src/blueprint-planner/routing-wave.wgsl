@@ -23,6 +23,9 @@ fn main(@builtin(local_invocation_index) lane: u32) {
   let config = workgroupUniformLoad(&configuration);
   let width = config[0]; let height = config[1]; let start = config[2]; let goal = config[3];
   let startDirection = config[4]; let finalDirection = config[5]; let kind = config[6];
+  // 订正 2026-10-06：路径登记上限原先写死 512，而结果缓冲区大小由主机的实测调参决定，
+  // 两者不一致时 GPU 会越界写入。现在上限由主机按缓冲区容量传入，两边恒等。
+  let maximumSteps = config[7];
   let states = width * height * 4u;
   if (lane == 0u) { result[0] = 0u; result[1] = 0u; }
   for (var state = lane; state < states; state += 128u) { atomicStore(&distances[state], 0x3fffffffu); }
@@ -68,7 +71,7 @@ fn main(@builtin(local_invocation_index) lane: u32) {
   var length = 0u;
   loop {
     let cell = cursor / 4u; let direction = cursor % 4u;
-    if (length >= 512u) { return; }
+    if (length >= maximumSteps) { return; }
     result[2u + length] = cell; length++;
     if (cursor == start * 4u + startDirection) { break; }
     let previous = neighbor(cell, (direction + 2u) % 4u, width, height);

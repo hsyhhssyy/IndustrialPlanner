@@ -60,6 +60,12 @@ export class PlannerRoutingGrid {
 
   read(cell: number, kind: number): number { return this.values[cell * 2 + kind]!; }
 
+  /** 2026-10-06：压缩回滚按格子写回清格前的数值状态，保持同一数组引用以免稠密镜像失效。 */
+  restoreValue(cell: number, kind: number, value: number): void {
+    this.values[cell * 2 + kind] = value;
+    this.updateSnapshot(cell);
+  }
+
   block(cell: number, permeable: number): void {
     for (let kind = 0; kind < 2; kind++) {
       this.values[cell * 2 + kind] = this.read(cell, kind) | ROUTE_OBSTACLE | (permeable & (1 << kind) ? 0 : ROUTE_BLOCKED);

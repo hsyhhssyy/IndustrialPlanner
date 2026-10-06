@@ -1,9 +1,29 @@
 import { PlannerCandidateError } from "./model";
 import type { WorldEntity } from "@/domain/document/world-document";
+import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 export interface PlannerOutline { readonly width: number; readonly height: number; }
+
+/** 目标基地的可放置范围；规划器不得产出超过该范围的搜索盒子。 */
+export interface PlannerOutlineCap { readonly width: number; readonly height: number; }
+
+/** 2026-10-06：搜索盒子此前无区域上限，产出的蓝图可能超出所在基地实际可放置范围。 */
+export function plannerOutlineCap(registry: RegistryContract, request: BlueprintPlannerRequest): PlannerOutlineCap | undefined {
+  const base = registry.baseDefinitions.find(definition => definition.id === request.plan.sourceBaseId);
+  if (!base) return undefined;
+  const { width, height } = base.placeableArea;
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) return undefined;
+  return { width, height };
+}
+
+/** 盒子必须同时容纳最小边界与区域上限；上限不足以容纳最小边界时按最小边界放行。 */
+export function clampPlannerOutline(outline: PlannerOutline, minimum: PlannerOutline, cap?: PlannerOutlineCap): PlannerOutline {
+  const limit = { width: Math.max(minimum.width, cap?.width ?? Infinity), height: Math.max(minimum.height, cap?.height ?? Infinity) };
+  return { width: Math.max(minimum.width, Math.min(limit.width, outline.width)),
+    height: Math.max(minimum.height, Math.min(limit.height, outline.height)) };
+}
 
 /** 搜索盒子必须容纳固定设施，也至少容纳任一单体设备。 */
 // AI-CORRECTION 2026-10-05：设施均可移动或换边；最小宽高仅取可旋转单体的必要下界，实际长边在布局验证。

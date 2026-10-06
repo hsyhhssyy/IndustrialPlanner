@@ -64,6 +64,14 @@ export interface BlueprintPlannerOptions {
 
   readonly evaluationsPerRound: number;
   readonly concurrency?: number | "auto";
+  /**
+   * 2026-10-06：算力基准测试标定出的并发上限（见 capacity-calibration.ts）。
+   * 浏览器不暴露 CPU/GPU 占用百分比，无法直接闭环控制占用率，因此先把实测吞吐曲线的膝盖点固化下来，
+   * 调度策略在该上限内自适应；未标定时不写入此字段。
+   */
+  readonly calibratedWorkers?: number;
+  /** 基准测试标定出的并行验证容量；未标定时运行时会从保守起点自适应。 */
+  readonly calibratedVerifiers?: number;
 }
 
 export interface BlueprintPlannerRequest {

@@ -33,7 +33,7 @@ import type { PlannerRoutingBackend } from "./routing-backend";
 import { constructCompactLayout } from "./constructive-layout";
 import { capturePlannerSeed, restorePlannerSeed, type PlannerSearchSeed } from "./search-seed";
 import { resolvePlannerAttempt } from "./search-portfolio";
-import { continuationOutline, fixedOutlineMinimum } from "./search-outline";
+import { clampPlannerOutline, continuationOutline, fixedOutlineMinimum, plannerOutlineCap } from "./search-outline";
 import { PlannerBoundary } from "./boundary";
 import { createBlueprintCandidate } from "./blueprint-candidate";
 
@@ -45,6 +45,12 @@ export interface PlannerCandidate {
   readonly metrics: BlueprintPlannerMetrics;
   readonly connections: readonly BlueprintPlannerConnection[];
 }
+
+/**
+ * 冷启动搜索盒子按设备占盒面积的这一比例反推边长。
+ * 2026-10-06 订正：曾试收紧到 35%，compact-continuation 的芽针方案面积由 528 上限恶化到 728（盒子过小导致可行解质量下降），故维持 50%。
+ */
+const PLANNER_INITIAL_DEVICE_COVERAGE = 0.5;
 
 export async function createPlannerCandidate(
   registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
@@ -183,6 +189,7 @@ async function createPlannerAttempt(
   //     return { width: Math.max(bounds.width, rect.x + rect.width), height: Math.max(bounds.height, rect.y + rect.height) };
   //   }, { width: 1, height: 1 });
   const fixedMinimum = fixedOutlineMinimum(registry, network.nodes);
+  const outlineCap = plannerOutlineCap(registry, request);
   // AI-REMOVED 2026-09-30:
   // Reason: 只减单边从 20×20 直接要求 380 格，遗漏 399、396 等长宽比。
   // Trigger: 用户要求尝试打破面积停滞。Evidence: 五百万提案曲线及原分支。
@@ -206,12 +213,14 @@ async function createPlannerAttempt(
   let outline = options.targetOutline ? { ...options.targetOutline } : options.seed
     ? continuationOutline(options.seed, variant, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
     : options.outline ? { ...options.outline }
-    : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / 0.5) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / 0.5) * 1.2 * scale) + 2) }
+    : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / PLANNER_INITIAL_DEVICE_COVERAGE) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / PLANNER_INITIAL_DEVICE_COVERAGE) * 1.2 * scale) + 2) }
       : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
   // AI-CORRECTION 2026-10-02: 调度器指定的盒子不可由冷启动回退改成另一尺寸；原注释所述面积上限仍有效。
   if (!options.seed && !options.targetOutline && options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
     outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea);
   }
+  // 2026-10-06：显式尺寸也夹到区域可放置范围；种子续搜的面积上限由 Host 统一夹取。
+  if (!options.seed && !options.targetOutline && options.outline) outline = clampPlannerOutline(outline, fixedMinimum, outlineCap);
   const statistics: PlannerSearchStatistics = { seed: variant, evaluationLimit: options.maxEvaluations ?? 50_000,
     evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline, profile, strategy,
     resumedFromArea: options.seed ? options.seed.width * options.seed.height : undefined, coolingEvaluations: options.coolingEvaluations,
@@ -515,6 +524,8 @@ async function createPlannerAttempt(
           break;
         }
         enterPhase("power"); rejectionPhase = "power";
+        // 2026-10-06：全部线路确定后再做一次压缩，消掉被后续占用逼出的绕行冗余；压缩失败只回滚线路。
+        await candidateRouter.compactRoutes(checkBudget, message => { throw new PlannerCandidateError(message, statistics); });
         const coverage = await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
         if (coverage === null) {
           failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);

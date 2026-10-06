@@ -16,7 +16,7 @@ import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import { comparePlannerRanks } from "./quality";
 import { meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
-import { breadthOutlineKey, breadthOutlines, fixedOutlineMinimum, selectBreadthOutline } from "./search-outline";
+import { breadthOutlineKey, breadthOutlines, fixedOutlineMinimum, plannerOutlineCap, selectBreadthOutline } from "./search-outline";
 import { createProductionNetwork } from "./production-network";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
 import { plannerRequestKey } from "./search-seed";
@@ -24,8 +24,18 @@ import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecogn
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
-import { browserPlannerResources, observePlannerPressure, plannerConcurrencyLimit, PlannerAutomaticConcurrency,
-  type PlannerResourceHints, type PlannerConcurrencySample } from "./automatic-concurrency";
+import { browserPlannerResources, DEFAULT_PLANNER_CONCURRENCY_POLICY, observePlannerPressure, plannerProbeCeiling,
+  PlannerAutomaticConcurrency, PLANNER_CONSERVATIVE_START, type PlannerResourceHints, type PlannerConcurrencySample } from "./automatic-concurrency";
+import { calibratePlannerCapacity } from "./capacity-calibration";
+import { measureGpuCrossover, DEFAULT_GPU_CROSSOVER_SCALES } from "./gpu-crossover";
+import { probeBrowserPlannerCapacity } from "./browser-capacity-probe";
+import { loadPlannerCapacity, plannerCapacitySignature, savePlannerCapacity } from "@/shared/storage/planner-capacity-storage";
+
+/** 浏览器标定的窗口与档位上限；档位数只是安全阀，实际上探由增益判定提前结束。 */
+const CAPACITY_WINDOW_MS = 4_000;
+const CAPACITY_MAX_LEVELS = 10;
+/** GPU 交叉点测量的规模档位；由 gpu-crossover 内部按"稳态单位成本"逐档比较。 */
+const GPU_CROSSOVER_SCALES = DEFAULT_GPU_CROSSOVER_SCALES;
 
 interface PlannerTask {
   file: BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint };
@@ -51,6 +61,8 @@ export interface PlannerHostOptions {
   readonly workerFactory?: () => Pick<PlannerWorkerClient, "build" | "dispose">;
   readonly storage?: typeof edaTaskStorage | null;
   readonly roundLimit?: () => number;
+  /** 并行验证上限；默认 4。各通道是独立仿真 Worker，可真正并行。 */
+  readonly verificationConcurrency?: number;
   readonly shardSelection?: { readonly count: number; readonly start: number; readonly end: number };
 }
 
@@ -81,7 +93,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const workerFor = (index: number) => {
     const existing = workers.get(index);
     if (existing) return existing;
-    const created = workers.size === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient(index === 1);
+    // 2026-10-06：GPU 通道不再只挂在 1 号 Worker 上。算力利用率要求并发提高，
+    // 单通道 GPU 会让其余 Worker 纯 CPU 跑；每个 Worker 各持有自己的设备与流水线，允许同时在途。
+    const created = workers.size === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient(true);
     workers.set(index, created);
     return created;
   };
@@ -298,7 +312,6 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const idleStatus = () => point.result !== null && point.savedBlueprintId === point.result.blueprint.blueprintId ? "completed" as const : "waiting" as const;
     let lastFailure = "尚未找到通过验证的布局";
     let interruption: unknown = null;
-    let verificationTail: Promise<void> = Promise.resolve();
     let pendingVerifications = 0;
     const verifying = new Set<number>();
     let wake: (() => void) | null = null;
@@ -361,15 +374,40 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       }
       persist(task);
     };
+    // 2026-10-06：验证改为有界并行池。原实现把每条验证串成单链，8 核机器上只有 2 个核在算，
+    // 是大规模任务 CPU 占用上不去的直接原因；每通道各自起独立仿真 Worker，天然可并行。
+    // 2026-10-06：验证并行度不再写死。优先用基准测试标定出的验证容量；
+    // 未标定时退化为与搜索共用同一控制律，由运行时的增益/压力信号自适应（初值取保守起点）。
+    const verificationParallelism = Math.max(1, Math.min(options.verificationConcurrency
+      ?? task.file.request.options.calibratedVerifiers ?? PLANNER_CONSERVATIVE_START, 64));
+    const verificationQueue: Array<() => Promise<void>> = [];
+    let verificationRunning = 0;
+    let verificationDrained: (() => void) | null = null;
+    const verificationIdle = () => {
+      if (verificationRunning === 0 && verificationQueue.length === 0) { verificationDrained?.(); verificationDrained = null; }
+    };
+    const startVerifications = () => {
+      while (verificationRunning < verificationParallelism && verificationQueue.length > 0) {
+        const run = verificationQueue.shift()!;
+        verificationRunning++;
+        void run().finally(() => { verificationRunning--; startVerifications(); verificationIdle(); });
+      }
+      verificationIdle();
+    };
+    const settleVerifications = async (): Promise<void> => {
+      if (verificationRunning === 0 && verificationQueue.length === 0) return;
+      await new Promise<void>(resolve => { verificationDrained = resolve; startVerifications(); });
+    };
+    /** 入队即在途；调用方不需要单独等待，统一由 settleVerifications 排空。 */
     const queueVerification = (shard: PlannerShardCheckpoint, portfolio: PlannerSearchPortfolio) => {
       pendingVerifications++;
       verifying.add(shard.index);
-      const pending = verificationTail.then(() => verify(shard, portfolio)).catch(error => {
-        if (interruption === null) interruption = error;
-        task.abort.abort();
-      }).finally(() => { pendingVerifications--; verifying.delete(shard.index); wake?.(); });
-      verificationTail = pending.catch(() => undefined);
-      return pending;
+      verificationQueue.push(async () => {
+        try { await verify(shard, portfolio); }
+        catch (error) { if (interruption === null) interruption = error; task.abort.abort(); }
+        finally { pendingVerifications--; verifying.delete(shard.index); wake?.(); }
+      });
+      startVerifications();
     };
     const owned = parallel.ownedShards;
     // AI-REMOVED 2026-10-02:
@@ -383,6 +421,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const leased = new Set<number>();
     const outlineCache = new Map<string, ReturnType<typeof breadthOutlines>>();
     const minimumCache = new Map<string, ReturnType<typeof fixedOutlineMinimum>>();
+    // 2026-10-06：尺寸广度必须落在目标基地可放置范围内，避免产出放不下的蓝图。
+    const outlineCap = plannerOutlineCap(workspace.registry, task.file.request);
     const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>) => {
       const portfolio = task.portfolios.get(shard.index)!;
       // AI-REMOVED 2026-10-02:
@@ -400,8 +440,12 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           const before = portfolio.snapshot();
           const selection = portfolio.next(shard.nextVariant);
           const sharedArea = point.best?.candidate.metrics.area;
-          const maximumArea = sharedArea === undefined ? selection.maximumArea
+          // 2026-10-06：区域可放置面积是所有后续尺寸批次的硬上限，与已证最优面积取更小者。
+          const regionCapArea = outlineCap ? outlineCap.width * outlineCap.height : undefined;
+          const sharedMaximum = sharedArea === undefined ? selection.maximumArea
             : Math.min(selection.maximumArea ?? sharedArea, sharedArea);
+          const maximumArea = sharedMaximum === undefined ? regionCapArea
+            : regionCapArea === undefined ? sharedMaximum : Math.min(sharedMaximum, regionCapArea);
           let shapeKey: string | undefined;
           let targetOutline: { readonly width: number; readonly height: number } | undefined;
           const requestKey = plannerRequestKey(selection.request);
@@ -414,9 +458,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
                 source?.network.nodes ?? createProductionNetwork(workspace.registry, selection.request).nodes);
               minimumCache.set(requestKey, minimum);
             }
-            const cacheKey = `${maximumArea}/${minimum.width}/${minimum.height}`;
+            const cacheKey = `${maximumArea}/${minimum.width}/${minimum.height}/${outlineCap?.width ?? 0}x${outlineCap?.height ?? 0}`;
             let shapes = outlineCache.get(cacheKey);
-            if (!shapes) { shapes = breadthOutlines(maximumArea, minimum); outlineCache.set(cacheKey, shapes); }
+            if (!shapes) { shapes = breadthOutlines(maximumArea, minimum, outlineCap); outlineCache.set(cacheKey, shapes); }
             const mode = plannerOutputModeKey(selection.request.options);
             const visits = (key: string) => parallel.shards.reduce((sum, entry) => sum + (entry.shapeVisits[key] ?? 0), 0);
             // AI-REMOVED 2026-10-02:
@@ -514,10 +558,18 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     };
     try {
       const concurrency = task.file.request.options.concurrency ?? 1;
-      const maximum = Math.min(owned.length, concurrency === "auto"
-        ? plannerConcurrencyLimit(options.resourceHints ?? browserPlannerResources()) : concurrency);
-      const controller = concurrency === "auto" ? new PlannerAutomaticConcurrency(maximum, performance.now(), point.evaluations) : null;
-      let target = controller?.target ?? maximum;
+      // 未标定时只给"允许试探到多高"的安全阀，容量结论来自标定值；显式并发数优先。
+      const hints = options.resourceHints ?? browserPlannerResources();
+      // 未标定时只给"允许试探到多高"的安全阀，容量结论来自标定值；显式并发数优先。
+      const probeCeiling = plannerProbeCeiling(hints);
+      const maximum = Math.min(owned.length, concurrency === "auto" ? probeCeiling : concurrency);
+      // 2026-10-06：显式并发数即用户目标；否则采用基准测试标定出的上限（任务内记录优先，其次本机已保存的标定结果）。
+      const calibratedWorkers = task.file.request.options.calibratedWorkers
+        ?? resolveCalibratedWorkers(plannerCapacitySignature(hints.hardwareConcurrency, hints.deviceMemory));
+      const controller = new PlannerAutomaticConcurrency(maximum, performance.now(), point.evaluations,
+        { ...DEFAULT_PLANNER_CONCURRENCY_POLICY, target: concurrency === "auto" ? "auto" : concurrency,
+          calibratedWorkers });
+      let target = controller.target;
       // AI-REMOVED 2026-10-03: wake 移至验证队列同级，允许验证完成唤醒派发。
       // Trigger: 验证与搜索解耦。Evidence: queueVerification.finally。Replacement: run 局部 wake。
       // Risk: Low。Human Review: Required
@@ -542,8 +594,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         stopMonitoring = () => { clearInterval(timer); stopPressure(); };
       }
       const claim = () => {
-        // 队列有界，背压只暂停新批次；不把串行验收误报为整机 CPU 满载。
-        if (pendingVerifications >= Math.max(2, target)) return null;
+        // 队列有界，背压只暂停新批次；上限跟随验证并行度，避免并行验证时把搜索饿死。
+        if (pendingVerifications >= Math.max(2, Math.min(target, verificationParallelism * 2))) return null;
         for (let step = 0; step < parallel.count; step++) {
           const index = (parallel.nextShard + step) % parallel.count;
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
@@ -579,7 +631,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         wake = null;
       }
       await Promise.allSettled(active.values());
-      await verificationTail;
+      await settleVerifications();
       target = 1; retire();
       // AI-REMOVED 2026-10-03:
       // Reason: 固定 Promise 池无法在本轮运行中增减执行容量，也不能重新唤醒提前退出的空闲通道。
@@ -621,7 +673,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     } finally {
       stopMonitoring();
       if (active.size > 0) { task.abort.abort(); await Promise.allSettled(active.values()); }
-      await verificationTail;
+      await settleVerifications();
       for (const [index, current] of workers) if (index > 0) { current.dispose(); workers.delete(index); }
       await settle(task);
     }
@@ -846,6 +898,26 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           tasks.set(id, task); latestId = id; persist(task); await writes; notify();
           return id;
         } finally { importing = false; }
+      },
+      /**
+       * 2026-10-06：运行算力基准测试并落盘。测量口径与 Node 侧 CLI 一致（只测布局生成），
+       * 结果按硬件签名保存，只有签名一致时才在启动任务时采用。
+       */
+      async calibrateCapacity(request, confirm, onProgress) {
+        assertReady();
+        // 标定必须独占算力：与正在运行的任务同时抢核，测出来的曲线是两者混合的结果，结论无效。
+        if (state.activeTaskId !== null || importing) throw new Error("请等待当前计算、保存或导入结束，再进行算力基准测试。");
+        const hints = options.resourceHints ?? browserPlannerResources();
+        const report = await calibratePlannerCapacity(options2 => probeBrowserPlannerCapacity(options2),
+          { request, engineKind: "dense-v2", confirm, onProgress, resourceHints: hints,
+            windowMs: CAPACITY_WINDOW_MS, maxLevels: CAPACITY_MAX_LEVELS,
+            // 2026-10-06：布局并发测完后，用真实 WebGPU 量出 GPU 布线的交叉规模。
+            // 这一步决定 GPU 通道的准入阈值，缺了它 GPU 在真实布局里永远不会被选中。
+            measureGpuCrossover: (progress, signal) => measureGpuCrossover({
+              scales: GPU_CROSSOVER_SCALES,
+              ...(progress ? { onProgress: progress } : {}), ...(signal ? { signal } : {}) }) });
+        savePlannerCapacity({ signature: plannerCapacitySignature(hints.hardwareConcurrency, hints.deviceMemory), report });
+        return report;
       },
       start(request) {
         assertReady();

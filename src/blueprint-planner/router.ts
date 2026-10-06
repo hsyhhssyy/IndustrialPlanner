@@ -26,6 +26,12 @@ interface SearchEntry {
   readonly parent: SearchEntry | null;
 }
 
+/** 清空格子时的进入方向掩码：允许四个方向重新进入。 */
+const ROUTE_EMPTY_ENTER = 15;
+
+/** 压缩线路前记录的逐格数值状态；重排未变短时用于精确回滚。 */
+interface PlannerRouteCellSnapshot { readonly x: number; readonly y: number; readonly values: readonly [number, number]; }
+
 // AI-REMOVED 2026-10-03:
 // Reason: 对象堆由可复用数值工作区替代。
 // Trigger: 用户授权 CPU 数值结构和增量更新。
@@ -70,7 +76,7 @@ interface SearchEntry {
 
 export class PlannerRouter {
   readonly routes: Array<{ source: string; target: string; sourcePort: string; targetPort: string;
-    sourceEdge: PlannerPort["edge"]; targetEdge: PlannerPort["edge"]; cells: readonly GridPoint[]; turns: number }> = [];
+    sourceEdge: PlannerPort["edge"]; targetEdge: PlannerPort["edge"]; minimumCells: number; cells: readonly GridPoint[]; turns: number }> = [];
   readonly conflicts = new Map<string, Set<string>>();
   private activeRoute = "";
 // AI-REMOVED 2026-10-03:
@@ -93,10 +99,13 @@ export class PlannerRouter {
   private readonly bounds: GridRect;
   private readonly escapes = new Map<string, GridPoint>();
   private readonly generalLogistics = new Set<string>();
+  /** 线路端点端口按稳定端口号索引；压缩后重建端点几何时使用。 */
+  private readonly allPorts: readonly PlannerPort[];
 
   constructor(private readonly registry: RegistryContract, entities: readonly WorldEntity[], ports: readonly PlannerPort[],
     private readonly boundary: { readonly minimumX: number; readonly minimumY?: number; readonly maximumX?: number; readonly maximumY?: number; readonly escapeLength?: number;
       readonly history?: ReadonlyMap<string, number> } = { minimumX: 0 }, private readonly routing?: PlannerRoutingBackend) {
+    this.allPorts = ports;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const entity of entities) {
       const definition = registry.queries.findEntityDefinition(entity.definitionId);
@@ -139,6 +148,109 @@ export class PlannerRouter {
 
   get entities(): readonly WorldEntity[] { return this.generated; }
 
+  /**
+   * 2026-10-06：布线完成后逐条尝试更短路径，消除先布线路被后续占用逼出的绕行与冗余皮带。
+   * 清格前记录被改动的格子状态；重排未变短或失败时按快照逐格回滚，绝不让候选因压缩而丢线。
+   */
+  async compactRoutes(checkBudget: () => void, fail: (message: string) => never): Promise<number> {
+    const ports = this.portIndex();
+    let improved = 0;
+    const considered = new Set<number>();
+    for (let index = 0; index < this.routes.length; index++) {
+      if (considered.has(index)) continue;
+      considered.add(index);
+      // 整条直通链一次重排，避免逐段改写造成链内端点不一致。
+      const chain = [index];
+      for (;;) {
+        const tail = this.routes[chain.at(-1)!]!;
+        const next = this.routes.findIndex((other, otherIndex) => !considered.has(otherIndex)
+          && other.source === tail.target && other.sourcePort === tail.targetPort);
+        // 直通节点只有这一进一出；端口分叉时不跨段改写。
+        if (next < 0 || this.routes.filter(other => other.target === tail.target).length > 1
+          || this.routes.filter(other => other.source === tail.target).length > 1) break;
+        considered.add(next); chain.push(next);
+      }
+      const head = this.routes[chain[0]!]!, tail = this.routes[chain.at(-1)!]!;
+      const source = ports.get(head.sourcePort), target = ports.get(tail.targetPort);
+      if (!source || !target) continue;
+      // 2026-10-06：准入缓冲下限是硬约束，重排必须按同一长度下限校验并回填。
+      const minimumCells = Math.max(...chain.map(entry => this.routes[entry]!.minimumCells));
+      const cells = chain.flatMap(entry => this.routes[entry]!.cells);
+      if (!cells.length) continue;
+      // 直接可连的线路没有可压缩空间；明显绕行的线路才值得再搜一次。
+      if (cells.length <= Math.abs(source.outside.x - target.outside.x) + Math.abs(source.outside.y - target.outside.y) + 4) continue;
+      checkBudget();
+      const kinds = chain.map(entry => {
+        const kind = ports.get(this.routes[entry]!.sourcePort)?.kind;
+        if (!kind) fail(`压缩线路缺少端口定义：${this.routes[entry]!.sourcePort}`);
+        return kind;
+      });
+      const before = this.routes.length;
+      const snapshot = this.removeChain(chain, kinds);
+      let replaced = false;
+      try {
+        if (await this.connectCpu(source, target, checkBudget, minimumCells) < cells.length) { improved++; replaced = true; }
+      } catch (error) {
+        // 压缩失败不是候选失败；预算取消与程序错误必须继续上抛。
+        if (error instanceof DOMException || !(error instanceof PlannerCandidateError)) throw error;
+      }
+      if (!replaced) { this.rollbackChain(snapshot, kinds, before); continue; }
+      // reuse 校验本身即提交，成功即保留；失败说明重排结果不满足同一端口与缓冲约束，整链路回滚。
+      if (this.reuse(source, target, this.routes[this.routes.length - 1]!.cells, minimumCells)) continue;
+      this.routes.length = before;
+      this.rollbackChain(snapshot, kinds, before);
+    }
+    return improved;
+  }
+
+  /**
+   * 链路按物流种类清格并返回被改动的格子快照；一条线路只占用它所属 kind 的格子。
+   * 只保留端点外侧格：设备侧端口格不在任何线路上。
+   */
+  private removeChain(indices: readonly number[], kinds: readonly LogisticsKind[]): PlannerRouteCellSnapshot[] {
+    const ports = this.portIndex();
+    const keep = new Set<string>();
+    for (const entry of indices) {
+      const route = this.routes[entry]!;
+      for (const value of [route.sourcePort, route.targetPort]) {
+        const port = ports.get(value);
+        if (port) keep.add(cellKey(port.outside));
+      }
+    }
+    const snapshot: PlannerRouteCellSnapshot[] = [];
+    const cells = indices.flatMap(entry => this.routes[entry]!.cells);
+    for (const point of cells) {
+      if (keep.has(cellKey(point))) continue;
+      const key = this.grid.cell(point.x, point.y);
+      snapshot.push({ x: point.x, y: point.y, values: [this.grid.read(key, 0), this.grid.read(key, 1)] });
+      for (const kind of kinds) {
+        const routes = this.paths.get(key);
+        if (!routes?.has(kind)) continue;
+        routes.delete(kind);
+        if (!routes.size) this.paths.delete(key);
+        this.grid.updateRoute(key, kindIndex(kind), ROUTE_EMPTY_ENTER, ROUTE_OPEN & 0xffff);
+      }
+    }
+    for (const entry of [...indices].sort((left, right) => right - left)) this.routes.splice(entry, 1);
+    return snapshot;
+  }
+
+  /** 按快照逐格写回清格前的数值状态；回滚只发生在重排未产出更短线路时。 */
+  private rollbackChain(snapshot: readonly PlannerRouteCellSnapshot[], kinds: readonly LogisticsKind[], routesBefore: number): void {
+    this.routes.length = Math.min(this.routes.length, routesBefore);
+    for (const cell of snapshot) {
+      const key = this.grid.cell(cell.x, cell.y);
+      for (const kind of kinds) this.grid.restoreValue(key, kindIndex(kind), cell.values[kindIndex(kind)]!);
+    }
+  }
+
+  /** 线路端点端口按稳定端口号索引；压缩后重建端点几何时使用。 */
+  private portIndex(): Map<string, PlannerPort> {
+    const index = new Map<string, PlannerPort>();
+    for (const port of this.allPorts) index.set(portId(port), port);
+    return index;
+  }
+
   /** 仅复用当前端口、边界、障碍及交叉都仍合法的完整线路；校验完成前不写占用。 */
   reuse(source: PlannerPort, target: PlannerPort, cells: readonly GridPoint[], minimumCells = 0): boolean {
     const prepared = this.prepareReuse(source, target, cells, minimumCells);
@@ -146,7 +258,7 @@ export class PlannerRouter {
     this.activeRoute = `${portId(source)}>${portId(target)}`;
     this.commit(prepared.tail, source.kind, EDGES.indexOf(opposite(target.edge)));
     this.routes.push({ source: source.entityId, target: target.entityId, sourcePort: portId(source), targetPort: portId(target),
-      sourceEdge: source.edge, targetEdge: target.edge, cells: cells.map(point => ({ ...point })), turns: prepared.turns });
+      sourceEdge: source.edge, targetEdge: target.edge, minimumCells, cells: cells.map(point => ({ ...point })), turns: prepared.turns });
     return true;
   }
 
@@ -216,7 +328,9 @@ export class PlannerRouter {
       || this.boundary.history?.size || y === undefined || maximumX === undefined || maximumY === undefined
       || cellKey(source.outside) === cellKey(target.cell)) return cpu();
     const width = maximumX - x + 1, height = maximumY - y + 1;
-    if (![x, y, width, height].every(Number.isSafeInteger) || width < 1 || height < 1 || width * height > 4096) return cpu();
+    // 准入规模由标定派生（GPU 实测仍快于 CPU 的最大格数），不再写死 4096。
+    if (![x, y, width, height].every(Number.isSafeInteger) || width < 1 || height < 1
+      || width * height > this.routing.tuning.maxBoundsCells) return cpu();
     return this.routing.connect({ grid: this.grid, bounds: { x, y, width, height }, start: source.outside, goal: target.outside,
       startDirection: EDGES.indexOf(source.edge), finalDirection: EDGES.indexOf(opposite(target.edge)), kind: kindIndex(source.kind) },
     checkBudget, async () => {
@@ -239,7 +353,7 @@ export class PlannerRouter {
         throw new PlannerCandidateError("两个非物流设备之间必须经过传送带或管道。");
       }
       this.routes.push({ source: source.entityId, target: target.entityId, sourcePort: portId(source), targetPort: portId(target),
-        sourceEdge: source.edge, targetEdge: target.edge, cells: [], turns: 0 });
+        sourceEdge: source.edge, targetEdge: target.edge, minimumCells, cells: [], turns: 0 });
       return 0;
     }
     const start = this.escapes.get(portId(source)) ?? source.outside, goal = this.escapes.get(portId(target)) ?? target.outside;
@@ -274,7 +388,7 @@ export class PlannerRouter {
           // 提交实体是两种后端的共同步骤，调度对照只比较取得合法路径的代价。
           searched?.(performance.now() - searchStarted);
           this.routes.push({ source: source.entityId, target: target.entityId, sourcePort: portId(source), targetPort: portId(target),
-            sourceEdge: source.edge, targetEdge: target.edge, cells: sequence.map(entry => entry.point),
+            sourceEdge: source.edge, targetEdge: target.edge, minimumCells, cells: sequence.map(entry => entry.point),
             turns: sequence.reduce((sum, entry, index) => sum + Number(entry.direction !== (sequence[index + 1]?.direction ?? finalDirection)), 0) });
           return this.commit(tail!, source.kind, finalDirection) + distance(start, source.outside) + distance(goal, target.outside);
         }

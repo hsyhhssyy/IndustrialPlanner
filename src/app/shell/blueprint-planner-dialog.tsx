@@ -5,6 +5,8 @@ import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner
 import { BlueprintPlannerItemPolicies } from "./blueprint-planner-item-policies";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { browserPlannerResources } from "@/blueprint-planner/automatic-concurrency";
+import { loadPlannerCapacity, plannerCapacitySignature, type PlannerStoredCapacity } from "@/shared/storage";
 import type { BlueprintPlannerAreaPoint, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import type { UiKey } from "@/shared/i18n";
 import type { AppHost } from "../host";
@@ -134,6 +136,14 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
+  // 2026-10-06：算力标定结果只在本机有效，界面读的是按硬件签名匹配后的存档，不随任务流转。
+  const [capacity, setCapacity] = useState<PlannerStoredCapacity | null>(() => loadPlannerCapacity());
+  const [capacitySignature] = useState(() => {
+    const hints = browserPlannerResources();
+    return plannerCapacitySignature(hints.hardwareConcurrency, hints.deviceMemory);
+  });
+  const [capacityMessage, setCapacityMessage] = useState<string | null>(null);
+  const [capacityCalibrating, setCapacityCalibrating] = useState(false);
   const [recentRate, setRecentRate] = useState<ReturnType<typeof samplePlannerProposalRate>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedId = controller.viewTaskId;
@@ -220,6 +230,21 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     })) : request.options.itemPolicies;
     return { ...request, plan: { ...request.plan, supplyPolicies }, options: { ...request.options, itemPolicies } };
   };
+  /**
+   * 2026-10-06：浏览器不暴露 CPU/GPU 占用百分比，因此容量上限只能实测。
+   * 用当前可见方案做基准负载（单次提案成本因方案而异），测出的上限按硬件签名落盘，
+   * 之后启动任务时由 Host 读取该签名下的标定值作为并发上限。
+   */
+  const calibrate = () => act(async () => {
+    if (!planner || busy || capacityCalibrating) return;
+    if (!window.confirm(t("eda.capacityConfirm"))) return;
+    setCapacityCalibrating(true);
+    try {
+      await planner.actions.calibrateCapacity(getConfiguredRequest(), async message => window.confirm(message),
+        message => setCapacityMessage(message));
+      setCapacity(loadPlannerCapacity());
+    } finally { setCapacityCalibrating(false); setCapacityMessage(null); }
+  });
   const download = () => act(() => {
     // AI-REMOVED 2026-10-04:
     // Reason: 下载入口需要支持尚未启动的配置草稿。
@@ -356,6 +381,14 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                   <option value="tank">{t("eda.converterStartupTank")}</option>
                   <option value="reject">{t("eda.converterStartupReject")}</option>
                 </select></label> : null}
+              <button type="button" onClick={calibrate} disabled={busy || capacityCalibrating}
+                aria-describedby="eda-capacity-status">{t("eda.capacityTest")}</button>
+              <p id="eda-capacity-status" role="status" className={styles.capacityStatus}>
+                {capacityCalibrating ? capacityMessage ?? t("eda.capacityTest")
+                  : capacity !== null && capacitySignature === capacity.signature
+                    ? `${t("eda.capacityMeasured").replace("{count}", String(capacity.report.concurrentWorkers))} · ${new Date(capacity.report.measuredAt).toLocaleString()}`
+                    : t("eda.capacityMissing")}
+              </p>
             </fieldset>
             {plan.containsModules ? <p role="alert" className={styles.error}>{t("eda.modulesUnsupported")}</p> : null}
           </> : null}
