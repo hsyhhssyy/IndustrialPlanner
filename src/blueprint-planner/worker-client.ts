@@ -16,7 +16,8 @@ export class PlannerWorkerClient {
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
-    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number }, originSeed?: PlannerSearchSeed): Promise<PlannerCandidate> {
+    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number }, originSeed?: PlannerSearchSeed,
+    gpuCrossoverCells?: number): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
@@ -57,7 +58,8 @@ export class PlannerWorkerClient {
       signal.addEventListener("abort", abort, { once: true });
       const timer = budgetMs === null ? undefined : setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
       try { worker.postMessage({ id, request, variant, budgetMs, gpu: this.allowGpu && request.options.concurrency === "auto",
-        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed } } satisfies PlannerWorkerRequest); }
+        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed },
+        gpuCrossoverCells } satisfies PlannerWorkerRequest); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }

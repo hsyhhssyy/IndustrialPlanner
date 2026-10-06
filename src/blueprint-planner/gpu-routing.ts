@@ -26,8 +26,73 @@ export class PlannerGpuRouting implements PlannerRoutingBackend {
   private snapshot: PlannerRoutingSnapshot | null = null;
   private initialized = false;
   private stopped = false;
+  private adapter: { vendor?: string; architecture?: string; fallback?: boolean } | undefined;
 
   get tuning(): PlannerGpuTuning { return this.gpuTuning; }
+
+  /** 适配器信息，供标定报告记录实测机型；未初始化时为 undefined。 */
+  get adapterInfo(): { vendor?: string; architecture?: string; fallback?: boolean } | undefined {
+    return this.adapter;
+  }
+
+  /**
+   * 2026-10-06：标定专用的纯测量入口 —— 绕过 PlannerRoutingPerformance 的准入判定直接跑 GPU 布线。
+   * 交叉点测量必须不受既有 bucket 决策影响，否则"GPU 只在规模已经很大时才跑"会把测量本身锁死。
+   * `deadlineMs` 与 `maxPathSteps` 可单独放宽：产品内的保守值会把大栅格的测量直接判成超时或被截断。
+   * 返回的是**稳态单位成本**：连跑 repetitions 次，扣除第一次（含一次性初始化与缓冲分配）后取平均。
+   */
+  async measure(problem: PlannerRoutingProblem, repetitions = 1, deadlineMs = this.gpuTuning.searchDeadlineMs,
+    maxPathSteps?: number): Promise<{ cells: number; milliseconds: number } | null> {
+    this.measurementFailure = undefined;
+    this.traceHeader = undefined;
+    if (maxPathSteps !== undefined) this.applyMeasurement({ maxPathSteps });
+    await this.initialize();
+    if (!this.device || !this.pipeline || this.stopped) {
+      this.measurementFailure = this.metrics.fallbackReason ?? "WebGPU 不可用";
+      return null;
+    }
+    let firstMs = 0;
+    let totalMs = 0;
+    let accepted = 0;
+    let pathCells = 0;
+    for (let attempt = 0; attempt < Math.max(1, repetitions); attempt++) {
+      const started = performance.now();
+      const cells = await this.attempt(problem, deadlineMs);
+      if (cells === null) break;
+      const milliseconds = performance.now() - started;
+      if (attempt === 0) firstMs = milliseconds; else { totalMs += milliseconds; accepted++; }
+      pathCells = cells.length;
+    }
+    if (accepted === 0) {
+      // 只跑一次时（repetitions=1）没有可平均的样本，退回首次耗时。
+      if (firstMs === 0) return null;
+      return { cells: pathCells, milliseconds: firstMs };
+    }
+    return { cells: pathCells, milliseconds: totalMs / accepted };
+  }
+
+  /** 单次测量的包装：把超时与"没解出"都收敛成 null，并留下可读的失败原因。 */
+  private async attempt(problem: PlannerRoutingProblem, deadlineMs: number): Promise<readonly GridPoint[] | null> {
+    try {
+      const cells = await this.deadline(this.search(problem), deadlineMs);
+      if (cells === null) {
+        const header = this.traceHeader;
+        this.measurementFailure ??= `search 返回 null（着色器返回码 ${header ? header.code : "?"}、登记长度 ${header ? header.length : "?"}）`;
+      }
+      return cells;
+    } catch (error) {
+      this.measurementFailure = error instanceof Error ? error.message : String(error);
+      return null;
+    }
+  }
+
+  /** 最近一次标定测量的失败原因；成功时为 undefined。用于区分"超时"与"没解出"。 */
+  measurementFailure: string | undefined;
+  /** 标定期记录着色器返回的结果头（返回码/登记长度/当时的上限），定位"没搜到"还是"被截断"。 */
+  traceHeader: { code: number; length: number; maxPathSteps: number } | undefined;
+
+  /** 释放设备与缓冲；标定结束后必须调用，避免为一次测量长期占用 GPU 资源。 */
+  dispose(): void { this.stop("已释放"); }
 
   /**
    * 用实测样本更新运行边界：单次布线 P90、初始化耗时、GPU 仍占优的最大格数、最长路径。
@@ -113,6 +178,8 @@ export class PlannerGpuRouting implements PlannerRoutingBackend {
       await this.deadline((async () => {
         const adapter = await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" });
         if (!adapter || adapter.info.isFallbackAdapter) throw new Error("硬件 WebGPU 不可用");
+        this.adapter = { vendor: adapter.info.vendor, architecture: adapter.info.architecture,
+          fallback: adapter.info.isFallbackAdapter };
         const device = await adapter.requestDevice();
         if (this.stopped) { device.destroy(); return; }
         this.device = device;
@@ -181,6 +248,8 @@ export class PlannerGpuRouting implements PlannerRoutingBackend {
     await readback.mapAsync(GPUMapMode.READ);
     try {
       const result = new Uint32Array(readback.getMappedRange());
+      // 标定期记录原始返回头，用于区分"没搜索到"与"路径被截断"。
+      this.traceHeader = { code: result[0]!, length: result[1] ?? 0, maxPathSteps: this.gpuTuning.maxPathSteps };
       if (result[0] !== 1 || !result[1]) return null;
       // 登记到上限说明路径被截断：放宽上限，让后续同类问题由 CPU 完整搜索而不是被静默丢弃。
       if (result[1] >= this.gpuTuning.maxPathSteps) {

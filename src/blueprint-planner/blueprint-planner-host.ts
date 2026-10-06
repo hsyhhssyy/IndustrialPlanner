@@ -309,6 +309,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   async function run(task: PlannerTask): Promise<void> {
     const point = task.file.checkpoint;
     const parallel = point.parallel!;
+    // 2026-10-06：GPU 交叉规模只能来自本机标定（保守缺省高于真实线路包围盒，不传下去 GPU 通道就永远不会被选中）。
+    // 必须声明在 lane 之前：lane 捕获该值并随每次派发传给 Worker。
+    const gpuCrossoverCells = loadPlannerCapacity()?.report.gpuCrossoverCells;
     const idleStatus = () => point.result !== null && point.savedBlueprintId === point.result.blueprint.blueprintId ? "completed" as const : "waiting" as const;
     let lastFailure = "尚未找到通过验证的布局";
     let interruption: unknown = null;
@@ -512,7 +515,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
                 observed = count;
                 task.liveEvaluations.set(shard.index, count);
                 live(phase, message);
-              }, selection.seed, selection.continuationStep, maximumArea, targetOutline, point.blueprintBaseline?.candidate.seed);
+              }, selection.seed, selection.continuationStep, maximumArea, targetOutline,
+              point.blueprintBaseline?.candidate.seed, gpuCrossoverCells);
             commit(candidate.search.evaluations, candidate);
           } catch (error) {
             if (error instanceof PlannerCandidateError) {
@@ -558,14 +562,16 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     };
     try {
       const concurrency = task.file.request.options.concurrency ?? 1;
-      // 未标定时只给"允许试探到多高"的安全阀，容量结论来自标定值；显式并发数优先。
       const hints = options.resourceHints ?? browserPlannerResources();
       // 未标定时只给"允许试探到多高"的安全阀，容量结论来自标定值；显式并发数优先。
       const probeCeiling = plannerProbeCeiling(hints);
       const maximum = Math.min(owned.length, concurrency === "auto" ? probeCeiling : concurrency);
       // 2026-10-06：显式并发数即用户目标；否则采用基准测试标定出的上限（任务内记录优先，其次本机已保存的标定结果）。
-      const calibratedWorkers = task.file.request.options.calibratedWorkers
-        ?? resolveCalibratedWorkers(plannerCapacitySignature(hints.hardwareConcurrency, hints.deviceMemory));
+      // 标定结果按硬件签名隔离：签名不符（换机器）时整份报告作废，容量与 GPU 交叉点一起回退到保守缺省。
+      const stored = loadPlannerCapacity();
+      const signature = plannerCapacitySignature(hints.hardwareConcurrency, hints.deviceMemory);
+      const calibrated = stored !== null && stored.signature === signature ? stored.report : null;
+      const calibratedWorkers = task.file.request.options.calibratedWorkers ?? calibrated?.concurrentWorkers;
       const controller = new PlannerAutomaticConcurrency(maximum, performance.now(), point.evaluations,
         { ...DEFAULT_PLANNER_CONCURRENCY_POLICY, target: concurrency === "auto" ? "auto" : concurrency,
           calibratedWorkers });

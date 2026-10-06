@@ -2,6 +2,7 @@ import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { SimulationEngineKind } from "@/domain/simulation";
 import { plannerProbeCeiling, PLANNER_SAFETY_CEILING, type PlannerResourceHints } from "@/blueprint-planner/automatic-concurrency";
 import { pickPlateau, stepUpThroughput } from "./capacity-growth";
+import type { PlannerGpuCrossoverReport } from "./gpu-crossover";
 
 /** 单个并发档位的实测吞吐；lagMs 是主线程事件循环延迟，用于识别"已到算力天花板"。 */
 export interface PlannerCapacityPoint {
@@ -41,6 +42,8 @@ export interface PlannerCapacityReport {
   readonly concurrentWorkers: number;
   /** 标定得到的 GPU 布线交叉点（路由边界格数）；未测得时为 undefined。 */
   readonly gpuCrossoverCells?: number;
+  /** 实测到的 WebGPU 适配器，便于用户确认标定跑在哪块设备上。 */
+  readonly adapter?: { readonly vendor?: string; readonly architecture?: string; readonly fallback?: boolean };
   readonly notes: readonly string[];
 }
 
@@ -56,6 +59,11 @@ export interface PlannerCapacityCalibrationOptions {
   readonly evaluationsPerWindow?: number;
   /** 最大探测档位数，防止在超大核心数机器上跑太久。 */
   readonly maxLevels?: number;
+  /**
+   * 2026-10-06：GPU 布线交叉点测量。只有具备真实 WebGPU 的调用方（浏览器 Host）会传入；
+   * 未传入时跳过，报告里 `gpuCrossoverCells` 保持 undefined。
+   */
+  readonly measureGpuCrossover?: (onProgress?: (message: string) => void, signal?: AbortSignal) => Promise<PlannerGpuCrossoverReport>;
   readonly signal?: AbortSignal;
 }
 
@@ -103,7 +111,24 @@ export async function calibratePlannerCapacity(probe: (options: PlannerCapacityP
   notes.push(growth.reason);
   const over = points.find(point => point.lagMs >= 100);
   if (over) notes.push(`${over.workers} 通道时主线程延迟 ${Math.round(over.lagMs)}ms，需关注交互流畅度。`);
-  return { measuredAt: Date.now(), hardware: hints, conservativeLimit, points, concurrentWorkers: growth.best, notes };
+  // 2026-10-06：布局并发测完之后再测 GPU 布线交叉点。GPU 只在准入规模之内参与，
+  // 因此它的交叉规模必须独立测量，不能由"GPU 已经跑过的那些大图"反推。
+  let gpuCrossoverCells: number | undefined;
+  let reportAdapter: PlannerCapacityReport["adapter"];
+  if (options.measureGpuCrossover) {
+    try {
+      const crossover = await options.measureGpuCrossover(options.onProgress, options.signal);
+      gpuCrossoverCells = crossover.maxProfitableCells;
+      reportAdapter = crossover.adapter;
+      notes.push(...crossover.notes);
+    } catch (error) {
+      // GPU 交叉点测不到不能影响已经得到的并发容量结论。
+      notes.push(`GPU 交叉点测量未完成：${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return { measuredAt: Date.now(), hardware: hints, conservativeLimit, points, concurrentWorkers: growth.best,
+    ...(gpuCrossoverCells === undefined ? {} : { gpuCrossoverCells }),
+    ...(reportAdapter === undefined ? {} : { adapter: reportAdapter }), notes };
 }
 
 /** 由吞吐曲线取膝盖点；导出供离线报告与测试复用。 */

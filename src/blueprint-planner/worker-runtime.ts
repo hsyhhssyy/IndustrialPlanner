@@ -28,6 +28,8 @@ export async function runPlannerWorkerRequest(
       try {
         const { PlannerGpuRouting } = await import("./gpu-routing");
         gpuRouting = new PlannerGpuRouting();
+        // 2026-10-06：交叉规模由主机标定给出。缺省值高于真实线路包围盒，不写入的话 GPU 永远不被选中。
+        if (input.gpuCrossoverCells !== undefined) gpuRouting.applyMeasurement({ maxProfitableCells: input.gpuCrossoverCells });
       } catch (error) {
         // 可选算子加载失败不能使整个布局任务失败；本通道本轮继续使用 CPU。
         gpuLoadError = error instanceof Error ? error.message : String(error);

@@ -9,6 +9,11 @@ export interface PlannerRoutingProblem {
   readonly startDirection: number;
   readonly finalDirection: number;
   readonly kind: number;
+  /**
+   * 2026-10-06：合成探针用的起终点跨度。GPU 着色器不含启发式，只有 CPU 侧 A* 会用它做估价；
+   * 生产 Router 不传该字段，因为它的估价直接由端口坐标算出。
+   */
+  readonly span?: number;
 }
 
 export interface PlannerRoutingMetrics {

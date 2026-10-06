@@ -10,6 +10,11 @@ export interface PlannerWorkerRequest {
   readonly budgetMs: number | null;
   readonly search?: PlannerSearchOptions;
   readonly gpu?: boolean;
+  /**
+   * 2026-10-06：主机标定出的 GPU 布线交叉规模（格数）。Worker 自己拿不到标定结果，
+   * 不传时 GPU 通道只能沿用保守缺省，而保守缺省高于真实线路规模，GPU 等于不会被选中。
+   */
+  readonly gpuCrossoverCells?: number;
 }
 
 export type PlannerWorkerResponse =
