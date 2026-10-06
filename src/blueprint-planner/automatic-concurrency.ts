@@ -105,9 +105,15 @@ export class PlannerAutomaticConcurrency {
     // 原实现让 target 恒从 1 起，而爬升要等观测窗口（缺省 4 秒）跑满；
     // 于是"用户指定 2 个通道"会退化成"先只用 1 个、4 秒后才到 2"，
     // 短任务里等于完全没按用户要求并发（task-sharding 的显式并发用例由此失败）。
-    // 用户的显式要求不是需要试探的容量结论，因此直接作为起点；
-    // 标定值不同：它是实测上限，起点仍保持保守，由控制律在窗口内爬升。
-    this.target = this.requestedTarget ?? 1;
+    //
+    // 订正 2026-10-06（第二处）：标定值同样是**测量结论**，必须直接作为起点。
+    // 基准测试逐档上探时已经量过"1 通道 7.7k 评估/秒、27 通道 74.9k 评估/秒"这条曲线，
+    // 并把吞吐平台点记成了 concurrentWorkers；正式规划再从 1 爬一遍等于把已经测出的
+    // 前 20 秒（1→7→12→15→18 共 5 个窗口，平均只有满速的 1/4）重新浪费一次，
+    // 而且上探增益会先撞上 1.05 的阈值、在 19~22 之间来回试探，永远到不了标定平台。
+    // 现在：显式并发数与标定平台都直接作为起点；只有**无标定**时才从保守起点上探。
+    // 机器被别的负载抢走时不需要靠起点保守来兜底：压力信号会按相对 20% 退让。
+    this.target = this.requestedTarget ?? calibrated ?? PLANNER_CONSERVATIVE_START;
     this.windowStartedAt = at;
     this.windowStartedEvaluations = evaluations;
   }
@@ -117,10 +123,19 @@ export class PlannerAutomaticConcurrency {
     this.windowStartedEvaluations = sample.evaluations;
   }
 
-  /** 相对退让：当前占用降低 shedFraction，至少 1 个通道，并对齐到向上取整。 */
+  /**
+   * 相对退让：当前占用降低 shedFraction，至少退让一格，且**永不退到 0**。
+   *
+   * 订正 2026-10-06：原式 `next >= target ? target - 1 : next` 在 target = 1 时先算出
+   * `max(1, floor(0.8)) = 1`，再落到 `target - 1 = 0`。而派发循环是
+   * `for (index = 0; index < target; ...)`，target 归零后一个通道都不派发，
+   * `active.size === 0 && pendingVerifications === 0` 立刻成立并 break，整轮计算直接结束；
+   * 此时每窗速率恒为 0，控制律也再没有机会爬回来。
+   * 正式规划恰好就是从 target = 1 起步的，因此只要第一个观测窗口持续卡顿就会踩中。
+   */
   private shed(): void {
     const next = Math.max(1, Math.floor(this.target * (1 - this.policy.shedFraction)));
-    this.target = next >= this.target ? this.target - 1 : next;
+    this.target = Math.max(1, next >= this.target ? this.target - 1 : next);
   }
 
   /** 爬升：把剩余空间按 rampFraction 分配，至少 +1。 */

@@ -111,6 +111,22 @@ it("标定值作为上限，容量提示只作兜底", () => {
   expect(explicit.maximum).toBe(3);
 });
 
+it("标定平台直接作为起点，不再从保守起点重爬", () => {
+  // 标定已经量出"1 通道 7.7k 评估/秒 … 27 通道 74.9k 评估/秒"这条曲线，并把吞吐平台点
+  // 记成 concurrentWorkers。正式规划再从 1 重爬要 5 个窗口（20 秒）才到 18，
+  // 而且上探增益会先撞上 1.05 的阈值、在 19~22 之间来回试探，永远到不了标定平台。
+  const calibrated = new PlannerAutomaticConcurrency(32, 0, 0,
+    { ...DEFAULT_PLANNER_CONCURRENCY_POLICY, calibratedWorkers: 27 });
+  expect(calibrated.maximum).toBe(27);
+  expect(calibrated.target).toBe(27);
+  // 已到达上限，窗口内保持不动，不再无意义地上探。
+  expect(drive(calibrated, 3, 100)).toEqual([27, 27, 27]);
+  // 无标定时仍必须从保守起点上探：上探是唯一能获得容量结论的手段。
+  const uncalibrated = new PlannerAutomaticConcurrency(8, 0, 0);
+  expect(uncalibrated.target).toBe(1);
+  expect(drive(uncalibrated, 3, 100)).toEqual([2, 3, 4]);
+});
+
 it("标定值不被与机型无关的常量削顶", () => {
   // 2026-10-06 回归：控制律曾对 maximum 取 Math.min(..., 32)，
   // 64 核机器实测出 64 通道也会被削到 32，标定结果形同作废。
@@ -147,6 +163,21 @@ it("小上限时至少退让一个通道，不会卡死在同一占用", () => {
   expect(drive(control, 2, 100).at(-1)).toBe(2);
   expect(control.observe({ at: 9000, evaluations: 400, activeWorkers: 2, pendingVerifications: 0, lagMs: 150 })).toBe(2);
   expect(control.observe({ at: 12_000, evaluations: 420, activeWorkers: 2, pendingVerifications: 0, lagMs: 150 })).toBe(1);
+});
+
+it("退让不会把通道降到 0，否则派发循环会直接结束整轮计算", () => {
+  // 2026-10-06 回归：原式先算 max(1, floor(1 * 0.8)) = 1，再落到 target - 1 = 0。
+  // 派发循环是 for (index = 0; index < target; ...)，target 归零后一个通道都不派发，
+  // active.size === 0 && pendingVerifications === 0 立即成立并 break，整轮计算直接结束；
+  // 此时每窗速率恒为 0，控制律也再没有机会爬回来。正式规划正是从 target = 1 起步的。
+  const control = new PlannerAutomaticConcurrency(8, 0, 0);
+  expect(control.target).toBe(1);
+  expect(control.observe({ at: 1_000, evaluations: 100, activeWorkers: 1, pendingVerifications: 0, lagMs: 200 })).toBe(1);
+  expect(control.observe({ at: 2_000, evaluations: 200, activeWorkers: 1, pendingVerifications: 0, lagMs: 200 })).toBe(1);
+  // 窗口跑满且持续卡顿：退让后仍保留 1 个通道。
+  expect(control.observe({ at: 4_000, evaluations: 400, activeWorkers: 1, pendingVerifications: 0, lagMs: 200 })).toBe(1);
+  // 压力消失、冷却结束后仍能重新加容，不会永久卡在 1。
+  expect(control.observe({ at: 9_000, evaluations: 500, activeWorkers: 1, pendingVerifications: 0, lagMs: 0 })).toBe(2);
 });
 
 it("CPU 压力信号可独立触发收缩，fair 不触发", () => {
