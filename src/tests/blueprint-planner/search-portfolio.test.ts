@@ -11,6 +11,43 @@ import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
 import yazhen from "./fixtures/yazhen-syringe.json";
 
+it("全局最优重调度替换旧主种子，重置续搜机会并保留其他输出拓扑", () => {
+  const registry = createRegistryContract();
+  const request = structuredClone(yazhen.request) as BlueprintPlannerRequest;
+  const auto = { ...request, options: { ...request.options, solidOutput: "auto" as const } };
+  const stash = { ...request, options: { ...request.options, solidOutput: "stash" as const } };
+  const warehouse = { ...request, options: { ...request.options, solidOutput: "warehouse" as const } };
+  const old = capturePlannerSeed(stash, createProductionNetwork(registry, stash), [], [], 24, 22);
+  const other = capturePlannerSeed(warehouse, createProductionNetwork(registry, warehouse), [], [], 22, 24);
+  const pool = new PlannerSearchPortfolio(auto, old);
+  pool.remember(other);
+  for (let i = 0; i < 20; i++) pool.next(i);
+  const best = { ...old, width: 24, height: 12 };
+  pool.restart(best);
+  expect(pool.next(0).seed).toBe(best);
+  expect(pool.next(1).seed).toBe(other);
+  expect(pool.snapshot().pools.every(entry => entry.attemptsWithoutImprovement <= 1)).toBe(true);
+
+  // 同面积、同摆位但线路不同的全局改善不能被旧种子去重吞掉。
+  const improved = structuredClone(best);
+  pool.restart(improved);
+  expect(pool.next(0).seed).toBe(improved);
+  expect(pool.next(2).continuationStep).toBe(1);
+});
+
+it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15", () => {
+  const registry = createRegistryContract();
+  const request = structuredClone(yazhen.request) as BlueprintPlannerRequest;
+  const seed = capturePlannerSeed(request, createProductionNetwork(registry, request), [], [], 24, 22);
+  const pool = new PlannerSearchPortfolio(request, seed);
+  for (const variant of [0, 3, 4, 7]) {
+    const selection = pool.next(variant, true, { area: 288, outputStashCount: 1 });
+    expect(selection.maximumArea).toBe(287);
+    expect(breadthOutlines(selection.maximumArea!, { width: 5, height: 5 })).toContainEqual({ width: 19, height: 15 });
+  }
+  expect(pool.next(3, true, { area: 288, outputStashCount: 2 }).maximumArea).toBe(288);
+});
+
 it("初排以设备面积两倍为目标，整数取整及各次重启均不超过 70 格", () => {
   expect(initialPlannerOutline(200, { width: 5, height: 5 }, 0)).toEqual({ width: 20, height: 20 });
   for (const area of [9, 75, 200, 2500, 4900]) for (let variant = 0; variant < 18; variant++) {

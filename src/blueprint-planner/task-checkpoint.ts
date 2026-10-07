@@ -34,6 +34,8 @@ export interface PlannerShardCheckpoint {
   portfolio: PlannerPortfolioSnapshot;
   pendingCandidate: PlannerCandidate | null;
   shapeVisits: Record<string, number>;
+  /** 尺寸访问次数所属的全局最优目标；旧任务缺省时在下次运行同步，累计计数保留。 */
+  searchTarget?: string;
 }
 
 export interface PlannerParallelCheckpoint {
@@ -270,6 +272,8 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           || !Number.isSafeInteger(shard.validatedCandidates) || shard.validatedCandidates < 0
           || shard.validatedCandidates > shard.attempts
           || !shard.shapeVisits || typeof shard.shapeVisits !== "object" || Array.isArray(shard.shapeVisits)
+          || (shard.searchTarget !== undefined && (typeof shard.searchTarget !== "string"
+            || shard.searchTarget.length === 0 || shard.searchTarget.length > 1024))
           || Object.entries(shard.shapeVisits).some(([key, visits]) => (!/^.+\/\d+\/\d+$/.test(key) || !outputModes.has(key.split("/").slice(0, -2).join("/")))
             || !Number.isSafeInteger(visits) || visits < 0)
           || Object.values(shard.shapeVisits).reduce((sum, visits) => sum + visits, 0) > shard.attempts

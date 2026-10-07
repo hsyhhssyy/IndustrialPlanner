@@ -234,7 +234,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     const file = selectedId === null ? planner.queries.exportDraft(getConfiguredRequest()) : planner.queries.exportTask(selectedId);
     const url = URL.createObjectURL(new Blob([JSON.stringify(file)], { type: "application/json" }));
     const link = document.createElement("a");
-    link.href = url; link.download = `${(plan?.name || "eda-task").replace(/[/\\:*?"<>|]/g, "-")}.eda-task.json`;
+    const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    link.href = url; link.download = `${(plan?.name || "eda-task").replace(/[/\\:*?"<>|]/g, "-")}_${timestamp}.eda-task.json`;
     link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   const elapsed = formatPlannerElapsed(progress?.elapsedMs ?? 0, [t("eda.elapsedDay"), t("eda.elapsedHour"), t("eda.elapsedMinute"), t("eda.elapsedSecond")]);

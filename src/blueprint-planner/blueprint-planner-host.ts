@@ -59,6 +59,11 @@ export interface PlannerHostOptions {
 }
 
 export function createBlueprintPlannerHost(workspace: WorkspaceContract, options: PlannerHostOptions = {}): BlueprintPlannerHost {
+  const rank = (candidate: PlannerCandidate) => ({ area: candidate.metrics.area,
+    outputStashCount: candidate.search.quality?.outputStashCount,
+    secondary: candidate.search.quality?.secondary ?? candidate.metrics.score });
+  const candidateSearchTarget = (candidate: PlannerCandidate) => JSON.stringify({
+    blueprintId: candidate.execution.blueprint.blueprintId, ...rank(candidate) });
   const state = observable<{ activeTaskId: string | null; revision: number }>({ activeTaskId: null, revision: 0 });
   const tasks = new Map<string, PlannerTask>();
   // 无法恢复的记录独立保留原文，禁止生命周期自动保存覆盖它们。
@@ -325,6 +330,21 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   async function run(task: PlannerTask): Promise<void> {
     const point = task.file.checkpoint;
     const parallel = point.parallel!;
+    let searchAbort = new AbortController();
+    const cancelSearch = () => searchAbort.abort();
+    task.abort.signal.addEventListener("abort", cancelSearch);
+    // AI-REMOVED 2026-10-07:
+    // Reason: 导入重新分配蓝图 ID 时也须更新当前搜索目标引用，复用同一目标编码。
+    // Trigger: 全局重调度检查点的导出、导入连续性。
+    // Evidence: importTask 原有蓝图 ID 重分配行为。
+    // Replacement: Host 级 rank / candidateSearchTarget；Risk: Low；Human Review: Required。
+    // Original code:
+    // const rank = (candidate: PlannerCandidate) => ({ area: candidate.metrics.area,
+    //   outputStashCount: candidate.search.quality?.outputStashCount,
+    //   secondary: candidate.search.quality?.secondary ?? candidate.metrics.score });
+    const canImprove = (candidate: PlannerCandidate) => point.best === null
+      || comparePlannerRanks(rank(candidate), rank(point.best.candidate)) < 0;
+    const searchTarget = () => point.best ? candidateSearchTarget(point.best.candidate) : undefined;
     const idleStatus = () => point.result !== null && point.savedBlueprintId === point.result.blueprint.blueprintId ? "completed" as const : "waiting" as const;
     let lastFailure = "尚未找到通过验证的布局";
     let interruption: unknown = null;
@@ -362,6 +382,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const verify = async (shard: PlannerShardCheckpoint, portfolio: PlannerSearchPortfolio) => {
       const candidate = shard.pendingCandidate;
       if (candidate === null) return;
+      // 旧目标下已完成的候选仅在仍可能改善全局结果时启动验收；已启动的验收正常结算。
+      if (!canImprove(candidate)) { shard.pendingCandidate = null; persist(task); return; }
       assertPlannerCandidateBounds(workspace.registry, candidate);
       check(task);
       const simulation = workspace.simulation;
@@ -388,13 +410,23 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       shard.validatedCandidates++;
       publish(task, { validatedCandidateCount: task.file.progress.validatedCandidateCount + 1, phase: "optimization" }, false);
       const oldArea = point.best?.candidate.metrics.area ?? null;
-      if (point.best === null || comparePlannerRanks({ area: candidate.metrics.area,
-        outputStashCount: candidate.search.quality?.outputStashCount,
-        secondary: candidate.search.quality?.secondary ?? candidate.metrics.score },
-      { area: point.best.candidate.metrics.area,
-        outputStashCount: point.best.candidate.search.quality?.outputStashCount,
-        secondary: point.best.candidate.search.quality?.secondary ?? point.best.candidate.metrics.score }) < 0) {
+      // AI-REMOVED 2026-10-07:
+      // Reason: 验收与迟到候选筛选统一使用正式排名，避免两处规则漂移。
+      // Trigger: 用户要求每次已验证改进立即全局重调度。
+      // Evidence: 旧实现仅替换 point.best，其他分片仍继续旧搜索。
+      // Replacement: 本函数的 canImprove / rank；Risk: Low；Human Review: Required。
+      // Original code:
+      // if (point.best === null || comparePlannerRanks({ area: candidate.metrics.area,
+      //   outputStashCount: candidate.search.quality?.outputStashCount,
+      //   secondary: candidate.search.quality?.secondary ?? candidate.metrics.score },
+      // { area: point.best.candidate.metrics.area,
+      //   outputStashCount: point.best.candidate.search.quality?.outputStashCount,
+      //   secondary: point.best.candidate.search.quality?.secondary ?? point.best.candidate.metrics.score }) < 0) {
+      if (canImprove(candidate)) {
         point.best = { candidate, report };
+        // 立即停止旧目标派发，Worker 协作取消后结算实际提案；不取消任务或其他候选的在途验收。
+        cancelSearch();
+        wake?.();
         point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
           metrics: candidate.metrics, connections: candidate.connections,
           measuredOutputs: report.probes.filter(probe => task.file.request.plan.targets.some(target => target.itemId === probe.id))
@@ -467,8 +499,27 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const leased = new Set<number>();
     const outlineCache = new Map<string, ReturnType<typeof breadthOutlines>>();
     const minimumCache = new Map<string, ReturnType<typeof fixedOutlineMinimum>>();
+    const synchronizeSearch = () => {
+      const target = searchTarget();
+      if (target !== undefined) {
+        for (const index of owned) {
+          const shard = parallel.shards[index]!;
+          if (shard.searchTarget === target) continue;
+          const portfolio = task.portfolios.get(index)!;
+          portfolio.restart(point.best!.candidate.seed);
+          shard.portfolio = portfolio.snapshot();
+          shard.shapeVisits = {};
+          shard.searchTarget = target;
+        }
+        task.portfolio.restart(point.best!.candidate.seed);
+      }
+      outlineCache.clear(); minimumCache.clear();
+      zeroAttempts = 0;
+      persist(task);
+    };
     const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>) => {
       const portfolio = task.portfolios.get(shard.index)!;
+      const signal = searchAbort.signal;
       // AI-REMOVED 2026-10-02:
       // Reason: 零提案失败应按整轮统计，不能每个短批重置。
       // Trigger: 尺寸广度批次可能因固定设施不合而零提案跳过。
@@ -480,9 +531,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       while (remaining > 0 || shard.pendingCandidate !== null) {
         check(task);
         if (shard.pendingCandidate === null) {
-          if (shard.portfolio.pools.length === 0 && point.best?.candidate.seed) portfolio.remember(point.best.candidate.seed);
+          // AI-REMOVED 2026-10-07:
+          // Reason: 只初始化空池使已有旧种子的分片永远不采用新最优。
+          // Trigger: 288 最优仅存在于一个分片，且从未用于 19×15 续搜。
+          // Evidence: 用户任务的分片池和尺寸访问记录。
+          // Replacement: synchronizeSearch；Risk: 改进时重新分配搜索机会；Human Review: Required。
+          // Original code:
+          // if (shard.portfolio.pools.length === 0 && point.best?.candidate.seed) portfolio.remember(point.best.candidate.seed);
           const before = portfolio.snapshot();
-          const selection = portfolio.next(shard.nextVariant);
+          const selection = portfolio.next(shard.nextVariant, true, point.best ? rank(point.best.candidate) : undefined);
           const sharedArea = point.best?.candidate.metrics.area;
           const maximumArea = sharedArea === undefined ? selection.maximumArea
             : Math.min(selection.maximumArea ?? sharedArea, sharedArea);
@@ -502,7 +559,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             let shapes = outlineCache.get(cacheKey);
             if (!shapes) { shapes = breadthOutlines(maximumArea, minimum); outlineCache.set(cacheKey, shapes); }
             const mode = plannerOutputModeKey(selection.request.options);
-            const visits = (key: string) => parallel.shards.reduce((sum, entry) => sum + (entry.shapeVisits[key] ?? 0), 0);
+            const visits = (key: string) => parallel.shards.reduce((sum, entry) => sum
+              + (entry.searchTarget === shard.searchTarget ? entry.shapeVisits[key] ?? 0 : 0), 0);
             // AI-REMOVED 2026-10-02:
             // Reason: 尺寸领取规则移至纯函数，供真实调度与回归测试共用。
             // Trigger: 多 Worker 防重复与可验证的跨客户端分片归属。
@@ -533,14 +591,14 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             shard.attempts++;
             shard.nextVariant += parallel.count;
             shard.evaluations += used;
-            if (shapeKey) shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
+            if (shapeKey && !signal.aborted) shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
             shard.portfolio = portfolio.snapshot();
             shard.pendingCandidate = candidate;
             point.attempt++;
             point.evaluations += used;
             if (shard.index === gpuShard) gpuLaneEvaluations += used;
             remaining -= used;
-            zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
+            if (!signal.aborted) zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
             task.liveEvaluations.delete(shard.index);
             task.activeShards.delete(shard.index);
             live();
@@ -548,15 +606,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           };
           try {
             const candidate = await laneWorker.build(selection.request, selection.variant, null, remaining,
-              task.abort.signal, (phase, message, count) => {
+              signal, (phase, message, count) => {
                 if (!Number.isSafeInteger(count) || count < observed || count > remaining) throw new Error("Worker 尝试计数无效。");
                 observed = count;
                 task.liveEvaluations.set(shard.index, count);
                 live(phase, message);
               }, selection.seed, selection.continuationStep, maximumArea, targetOutline, point.blueprintBaseline?.candidate.seed);
-            commit(candidate.search.evaluations, candidate);
+            commit(candidate.search.evaluations, canImprove(candidate) ? candidate : null);
           } catch (error) {
-            if (error instanceof PlannerCandidateError) {
+            if (signal.aborted) {
+              // 包含零提案的取消也推进已派发序号，避免全局改进或恢复后重复随机轨迹。
+              commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
+              break;
+            } else if (error instanceof PlannerCandidateError) {
               const used = error.search?.evaluations ?? observed;
               // AI-CORRECTION 2026-10-02: 显式尺寸不合时跳过该批；连续零提案仍停止以免无限循环。
               // AI-REMOVED 2026-10-03:
@@ -568,10 +630,16 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
               // if (used === 0 && !targetOutline) throw new Error(`当前布局无法启动搜索：${error.message}`);
               commit(used, null);
               lastFailure = error.message;
-            } else if (task.abort.signal.aborted) {
-              if (observed > 0) commit(observed, null);
-              else { portfolio.restore(before); task.liveEvaluations.delete(shard.index); task.activeShards.delete(shard.index); }
-              break;
+            // AI-REMOVED 2026-10-07:
+            // Reason: 全局重调度需要独立取消，零提案也必须推进已派发序号。
+            // Trigger: 用户要求新最优出现后立即取消旧批次并重新搜索。
+            // Evidence: 原逻辑仅检查任务暂停，且零提案恢复旧序号。
+            // Replacement: 上方 signal.aborted 分支；Risk: 取消批次计入布局次数；Human Review: Required。
+            // Original code:
+            // } else if (task.abort.signal.aborted) {
+            //   if (observed > 0) commit(observed, null);
+            //   else { portfolio.restore(before); task.liveEvaluations.delete(shard.index); task.activeShards.delete(shard.index); }
+            //   break;
             } else {
               portfolio.restore(before);
               task.liveEvaluations.delete(shard.index);
@@ -598,6 +666,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       return quota - remaining;
     };
     try {
+      synchronizeSearch();
       const concurrency = task.file.request.options.concurrency ?? 1;
       if (task.file.request.options.gpu === true && owned.length > 1 && options.gpuLayout !== false && (options.gpuWorkerFactory
         || (!options.worker && !options.workerFactory && typeof navigator !== "undefined" && "gpu" in navigator))) {
@@ -647,7 +716,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const claim = (gpu = false) => {
         // 队列有界，背压只暂停新批次；不把串行验收误报为整机 CPU 满载。
         // 订正 2026-10-06：验证已可并行；高水位跟随共享上限，两个阶段分别测量吞吐。
-        if (pendingVerifications >= Math.max(2, maximum)) return null;
+        if (searchAbort.signal.aborted || pendingVerifications >= Math.max(2, maximum)) return null;
         for (let step = 0; step < parallel.count; step++) {
           const index = (parallel.nextShard + step) % parallel.count;
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
@@ -663,6 +732,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       };
       // 同一批预算、分片租约与验证队列由主线程统一管理；缩容只阻止后续领批。
       while (!task.abort.signal.aborted) {
+        // 所有旧批次结算后才清空尺寸访问与更新种子，迟到回调不能写进新目标的记录。
+        if (searchAbort.signal.aborted && active.size === 0) {
+          synchronizeSearch();
+          searchAbort = new AbortController();
+        }
         startVerifications(); retire();
         // 初排构造主要是 CPU 工作；已有可用种子后，GPU 专注不同尺寸上的独立续搜。
         for (const index of [...(gpuWorker?.gpuAvailable && point.best ? [-1] : []), ...Array.from({ length: target }, (_, index) => index)]) {
@@ -746,6 +820,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       await settleVerifications();
       gpuWorker?.dispose();
       for (const [index, current] of workers) if (index > 0) { current.dispose(); workers.delete(index); }
+      task.abort.signal.removeEventListener("abort", cancelSearch);
       await settle(task);
     }
   }
@@ -1048,7 +1123,16 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
           const result = task.file.checkpoint.result;
           const blueprint = task.file.checkpoint.best?.candidate.execution.blueprint;
-          if (blueprint) blueprint.blueprintId = createUuid();
+          if (blueprint) {
+            const best = task.file.checkpoint.best!.candidate;
+            const previousTarget = candidateSearchTarget(best);
+            blueprint.blueprintId = createUuid();
+            const target = candidateSearchTarget(best);
+            // 导入创建独立身份，但对应当前最优的已完成搜索机会仍然有效。
+            for (const shard of task.file.checkpoint.parallel?.shards ?? []) {
+              if (shard.searchTarget === previousTarget) shard.searchTarget = target;
+            }
+          }
           const pendingBlueprint = task.file.checkpoint.pendingCandidate?.execution.blueprint;
           if (pendingBlueprint && pendingBlueprint !== blueprint) pendingBlueprint.blueprintId = createUuid();
           if (result !== null) task.file.checkpoint.result = { ...result, taskId: id, folderId: null,

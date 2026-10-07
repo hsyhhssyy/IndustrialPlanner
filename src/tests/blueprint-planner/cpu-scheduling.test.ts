@@ -154,7 +154,13 @@ it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续�
     const resumed = test.host.queries.exportTask(test.id);
     expect(resumed.progress.status).toBe("waiting");
     expect(resumed.progress.evaluatedProposals).toBe(110_000);
-    expect(resumed.progress.validatedCandidateCount).toBeGreaterThanOrEqual(5);
+    // AI-REMOVED 2026-10-07:
+    // Reason: 首个通过验收后，其余同排名排队候选已不可能改善，不再重复启动仿真。
+    // Trigger: 用户要求全局改进立即重调度并淘汰旧候选。
+    // Evidence: 本用例的五个候选使用同一真实蓝图及排名。
+    // Replacement: 下方检查至少一个完成验收且队列清空；Risk: Low；Human Review: Required。
+    // Original code: expect(resumed.progress.validatedCandidateCount).toBeGreaterThanOrEqual(5);
+    expect(resumed.progress.validatedCandidateCount).toBeGreaterThanOrEqual(1);
     expect((resumed.checkpoint as PlannerCheckpoint).parallel!.shards.every(shard => shard.pendingCandidate === null)).toBe(true);
   } finally { await test.close(); }
 }, 30_000);

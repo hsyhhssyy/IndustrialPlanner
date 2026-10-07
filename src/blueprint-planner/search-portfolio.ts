@@ -92,7 +92,22 @@ export class PlannerSearchPortfolio {
     for (const [key, pool] of pools) this.seeds.set(key, pool);
   }
 
-  next(variant: number, continuation = true) {
+  /** 全局改进后保留不同拓扑与近优布局，但所有分片重新从新最优分配续搜机会。 */
+  restart(seed: PlannerSearchSeed | undefined): void {
+    this.remember(seed);
+    if (seed) {
+      const pool = this.seeds.get(seed.requestKey)!;
+      const entry: SeedEntry = { seed, features: seedFeatures(seed), visits: 0 };
+      // 同面积的施工成本改善也必须成为主种子；仅线路变化时替换原有相同摆位。
+      pool.entries = [entry, ...pool.entries.filter(item => seedDistance(item, entry) !== 0)].slice(0, 4);
+    }
+    for (const pool of this.seeds.values()) {
+      pool.attemptsWithoutImprovement = 0;
+      for (const entry of pool.entries) entry.visits = 0;
+    }
+  }
+
+  next(variant: number, continuation = true, globalBest?: { readonly area: number; readonly outputStashCount?: number }) {
     const attempt = resolvePlannerAttempt(this.request, variant);
     // AI-REMOVED 2026-09-30:
     // Reason: 单一种子会丢弃同面积但通道不同的有效布局。
@@ -104,8 +119,9 @@ export class PlannerSearchPortfolio {
     // return { ...attempt, seed: continuation && attempt.variant % 4 !== 3
     //   ? this.seeds.get(plannerRequestKey(attempt.request)) : undefined };
     const pool = this.seeds.get(plannerRequestKey(attempt.request));
-    const bestArea = Math.min(...[...this.seeds.values()].map(value => value.entries[0]!.seed.width * value.entries[0]!.seed.height));
-    const bestStashCount = Math.min(...[...this.seeds.values()].flatMap(value => value.entries
+    const bestArea = globalBest?.area ?? Math.min(...[...this.seeds.values()].map(value => value.entries[0]!.seed.width * value.entries[0]!.seed.height));
+    const bestStashCount = globalBest ? (this.request.blueprintSource ? 0 : globalBest.outputStashCount ?? 0)
+      : Math.min(...[...this.seeds.values()].flatMap(value => value.entries
       .filter(entry => entry.seed.width * entry.seed.height === bestArea).map(entry => this.request.blueprintSource ? 0 : countPlannerOutputStashes(entry.seed.network.nodes))));
     // 2026-09-30：同面积少箱也是改进；冷启动可能合箱，固定拓扑续搜只有本来更少箱时才放宽一格。
     let maximumArea = continuation && Number.isFinite(bestArea)
