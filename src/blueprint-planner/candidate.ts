@@ -59,8 +59,9 @@ export async function createPlannerCandidate(
   // 独立重启轮换箱数；预算内重排必须保持本轮拓扑选择。
   options = { ...options, stashPackingVariant: options.stashPackingVariant ?? Math.floor((variant + 1) / 4) };
   // 每四轮的独立重启轮换供水结构；三种结构避免与 32 分片步长锁定，阶段重排保持本轮选择。
+  // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
   options = { ...options, conduitTopology: options.conduitTopology
-    ?? (["local", "shared", "trunk"] as const)[Math.floor((variant + 1) / 4) % 3] };
+    ?? (["shared", "trunk", "local"] as const)[Math.floor((variant + 1) / 4) % 3] };
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
   const reserve = !options.seed && options.strategy !== "baseline" && total >= 20_000;
