@@ -114,17 +114,25 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
     const priorities = new Set(outgoing.map(wire => nodes.get(id)!.entity.config[
       `portGroups[${wire.source.groupIndex}].ports[${wire.source.portIndex}].priorityGroup`]));
     if (priorities.size > 1) throw new PlannerCandidateError(`分流器不能通过优先级实现比例分配：${id}`);
-    if (outgoing.every(wire => Math.abs(wire.perMinute - outgoing[0]!.perMinute) < 1e-6)) continue;
-    const metered = (wire: PlannerWire, visited: Set<string>): boolean => {
-      if (visited.has(wire.target.entityId)) return false;
-      const node = nodes.get(wire.target.entityId)!;
-      const limit = wire.itemIds.length === 1 ? rateOf(node.entity.id, wire.itemIds[0]!) : null;
-      if (limit !== null) return limit <= wire.perMinute + 1e-6;
-      if (!registry.queries.isGeneralLogisticsDevice(node.definition.id)) return false;
-      const children = wires.filter(child => child.source.entityId === node.entity.id);
-      return children.length > 0 && children.every(child => metered(child, new Set(visited).add(node.entity.id)));
-    };
-    if (!outgoing.every(wire => metered(wire, new Set([id])))) throw new PlannerCandidateError(`非均分支路没有完整准入口约束：${id}`);
+    // AI-REMOVED 2026-10-07:
+    // Reason: 普通生产输入的缓冲背压允许非等量分流；不能把分流器计划运量当作所有末端都必须限速的依据。
+    // Trigger: 用户明确普通生产输入依靠缓冲区背压，要求支持单口暗管主管分流。
+    // Evidence: 本任务供水 15/min 与 30/min 被非等量规则强制加准入口；工作消耗已有独立限速和审计。
+    // Replacement: 本函数前段逐一检查 consumption-channel 的准入口及共享份额；普通支路由真实产量验收。
+    // Risk: 不能省略工作消耗路径审计；普通背压启动过程可能延长。
+    // Human Review: Required
+    // Original code:
+    // if (outgoing.every(wire => Math.abs(wire.perMinute - outgoing[0]!.perMinute) < 1e-6)) continue;
+    // const metered = (wire: PlannerWire, visited: Set<string>): boolean => {
+    //   if (visited.has(wire.target.entityId)) return false;
+    //   const node = nodes.get(wire.target.entityId)!;
+    //   const limit = wire.itemIds.length === 1 ? rateOf(node.entity.id, wire.itemIds[0]!) : null;
+    //   if (limit !== null) return limit <= wire.perMinute + 1e-6;
+    //   if (!registry.queries.isGeneralLogisticsDevice(node.definition.id)) return false;
+    //   const children = wires.filter(child => child.source.entityId === node.entity.id);
+    //   return children.length > 0 && children.every(child => metered(child, new Set(visited).add(node.entity.id)));
+    // };
+    // if (!outgoing.every(wire => metered(wire, new Set([id])))) throw new PlannerCandidateError(`非均分支路没有完整准入口约束：${id}`);
   }
   const rules = new PlannerSupplyRules(registry, network.request.plan, network.request.options.converterStartup);
   const startupProduction = network.nodes.flatMap(node => {

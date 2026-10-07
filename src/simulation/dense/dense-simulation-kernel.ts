@@ -1400,7 +1400,69 @@ export class DenseSimulationKernel {
     return (portIndex - cursor + portCount) % portCount;
   }
 
+  // AI-REMOVED 2026-10-07:
+  // Reason: 旧候选表仅记录输出端高优先级连接，输入端跨组竞争遗漏优先级。
+  // Trigger: 用户反馈汇流器自定义优先级在多种 1/5/9 组合下错误选路。
+  // Evidence: 最小三路持续输入场景可复现低优先级独占；组内 rank 不包含组间优先级。
+  // Replacement: 下方 compileHigherPriorityPhysicalIndexesByEdgeIndex 同时编译输入与输出约束。
+  // Risk: 所有多输入节点共用此行为；断供回退、轮询和原输出优先级由回归覆盖。
+  // Human Review: Required
+  //
+  // AI-CORRECTION 2026-10-07: 上述输入/输出统一等待方案已撤回；输出实现恢复原状，
+  // 输入优先级由 compileInputRoutingEdgeIndexesByGroupIndex + hasAvailableEarlierInput 统一处理。
+  // Original code:
+  // private compileHigherPriorityPhysicalIndexesByEdgeIndex(): readonly Uint32Array[] {
+  //   const physicalIndexesByRoutingLaneAndPriority = new Map<
+  //     string,
+  //     Map<number, Set<number>>
+  //   >();
+  //   for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
+  //     const edgeId = this.layout.dictionary.edgeIds[edgeIndex]!;
+  //     const edge = this.topology.transferEdges[edgeId];
+  //     const port = edge === undefined ? undefined : this.topology.ports[edge.sourcePortId];
+  //     if (port === undefined) {
+  //       continue;
+  //     }
+  //     const sourceNodeIndex = this.layout.edgeSourceNodeIndexes[edgeIndex]!;
+  //     const laneKey = `${sourceNodeIndex}\u0000${port.kind}\u0000${port.isPipe ? 1 : 0}`;
+  //     const physicalIndexesByPriority =
+  //       physicalIndexesByRoutingLaneAndPriority.get(laneKey) ?? new Map();
+  //     const physicalIndexes = physicalIndexesByPriority.get(port.priorityGroup) ?? new Set();
+  //     physicalIndexes.add(this.edgePhysicalConnectionIndexes[edgeIndex]!);
+  //     physicalIndexesByPriority.set(port.priorityGroup, physicalIndexes);
+  //     physicalIndexesByRoutingLaneAndPriority.set(laneKey, physicalIndexesByPriority);
+  //   }
+  //
+  //   return this.layout.dictionary.edgeIds.map((edgeId, edgeIndex) => {
+  //     const edge = this.topology.transferEdges[edgeId];
+  //     const port = edge === undefined ? undefined : this.topology.ports[edge.sourcePortId];
+  //     if (edge === undefined || port === undefined) {
+  //       return new Uint32Array(0);
+  //     }
+  //
+  //     const physicalIndexes = new Set<number>();
+  //     const sourceNodeIndex = this.layout.edgeSourceNodeIndexes[edgeIndex]!;
+  //     const laneKey = `${sourceNodeIndex}\u0000${port.kind}\u0000${port.isPipe ? 1 : 0}`;
+  //     const physicalIndexesByPriority =
+  //       physicalIndexesByRoutingLaneAndPriority.get(laneKey);
+  //     for (const [priorityGroup, candidatePhysicalIndexes] of
+  //       physicalIndexesByPriority ?? []) {
+  //       if (priorityGroup >= port.priorityGroup) {
+  //         continue;
+  //       }
+  //       for (const physicalIndex of candidatePhysicalIndexes) {
+  //         physicalIndexes.add(physicalIndex);
+  //       }
+  //     }
+  //     return Uint32Array.from(physicalIndexes);
+  //   });
+  // }
+
   private compileHigherPriorityPhysicalIndexesByEdgeIndex(): readonly Uint32Array[] {
+    // 输入与输出均先等待更高优先级的物理连接；无进展时由现有 fallback 放行。
+    // 同优先级仍由独立轮询游标仲裁，不把连接扫描顺序当成优先级。
+    // AI-CORRECTION 2026-10-07: 输入无货时统一放行会让 G9 越过仍有货的 G5；
+    // 此表恢复仅约束输出，输入在 hasAvailableEarlierInput 中按当前可搬运性逐级选择。
     const physicalIndexesByRoutingLaneAndPriority = new Map<
       string,
       Map<number, Set<number>>
@@ -1453,36 +1515,88 @@ export class DenseSimulationKernel {
     ) === true;
   }
 
+  // AI-REMOVED 2026-10-07:
+  // Reason: 输入竞争候选仅包含同一优先级组，跨组的高优先级输入无法阻止低优先级抢占。
+  // Trigger: 汇流器 1/5/9 自定义优先级组合错误选路。
+  // Evidence: 三路满载场景低优先级独占；最高优先级断供后仍需在剩余候选中择优。
+  // Replacement: 下方同一输入 Node、端口类型和物流介质内的高优先级及同级候选表。
+  // Risk: 输入仲裁为公共逻辑，须覆盖断供回退、放置顺序和既有输出优先级。
+  // Human Review: Required
+  //
+  // Original code:
+  // private compileInputRoutingEdgeIndexesByGroupIndex(): ReadonlyMap<number, Uint32Array> {
+  //   const indexesByGroupIndex = new Map<number, number[]>();
+  //   for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
+  //     const groupIndex = this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!;
+  //     const portCount = this.layout.routingGroupPortOffsets[groupIndex + 1]!
+  //       - this.layout.routingGroupPortOffsets[groupIndex]!;
+  //     if (portCount <= 1) {
+  //       continue;
+  //     }
+  //     const indexes = indexesByGroupIndex.get(groupIndex) ?? [];
+  //     indexes.push(edgeIndex);
+  //     indexesByGroupIndex.set(groupIndex, indexes);
+  //   }
+  //   return new Map([...indexesByGroupIndex].map(([groupIndex, indexes]) =>
+  //     [groupIndex, Uint32Array.from(indexes)],
+  //   ));
+  // }
+
   private compileInputRoutingEdgeIndexesByGroupIndex(): ReadonlyMap<number, Uint32Array> {
-    const indexesByGroupIndex = new Map<number, number[]>();
+    const indexesByLane = new Map<string, number[]>();
+    const laneByGroupIndex = new Map<number, { readonly key: string; readonly priority: number }>();
     for (let edgeIndex = 0; edgeIndex < this.layout.dictionary.edgeIds.length; edgeIndex += 1) {
-      const groupIndex = this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!;
-      const portCount = this.layout.routingGroupPortOffsets[groupIndex + 1]!
-        - this.layout.routingGroupPortOffsets[groupIndex]!;
-      if (portCount <= 1) {
+      const edgeId = this.layout.dictionary.edgeIds[edgeIndex]!;
+      const edge = this.topology.transferEdges[edgeId];
+      const port = edge === undefined ? undefined : this.topology.ports[edge.targetPortId];
+      if (port === undefined) {
         continue;
       }
-      const indexes = indexesByGroupIndex.get(groupIndex) ?? [];
+      const nodeIndex = this.layout.edgeTargetNodeIndexes[edgeIndex]!;
+      const key = `${nodeIndex}\u0000${port.kind}\u0000${port.isPipe ? 1 : 0}`;
+      const indexes = indexesByLane.get(key) ?? [];
       indexes.push(edgeIndex);
-      indexesByGroupIndex.set(groupIndex, indexes);
+      indexesByLane.set(key, indexes);
+      laneByGroupIndex.set(this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!, {
+        key,
+        priority: port.priorityGroup,
+      });
     }
-    return new Map([...indexesByGroupIndex].map(([groupIndex, indexes]) =>
-      [groupIndex, Uint32Array.from(indexes)],
-    ));
+
+    const indexesByGroupIndex = new Map<number, Uint32Array>();
+    for (const [groupIndex, lane] of laneByGroupIndex) {
+      const indexes = indexesByLane.get(lane.key)!.filter((edgeIndex) => {
+        const candidateGroup = this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!;
+        return laneByGroupIndex.get(candidateGroup)!.priority <= lane.priority;
+      });
+      if (indexes.length > 1) {
+        indexesByGroupIndex.set(groupIndex, Uint32Array.from(indexes));
+      }
+    }
+    return indexesByGroupIndex;
   }
 
   private hasAvailableEarlierInput(edgeIndex: number, allowPriorityFallback: boolean): boolean {
     const targetRank = this.resolveEdgeRoutingRank(edgeIndex, false);
-    if (targetRank === 0) {
-      return false;
-    }
+    // AI-REMOVED 2026-10-07:
+    // Reason: 组内首位不代表全局最高优先级，单端口组也必须检查更高优先级输入。
+    // Trigger: 自定义优先级组被当作相同顺位竞争。
+    // Evidence: 三组各只有一个端口时 targetRank 都为 0。
+    // Replacement: 下方按高优先级候选和同级轮询位置共同检查。
+    // Risk: Low；单输入节点没有竞争候选，仍直接通过。
+    // Human Review: Required
+    // Original code:
+    // if (targetRank === 0) {
+    //   return false;
+    // }
     const groupIndex = this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!;
     const sourceRank = this.resolveEdgeRoutingRank(edgeIndex, true);
     // 缓存可能在本轮扫描中途腾空；后续入口必须重新检查之前因满载而跳过的入口。
     // 仅让位于当前输出顺位之前的候选，保持输出调度顺序并避免互相等待。
     for (const earlierEdgeIndex of this.inputRoutingEdgeIndexesByGroupIndex.get(groupIndex) ?? []) {
       if (
-        this.resolveEdgeRoutingRank(earlierEdgeIndex, false) >= targetRank
+        (this.layout.edgeTargetRoutingGroupIndexes[earlierEdgeIndex] === groupIndex
+          && this.resolveEdgeRoutingRank(earlierEdgeIndex, false) >= targetRank)
         || this.resolveEdgeRoutingRank(earlierEdgeIndex, true) > sourceRank
         || this.regionalOutletIdsByEdgeIndex[earlierEdgeIndex] !== null
         || this.usedPhysicalConnectionFlags[

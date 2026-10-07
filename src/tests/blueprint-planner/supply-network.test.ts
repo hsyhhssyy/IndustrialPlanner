@@ -15,7 +15,7 @@ import nugget from "./fixtures/pyrrolite-nugget.json";
 import ore from "./fixtures/pyrrolite-ore.json";
 
 it.each([{ input: nugget, sources: 4, separate: false }, { input: ore, sources: 5, separate: false },
-  { input: nugget, sources: 5, separate: true }, { input: ore, sources: 6, separate: true }])("供料按容量共享，运行消耗全部经过准入口，非等量支路明确限速 ($sources 个来源，分组 $separate)", async ({ input, sources, separate }) => {
+  { input: nugget, sources: 5, separate: true }, { input: ore, sources: 6, separate: true }])("供料按容量共享，运行消耗保留准入口及缓冲约束 ($sources 个来源，分组 $separate)", async ({ input, sources, separate }) => {
   const registry = createRegistryContract();
   const request = structuredClone(input.request) as BlueprintPlannerRequest;
   const before = JSON.stringify(request);

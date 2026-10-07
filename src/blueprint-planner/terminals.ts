@@ -19,6 +19,7 @@ import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNo
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { createRecipeNode } from "./production-network";
 import { restrictPort } from "./wiring";
+import type { PlannerSearchOptions } from "./search-types";
 
 export function materialBalance(network: PlannerNetwork): Map<string, number> {
   const result = sumMaterial(network.nodes.flatMap((node) => node.outputs));
@@ -46,7 +47,7 @@ function isRoundedRunningConsumptionShortfall(network: PlannerNetwork, itemId: s
   return extraRunning > 1e-6 && Math.abs(extraRunning - plannedProduction - shortfall) <= 1e-4;
 }
 
-export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant = 0): void {
+export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local"): void {
   if (!Number.isSafeInteger(stashPackingVariant) || stashPackingVariant < 0) throw new Error("储存箱分组序号必须为非负整数。");
   const itemRules = new PlannerItemRules(registry, network.request.options);
   const available = new Set([...network.request.plan.infiniteItemIds, ...network.request.plan.externalSupplies.map((entry) => entry.itemId)]);
@@ -113,12 +114,14 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         operating: input.storageGroupIds !== undefined && node.definition.recipeChannels.some(channel => channel.type === "consumption-channel"
           && channel.ingredientStorageGroupIds.some(id => input.storageGroupIds!.includes(id))) }))) : [];
     const pools = demands.length ? (separateOperatingSupply ? [false, true].map(operating => demands.filter(demand => demand.operating === operating)) : [demands]) : [];
+    // 共享暗管按运力分设施，不再因消费者数量多而截断主管；排液设施仍沿用 fluidGroupSize。
+    const supplyGroupSize = conduitTopology === "local" ? fluidGroupSize : Math.max(1, demands.length);
     const groups = pools.length ? pools.filter(pool => pool.length).map(pool => ({
       rate: pool.reduce((sum, demand) => sum + demand.input.perMinute, 0),
       targets: pool.map(demand => ({ entityId: demand.node.entity.id, storageGroupIds: demand.input.storageGroupIds })),
-    })).flatMap(group => group.targets.length <= fluidGroupSize ? [group] : clusterTerminalDemands(
+    })).flatMap(group => group.targets.length <= supplyGroupSize ? [group] : clusterTerminalDemands(
       demands.filter(demand => group.targets.some(target => target.entityId === demand.node.entity.id && target.storageGroupIds === demand.input.storageGroupIds))
-        .map(demand => ({ node: demand.node, perMinute: demand.input.perMinute, storageGroupIds: demand.input.storageGroupIds })), fluidGroupSize))
+        .map(demand => ({ node: demand.node, perMinute: demand.input.perMinute, storageGroupIds: demand.input.storageGroupIds })), supplyGroupSize))
       : [{ rate: flow.perMinute, targets: undefined }];
     for (const group of groups) for (let remaining = group.rate; remaining > 1e-6; remaining -= facilityCapacity) {
       deliveries.push({ perMinute: Math.min(facilityCapacity, remaining), targets: group.targets });
@@ -126,7 +129,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     for (const delivery of deliveries) {
       const rate = delivery.perMinute;
       const definitionId = mode === "external" ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
-        : mode === "warehouse" ? "unloader_1" : rate > transportCapacity(kind) || (compact && (delivery.targets?.length ?? 0) > 1)
+        : mode === "warehouse" ? "unloader_1" : rate > transportCapacity(kind) || (compact && conduitTopology === "local" && (delivery.targets?.length ?? 0) > 1)
           ? "udpipe_unloader_2" : "udpipe_unloader_1";
       const base = { ...createPlainNode(registry, definitionId, `eda-source-${network.nodes.length}`, "supply"), supplyTargets: delivery.targets };
       const node: PlannerNode = mode === "external" ? { ...base, external: true } : delivery.consumer === undefined ? base

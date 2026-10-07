@@ -58,6 +58,9 @@ export async function createPlannerCandidate(
   ({ request, variant } = resolvePlannerAttempt(request, variant));
   // 独立重启轮换箱数；预算内重排必须保持本轮拓扑选择。
   options = { ...options, stashPackingVariant: options.stashPackingVariant ?? Math.floor((variant + 1) / 4) };
+  // 每四轮的独立重启轮换供水结构；三种结构避免与 32 分片步长锁定，阶段重排保持本轮选择。
+  options = { ...options, conduitTopology: options.conduitTopology
+    ?? (["local", "shared", "trunk"] as const)[Math.floor((variant + 1) / 4) % 3] };
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
   const reserve = !options.seed && options.strategy !== "baseline" && total >= 20_000;
@@ -378,7 +381,8 @@ async function createPlannerAttempt(
     // Original code: await placePower(registry, network, placement, checkBudget);
     startups = preparePlantStartups(registry, network, placement);
     prepareConverterStartups(registry, network, placement);
-    addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize, strategy === "compact", options.stashPackingVariant);
+    addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
+      strategy === "compact", options.stashPackingVariant, options.conduitTopology);
     }
     const boundary = new PlannerBoundary(registry, network, outline);
     if (!restored) boundary.arrange(variant);
@@ -397,7 +401,7 @@ async function createPlannerAttempt(
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
     const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
-      strategy === "compact", strategy !== "baseline");
+      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
     connectPlantStartups(registry, startups, wires);
     statistics.wireCount = wires.length;
     statistics.bestRoutedWireCount = 0;

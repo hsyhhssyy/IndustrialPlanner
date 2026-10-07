@@ -1,4 +1,4 @@
-import type { PlannerSearchExperiment, PlannerSearchStatistics } from "@/blueprint-planner/search-types";
+import type { PlannerSearchExperiment, PlannerSearchStatistics, PlannerSearchOptions } from "@/blueprint-planner/search-types";
 import type { PlannerSearchProfile } from "@/blueprint-planner/search-profile";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -61,6 +61,7 @@ export interface PlannerBatchOptions {
   readonly diagnostics?: boolean;
   readonly experiments?: readonly PlannerSearchExperiment[];
   readonly stashPackingVariant?: number;
+  readonly conduitTopology?: PlannerSearchOptions["conduitTopology"];
 }
 
 export interface PlannerAttemptRecord {
@@ -144,6 +145,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
             diagnostics: options.diagnostics,
             experiments: options.experiments,
             stashPackingVariant: options.stashPackingVariant,
+            conduitTopology: options.conduitTopology,
             ...(options.width === undefined ? {} : { outline: { width: options.width, height: options.height! } }),
           });
         localEvaluations += candidate.search.evaluations;

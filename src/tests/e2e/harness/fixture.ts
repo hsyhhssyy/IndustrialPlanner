@@ -135,6 +135,8 @@ export class ManagedCli {
       contextOptions: contextOptions(this.screen),
     } });
     this.opened = true;
+    // CLI live tracing 的建目录与调用栈写入不共享队列，先完成建目录，避免首次 .stacks 写入抢先失败。
+    await mkdir(resolve(this.directory, "traces"), { recursive: true });
     await this.invoke(["tracing-start"], "trace-start.log");
     this.tracing = true;
     if (this.screen.name === "desktop") {

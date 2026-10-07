@@ -21,6 +21,8 @@ export interface PlannerSearchOptions {
   readonly continuationStep?: number;
   /** 同物品输出箱数量的有限轮换；0 优先按端口总容量合箱。 */
   readonly stashPackingVariant?: number;
+  /** 暗管按局部需求直连、容量共享分流或主管逐点分流；只影响新构网，续搜保留种子结构。 */
+  readonly conduitTopology?: "local" | "shared" | "trunk";
   /** 已验证全局最优面积减一；所有输出拓扑、续搜与独立重启共用。 */
   /** 订正 2026-09-30：可能减少输出箱数时允许相同面积；面积仍是首要目标。 */
   readonly maximumArea?: number;

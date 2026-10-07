@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "converger-priority-1-5-9",
+  "version": "fixture-v1",
+  "name": "汇流器输入优先级 1-5-9",
+  "description": "三路持续供货；输入顺序为 in_n、in_e、in_w。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 70,
+    "y": 76
+  },
+  "entities": {
+    "cheat_infinite_solid:26": {
+      "id": "cheat_infinite_solid:26",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 66,
+        "y": 76
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].initialItemType": "item_copper_bottle",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "cheat_infinite_solid:27": {
+      "id": "cheat_infinite_solid:27",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 69,
+        "y": 78
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].initialItemType": "item_iron_bottle",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "cheat_infinite_solid:28": {
+      "id": "cheat_infinite_solid:28",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 72,
+        "y": 76
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].initialItemType": "item_glass_bottle",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "storager_1:5": {
+      "id": "storager_1:5",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 68,
+        "y": 73
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "log_converger:2": {
+      "id": "log_converger:2",
+      "definitionId": "log_converger",
+      "position": {
+        "x": 69,
+        "y": 76
+      },
+      "rotation": 180,
+      "config": {
+        "customPortPriorityGroups": true,
+        "portPriorityGroups": {
+          "item_input:in_n": 1,
+          "item_input:in_e": 5,
+          "item_input:in_w": 9
+        }
+      },
+      "tags": []
+    },
+    "logistics-draft:belt:1:0": {
+      "id": "logistics-draft:belt:1:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 71,
+        "y": 76
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:1:1": {
+      "id": "logistics-draft:belt:1:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 70,
+        "y": 76
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:3:0": {
+      "id": "logistics-draft:belt:3:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 69,
+        "y": 77
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:5:0:1": {
+      "id": "logistics-draft:belt:5:0:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 67,
+        "y": 76
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:6:1": {
+      "id": "logistics-draft:belt:6:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 68,
+        "y": 76
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "cheat_infinite_solid:26",
+    "cheat_infinite_solid:27",
+    "cheat_infinite_solid:28",
+    "storager_1:5",
+    "log_converger:2",
+    "logistics-draft:belt:1:0",
+    "logistics-draft:belt:1:1",
+    "logistics-draft:belt:3:0",
+    "logistics-draft:belt:5:0:1",
+    "logistics-draft:belt:6:1"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-07T00:00:00.000Z",
+  "updatedAt": "2026-10-07T00:00:00.000Z"
+}

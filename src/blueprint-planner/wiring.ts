@@ -22,7 +22,7 @@ interface Connection {
   readonly amounts: Map<string, number>;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true): Promise<PlannerWire[]> {
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false): Promise<PlannerWire[]> {
   const outputs = allocatePorts(registry, network.nodes, "output");
   const inputs = allocatePorts(registry, network.nodes, "input");
   const connections: Connection[] = [];
@@ -90,6 +90,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     }
   }
   // 同一库存组的空闲输出口优先直连，避免先合并再分流引入限速、缓冲和额外占地。
+  // AI-CORRECTION 2026-10-07: 普通生产分流已取消额外限速与缓冲；空闲口直连仍作为减少物流设施的候选。
   if (compact) for (const group of groupConnections(connections, "source").values()) {
     const node = network.nodes.find(entry => entry.entity.id === group[0]!.source.entityId)!;
     const original = group[0]!.source;
@@ -131,8 +132,17 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   for (const input of inputs) {
     checkBudget();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    const exportedRate = [...input.amounts.values()].reduce((sum, rate) => sum + rate, 0);
-    if (!input.consumption && (input.node.purpose !== "product" || exportedRate >= transportCapacity(input.port.kind))) continue;
+    // AI-REMOVED 2026-10-07:
+    // Reason: 成品接收设施同样通过容量和背压拒收，不需要按目标流量额外限速。
+    // Trigger: 用户明确只有工作消耗输入需要准入口，普通设备不因供料超过需求而限速。
+    // Evidence: product 不是 consumption-channel；此条件为所有低于单线满速的成品出口增加准入口。
+    // Replacement: 下方按 consumption 输入语义选择准入口。
+    // Risk: 取整设备允许实际增产，仍以持续接收与真实产量验收；自循环工作消耗回填约束保留。
+    // Human Review: Required
+    // Original code:
+    // const exportedRate = [...input.amounts.values()].reduce((sum, rate) => sum + rate, 0);
+    // if (!input.consumption && (input.node.purpose !== "product" || exportedRate >= transportCapacity(input.port.kind))) continue;
+    if (!input.consumption) continue;
     // AI-CORRECTION 2026-10-02: 下方原“每个运行消耗通道无条件放准入口”只在没有精确等分的共享上游限速时适用。
     if (sharedTargets.has(portKey(input.port))) continue;
 // AI-REMOVED 2026-09-16:
@@ -182,7 +192,9 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   for (const group of outputGroups.values()) {
     checkBudget();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    if (group.length > 1) expandSplitTree(registry, network, placement, connections, group, group[0]!.source, false);
+    const trunk = preferTrunk && group[0]!.source.kind === LOGISTICS_KIND.pipe
+      && group.every(connection => inputsByPort.get(portKey(connection.target))?.consumption === false);
+    if (group.length > 1) expandSplitTree(registry, network, placement, connections, group, group[0]!.source, trunk);
   }
   const inputGroups = groupConnections(connections, "target");
   for (const group of inputGroups.values()) {
@@ -388,24 +400,32 @@ function matchesSplitShares(leaves: readonly Connection[], incomingRate: number,
 }
 
 function expandSplitTree(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement,
-  connections: Connection[], leaves: Connection[], root: PlannerPort, meteringRequired: boolean): void {
+  connections: Connection[], leaves: Connection[], root: PlannerPort, trunk: boolean): void {
   if (leaves.length === 1) {
     const leaf = leaves[0]!;
     leaf.source = root;
-    if (!meteringRequired) return;
-    const target = network.nodes.find(node => node.entity.id === leaf.target.entityId)!;
-    const existing = target.entity.config[`portGroups[${leaf.target.groupIndex}].ports[${leaf.target.portIndex}].admissionRule`];
-    if (existing && typeof existing === "object" && "perMinuteLimit" in existing && typeof existing.perMinuteLimit === "number") return;
-    if (leaf.amounts.size !== 1) throw new PlannerCandidateError("非等流量混合物料分支不能用单物料准入口限速。");
-    const [itemId, rate] = [...leaf.amounts][0]!;
-    const definition = findLogisticsDevice(registry, root.kind, "admission");
-    const limiter = createPlainNode(registry, definition.id, `eda-branch-limiter-${network.nodes.length}`, "logistics");
-    placement.placeAnywhere(limiter, 0, leaf.target.outside); network.nodes.push(limiter);
-    const inlet = getPlannerPorts(registry, limiter.entity, definition, "input", itemId)[0]!;
-    const outlet = getPlannerPorts(registry, limiter.entity, definition, "output", itemId)[0]!;
-    limiter.entity.config[`portGroups[${inlet.groupIndex}].ports[${inlet.portIndex}].admissionRule`] = { itemId, limit: null, perMinuteLimit: rate };
-    connections.push({ source: outlet, target: leaf.target, amounts: new Map(leaf.amounts) });
-    leaf.target = inlet;
+    // AI-REMOVED 2026-10-07:
+    // Reason: 取消普通异量分支的自动限速；工作消耗准入口已由 wireProductionNetwork 按输入语义构造。
+    // Trigger: 用户明确普通生产输入依靠缓冲区背压，要求支持单口暗管主管分流。
+    // Evidence: 本任务供水 15/min 与 30/min 被非等量规则强制加准入口；工作消耗已有独立限速和审计。
+    // Replacement: wireProductionNetwork 的 consumption 输入限速与 sharedAdmissions。
+    // Risk: 普通输入需要真实仿真验证背压稳态；工作消耗限额不放宽。
+    // Human Review: Required
+    // Original code:
+    // if (!meteringRequired) return;
+    // const target = network.nodes.find(node => node.entity.id === leaf.target.entityId)!;
+    // const existing = target.entity.config[`portGroups[${leaf.target.groupIndex}].ports[${leaf.target.portIndex}].admissionRule`];
+    // if (existing && typeof existing === "object" && "perMinuteLimit" in existing && typeof existing.perMinuteLimit === "number") return;
+    // if (leaf.amounts.size !== 1) throw new PlannerCandidateError("非等流量混合物料分支不能用单物料准入口限速。");
+    // const [itemId, rate] = [...leaf.amounts][0]!;
+    // const definition = findLogisticsDevice(registry, root.kind, "admission");
+    // const limiter = createPlainNode(registry, definition.id, `eda-branch-limiter-${network.nodes.length}`, "logistics");
+    // placement.placeAnywhere(limiter, 0, leaf.target.outside); network.nodes.push(limiter);
+    // const inlet = getPlannerPorts(registry, limiter.entity, definition, "input", itemId)[0]!;
+    // const outlet = getPlannerPorts(registry, limiter.entity, definition, "output", itemId)[0]!;
+    // limiter.entity.config[`portGroups[${inlet.groupIndex}].ports[${inlet.portIndex}].admissionRule`] = { itemId, limit: null, perMinuteLimit: rate };
+    // connections.push({ source: outlet, target: leaf.target, amounts: new Map(leaf.amounts) });
+    // leaf.target = inlet;
     return;
   }
   const definition = findLogisticsDevice(registry, root.kind, "splitter");
@@ -414,9 +434,19 @@ function expandSplitTree(registry: RegistryContract, network: PlannerNetwork, pl
   const inlet = getPlannerPorts(registry, node.entity, definition, "input")[0]!;
   const branches = getPlannerPorts(registry, node.entity, definition, "output");
   const rate = (leaf: Connection) => [...leaf.amounts.values()].reduce((sum, amount) => sum + amount, 0);
-  const groups = partitionEqualFlows(leaves, rate, branches.length);
-  const totals = groups.map(group => group.reduce((sum, leaf) => sum + rate(leaf), 0));
-  const unequal = totals.some(total => Math.abs(total - totals[0]!) > 1e-6);
+  // AI-REMOVED 2026-10-07:
+  // Reason: 分流树按供料语义选择结构；普通支路不以计划流量不等触发限速。
+  // Trigger: 用户明确普通生产输入依靠缓冲区背压，要求支持单口暗管主管分流。
+  // Evidence: 本任务供水 15/min 与 30/min 被非等量规则强制加准入口；工作消耗已有独立限速和审计。
+  // Replacement: 下方主管或均分树分组。
+  // Risk: 主管需要更多分流器，仍与共享树及局部直连竞争面积。
+  // Human Review: Required
+  // Original code:
+  // const groups = partitionEqualFlows(leaves, rate, branches.length);
+  // const totals = groups.map(group => group.reduce((sum, leaf) => sum + rate(leaf), 0));
+  // const unequal = totals.some(total => Math.abs(total - totals[0]!) > 1e-6);
+  const ordered = trunk ? [...leaves].sort((a, b) => distance(root, a.target) - distance(root, b.target)) : leaves;
+  const groups = trunk ? [[ordered[0]!], ordered.slice(1)] : partitionEqualFlows(leaves, rate, branches.length);
   const amounts = new Map<string, number>();
   for (const leaf of leaves) for (const [item, amount] of leaf.amounts) amounts.set(item, (amounts.get(item) ?? 0) + amount);
   connections.push({ source: root, target: inlet, amounts });
@@ -425,6 +455,6 @@ function expandSplitTree(registry: RegistryContract, network: PlannerNetwork, pl
     restrictPort(registry, node, branch, group?.flatMap(leaf => [...leaf.amounts.keys()]).filter((id, at, all) => all.indexOf(id) === at) ?? []);
     // 所有启用分支使用相同优先级；不以 priorityGroup 伪造比例分流。
     node.entity.config[`portGroups[${branch.groupIndex}].ports[${branch.portIndex}].priorityGroup`] = 1;
-    if (group) expandSplitTree(registry, network, placement, connections, group, branch, meteringRequired || unequal);
+    if (group) expandSplitTree(registry, network, placement, connections, group, branch, trunk);
   }
 }

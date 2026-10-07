@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 15,
+  "fixtureRevision": 16,
   "updatedAt": "2026-10-07",
   "entries": [
     {
@@ -3446,6 +3446,230 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/layout/left-dock.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-1-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-1-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-1-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-5-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-5-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-5-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-9-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-9-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-9-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-1-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-1-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-1-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-5-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-5-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-5-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-9-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-9-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-9-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-1-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-1-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-1-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-5-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-5-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-5-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-9-1.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-9-5.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-9-9.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/1-5-1-reordered.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/5-1-9-reordered.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/9-5-1-reordered.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/high-empty.schema6.json",
+      "role": "test-scene",
+      "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/converger-priority/high-depleted.schema6.json",
       "role": "test-scene",
       "schemaVersion": 6,
       "version": "fixture-v1",
