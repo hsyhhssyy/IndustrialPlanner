@@ -42,6 +42,14 @@ export function installStorageGeneration(state: StorageGeneration, invalidate: (
 
 export function hasStorageGeneration(): boolean { return activeGeneration !== null; }
 
+export function getStorageGeneration(): StorageGeneration | null { return activeGeneration; }
+
+/** 调度器持有生命周期独占锁并持久化新代际后更新当前页；其他页仍使用旧代际而被阻断。 */
+export function adoptStorageGeneration(state: StorageGeneration): void {
+  activeGeneration = state;
+  localStorage.setItem(RECOVERY_GENERATION_KEY, state.generation);
+}
+
 export function assertLocalStorageGeneration(): void {
   if (invalidated) throw new Error("Storage generation changed; reload required.");
   if (activeGeneration === null) return;

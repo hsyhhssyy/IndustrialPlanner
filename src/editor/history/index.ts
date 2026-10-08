@@ -12,3 +12,4 @@ export type {
 export {
   EditorHistoryRuntime,
 } from "./history-runtime";
+export { normalizePersistedEditorHistoryState } from "./history-storage";

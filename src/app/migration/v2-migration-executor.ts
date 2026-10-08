@@ -1,3 +1,4 @@
+import { saveModuleBalancingState } from "../storage";
 import { runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -37,6 +38,7 @@ export interface V2MigrationExecutorResult extends V2MigrationCompletionSummary 
 
 export async function executeV2Migration(
   appHost: AppHost,
+  deferWorkspaceRefresh = false,
 ): Promise<V2MigrationExecutorResult> {
   cleanupDiscardableV2LocalStorageBeforeV3Boot();
 
@@ -61,6 +63,7 @@ export async function executeV2Migration(
     appHost.internalState.workbench.toolbox.moduleBalancing,
   );
 
+  await saveModuleBalancingState(moduleResult.state);
   runInAction(() => {
     Object.assign(
       appHost.internalState.workbench.toolbox.moduleBalancing,
@@ -68,7 +71,8 @@ export async function executeV2Migration(
     );
   });
 
-  const loadedBaseId = await loadMigratedActiveBase(appHost, migratedWorldDocuments);
+  const loadedBaseId = deferWorkspaceRefresh ? resolveMigratedActiveBaseId(migratedWorldDocuments)
+    : await loadMigratedActiveBase(appHost, migratedWorldDocuments);
   const summary: V2MigrationCompletionSummary = {
     migratedMapCount: migratedWorldDocuments.length,
     migratedBlueprintCount,

@@ -7,7 +7,17 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
-import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
+// AI-REMOVED 2026-10-08:
+// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
+// Trigger: REQ-041 用户授权统一迁移。
+// Evidence: 启动、导入和保存调用链审查。
+// Replacement: 共享文档 codec
+// Risk: 需回归迁移失败与恢复。
+// Human Review: Required
+// Original code:
+// import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
+import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
+export { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 import { reaction, runInAction } from "mobx";
 
 import { createLogger } from "@/shared/logging/logger";
@@ -443,84 +453,92 @@ function timestampToNumber(value: string): number {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function normalizeWorldDocument(
-  value: unknown,
-): WorldDocument | null {
-  if (!isWorldDocumentLike(value)) {
-    return null;
-  }
-
-  // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
-  const migration = migrateBlueprintDocumentState({
-    baseId: value.baseId,
-    entities: value.entities,
-    entityOrder: value.entityOrder,
-    slotLinks: value.slotLinks,
-    regions: value.regions,
-  }, value.schemaVersion);
-
-  if (migration === null) {
-    return null;
-  }
-
-  // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
-  // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
-  const validEntityOrder = Array.from(new Set(migration.entityOrder))
-    .filter((entityId) => entityId in migration.entities);
-
-  return {
-    ...value,
-    schemaVersion: migration.schemaVersion,
-    entities: migration.entities,
-    entityOrder: validEntityOrder,
-    slotLinks: [...migration.slotLinks],
-    regions: migration.regions,
-  };
-}
-
-function isWorldDocumentLike(
-  value: unknown,
-): value is WorldDocument {
-  return (
-    isRecord(value) &&
-    typeof value.schemaVersion === "number" &&
-    typeof value.documentKey === "string" &&
-    value.documentKey.trim() !== "" &&
-    typeof value.baseId === "string" &&
-    isRecord(value.meta) &&
-    isRecord(value.entities) &&
-    Array.isArray(value.entityOrder) &&
-    Array.isArray(value.slotLinks) &&
-    (value.schemaVersion < 7 || Array.isArray(value.regions)) &&
-    isWorldDocumentSettingsLike(value.documentSettings)
-  );
-}
-
-function isWorldDocumentSettingsLike(
-  value: unknown,
-): value is WorldDocument["documentSettings"] {
-  return (
-    isRecord(value)
-    && isWorldDocumentViewportSettingsLike(value.viewport)
-  );
-}
-
-function isWorldDocumentViewportSettingsLike(
-  value: unknown,
-): value is WorldDocument["documentSettings"]["viewport"] {
-  return (
-    isRecord(value)
-    && isRecord(value.center)
-    && typeof value.center.x === "number"
-    && Number.isFinite(value.center.x)
-    && typeof value.center.y === "number"
-    && Number.isFinite(value.center.y)
-    && typeof value.gridSize === "number"
-    && Number.isFinite(value.gridSize)
-    && value.gridSize > 0
-  );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+// AI-REMOVED 2026-10-08:
+// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
+// Trigger: REQ-041 用户授权统一迁移。
+// Evidence: 启动、导入和保存调用链审查。
+// Replacement: shared/storage/world-document-storage.ts
+// Risk: 需回归迁移失败与恢复。
+// Human Review: Required
+// Original code:
+// export function normalizeWorldDocument(
+//   value: unknown,
+// ): WorldDocument | null {
+//   if (!isWorldDocumentLike(value)) {
+//     return null;
+//   }
+//
+//   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
+//   const migration = migrateBlueprintDocumentState({
+//     baseId: value.baseId,
+//     entities: value.entities,
+//     entityOrder: value.entityOrder,
+//     slotLinks: value.slotLinks,
+//     regions: value.regions,
+//   }, value.schemaVersion);
+//
+//   if (migration === null) {
+//     return null;
+//   }
+//
+//   // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
+//   // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
+//   const validEntityOrder = Array.from(new Set(migration.entityOrder))
+//     .filter((entityId) => entityId in migration.entities);
+//
+//   return {
+//     ...value,
+//     schemaVersion: migration.schemaVersion,
+//     entities: migration.entities,
+//     entityOrder: validEntityOrder,
+//     slotLinks: [...migration.slotLinks],
+//     regions: migration.regions,
+//   };
+// }
+//
+// function isWorldDocumentLike(
+//   value: unknown,
+// ): value is WorldDocument {
+//   return (
+//     isRecord(value) &&
+//     typeof value.schemaVersion === "number" &&
+//     typeof value.documentKey === "string" &&
+//     value.documentKey.trim() !== "" &&
+//     typeof value.baseId === "string" &&
+//     isRecord(value.meta) &&
+//     isRecord(value.entities) &&
+//     Array.isArray(value.entityOrder) &&
+//     Array.isArray(value.slotLinks) &&
+//     (value.schemaVersion < 7 || Array.isArray(value.regions)) &&
+//     isWorldDocumentSettingsLike(value.documentSettings)
+//   );
+// }
+//
+// function isWorldDocumentSettingsLike(
+//   value: unknown,
+// ): value is WorldDocument["documentSettings"] {
+//   return (
+//     isRecord(value)
+//     && isWorldDocumentViewportSettingsLike(value.viewport)
+//   );
+// }
+//
+// function isWorldDocumentViewportSettingsLike(
+//   value: unknown,
+// ): value is WorldDocument["documentSettings"]["viewport"] {
+//   return (
+//     isRecord(value)
+//     && isRecord(value.center)
+//     && typeof value.center.x === "number"
+//     && Number.isFinite(value.center.x)
+//     && typeof value.center.y === "number"
+//     && Number.isFinite(value.center.y)
+//     && typeof value.gridSize === "number"
+//     && Number.isFinite(value.gridSize)
+//     && value.gridSize > 0
+//   );
+// }
+//
+// function isRecord(value: unknown): value is Record<string, unknown> {
+//   return typeof value === "object" && value !== null;
+// }

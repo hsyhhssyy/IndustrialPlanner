@@ -230,6 +230,16 @@ function createObjectStoreHandle(
 
       return request;
     },
+    getAllKeys: () => {
+      const request = createRequest<IDBValidKey[]>();
+      trackFakeTransactionRequest(transactionState);
+      queueMicrotask(() => {
+        assignRequestResult(request, Array.from(store.values.keys()));
+        request.onsuccess?.(new Event("success"));
+        finishFakeTransactionRequest(transactionState, transaction);
+      });
+      return request;
+    },
     getAll: () => {
       const request = createRequest<unknown[]>();
       trackFakeTransactionRequest(transactionState);

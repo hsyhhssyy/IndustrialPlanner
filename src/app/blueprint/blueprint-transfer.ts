@@ -1,10 +1,14 @@
 import {
   createBlueprintDocument,
+  BLUEPRINT_SCHEMA_VERSION,
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { convertLegacyBlueprintJson } from "@/shared/storage";
+
+const legacyImports = new WeakSet<BlueprintDocument>();
+export function importedBlueprintNeedsMigration(document: BlueprintDocument): boolean { return legacyImports.has(document); }
 
 export function serializeBlueprintDocumentForTransfer(blueprint: BlueprintDocument): string {
   return JSON.stringify(toPortableBlueprintDocument(blueprint), null, 2);
@@ -14,7 +18,9 @@ export function parseBlueprintTransferText(text: string): BlueprintDocument | nu
   try {
     const parsed = JSON.parse(text.trim()) as unknown;
 
-    return normalizeBlueprintDocument(parsed) ?? convertLegacyBlueprintJson(parsed);
+    const document = normalizeBlueprintDocument(parsed) ?? convertLegacyBlueprintJson(parsed);
+    if (document !== null && (parsed as { schemaVersion?: number })?.schemaVersion !== BLUEPRINT_SCHEMA_VERSION) legacyImports.add(document);
+    return document;
   } catch {
     return null;
   }
@@ -23,7 +29,7 @@ export function parseBlueprintTransferText(text: string): BlueprintDocument | nu
 export function createImportedBlueprintDocument(blueprint: BlueprintDocument): BlueprintDocument {
   const portableBlueprint = toPortableBlueprintDocument(blueprint);
 
-  return createBlueprintDocument({
+  const imported = createBlueprintDocument({
     version: portableBlueprint.version,
     name: portableBlueprint.name,
     description: portableBlueprint.description,
@@ -36,6 +42,8 @@ export function createImportedBlueprintDocument(blueprint: BlueprintDocument): B
     slotLinks: portableBlueprint.slotLinks.map(cloneSlotLinkDefinition),
     regions: portableBlueprint.regions.map(cloneRegionAnnotation),
   });
+  if (legacyImports.has(blueprint)) legacyImports.add(imported);
+  return imported;
 }
 
 export function downloadBlueprintDocumentForTransfer(blueprint: BlueprintDocument): void {

@@ -3,6 +3,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { CreateSimulationHostOptions, SimulationHost, SimulationHostFactory } from "./contracts";
 import { createDenseSimulationHost } from "./dense";
 import { createLegacySimulationHost } from "./legacy";
+import { assertDataMigrationIdle } from "@/shared/data-migration";
 
 export type { SimulationEngineKind } from "@/domain/simulation/types/simulation-types";
 export type { CreateSimulationHostOptions, SimulationHost, SimulationHostWorkerMode } from "./contracts";
@@ -16,7 +17,10 @@ const SIMULATION_ENGINE_REGISTRY = {
 export const SUPPORTED_SIMULATION_ENGINE_KINDS = Object.freeze(Object.keys(SIMULATION_ENGINE_REGISTRY) as SimulationEngineKind[]);
 
 export function createSimulationHost(workspace: WorkspaceContract, options: CreateSimulationHostOptions = {}): SimulationHost {
-  return SIMULATION_ENGINE_REGISTRY[options.engineKind ?? "legacy"](workspace, options);
+  const host = SIMULATION_ENGINE_REGISTRY[options.engineKind ?? "legacy"](workspace, options);
+  const start = host.actions.start.bind(host.actions);
+  host.actions.start = async () => { assertDataMigrationIdle(); await start(); };
+  return host;
 }
 
 // AI-REMOVED 2026-09-09:

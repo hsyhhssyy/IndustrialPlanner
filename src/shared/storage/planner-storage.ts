@@ -1,4 +1,5 @@
 import {
+  prepareVersionedStorageMigration,
   readFromIndexedDbWithMigration,
   saveToIndexedDbWithVersion,
   type StorageMigration,
@@ -161,6 +162,15 @@ const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
 };
 
 const CURRENT_VERSION = 4;
+
+export async function preparePlannerStorageMigration() {
+  const plan = await prepareVersionedStorageMigration(PLANNER_STORE_LOCATION, CURRENT_VERSION, MIGRATIONS,
+    undefined, normalizePlannerPersistedState, "产线规划");
+  return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    await job.run();
+    emitStorageChange({ assetType: "production-planning", assetId: "v3", origin: "local", timestamp: Date.now() });
+  } })) };
+}
 const MIGRATIONS: StorageMigration<PlannerPersistedState>[] = [
   {
     version: 2,

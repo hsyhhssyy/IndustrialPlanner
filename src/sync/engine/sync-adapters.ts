@@ -118,6 +118,9 @@ export interface SyncPlanUpload {
  * 二段删除落地全部由引擎在 commit 成功后统一执行。
  */
 export interface SyncEngineTransaction {
+  /** 2026-10-08：收齐已采纳输入后才统一落地；版本转换输入在全局冻结中提交。 */
+  stageDownload?(key: string, value: { readonly label: string; readonly requiresMigration: boolean; readonly run: () => Promise<void> }): void;
+  unstageDownload?(key: string): void;
   /** 共享上传批次；commit 由引擎在全部下载完成后执行。 */
   readonly writeBatch: SyncRemoteWriteBatch;
   /** 暂存 touch（lastSyncedHash），commit 成功后由引擎统一落盘。 */
@@ -680,11 +683,23 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
       logger.warn(`${adapterId}/${assetId}: use-remote but remote asset not found → skipping`);
       return;
     }
-    await options.writeLocal(remoteAsset.value, null);
-    transaction.stageTouch(assetKey, remoteAsset.contentHash);
+    const apply = async () => {
+      await transaction.assertDownloadAllowed(adapterId, assetId);
+      await options.writeLocal(remoteAsset.value, null);
+      transaction.stageTouch(assetKey, remoteAsset.contentHash);
+      if (remoteAsset.normalizationChanged) {
+        // 已采纳远端的升级属于本轮本地回写，复用远端 revision 校验，不另建冲突决议。
+        transaction.recordUpload({ adapterId, assetId, params: await options.createPutParams(remoteAsset.value, remoteAsset.contentHash) });
+      }
+    };
+    if (transaction.stageDownload) transaction.stageDownload(assetKey, {
+      label: "下载内容", requiresMigration: remoteAsset.normalizationChanged, run: apply,
+    });
+    else await apply();
   };
 
   const applyUpload = async (): Promise<void> => {
+    transaction.unstageDownload?.(assetKey);
     if (localDeletedAt !== null) {
       if (options.createTombstoneParams === null || localValue === null) {
         logger.warn(`${adapterId}/${assetId}: local tombstone upload not supported → skipping`);
@@ -717,6 +732,7 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
   };
 
   const applyLocalRestore = async (): Promise<void> => {
+    transaction.unstageDownload?.(assetKey);
     if (localValue === null) {
       return;
     }

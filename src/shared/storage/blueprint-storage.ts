@@ -674,7 +674,7 @@ function normalizeBlueprintFolderRecord(
   }
 
   return {
-    schemaVersion: value.schemaVersion,
+    schemaVersion: BLUEPRINT_SCHEMA_VERSION,
     kind: "folder",
     folderId: value.folderId,
     name,

@@ -1,3 +1,4 @@
+import { migrateIncomingData } from "@/shared/data-migration";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { observer } from "mobx-react-lite";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
@@ -475,7 +476,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
     setErrorMessage(null);
 
     try {
-      const saved = controller.source === "selection"
+      const save = async () => controller.source === "selection"
         ? await saveSelectionBlueprint({
           workspace: appHost.workspace,
           name: normalizedName,
@@ -496,6 +497,14 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
               parentFolderId: currentFolderId,
             },
           );
+
+      let saved: Awaited<ReturnType<typeof save>> = null;
+      if (controller.requiresMigration) {
+        await migrateIncomingData([{ label: "导入蓝图", run: async () => {
+          saved = await save();
+          if (saved === null) throw new Error(copy.saveFailed);
+        } }]);
+      } else saved = await save();
 
       if (saved === null) {
         setErrorMessage(copy.saveFailed);

@@ -36,13 +36,22 @@ export async function readEditorHistoryState(
   const normalizedState = normalizePersistedEditorHistoryState(persistedState, documentKey, document);
   if (persistedState !== null && normalizedState === null) throw new Error("Invalid editor history; original records were preserved.");
 
-  if (
-    normalizedState !== null
-    && isRecord(persistedState)
-    && persistedState.documentSchemaVersion !== BLUEPRINT_SCHEMA_VERSION
-  ) {
-    await writeEditorHistoryState(normalizedState);
-  }
+// AI-REMOVED 2026-10-08:
+// Reason: 历史读取不再独立写回，写入归全局迁移提交。
+// Trigger: REQ-041 全局迁移。
+// Evidence: 启动、读取与同步调用链审查。
+// Replacement: src/editor/data-migration.ts
+// Risk: 需验证全库迁移与中断恢复。
+// Human Review: Required
+// Original code:
+//   if (
+//     normalizedState !== null
+//     && isRecord(persistedState)
+//     && persistedState.documentSchemaVersion !== BLUEPRINT_SCHEMA_VERSION
+//   ) {
+//     await writeEditorHistoryState(normalizedState);
+//   }
+
 
   return normalizedState;
 }
@@ -64,7 +73,7 @@ function createEditorHistoryLocation(documentKey: string) {
   };
 }
 
-function normalizePersistedEditorHistoryState(
+export function normalizePersistedEditorHistoryState(
   value: unknown,
   expectedDocumentKey: string,
   document: WorldDocument | null,
@@ -171,6 +180,8 @@ function migrateEditorHistoryRecordDeviceIds(
   record: Record<string, unknown>, sourceSchema: number,
   context: Record<string, WorldEntity>, baseId?: string,
 ): Record<string, unknown> {
+  // 2026-10-08：6→7 是空步骤，不需要解析历史连接端点，也不能因此截断原本有效的历史。
+  if (sourceSchema === 6 && BLUEPRINT_SCHEMA_VERSION === 7) return record;
   const typedRecord = record as unknown as EditorHistoryRecord;
   return {
     ...typedRecord,

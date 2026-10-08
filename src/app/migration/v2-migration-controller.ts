@@ -1,3 +1,4 @@
+import { migrateIncomingData } from "@/shared/data-migration";
 import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -178,7 +179,10 @@ export class V2MigrationController {
     });
 
     try {
-      const result = await executeV2Migration(appHost);
+      let result: V2MigrationExecutorResult | null = null;
+      await migrateIncomingData([{ label: "导入旧版数据", run: async () => { result = await executeV2Migration(appHost, true); } }]);
+      const completed = result as V2MigrationExecutorResult | null;
+      if (completed?.loadedBaseId) await appHost.workspace.editor?.actions.loadLatestBaseDocument(completed.loadedBaseId);
 
       runInAction(() => {
         this.result = result;

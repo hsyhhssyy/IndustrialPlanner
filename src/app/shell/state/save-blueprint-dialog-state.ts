@@ -1,3 +1,4 @@
+import { importedBlueprintNeedsMigration } from "@/app/blueprint/blueprint-transfer";
 import { makeAutoObservable } from "mobx";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
@@ -12,6 +13,7 @@ export class WorkbenchSaveBlueprintDialogController {
   document: BlueprintDocument | null = null;
   parentFolderId: string | null = null;
   completedMutationCount = 0;
+  requiresMigration = false;
 
   public constructor(dialogState: DialogStateReadWrite) {
     this.dialogState = dialogState;
@@ -26,6 +28,7 @@ export class WorkbenchSaveBlueprintDialogController {
   }
 
   public openImported(document: BlueprintDocument, parentFolderId: string | null = null) {
+    this.requiresMigration = importedBlueprintNeedsMigration(document);
     this.source = "import";
     this.document = document;
     this.parentFolderId = parentFolderId;
@@ -47,6 +50,7 @@ export class WorkbenchSaveBlueprintDialogController {
   }
 
   public close() {
+    this.requiresMigration = false;
     this.dialogState.visible = false;
     this.source = "selection";
     this.document = null;

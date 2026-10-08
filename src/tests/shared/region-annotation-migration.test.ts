@@ -23,7 +23,7 @@ describe("region annotation migration", () => {
     }, 5);
 
     expect(migration).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       regions: [],
     });
   });

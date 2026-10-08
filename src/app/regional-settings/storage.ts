@@ -28,6 +28,7 @@ import {
 import { LEGACY_REGIONAL_SETTINGS_LOCATION } from "@/shared/legacy-regional-dark-pipe";
 import {
   readFromIndexedDbWithMigration,
+  prepareVersionedStorageMigration,
   // AI-REMOVED 2026-09-25:
   // Reason: 资源设置写入需保留数据库中尚未迁移的旧关系，防止旧内存副本恢复已迁移记录。
   // Trigger: REQ-038 文档权威及晚到同步。
@@ -53,6 +54,16 @@ import {
 const REGIONAL_SETTINGS_STORE_LOCATION: IndexedDbStorageLocation = {
   ...LEGACY_REGIONAL_SETTINGS_LOCATION,
 };
+
+export async function prepareRegionalSettingsMigration(itemDefinitions: readonly ItemDefinition[]) {
+  const normalize = (raw: unknown) => normalizeRegionalSettingsAsset(raw, itemDefinitions);
+  const plan = await prepareVersionedStorageMigration(REGIONAL_SETTINGS_STORE_LOCATION, REGIONAL_SETTINGS_SCHEMA_VERSION,
+    [{ version: REGIONAL_SETTINGS_SCHEMA_VERSION, migrate: normalize }], undefined, normalize, "地区设置");
+  return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    await job.run();
+    emitRegionalSettingsStorageChange({ origin: "local" });
+  } })) };
+}
 
 export async function loadRegionalSettingsAsset(
   itemDefinitions: readonly ItemDefinition[],

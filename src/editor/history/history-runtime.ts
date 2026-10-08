@@ -88,6 +88,7 @@ export class EditorHistoryRuntime {
   }
 
   /** 等待历史读取（含迁移写回）及保存完成；等待期间追加的写入也必须排空。 */
+  // AI-CORRECTION 2026-10-08: 读取不再写回 schema；统一调度器承担持久化，flush 仍等待现有读取和业务保存。
   public async flush(): Promise<void> {
     let pending: Promise<void>;
     do {
@@ -95,6 +96,16 @@ export class EditorHistoryRuntime {
       await pending;
       await Promise.all(this.loads.values());
     } while (pending !== this.writeQueue || this.loads.size > 0);
+  }
+
+  public async refreshAfterMigration(): Promise<void> {
+    await this.flush();
+    this.documents.clear();
+    this.loadErrors.clear();
+    if (this.requestedDocumentKey !== null) {
+      this.loadDocumentHistory(this.requestedDocumentKey);
+      await this.flush();
+    }
   }
 
   public record(options: {

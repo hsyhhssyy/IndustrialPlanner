@@ -24,7 +24,8 @@ import {
 // AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
 // AI-CORRECTION 2026-09-11: 远端发布 tag v1.5.0 仍为 schema 5；所有当前未发布变更统一进入 5→6。
 // USER-REQUIREMENT 2026-09-18: 修改迁移目标前必须先核查目标 schema 是否已经上线；未上线时不得增加下一个版本，只能把新增迁移追加到现有生产版本至目标版本的 step。当前固定追加到 5→6。
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 6;
+// AI-CORRECTION 2026-10-08: 用户允许 REQ-041 增加 6→7 空步骤，专用于迁移模式切换及旧 fallback，既有 1→6 规则保留。
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 7;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
@@ -142,6 +143,16 @@ export interface BlueprintDeviceReferenceMigrationResult {
  * AI-CORRECTION 2026-08-19: schema 5 起迁移链以完整文档状态为边界，同时迁移实体、实体顺序与槽位链接。
  */
 export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
+// AI-REMOVED 2026-10-08:
+// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
+// Trigger: REQ-041 用户授权统一迁移。
+// Evidence: 启动、导入和保存调用链审查。
+// Replacement: 本数组尾部的 6→7 步骤
+// Risk: 需回归迁移失败与恢复。
+// Human Review: Required
+// Original code:
+//   // 2026-10-08：只建立恢复边界，业务内容保持原样；历史转换仍按相邻版本执行。
+//   { fromVersion: 6, toVersion: 7, deviceRules: [] },
   {
     fromVersion: 1,
     toVersion: 2,
@@ -395,6 +406,8 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
 //       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
 //     ],
 //   },
+  // 2026-10-08：只建立恢复边界，业务内容保持原样；历史转换仍按相邻版本执行。
+  { fromVersion: 6, toVersion: 7, deviceRules: [] },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
 const MIGRATION_SPEC_BY_SOURCE_VERSION = createMigrationSpecBySourceVersion(

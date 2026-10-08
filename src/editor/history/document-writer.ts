@@ -1,6 +1,7 @@
 import type {
   WorldDocument,
 } from "@/domain/document/world-document";
+import { isDataMigrationFrozen } from "@/shared/data-migration";
 import type {
   EditorHistoryActionDescriptor,
 } from "@/domain/editor/editor-history";
@@ -51,6 +52,7 @@ export function createEditorDocumentWriter(options: {
     action: EditorHistoryActionDescriptor,
     mode: EditorDocumentWriteMode,
   ): WorldDocument | null => {
+    if (isDataMigrationFrozen() && mode !== "remote-sync") return null;
     const currentDocument = options.document.getSnapshot();
     // 历史重放恢复已记录的关系；只有新的用户编辑需要重新判断覆盖。
     if (mode === "record") nextDocument = options.normalizeEdit?.(currentDocument, nextDocument) ?? nextDocument;

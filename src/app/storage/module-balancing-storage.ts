@@ -11,6 +11,7 @@ import {
 } from "@/app/module-balancing-schema";
 import {
   readFromIndexedDbWithMigration,
+  prepareVersionedStorageMigration,
   saveToIndexedDbWithVersion,
   type StorageMigration,
 } from "@/shared/storage/migration";
@@ -42,6 +43,16 @@ const MODULE_BALANCING_STORE_LOCATION: IndexedDbStorageLocation = {
 };
 
 const CURRENT_VERSION = 2;
+
+export async function prepareModuleBalancingMigration() {
+  const plan = await prepareVersionedStorageMigration(MODULE_BALANCING_STORE_LOCATION, CURRENT_VERSION, MIGRATIONS,
+    undefined, normalizeModuleBalancingState, "模块配平");
+  return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    await job.run();
+    emitStorageChange({ assetType: "module-canvas", assetId: "all", origin: "local", timestamp: Date.now() });
+    emitStorageChange({ assetType: "custom-module", assetId: "all", origin: "local", timestamp: Date.now() });
+  } })) };
+}
 // AI-REMOVED 2026-08-08:
 // Reason: 模块墓碑不应跨 Cloudflare/WebDAV 目标共享，也不应留在全局 localStorage。
 // Trigger: 用户要求同步属性和缓存全部收归对应同步存储。

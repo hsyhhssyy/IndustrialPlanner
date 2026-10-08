@@ -250,3 +250,28 @@ describe("cloudflare-v2-worker-client", () => {
     client.dispose();
   });
 });
+
+it("迁移更换本地代际后重建同步 Worker，避免旧代际拒绝后续上传", async () => {
+  const { installStorageGeneration, adoptStorageGeneration, RECOVERY_GENERATION_KEY } = await import("@/shared/storage/storage-generation");
+  const generation = { formatVersion: 1 as const, schemaVersion: 7, generation: "before", buildId: "test", phase: "ready" as const };
+  localStorage.setItem(RECOVERY_GENERATION_KEY, generation.generation);
+  const disposeGeneration = installStorageGeneration(generation, () => {});
+  const workers: FakeWorker[] = [];
+  const client = new CloudflareV2WorkerClient({ workerFactory: () => {
+    const worker = new FakeWorker(); workers.push(worker); return worker as unknown as Worker;
+  } });
+  const config = { apiBase: "https://sync.example.test", spaceId: "migration", maxConcurrentRequests: 2, requestTimeoutMs: 30_000 };
+  try {
+    const first = client.request(config, { type: "recover-pending-upload" });
+    const request = workers[0]!.posted.find((value): value is CfV2WorkerRequest => typeof value === "object" && value !== null && "requestId" in value)!;
+    workers[0]!.respond(request.requestId, { recovered: false, commit: null });
+    await first;
+    adoptStorageGeneration({ ...generation, generation: "after" });
+    const second = client.request(config, { type: "recover-pending-upload" });
+    expect(workers).toHaveLength(2);
+    expect(workers[0]!.terminate).toHaveBeenCalledTimes(1);
+    const next = workers[1]!.posted.find((value): value is CfV2WorkerRequest => typeof value === "object" && value !== null && "requestId" in value)!;
+    workers[1]!.respond(next.requestId, { recovered: false, commit: null });
+    await second;
+  } finally { client.dispose(); disposeGeneration(); localStorage.clear(); }
+});

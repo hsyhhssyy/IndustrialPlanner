@@ -1701,3 +1701,41 @@ function createSettings(enabled = true) {
     maxConcurrentRequests: 4,
   };
 }
+
+it("收齐整个下载批次后一次迁移，再提交同步基线", async () => {
+  const { createDataMigrationController, installDataMigrationController } = await import("@/shared/data-migration");
+  const { prepareLocalMigrationRecovery } = await import("@/shared/storage/local-migration-recovery");
+  const { isDataMigrationComplete } = await import("@/shared/storage/data-migration-state");
+  const { createFakeIndexedDbFactory } = await import("./fake-indexed-db");
+  vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+  vi.stubGlobal("navigator", { locks: { request: async (_name: string, options: unknown, action?: () => Promise<unknown>) =>
+    action ? action() : (options as () => Promise<unknown>)() } });
+  const dispose = await prepareLocalMigrationRecovery({ schemaVersion: 7, buildId: "sync-test", onInvalidated: () => {} });
+  const events: string[] = [];
+  const controller = createDataMigrationController("sync-test", [{
+    pause: async () => { events.push("freeze"); },
+    prepare: async () => ({ jobs: [{ label: "全库", run: async () => { events.push("migrate"); } }] }),
+    refresh: async () => { events.push("refresh"); },
+  }]);
+  const uninstall = installDataMigrationController(controller);
+  const adapter = createAdapter();
+  adapter.sync.mockImplementation(async (_session: SyncRemoteSession, options: Parameters<SyncAdapter["sync"]>[1]) => {
+    for (const id of ["a", "b"]) {
+      events.push(`download-${id}`);
+      options.transaction.stageDownload!(id, { label: id, requiresMigration: true,
+        run: async () => { expect(await isDataMigrationComplete("sync-test")).toBe(false); events.push(`apply-${id}`); },
+      });
+    }
+    return { adapterId: adapter.id, mode: adapter.mode, status: "downloaded", changedAssetIds: ["a", "b"] };
+  });
+  const service = createSyncService({ readSettings: () => createSettings(), adapters: [adapter],
+    createRemote: () => createTestRemote({ complete: async () => {
+      expect(await isDataMigrationComplete("sync-test")).toBe(true); events.push("complete");
+    } }),
+  });
+  try {
+    await service.syncNow("manual");
+    expect(events).toEqual(["download-a", "download-b", "freeze", "apply-a", "apply-b", "migrate", "refresh", "complete"]);
+    expect(service.getStatus().lastError).toBeNull();
+  } finally { service.stop(); uninstall(); dispose(); localStorage.clear(); vi.unstubAllGlobals(); }
+});

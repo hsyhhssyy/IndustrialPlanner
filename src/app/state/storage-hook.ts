@@ -1,4 +1,6 @@
+import { pausePlannerStorageForMigration, refreshPlannerStorageAfterMigration } from "../shell";
 import { reaction, runInAction } from "mobx";
+import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { reportStorageFailure, runStorageEffect } from "@/shared/storage/storage-failure";
 
 import { isLegacyModuleBalancingId, createModuleBalancingId } from "../shell/module-balancing/module-balancing-model";
@@ -55,17 +57,22 @@ import {
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
+const migrationLifecycles = new WeakMap<AppHost, { pause: () => Promise<void>; refresh: () => Promise<void> }>();
+export async function pauseAppStorageForMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.pause(); }
+export async function refreshAppStorageAfterMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.refresh(); }
+
 export function hookLocalstorage(appHost: AppHost): () => void {
   let disposed = false;
   let moduleBalancingHydrated = false;
   let moduleBalancingWriteQueue = Promise.resolve();
+  let writeError: unknown = null;
   const persistModuleBalancing = (): void => {
-    if (disposed || !moduleBalancingHydrated) return;
+    if (disposed || !moduleBalancingHydrated || isDataMigrationFrozen()) return;
     // 排队前冻结数据，避免异步读取期间收到后续编辑，旧任务写入新的可变对象。
     const snapshot = JSON.parse(JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing)) as ModuleBalancingStateReadWrite;
     moduleBalancingWriteQueue = moduleBalancingWriteQueue
-      .then(() => saveModuleBalancingState(snapshot))
-      .catch(error => reportStorageFailure("module-balancing", error));
+      .then(async () => { await saveModuleBalancingState(snapshot); writeError = null; })
+      .catch(error => { writeError = error; reportStorageFailure("module-balancing", error); });
   };
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
     APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -111,7 +118,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   }
 
   const moduleBalancingHydrationBaseline = JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing);
-  void loadModuleBalancingState().then((persistedModuleBalancingState) => {
+  const hydration = loadModuleBalancingState().then((persistedModuleBalancingState) => {
     if (disposed) return;
     moduleBalancingHydrated = true;
     const currentModuleBalancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
@@ -129,6 +136,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
 
     persistModuleBalancing();
   }).catch(error => {
+    writeError = error;
     moduleBalancingHydrated = false;
     if (!disposed) reportStorageFailure("module-balancing load", error);
   });
@@ -136,6 +144,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   const disposeWorkbenchReaction = reaction(
     () => JSON.stringify(appHost.internalState.workbench),
     () => {
+      if (isDataMigrationFrozen()) return;
       const toolboxState = appHost.internalState.workbench.dialogState.toolbox;
       console.debug(
         `[DialogOffset] persist workbench → toolbox: visible=${toolboxState.visible} maximized=${toolboxState.maximized} offset=(${toolboxState.offsetX}, ${toolboxState.offsetY}) size=(${toolboxState.width}, ${toolboxState.height})`,
@@ -149,6 +158,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   const disposeAppSettingsReaction = reaction(
     () => JSON.stringify(appHost.internalState.settings),
     () => {
+      if (isDataMigrationFrozen()) return;
       runStorageEffect("app-settings", () => saveToLocalStorage<AppSettingsReadWrite>(
         APP_SETTINGS_LOCAL_STORAGE_KEY,
         appHost.internalState.settings,
@@ -182,7 +192,28 @@ export function hookLocalstorage(appHost: AppHost): () => void {
     },
   );
 
+  migrationLifecycles.set(appHost, {
+    pause: async () => {
+      await hydration; await moduleBalancingWriteQueue;
+      await appHost.regionalSettings.flushForMigration();
+      await pausePlannerStorageForMigration();
+      if (writeError !== null) throw writeError;
+    },
+    refresh: async () => {
+      const settings = readFromLocalStorage<AppSettingsReadWrite>(APP_SETTINGS_LOCAL_STORAGE_KEY);
+      const workbench = readFromLocalStorage<unknown>(WORKBENCH_STATE_LOCAL_STORAGE_KEY);
+      const modules = await loadModuleBalancingState();
+      runInAction(() => {
+        if (settings !== null) Object.assign(appHost.internalState.settings, normalizePersistedAppSettings(settings, appHost.internalState.settings));
+        if (workbench !== null) Object.assign(appHost.internalState.workbench, normalizePersistedWorkbenchState(workbench, appHost.internalState.workbench));
+        if (modules !== null) appHost.internalState.workbench.toolbox.moduleBalancing = modules;
+      });
+      await appHost.regionalSettings.hydrate();
+      await refreshPlannerStorageAfterMigration();
+    },
+  });
   return () => {
+    migrationLifecycles.delete(appHost);
     disposed = true;
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();
@@ -192,7 +223,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   };
 }
 
-function normalizePersistedAppSettings(
+export function normalizePersistedAppSettings(
   persistedAppSettings: AppSettingsReadWrite,
   fallback: AppSettingsReadWrite,
 ): AppSettingsReadWrite {
@@ -333,7 +364,7 @@ function normalizePersistedAppSettings(
   };
 }
 
-function normalizePersistedWorkbenchState(
+export function normalizePersistedWorkbenchState(
   persistedWorkbenchState: unknown,
   fallback: WorkbenchStateReadWrite,
 ): WorkbenchStateReadWrite {

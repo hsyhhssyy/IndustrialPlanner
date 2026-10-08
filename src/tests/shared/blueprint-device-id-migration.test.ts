@@ -94,7 +94,7 @@ afterEach(() => {
 
 describe("blueprint device id migration version chain", () => {
   it("declares one contiguous migration for every schema version up to current", () => {
-    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(6);
+    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(7);
     expect(BLUEPRINT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.map((spec) => [
@@ -106,6 +106,8 @@ describe("blueprint device id migration version chain", () => {
       [3, 4],
       [4, 5],
       [5, 6],
+      // AI-CORRECTION 2026-10-08: REQ-041 授权新增空升级恢复边界。
+      [6, 7],
       // AI-REMOVED 2026-09-11:
       // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
       // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
@@ -253,7 +255,7 @@ describe("blueprint device id migration version chain", () => {
 
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
-    expect(directToCurrent).toEqual(version6);
+    expect(directToCurrent).toEqual({ ...version6, schemaVersion: 7 });
   });
 
   it("keeps current schema entities unchanged when normalized again", () => {
@@ -264,7 +266,7 @@ describe("blueprint device id migration version chain", () => {
     const current = migrateBlueprintEntityDeviceIds(entities, 6);
 
     expect(current).toEqual({
-      schemaVersion: 6,
+      schemaVersion: 7,
       entities,
     });
   });
@@ -433,11 +435,11 @@ describe("blueprint device id migration version chain", () => {
       });
 
       expect(blueprint).toMatchObject({
-        schemaVersion: 6,
+        schemaVersion: 7,
         entities: { entity: { definitionId: expectedId, rotation: schemaVersion < 6 ? 180 : 0 } },
       });
       expect(world).toMatchObject({
-        schemaVersion: 6,
+        schemaVersion: 7,
         entities: { entity: { definitionId: expectedId, rotation: schemaVersion < 6 ? 180 : 0 } },
       });
     },
@@ -497,7 +499,7 @@ describe("blueprint device id migration version chain", () => {
 
       expect(renamed).toEqual({
         ...state,
-        schemaVersion: 6,
+        schemaVersion: 7,
         entities: { ...state.entities, entity: { ...entity, definitionId: newId, rotation: (rotation + 180) % 360 } },
         regions: [],
       });
@@ -507,11 +509,11 @@ describe("blueprint device id migration version chain", () => {
         ...entity, definitionId: newId, rotation: (rotation + 180) % 360,
       });
       expect(migrateBlueprintDeviceReference(oldId, rotation, 5)).toEqual({
-        schemaVersion: 6, deviceId: newId, rotation: (rotation + 180) % 360,
+        schemaVersion: 7, deviceId: newId, rotation: (rotation + 180) % 360,
       });
       expect(migrateBlueprintDeviceReference(`item_port_${oldId}`)?.deviceId).toBe(newId);
       expect(migrateBlueprintDeviceReference(newId, rotation)).toEqual({
-        schemaVersion: 6, deviceId: newId, rotation,
+        schemaVersion: 7, deviceId: newId, rotation,
       });
     }
   });

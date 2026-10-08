@@ -74,9 +74,12 @@ export function emptyPlannerCheckpoint(): PlannerCheckpoint {
 
 /** 2026-09-30：仅明确支持的旧算法允许保留输入、重置搜索；不猜测未知版本顺序。 */
 // AI-CORRECTION 2026-10-06：保留历史计数和曲线，最优蓝图按盒外存取线规则重算并重新验收，只重建搜索内部状态。
+import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
+
 export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, registry: RegistryContract,
   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
 ): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
+  value = migrateTaskBlueprintSchemas(value);
   if (value?.request && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
     const file = parsePlannerTaskFile(value, registry);
     if (!verify) return file;

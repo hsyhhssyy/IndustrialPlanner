@@ -17,7 +17,7 @@ it("migrates schema 5 history entity changes exactly once before undo or redo", 
     }],
   });
   const history = await readEditorHistoryState(location.key);
-  expect(history?.documentSchemaVersion).toBe(6);
+  expect(history?.documentSchemaVersion).toBe(7);
   expect(history?.records[0]?.delta.entities.updated.machine).toMatchObject({
     before: { definitionId: "furnance_1_liquid", rotation: 180 }, after: { definitionId: "furnance_1_liquid", rotation: 270 },
   });
@@ -54,7 +54,7 @@ it("retains the continuous undo history after an incompatible legacy record", as
 
   const history = await readEditorHistoryState(location.key);
 
-  expect(history).toMatchObject({ cursorSequence: 1, documentSchemaVersion: 6 });
+  expect(history).toMatchObject({ cursorSequence: 1, documentSchemaVersion: 7 });
   expect(history?.records).toHaveLength(1);
   expect(history?.records[0]).toMatchObject({ id: "change-2", sequence: 1 });
   expect(history?.records[0]?.delta.entities.updated.machine?.after).toMatchObject({

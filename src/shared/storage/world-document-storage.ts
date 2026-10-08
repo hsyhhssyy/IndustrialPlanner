@@ -155,7 +155,7 @@ export function normalizeWorldDocument(
     ...value,
     schemaVersion: migration.schemaVersion,
     entities: migration.entities,
-    entityOrder: Array.from(new Set(migration.entityOrder)),
+    entityOrder: Array.from(new Set(migration.entityOrder)).filter(entityId => entityId in migration.entities),
     slotLinks: [...migration.slotLinks],
     regions: migration.regions,
   };

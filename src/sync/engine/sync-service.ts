@@ -36,6 +36,8 @@ import {
   type SyncPlanUpload,
 } from "./sync-adapters";
 
+import { isDataMigrationFrozen, migrateIncomingData, subscribeDataMigration } from "@/shared/data-migration";
+
 const logger = createLogger("sync-service");
 
 export type SyncServicePhase = "idle" | "uploading" | "downloading" | "error";
@@ -121,6 +123,7 @@ interface FrozenDirtyEntry {
  * 引擎在单轮 pass 内收集条目、上传登记、touch 暂存与二段删除。
  */
 interface EngineTransaction extends SyncEngineTransaction {
+  readonly stagedDownloads: ReadonlyMap<string, { readonly label: string; readonly requiresMigration: boolean; readonly run: () => Promise<void> }>;
   readonly items: readonly SyncPlanItem[];
   readonly uploads: readonly SyncPlanUpload[];
   readonly stagedTouches: ReadonlyMap<string, string | null>;
@@ -282,6 +285,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let activeRemote: SyncRemote | null = null;
   let pendingTrigger: SyncRunReason | null = null;
+  let stopMigrationSubscription: (() => void) | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
   /** 最近一次完整分类后，本服务实例是否持续接收了全部本地变更通知。 */
@@ -411,6 +415,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     status.tasks.find((task) => task.kind === kind)?.completedUnitCount ?? 0;
 
   const syncNow = async (trigger: SyncRunReason): Promise<SyncServiceStatus> => {
+    if (isDataMigrationFrozen()) { pendingTrigger = selectQueuedTrigger(pendingTrigger, trigger); return status; }
     logger.info(`sync triggered: ${trigger}`);
     const isInitialSync = trigger === "startup" || trigger === "foreground";
 
@@ -958,6 +963,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     passTrigger: SyncRunReason,
     passIsInitialSync: boolean,
   ): Promise<SyncAdapterResult[]> => {
+    return await withSyncLock(async () => {
     const remote = options.createRemote(
       passSettings,
       (activity) => {
@@ -988,7 +994,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       localChangeTrackingComplete,
     );
     try {
-      return await withSyncLock(async () => {
+      return await (async () => {
         await options.beforeSync?.(session, passSettings);
         const adapterResults = passIsInitialSync
           ? await runInitialSyncPlan(session, transaction)
@@ -1006,6 +1012,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           await transaction.writeBatch.discard();
           return resolution.results;
         }
+
+        const downloads = [...transaction.stagedDownloads.values()];
+        if (downloads.some(download => download.requiresMigration)) await migrateIncomingData(downloads, true);
+        else for (const download of downloads) await download.run();
 
         // AI-CORRECTION 2026-08-10: big-check 已删除，目录维护仅在初始同步时执行。
         if (passIsInitialSync) {
@@ -1046,7 +1056,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
 
         return resolution.results;
-      });
+      })();
     } finally {
       session.dispose?.();
       if (activeRemote === remote) {
@@ -1054,6 +1064,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       }
       remote.dispose?.();
     }
+    });
   };
 
   const freezeDirtySnapshot = (): Map<string, FrozenDirtyEntry> =>
@@ -1095,9 +1106,13 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       readonly apply: () => Promise<void>;
     }>();
     const writeBatch = session.beginWriteBatch();
+    const stagedDownloads = new Map<string, { readonly label: string; readonly requiresMigration: boolean; readonly run: () => Promise<void> }>();
 
     return {
       writeBatch,
+      stagedDownloads,
+      stageDownload: (key, value) => { stagedDownloads.set(key, value); },
+      unstageDownload: key => { stagedDownloads.delete(key); },
       items,
       uploads,
       stagedTouches,
@@ -1752,6 +1767,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   const runUpdateCheck = async (
     trace: UpdateCheckTimerTrace,
   ): Promise<void> => {
+    if (isDataMigrationFrozen()) return;
     if (updateCheckRunning) {
       logger.debug(
         `update check coalesced — generation=${trace.schedulerGeneration} ` +
@@ -1796,7 +1812,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       }
 
       const probeStartedAtMs = Date.now();
-      const unchanged = await isRemoteUnchanged();
+      const unchanged = await withSyncLock(async () => isDataMigrationFrozen() ? true : await isRemoteUnchanged());
       logger.debug(
         `update check probe completed — generation=${trace.schedulerGeneration} ` +
         `tick=${trace.tickSequence} unchanged=${unchanged} ` +
@@ -1852,6 +1868,12 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       }
 
       started = true;
+      stopMigrationSubscription = subscribeDataMigration(() => {
+        if (isDataMigrationFrozen() || syncing || pendingTrigger === null) return;
+        const trigger = pendingTrigger;
+        pendingTrigger = null;
+        void syncNow(trigger);
+      });
       syncSuppressImmediate = false;
       logger.info("sync service started");
       void syncNow("startup");
@@ -1903,6 +1925,8 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     },
     stop: () => {
       started = false;
+      stopMigrationSubscription?.();
+      stopMigrationSubscription = null;
       localChangeTrackingComplete = false;
       logger.info("sync service stopped");
       pendingTrigger = null;

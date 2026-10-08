@@ -23,7 +23,16 @@ import { createEditorQueries } from "./queries";
 import { syncPlacementValidationState } from "./placement-validation";
 import { syncPoweredEntityCollection } from "./actions/powered-collection";
 import { hookLocalstorage } from "./storage-hook";
-import { hookLegacyDarkPipeMigration } from "./legacy-dark-pipe-migration";
+// AI-REMOVED 2026-10-08:
+// Reason: 独立监听调度已由全局迁移接管。
+// Trigger: REQ-041 全局迁移。
+// Evidence: 启动、读取与同步调用链审查。
+// Replacement: src/editor/data-migration.ts
+// Risk: 需验证全库迁移与中断恢复。
+// Human Review: Required
+// Original code:
+// import { hookLegacyDarkPipeMigration } from "./legacy-dark-pipe-migration";
+
 import { hookDarkPipeLinkLifecycle, normalizeEditedDarkPipeLinks } from "./dark-pipe-link-lifecycle";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 
@@ -133,7 +142,16 @@ export function createEditorHost(
   disposers.push(hookPoweredCollection(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
-  disposers.push(hookLegacyDarkPipeMigration(host));
+// AI-REMOVED 2026-10-08:
+// Reason: 迁移必须在业务初始化前统一执行。
+// Trigger: REQ-041 全局迁移。
+// Evidence: 启动、读取与同步调用链审查。
+// Replacement: src/editor/data-migration.ts
+// Risk: 需验证全库迁移与中断恢复。
+// Human Review: Required
+// Original code:
+//   disposers.push(hookLegacyDarkPipeMigration(host));
+
   disposers.push(hookDarkPipeLinkLifecycle(host));
 
   return host;

@@ -1,3 +1,4 @@
+import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { reaction, runInAction } from "mobx";
 import { reportStorageFailure } from "@/shared/storage/storage-failure";
 import {
@@ -15,6 +16,14 @@ import type {
   ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 
+const migrationLifecycles = new Set<{ pause: () => Promise<void>; refresh: () => Promise<void> }>();
+export async function pausePlannerStorageForMigration(): Promise<void> {
+  for (const lifecycle of migrationLifecycles) await lifecycle.pause();
+}
+export async function refreshPlannerStorageAfterMigration(): Promise<void> {
+  for (const lifecycle of migrationLifecycles) await lifecycle.refresh();
+}
+
 /**
  * 挂接 IndexedDB 持久化到 MobX store。
  * - 异步加载历史状态并 hydration
@@ -27,13 +36,14 @@ export function hookPlannerIndexedDbPersistence(
   let disposed = false;
   let loaded = false;
   let writeQueue = Promise.resolve();
+  let writeError: unknown = null;
   const baseline = JSON.stringify(toPersistedState(store));
   runInAction(() => { store.hydrated = false; });
   // Step 1: 异步加载持久化状态
-  void loadPlannerState().then((persisted) => {
+  const hydrate = (force = false) => loadPlannerState().then((persisted) => {
     if (disposed) return;
     runInAction(() => {
-      if (persisted !== null && JSON.stringify(toPersistedState(store)) === baseline) {
+      if (persisted !== null && (force || JSON.stringify(toPersistedState(store)) === baseline)) {
         const targets = normalizePorts(persisted.targets);
         const supplies = normalizePorts(persisted.supplies);
         const sourceConfig: ProductionPlanningSourceConfig = {
@@ -59,16 +69,19 @@ export function hookPlannerIndexedDbPersistence(
       store.hydrated = true;
     });
   }).catch(error => {
+    writeError = error;
     if (!disposed) reportStorageFailure("production-planning load", error);
   });
+
+  const hydration = hydrate();
 
   // Step 2: reaction — 仅 hydration 完成后才开始写入
   const dispose = reaction(
     () => ({ state: toPersistedState(store), hydrated: store.hydrated }),
     ({ state }) => {
-      if (disposed || !loaded || !store.hydrated) return;
-      writeQueue = writeQueue.then(() => savePlannerState(state))
-        .catch(error => reportStorageFailure("production-planning", error));
+      if (disposed || !loaded || !store.hydrated || isDataMigrationFrozen()) return;
+      writeQueue = writeQueue.then(async () => { await savePlannerState(state); writeError = null; })
+        .catch(error => { writeError = error; reportStorageFailure("production-planning", error); });
     },
     { fireImmediately: false },
   );
@@ -96,7 +109,13 @@ export function hookPlannerIndexedDbPersistence(
   //   { fireImmediately: false },
   // );
 
+  const lifecycle = {
+    pause: async () => { await hydration; await writeQueue; if (writeError !== null) throw writeError; },
+    refresh: async () => { await hydrate(true); if (writeError !== null) throw writeError; },
+  };
+  migrationLifecycles.add(lifecycle);
   return () => {
+    migrationLifecycles.delete(lifecycle);
     disposed = true;
     dispose();
   };

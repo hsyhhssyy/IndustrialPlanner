@@ -1,10 +1,10 @@
-import { openIndexedDbStores, waitForRequest, waitForTransaction } from "./browser-storage";
-import { createStableJsonHash } from "./hash-utils";
-import { DATA_MIGRATION_STORE, type DataMigrationCompletion } from "./data-migration-state";
+// 固定于 2026-10-08、REQ-041 实施前的恢复入口。禁止随新恢复器同步改写；用于证明旧实现可读取新流程保留的原件。
+import { openIndexedDbStores, waitForRequest, waitForTransaction } from "@/shared/storage/browser-storage";
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import {
   installStorageGeneration, RECOVERY_DATABASE, RECOVERY_GENERATION_KEY, RECOVERY_LOCK,
   RECOVERY_STATE_KEY, RECOVERY_STORE, type StorageGeneration,
-} from "./storage-generation";
+} from "@/shared/storage/storage-generation";
 
 export const MIGRATION_BACKUP_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
 const SNAPSHOT_PREFIX = "snapshot:";
@@ -32,7 +32,6 @@ interface RecoverySnapshot {
 export async function prepareLocalMigrationRecovery(options: {
   readonly schemaVersion: number;
   readonly buildId: string;
-  readonly migrationVersion?: string;
   readonly onInvalidated: () => void;
   readonly now?: number;
   readonly verifyCurrentBuild?: () => Promise<boolean>;
@@ -43,26 +42,6 @@ export async function prepareLocalMigrationRecovery(options: {
     if (database === null) throw new Error("无法打开本地存储，原数据未修改。");
     try {
       const now = options.now ?? Date.now();
-      // 完成记录有效时只读取两个小状态；不枚举正文或全部快照。旧构建仍走其原恢复算法。
-      if (options.migrationVersion !== undefined && database.objectStoreNames.contains(DATA_MIGRATION_STORE)) {
-        const fast = database.transaction([RECOVERY_STORE, DATA_MIGRATION_STORE], "readonly");
-        const done = waitForTransaction(fast);
-        void done.catch(() => undefined);
-        const [current, rawCompletion] = await Promise.all([
-          waitForRequest<StorageGeneration | undefined>(fast.objectStore(RECOVERY_STORE).get(RECOVERY_STATE_KEY)),
-          waitForRequest<string | undefined>(fast.objectStore(DATA_MIGRATION_STORE).get("complete")),
-        ]);
-        await done;
-        let completed: DataMigrationCompletion | undefined;
-        try { completed = rawCompletion === undefined ? undefined : JSON.parse(rawCompletion) as DataMigrationCompletion; }
-        catch { /* 不可读完成记录按未完成处理，继续原件保护路径。 */ }
-        if (current !== undefined && isGeneration(current) && current.phase === "ready"
-          && current.schemaVersion === options.schemaVersion && completed?.complete === true
-          && completed.version === options.migrationVersion && completed.generation === current.generation) {
-          localStorage.setItem(RECOVERY_GENERATION_KEY, current.generation);
-          return installStorageGeneration(current, options.onInvalidated);
-        }
-      }
       const transaction = database.transaction(Array.from(database.objectStoreNames), "readonly");
       const completion = waitForTransaction(transaction);
       void completion.catch(() => undefined);

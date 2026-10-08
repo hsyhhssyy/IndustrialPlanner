@@ -63,16 +63,16 @@ describe("文档中的跨基地暗管引用", () => {
     expect(blueprint.slotLinks[0]?.source).not.toHaveProperty("baseId");
     expect(blueprint.slotLinks[0]?.target).not.toHaveProperty("baseId");
     expect(JSON.stringify(source)).toBe(before);
-    expect(blueprint.schemaVersion).toBe(6);
+    expect(blueprint.schemaVersion).toBe(7);
   });
 
-  it.each([5, 6])("schema %i 蓝图读取仍以当前 6 为目标，世界文档不丢失跨基地引用", (schemaVersion) => {
+  it.each([5, 6])("schema %i 蓝图读取仍以当前 7 为目标，世界文档不丢失跨基地引用", (schemaVersion) => {
     const input = { ...fixture, schemaVersion, slotLinks: [remoteLink, localLink] };
     const blueprint = normalizeBlueprintDocument(input);
 
-    expect(BLUEPRINT_SCHEMA_VERSION).toBe(6);
-    expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(6);
-    expect(blueprint?.schemaVersion).toBe(6);
+    expect(BLUEPRINT_SCHEMA_VERSION).toBe(7);
+    expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(7);
+    expect(blueprint?.schemaVersion).toBe(7);
     expect(blueprint?.slotLinks).toEqual([localLink]);
     expect(input.slotLinks).toEqual([remoteLink, localLink]);
     expect(normalizeWorldDocument({ ...documentWithLinks([remoteLink]), schemaVersion })?.slotLinks).toEqual([remoteLink]);

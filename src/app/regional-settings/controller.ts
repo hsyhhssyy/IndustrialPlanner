@@ -128,6 +128,8 @@ export class RegionalSettingsController {
 //     return this.asset.darkPipeLinks;
 //   }
 //
+  public async flushForMigration(): Promise<void> { await this.persistenceQueue; }
+
   public async hydrate(): Promise<void> {
     const stored = await loadRegionalSettingsAsset(this.registry.itemDefinitions);
     runInAction(() => {

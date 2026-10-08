@@ -1,3 +1,4 @@
+import { getStorageGeneration, assertLocalStorageGeneration } from "@/shared/storage/storage-generation";
 import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
@@ -56,6 +57,7 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
   private readonly pending = new Map<number, QueuedRequest>();
   private readonly queue: QueuedRequest[] = [];
   private nextRequestId = 1;
+  private storageGeneration: string | null = null;
   private disposed = false;
 
   public constructor(private readonly options: CloudflareV2WorkerClientOptions = {}) {
@@ -76,6 +78,16 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
   ): Promise<TResult> {
     if (this.disposed) {
       return Promise.reject(new Error("Cloudflare worker client is disposed."));
+    }
+    assertLocalStorageGeneration();
+    const generation = getStorageGeneration()?.generation ?? null;
+    if (generation !== this.storageGeneration) {
+      if (this.pending.size > 0 || this.queue.length > 0) {
+        return Promise.reject(new Error("同步任务尚未结束，不能切换本地数据代际。"));
+      }
+      // 迁移已等待原代际的网络任务结束；下次请求建立全新的 Worker 缓存和写入屏障。
+      this.destroyWorker();
+      this.storageGeneration = generation;
     }
     const request: CfV2WorkerRequest = {
       requestId: this.nextRequestId,

@@ -47,7 +47,7 @@ describe("system-blueprint public assets", () => {
         sourcePath: "v1.5-six-xiranite-full-speed-gas-solid-conversion.json",
       },
     ]);
-    expect(v15FolderDirectory.blueprints.map(({ schemaVersion }) => schemaVersion)).toEqual([6, 6, 6]);
+    expect(v15FolderDirectory.blueprints.map(({ schemaVersion }) => schemaVersion)).toEqual([7, 7, 7]);
 
     const valley4FolderDirectory = listSystemBlueprintDirectory(
       snapshot,

@@ -1,4 +1,5 @@
 import { hasStorageGeneration } from "./storage-generation";
+import { migratedRecordJob } from "./migration-records";
 import type { IndexedDbStorageLocation } from "./browser-storage";
 import {
   readFromIndexedDb,
@@ -30,6 +31,19 @@ export interface StorageMigration<T, TContext = void> {
 interface VersionedPayload<T> {
   _v: number;
   data: T;
+}
+
+/** 全库升级使用与单项读取相同的版本规则，显式产生持久化任务。 */
+export async function prepareVersionedStorageMigration<T, TContext>(
+  location: IndexedDbStorageLocation, currentVersion: number, migrations: readonly StorageMigration<T, TContext>[],
+  context: TContext, normalize: (value: T) => T | null, label: string,
+) {
+  const raw = await readFromIndexedDb<unknown>(location, { strict: true });
+  if (raw === null) return { jobs: [] };
+  const value = applyMigrations(raw, currentVersion, migrations, context);
+  const normalized = value === null ? null : normalize(value);
+  if (normalized === null) throw new Error(`${label} 无法升级，原件已保留。`);
+  return { jobs: migratedRecordJob(location, { key: location.key, value: raw }, { _v: currentVersion, data: normalized }, label) };
 }
 
 function isVersionedPayload(value: unknown): value is VersionedPayload<unknown> {

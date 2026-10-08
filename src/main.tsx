@@ -1,5 +1,15 @@
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { prepareLocalMigrationRecovery } from "@/shared/storage/local-migration-recovery";
+import { createDataMigrationController, installDataMigrationController, isDataMigrationFrozen } from "@/shared/data-migration";
+import { prepareBlueprintLibraryMigration } from "@/shared/blueprint-library-migration";
+import { prepareEditorDataMigration } from "./editor/data-migration";
+import type { EditorHost } from "./editor/editor-host";
+import { prepareAppDataMigration } from "./app/data-migration";
+import { pauseAppStorageForMigration, refreshAppStorageAfterMigration } from "./app/state/storage-hook";
+import { prepareEdaDataMigration, EDA_MIGRATION_VERSION } from "./blueprint-planner/data-migration";
+import type { BlueprintPlannerHost } from "./blueprint-planner/blueprint-planner-host";
+import { DataMigrationOverlay } from "./app/migration/data-migration-overlay";
+import { createMigrationVerification } from "./simulation/migration-verification";
 
 import { createBlueprintPlannerHost } from "./blueprint-planner";
 import { createAudioHost } from "./audio";
@@ -44,8 +54,12 @@ declare global {
 
 // 数据安全入口必须先于所有主机初始化和同步任务。
 async function startWorkbench(): Promise<void> {
+  const migrationVersion = `local-data-1:${BLUEPRINT_SCHEMA_VERSION}:${EDA_MIGRATION_VERSION}`;
+  const reactRoot = ReactDOM.createRoot(document.getElementById("root")!);
+  reactRoot.render(<DataMigrationOverlay />);
   const disposeStorageGeneration = await prepareLocalMigrationRecovery({
     schemaVersion: BLUEPRINT_SCHEMA_VERSION,
+    migrationVersion,
     buildId: import.meta.url,
     onInvalidated: () => {
       // navigation 使用既有 PWA network-first；同步触发 SW 更新但不等待后台页继续写入。
@@ -80,7 +94,58 @@ async function startWorkbench(): Promise<void> {
     blueprintPlanner: null,
   }
 
+  let migrationApp: AppHost | null = null;
+  let migrationEditor: EditorHost | null = null;
+  let migrationPlanner: BlueprintPlannerHost | null = null;
+  let migrationSimulation: ReturnType<typeof createSimulationHost> | null = null;
+  let resumeSimulation = false;
+  const verification = createMigrationVerification(registry);
+  const migration = createDataMigrationController(migrationVersion, [
+    {
+      prepare: async () => ({ jobs: [] }),
+      pause: async () => {
+        resumeSimulation = workspace.simulation?.state.runningState === "start";
+        workspace.simulation?.actions.pause();
+        await migrationPlanner?.pauseForMigration();
+        if (migrationEditor !== null) {
+          await migrationEditor.internalDocuments.flush();
+          await migrationEditor.internalHistory.flush();
+        }
+        if (migrationApp !== null) await pauseAppStorageForMigration(migrationApp);
+      },
+      refresh: async () => {
+        if (migrationApp !== null) await refreshAppStorageAfterMigration(migrationApp);
+        await migrationEditor?.internalDocuments.refreshAfterMigration();
+        await migrationEditor?.internalHistory.refreshAfterMigration();
+        await migrationPlanner?.reloadAfterMigration();
+        if (migrationSimulation?.internalState.hasStarted) {
+          const refreshed = await migrationSimulation.internalActions.refreshFromCurrentDocument();
+          migrationSimulation.actions.pause();
+          if (refreshed.status === "failed") throw new Error(refreshed.error ?? "升级后的仿真状态未能恢复。");
+        }
+      },
+      resume: () => { if (resumeSimulation) workspace.simulation?.actions.resume(); },
+    },
+    { label: "检查应用设置", prepare: () => prepareAppDataMigration(registry) },
+    { label: "检查基地与编辑历史", prepare: () => prepareEditorDataMigration(registry) },
+    { label: "检查蓝图库", prepare: prepareBlueprintLibraryMigration },
+    { label: "检查计算任务", prepare: () => prepareEdaDataMigration(registry, request => verification.run(request)) },
+  ]);
+  const disposeMigration = installDataMigrationController(migration);
+  const freezeInput = (event: Event) => {
+    if (!isDataMigrationFrozen() || event.target instanceof Element && event.target.closest('[aria-labelledby="data-migration-title"]')) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+  };
+  const inputEvents = ["pointerdown", "pointermove", "pointerup", "keydown", "keyup", "wheel", "touchstart", "touchmove", "drop", "click", "submit", "beforeinput", "paste"];
+  for (const event of inputEvents) window.addEventListener(event, freezeInput, { capture: true, passive: false });
+  if (import.meta.hot) import.meta.hot.dispose(() => {
+    disposeMigration(); verification.dispose();
+    for (const event of inputEvents) window.removeEventListener(event, freezeInput, true);
+  });
+  await migration.run();
+
   const appHost = createAppHost(workspace);
+  migrationApp = appHost;
   await appHost.regionalSettings.hydrate();
   if (import.meta.env.DEV) {
     window.__industrialPlannerAppHost = appHost;
@@ -105,7 +170,8 @@ async function startWorkbench(): Promise<void> {
   // Human Review: Required
   // Original code:
   // const editorHost = createEditorHost(workspace);
-  createEditorHost(workspace);
+  // AI-CORRECTION 2026-10-08: 组合根保留具体 Host 供全局迁移结算与刷新，不增加 Domain 属性。
+  migrationEditor = createEditorHost(workspace);
   // AI-REMOVED 2026-09-25:
   // Reason: Editor 区域文档负责关系生命周期，App 资产仅保留旧记录迁移入口。
   // Trigger: REQ-038 出口文档权威。
@@ -120,12 +186,20 @@ async function startWorkbench(): Promise<void> {
   //     new Set(Object.keys(document.entities)),
   //   );
   // });
-  await createSyncHost(workspace, {
-    assetSources: [
-      ...createModuleBalancingSyncSources(appHost),
-      appHost.regionalSettings.createSyncSource(),
-    ],
-  });
+// AI-REMOVED 2026-10-08:
+// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
+// Trigger: REQ-041 用户授权统一迁移。
+// Evidence: 启动、导入和保存调用链审查。
+// Replacement: main.tsx 全部 Host 创建后的同步装配
+// Risk: 需回归迁移失败与恢复。
+// Human Review: Required
+// Original code:
+//   await createSyncHost(workspace, {
+//     assetSources: [
+//       ...createModuleBalancingSyncSources(appHost),
+//       appHost.regionalSettings.createSyncSource(),
+//     ],
+//   });
   await createRenderHost(workspace);
   const simulationHost = createSimulationHost(workspace, {
     engineKind: simulationEngineLaunchPreference.activeDenseEnabled ? "dense-v2" : "legacy",
@@ -149,7 +223,16 @@ async function startWorkbench(): Promise<void> {
   //     appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
   });
 
-  createBlueprintPlannerHost(workspace);
+  migrationSimulation = simulationHost;
+  migrationPlanner = createBlueprintPlannerHost(workspace);
+
+  await createSyncHost(workspace, {
+    assetSources: [
+      ...createModuleBalancingSyncSources(appHost),
+      appHost.regionalSettings.createSyncSource(),
+    ],
+  });
+
 
   const audioHost = createAudioHost(workspace, {
     readEnabled: () => appHost.internalState.settings.gamePlayDeviceAudio,
@@ -200,12 +283,13 @@ async function startWorkbench(): Promise<void> {
     },
   );
 
-  ReactDOM.createRoot(document.getElementById("root")!).render(
+  reactRoot.render(
     <React.StrictMode>
       <WorkbenchApp
         appHost={appHost}
         simulationEngineLaunchPreference={simulationEngineLaunchPreference}
       />
+      <DataMigrationOverlay />
     </React.StrictMode>,
   );
 
@@ -213,7 +297,7 @@ async function startWorkbench(): Promise<void> {
 
 void startWorkbench().catch((error: unknown) => {
   const root = document.getElementById("root");
-  if (root !== null) {
+  if (root !== null && !isDataMigrationFrozen()) {
     const message = document.createElement("p");
     message.textContent = error instanceof Error ? error.message : "无法安全读取本地数据，已停止写入。";
     const retry = document.createElement("button");
