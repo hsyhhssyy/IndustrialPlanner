@@ -62,15 +62,38 @@ export function BlueprintIdentificationPreview({ appHost, blueprint, boundaries,
     viewportCenter: bounds ? bounds.left + bounds.width / 2 : 0, gridCellPixelSize: scale, worldCoordinate: x });
   const yPixel = (y: number) => resolveViewportAxisPixelPosition({ viewportStart: view.offsetY, viewportSpan: size.height,
     viewportCenter: bounds ? bounds.top + bounds.height / 2 : 0, gridCellPixelSize: scale, worldCoordinate: y });
-  const entryRect = (entry: NonNullable<typeof geometry>["entries"][number]) => ({
-    left: xPixel(entry.entity.position.x), top: yPixel(entry.entity.position.y),
-    width: entry.gridArea.footprint.width * scale, height: entry.gridArea.footprint.height * scale,
-  });
-  const markerLayouts = layoutIdentificationMarkers(markers.map(marker => ({
-    key: marker.key, x: xPixel(marker.x), y: yPixel(marker.y),
-    width: Math.max(48, [...`${marker.arrow} ${marker.label}`].reduce((sum, character) => sum + (character.codePointAt(0)! > 127 ? 12 : 7), 12)),
-    target: entryRect(marker.entry),
-  })), geometry?.entries.map(entryRect) ?? [], size.width, size.height);
+  // AI-REMOVED 2026-10-08:
+  // Reason: 按当前视口重新布局使标签在缩放和平移时跳动。
+  // Trigger: 用户要求固定标签位置，允许边缘裁切并靠近本体。
+  // Evidence: layoutIdentificationMarkers 的输入包含 view.zoom 和 view.offset。
+  // Replacement: 下方全图坐标布局与 boundaryOverlay 整体变换。
+  // Risk: Low。Human Review: Required
+  // Original code:
+  // const entryRect = (entry: NonNullable<typeof geometry>["entries"][number]) => ({
+  //   left: xPixel(entry.entity.position.x), top: yPixel(entry.entity.position.y),
+  //   width: entry.gridArea.footprint.width * scale, height: entry.gridArea.footprint.height * scale,
+  // });
+  // const markerLayouts = layoutIdentificationMarkers(markers.map(marker => ({
+  //   key: marker.key, x: xPixel(marker.x), y: yPixel(marker.y),
+  //   width: Math.max(48, [...`${marker.arrow} ${marker.label}`].reduce((sum, character) => sum + (character.codePointAt(0)! > 127 ? 12 : 7), 12)),
+  //   target: entryRect(marker.entry),
+  // })), geometry?.entries.map(entryRect) ?? [], size.width, size.height);
+  // 布局只依赖全图和容器尺寸；缩放、平移及选择复用同一组坐标。
+  const markerLayouts = useMemo(() => {
+    if (!bounds || !geometry) return [];
+    const cell = Math.max(.5, Math.min(size.width / bounds.width, size.height / bounds.height));
+    const fitX = (x: number) => size.width / 2 + (x - bounds.left - bounds.width / 2) * cell;
+    const fitY = (y: number) => size.height / 2 + (y - bounds.top - bounds.height / 2) * cell;
+    const entryRect = (entry: NonNullable<typeof geometry>["entries"][number]) => ({
+      left: fitX(entry.entity.position.x), top: fitY(entry.entity.position.y),
+      width: entry.gridArea.footprint.width * cell, height: entry.gridArea.footprint.height * cell,
+    });
+    return layoutIdentificationMarkers(markers.map(marker => ({
+      key: marker.key, x: fitX(marker.x), y: fitY(marker.y),
+      width: Math.max(48, [...`${marker.arrow} ${marker.label}`].reduce((sum, character) => sum + (character.codePointAt(0)! > 127 ? 12 : 7), 12)),
+      target: entryRect(marker.entry),
+    })), geometry.entries.map(entryRect), size.width, size.height);
+  }, [bounds, geometry, markers, size]);
 
   useEffect(() => {
     const element = frame.current;
@@ -200,6 +223,8 @@ export function BlueprintIdentificationPreview({ appHost, blueprint, boundaries,
           aria-label={`${marker.label} · ${t(marker.entry.definition.nameKey)}`} title={`${marker.label} · ${t(marker.entry.definition.nameKey)}`}
           style={{ left: xPixel(marker.x), top: yPixel(marker.y) }} onClick={() => onSelect(marker.boundary)}>{marker.arrow} {marker.label}</button>)}
       */}
+      <div className={styles.boundaryOverlay} style={{ transform:
+        `translate(${view.offsetX + size.width / 2 * (1 - view.zoom)}px, ${view.offsetY + size.height / 2 * (1 - view.zoom)}px) scale(${view.zoom})` }}>
       <svg className={styles.boundaryLeaders} width={size.width} height={size.height} aria-hidden="true">
         {markerLayouts.map(layout => {
           const marker = markers.find(marker => marker.key === layout.key)!;
@@ -217,6 +242,7 @@ export function BlueprintIdentificationPreview({ appHost, blueprint, boundaries,
           style={{ left: layout.left, top: layout.top, width: layout.width, height: layout.height }}
           onClick={() => onSelect(marker.boundary)}>{marker.arrow} {marker.label}</button>;
       })}
+      </div>
     </div>
     <div className={styles.previewControls}>
       <button type="button" aria-label={t("eda.previewZoomOut")} onClick={() => setView(view => ({ ...view, zoom: Math.max(.25, view.zoom / 1.3) }))}>−</button>

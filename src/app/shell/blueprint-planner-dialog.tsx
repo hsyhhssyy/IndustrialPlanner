@@ -322,7 +322,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             <div className={styles.heading}><div><span>{t(controller.blueprintRequest ? "eda.blueprintMode" : "eda.productionMode")}</span><p className={styles.target}>{plan.name}</p></div>
 
             </div>
-            <div className={styles.flow} aria-label={t(controller.blueprintRequest ? "eda.baselineOutputs" : "productionPlanning.modeDevice")}>
+            {controller.blueprintRequest?.blueprintSource ? <BlueprintIdentification key={controller.blueprintRequest.blueprintSource.blueprint.blueprintId}
+              appHost={appHost} blueprint={controller.blueprintRequest.blueprintSource.blueprint} taskId={selectedId} /> : null}
+            <div className={controller.blueprintRequest ? undefined : styles.flow} aria-label={t(controller.blueprintRequest ? "eda.baselineOutputs" : "productionPlanning.modeDevice")}>
               {controller.blueprintRequest ? <ul>{plan.targets.map(target => <li key={target.itemId}>
                 {t(appHost.workspace.registry.queries.findItemDefinition(target.itemId)!.nameKey)} · {target.perMinute.toFixed(2)}/min
               </li>)}</ul> : <PlannerTaskFlow key={selectedId ?? "draft"} plan={plan} registry={appHost.workspace.registry} t={t} />}

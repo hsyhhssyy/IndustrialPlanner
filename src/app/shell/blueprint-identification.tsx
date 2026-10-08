@@ -86,6 +86,7 @@ import styles from "./blueprint-planner-dialog.module.scss";
 
 /** 边界配置只属于本次计算；关闭时取消独立识别，不修改编辑中的基地。 */
 // AI-CORRECTION 2026-10-07：配置归属持久任务，关闭面板不取消识别；暂停通过任务操作执行。
+// AI-CORRECTION 2026-10-08：优化阶段复用原图和已识别边界，只读展示基线并保留定位交互。
 export const BlueprintIdentification = observer(function BlueprintIdentification({ appHost, blueprint, taskId }: {
   appHost: AppHost; blueprint: BlueprintDocument; taskId: string | null;
 }) {
@@ -93,14 +94,16 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
   void planner.state.revision;
   const current = taskId === null ? null : planner.queries.getLastRequest(taskId);
   const request = current && isBlueprintRecognitionRequest(current) ? current : null;
-  const boundaries = request?.input.boundaries ?? [];
+  const input = request?.input ?? (current && !isBlueprintRecognitionRequest(current) ? current.blueprintSource : null);
+  const readOnly = !!input && !request;
+  const boundaries = input?.boundaries ?? [];
   const [selected, setSelected] = useState<string | null>(null);
   const [focusVersion, setFocusVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const rows = useRef(new Map<string, HTMLDivElement>());
   const list = useRef<HTMLDivElement>(null);
   const registry = appHost.workspace.registry;
-  const running = appHost.blueprintPlannerDialog.taskLocked;
+  const running = !!request && appHost.blueprintPlannerDialog.taskLocked;
   const choose = (boundary: BlueprintPlannerBlueprintBoundary, focus: boolean) => {
     const key = blueprintBoundaryKey(boundary); setSelected(key);
     if (focus) setFocusVersion(value => value + 1);
@@ -138,8 +141,8 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
   };
   const inputs = boundaries.filter(boundary => boundary.direction === "input");
   const outputs = boundaries.filter(boundary => boundary.direction === "output");
-  return <section aria-label={t("eda.identifyBlueprint")} className={styles.identification}>
-    <div className={styles.heading}><p className={styles.target}>{blueprint.name}</p></div>
+  return <section aria-label={t(readOnly ? "eda.blueprintMode" : "eda.identifyBlueprint")} className={styles.identification}>
+    {!readOnly ? <div className={styles.heading}><p className={styles.target}>{blueprint.name}</p></div> : null}
     <div className={styles.identificationBody}>
       <BlueprintIdentificationPreview appHost={appHost} blueprint={blueprint} boundaries={boundaries}
         selected={selected} focusVersion={focusVersion} onSelect={boundary => choose(boundary, false)} />
@@ -152,7 +155,7 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
             const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
             const pipe = boundary.kind === "port" ? definition.portGroups.find(entry => entry.id === boundary.portGroupId)?.isPipe
               : definition.portGroups.some(entry => entry.isPipe);
-            const fixed = request?.detectedBoundaries?.find(entry => blueprintBoundaryKey(entry) === key)?.itemId != null;
+            const fixed = readOnly || request?.detectedBoundaries?.find(entry => blueprintBoundaryKey(entry) === key)?.itemId != null;
             const marker = t(boundary.direction === "input" ? "eda.inputMarker" : "eda.outputMarker").replace("{index}", String(index + 1));
             const item = boundary.itemId ? registry.queries.findItemDefinition(boundary.itemId) : null;
             return <div key={key} ref={element => { if (element) rows.current.set(key, element); else rows.current.delete(key); }}

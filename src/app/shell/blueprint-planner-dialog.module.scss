@@ -105,8 +105,9 @@ Risk: Low。Human Review: Required
 Original code:
 .content .boundaryMarker { position: absolute; min-height: 24px; padding: 2px 5px; transform: translate(-50%, -50%); background: #ffffffed; color: #155b85; border: 1px solid #155b85; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 */
-.content .previewFrame .boundaryMarker { position: absolute; box-sizing: border-box; min-width: 0; min-height: 0; padding: 2px 5px; background: #ffffffed; color: #155b85; border: 1px solid #155b85; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.boundaryLeaders { position: absolute; inset: 0; pointer-events: none; color: #155b85; }
+.boundaryOverlay { position: absolute; inset: 0; transform-origin: 0 0; pointer-events: none; }
+.content .previewFrame .boundaryMarker { position: absolute; box-sizing: border-box; min-width: 0; min-height: 0; padding: 2px 5px; background: #ffffffed; color: #155b85; border: 1px solid #155b85; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: auto; }
+.boundaryLeaders { position: absolute; inset: 0; overflow: visible; pointer-events: none; color: #155b85; }
 .boundaryLeaders g[data-direction="output"] { color: #8c430b; }
 .boundaryLeaders line { stroke: currentColor; stroke-width: 1; }
 .boundaryLeaders circle { fill: currentColor; stroke: #fff; stroke-width: 1; }

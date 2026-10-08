@@ -30,6 +30,8 @@ for (const profile of SCREEN_PROFILES) {
       const dialog = page.getByRole('dialog').filter({has:page.locator('#blueprint-planner-title')});
       const identify = dialog.getByRole('button', {name:'识别蓝图',exact:true});
       await identify.waitFor();
+      await dialog.locator('[class*="boundaryRow"]').first().waitFor();
+      const originalBoundaryText = await dialog.locator('[class*="boundaryRow"]').allTextContents();
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "boundaries.png"))}});
       await identify.click();
       await dialog.getByLabel('原图净产率').waitFor({timeout:60000});
@@ -41,6 +43,18 @@ for (const profile of SCREEN_PROFILES) {
       assert(baseline.result.measuredOutputs.length === 1 && baseline.result.measuredOutputs[0].perMinute === 30, '净产率基线错误');
       assert(baseline.file.checkpoint.blueprintBaseline.report.engineKind === 'dense-v2', '识别未固定使用 Dense');
       assert(JSON.stringify(baseline.result.blueprint.entities) === JSON.stringify(${JSON.stringify(plant.entities)}), '识别修改了原图设备');
+      // 2026-10-08：进入优化后持续展示只读原图和识别边界，定位交互继续有效。
+      await dialog.locator('[class*="previewCanvas"] canvas').waitFor();
+      assert(JSON.stringify(await dialog.locator('[class*="boundaryRow"]').allTextContents()) === JSON.stringify(originalBoundaryText),
+        '进入优化后丢失原图边界和物品');
+      assert(await dialog.getByRole('combobox').count() === 0, '优化基线不能编辑输入物品');
+      const baselineLocation = dialog.locator('[class*="boundaryRow"]').first().getByRole('button');
+      await baselineLocation.click();
+      await dialog.locator('[class*="previewSelection"]').waitFor();
+      assert(await baselineLocation.getAttribute('aria-pressed') === 'true', '优化页原图列表定位失效');
+      await dialog.locator('[class*="boundaryMarker"]').first().click();
+      assert(await dialog.locator('[class*="boundaryRow"]').first().getAttribute('data-selected') === 'true',
+        '优化页原图标记未联动列表');
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "baseline.png"))}});
       await dialog.getByRole('button', {name:'保存蓝图',exact:true}).click();
       await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
@@ -59,6 +73,14 @@ for (const profile of SCREEN_PROFILES) {
         return p.queries.getResult(p.queries.listTasks()[0].taskId);
       });
       assert(restored?.metrics.area === 150 && restored.measuredOutputs[0].perMinute === 30, '刷新恢复丢失原图基线');
+      await page.evaluate(() => {
+        const h=window.__industrialPlannerAppHost, p=h.workspace.blueprintPlanner, id=p.queries.listTasks()[0].taskId;
+        h.blueprintPlannerDialog.selectTask(id,p.queries.getLastRequest(id)); h.blueprintPlannerDialog.open();
+      });
+      await dialog.locator('[class*="previewCanvas"] canvas').waitFor();
+      assert(JSON.stringify(await dialog.locator('[class*="boundaryRow"]').allTextContents()) === JSON.stringify(originalBoundaryText),
+        '恢复优化任务后丢失原图预览边界');
+      assert(await dialog.getByRole('combobox').count() === 0, '恢复的原图基线必须只读');
       await page.evaluate(record => window.__industrialPlannerAppHost.blueprintPreview.open({...record,parentFolderId:null}), ${JSON.stringify(unknown)});
       await page.getByRole('button', {name:'优化此蓝图',exact:true}).click();
       const choices = dialog.getByRole('combobox');

@@ -43,6 +43,29 @@ for (const profile of SCREEN_PROFILES) {
       assert(callouts.labels > 0 && callouts.dots === callouts.labels && callouts.lines === callouts.labels,
         '每个可见标签必须保留目标圆点和引线');
       assert(!callouts.overlapping && !callouts.covered, '标签不能重叠或覆盖目标圆点');
+      // 2026-10-08：标签与目标保持固定对应关系，缩放只能整体变换，不重新寻找视口空位。
+      const readLabels = () => dialog.locator('[class*="previewFrame"]').evaluate(frame => ({
+        labels: [...frame.querySelectorAll('[class*="boundaryMarker"]')].map(button => ({
+          position: [button.style.left, button.style.top, button.style.width, button.style.height],
+          renderedWidth: button.getBoundingClientRect().width,
+        })),
+        targets: [...frame.querySelectorAll('circle')].map(circle => [circle.getAttribute('cx'), circle.getAttribute('cy')]),
+      }));
+      const beforeZoom = await readLabels();
+      assert(await dialog.locator('[class*="previewControls"]').getByRole('button').count() === 3, '预览缩放按钮不完整');
+      const zoomControls = dialog.locator('[class*="previewControls"]').getByRole('button');
+      await zoomControls.nth(2).click();
+      await zoomControls.nth(2).click();
+      const afterZoom = await readLabels();
+      assert(JSON.stringify(afterZoom.labels.map(label => label.position))
+        === JSON.stringify(beforeZoom.labels.map(label => label.position)), '缩放重新分配了标签位置');
+      assert(JSON.stringify(afterZoom.targets) === JSON.stringify(beforeZoom.targets), '缩放改变了目标坐标');
+      assert(afterZoom.labels.length === beforeZoom.labels.length && afterZoom.labels.every((label, index) =>
+        Math.abs(label.renderedWidth / beforeZoom.labels[index].renderedWidth - 1.69) < .01), '标签没有跟随蓝图缩放');
+      await zoomControls.nth(1).click();
+      const afterFit = await readLabels();
+      assert(JSON.stringify(afterFit.labels.map(label => label.position))
+        === JSON.stringify(beforeZoom.labels.map(label => label.position)), '显示全图改变了标签布局');
       await dialog.getByRole('combobox').selectOption('item_iron_ore');
       const exported = page.waitForEvent('download');
       await dialog.getByRole('button', {name:'下载任务',exact:true}).click();
