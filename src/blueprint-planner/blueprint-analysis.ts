@@ -5,8 +5,17 @@ import type { SimulationBlueprintAnalysis, SimulationBlueprintAnalysisPort, Simu
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 
-export const blueprintBoundaryKey = (boundary: BlueprintPlannerBlueprintBoundary) =>
-  `${boundary.entityId}/${boundary.portGroupId}/${boundary.portId}/${boundary.direction}`;
+// AI-REMOVED 2026-10-07:
+// Reason: 边界身份供任务和界面共用。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/shared/planner-task.ts blueprintBoundaryKey
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+// export const blueprintBoundaryKey = (boundary: BlueprintPlannerBlueprintBoundary) =>
+//   `${boundary.entityId}/${boundary.portGroupId}/${boundary.portId}/${boundary.direction}`;
+//
+export { blueprintBoundaryKey } from "@/shared/planner-task";
 
 /** 同一实体的库存通道分别追踪，桥接器的独立通道不能按实体合并。 */
 export function blueprintMaterialGraph(registry: RegistryContract, blueprint: BlueprintDocument,
@@ -79,10 +88,11 @@ export function blueprintMaterialGraph(registry: RegistryContract, blueprint: Bl
 }
 
 export function inspectBlueprintBoundaries(registry: RegistryContract, blueprint: BlueprintDocument,
-  analysis: SimulationBlueprintAnalysis, activeActivityIds: readonly string[] = []): BlueprintPlannerBlueprintBoundary[] {
+  analysis: SimulationBlueprintAnalysis, activeActivityIds: readonly string[] = [],
+  suppliedBoundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): BlueprintPlannerBlueprintBoundary[] {
   const result: BlueprintPlannerBlueprintBoundary[] = [];
   const connected = new Set(analysis.connections.flatMap(edge => [edge.sourcePortId, edge.targetPortId]));
-  const graph = blueprintMaterialGraph(registry, blueprint, analysis, [], activeActivityIds);
+  const graph = blueprintMaterialGraph(registry, blueprint, analysis, suppliedBoundaries, activeActivityIds);
   const infer = (ports: readonly SimulationBlueprintAnalysisPort[]) => {
     const ids = new Set(ports.flatMap(port => [...graph.items.get(port.id) ?? []]));
     if (ids.size === 1) return [...ids][0]!;
@@ -124,18 +134,73 @@ export function assertBlueprintRecognition(registry: RegistryContract, input: Bl
     const port = graph.ports.get(id)!;
     throw new Error(`疑似混带：${port.entityId} / ${port.groupId} / ${port.portId}，物品：${[...items].join("、")}。`);
   }
-  for (const channel of report.analysis.channels.filter(channel => input.blueprint.entities[channel.entityId])) {
-    const definition = registry.queries.findEntityDefinition(input.blueprint.entities[channel.entityId]!.definitionId)!;
+  // 已持久化的自动出口必须与本次真实物品传播一致，导入不能用指定物品掩盖实际产物。
+  for (const boundary of input.boundaries.filter(boundary => boundary.direction === "output")) {
+    const ports = report.analysis.ports.filter(port => port.entityId === boundary.entityId && (boundary.kind === "facility"
+      ? port.direction === "input" : port.groupId === boundary.portGroupId && port.portId === boundary.portId));
+    const ids = new Set(ports.flatMap(port => [...graph.items.get(port.id) ?? []]));
+    if (ids.size !== 1 || !boundary.itemId || !ids.has(boundary.itemId)) throw new Error(`出口 ${boundary.entityId} 的物品与运行证据不一致。`);
+  }
+  // AI-REMOVED 2026-10-08:
+  // Reason: 配方身份属于设备整体组合，逐通道唯一性会拒绝合法的通道迁移和冗余空闲通道。
+  // Trigger: 用户要求比较所有通道合计配方，并允许完整组合中的单个配方独立出现。
+  // Evidence: 真实 Dense 场景中 ch1/ch2 从 A/B 变为 B/A，设备的无序组合保持 A+B。
+  // Replacement: 下方设备组合验收与空闲通道判定；assertBlueprintRecipeCombination。
+  // Risk: 允许组合的子组合；出口产率、库存漂移和混带检查继续独立执行。
+  // Human Review: Required
+  // Original code:
+  //   for (const channel of report.analysis.channels.filter(channel => input.blueprint.entities[channel.entityId])) {
+  //     const definition = registry.queries.findEntityDefinition(input.blueprint.entities[channel.entityId]!.definitionId)!;
+  //     if (registry.queries.isGeneralLogisticsDevice(definition.id) || definition.uiGroup === "cheat" || definition.id === "storager_1"
+  //       || input.boundaries.some(boundary => boundary.kind === "facility" && boundary.entityId === channel.entityId)) continue;
+  //     if (!channel.inputNodeIds.length && !channel.outputNodeIds.length && !channel.configuredRecipeId) continue;
+  //     const recipes = new Set(channel.observedRecipeIds);
+  //     const possible = graph.possibleRecipes.get(`${channel.entityId}/${channel.channelId}`);
+  //     // AI-REMOVED 2026-10-08:
+  //     // Reason: 静态候选数量不代表正式观察期实际运行的配方数量。
+  //     // Trigger: 用户允许预热切换，但要求正式观察期稳定为同一配方。
+  //     // Evidence: 惰气提纯真实运行仅使用增强配方，静态传播仍同时列出普通与增强配方。
+  //     // Replacement: 下方基于观察期 observedRecipeIds 的稳定性检查。
+  //     // Risk: Low；全程物品传播、混带检查与稳态产率验收继续执行。
+  //     // Human Review: Required
+  //     // Original code:
+  //     // if (possible && possible.size > 1) throw new Error(`设备 ${channel.entityId} 的通道 ${channel.channelId} 存在多种可运行配方，禁止优化。`);
+  //     if (recipes.size > 1) {
+  //       throw new Error(`设备 ${channel.entityId} 的通道 ${channel.channelId} 在观察期内配方未稳定：${[...recipes].join("、")}，禁止优化。`);
+  //     }
+  //     if (channel.consumption && recipes.size === 0 && !channel.configuredRecipeId && (possible?.size ?? 0) <= 1) continue;
+  //     if (recipes.size === 0 && channel.manual && channel.configuredRecipeId) recipes.add(channel.configuredRecipeId);
+  //     if (recipes.size !== 1 || channel.manual && channel.configuredRecipeId && !recipes.has(channel.configuredRecipeId)) {
+  //       throw new Error(`无法确定设备 ${channel.entityId} 的配方通道 ${channel.channelId}，禁止优化。`);
+  //     }
+  //   }
+  for (const entityId of new Set(report.analysis.channels.map(channel => channel.entityId))) {
+    const entity = input.blueprint.entities[entityId];
+    if (!entity) continue;
+    const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
     if (registry.queries.isGeneralLogisticsDevice(definition.id) || definition.uiGroup === "cheat" || definition.id === "storager_1"
-      || input.boundaries.some(boundary => boundary.kind === "facility" && boundary.entityId === channel.entityId)) continue;
-    if (!channel.inputNodeIds.length && !channel.outputNodeIds.length && !channel.configuredRecipeId) continue;
-    const recipes = new Set(channel.observedRecipeIds);
-    const possible = graph.possibleRecipes.get(`${channel.entityId}/${channel.channelId}`);
-    if (possible && possible.size > 1) throw new Error(`设备 ${channel.entityId} 的通道 ${channel.channelId} 存在多种可运行配方，禁止优化。`);
-    if (channel.consumption && recipes.size === 0 && !channel.configuredRecipeId && (possible?.size ?? 0) <= 1) continue;
-    if (recipes.size === 0 && channel.manual && channel.configuredRecipeId) recipes.add(channel.configuredRecipeId);
-    if (recipes.size !== 1 || channel.manual && channel.configuredRecipeId && !recipes.has(channel.configuredRecipeId)) {
-      throw new Error(`无法确定设备 ${channel.entityId} 的配方通道 ${channel.channelId}，禁止优化。`);
+      || input.boundaries.some(boundary => boundary.kind === "facility" && boundary.entityId === entityId)) continue;
+    const channels = report.analysis.channels.filter(channel => channel.entityId === entityId);
+    const combination = assertBlueprintRecipeCombination(report.analysis, entityId);
+    for (const channel of channels) {
+      if (!channel.inputNodeIds.length && !channel.outputNodeIds.length && !channel.configuredRecipeId) continue;
+      const observed = channel.observedRecipeIds;
+      const possible = graph.possibleRecipes.get(`${entityId}/${channel.channelId}`);
+      if (channel.manual) {
+        if (observed.some(id => id !== channel.configuredRecipeId)) {
+          throw new Error(`设备 ${entityId} 的配方通道 ${channel.channelId} 与手动配置不一致，禁止优化。`);
+        }
+        continue;
+      }
+      if (observed.length) continue;
+      if (channel.consumption && !channel.configuredRecipeId && (possible?.size ?? 0) <= 1) continue;
+      // 同一实际库存上的冗余通道没有新增配方身份；独立库存仍必须具备已知配方证据。
+      const sharedKnown = channels.some(peer => peer.consumption === channel.consumption
+        && (peer.observedRecipeIds.length > 0 || peer.manual && peer.configuredRecipeId !== null)
+        && peer.inputNodeIds.length === channel.inputNodeIds.length && peer.inputNodeIds.every(id => channel.inputNodeIds.includes(id))
+        && peer.outputNodeIds.length === channel.outputNodeIds.length && peer.outputNodeIds.every(id => channel.outputNodeIds.includes(id)));
+      if (sharedKnown || possible?.size === 1 && [...possible].every(id => combination.includes(id))) continue;
+      throw new Error(`无法确定设备 ${entityId} 的配方通道 ${channel.channelId}，禁止优化。`);
     }
   }
   const allowedSources = new Set(input.boundaries.filter(boundary => boundary.direction === "input").map(boundary => boundary.entityId));
@@ -143,6 +208,27 @@ export function assertBlueprintRecognition(registry: RegistryContract, input: Bl
     throw new Error("内部设备使用了未声明的无限库存，无法建立真实产率基线。");
   }
   return graph;
+}
+
+/** 完整组合必须同 tick 实际出现；其子组合可独立运行，不能把串行 A/B 历史拼成 A+B。 */
+function assertBlueprintRecipeCombination(analysis: SimulationBlueprintAnalysis, entityId: string): readonly string[] {
+  if (!Array.isArray(analysis.recipeCombinations)) throw new Error("缺少设备配方组合观测数据，请重新识别蓝图。");
+  const rows = analysis.recipeCombinations.filter(row => row.entityId === entityId);
+  if (!rows.length) throw new Error(`缺少设备 ${entityId} 的配方组合观测数据，请重新识别蓝图。`);
+  const complete = rows.reduce((best, row) => row.recipeIds.length > best.recipeIds.length ? row : best);
+  const counts = new Map<string, number>();
+  for (const id of complete.recipeIds) counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const row of rows) {
+    const remaining = new Map(counts);
+    for (const id of row.recipeIds) {
+      const count = remaining.get(id) ?? 0;
+      if (count === 0) {
+        throw new Error(`设备 ${entityId} 在观察期内配方未稳定：无法确定覆盖全部实际运行配方的完整组合，禁止优化。`);
+      }
+      remaining.set(id, count - 1);
+    }
+  }
+  return complete.recipeIds;
 }
 
 /** 只容许配方批次和输送相位的波动，不把持续增减库存或末段停产当作稳态。 */

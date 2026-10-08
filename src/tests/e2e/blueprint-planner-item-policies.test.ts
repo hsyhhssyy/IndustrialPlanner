@@ -167,6 +167,9 @@ const scenario = resolve(directory, "scenario.js");
         const { createSimulationHost } = await import('/src/simulation/simulation-host.ts');
         host.workspace.simulation.dispose(); createSimulationHost(host.workspace, {engineKind:'dense-v2',blueprintDenseTickRate:2});
         host.blueprintPlannerDialog.setEnabled(true); host.blueprintPlannerDialog.open(plan);
+        // 新草稿使用默认供料；测试所需的路线通过当前草稿显式配置。
+        if (host.blueprintPlannerDialog.plan.supplyPolicies.length !== 0) throw Error('新草稿保留了输入方案的供料策略');
+        for (const policy of plan.supplyPolicies ?? []) host.blueprintPlannerDialog.updateSupplyPolicy(policy);
       }, ${JSON.stringify(environment.plan)});
       const screen = await page.evaluate(() => window.__industrialPlannerAppHost.state.screenProfile);
       assert(screen.deviceClass === ${JSON.stringify(profile.name)} && screen.hasTouch, '屏幕档位不匹配');
@@ -188,7 +191,7 @@ const scenario = resolve(directory, "scenario.js");
       await tree.evaluate(element => element.scrollIntoView({block:'start'}));
       await page.screenshot({path:${JSON.stringify(resolve(directory, "configured.png"))}});
       const before = await dialog.ariaSnapshot();
-      await dialog.getByRole('spinbutton', {name:'提案次数（万次）'}).fill('1');
+      await dialog.getByRole('spinbutton', {name:'单轮最大尝试次数（万次）'}).fill('1');
       await dialog.getByRole('checkbox', {name:'CPU 并行计算'}).uncheck();
       await dialog.getByRole('checkbox', {name:'GPU 辅助计算'}).uncheck();
       // 2026-10-04：三档草稿下载开发验证完成后独立补充正式回归，下载不得偷偷启动计算。
@@ -216,8 +219,16 @@ const scenario = resolve(directory, "scenario.js");
       assert(task.request.options.itemPolicies.find(policy => policy.itemId === 'item_gas_acid').supply === 'conduit', '接入未保存');
       assert(await connection.isDisabled(), '已开始任务可以改写规则');
       await dialog.getByRole('button', {name:'复制任务',exact:true}).click();
+      const copied = await page.evaluate(() => {
+        const h = window.__industrialPlannerAppHost;
+        return {request:h.blueprintPlannerDialog.getRequest(),history:h.workspace.blueprintPlanner.queries.exportTask(h.workspace.blueprintPlanner.queries.listTasks()[0].taskId)};
+      });
+      assert(copied.request.plan.supplyPolicies.length === 0 && copied.request.options.itemPolicies.length === 0,
+        '复制任务生成的新草稿必须恢复默认供料和物品规则');
+      assert(JSON.stringify(copied.history.request) === JSON.stringify(task.request), '复制任务改写了历史任务参数');
+      await tree.getByRole('button', {name:'外部供给',exact:true}).click();
       assert(await connection.isEnabled(), '新草稿不可编辑');
-      assert(await connection.inputValue() === 'conduit', '复制任务丢失规则');
+      assert(await connection.inputValue() === 'conduit', '新草稿必须恢复流体暗管接入默认值');
       await tree.getByRole('button', {name:'内部生产',exact:true}).click();
       assert(await connection.count() === 0, '自产气体仍要求外接设施');
       assert(await page.evaluate(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length) === 1, '编辑草稿覆盖历史');

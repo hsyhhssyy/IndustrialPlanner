@@ -1,3 +1,6 @@
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitionBoundaries,
+  type BlueprintRecognitionTask } from "./blueprint-recognition-task";
 import { plannerOutputModeKey } from "./output-policy";
 import { observable, runInAction } from "mobx";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -24,11 +27,12 @@ import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecogn
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
+import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
 import { browserPlannerResources, observePlannerPressure, plannerConcurrencyLimit, PlannerAutomaticConcurrency, PlannerConcurrencyMemory,
   type PlannerResourceHints, type PlannerConcurrencySample } from "./automatic-concurrency";
 
 interface PlannerTask {
-  file: BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint };
+  file: BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
   originTaskId: string;
   portfolio: PlannerSearchPortfolio;
   portfolios: Map<number, PlannerSearchPortfolio>;
@@ -66,6 +70,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     blueprintId: candidate.execution.blueprint.blueprintId, ...rank(candidate) });
   const state = observable<{ activeTaskId: string | null; revision: number }>({ activeTaskId: null, revision: 0 });
   const tasks = new Map<string, PlannerTask>();
+  // 识别使用阶段检查点，不实例化尚未存在的搜索计划或种子池。
+  const recognitionTasks = new Map<string, BlueprintRecognitionTask>();
   // 无法恢复的记录独立保留原文，禁止生命周期自动保存覆盖它们。
   const blockedTasks = new Map<string, { file: BlueprintPlannerTaskFile; progress: BlueprintPlannerProgress }>();
   const retainBlocked = (file: BlueprintPlannerTaskFile, error: unknown) => {
@@ -101,7 +107,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const restorationAbort = new AbortController();
   let latestId: string | undefined;
   let writes: Promise<void> = Promise.resolve();
-  const pendingWrites = new Set<PlannerTask>();
+  const pendingWrites = new Set<PlannerTask | BlueprintRecognitionTask>();
   let writing = false;
   let lastWriteAt = -Infinity;
   let flushWrite: (() => void) | null = null;
@@ -120,14 +126,30 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     lastNotificationAt = performance.now();
     runInAction(() => { state.revision++; });
   };
-  const elapsed = (task: PlannerTask) => task.file.progress.elapsedMs + (task.resumedAt === null ? 0 : performance.now() - task.resumedAt);
+  const elapsed = (task: PlannerTask | BlueprintRecognitionTask) => task.file.progress.elapsedMs + (task.resumedAt === null ? 0 : performance.now() - task.resumedAt);
   // 只保存已完成的搜索阶段；运行中的计数没有可恢复的退火状态，刷新后必须从安全边界重做。
-  const snapshot = (task: PlannerTask): BlueprintPlannerTaskFile => structuredClone({ ...task.file,
-    progress: { ...task.file.progress, elapsedMs: elapsed(task), evaluatedProposals: task.file.checkpoint.evaluations,
-      candidateCount: task.file.checkpoint.attempt,
-      roundEvaluatedProposals: Math.max(0, task.file.checkpoint.evaluations - task.roundStartedEvaluations), activeWorkerCount: 0 },
-    checkpoint: { ...task.file.checkpoint, portfolio: task.portfolio.snapshot() } });
-  const persist = (task: PlannerTask) => {
+// AI-REMOVED 2026-10-07:
+// Reason: 持久化队列同时保存识别阶段和搜索检查点。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/blueprint-planner/blueprint-planner-host.ts snapshot
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//   const snapshot = (task: PlannerTask): BlueprintPlannerTaskFile => structuredClone({ ...task.file,
+//     progress: { ...task.file.progress, elapsedMs: elapsed(task), evaluatedProposals: task.file.checkpoint.evaluations,
+//       candidateCount: task.file.checkpoint.attempt,
+//       roundEvaluatedProposals: Math.max(0, task.file.checkpoint.evaluations - task.roundStartedEvaluations), activeWorkerCount: 0 },
+//     checkpoint: { ...task.file.checkpoint, portfolio: task.portfolio.snapshot() } });
+  const snapshot = (task: PlannerTask | BlueprintRecognitionTask): BlueprintPlannerTaskFile => {
+    if (!("portfolio" in task)) return structuredClone({ ...task.file,
+      progress: { ...task.file.progress, elapsedMs: elapsed(task), activeWorkerCount: 0 } });
+    return structuredClone({ ...task.file,
+      progress: { ...task.file.progress, elapsedMs: elapsed(task), evaluatedProposals: task.file.checkpoint.evaluations,
+        candidateCount: task.file.checkpoint.attempt,
+        roundEvaluatedProposals: Math.max(0, task.file.checkpoint.evaluations - task.roundStartedEvaluations), activeWorkerCount: 0 },
+      checkpoint: { ...task.file.checkpoint, portfolio: task.portfolio.snapshot() } });
+  };
+  const persist = (task: PlannerTask | BlueprintRecognitionTask) => {
     if (storage === null) return;
     // AI-REMOVED 2026-10-03:
     // Reason: 写入较慢时，Promise 链会无限保留每个批次的完整 32 分片快照。
@@ -140,14 +162,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // writes = writes.then(() => storage.save(file)).catch(error => reportStorageFailure("eda-task", error));
     pendingWrites.add(task);
     // 运行时只保留最新引用，两秒内合并检查点；收尾与关闭立即唤醒，仍等待最终写入。
-    if (disposed || task.file.progress.status !== "running") flushWrite?.();
+    // 识别阶段只在边界、输入和出口确认时提交，立即落盘；搜索批次仍合并写入。
+    if (disposed || !("portfolio" in task) || task.file.progress.status !== "running") flushWrite?.();
     if (writing) return;
     writing = true;
     writes = Promise.resolve().then(async () => {
       try {
         while (pendingWrites.size > 0) {
           const delay = 2000 - (performance.now() - lastWriteAt);
-          if (!disposed && delay > 0 && [...pendingWrites].every(value => value.file.progress.status === "running")) {
+          if (!disposed && delay > 0 && [...pendingWrites].every(value => "portfolio" in value && value.file.progress.status === "running")) {
             await new Promise<void>(resolve => {
               const timer = setTimeout(() => { flushWrite = null; resolve(); }, delay);
               flushWrite = () => { clearTimeout(timer); flushWrite = null; resolve(); };
@@ -163,7 +186,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       } finally { writing = false; }
     });
   };
-  const publish = (task: PlannerTask, patch: Partial<BlueprintPlannerProgress>, immediate = true) => {
+  const publish = (task: PlannerTask | BlueprintRecognitionTask, patch: Partial<BlueprintPlannerProgress>, immediate = true) => {
+    if (!("portfolio" in task) && patch.message !== undefined) patch = { ...patch,
+      message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, patch.message) };
     const spent = elapsed(task);
     if (task.resumedAt !== null) task.resumedAt = performance.now();
     task.file = { ...task.file, progress: { ...task.file.progress, ...patch, elapsedMs: spent } };
@@ -174,7 +199,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     if (!loaded) throw new Error("正在读取历史计算任务，请稍候。");
   };
   // 草稿只封装输入与空检查点；下载不触发计算，也不写入任务历史。
-  const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid()): BlueprintPlannerTaskFile => ({
+  const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid()): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest } => ({
     formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId,
     request: structuredClone(request), checkpoint: emptyPlannerCheckpoint(), progress: { taskId, status: "waiting",
       phase: "preparing", startedAt: Date.now(), elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
@@ -977,10 +1002,130 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     } finally { await settle(task); }
   }
 
+  const recognitionRuntime = (file: ReturnType<typeof parseRecognitionTaskFile>): BlueprintRecognitionTask => ({
+    file, abort: new AbortController(), resumedAt: null, running: null,
+  });
+  const inspectReport = async (input: import("@/domain/blueprint-planner").BlueprintPlannerBlueprintInput, signal?: AbortSignal) => {
+    if (!workspace.simulation) throw new Error("仿真服务不可用。");
+    input = excludeDisconnectedBlueprintPipes(workspace.registry, input).input;
+    if (!input.blueprint.entityOrder.length) throw new Error("排除内部断连管道后没有可识别的设备。");
+    return workspace.simulation.actions.runBlueprint({ blueprint: input.blueprint, activeActivityIds: input.activeActivityIds,
+      engine: { kind: "dense-v2", ticksPerSecond: 2 },
+      scene: { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" }, probes: [],
+      warmupSeconds: 0, observationSeconds: 0.5, inventorySampleCount: 2, maxWallTimeMs: 30_000, collectAnalysis: true },
+      AbortSignal.any([restorationAbort.signal, ...signal ? [signal] : []]));
+  };
+  async function runRecognition(task: BlueprintRecognitionTask, inspectOnly: boolean, signal?: AbortSignal): Promise<void> {
+    assertReady();
+    if (state.activeTaskId !== null || importing || task.running !== null) throw new Error("已有任务正在计算、保存或导入。");
+    task.abort = new AbortController();
+    const combined = AbortSignal.any([restorationAbort.signal, task.abort.signal, ...signal ? [signal] : []]);
+    const id = task.file.taskId;
+    task.resumedAt = performance.now(); latestId = id;
+    runInAction(() => { state.activeTaskId = id; });
+    publish(task, { status: "running", message: "正在检查蓝图边界。" });
+    persist(task);
+    const operation = async () => {
+      try {
+        combined.throwIfAborted();
+        let request = task.file.request;
+        const initial = await inspectReport(request.input, combined);
+        combined.throwIfAborted();
+        if (!initial.analysis || initial.status !== "completed") throw new Error(initial.diagnostics[0]?.message ?? "无法解析蓝图。");
+        const detected = inspectBlueprintBoundaries(workspace.registry, request.input.blueprint, initial.analysis, request.input.activeActivityIds);
+        if (request.detectedBoundaries !== null && JSON.stringify(detected) !== JSON.stringify(request.detectedBoundaries)) {
+          throw new Error("原图的边界或固定物品与任务不一致，请重新创建识别任务。");
+        }
+        if (request.detectedBoundaries === null) {
+          const configured = new Map(request.input.boundaries.map(boundary => [blueprintBoundaryKey(boundary), boundary]));
+          if ([...configured.keys()].some(key => !detected.some(boundary => blueprintBoundaryKey(boundary) === key))) throw new Error("任务包含原图中不存在的边界。");
+          request = { ...request, detectedBoundaries: detected,
+            input: { ...request.input, boundaries: detected.map(boundary => boundary.itemId !== null ? boundary
+              : { ...boundary, itemId: configured.get(blueprintBoundaryKey(boundary))?.itemId ?? null }) } };
+          task.file = { ...task.file, request, checkpoint: { step: "inputs" } };
+          parseRecognitionTaskFile(snapshot(task), workspace.registry);
+          persist(task); await writes; combined.throwIfAborted(); notify();
+        }
+        if (inspectOnly) {
+          publish(task, { status: "waiting", message: "边界检查完成，可以确认输入并识别蓝图。" });
+          return;
+        }
+        const unknownInputs = request.input.boundaries.filter(boundary => boundary.direction === "input" && !boundary.itemId);
+        if (unknownInputs.length) throw new Error(`请补全输入物品：${unknownInputs.map(boundary => boundary.entityId).join("、")}。`);
+        if (!request.input.boundaries.length) throw new Error("蓝图没有可识别的外部边界。");
+        const outputsResolved = task.file.checkpoint.step === "verification";
+        if (!outputsResolved) task.file.checkpoint.step = "outputs";
+        publish(task, { message: outputsResolved ? "正在恢复产率验证。" : "正在自动识别出口物品。" }); persist(task); await writes; combined.throwIfAborted();
+        let boundaries = outputsResolved ? [...request.input.boundaries] : inspectBlueprintBoundaries(workspace.registry, request.input.blueprint, initial.analysis,
+          request.input.activeActivityIds, request.input.boundaries);
+        // 静态传播不足时先观察真实生产；最终产率仍由完整持续收货场景验证。
+        if (boundaries.some(boundary => boundary.direction === "output" && !boundary.itemId)) {
+          const discovery = blueprintRecognitionScene(workspace.registry, { ...request.input, boundaries }, request.input.blueprint, 30, true);
+          const observed = await workspace.simulation!.actions.runBlueprint(discovery, combined);
+          combined.throwIfAborted();
+          if (observed.status !== "completed" || !observed.analysis) throw new Error("出口发现未完成，请继续识别。");
+          boundaries = inspectBlueprintBoundaries(workspace.registry, request.input.blueprint, observed.analysis,
+            request.input.activeActivityIds, boundaries);
+        }
+        const unresolved = boundaries.filter(boundary => !boundary.itemId);
+        if (unresolved.length) throw new Error(`无法确定出口物品：${unresolved.map(boundary => {
+          const entity = request.input.blueprint.entities[boundary.entityId]!;
+          return `${entity.id} (${entity.position.x}, ${entity.position.y})`;
+        }).join("、")}。请检查上游配方、供料或混带。`);
+        request = { ...request, input: { ...request.input, boundaries } };
+        task.file = { ...task.file, request, checkpoint: { step: "verification" } };
+        publish(task, { message: "正在验证持续净产率。" }); persist(task); await writes; combined.throwIfAborted();
+        const execution = blueprintRecognitionScene(workspace.registry, structuredClone(request.input));
+        const report = await workspace.simulation!.actions.runBlueprint(execution, combined);
+        combined.throwIfAborted();
+        const identified = identifyBlueprintNetwork(workspace.registry, request.input, request.options, execution, report);
+        assertPlannerCandidateBounds(workspace.registry, identified.candidate);
+        const file = createTaskFile(identified.request, id), baseline = { candidate: identified.candidate, report };
+        const best = structuredClone(baseline);
+        // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
+        best.candidate.execution.blueprint.blueprintId = createUuid();
+        const planning = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
+          portfolio: new PlannerSearchPortfolio(identified.request, identified.candidate.seed).snapshot(),
+          result: { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
+            measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
+            observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } },
+          progress: { ...file.progress, startedAt: task.file.progress.startedAt, elapsedMs: elapsed(task),
+            message: withBlueprintDisconnectionWarning(workspace.registry, request.input, "蓝图识别完成，可以开始优化。"), bestArea: identified.candidate.metrics.area,
+            areaHistory: [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] } });
+        await writes; combined.throwIfAborted();
+        pendingWrites.delete(task); recognitionTasks.delete(id); tasks.set(id, planning);
+        persist(planning); await writes; notify();
+      } catch (error) {
+        publish(task, { status: combined.aborted ? "cancelled" : "failed", message: combined.aborted
+          ? "识别已暂停，原图和已完成阶段已保留，可以继续识别。" : errorMessage(error) });
+        throw error;
+      } finally {
+        if (recognitionTasks.has(id)) {
+          publish(task, { estimatedProgress: null, activeWorkerCount: 0 });
+          task.resumedAt = null; persist(task); await writes;
+        }
+        task.running = null;
+        if (state.activeTaskId === id) runInAction(() => { state.activeTaskId = null; });
+        notify();
+      }
+    };
+    task.running = Promise.resolve().then(operation);
+    return task.running;
+  }
+
   const ready = storage === null ? Promise.resolve() : storage.load().then(async files => {
     if (disposed) return;
     for (const file of files) {
       try {
+        if (file.request && isBlueprintRecognitionRequest(file.request)) {
+          const task = recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry));
+          if (task.file.progress.status === "running") task.file = { ...task.file,
+            progress: { ...task.file.progress, status: "waiting",
+              message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已恢复，可以继续识别。") } };
+          recognitionTasks.set(file.taskId, task); latestId = file.taskId;
+          if (JSON.stringify(task.file) !== JSON.stringify(file)) persist(task);
+          continue;
+        }
         const task = await restore(file);
         if (["running", "saving"].includes(task.file.progress.status)) task.file = { ...task.file,
           progress: { ...task.file.progress, status: "waiting", message: "计算已恢复，可以继续。", estimatedProgress: null } };
@@ -1000,53 +1145,101 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const host: BlueprintPlannerHost = {
     state,
     actions: {
+// AI-REMOVED 2026-10-07:
+// Reason: 识别在现有任务内执行，并自动推断出口、保留暂停或失败状态。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/blueprint-planner/blueprint-planner-host.ts runRecognition
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//       async inspectBlueprint(blueprint, activeActivityIds, signal) {
+//         await ready; assertReady();
+//         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+//         signal?.throwIfAborted();
+//         try {
+//           if (!workspace.simulation) throw new Error("仿真服务不可用。");
+//           const report = await workspace.simulation.actions.runBlueprint({ blueprint, activeActivityIds,
+//             engine: { kind: "dense-v2", ticksPerSecond: 2 },
+//             scene: { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" }, probes: [],
+//             warmupSeconds: 0, observationSeconds: 0.5, inventorySampleCount: 2, maxWallTimeMs: 30_000, collectAnalysis: true },
+//           AbortSignal.any([restorationAbort.signal, ...signal ? [signal] : []]));
+//           if (!report.analysis) throw new Error(report.diagnostics[0]?.message ?? "无法解析蓝图。");
+//           return inspectBlueprintBoundaries(workspace.registry, blueprint, report.analysis, activeActivityIds);
+//         } finally { signal?.throwIfAborted(); }
+//       },
+//       async identifyBlueprint(input, inputOptions, signal) {
+//         input = structuredClone(input); inputOptions = structuredClone(inputOptions);
+//         const boundaries = await host.actions.inspectBlueprint(input.blueprint, input.activeActivityIds, signal);
+//         if (boundaries.length !== input.boundaries.length || boundaries.some(boundary => {
+//           const configured = input.boundaries.find(entry => blueprintBoundaryKey(entry) === blueprintBoundaryKey(boundary));
+//           return !configured?.itemId || boundary.itemId !== null && boundary.itemId !== configured.itemId || configured.kind !== boundary.kind;
+//         })) throw new Error("请补全所有边界物品，并保留蓝图中已有的物品配置。");
+//         assertReady();
+//         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+//         importing = true;
+//         try {
+//           if (!workspace.simulation) throw new Error("仿真服务不可用。");
+//           const execution = blueprintRecognitionScene(workspace.registry, structuredClone(input));
+//           const report = await workspace.simulation.actions.runBlueprint(execution,
+//             AbortSignal.any([restorationAbort.signal, ...signal ? [signal] : []]));
+//           const identified = identifyBlueprintNetwork(workspace.registry, input, inputOptions, execution, report);
+//           assertPlannerCandidateBounds(workspace.registry, identified.candidate);
+//           const file = createTaskFile(identified.request), id = file.taskId;
+//           const baseline = { candidate: identified.candidate, report };
+//           const best = structuredClone(baseline);
+//           // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
+//           best.candidate.execution.blueprint.blueprintId = createUuid();
+//           const task = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
+//             portfolio: new PlannerSearchPortfolio(identified.request, identified.candidate.seed).snapshot(),
+//             result: { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
+//               measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
+//               observationSeconds: report.observationSeconds, elapsedMs: report.elapsedMs } },
+//             progress: { ...file.progress, message: "蓝图识别完成，可以开始优化。", bestArea: identified.candidate.metrics.area,
+//               areaHistory: [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] } });
+//           tasks.set(id, task); latestId = id; persist(task); await writes; notify();
+//           return id;
+//         } finally { importing = false; }
+//       },
       async inspectBlueprint(blueprint, activeActivityIds, signal) {
         await ready; assertReady();
         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+        const report = await inspectReport({ blueprint, boundaries: [], activeActivityIds }, signal);
         signal?.throwIfAborted();
-        try {
-          if (!workspace.simulation) throw new Error("仿真服务不可用。");
-          const report = await workspace.simulation.actions.runBlueprint({ blueprint, activeActivityIds,
-            engine: { kind: "dense-v2", ticksPerSecond: 2 },
-            scene: { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" }, probes: [],
-            warmupSeconds: 0, observationSeconds: 0.5, inventorySampleCount: 2, maxWallTimeMs: 30_000, collectAnalysis: true },
-          AbortSignal.any([restorationAbort.signal, ...signal ? [signal] : []]));
-          if (!report.analysis) throw new Error(report.diagnostics[0]?.message ?? "无法解析蓝图。");
-          return inspectBlueprintBoundaries(workspace.registry, blueprint, report.analysis, activeActivityIds);
-        } finally { signal?.throwIfAborted(); }
+        if (!report.analysis) throw new Error(report.diagnostics[0]?.message ?? "无法解析蓝图。");
+        return inspectBlueprintBoundaries(workspace.registry, blueprint, report.analysis, activeActivityIds);
       },
-      async identifyBlueprint(input, inputOptions, signal) {
-        input = structuredClone(input); inputOptions = structuredClone(inputOptions);
-        const boundaries = await host.actions.inspectBlueprint(input.blueprint, input.activeActivityIds, signal);
-        if (boundaries.length !== input.boundaries.length || boundaries.some(boundary => {
-          const configured = input.boundaries.find(entry => blueprintBoundaryKey(entry) === blueprintBoundaryKey(boundary));
-          return !configured?.itemId || boundary.itemId !== null && boundary.itemId !== configured.itemId || configured.kind !== boundary.kind;
-        })) throw new Error("请补全所有边界物品，并保留蓝图中已有的物品配置。");
-        assertReady();
+      async createBlueprintTask(input, inputOptions) {
+        await ready; assertReady();
         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
-        importing = true;
-        try {
-          if (!workspace.simulation) throw new Error("仿真服务不可用。");
-          const execution = blueprintRecognitionScene(workspace.registry, structuredClone(input));
-          const report = await workspace.simulation.actions.runBlueprint(execution,
-            AbortSignal.any([restorationAbort.signal, ...signal ? [signal] : []]));
-          const identified = identifyBlueprintNetwork(workspace.registry, input, inputOptions, execution, report);
-          assertPlannerCandidateBounds(workspace.registry, identified.candidate);
-          const file = createTaskFile(identified.request), id = file.taskId;
-          const baseline = { candidate: identified.candidate, report };
-          const best = structuredClone(baseline);
-          // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
-          best.candidate.execution.blueprint.blueprintId = createUuid();
-          const task = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
-            portfolio: new PlannerSearchPortfolio(identified.request, identified.candidate.seed).snapshot(),
-            result: { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
-              measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
-              observationSeconds: report.observationSeconds, elapsedMs: report.elapsedMs } },
-            progress: { ...file.progress, message: "蓝图识别完成，可以开始优化。", bestArea: identified.candidate.metrics.area,
-              areaHistory: [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] } });
-          tasks.set(id, task); latestId = id; persist(task); await writes; notify();
-          return id;
-        } finally { importing = false; }
+        const id = createUuid(), task = recognitionRuntime(createRecognitionTaskFile(workspace.registry, id, input, inputOptions));
+        recognitionTasks.set(id, task); latestId = id; persist(task); await writes; notify();
+        // 后台边界检查的异常已进入任务进度；任务编号不依赖检查成功。
+        void runRecognition(task, true).catch(() => {});
+        return id;
+      },
+      async updateBlueprintBoundaries(id, boundaries) {
+        assertReady();
+        const task = recognitionTasks.get(id);
+        if (!task) throw new Error("蓝图识别任务不存在。");
+        if (state.activeTaskId !== null || importing || task.running) throw new Error("请先暂停当前任务并等待结束。");
+        const request = task.file.request;
+        if (!request.detectedBoundaries) throw new Error("请先完成边界检查。");
+        validateRecognitionBoundaries(workspace.registry, request.input, boundaries);
+        const fixed = new Map(request.detectedBoundaries.map(boundary => [blueprintBoundaryKey(boundary), boundary]));
+        if (fixed.size !== boundaries.length || boundaries.some(boundary => {
+          const original = fixed.get(blueprintBoundaryKey(boundary));
+          return !original || original.kind !== boundary.kind || original.itemId !== null && original.itemId !== boundary.itemId;
+        })) throw new Error("不能改变原图固定的边界或物品。");
+        const inputs = boundaries.map(boundary => boundary.direction === "input" ? boundary
+          : { ...boundary, itemId: fixed.get(blueprintBoundaryKey(boundary))!.itemId });
+        task.file = { ...task.file, request: { ...request, input: { ...request.input, boundaries: structuredClone(inputs) } }, checkpoint: { step: "inputs" } };
+        publish(task, { status: "waiting", message: "输入配置已保存，可以继续识别。" }); persist(task); await writes;
+      },
+      async identifyBlueprint(id, signal) {
+        await ready; assertReady();
+        const task = recognitionTasks.get(id);
+        if (!task) throw new Error("蓝图识别任务不存在。");
+        await runRecognition(task, false, signal);
       },
       start(request) {
         assertReady();
@@ -1076,18 +1269,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         launch(task, evaluations, concurrency, gpu);
       },
       cancel(id) {
-        const task = requireTask(id);
+        const task = recognitionTasks.get(id) ?? requireTask(id);
         if (task.file.progress.status === "running") task.abort.abort();
       },
       save: id => save(requireTask(id)),
       retrySave: id => save(requireTask(id)),
       async deleteTask(id) {
         assertReady();
-        const task = blockedTasks.has(id) ? null : requireTask(id);
+        const task = blockedTasks.has(id) ? null : recognitionTasks.get(id) ?? requireTask(id);
         if (state.activeTaskId === id || task?.running != null) throw new Error("请先暂停任务并等待计算结束。");
         await writes;
         await storage?.delete(id);
         tasks.delete(id);
+        recognitionTasks.delete(id);
         blockedTasks.delete(id);
         notify();
       },
@@ -1097,8 +1291,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         try {
           await ready;
           assertReady();
-          let task: PlannerTask;
-          try { task = await restore(file); } catch (error) {
+          let task: PlannerTask | BlueprintRecognitionTask;
+          try { task = file?.request && isBlueprintRecognitionRequest(file.request)
+            ? recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)) : await restore(file); } catch (error) {
             if (disposed) throw error;
             if (!file || typeof file !== "object" || typeof file.taskId !== "string" || !file.taskId) throw error;
             const id = createUuid();
@@ -1119,6 +1314,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           // 导入始终创建独立任务，不能覆盖正在计算的同名任务或本机历史。
           // AI-CORRECTION 2026-10-05：活动任务存在时禁止导入；导入提交前也禁止启动、续算和保存。
           const id = createUuid();
+          if (!("portfolio" in task)) {
+            task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
+              message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已导入，可以继续识别。"), estimatedProgress: null } };
+            await storage?.save(snapshot(task)); recognitionTasks.set(id, task); latestId = id; notify(); return id;
+          }
           task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
             message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
           const result = task.file.checkpoint.result;
@@ -1147,21 +1347,21 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       },
     },
     queries: {
-      listTasks: () => [...[...tasks.values()].map(task => ({ ...task.file.progress, elapsedMs: elapsed(task) })),
+      listTasks: () => [...[...tasks.values(), ...recognitionTasks.values()].map(task => ({ ...task.file.progress, elapsedMs: elapsed(task) })),
         ...[...blockedTasks.values()].map(task => ({ ...task.progress }))].sort((a, b) => b.startedAt - a.startedAt),
       getTask: (id = state.activeTaskId ?? latestId) => {
-        const task = id === undefined ? undefined : tasks.get(id);
+        const task = id === undefined ? undefined : tasks.get(id) ?? recognitionTasks.get(id);
         return task ? { ...task.file.progress, elapsedMs: elapsed(task) }
           : id !== undefined && blockedTasks.has(id) ? { ...blockedTasks.get(id)!.progress } : null;
       },
       getLastRequest: (id = state.activeTaskId ?? latestId) => {
-        const task = id === undefined ? undefined : tasks.get(id);
+        const task = id === undefined ? undefined : tasks.get(id) ?? recognitionTasks.get(id);
         return task ? structuredClone(task.file.request) : null;
       },
       getResult: id => structuredClone(tasks.get(id)?.file.checkpoint.result ?? null),
       exportTask: id => {
         assertReady();
-        return blockedTasks.has(id) ? structuredClone(blockedTasks.get(id)!.file) : snapshot(requireTask(id));
+        return blockedTasks.has(id) ? structuredClone(blockedTasks.get(id)!.file) : snapshot(recognitionTasks.get(id) ?? requireTask(id));
       },
       exportDraft: request => {
         assertReady();
@@ -1172,7 +1372,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       disposed = true;
       if (notificationTimer !== null) { clearTimeout(notificationTimer); notificationTimer = null; }
       restorationAbort.abort();
-      for (const task of tasks.values()) { task.abort.abort(); persist(task); }
+      for (const task of [...tasks.values(), ...recognitionTasks.values()]) { task.abort.abort(); persist(task); }
       for (const current of new Set([worker, ...workers.values()])) current.dispose();
       if (workspace.blueprintPlanner === host) workspace.blueprintPlanner = null;
     },

@@ -90,6 +90,16 @@ export interface BlueprintPlannerBlueprintInput {
   readonly activeActivityIds: readonly string[];
 }
 
+/** 识别期间只保存原图和边界，不用尚不存在的生产计划替代识别状态。 */
+export interface BlueprintPlannerBlueprintRecognitionRequest {
+  readonly kind: "blueprint-recognition";
+  readonly input: BlueprintPlannerBlueprintInput;
+  readonly options: BlueprintPlannerOptions;
+  readonly detectedBoundaries: readonly BlueprintPlannerBlueprintBoundary[] | null;
+}
+
+export type BlueprintPlannerTaskRequest = BlueprintPlannerRequest | BlueprintPlannerBlueprintRecognitionRequest;
+
 export type BlueprintPlannerTaskStatus =
   | "running"
   | "waiting"
@@ -100,6 +110,7 @@ export type BlueprintPlannerTaskStatus =
   | "save-failed";
 
 export type BlueprintPlannerPhase =
+  | "identification"
   | "preparing"
   | "layout"
   | "routing"
@@ -166,7 +177,7 @@ export interface BlueprintPlannerTaskFile {
   readonly formatVersion: 1;
   readonly algorithmVersion: string;
   readonly taskId: string;
-  readonly request: BlueprintPlannerRequest;
+  readonly request: BlueprintPlannerTaskRequest;
   readonly progress: BlueprintPlannerProgress;
   readonly checkpoint: unknown;
 }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, it, vi } from "vitest";
-import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerTaskFile, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -12,7 +12,7 @@ import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import legacy from "./fixtures/legacy-boundary-task.json";
 import invalid from "./fixtures/legacy-boundary-invalid-task.json";
 
-const taskFile = () => structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint };
+const taskFile = () => structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
 
 it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"])("%s：旧最优移除存取线后真实验收，保留进度且只改曲线末点", async algorithmVersion => {
   const session = new PlannerBatchSession();

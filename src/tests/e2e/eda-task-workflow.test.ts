@@ -283,7 +283,7 @@ for (const profile of profiles) {
       const curve = dialog.getByRole('img',{name:/尝试次数与已验证最优面积/});
       const labels = await curve.locator('text').allTextContents();
       assert(labels.filter(label => label.includes('（对数坐标）')).length === 1, '只有 X 轴标注对数坐标');
-      assert(labels.includes('已验证最优面积') && labels.includes('累计提案（对数坐标）'), '坐标轴标题缺失');
+      assert(labels.includes('已验证最优面积') && labels.includes('累计尝试（对数坐标）'), '坐标轴标题缺失');
       const minimumCount = progress.areaHistory[0].evaluatedProposals;
       const maximumCount = progress.evaluatedProposals;
       assert(labels.filter(label => label === '0').length === (minimumCount === 0 ? 1 : 0), '坐标轴不能强制包含不存在的零记录');
@@ -386,9 +386,31 @@ for (const profile of profiles) {
         writeFile(resolve(success, "report.json"), JSON.stringify({ progress: task.progress,
           report: task.checkpoint.best.report, metrics: task.checkpoint.result.metrics, ticksPerSecond: 2 })),
       ]);
-      expect(await cli.runCode("async page => { await page.getByRole('button',{name:'删除任务',exact:true}).click(); }", "delete.log"))
-        .toContain("删除后不可恢复");
-      await cli.invoke(["dialog-accept"], "confirm.log");
+      // AI-REMOVED 2026-10-08:
+      // Reason: 删除确认改为项目 DialogShell，CLI 系统弹窗命令不再适用。
+      // Trigger: 用户要求 EDA 复用项目弹窗模块。
+      // Evidence: BlueprintPlannerDialog 使用 data-dialog-key="eda-delete-task"。
+      // Replacement: 下方真实弹窗内容断言与确认按钮点击。
+      // Risk: Low。Human Review: Required
+      // Original code:
+      // expect(await cli.runCode("async page => { await page.getByRole('button',{name:'删除任务',exact:true}).click(); }", "delete.log"))
+      //   .toContain("删除后不可恢复");
+      // await cli.invoke(["dialog-accept"], "confirm.log");
+      const deletion = await cli.runJson(`async page => {
+        page.__edaDeleteNativeDialogs = [];
+        page.on('dialog', async dialog => {
+          page.__edaDeleteNativeDialogs.push(dialog.message());
+          await dialog.dismiss();
+        });
+        await page.locator('[data-dialog-key="blueprint-planner"]').getByRole('button',{name:'删除任务',exact:true}).click();
+        const confirmation = page.locator('[data-dialog-key="eda-delete-task"]');
+        await confirmation.waitFor({state:'visible'});
+        return {message:await confirmation.innerText(),nativeDialogs:page.__edaDeleteNativeDialogs};
+      }`, "delete.log");
+      expect(deletion).toMatchObject({ message: expect.stringContaining("删除后不可恢复"), nativeDialogs: [] });
+      await cli.runCode(`async page => {
+        await page.locator('[data-dialog-key="eda-delete-task"]').getByRole('button',{name:'删除任务',exact:true}).click();
+      }`, "confirm.log");
       const deleted = await cli.runJson(`async page => {
         await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length === 1);
         const count = await page.evaluate(async () => {

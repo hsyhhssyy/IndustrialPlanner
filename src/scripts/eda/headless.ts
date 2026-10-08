@@ -1,3 +1,4 @@
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { readFile, rename, stat, open, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint-planner/blueprint-planner-host";
@@ -99,7 +100,7 @@ export async function runHeadlessPlanner(args: readonly string[]): Promise<void>
           await rename(staging, output);
         } finally { await unlink(staging).catch(() => undefined); }
         const result = host.queries.getResult(id);
-        if (result && savedBlueprintId !== result.blueprint.blueprintId) {
+        if (result && !isBlueprintRecognitionRequest(file.request) && savedBlueprintId !== result.blueprint.blueprintId) {
           const path = await saveSuccessfulPlanning(session.workspace.registry, file.request.plan.name,
             result.blueprint, file.request, { result, checkpoint: file.checkpoint, engineKind: "dense-v2", ticksPerSecond: 2 });
           savedBlueprintId = result.blueprint.blueprintId;

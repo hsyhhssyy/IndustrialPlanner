@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import LucideCheck from "~icons/lucide/check";
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
 import LucideLock from "~icons/lucide/lock";
 import LucideTrash2 from "~icons/lucide/trash-2";
@@ -376,6 +377,12 @@ export function WarehouseItemLinkInspector({
                 type="button"
               >
                 <span aria-hidden="true">∞</span>
+                {row.currentIgnoreStock && row.currentItemId !== null ? (
+                  <LucideCheck
+                    aria-hidden="true"
+                    className={cm(styles, "warehouse-link-infinity-check-icon")}
+                  />
+                ) : null}
               </button>}
               <button
                 aria-label="清除"

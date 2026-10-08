@@ -1072,6 +1072,7 @@
 */
 
 .warehouse-link-infinity-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1094,7 +1095,7 @@
   line-height: 1;
 }
 
-.warehouse-link-infinity-button:hover:not(:disabled):not([aria-disabled="true"]) {
+.warehouse-link-infinity-button:hover:not(:disabled):not([aria-disabled="true"]):not([aria-pressed="true"]) {
   border-color: var(--line-strong);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
@@ -1106,20 +1107,46 @@
   color: var(--text-0);
 }
 
-.warehouse-link-infinity-button[aria-pressed="true"] {
+/*
+  AI-REMOVED 2026-10-08:
+  Reason: 浅色填充与关闭态差异不足，且普通 hover 的优先级会覆盖开启态。
+  Trigger: 用户选择“实色按钮 + 勾选”方案，要求明显区分无限按钮的开关状态。
+  Evidence: 原开启态使用 accent-soft 混色；普通 hover 选择器优先级高于 aria-pressed 选择器。
+  Replacement: 下方实色开启态与 warehouse-link-infinity-check-icon。
+  Risk: Low；复用主题 token，按钮尺寸与库存配置行为不变。
+  Human Review: Required
+
+  Original code:
+  .warehouse-link-infinity-button[aria-pressed="true"] {
+    border-color: var(--accent-strong);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
+    }
+    background: var(--accent-soft);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
+    }
+    color: var(--accent-strong);
+    box-shadow: inset 0 0 0 1px var(--accent-strong);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+    }
+  }
+*/
+
+.warehouse-link-infinity-button[aria-pressed="true"]:not(:disabled) {
   border-color: var(--accent-strong);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
-  }
-  background: var(--accent-soft);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
-  }
-  color: var(--accent-strong);
-  box-shadow: inset 0 0 0 1px var(--accent-strong);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
-  }
+  background: var(--accent-strong);
+  color: var(--surface-1);
+}
+
+.warehouse-link-infinity-check-icon {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  stroke-width: 3;
 }
 
 .warehouse-link-infinity-button[aria-pressed="true"] span {
@@ -1139,8 +1166,8 @@
 .warehouse-link-infinity-button.is-locked {
   position: relative;
   cursor: help;
-  color: var(--text-2);
-  opacity: 0.72;
+  color: var(--text-1);
+  opacity: 1;
 }
 
 .warehouse-link-infinity-button.is-locked:hover,

@@ -8,17 +8,21 @@ import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./bluepr
 import type { PlannerCandidate } from "./candidate";
 import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import { capturePlannerSeed } from "./search-seed";
+import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 
 /** 设备数量与端口身份来自原图，流量来自实测；不借产线求解器重建主体设备。 */
 export function identifyBlueprintNetwork(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
   options: BlueprintPlannerOptions, execution: SimulationBlueprintRunRequest, report: SimulationBlueprintRunReport) {
+  // 2026-10-08：网表只包含有效支路；公开请求仍携带完整原图，以便导出和重新识别。
+  const originalInput = input;
+  input = excludeDisconnectedBlueprintPipes(registry, input).input;
   const graph = assertBlueprintRecognition(registry, input, report), analysis = report.analysis!;
   assertBlueprintSteadyState(registry, report, execution.probes);
   const targets = report.probes.filter(probe => execution.probes.find(entry => entry.id === probe.id)?.direction === "input")
     .map(probe => ({ itemId: probe.id, perMinute: probe.perMinute - (report.probes.find(entry => entry.id === `input:${probe.id}`)?.perMinute ?? 0) }))
     .filter(target => target.perMinute > 1e-6);
   if (!targets.length) throw new Error("出口没有持续净产出，无法建立产率基线。");
-  const request: BlueprintPlannerRequest = { blueprintSource: structuredClone(input), options: { ...options, solidOutput: "warehouse", itemPolicies: [] },
+  const request: BlueprintPlannerRequest = { blueprintSource: structuredClone(originalInput), options: { ...options, solidOutput: "warehouse", itemPolicies: [] },
     plan: { name: input.blueprint.name, sourceBaseId: input.blueprint.baseId, targets, recipes: [], externalSupplies: [],
       infiniteItemIds: [...new Set(input.boundaries.filter(entry => entry.direction === "input").map(entry => entry.itemId!))],
       byproductItemIds: [], containsModules: false, unresolvedPerMinute: 0, activeActivityIds: input.activeActivityIds } };
@@ -32,8 +36,9 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
     const entity = structuredClone(input.blueprint.entities[id]!);
     const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
     const channels = analysis.channels.filter(channel => channel.entityId === id);
-    const recipes = channels.flatMap(channel => channel.observedRecipeIds.length ? channel.observedRecipeIds : channel.configuredRecipeId
-      ? [channel.configuredRecipeId] : [...graph.possibleRecipes.get(`${id}/${channel.channelId}`) ?? []]).map(id => registry.queries.findRecipeDefinition(id)!)
+    const recipes = channels.flatMap(channel => channel.observedRecipeIds.length ? channel.observedRecipeIds : channel.manual && channel.configuredRecipeId
+      ? [channel.configuredRecipeId] : channel.consumption ? [...graph.possibleRecipes.get(`${id}/${channel.channelId}`) ?? []] : [])
+      .map(id => registry.queries.findRecipeDefinition(id)!)
       .filter(recipe => recipe && !["transport", "warehouse"].includes(recipe.recipeType));
     const recipe = recipes.find(recipe => recipe.gasDiffusionOutput) ?? recipes.find(recipe => !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) ?? null;
     const boundary = boundaries.get(id);

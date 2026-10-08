@@ -91,6 +91,9 @@ export interface SimulationBlueprintAnalysis {
   readonly channels: readonly { entityId: string; channelId: string; consumption: boolean;
     inputNodeIds: readonly string[]; outputNodeIds: readonly string[];
     configuredRecipeId: string | null; manual: boolean; observedRecipeIds: readonly string[] }[];
+  /** 正式观察期同一真实 tick 的全部通道配方；忽略通道顺序，保留重复数量与空组合。 */
+  readonly recipeCombinations: readonly { entityId: string; recipeIds: readonly string[];
+    windowSampleCounts: readonly number[] }[];
   readonly slots: readonly { entityId: string; nodeId: string; groupId: string | null; slotId: string | null;
     itemId: string | null; count: number; infinite: boolean }[];
   /** 全程物品集合包含预热；四段流量只累计观察期，不保存逐 tick 历史。 */

@@ -7,10 +7,12 @@ import { createHash, randomUUID } from "node:crypto";
 
 import {
   expect,
+  SCREEN_PROFILES,
   test,
   type APIRequestContext,
   type Page,
 } from "./harness/fixture";
+import { contextOptions, installDesktopPointer } from "./harness/profiles";
 
 import { BLUEPRINT_SCHEMA_VERSION } from "../../domain/document/blueprint-document";
 import { WORLD_DOCUMENT_SCHEMA_VERSION } from "../../domain/document/world-document";
@@ -73,144 +75,172 @@ interface BrowserTestWindow {
 
 test.setTimeout(240_000);
 
-test("Cloudflare 当前文档迁移：无冲突并将 schema 4 升级结果写回远端", async ({
-  page,
-  request,
-}) => {
-  const spaceId = `e2e-cf-migration-world-${randomUUID()}`;
-
-  try {
-    await enableExperimentalSyncFixture(page);
-    await page.goto("/");
-    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
-
-    const fixture = await prepareWorldDocumentMigrationFixture(page, spaceId);
-    const seededRevision = await seedRemoteAsset({
-      request,
-      spaceId,
-      assetType: "world-document",
-      assetId: fixture.assetId,
-      value: fixture.remoteValue,
+for (const profile of SCREEN_PROFILES) {
+  test.describe(`[${profile.name}]`, () => {
+    test.use(contextOptions(profile));
+    test.beforeEach(async ({ context }) => {
+      if (profile.name === "desktop") await installDesktopPointer(context);
     });
-    await seedBrowserSyncBaseline({
+
+    test("Cloudflare 当前文档迁移：无冲突并将 schema 4 升级结果写回远端", async ({
       page,
-      spaceId,
-      revision: seededRevision,
-      assetKey: `world-documents:${fixture.assetId}`,
-      lastSyncedHash: fixture.lastSyncedHash,
-    });
-
-    await page.reload();
-    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
-    const syncState = await waitForSyncTerminalState(page);
-
-    expect(syncState).toEqual({
-      phase: "idle",
-      saveState: "idle",
-      initialSyncStage: "ready",
-      hasCompletedInitialFeatureSync: true,
-      pendingLocalChangeCount: 0,
-      lastError: null,
-      pendingConflict: null,
-    });
-    await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
-
-    const localDocument = await page.evaluate(async (documentKey) => {
-      const browserStorageModuleUrl = "/src/shared/storage/browser-storage.ts";
-      const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
-      const [browserStorage, worldStorage] = await Promise.all([
-        import(/* @vite-ignore */ browserStorageModuleUrl),
-        import(/* @vite-ignore */ worldStorageModuleUrl),
-      ]);
-      return await browserStorage.readFromIndexedDb({
-        ...worldStorage.WORLD_DOCUMENT_DATABASE_LOCATION,
-        key: documentKey,
-      });
-    }, fixture.localDocumentKey) as {
-      readonly schemaVersion: number;
-      readonly entities: Readonly<Record<string, {
-        readonly config: Readonly<Record<string, unknown>>;
-      }>>;
-    };
-    expectMigratedDarkPipeDocument(localDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
-
-    const remoteDocument = await readRemoteAsset({
       request,
-      spaceId,
-      assetType: "world-document",
-      assetId: fixture.assetId,
+    }) => {
+      const spaceId = `e2e-cf-migration-world-${randomUUID()}`;
+
+      try {
+        await enableExperimentalSyncFixture(page);
+        // AI-REMOVED 2026-10-08:
+        // Reason: 夹具必须在 App 启动前写入，避免活动文档自动保存覆盖旧版数据。
+        // Trigger: 当前文档迁移 E2E 丢失夹具实体并产生同步冲突。
+        // Evidence: Trace 中准备时有 2 个实体，刷新后同一本地文档只剩 1 个。
+        // Replacement: enableExperimentalSyncFixture 的同源空白页；下方准备完成后首次启动 App。
+        // Risk: Low。Human Review: Required
+        // Original code:
+        // await page.goto("/");
+        // await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+
+        const fixture = await prepareWorldDocumentMigrationFixture(page, spaceId);
+        const seededRevision = await seedRemoteAsset({
+          request,
+          spaceId,
+          assetType: "world-document",
+          assetId: fixture.assetId,
+          value: fixture.remoteValue,
+        });
+        await seedBrowserSyncBaseline({
+          page,
+          spaceId,
+          revision: seededRevision,
+          assetKey: `world-documents:${fixture.assetId}`,
+          lastSyncedHash: fixture.lastSyncedHash,
+          syncTargetKey: fixture.syncTargetKey,
+        });
+
+        expect(localBackend.requests.filter((entry) => entry.path.endsWith("/plan"))).toEqual([]);
+        await page.goto("/");
+        await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+        const syncState = await waitForSyncTerminalState(page);
+
+        expect(syncState).toEqual({
+          phase: "idle",
+          saveState: "idle",
+          initialSyncStage: "ready",
+          hasCompletedInitialFeatureSync: true,
+          pendingLocalChangeCount: 0,
+          lastError: null,
+          pendingConflict: null,
+        });
+        await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
+
+        const localDocument = await page.evaluate(async (documentKey) => {
+          const browserStorageModuleUrl = "/src/shared/storage/browser-storage.ts";
+          const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
+          const [browserStorage, worldStorage] = await Promise.all([
+            import(/* @vite-ignore */ browserStorageModuleUrl),
+            import(/* @vite-ignore */ worldStorageModuleUrl),
+          ]);
+          return await browserStorage.readFromIndexedDb({
+            ...worldStorage.WORLD_DOCUMENT_DATABASE_LOCATION,
+            key: documentKey,
+          });
+        }, fixture.localDocumentKey) as {
+          readonly schemaVersion: number;
+          readonly entities: Readonly<Record<string, {
+            readonly config: Readonly<Record<string, unknown>>;
+          }>>;
+        };
+        expectMigratedDarkPipeDocument(localDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
+
+        const remoteDocument = await readRemoteAsset({
+          request,
+          spaceId,
+          assetType: "world-document",
+          assetId: fixture.assetId,
+        });
+        expectMigratedDarkPipeDocument(remoteDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
+      } finally {
+        await clearRemoteTestAssets(request, spaceId);
+      }
     });
-    expectMigratedDarkPipeDocument(remoteDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
-  } finally {
-    await clearRemoteTestAssets(request, spaceId);
-  }
-});
 
-test("Cloudflare 蓝图库蓝图迁移：无冲突并将 schema 4 升级结果写回远端", async ({
-  page,
-  request,
-}) => {
-  const spaceId = `e2e-cf-migration-blueprint-${randomUUID()}`;
-
-  try {
-    await enableExperimentalSyncFixture(page);
-    await page.goto("/");
-    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
-
-    const fixture = await prepareBlueprintMigrationFixture(page, spaceId);
-    const seededRevision = await seedRemoteAsset({
-      request,
-      spaceId,
-      assetType: "blueprint",
-      assetId: fixture.assetId,
-      value: fixture.remoteValue,
-    });
-    await seedBrowserSyncBaseline({
+    test("Cloudflare 蓝图库蓝图迁移：无冲突并将 schema 4 升级结果写回远端", async ({
       page,
-      spaceId,
-      revision: seededRevision,
-      assetKey: `blueprints:${fixture.assetId}`,
-      lastSyncedHash: fixture.lastSyncedHash,
-    });
-
-    await page.reload();
-    await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
-    const syncState = await waitForSyncTerminalState(page);
-
-    expect(syncState).toEqual({
-      phase: "idle",
-      saveState: "idle",
-      initialSyncStage: "ready",
-      hasCompletedInitialFeatureSync: true,
-      pendingLocalChangeCount: 0,
-      lastError: null,
-      pendingConflict: null,
-    });
-    await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
-
-    const localBlueprint = await page.evaluate(async (blueprintId) => {
-      const blueprintStorageModuleUrl = "/src/shared/storage/blueprint-storage.ts";
-      const blueprintStorage = await import(/* @vite-ignore */ blueprintStorageModuleUrl);
-      return await blueprintStorage.readBlueprintRecord(blueprintId);
-    }, fixture.assetId) as {
-      readonly schemaVersion: number;
-      readonly entities: Readonly<Record<string, {
-        readonly config: Readonly<Record<string, unknown>>;
-      }>>;
-    };
-    expectMigratedDarkPipeDocument(localBlueprint, BLUEPRINT_SCHEMA_VERSION);
-
-    const remoteBlueprint = await readRemoteAsset({
       request,
-      spaceId,
-      assetType: "blueprint",
-      assetId: fixture.assetId,
+    }) => {
+      const spaceId = `e2e-cf-migration-blueprint-${randomUUID()}`;
+
+      try {
+        await enableExperimentalSyncFixture(page);
+        // AI-REMOVED 2026-10-08:
+        // Reason: 蓝图迁移夹具与当前文档迁移统一在 App 启动前准备。
+        // Trigger: 同步提前读取尚未完成的远端数据和基线。
+        // Evidence: 当前文档失败 Trace 中，首个 plan 请求早于基线写入完成。
+        // Replacement: enableExperimentalSyncFixture 的同源空白页；下方准备完成后首次启动 App。
+        // Risk: Low。Human Review: Required
+        // Original code:
+        // await page.goto("/");
+        // await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+
+        const fixture = await prepareBlueprintMigrationFixture(page, spaceId);
+        const seededRevision = await seedRemoteAsset({
+          request,
+          spaceId,
+          assetType: "blueprint",
+          assetId: fixture.assetId,
+          value: fixture.remoteValue,
+        });
+        await seedBrowserSyncBaseline({
+          page,
+          spaceId,
+          revision: seededRevision,
+          assetKey: `blueprints:${fixture.assetId}`,
+          lastSyncedHash: fixture.lastSyncedHash,
+          syncTargetKey: fixture.syncTargetKey,
+        });
+
+        expect(localBackend.requests.filter((entry) => entry.path.endsWith("/plan"))).toEqual([]);
+        await page.goto("/");
+        await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+        const syncState = await waitForSyncTerminalState(page);
+
+        expect(syncState).toEqual({
+          phase: "idle",
+          saveState: "idle",
+          initialSyncStage: "ready",
+          hasCompletedInitialFeatureSync: true,
+          pendingLocalChangeCount: 0,
+          lastError: null,
+          pendingConflict: null,
+        });
+        await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
+
+        const localBlueprint = await page.evaluate(async (blueprintId) => {
+          const blueprintStorageModuleUrl = "/src/shared/storage/blueprint-storage.ts";
+          const blueprintStorage = await import(/* @vite-ignore */ blueprintStorageModuleUrl);
+          return await blueprintStorage.readBlueprintRecord(blueprintId);
+        }, fixture.assetId) as {
+          readonly schemaVersion: number;
+          readonly entities: Readonly<Record<string, {
+            readonly config: Readonly<Record<string, unknown>>;
+          }>>;
+        };
+        expectMigratedDarkPipeDocument(localBlueprint, BLUEPRINT_SCHEMA_VERSION);
+
+        const remoteBlueprint = await readRemoteAsset({
+          request,
+          spaceId,
+          assetType: "blueprint",
+          assetId: fixture.assetId,
+        });
+        expectMigratedDarkPipeDocument(remoteBlueprint, BLUEPRINT_SCHEMA_VERSION);
+      } finally {
+        await clearRemoteTestAssets(request, spaceId);
+      }
     });
-    expectMigratedDarkPipeDocument(remoteBlueprint, BLUEPRINT_SCHEMA_VERSION);
-  } finally {
-    await clearRemoteTestAssets(request, spaceId);
-  }
-});
+
+  });
+}
 
 async function enableExperimentalSyncFixture(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -221,6 +251,15 @@ async function enableExperimentalSyncFixture(page: Page): Promise<void> {
       },
     }));
   });
+  // 复用 IndexedDB 回归的同源空白页模式，只加载准备夹具所需的生产模块。
+  await page.route("**/__cloudflare_migration_fixture__", (route) => route.fulfill({
+    contentType: "text/html",
+    body: "<!doctype html><title>Cloudflare migration fixture</title>",
+  }));
+  await page.goto("/__cloudflare_migration_fixture__");
+  expect(await page.evaluate(() => (
+    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost === undefined
+  ))).toBe(true);
 }
 
 async function prepareWorldDocumentMigrationFixture(
@@ -230,6 +269,7 @@ async function prepareWorldDocumentMigrationFixture(
   readonly assetId: string;
   readonly localDocumentKey: string;
   readonly lastSyncedHash: string;
+  readonly syncTargetKey: string;
   readonly remoteValue: unknown;
 }> {
   return await page.evaluate(async ({
@@ -246,6 +286,9 @@ async function prepareWorldDocumentMigrationFixture(
     const syncProviderActivationModuleUrl = "/src/shared/storage/sync-provider-activation.ts";
     const syncHostModuleUrl = "/src/sync/sync-host.ts";
     const worldStorageModuleUrl = "/src/shared/storage/world-document-storage.ts";
+    const worldDocumentModuleUrl = "/src/domain/document/world-document.ts";
+    const protocolCoreModuleUrl = "/src/editor/ensure-protocol-core.ts";
+    const registryModuleUrl = "/src/registry/index.ts";
     const [
       backendAddress,
       browserStorage,
@@ -254,6 +297,9 @@ async function prepareWorldDocumentMigrationFixture(
       syncProviderActivation,
       syncHost,
       worldStorage,
+      worldDocument,
+      protocolCore,
+      registry,
     ] = await Promise.all([
       import(/* @vite-ignore */ backendAddressModuleUrl),
       import(/* @vite-ignore */ browserStorageModuleUrl),
@@ -262,12 +308,26 @@ async function prepareWorldDocumentMigrationFixture(
       import(/* @vite-ignore */ syncProviderActivationModuleUrl),
       import(/* @vite-ignore */ syncHostModuleUrl),
       import(/* @vite-ignore */ worldStorageModuleUrl),
+      import(/* @vite-ignore */ worldDocumentModuleUrl),
+      import(/* @vite-ignore */ protocolCoreModuleUrl),
+      import(/* @vite-ignore */ registryModuleUrl),
     ]);
-    const host = (window as unknown as BrowserTestWindow).__industrialPlannerAppHost;
-    const currentDocument = host?.workspace?.editor?.document?.getSnapshot();
-    if (currentDocument === undefined) {
-      throw new Error("Current world document is unavailable.");
-    }
+    // AI-REMOVED 2026-10-08:
+    // Reason: 从活动 Editor 取快照会迫使测试在准备旧版数据前启动自动保存。
+    // Trigger: 旧版夹具与活动文档内存不一致，刷新后夹具实体丢失。
+    // Evidence: prepareWorldDocumentMigrationFixture 直接写磁盘而未发布 Editor 快照。
+    // Replacement: 下方正式文档工厂和协议核心归一化函数。
+    // Risk: Low。Human Review: Required
+    // Original code:
+    // const host = (window as unknown as BrowserTestWindow).__industrialPlannerAppHost;
+    // const currentDocument = host?.workspace?.editor?.document?.getSnapshot();
+    // if (currentDocument === undefined) {
+    //   throw new Error("Current world document is unavailable.");
+    // }
+    const currentDocument = protocolCore.ensureProtocolCoreEntity({
+      document: worldDocument.createWorldDocument(),
+      queries: registry.createRegistryContract().queries,
+    });
 
     const legacyDocument = {
       ...currentDocument,
@@ -294,6 +354,13 @@ async function prepareWorldDocumentMigrationFixture(
       ...worldStorage.WORLD_DOCUMENT_DATABASE_LOCATION,
       key: legacyDocument.documentKey,
     }, legacyDocument);
+    const storedDocument = await browserStorage.readFromIndexedDb({
+      ...worldStorage.WORLD_DOCUMENT_DATABASE_LOCATION,
+      key: legacyDocument.documentKey,
+    });
+    if (storedDocument?.schemaVersion !== schemaVersion || storedDocument.entities?.[entityId] === undefined) {
+      throw new Error("Legacy world-document fixture was not stored intact before startup.");
+    }
     localStorage.setItem("v3-editor-persist-state", JSON.stringify({
       lastDocumentId: legacyDocument.documentKey,
       latestDocumentIdByBaseId: {
@@ -309,9 +376,16 @@ async function prepareWorldDocumentMigrationFixture(
       apiBaseUrl,
       spaceId,
     });
-    if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
-      throw new Error("Failed to activate the Cloudflare world-document migration fixture.");
-    }
+    // AI-REMOVED 2026-10-08:
+    // Reason: 同步激活必须等待远端数据和本地基线准备完成。
+    // Trigger: 夹具准备阶段提前发起同步。
+    // Evidence: 失败 Trace 中首个 plan 请求发生在 seedBrowserSyncBaseline 完成之前。
+    // Replacement: seedBrowserSyncBaseline 最后调用 activateSyncProvider。
+    // Risk: Low。Human Review: Required
+    // Original code:
+    // if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
+    //   throw new Error("Failed to activate the Cloudflare world-document migration fixture.");
+    // }
     // AI-REMOVED 2026-09-09:
     // Reason: 旧 provider key 不会覆盖已经存在的现代 disabled 激活记录，无法真正启动同步。
     // Trigger: Cloudflare schema migration E2E 的远端资产始终停留在 schema 4。
@@ -322,11 +396,13 @@ async function prepareWorldDocumentMigrationFixture(
     //
     // Original code:
     // localStorage.setItem("v3-sync-provider", "cloudflare");
+    // AI-CORRECTION 2026-10-08: 正式激活 API 保留，移至 seedBrowserSyncBaseline 完成基线写入之后。
 
     return {
       assetId: legacyDocument.baseId,
       localDocumentKey: legacyDocument.documentKey,
       lastSyncedHash: hashUtils.createStableJsonHash(remoteValue),
+      syncTargetKey,
       remoteValue,
     };
   }, {
@@ -344,6 +420,7 @@ async function prepareBlueprintMigrationFixture(
 ): Promise<{
   readonly assetId: string;
   readonly lastSyncedHash: string;
+  readonly syncTargetKey: string;
   readonly remoteValue: unknown;
 }> {
   const blueprintId = `e2e-schema-4-blueprint-${randomUUID()}`;
@@ -411,6 +488,13 @@ async function prepareBlueprintMigrationFixture(
       ...blueprintStorage.BLUEPRINT_STORE_LOCATION,
       key: `blueprint:${blueprintId}`,
     }, legacyBlueprint);
+    const storedBlueprint = await browserStorage.readFromIndexedDb({
+      ...blueprintStorage.BLUEPRINT_STORE_LOCATION,
+      key: `blueprint:${blueprintId}`,
+    });
+    if (storedBlueprint?.schemaVersion !== schemaVersion || storedBlueprint.entities?.[entityId] === undefined) {
+      throw new Error("Legacy blueprint fixture was not stored intact before startup.");
+    }
     backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
     await cloudflareSettings.writeCloudflareSyncSettings({
       spaceName: spaceId,
@@ -420,9 +504,16 @@ async function prepareBlueprintMigrationFixture(
       apiBaseUrl,
       spaceId,
     });
-    if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
-      throw new Error("Failed to activate the Cloudflare blueprint migration fixture.");
-    }
+    // AI-REMOVED 2026-10-08:
+    // Reason: 蓝图迁移与当前文档迁移共享完整准备后再激活的时序。
+    // Trigger: 同步读取未完成的远端数据和基线。
+    // Evidence: prepareBlueprintMigrationFixture 同样在远端和基线写入前激活 provider。
+    // Replacement: seedBrowserSyncBaseline 最后调用 activateSyncProvider。
+    // Risk: Low。Human Review: Required
+    // Original code:
+    // if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
+    //   throw new Error("Failed to activate the Cloudflare blueprint migration fixture.");
+    // }
     // AI-REMOVED 2026-09-09:
     // Reason: 旧 provider key 不会覆盖已经存在的现代 disabled 激活记录，无法真正启动同步。
     // Trigger: Cloudflare schema migration E2E 的远端资产始终停留在 schema 4。
@@ -433,10 +524,12 @@ async function prepareBlueprintMigrationFixture(
     //
     // Original code:
     // localStorage.setItem("v3-sync-provider", "cloudflare");
+    // AI-CORRECTION 2026-10-08: 正式激活 API 保留，移至 seedBrowserSyncBaseline 完成基线写入之后。
 
     return {
       assetId: blueprintId,
       lastSyncedHash: hashUtils.createStableJsonHash(legacyBlueprint),
+      syncTargetKey,
       remoteValue: legacyBlueprint,
     };
   }, {
@@ -477,6 +570,7 @@ async function seedBrowserSyncBaseline(options: {
   readonly revision: string;
   readonly assetKey: string;
   readonly lastSyncedHash: string;
+  readonly syncTargetKey: string;
 }): Promise<void> {
   await options.page.evaluate(async ({
     apiBaseUrl,
@@ -484,20 +578,30 @@ async function seedBrowserSyncBaseline(options: {
     lastSyncedHash,
     revision,
     spaceId,
+    syncTargetKey,
   }) => {
     const localStateModuleUrl = "/src/sync/clients/cloudflare/cloudflare-v2-local-state.ts";
+    const syncProviderActivationModuleUrl = "/src/shared/storage/sync-provider-activation.ts";
     const { CloudflareV2LocalStateStore } = await import(
       /* @vite-ignore */ localStateModuleUrl
     );
     const state = new CloudflareV2LocalStateStore(apiBaseUrl, spaceId);
     await state.writeAppliedRevision(revision);
     await state.setLastSyncedHash(assetKey, lastSyncedHash);
+    const syncProviderActivation = await import(/* @vite-ignore */ syncProviderActivationModuleUrl);
+    if ((window as unknown as BrowserTestWindow).__industrialPlannerAppHost !== undefined) {
+      throw new Error("Migration fixtures must be fully prepared before the App starts.");
+    }
+    if (!syncProviderActivation.activateSyncProvider("cloudflare", syncTargetKey)) {
+      throw new Error("Failed to activate the Cloudflare migration fixture after preparing its baseline.");
+    }
   }, {
     apiBaseUrl: BACKEND_API_BASE_URL,
     assetKey: options.assetKey,
     lastSyncedHash: options.lastSyncedHash,
     revision: options.revision,
     spaceId: options.spaceId,
+    syncTargetKey: options.syncTargetKey,
   });
 }
 

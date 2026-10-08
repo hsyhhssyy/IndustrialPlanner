@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdir, writeFile } from "node:fs/promises";
 import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -35,11 +35,13 @@ describe("原蓝图识别与受约束优化", () => {
     try {
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
       expect(boundaries).toEqual([{ entityId: "eda-output-3", portGroupId: "", portId: "", direction: "output", kind: "facility", itemId: "item_plant_moss_3" }]);
-      const id = await env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options);
+      const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());
+      await env.planner.actions.identifyBlueprint(id);
       expect(env.planner.queries.getTask(id)?.status).toBe("waiting");
       expect(env.planner.queries.getResult(id)?.measuredOutputs).toEqual([{ itemId: "item_plant_moss_3", perMinute: 30 }]);
       expect(env.planner.queries.getResult(id)?.blueprint.blueprintId).not.toBe(blueprint.blueprintId);
-      const file = env.planner.queries.exportTask(id), checkpoint = file.checkpoint as PlannerCheckpoint;
+      const file = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry), checkpoint = file.checkpoint as PlannerCheckpoint;
       expect(checkpoint.blueprintBaseline?.candidate.metrics.area).toBe(150);
       expect(checkpoint.blueprintBaseline?.report.engineKind).toBe("dense-v2");
       const baseline = checkpoint.blueprintBaseline!;
@@ -77,8 +79,10 @@ describe("原蓝图识别与受约束优化", () => {
     try {
       const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema6.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
-      const id = await env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options);
-      const file = env.planner.queries.exportTask(id), baseline = (file.checkpoint as PlannerCheckpoint).blueprintBaseline!.candidate;
+      const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());
+      await env.planner.actions.identifyBlueprint(id);
+      const file = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry), baseline = (file.checkpoint as PlannerCheckpoint).blueprintBaseline!.candidate;
       const candidate = await client.build(file.request, 1, 40_000, { originSeed: baseline.seed, seed: baseline.seed,
         targetOutline: { width: 10, height: 14 }, maxEvaluations: 15_000 });
       const report = await env.simulation.actions.runBlueprint(candidate.execution);
@@ -101,17 +105,43 @@ describe("原蓝图识别与受约束优化", () => {
     } finally { await client.dispose(); env.dispose(); }
   }, 60_000);
 
-  it("未说明物品的断头必须配置，取消识别不会创建任务", async () => {
+// AI-REMOVED 2026-10-07:
+// Reason: 取消和失败不再丢弃原图识别任务。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/tests/blueprint-planner/blueprint-optimization.test.ts 取消识别保留任务
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//   it("未说明物品的断头必须配置，取消识别不会创建任务", async () => {
+//     const env = setup();
+//     try {
+//       const blueprint = loadBlueprintFromFile(`${directory}unknown-entry.schema6.json`);
+//       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
+//       expect(boundaries).toHaveLength(2);
+//       expect(boundaries.every(boundary => boundary.kind === "port" && boundary.itemId === null)).toBe(true);
+//       await expect(env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options)).rejects.toThrow("补全所有边界物品");
+//       const abort = new AbortController(); abort.abort();
+//       await expect(env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options, abort.signal)).rejects.toThrow();
+//       expect(env.planner.queries.listTasks()).toEqual([]);
+//     } finally { env.dispose(); }
+//   });
+//
+  it("未说明物品的输入必须配置，取消识别保留任务和原图", async () => {
     const env = setup();
     try {
       const blueprint = loadBlueprintFromFile(`${directory}unknown-entry.schema6.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
       expect(boundaries).toHaveLength(2);
       expect(boundaries.every(boundary => boundary.kind === "port" && boundary.itemId === null)).toBe(true);
-      await expect(env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options)).rejects.toThrow("补全所有边界物品");
+      const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());
+      await expect(env.planner.actions.identifyBlueprint(id)).rejects.toThrow("补全输入物品");
       const abort = new AbortController(); abort.abort();
-      await expect(env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options, abort.signal)).rejects.toThrow();
-      expect(env.planner.queries.listTasks()).toEqual([]);
+      await expect(env.planner.actions.identifyBlueprint(id, abort.signal)).rejects.toThrow();
+      expect(env.planner.queries.listTasks()).toHaveLength(1);
+      expect(env.planner.queries.getTask(id)?.status).toBe("cancelled");
+      expect(env.planner.queries.getResult(id)).toBeNull();
+      expect(env.planner.queries.exportTask(id).request).toMatchObject({ kind: "blueprint-recognition", input: { blueprint } });
     } finally { env.dispose(); }
   });
 
@@ -143,8 +173,10 @@ describe("原蓝图识别与受约束优化", () => {
     try {
       const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema6.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
-      const id = await env.planner.actions.identifyBlueprint({ blueprint, boundaries, activeActivityIds: [] }, options);
-      const file = env.planner.queries.exportTask(id), baseline = (file.checkpoint as PlannerCheckpoint).blueprintBaseline!.candidate;
+      const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());
+      await env.planner.actions.identifyBlueprint(id);
+      const file = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry), baseline = (file.checkpoint as PlannerCheckpoint).blueprintBaseline!.candidate;
       const { network } = restorePlannerSeed(env.workspace.registry, file.request, baseline.seed!);
       const terminal = network.nodes.find(node => node.purpose === "product")!;
       const nodes = Array.from({ length: 18 }, (_, index) => ({ ...terminal,

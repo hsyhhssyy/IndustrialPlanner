@@ -63,18 +63,29 @@ for (const profile of SCREEN_PROFILES) {
       await page.getByRole('button', {name:'优化此蓝图',exact:true}).click();
       const choices = dialog.getByRole('combobox');
       await choices.first().waitFor();
-      assert(await choices.count() === 2 && await identify.isDisabled(), '未知断头必须补全物品');
-      await choices.nth(0).selectOption('item_iron_ore');
-      assert(await identify.isDisabled(), '仍有未知出口时不能识别');
-      await choices.nth(1).selectOption('item_iron_ore');
+      // 2026-10-07：识别任务提前创建，未知出口由运行自动确认，仅输入需要选择。
+      assert(await choices.count() === 1 && await identify.isDisabled(), '未知输入必须补全物品');
+      await choices.first().selectOption('item_iron_ore');
       await identify.click();
       await dialog.getByRole('alert').waitFor({timeout:60000});
       assert((await dialog.getByRole('alert').innerText()).includes('净产出'), '输入直接穿过的蓝图不应产生净产率');
-      assert(await page.evaluate(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length) === 1,
-        '识别失败不应创建任务');
+      assert(await page.evaluate(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length) === 2,
+        '识别失败必须保留原图任务');
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "rejected.png"))}});
       return {passed:true,screen,snapshot:await page.locator('body').ariaSnapshot()};
     }`);
     expect(result).toMatchObject({ passed: true });
   });
 }
+
+// AI-REMOVED 2026-10-07:
+// Reason: 输出选择退出表单；识别失败保留任务。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/tests/e2e/blueprint-optimization.test.ts 原图识别基线恢复与未知输入验证
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//       assert(await choices.count() === 2 && await identify.isDisabled(), '未知断头必须补全物品');
+//       await choices.nth(0).selectOption('item_iron_ore');
+//       assert(await identify.isDisabled(), '仍有未知出口时不能识别');
+//       await choices.nth(1).selectOption('item_iron_ore');

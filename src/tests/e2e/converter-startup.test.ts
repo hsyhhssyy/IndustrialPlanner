@@ -190,7 +190,9 @@ for (const profile of profiles) {
         await ready();
         await page.evaluate(request => {
           const c = window.__industrialPlannerAppHost.blueprintPlannerDialog;
-          c.setEnabled(true); c.open(request.plan, request.options);
+          c.setEnabled(true); c.open(request.plan);
+          // 新草稿默认值与夹具路线分离，自循环必须在当前草稿中显式配置。
+          for (const policy of request.plan.supplyPolicies ?? []) c.updateSupplyPolicy(policy);
         }, request);
         const screen = await page.evaluate(() => window.__industrialPlannerAppHost.state.screenProfile);
         assert(screen.deviceClass === ${JSON.stringify(profile.name)} && screen.hasTouch, 'Screen Profile');
@@ -201,6 +203,7 @@ for (const profile of profiles) {
         assert(await select.inputValue() === 'reject', '旧任务缺省必须拒绝启动');
         assert(await warning.isVisible() && await start.isDisabled(), '缺省显示错误并阻断');
         await page.screenshot({ path: ${JSON.stringify(resolve(output, "reject.png"))} });
+        let savedTaskId = null;
         for (const mode of ['manual', 'tank']) {
           await select.selectOption(mode);
           assert(await warning.count() === 0 && !(await start.isDisabled()), mode + ' 应取消自循环阻断');
@@ -208,19 +211,35 @@ for (const profile of profiles) {
             const h = window.__industrialPlannerAppHost, p = h.workspace.blueprintPlanner;
             const file = p.queries.exportDraft(h.blueprintPlannerDialog.getRequest());
             const id = await p.actions.importTask(file);
-            return file.request.options.converterStartup === mode && p.queries.getLastRequest(id).options.converterStartup === mode;
+            return {taskId:id,valid:file.request.options.converterStartup === mode && p.queries.getLastRequest(id).options.converterStartup === mode};
           }, mode);
-          assert(persisted, mode + ' 必须进入任务文件并可导入');
+          assert(persisted.valid, mode + ' 必须进入任务文件并可导入');
+          savedTaskId = persisted.taskId;
           await page.screenshot({ path: ${JSON.stringify(resolve(output, "allowed"))} + '-' + mode + '.png' });
         }
+        assert(await page.evaluate(() => localStorage.getItem('industrial-planner.eda.options')) === null,
+          '修改启动设置不能保存全局规划偏好');
         await page.reload(); await ready();
         await page.evaluate(plan => {
           const c = window.__industrialPlannerAppHost.blueprintPlannerDialog;
           c.setEnabled(true); c.open(plan);
+          for (const policy of plan.supplyPolicies ?? []) c.updateSupplyPolicy(policy);
         }, request.plan);
-        assert(await select.inputValue() === 'tank', '刷新保留启动偏好');
+        assert(await select.inputValue() === 'reject', '刷新后的新草稿必须恢复默认启动设置');
+        await select.selectOption('manual');
+        assert(await warning.count() === 0 && !(await start.isDisabled()), '新草稿可以独立修改启动设置');
         await select.selectOption('reject');
         assert(await warning.isVisible() && await start.isDisabled(), '恢复拒绝后重新阻断');
+        await page.waitForFunction(id => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks()
+          .some(task => task.taskId === id), savedTaskId);
+        await page.evaluate(id => {
+          const h = window.__industrialPlannerAppHost;
+          h.blueprintPlannerDialog.selectTask(id, h.workspace.blueprintPlanner.queries.getLastRequest(id));
+        }, savedTaskId);
+        assert(await select.inputValue() === 'tank' && await warning.count() === 0,
+          '已有任务必须从任务文件恢复自己的启动设置');
+        assert(await page.evaluate(() => localStorage.getItem('industrial-planner.eda.options')) === null,
+          '恢复已有任务不能保存全局规划偏好');
         return { passed: true };
       }`, "validation.log");
       expect(result).toMatchObject({ passed: true });

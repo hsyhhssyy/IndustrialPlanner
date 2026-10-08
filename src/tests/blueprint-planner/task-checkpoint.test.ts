@@ -17,7 +17,7 @@ import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
-function taskFile(): BlueprintPlannerTaskFile {
+function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest } {
   return { formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId: "test-task",
     request: structuredClone(yazhen.request) as BlueprintPlannerRequest, checkpoint: emptyPlannerCheckpoint(),
     progress: { taskId: "test-task", status: "waiting", phase: "preparing", startedAt: 1,

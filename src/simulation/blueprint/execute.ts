@@ -122,6 +122,8 @@ export async function executeBlueprint(
           if (observationStartTick === null && engine.tickNumber >= warmupEndTick) {
             observationStartTick = engine.tickNumber;
             sampleInventory();
+            // 2026-10-08：首个观察 tick 内结算的旧批次也属于观察期，不能只读取结算后的新配方。
+            analysis?.observeRecipes(engine, 0);
           }
           // AI-REMOVED 2026-10-05:
           // Reason: 结束边界必须在定时补料之前判定，避免结束后补料改变最终库存。

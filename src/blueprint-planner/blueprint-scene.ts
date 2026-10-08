@@ -8,10 +8,15 @@ import { getPlannerPorts, ROTATIONS, opposite, resolveTransportPose, allowsPlann
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { createPlainNode } from "./placement";
 import { configureSource } from "./terminals";
+import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 
 /** 夹具只作用于独立场景；供料只补用户声明的边界，绝不补贴内部生产。 */
 export function blueprintRecognitionScene(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
-  blueprint: BlueprintDocument = input.blueprint, seconds = 600): SimulationBlueprintRunRequest {
+  blueprint: BlueprintDocument = input.blueprint, seconds = 600, discoverOutputs = false): SimulationBlueprintRunRequest {
+  // 2026-10-08：原图保持在任务中；识别夹具和真实仿真使用排除断连支路后的副本。
+  const effective = excludeDisconnectedBlueprintPipes(registry, input).input;
+  if (blueprint === input.blueprint) blueprint = effective.blueprint;
+  input = { ...effective, blueprint };
   const scene: { externalEntities: WorldEntity[]; externalSlotLinks: []; initialSlots: SimulationBlueprintRunRequest["scene"]["initialSlots"] extends readonly (infer T)[] ? T[] : never;
     powerMode: "infinite" } = { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" };
   const sinks = new Map<string, string[]>();
@@ -59,6 +64,8 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
   for (const boundary of input.boundaries) {
     const entity = blueprint.entities[boundary.entityId];
     if (!entity) continue;
+    // 发现阶段允许尚未确定的出口；正式验收仍须装配持续收货和物品探针。
+    if (discoverOutputs && boundary.direction === "output" && boundary.itemId === null) continue;
     const itemId = boundary.itemId;
     if (!itemId || !registry.queries.findItemDefinition(itemId)) throw new Error(`请指定 ${boundary.entityId} 运送的物品。`);
     const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
@@ -100,6 +107,7 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
     ...[...sinks].map(([itemId, entityIds]) => ({ id: itemId, itemId, entityIds, direction: "input" as const })),
     ...[...sources].map(([itemId, entityIds]) => ({ id: `input:${itemId}`, itemId, entityIds, direction: "output" as const })),
   ],
-    warmupSeconds: seconds, observationSeconds: seconds, inventorySampleCount: 9, maxWallTimeMs: 120_000,
+    // 2026-10-08：用户指定预热 360 仿真秒；seconds 只控制发现或产率验证的观察窗口。
+    warmupSeconds: 360, observationSeconds: seconds, inventorySampleCount: 9, maxWallTimeMs: 120_000,
     activeActivityIds: input.activeActivityIds, collectAnalysis: true };
 }

@@ -5,17 +5,15 @@ import type { BlueprintExecutionEngine, CompiledSimulationTopology } from "../co
 /** 识别只读取实际编译结果和引擎事件，不能从可接收物品域臆造实际物流。 */
 export class BlueprintAnalysisCollector {
   private readonly recipes = new Map<string, Set<string>>();
+  private readonly recipeCombinations = new Map<string, { entityId: string; recipeIds: string[]; windowSampleCounts: number[] }>();
   private readonly transfers = new Map<string, { sourcePortId: string; targetPortId: string; itemId: string;
     totalAmount: number; windowAmounts: number[] }>();
   constructor(private readonly topology: CompiledSimulationTopology, private readonly registry: RegistryContract) {}
 
   sample(engine: BlueprintExecutionEngine, observationFraction: number | null): void {
-    for (const device of engine.readDevices()) for (const [channelId, recipe] of Object.entries(device.channelRecipes)) {
-      if (!recipe) continue;
-      const key = `${device.deviceId}/${channelId}`;
-      const entries = this.recipes.get(key) ?? new Set<string>();
-      entries.add(recipe.recipeId); this.recipes.set(key, entries);
-    }
+    // 2026-10-08：配方稳定性只统计正式观察期；预热物流仍由下方全程转移记录保留。
+    const windowIndex = observationFraction === null ? null : Math.min(3, Math.max(0, Math.ceil(observationFraction * 4) - 1));
+    if (windowIndex !== null) this.observeRecipes(engine, windowIndex);
     engine.visitTransfers(transfer => {
       const edge = this.topology.transferEdges[transfer.edgeId];
       if (!edge) return;
@@ -23,9 +21,30 @@ export class BlueprintAnalysisCollector {
       const row = this.transfers.get(key) ?? { sourcePortId: edge.sourcePortId, targetPortId: edge.targetPortId,
         itemId: transfer.itemType, totalAmount: 0, windowAmounts: [0, 0, 0, 0] };
       row.totalAmount += transfer.amount;
-      if (observationFraction !== null) row.windowAmounts[Math.min(3, Math.max(0, Math.ceil(observationFraction * 4) - 1))]! += transfer.amount;
+      if (windowIndex !== null) row.windowAmounts[windowIndex]! += transfer.amount;
       this.transfers.set(key, row);
     });
+  }
+
+  /** 观察起点单独采集配方，不重复累计预热最后一个 tick 的物流。 */
+  observeRecipes(engine: BlueprintExecutionEngine, windowIndex: number): void {
+    for (const device of engine.readDevices()) {
+      const recipeIds: string[] = [];
+      for (const [channelId, recipe] of Object.entries(device.channelRecipes)) {
+        if (!recipe) continue;
+        const key = `${device.deviceId}/${channelId}`;
+        const entries = this.recipes.get(key) ?? new Set<string>();
+        entries.add(recipe.recipeId); this.recipes.set(key, entries);
+        recipeIds.push(recipe.recipeId);
+      }
+      const compiled = this.topology.devices[device.deviceId];
+      if (!compiled?.sourceEntityId || !compiled.recipeChannels.length) continue;
+      recipeIds.sort();
+      const key = JSON.stringify([device.deviceId, recipeIds]);
+      const row = this.recipeCombinations.get(key) ?? { entityId: compiled.sourceEntityId, recipeIds, windowSampleCounts: [0, 0, 0, 0] };
+      row.windowSampleCounts[windowIndex]! += 1;
+      this.recipeCombinations.set(key, row);
+    }
   }
 
   report(): SimulationBlueprintAnalysis {
@@ -60,6 +79,8 @@ export class BlueprintAnalysisCollector {
           outputNodeIds: channel.productNodeIds.map(storageNode), configuredRecipeId: channel.defaultRecipeId, manual: channel.manualRecipeOnly,
           observedRecipeIds: [...this.recipes.get(`${id}/${channel.id}`) ?? []] })) : [];
       }),
+      recipeCombinations: [...this.recipeCombinations.values()].map(row => ({ ...row,
+        recipeIds: [...row.recipeIds], windowSampleCounts: [...row.windowSampleCounts] })),
       slots: topology.ordering.slotOrder.flatMap(id => {
         const slot = topology.slots[id]!, node = topology.nodes[slot.nodeId]!, entityId = entity(node.deviceId);
         return entityId ? [{ entityId, nodeId: storageNode(node.id), groupId: slot.sourceStorageSlotGroupId, slotId: slot.sourceSlotId,

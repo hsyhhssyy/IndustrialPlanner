@@ -1,5 +1,6 @@
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { makeAutoObservable, observable, toJS } from "mobx";
-import type { BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import { runStorageEffect } from "@/shared/storage/storage-failure";
 import { createDefaultDialogStateForKey } from "../state";
@@ -32,6 +33,7 @@ export class BlueprintPlannerDialogController {
   blueprintRequest: BlueprintPlannerRequest | null = null;
   viewTaskId: string | null = null;
   options: BlueprintPlannerOptions = createDefaultPlannerOptions();
+  blueprintCreationError: string | null = null;
 
   constructor(private readonly getPlanner: () => BlueprintPlannerContract | null) {
 // AI-REMOVED 2026-10-06:
@@ -107,24 +109,59 @@ export class BlueprintPlannerDialogController {
     this.dialogState.visible = true;
   }
 
-  openBlueprint(blueprint: BlueprintDocument): void {
+// AI-REMOVED 2026-10-07:
+// Reason: 打开原图即建立持久任务，识别请求不要求生产计划。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/app/shell/blueprint-planner-dialog-state.ts openBlueprint/selectTask
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//   openBlueprint(blueprint: BlueprintDocument): void {
+//     if (this.taskLocked) { this.open(); return; }
+//     this.options = createDefaultPlannerOptions();
+//     this.blueprintDraft = structuredClone(toJS(blueprint));
+//     this.blueprintRequest = null; this.plan = null; this.viewTaskId = null;
+//     this.dialogState.visible = true;
+//   }
+//
+//   selectTask(taskId: string | null, request?: BlueprintPlannerRequest): void {
+//     if (this.taskLocked && taskId !== this.activeTaskId) return;
+//     this.viewTaskId = taskId;
+//     this.blueprintDraft = null;
+//     this.blueprintRequest = request?.blueprintSource ? structuredClone(request) : null;
+//     if (taskId === null || !request) this.plan = null;
+//     if (request) { this.plan = structuredClone(request.plan); this.options = {
+//       ...structuredClone(request.options), converterStartup: request.options.converterStartup ?? "reject", concurrency: request.options.concurrency === 1 ? 1 : "auto",
+//       gpu: request.options.gpu ?? request.options.concurrency === "auto",
+//     }; }
+//   }
+//
+  openBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[] = []): void {
     if (this.taskLocked) { this.open(); return; }
     this.options = createDefaultPlannerOptions();
-    this.blueprintDraft = structuredClone(toJS(blueprint));
+    const draft = structuredClone(toJS(blueprint));
+    this.blueprintDraft = draft; this.blueprintCreationError = null;
     this.blueprintRequest = null; this.plan = null; this.viewTaskId = null;
     this.dialogState.visible = true;
+    const planner = this.getPlanner();
+    if (!planner) { this.blueprintCreationError = "蓝图规划服务不可用。"; return; }
+    void planner.actions.createBlueprintTask({ blueprint: draft, boundaries: [],
+      activeActivityIds }, toJS(this.options)).then(id => {
+      if (this.blueprintDraft === draft && this.viewTaskId === null) this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    }).catch(error => { this.blueprintCreationError = error instanceof Error ? error.message : String(error); });
   }
 
-  selectTask(taskId: string | null, request?: BlueprintPlannerRequest): void {
+  selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {
     if (this.taskLocked && taskId !== this.activeTaskId) return;
-    this.viewTaskId = taskId;
-    this.blueprintDraft = null;
-    this.blueprintRequest = request?.blueprintSource ? structuredClone(request) : null;
-    if (taskId === null || !request) this.plan = null;
-    if (request) { this.plan = structuredClone(request.plan); this.options = {
+    this.viewTaskId = taskId; this.blueprintCreationError = null;
+    const recognizing = request && isBlueprintRecognitionRequest(request);
+    this.blueprintDraft = recognizing ? structuredClone(request.input.blueprint) : null;
+    this.blueprintRequest = request && !recognizing && request.blueprintSource ? structuredClone(request) : null;
+    this.plan = request && !recognizing ? structuredClone(request.plan) : null;
+    if (request) this.options = {
       ...structuredClone(request.options), converterStartup: request.options.converterStartup ?? "reject", concurrency: request.options.concurrency === 1 ? 1 : "auto",
       gpu: request.options.gpu ?? request.options.concurrency === "auto",
-    }; }
+    };
   }
 
   close(): void { this.dialogState.visible = false; }

@@ -2,11 +2,13 @@ import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { PlannerSearchSeed } from "./search-seed";
+import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 
 /** 生成、验收与任务恢复使用同一原图约束，不能借检查点或重新识别放宽数量与控制语义。 */
 export function assertBlueprintPreserved(registry: RegistryContract, request: BlueprintPlannerRequest,
   baseline: PlannerSearchSeed, candidate: BlueprintDocument): void {
-  const original = request.blueprintSource!.blueprint;
+  // 2026-10-08：原始文件继续保留，已排除支路的控制设备不得借原图身份重新进入候选。
+  const original = excludeDisconnectedBlueprintPipes(registry, request.blueprintSource!).input.blueprint;
   const fixed = new Set(baseline.network.nodes.filter(node => !["supply", "product", "environment"].includes(node.purpose)).map(node => node.entity.id));
   if (new Set(candidate.entityOrder).size !== candidate.entityOrder.length
     || candidate.entityOrder.length !== Object.keys(candidate.entities).length) throw new Error("蓝图设备编号重复或索引不一致。");

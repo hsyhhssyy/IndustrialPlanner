@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 6,
+  "blueprintId": "eda-broken-only",
+  "version": "fixture-v1",
+  "name": "broken-only",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "bad1": {
+      "id": "bad1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "admission": {
+      "id": "admission",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bad2": {
+      "id": "bad2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "bad1",
+    "admission",
+    "bad2"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-08T00:00:00.000Z",
+  "updatedAt": "2026-10-08T00:00:00.000Z"
+}

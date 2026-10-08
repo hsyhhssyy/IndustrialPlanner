@@ -1,17 +1,19 @@
 import { restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES, plannerOutputModeKey, resolvePlannerOutputAttempt } from "./output-policy";
-import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type { PlannerCandidate } from "./candidate";
 import { validatePlannerRequest } from "./production-network";
 import { PlannerSearchPortfolio, type PlannerPortfolioSnapshot } from "./search-portfolio";
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { plannerRequestKey } from "./search-seed";
 import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
 import { migratePlannerCandidate } from "./task-migration";
 import { assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
+import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
@@ -74,8 +76,8 @@ export function emptyPlannerCheckpoint(): PlannerCheckpoint {
 // AI-CORRECTION 2026-10-06：保留历史计数和曲线，最优蓝图按盒外存取线规则重算并重新验收，只重建搜索内部状态。
 export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, registry: RegistryContract,
   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
-): Promise<BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint }> {
-  if (value?.request?.blueprintSource) {
+): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
+  if (value?.request && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
     const file = parsePlannerTaskFile(value, registry);
     if (!verify) return file;
     const source = file.request.blueprintSource!;
@@ -122,7 +124,7 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   if (value?.formatVersion !== 1 || !["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"].includes(value.algorithmVersion)) {
     return parsePlannerTaskFile(value, registry);
   }
-  const file = structuredClone(value) as BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint };
+  const file = structuredClone(value) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
   if ((file.request.options.warehouseBus as string) === "free") Object.assign(file.request.options, { warehouseBus: "corner" });
   validateTaskRequest(registry, file.request);
   // AI-REMOVED 2026-10-06:
@@ -170,9 +172,9 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
 }
 
 /** JSON 边界验证失败时拒绝导入，不能悄悄丢弃检查点后从头计算。 */
-export function parsePlannerTaskFile(value: unknown, registry: RegistryContract): BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint } {
+export function parsePlannerTaskFile(value: unknown, registry: RegistryContract): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint } {
   try {
-    const file = structuredClone(value) as BlueprintPlannerTaskFile & { checkpoint: PlannerCheckpoint };
+    const file = structuredClone(value) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
     if (file?.formatVersion !== 1 || file.algorithmVersion !== PLANNER_ALGORITHM_VERSION) throw new Error("任务格式或算法版本不兼容。");
     if (typeof file.taskId !== "string" || !file.taskId || file.taskId.length > 200) throw new Error("任务编号无效。");
     assertJson(file);
@@ -214,7 +216,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     if (request.blueprintSource) {
       const baseline = point.blueprintBaseline;
       if (!baseline?.candidate.seed || baseline.report.status !== "completed"
-        || JSON.stringify(baseline.candidate.execution.blueprint) !== JSON.stringify(request.blueprintSource.blueprint)) throw new Error("蓝图任务缺少原图识别基线。");
+        || JSON.stringify(baseline.candidate.execution.blueprint) !== JSON.stringify(excludeDisconnectedBlueprintPipes(registry, request.blueprintSource).input.blueprint)) throw new Error("蓝图任务缺少原图识别基线。");
       const identified = identifyBlueprintNetwork(registry, request.blueprintSource, request.options, baseline.candidate.execution, baseline.report);
       if (JSON.stringify(identified.request.plan) !== JSON.stringify(request.plan)
         || baseline.candidate.seed.requestKey !== plannerRequestKey(request)) throw new Error("蓝图任务产率基线或输入配置不一致。");
@@ -300,6 +302,21 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
   }
 }
 
+/** 识别任务尚无生产计划，参数校验与计划校验分开复用。 */
+export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): void {
+  if (!options) throw new Error("计算参数无效。");
+  if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)
+    || options.concurrency < 1 || options.concurrency > 32)) throw new Error("并发计算数必须介于 1 到 32。");
+  if (options.gpu !== undefined && typeof options.gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+  for (const key of ["solidSupply", "fluidSupply", "warehouseBus", "solidOutput", "byproducts", "plantStartup"] as const) {
+    const choices = { solidSupply: ["external", "warehouse"], fluidSupply: ["external", "conduit"], warehouseBus: ["straight", "corner", "u-shaped"],
+      solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
+    if (!choices[key].includes(options[key])) throw new Error(`无效的规划选项：${key}`);
+  }
+  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1000 || options.evaluationsPerRound % 1000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+  if (options.converterStartup !== undefined && !["manual", "tank", "reject"].includes(options.converterStartup)) throw new Error("未知转化设备启动方式。");
+}
+
 export function validateTaskRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
   const { plan, options } = request;
   if (request.blueprintSource) {
@@ -310,15 +327,24 @@ export function validateTaskRequest(registry: RegistryContract, request: Bluepri
         || !registry.queries.findItemDefinition(boundary.itemId) || !["input", "output"].includes(boundary.direction)
         || !["port", "facility"].includes(boundary.kind))) throw new Error("原蓝图或边界配置无效。");
   }
-  if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)
-    || options.concurrency < 1 || options.concurrency > 32)) throw new Error("并发计算数必须介于 1 到 32。");
-  if (options.gpu !== undefined && typeof options.gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+// AI-REMOVED 2026-10-07:
+// Reason: 识别和规划任务复用计算参数校验，避免两套规则漂移。
+// Trigger: 用户要求识别任务可恢复、自动识别出口与预览联动。
+// Evidence: 原实现只在识别成功后建任务，边界必须全部手动补齐。
+// Replacement: src/blueprint-planner/task-checkpoint.ts validatePlannerTaskOptions
+// Risk: 已保存规划任务保留原有格式和验收；Human Review: Required
+// Original code:
+//   if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)
+//     || options.concurrency < 1 || options.concurrency > 32)) throw new Error("并发计算数必须介于 1 到 32。");
+//   if (options.gpu !== undefined && typeof options.gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+//   if (typeof plan.name !== "string" || typeof plan.sourceBaseId !== "string" || typeof plan.containsModules !== "boolean") throw new Error("产线信息无效。");
+//   for (const key of ["solidSupply", "fluidSupply", "warehouseBus", "solidOutput", "byproducts", "plantStartup"] as const) {
+//     const choices = { solidSupply: ["external", "warehouse"], fluidSupply: ["external", "conduit"], warehouseBus: ["straight", "corner", "u-shaped"],
+//       solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
+//     if (!choices[key].includes(options[key])) throw new Error(`无效的规划选项：${key}`);
+//   }
+  validatePlannerTaskOptions(options);
   if (typeof plan.name !== "string" || typeof plan.sourceBaseId !== "string" || typeof plan.containsModules !== "boolean") throw new Error("产线信息无效。");
-  for (const key of ["solidSupply", "fluidSupply", "warehouseBus", "solidOutput", "byproducts", "plantStartup"] as const) {
-    const choices = { solidSupply: ["external", "warehouse"], fluidSupply: ["external", "conduit"], warehouseBus: ["straight", "corner", "u-shaped"],
-      solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
-    if (!choices[key].includes(options[key])) throw new Error(`无效的规划选项：${key}`);
-  }
   for (const list of [plan.targets, plan.externalSupplies, ...plan.recipes.flatMap(recipe => [recipe.inputs, recipe.outputs, recipe.runningInputs])]) {
     if (!Array.isArray(list) || list.some(flow => typeof flow.itemId !== "string" || !Number.isFinite(flow.perMinute) || flow.perMinute < 0)) throw new Error("产线流量无效。");
   }

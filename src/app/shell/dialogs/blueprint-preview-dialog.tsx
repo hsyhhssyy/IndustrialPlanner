@@ -1,3 +1,4 @@
+import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import {
   useEffect,
@@ -297,11 +298,13 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       placeBlockedByBase: "包含不可放置设备",
       placeHint: "将当前蓝图放置到场景",
       version: "版本",
+      schemaVersion: "架构版本",
       base: "地图",
       entities: "实体数",
       links: "连线数",
       footprint: "预估范围",
       boundingBox: "包围盒范围",
+      area: "面积",
       anchor: "初始坐标",
       updatedAt: "更新时间",
       noDescription: "暂无描述",
@@ -336,11 +339,13 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       placeBlockedByBase: "Contains unplaceable devices",
       placeHint: "Place this blueprint into the scene",
       version: "Version",
+      schemaVersion: "Schema Version",
       base: "Base",
       entities: "Entities",
       links: "Links",
       footprint: "Footprint",
       boundingBox: "Bounding Box",
+      area: "Area",
       anchor: "Anchor",
       updatedAt: "Updated",
       noDescription: "No description",
@@ -1193,7 +1198,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         {t("workbench.button.copyBlueprintToClipboard")}
                       </button>
                       {appHost.blueprintPlannerDialog.enabled ? <button type="button" disabled={!record}
-                        onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record); controller.close(); } }}
+                        onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
                         className={cm(styles, "save-blueprint-secondary-button")}
                         data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
                       {showMoveAction ? (
@@ -1227,9 +1232,17 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                   <dt>{copy.entities}</dt>
                   <dd>{record.entityOrder.length}</dd>
                   <dt>{copy.version}</dt>
-                  <dd>{record.version}</dd>
+                  <dd className={cm(styles, "blueprint-preview-metadata-inline")}>
+                    <span>{record.version}</span>
+                    <span className={cm(styles, "blueprint-preview-metadata-inline-label")}>{copy.schemaVersion}</span>
+                    <span>{record.schemaVersion}</span>
+                  </dd>
                   <dt>{copy.boundingBox}</dt>
-                  <dd>{footprint.width} x {footprint.height}</dd>
+                  <dd className={cm(styles, "blueprint-preview-metadata-inline")}>
+                    <span>{footprint.width} x {footprint.height}</span>
+                    <span className={cm(styles, "blueprint-preview-metadata-inline-label")}>{copy.area}</span>
+                    <span>{footprint.width * footprint.height}</span>
+                  </dd>
                 </dl>
               </>
             )}

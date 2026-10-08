@@ -30,7 +30,7 @@
 
 .blueprint-preview-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 248px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 306px);
   gap: 14px;
   min-height: 100%;
 }
@@ -331,6 +331,19 @@
   font-size: 0.82rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.blueprint-preview-metadata-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.blueprint-preview-metadata-inline-label {
+  color: var(--text-2);
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .blueprint-preview-footnote {

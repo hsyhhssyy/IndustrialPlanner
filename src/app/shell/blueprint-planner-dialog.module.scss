@@ -36,6 +36,12 @@
 .heading > div > span { color: var(--text-1); font-size: 12px; }
 .heading .target { margin: 4px 0 8px; overflow-wrap: anywhere; }
 .taskActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: start; }
+.deleteConfirmation { display: grid; gap: 20px; padding: 16px 18px; }
+.deleteConfirmation p { margin: 0; color: var(--text-0); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.deleteConfirmationActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.deleteConfirmationActions button { min-width: 96px; min-height: 36px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-0); background: var(--surface-2); cursor: pointer; }
+.deleteConfirmationActions button:disabled { opacity: .5; cursor: default; }
+.deleteConfirmationActions button:last-child { color: var(--danger); border-color: var(--danger); }
 .flow { height: 250px; min-height: 180px; display: flex; margin: 8px 0 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .flow > * { flex: 1; min-width: 0; min-height: 0; }
 .compact .history { width: 145px; padding: 8px; }
@@ -81,3 +87,42 @@
 
 .environmentTree > div { grid-template-columns: minmax(0, 1fr) minmax(170px, .8fr); }
 .environmentDetail { font-size: 12px; }
+
+.identification { min-width: 0; }
+.identificationBody { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(190px, 1fr); gap: 14px; margin: 0 0 12px; }
+.identificationPreview { min-width: 0; }
+.previewFrame { position: relative; height: min(440px, calc(100dvh - 300px)); min-height: max(190px, var(--boundary-label-min-height, 0px)); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; touch-action: none; background: #eef1f4; }
+.previewCanvas { position: absolute; inset: 0; }
+.previewCanvas canvas { display: block; width: 100%; height: 100%; }
+.previewControls { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.previewSelection { position: absolute; box-sizing: border-box; border: 2px solid #e79014; background: #ffca4c33; pointer-events: none; }
+/* AI-REMOVED 2026-10-08:
+Reason: 标签移至设备周围，并明确覆盖公共按钮尺寸与 padding。
+Trigger: 用户指出蓝图标签压住设备。
+Evidence: 居中 transform 与更高优先级的公共按钮规则造成遮挡。
+Replacement: .content .previewFrame .boundaryMarker
+Risk: Low。Human Review: Required
+Original code:
+.content .boundaryMarker { position: absolute; min-height: 24px; padding: 2px 5px; transform: translate(-50%, -50%); background: #ffffffed; color: #155b85; border: 1px solid #155b85; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+*/
+.content .previewFrame .boundaryMarker { position: absolute; box-sizing: border-box; min-width: 0; min-height: 0; padding: 2px 5px; background: #ffffffed; color: #155b85; border: 1px solid #155b85; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.boundaryLeaders { position: absolute; inset: 0; pointer-events: none; color: #155b85; }
+.boundaryLeaders g[data-direction="output"] { color: #8c430b; }
+.boundaryLeaders line { stroke: currentColor; stroke-width: 1; }
+.boundaryLeaders circle { fill: currentColor; stroke: #fff; stroke-width: 1; }
+.boundaryLeaders g[data-selected="true"] line { stroke-width: 2; }
+.content .previewFrame .boundaryMarker[data-direction="output"] { color: #8c430b; border-color: #8c430b; }
+.content .previewFrame .boundaryMarker[aria-pressed="true"] { background: #ffe0a0; outline: 2px solid #e79014; z-index: 1; }
+.boundaryList { min-width: 0; max-height: min(482px, calc(100dvh - 176px)); overflow: auto; }
+.boundaryGroup { margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
+.boundaryGroup legend { padding: 0 0 8px; font-size: 13px; font-weight: 600; }
+.boundaryRow { padding: 6px; margin-bottom: 6px; border: 1px solid var(--line); border-radius: 6px; }
+.boundaryRow[data-selected="true"] { border-color: var(--accent-strong); background: var(--surface-2); }
+.content .boundaryRow > button { display: flex; align-items: start; gap: 8px; width: 100%; min-height: 26px; padding: 0; border: 0; background: transparent; text-align: left; font-size: 12px; }
+.boundaryRow > button strong { flex-shrink: 0; color: var(--accent-strong); }
+.boundaryRow > button small { color: var(--text-1); white-space: nowrap; }
+.boundaryRow output { display: block; padding: 5px 0 0; color: var(--text-1); font-size: 13px; }
+.boundaryRow select { width: 100%; min-height: 32px; margin-top: 4px; padding: 4px 6px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 4px; color: var(--text-0); background: var(--surface-1); }
+.compact .identificationBody { grid-template-columns: minmax(0, 1.2fr) minmax(170px, 1fr); gap: 8px; }
+
+.compact .previewFrame { height: min(220px, calc(100dvh - 190px)); min-height: max(140px, var(--boundary-label-min-height, 0px)); }

@@ -1,3 +1,4 @@
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 // AI-REMOVED 2026-10-03: Reason: 全局选项字段收敛后无须 BlueprintPlannerOptions。Trigger: 逐物品配置。
 // Evidence: OPTION_FIELDS 仅保留两项。Replacement: 字段字面量。Risk: Low。Human Review: Required
 // Original code: import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
@@ -9,6 +10,7 @@ import type { BlueprintPlannerAreaPoint, BlueprintPlannerTaskFile } from "@/doma
 import type { UiKey } from "@/shared/i18n";
 import type { AppHost } from "../host";
 import { enterBlueprintPlacement } from "../input";
+import { createDefaultDialogStateForKey } from "../state";
 import { DialogShell } from "./shared/dialog-shell";
 import { PlannerTaskFlow } from "./production-planning";
 import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate } from "./blueprint-planner-statistics";
@@ -127,6 +129,33 @@ function AreaCurve({ points, proposals, label, xLabel, yLabel }: {
   </figure>;
 }
 
+function PlannerTaskDeleteButton({ disabled, onConfirm, t }: {
+  disabled: boolean; onConfirm: () => void; t: AppHost["actions"]["translate"];
+}) {
+  const [visible, setVisible] = useState(false);
+  const dialogState = useMemo(() => createDefaultDialogStateForKey("eda-delete-task"), []);
+  const close = () => setVisible(false);
+  return <>
+    <button type="button" disabled={disabled} onClick={() => setVisible(true)}>{t("eda.deleteTask")}</button>
+    <DialogShell dialogKey="eda-delete-task" dialogState={{ ...dialogState, visible }}
+      title={t("eda.deleteTask")} titleId="eda-delete-task-title" closeTitle={t("action.close")}
+      maximizeTitle="" restoreTitle="" showMaximizeButton={false}
+      shellStyle={{ width: "min(420px, 100%)", height: "auto", minHeight: 0 }}
+      onClose={close} onToggleMaximized={() => {}}>
+      <div className={styles.deleteConfirmation}>
+        <p>{t("eda.confirmDelete")}</p>
+        <div className={styles.deleteConfirmationActions}>
+          <button type="button" onClick={close}>{t("action.cancel")}</button>
+          <button type="button" disabled={disabled} onClick={() => {
+            if (disabled) return;
+            close(); onConfirm();
+          }}>{t("eda.deleteTask")}</button>
+        </div>
+      </div>
+    </DialogShell>
+  </>;
+}
+
 export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({ appHost }: { appHost: AppHost }) {
   const controller = appHost.blueprintPlannerDialog;
   const planner = appHost.workspace.blueprintPlanner;
@@ -158,9 +187,18 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     void revision;
     return selectedId === null ? null : planner?.queries.getResult(selectedId) ?? null;
   }, [planner, revision, selectedId]);
+  const recognition = useMemo(() => {
+    void revision;
+    const request = selectedId === null ? null : planner?.queries.getLastRequest(selectedId);
+    return request && isBlueprintRecognitionRequest(request) ? request : null;
+  }, [planner, revision, selectedId]);
   const history = useMemo(() => {
     void revision;
-    return planner?.queries.listTasks().map(task => ({ ...task, name: planner.queries.getLastRequest(task.taskId)?.plan.name ?? task.taskId })) ?? [];
+    return planner?.queries.listTasks().map(task => {
+      const request = planner.queries.getLastRequest(task.taskId);
+      return { ...task, recognizing: !!request && isBlueprintRecognitionRequest(request),
+        name: request ? isBlueprintRecognitionRequest(request) ? request.input.blueprint.name : request.plan.name : task.taskId };
+    }) ?? [];
   }, [planner, revision]);
   const supply = useMemo(() => {
     if (!controller.plan) return { view: null, error: null };
@@ -235,7 +273,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     const url = URL.createObjectURL(new Blob([JSON.stringify(file)], { type: "application/json" }));
     const link = document.createElement("a");
     const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    link.href = url; link.download = `${(plan?.name || "eda-task").replace(/[/\\:*?"<>|]/g, "-")}_${timestamp}.eda-task.json`;
+    link.href = url; link.download = `${(plan?.name || controller.blueprintDraft?.name || "eda-task").replace(/[/\\:*?"<>|]/g, "-")}_${timestamp}.eda-task.json`;
     link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   const elapsed = formatPlannerElapsed(progress?.elapsedMs ?? 0, [t("eda.elapsedDay"), t("eda.elapsedHour"), t("eda.elapsedMinute"), t("eda.elapsedSecond")]);
@@ -271,7 +309,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           {history.length === 0 ? <p>{t("eda.noHistory")}</p> : history.map(task => <button type="button" key={task.taskId}
             disabled={fileBusy || anyBusy && task.taskId !== controller.activeTaskId}
             className={styles.task} aria-pressed={selectedId === task.taskId} onClick={() => select(task.taskId)}>
-            <strong>{task.name}</strong><span>{t("eda.productionMode")} · {statusLabel(task.status)}</span>
+            <strong>{task.name}</strong><span>{t(task.recognizing ? "eda.identifyBlueprint" : "eda.productionMode")} · {statusLabel(task.status)}</span>
             <time>{new Date(task.startedAt).toLocaleString()}</time>
           </button>)}
         </div>
@@ -279,7 +317,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       <div className={styles.main}>
         <div className={styles.scroll}>
           {controller.blueprintDraft ? <BlueprintIdentification key={controller.blueprintDraft.blueprintId}
-            appHost={appHost} blueprint={controller.blueprintDraft} onBusy={setFileBusy} /> : plan === null && progress === null ? <div className={styles.empty}><p>{t("eda.noPlan")}</p>
+            appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} /> : plan === null && progress === null ? <div className={styles.empty}><p>{t("eda.noPlan")}</p>
             <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.openProductionPlanning")}</button></div> : plan !== null ? <>
             <div className={styles.heading}><div><span>{t(controller.blueprintRequest ? "eda.blueprintMode" : "eda.productionMode")}</span><p className={styles.target}>{plan.name}</p></div>
 
@@ -357,16 +395,16 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             <div className={styles.statistics}>
               <span>{statusLabel(progress.status)}</span>
               <span>{t("eda.elapsed")} <strong>{elapsed}</strong></span>
-              <span>{t("eda.candidates")} <strong>{progress.candidateCount}</strong></span>
+              {progress.phase !== "identification" ? <span>{t("eda.candidates")} <strong>{progress.candidateCount}</strong></span> : null}
               {progress.bestArea !== null ? <span>{t("eda.bestArea")} <strong>{progress.bestArea}</strong></span> : null}
             </div>
             {busy ? <progress aria-label={t("eda.progress")} max={1} value={progress.estimatedProgress ?? undefined} /> : null}
-            <div className={styles.statistics}>
+            {progress.phase !== "identification" ? <div className={styles.statistics}>
               <span>{t("eda.roundProposals")} <strong>{progress.roundEvaluatedProposals.toLocaleString()} / {planner?.queries.getLastRequest(progress.taskId)?.options.evaluationsPerRound.toLocaleString()}</strong>{" "}
                 <span className={styles.proposalRate} title={t("eda.recentRate")}>({rate === null ? "—" : rate.toLocaleString()} {t("eda.proposalsPerSecond")})</span></span>
               <span>{t("eda.totalProposals")} <strong>{progress.evaluatedProposals.toLocaleString()}</strong>{" "}
                 <span className={styles.proposalRate} title={t("eda.averageRate")}>({plannerProposalRate(progress.evaluatedProposals, progress.elapsedMs).toLocaleString()} {t("eda.proposalsPerSecond")})</span></span>
-            </div>
+            </div> : null}
             <p>{progress.message}</p>
             {progress.areaHistory?.length ? <AreaCurve points={progress.areaHistory}
               proposals={progress.evaluatedProposals} label={t("eda.areaCurve")}
@@ -374,22 +412,48 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {result !== null ? <p>{result.metrics.width} × {result.metrics.height} · {result.metrics.productionDeviceCount} {t("eda.devices")}
               {result.metrics.gasDiffuserCount > 0 ? ` · ${t("eda.environmentCount").replace("{count}", String(result.metrics.gasDiffuserCount))}` : ""}</p> : null}
           </section> : null}
+          {controller.blueprintCreationError ? <p role="alert" className={styles.error}>{controller.blueprintCreationError}</p> : null}
           {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
         </div>
         <footer className={styles.footer}>
           {selectedId !== null || plan !== null ? <div className={styles.taskActions}>
             <button type="button" disabled={!planner || fileBusy} onClick={download}>{t("eda.downloadTask")}</button>
-            {selectedId !== null ? <button type="button" disabled={busy || fileBusy} onClick={() => act(async () => {
-              if (!planner || !window.confirm(t("eda.confirmDelete"))) return;
+            {/* AI-REMOVED 2026-10-08:
+              Reason: EDA 删除确认必须使用项目弹窗模块。
+              Trigger: 用户指出系统弹窗破坏项目交互一致性。
+              Evidence: 原按钮直接调用 window.confirm；DialogShell 已提供遮罩、叠层和 Escape 关闭。
+              Replacement: 本文件 PlannerTaskDeleteButton 与下方删除处理器。
+              Risk: 确认改为异步交互，需核验任务 ID 和运行锁。Human Review: Required
+              Original code:
+              {selectedId !== null ? <button type="button" disabled={busy || fileBusy} onClick={() => act(async () => {
+                if (!planner || !window.confirm(t("eda.confirmDelete"))) return;
+                setFileBusy(true);
+                try {
+                  await planner.actions.deleteTask(selectedId);
+                  const next = planner.queries.listTasks()[0];
+                  if (next) select(next.taskId); else controller.selectTask(null);
+                } finally { setFileBusy(false); }
+              })}>{t("eda.deleteTask")}</button> : null}
+            */}
+            {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
+              if (!planner || controller.taskLocked || fileBusy || controller.viewTaskId !== selectedId) return;
               setFileBusy(true);
               try {
                 await planner.actions.deleteTask(selectedId);
                 const next = planner.queries.listTasks()[0];
                 if (next) select(next.taskId); else controller.selectTask(null);
               } finally { setFileBusy(false); }
-            })}>{t("eda.deleteTask")}</button> : null}
+            })} /> : null}
           </div> : null}
           <div className={styles.planningActions}>
+            {recognition && selectedId !== null ? <button type="button" className={styles.primary}
+              disabled={busy || !recognition.detectedBoundaries || !recognition.input.boundaries.length
+                || recognition.input.boundaries.some(boundary => boundary.direction === "input" && !boundary.itemId)}
+              onClick={() => act(async () => {
+                await planner!.actions.identifyBlueprint(selectedId);
+                controller.selectTask(selectedId, planner!.queries.getLastRequest(selectedId) ?? undefined);
+              })}>{t(progress?.status === "running" ? "eda.identifyingBlueprint" : "eda.identifyBlueprint")}</button> : null}
+
             {progress !== null && plan !== null && !busy && !controller.blueprintRequest ? <button type="button" disabled={anyBusy}
               onClick={() => { controller.open(plan); setError(null); }}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
