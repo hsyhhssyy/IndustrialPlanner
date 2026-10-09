@@ -130,6 +130,8 @@ const UI: Record<string, string> = {
     "eda.bestArea": "Best verified area",
     "eda.progress": "Approximate progress",
     "eda.devices": "production devices",
+    "eda.occupiedCells": "Occupied {count} cells",
+    "eda.utilization": "Box utilization {percent}%",
     "eda.continue": "Continue planning",
     "eda.save": "Save blueprint",
     "eda.retrySave": "Retry saving",

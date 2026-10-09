@@ -412,6 +412,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               proposals={progress.evaluatedProposals} label={t("eda.areaCurve")}
               xLabel={`${t("eda.totalProposals")}${t("eda.logScale")}`} yLabel={t("eda.bestArea")} /> : null}
             {result !== null ? <p>{result.metrics.width} × {result.metrics.height} · {result.metrics.productionDeviceCount} {t("eda.devices")}
+              {/* 2026-10-06：盒内占用与利用率一并展示，用于判断「盒子是不是装得空」。 */}
+              {result.metrics.occupiedCells !== undefined ? ` · ${t("eda.occupiedCells").replace("{count}", result.metrics.occupiedCells.toLocaleString())}` : ""}
+              {result.metrics.utilization !== undefined ? ` · ${t("eda.utilization").replace("{percent}", (result.metrics.utilization * 100).toFixed(1))}` : ""}
               {result.metrics.gasDiffuserCount > 0 ? ` · ${t("eda.environmentCount").replace("{count}", String(result.metrics.gasDiffuserCount))}` : ""}</p> : null}
           </section> : null}
           {controller.blueprintCreationError ? <p role="alert" className={styles.error}>{controller.blueprintCreationError}</p> : null}

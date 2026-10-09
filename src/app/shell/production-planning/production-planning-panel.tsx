@@ -499,6 +499,30 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     useModules,
   ]);
 
+  // 订正 2026-10-06（代码检查：React updater 内写 MobX）：
+  // handleCoverDemand / handleRemoveExternalSupply 原先在 setCalculation 的 updater 回调里直接
+  // runInAction 写 store.session.processExpandedItems。updater 必须是纯函数——StrictMode 下会被调用
+  // 两次，React 也不保证其调用时机。本文件上面那个 effect 已是正确写法（先纯 setCalculation，
+  // 再在 effect 体内 runInAction），这里把两个 handler 对齐到同一模式：
+  //   · updater 只做纯计算；
+  //   · 重收集请求用 pendingProcessExpandedResetRef 标记，在提交后的 effect 中消费。
+  // 语义与原来一致：仍只在"外部供给增删"时重收集可展开项，不影响手工展开（toggleProcessItem）
+  // 与首次计算时的全部展开。
+  const pendingProcessExpandedResetRef = useRef(false);
+  useEffect(() => {
+    if (!pendingProcessExpandedResetRef.current) {
+      return;
+    }
+    pendingProcessExpandedResetRef.current = false;
+    if (calculation === null) {
+      return;
+    }
+    const expanded = collectAllProcessExpandableItemIds(calculation.plan);
+    runInAction(() => {
+      store.session = { ...store.session, processExpandedItems: expanded };
+    });
+  }, [calculation, store]);
+
   const requestItemSelection = async (onSelect: (itemId: string) => void) => {
     const itemId = await appHost.encyclopediaPicker.pickItem({
       includeInactiveActivityItems: showAllActivityContent,
@@ -599,6 +623,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     runInAction(() => {
       store.supplies = nextSupplies;
     });
+    pendingProcessExpandedResetRef.current = true;
     setCalculation((current) => {
       if (current === null) {
         return null;
@@ -614,10 +639,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       }, index);
 
       // 工序图重新收集可展开项（外部供给的物品不再展开）
-      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-      runInAction(() => {
-        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-      });
+      // 订正 2026-10-06：重收集已移出 updater，改由 pendingProcessExpandedResetRef 标记、
+      // 在提交后的 effect 中执行（updater 必须为纯函数）。语义不变。
 
       return {
         ...current,
@@ -632,6 +655,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     runInAction(() => {
       store.supplies = nextSupplies;
     });
+    pendingProcessExpandedResetRef.current = true;
     setCalculation((current) => {
       if (current === null) {
         return null;
@@ -647,10 +671,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       }, index);
 
       // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
-      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-      runInAction(() => {
-        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-      });
+      // 订正 2026-10-06：重收集已移出 updater，改由 pendingProcessExpandedResetRef 标记、
+      // 在提交后的 effect 中执行（updater 必须为纯函数）。语义不变。
 
       return {
         ...current,

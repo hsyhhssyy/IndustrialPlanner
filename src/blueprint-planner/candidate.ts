@@ -622,6 +622,18 @@ async function createPlannerAttempt(
             reject("circulation", failure);
             break;
           }
+          // AI-REMOVED 2026-10-07:
+          // Reason: 不在生产搜索路径上启用线路压缩。上游 v3 从不调用 compactRoutes，
+          //         压缩属于搜索行为变更，应由上游决定是否启用；本 PR 只修「压缩一旦被调用就
+          //         必须同步实体」这一簿记缺陷（见 router.ts 的 compactRoutes / restoreChain）。
+          // Trigger: 评审指出线路压缩没有同步处理实体；而把压缩接入生产路径会改变搜索轨迹
+          //          （实测在 escapeLength: 0 下压缩不会变短，接入本身没有收益，只增加偏离上游的面积）。
+          // Evidence: v3 全仓库 grep compactRoutes 只有 router.ts 的定义与测试；本文件曾是唯一生产调用点。
+          // Replacement: router.ts 的实体一致性修复保留，接入时机交回上游。
+          // Risk: 绕行冗余不再被压缩消掉（与上游现状一致）。Human Review: Required
+          // Original code:
+          // 2026-10-06：全部线路确定后再做一次压缩，消掉被后续占用逼出的绕行冗余；压缩失败只回滚线路。
+          // await candidateRouter.compactRoutes(checkBudget, message => { throw new PlannerCandidateError(message, statistics); });
           enterPhase("power"); rejectionPhase = "power";
           const coverage = await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
           if (coverage === null) {
@@ -732,6 +744,9 @@ async function createPlannerAttempt(
       productionDeviceCount: network.nodes.filter((node) => node.purpose === "production" || node.purpose === "auxiliary").length,
       gasDiffuserCount: gasCount, additionalGasDiffuserCount: additionalGasCount,
       score: boundedPlannerScore(width * height, statistics.quality.secondary),
+      // 2026-10-06：盒内占用与利用率一并交付，界面据此显示「盒子是不是装得空」。
+      // 仅作展示与人工判断，不参与 comparePlannerRanks 的排序（理由见 Domain 契约注释）。
+      occupiedCells: statistics.quality.occupiedCells, utilization: statistics.quality.utilization,
     };
     const busSides = ["上", "右", "下", "左"].filter((_, side) => boundaryResult.busMask! & (1 << side));
     const blueprint = createBlueprintDocument({

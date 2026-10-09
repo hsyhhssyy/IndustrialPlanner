@@ -131,6 +131,8 @@ export type UiKey =
   | "eda.bestArea"
   | "eda.progress"
   | "eda.devices"
+  | "eda.occupiedCells"
+  | "eda.utilization"
   | "eda.continue"
   | "eda.save"
   | "eda.retrySave"

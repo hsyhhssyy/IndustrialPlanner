@@ -130,6 +130,8 @@ const UI: Record<string, string> = {
     "eda.bestArea": "已验证最优面积",
     "eda.progress": "大概进度",
     "eda.devices": "台生产设备",
+    "eda.occupiedCells": "盒内占用 {count} 格",
+    "eda.utilization": "盒内利用率 {percent}%",
     "eda.continue": "继续规划",
     "eda.save": "保存蓝图",
     "eda.retrySave": "重试保存",

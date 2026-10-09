@@ -149,6 +149,19 @@ export interface BlueprintPlannerMetrics {
   readonly gasDiffuserCount: number;
   readonly additionalGasDiffuserCount: number;
   readonly score: number;
+  /**
+   * 盒内实际占用格数（设备去重后的占格）与利用率，供界面判断「盒子是否装得空」。
+   *
+   * 2026-10-06：这两项此前只存在于搜索内部的统计（quality.ts），交付契约里看不到，
+   * 界面只能看到声明面积。提升为交付度量后仅供展示与人工判断。
+   *
+   * 为何不参与 comparePlannerRanks 排序：同面积下占用更多通常意味着更长的物流
+   * （传送带/管道段数更多），而物流成本已由 secondary 的 lengthPenalty 单独度量；
+   * 若再让「利用率高者优」，等于奖励冗长布线，与长度惩罚方向相反。
+   */
+  readonly occupiedCells?: number;
+  /** occupiedCells / area，取值 0~1；用于一眼看出盒内空置比例。 */
+  readonly utilization?: number;
 }
 
 export interface BlueprintPlannerConnection {

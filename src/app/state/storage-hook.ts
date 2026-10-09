@@ -130,9 +130,13 @@ export function hookLocalstorage(appHost: AppHost): () => void {
         persistedWorkbenchState,
         appHost.internalState.workbench,
       );
-      console.debug(
-        `[DialogOffset] restore workbench ← localStorage → toolbox: visible=${restored.dialogState.toolbox.visible} maximized=${restored.dialogState.toolbox.maximized} offset=(${restored.dialogState.toolbox.offsetX}, ${restored.dialogState.toolbox.offsetY}) size=(${restored.dialogState.toolbox.width}, ${restored.dialogState.toolbox.height})`,
-      );
+      // 订正 2026-10-06（代码检查：未门控的调试日志）：恢复与保存路径的 [DialogOffset] 日志
+      // 此前无条件输出，任何一次布局/设置写入都会打印。新行为：与项目其余调试输出一致，仅在 debugMode 下输出。
+      if (appHost.internalState.settings.debugMode) {
+        console.debug(
+          `[DialogOffset] restore workbench ← localStorage → toolbox: visible=${restored.dialogState.toolbox.visible} maximized=${restored.dialogState.toolbox.maximized} offset=(${restored.dialogState.toolbox.offsetX}, ${restored.dialogState.toolbox.offsetY}) size=(${restored.dialogState.toolbox.width}, ${restored.dialogState.toolbox.height})`,
+        );
+      }
       Object.assign(
         appHost.internalState.workbench,
         restored,
@@ -172,14 +176,26 @@ export function hookLocalstorage(appHost: AppHost): () => void {
     if (!disposed) reportStorageFailure("module-balancing load", error);
   });
 
+  // 订正 2026-10-06（代码检查：重复持久化路径）：moduleBalancing 有自己的权威存储
+  // （loadModuleBalancingState / saveModuleBalancingState 与下面的 disposeModuleBalancingReaction），
+  // 但 workbench 的变更检测此前把整棵树（含 toolbox.moduleBalancing）一起 stringify：
+  // 于是每次编辑模块平衡都会额外做一次整个 workbench 的序列化并写一次 localStorage，形成双路持久化。
+  // 现在变更检测排除该子树，mobx 的依赖集随之不再包含它 —— 单独编辑模块平衡只走它自己的 reaction。
+  // 写入仍保留完整 workbench：为一份随后会被 IndexedDB 权威数据覆盖的副本再多付一次序列化并不划算，
+  // 且恢复路径不依赖这份副本（normalizePersistedToolboxState 会回落到内存值，再由 loadModuleBalancingState 覆盖）。
+  const workbenchStorageReplacer = (key: string, value: unknown): unknown =>
+    key === "moduleBalancing" ? undefined : value;
   const disposeWorkbenchReaction = reaction(
-    () => JSON.stringify(appHost.internalState.workbench),
+    () => JSON.stringify(appHost.internalState.workbench, workbenchStorageReplacer),
     () => {
       if (isDataMigrationFrozen()) return;
       const toolboxState = appHost.internalState.workbench.dialogState.toolbox;
-      console.debug(
-        `[DialogOffset] persist workbench → toolbox: visible=${toolboxState.visible} maximized=${toolboxState.maximized} offset=(${toolboxState.offsetX}, ${toolboxState.offsetY}) size=(${toolboxState.width}, ${toolboxState.height})`,
-      );
+      // 订正 2026-10-06（代码检查：未门控的调试日志）：与上面的恢复日志同理，改为 debugMode 门控。
+      if (appHost.internalState.settings.debugMode) {
+        console.debug(
+          `[DialogOffset] persist workbench → toolbox: visible=${toolboxState.visible} maximized=${toolboxState.maximized} offset=(${toolboxState.offsetX}, ${toolboxState.offsetY}) size=(${toolboxState.width}, ${toolboxState.height})`,
+        );
+      }
       runStorageEffect("workbench", () => saveToLocalStorage<WorkbenchStateReadWrite>(
         WORKBENCH_STATE_LOCAL_STORAGE_KEY,
         appHost.internalState.workbench,

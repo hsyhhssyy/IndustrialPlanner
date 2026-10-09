@@ -23,6 +23,7 @@ import LucideX from "~icons/lucide/x";
 import type { AppHost } from "@/app/host/app-host";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { CompositeItemIcon } from "@/app/shell/shared";
 import {
@@ -288,11 +289,28 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     };
   }, []);
 
-  const index = buildModuleBalancingIndex(appHost.workspace.registry, balancingState, {
-    includeInactiveActivityContent: showAllActivityContent,
+  // 订正 2026-10-06（代码检查：渲染期全量重算）：
+  // index 原先在组件顶层无条件重建：每次都要建 3 个 Map、过滤全部配方，并对全量物品与设备排序
+  // （registry 是千级规模）。本组件有 18 个 useState，搜索框输入、hover、展开任一变化都会触发它。
+  //
+  // 失效条件为什么用输入内容的哈希、而不是对象引用：
+  // balancingState 是 MobX observable，customModules 被 splice / 赋值原地替换，引用并不随内容变；
+  // activeActivityIds 由 resolveEffectiveActivityIds 每次渲染新建，引用每次都变。
+  // 依赖对象引用只会得到两种错误结果——"index 永不更新而读到过期数据"或"memo 完全失效"，
+  // 只有内容哈希能正确表达失效条件。index 只读 state.customModules，不读 canvases，故签名只需覆盖这几项。
+  const moduleBalancingIndexKey = createStableJsonHash({
+    customModules: balancingState.customModules,
+    showAllActivityContent,
     activeActivityIds,
     recommendedModules,
   });
+  const index = useMemo(() => buildModuleBalancingIndex(appHost.workspace.registry, balancingState, {
+    includeInactiveActivityContent: showAllActivityContent,
+    activeActivityIds,
+    recommendedModules,
+  }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 失效条件由 moduleBalancingIndexKey 表达，理由见上。
+  [appHost.workspace.registry, moduleBalancingIndexKey]);
   const naturalResourcesCustomFilter = useMemo(() => {
     const itemIds = appHost.workspace.registry.itemDefinitions
       .filter((item) => item.tags.includes("自然资源"))
@@ -313,6 +331,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const activeCanvas = visibleCanvases.find((canvas) => canvas.id === balancingState.activeCanvasId)
     ?? visibleCanvases[0]
     ?? null;
+  // 订正 2026-10-06：这里**有意**不缓存。computeModuleBalancing 的成本与 activeCanvas 规模线性相关，
+  // 而 activeCanvas 属于 balancingState.canvases，同样被原地变异；要缓存就必须哈希整份 canvas，
+  // 其序列化成本与计算本身同量级（canvas 越大越接近持平），属于用复杂度换不到收益。
+  // 若将来要把这里也纳入缓存，前提是先让 canvases 的更新改为不可变替换。
   const computation = activeCanvas === null ? null : computeModuleBalancing(activeCanvas, index);
   const selectedStage = activeCanvas?.stages.find((stage) => stage.id === selectedStageId)
     ?? activeCanvas?.stages[0]

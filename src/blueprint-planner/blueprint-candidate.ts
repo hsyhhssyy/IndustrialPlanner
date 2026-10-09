@@ -157,7 +157,9 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           metrics: { width: outline.width, height: outline.height, area, entityCount: entities.length,
             productionDeviceCount: network.nodes.filter(node => node.purpose === "production").length,
             gasDiffuserCount: network.nodes.filter(node => node.purpose === "environment").length, additionalGasDiffuserCount: 0,
-            score: boundedPlannerScore(area, quality.secondary) } };
+            score: boundedPlannerScore(area, quality.secondary),
+            // 订正 2026-10-06：蓝图优化路径同样交付占用与利用率，界面展示口径与产线生成保持一致。
+            occupiedCells: quality.occupiedCells, utilization: quality.utilization } };
         assertPlannerCandidateBounds(registry, candidate);
         return candidate;
       } catch (error) {

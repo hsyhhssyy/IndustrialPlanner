@@ -16,6 +16,15 @@ const SIMULATION_ENGINE_REGISTRY = {
 /** 所有公开可选的仿真引擎；测试矩阵与运行时入口共用这一份注册表。 */
 export const SUPPORTED_SIMULATION_ENGINE_KINDS = Object.freeze(Object.keys(SIMULATION_ENGINE_REGISTRY) as SimulationEngineKind[]);
 
+/**
+ * 2026-10-06（代码检查复核，结论：此处不改）：
+ * 这里的默认值 "legacy" 曾被怀疑与产品默认相反（main.tsx 由 simulation-engine-launch-preference
+ * 决定，legacy 需要 debugMode 与 debug-legacy-simulation-engine 双开关才生效），一度被改为 "dense-v2"。
+ * 复核后回退：默认 legacy 是**既有契约**，由 src/tests/simulation/dense-host-regressions.test.ts 的
+ * "reports 'legacy' as the current engine for undefined selection" 明确固化，
+ * 属于"显式选择才切 dense"的有意设计，不是静默缺口。改动会直接打破该契约用例。
+ * 若将来确实要改默认引擎，必须先更新该用例，并承担"所有省略 engineKind 的调用方一并换引擎"的行为变更。
+ */
 export function createSimulationHost(workspace: WorkspaceContract, options: CreateSimulationHostOptions = {}): SimulationHost {
   const host = SIMULATION_ENGINE_REGISTRY[options.engineKind ?? "legacy"](workspace, options);
   const start = host.actions.start.bind(host.actions);

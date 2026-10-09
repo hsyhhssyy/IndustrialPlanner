@@ -107,6 +107,13 @@ const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
+// AI-CORRECTION 2026-10-06（代码检查：未门控的热路径日志）：
+// touch 拖拽路径上原有 8 处 console.warn("[LOGISTICS-DEBUG]", …)（touch-dragstart、
+// touch-dragstart-result、handleTouchDragStart-enter / -null-early-return / -existing-draft /
+// -endpoint / -startEntity / -empty-rejected），既没有走本文件已有的 logger，也没有任何 debug 门控，
+// 每次触摸拖动都会无条件输出。现全部改走 logisticsLogger.debug —— 其输出级别与 debugMode 联动
+// （main.tsx、workbench-app.tsx 在 debugMode 开启时调用 setLogLevel("debug")），
+// 默认级别 warn 时不再产生任何输出。8 处调用点位置与上下文参数均未改变，仅替换输出通道与级别。
 // AI-REMOVED 2026-07-27:
 // Reason: app 手势层不应维护 3 个传送带节 definition ID。
 // Trigger: 用户要求 registry 外只使用 Query。
@@ -397,7 +404,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           });
 
         case "touch dragstart": {
-          console.warn("[LOGISTICS-DEBUG]","touch-dragstart", {
+          logisticsLogger.debug("touch-dragstart", {
             gestureId: event.gestureId,
             kind: context.appHost.internalState.runtime.logisticsPlacement.kind,
             allowEmptySource: resolveLogisticsPlacementBehaviorOptions(context.appHost).allowEmptySource,
@@ -410,7 +417,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             position: event.position,
             startPosition: event.startPosition,
           });
-          console.warn("[LOGISTICS-DEBUG]","touch-dragstart-result", {
+          logisticsLogger.debug("touch-dragstart-result", {
             gestureId: event.gestureId,
             status: result.status,
           });
@@ -634,18 +641,18 @@ function handleTouchDragStart(options: {
   const kind = options.appHost.internalState.runtime.logisticsPlacement.kind;
   const startGridPoint = resolveGridPointFromGesturePosition(options.editor, options.startPosition);
   const pointerGridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-enter", {
+  logisticsLogger.debug("handleTouchDragStart-enter", {
     kind, startGridPoint, pointerGridPoint,
     draftState: options.editor.queries.resolveLogisticsDraftState() !== null ? "present" : "null",
   });
   if (kind === null || startGridPoint === null || pointerGridPoint === null) {
-    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-null-early-return", { kind, startGridPoint, pointerGridPoint });
+    logisticsLogger.debug("handleTouchDragStart-null-early-return", { kind, startGridPoint, pointerGridPoint });
     return { status: "ignored" };
   }
 
   if (options.editor.queries.resolveLogisticsDraftState() !== null) {
     const onHead = isTouchDragStartOnLogisticsHead(options.editor, options.startPosition);
-    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-existing-draft", { onHead });
+    logisticsLogger.debug("handleTouchDragStart-existing-draft", { onHead });
     if (!onHead) {
       return { status: "ignored" };
     }
@@ -663,7 +670,7 @@ function handleTouchDragStart(options: {
     startGridPoint,
     kind,
   );
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-endpoint", {
+  logisticsLogger.debug("handleTouchDragStart-endpoint", {
     type: endpoint?.type ?? "null",
     portDirection: endpoint?.type === "device-port" ? endpoint.portDirection : "N/A",
   });
@@ -726,14 +733,14 @@ function handleTouchDragStart(options: {
   }
 
   const startEntity = options.editor.queries.findEntityAtClientPixelPoint(options.startPosition);
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-startEntity", {
+  logisticsLogger.debug("handleTouchDragStart-startEntity", {
     hasEntity: startEntity !== null,
     allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
   });
   if (startEntity === null) {
     if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource) {
       showEmptyLogisticsStartToast(options.appHost);
-      console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-empty-rejected");
+      logisticsLogger.debug("handleTouchDragStart-empty-rejected");
       return { status: "ignored" };
     }
 

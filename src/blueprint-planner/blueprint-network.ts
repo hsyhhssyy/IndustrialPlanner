@@ -92,7 +92,11 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
     byId.get(target.entityId)!.inputs.push({ itemId: itemIds[0]!, perMinute, storageGroupIds: targetGroup });
     routes.push({ source: source.entityId, target: target.entityId,
       sourcePort: `${source.entityId}/${from.groupIndex}/${from.portIndex}`, targetPort: `${target.entityId}/${to.groupIndex}/${to.portIndex}`,
-      sourceEdge: from.edge, targetEdge: to.edge, cells, turns: 0 });
+      sourceEdge: from.edge, targetEdge: to.edge, cells, turns: 0,
+      // 订正 2026-10-06：route 记录新增了 minimumCells（准入端口前的物流格数下限），
+      // 未显式写入会让捕获的种子与 Router 写入的路线形状不一致，从而在构造校验时报缺字段。
+      // 识别现有蓝图时没有准入口约束，取 0。
+      minimumCells: 0 });
   }
   const rectangles = input.blueprint.entityOrder.map(id => resolveEntityGridRect({ entity: input.blueprint.entities[id]!,
     definition: registry.queries.findEntityDefinition(input.blueprint.entities[id]!.definitionId)! }));

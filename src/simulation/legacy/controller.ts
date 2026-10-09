@@ -815,7 +815,15 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     }
 
     this.playback.resetPlaybackHotQueue();
+    // 订正 2026-10-06（代码检查：patch/reset 缺 revision 校验）：
+    // 与 syncToTick 采用同一道防护——拓扑热切换期间返回的旧会话响应必须丢弃，
+    // 否则旧会话的 runtimeStatus（含 mode:"error"、latestTickNumber、bufferSize）会写进新会话。
+    // 原实现直接 await 后写入，缺少这层校验。
+    const requestTopologyRevision = this.topologyRevision;
     const response = await this.bridge.patchRuntimeSlot(patch);
+    if (requestTopologyRevision !== this.topologyRevision) {
+      return;
+    }
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
     });
@@ -836,7 +844,13 @@ export class SimulationActionImpl implements SimulationAction, SimulationInterna
     }
 
     this.playback.resetPlaybackHotQueue();
+    // 订正 2026-10-06（代码检查：patch/reset 缺 revision 校验）：与 patchRuntimeSlot 同理，
+    // 旧会话的准入计数重置响应不得写进热切换后的新会话。
+    const requestTopologyRevision = this.topologyRevision;
     const response = await this.bridge.resetAdmissionCounter(reset);
+    if (requestTopologyRevision !== this.topologyRevision) {
+      return;
+    }
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
     });

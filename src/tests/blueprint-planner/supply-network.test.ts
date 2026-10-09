@@ -55,7 +55,7 @@ it.each([{ input: nugget, sources: 4, separate: false }, { input: ore, sources: 
   const routes = wires.map(wire => ({ source: wire.source.entityId, target: wire.target.entityId,
     sourcePort: `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`,
     targetPort: `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`,
-    sourceEdge: wire.source.edge, targetEdge: wire.target.edge,
+    sourceEdge: wire.source.edge, targetEdge: wire.target.edge, minimumCells: wire.minimumCells ?? 0,
     cells: Array.from({ length: wire.minimumCells ?? 0 }, () => ({ x: 0, y: 0 })), turns: 0 }));
   expect(auditPlannerSupply(registry, network, wires, routes).operatingLimits.length).toBeGreaterThan(0);
   expect(JSON.stringify(request)).toBe(before);
@@ -105,7 +105,7 @@ it.each([{ count: 3, shared: true }, { count: 4, shared: true }, { count: 5, sha
     const routes = wires.map(wire => ({ source: wire.source.entityId, target: wire.target.entityId,
       sourcePort: `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`,
       targetPort: `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`,
-      sourceEdge: wire.source.edge, targetEdge: wire.target.edge,
+      sourceEdge: wire.source.edge, targetEdge: wire.target.edge, minimumCells: wire.minimumCells ?? 0,
       cells: Array.from({ length: wire.minimumCells ?? 0 }, () => ({ x: 0, y: 0 })), turns: 0 }));
     const audit = auditPlannerSupply(registry, network, wires, routes);
     expect(audit.operatingLimits).toHaveLength(shared ? 1 : count);
