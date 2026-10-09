@@ -6,6 +6,7 @@ import {
   hashPrecacheEntries as hashManifestPrecacheEntries,
   isDeviceAnimationAssetUrl,
   isDeviceAudioAssetUrl,
+  isPrecacheCompleteMarker,
   normalizePrecacheEntries,
   partitionPrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -31,6 +32,7 @@ type PrecacheMetadataEntry = {
 
 type ReusablePrecacheCache = {
   readonly cache: Cache;
+  readonly cacheName: string;
   readonly metadata: ReadonlyMap<string, PrecacheMetadataEntry>;
 };
 
@@ -48,7 +50,7 @@ type AnimationDownloadTask = {
   readonly promise: Promise<void>;
 };
 
-type AnimationCompleteMarker = {
+type OptionalPrecacheCompleteMarker = {
   readonly cacheName: string;
   readonly manifestHash: string;
   readonly totalBytes: number;
@@ -60,6 +62,7 @@ type PwaClientMessage =
   | { readonly type: "PWA_AUDIO_CACHE_START" | "PWA_AUDIO_CACHE_CANCEL" }
   | { readonly type: "PWA_ANIMATION_CACHE_CANCEL" }
   | { readonly type: "PWA_ANIMATION_CACHE_START" }
+  | { readonly type: "PWA_ANIMATION_CACHE_CHECK" }
   | { readonly type: "PWA_SKIP_WAITING" };
 
 type PwaServiceWorkerMessage =
@@ -87,11 +90,11 @@ type PwaServiceWorkerMessage =
     readonly task: PrecacheTaskKind;
   }
   | {
-    readonly type: "PWA_ANIMATION_CACHE_CANCELLED";
+    readonly type: "PWA_ANIMATION_CACHE_CANCELLED" | "PWA_ANIMATION_CACHE_MISSING";
     readonly cacheName: string;
   }
   | {
-    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED";
+    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED" | "PWA_AUDIO_CACHE_INVALIDATED";
     readonly cacheName: string;
   }
   | {
@@ -105,7 +108,7 @@ declare let self: ServiceWorkerGlobalScope & {
 
 const PRECACHE_DOWNLOAD_CONCURRENCY = 6;
 const PRECACHE_METADATA_VERSION = 1;
-const ANIMATION_COMPLETE_MARKER_VERSION = 1;
+const OPTIONAL_COMPLETE_MARKER_VERSION = 1;
 const RAW_PRECACHE_ENTRIES = self.__WB_MANIFEST;
 const PRECACHE_ENTRIES = normalizePrecacheEntries(RAW_PRECACHE_ENTRIES);
 const {
@@ -123,6 +126,7 @@ let audioDownload: { abort: AbortController; promise: Promise<void> } | null = n
 const INDEX_CACHE_URL = createCacheUrl("index.html");
 const PRECACHE_METADATA_CACHE_URL = createCacheUrl("__industrial_planner_precache_metadata__.json");
 const ANIMATION_COMPLETE_MARKER_CACHE_URL = createCacheUrl("__industrial_planner_animation_complete__.json");
+const AUDIO_COMPLETE_MARKER_CACHE_URL = createCacheUrl("__industrial_planner_audio_complete__.json");
 
 let animationDownloadTask: AnimationDownloadTask | null = null;
 let nextAnimationDownloadTaskId = 1;
@@ -153,6 +157,23 @@ self.addEventListener("message", (event) => {
 
   if (message?.type === "PWA_ANIMATION_CACHE_START") {
     event.waitUntil(startAnimationPrecache());
+    return;
+  }
+
+  if (message?.type === "PWA_ANIMATION_CACHE_CHECK") {
+    event.waitUntil((async () => {
+      try {
+        const cache = await caches.open(ANIMATION_CACHE_NAME);
+        const complete = await isOptionalPrecacheComplete(cache, "animation", ANIMATION_ENTRIES);
+        event.source?.postMessage(complete ? {
+          type: "PWA_PRECACHE_DONE", task: "animation", cacheName: ANIMATION_CACHE_NAME,
+          totalBytes: calculateTotalBytes(ANIMATION_ENTRIES), totalFiles: ANIMATION_ENTRIES.length,
+        } : { type: "PWA_ANIMATION_CACHE_MISSING", cacheName: ANIMATION_CACHE_NAME });
+      } catch (error) {
+        event.source?.postMessage({ type: "PWA_PRECACHE_ERROR", task: "animation", cacheName: ANIMATION_CACHE_NAME,
+          message: error instanceof Error ? error.message : "Animation cache check failed" });
+      }
+    })());
     return;
   }
 
@@ -218,7 +239,7 @@ async function installPrecache(): Promise<void> {
     const entriesToDownload: PrecacheEntry[] = [];
 
     for (const entry of CORE_ENTRIES) {
-      const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
+      const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches, CACHE_NAME);
 
       if (reusedBytes === null) {
         entriesToDownload.push(entry);
@@ -271,7 +292,8 @@ async function installPrecache(): Promise<void> {
 async function startAnimationPrecache(): Promise<void> {
   const currentTask = animationDownloadTask;
 
-  if (currentTask !== null && currentTask.cacheName === ANIMATION_CACHE_NAME) {
+  if (currentTask !== null && currentTask.cacheName === ANIMATION_CACHE_NAME
+    && !currentTask.abortController.signal.aborted) {
     return currentTask.promise;
   }
 
@@ -333,6 +355,12 @@ async function installOptionalPrecacheEntries(
   cachePrefix: string, cache: Cache, existingCaches: readonly string[], signal: AbortSignal,
   assertActive: () => void,
 ): Promise<void> {
+  if (await isOptionalPrecacheComplete(cache, task, entries)) {
+    assertActive();
+    return;
+  }
+  assertActive();
+  await cache.delete(task === "animation" ? ANIMATION_COMPLETE_MARKER_CACHE_URL : AUDIO_COMPLETE_MARKER_CACHE_URL);
   const reusable = await openReusablePrecacheCaches(existingCaches, cachePrefix);
   const cached: PrecacheEntry[] = [];
   const missing: PrecacheEntry[] = [];
@@ -340,14 +368,27 @@ async function installOptionalPrecacheEntries(
   const totalBytes = calculateTotalBytes(entries);
   for (const entry of entries) {
     assertActive();
-    const bytes = await tryReusePrecachedEntry(entry, cache, reusable);
+    const bytes = await tryReusePrecachedEntry(entry, cache, reusable, cacheName);
     if (bytes === null) missing.push(entry);
     else {
       cached.push(entry);
-      await reportPrecacheProgress(task, cacheName, entry, bytes, progress, totalBytes, entries.length);
+      // AI-REMOVED 2026-10-09:
+      // Reason: 缓存校验与复用不属于网络下载，不应逐文件触发下载进度。
+      // Trigger: 刷新后完整动画和音频包仍弹出下载提示。
+      // Evidence: 此分支只读取已缓存的文件；missing 才交给下载器。
+      // Replacement: 下方仅在 missing 非空时广播复用起点；下载回调继续上报进度。
+      // Risk: Low。Human Review: Required
+      // Original code:
+      // await reportPrecacheProgress(task, cacheName, entry, bytes, progress, totalBytes, entries.length);
+      progress.completedFiles += 1;
+      progress.completedBytes += bytes;
     }
   }
+  assertActive();
   await writePrecacheMetadata(cache, cached);
+  if (missing.length > 0) {
+    await broadcastOptionalProgress(task, cacheName, progress, totalBytes, entries.length, "");
+  }
   await downloadPrecacheEntries(missing, cache, async (entry, bytes) => {
     assertActive();
     if (bytes === null) throw new Error(`Required ${task} resource is unavailable: ${entry.url}`);
@@ -358,6 +399,22 @@ async function installOptionalPrecacheEntries(
   assertActive();
   if (cached.length !== entries.length) throw new Error(`Incomplete ${task} package`);
   await writePrecacheMetadata(cache, cached);
+  await writeOptionalPrecacheCompleteMarker(cache, task, entries, cacheName);
+}
+
+/** 信任安装时成功校验的包；刷新只读标记、元数据和键，不重读/回写整包。 */
+async function isOptionalPrecacheComplete(
+  cache: Cache, task: "animation" | "audio", entries: readonly PrecacheEntry[],
+): Promise<boolean> {
+  if (!await hasOptionalPrecacheCompleteMarker(cache, task)) return false;
+  const metadata = await readPrecacheMetadata(cache);
+  const cachedUrls = new Set((await cache.keys()).map((request) => request.url));
+  return entries.every((entry) => {
+    const cacheUrl = createCacheUrl(entry.url);
+    const metadataEntry = metadata.get(cacheUrl);
+    return cachedUrls.has(cacheUrl) && metadataEntry !== undefined
+      && isPrecacheMetadataEntryCompatible(entry, metadataEntry);
+  });
 }
 
 function cancelAnimationPrecache(): void {
@@ -373,13 +430,20 @@ async function installAnimationPrecache(taskId: number, signal: AbortSignal): Pr
   const totalBytes = calculateTotalBytes(ANIMATION_ENTRIES);
   // AI-REMOVED 2026-09-26: 已移至 installOptionalPrecacheEntries；原因及风险见下方记录。
   // const cachedEntries: PrecacheEntry[] = [];
-  const progress: PrecacheInstallProgress = {
-    completedBytes: 0,
-    completedFiles: 0,
-  };
-
-  await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
-  await broadcastAnimationProgress(progress, totalBytes, totalFiles, "");
+  // AI-REMOVED 2026-10-09:
+  // Reason: 完整包必须先静默检查；无条件清除完成标记和广播会制造重复下载提示。
+  // Trigger: 每次刷新重新显示动画下载进度。
+  // Evidence: 原代码在检查缓存前删除标记并广播 0% 下载进度。
+  // Replacement: installOptionalPrecacheEntries 的完成检查、失效处理和缺失文件进度。
+  // Risk: Low。Human Review: Required
+  // Original code:
+  // const progress: PrecacheInstallProgress = {
+  //   completedBytes: 0,
+  //   completedFiles: 0,
+  // };
+  //
+  // await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+  // await broadcastAnimationProgress(progress, totalBytes, totalFiles, "");
 
   try {
   // AI-REMOVED 2026-09-26:
@@ -451,7 +515,12 @@ async function installAnimationPrecache(taskId: number, signal: AbortSignal): Pr
       "industrial-planner-animation-precache-", cache, cacheNamesBeforeDownload, signal,
       () => throwIfAnimationTaskInactive(taskId, signal));
 
-    await writeAnimationCompleteMarker(cache, totalBytes, totalFiles);
+    // AI-REMOVED 2026-10-09:
+    // Reason: 动画和音频统一在共用安装器完成校验后写入标记。
+    // Trigger: 修复可选资源包刷新恢复。Evidence: installOptionalPrecacheEntries 已写入标记。
+    // Replacement: writeOptionalPrecacheCompleteMarker。Risk: Low。Human Review: Required
+    // Original code:
+    // await writeAnimationCompleteMarker(cache, totalBytes, totalFiles);
     await cleanupObsoleteAnimationCaches();
     await broadcastMessage({
       type: "PWA_PRECACHE_DONE",
@@ -488,7 +557,9 @@ function isCurrentAnimationTask(taskId: number): boolean {
   return animationDownloadTask?.id === taskId;
 }
 
-async function broadcastAnimationProgress(
+async function broadcastOptionalProgress(
+  task: "animation" | "audio",
+  cacheName: string,
   progress: PrecacheInstallProgress,
   totalBytes: number,
   totalFiles: number,
@@ -496,31 +567,32 @@ async function broadcastAnimationProgress(
 ): Promise<void> {
   await broadcastMessage({
     type: "PWA_PRECACHE_PROGRESS",
-    cacheName: ANIMATION_CACHE_NAME,
+    cacheName,
     completedBytes: progress.completedBytes,
     completedFiles: progress.completedFiles,
     currentUrl,
-    task: "animation",
+    task,
     totalBytes,
     totalFiles,
   });
 }
 
-async function writeAnimationCompleteMarker(
+async function writeOptionalPrecacheCompleteMarker(
   cache: Cache,
-  totalBytes: number,
-  totalFiles: number,
+  task: "animation" | "audio",
+  entries: readonly PrecacheEntry[],
+  cacheName: string,
 ): Promise<void> {
-  const marker: AnimationCompleteMarker = {
-    cacheName: ANIMATION_CACHE_NAME,
-    manifestHash: ANIMATION_MANIFEST_HASH,
-    totalBytes,
-    totalFiles,
-    version: ANIMATION_COMPLETE_MARKER_VERSION,
+  const marker: OptionalPrecacheCompleteMarker = {
+    cacheName,
+    manifestHash: hashPrecacheEntries(entries),
+    totalBytes: calculateTotalBytes(entries),
+    totalFiles: entries.length,
+    version: OPTIONAL_COMPLETE_MARKER_VERSION,
   };
 
   await cache.put(
-    ANIMATION_COMPLETE_MARKER_CACHE_URL,
+    task === "animation" ? ANIMATION_COMPLETE_MARKER_CACHE_URL : AUDIO_COMPLETE_MARKER_CACHE_URL,
     new Response(JSON.stringify(marker), {
       headers: {
         "content-type": "application/json; charset=utf-8",
@@ -554,6 +626,7 @@ async function openReusablePrecacheCaches(
 
         return {
           cache,
+          cacheName,
           metadata: await readPrecacheMetadata(cache),
         };
       }),
@@ -564,6 +637,7 @@ async function tryReusePrecachedEntry(
   entry: PrecacheEntry,
   targetCache: Cache,
   reusableCaches: readonly ReusablePrecacheCache[],
+  targetCacheName: string,
 ): Promise<number | null> {
   const cacheUrl = createCacheUrl(entry.url);
 
@@ -584,7 +658,11 @@ async function tryReusePrecachedEntry(
       continue;
     }
 
-    await targetCache.put(cacheUrl, cachedResponse);
+    // 同一包的文件已在目标缓存中；校验恢复时避免再写回相同内容。
+    // caches.open 同一名称可能返回不同对象，需按缓存条目的实际归属判断。
+    if (reusableCache.cacheName !== targetCacheName) {
+      await targetCache.put(cacheUrl, cachedResponse);
+    }
     return verifiedBytes;
   }
 
@@ -873,7 +951,13 @@ async function resolvePrecachedResponse(request: Request): Promise<Response> {
 
   if (isDeviceAudioAssetUrl(requestUrl, self.registration.scope)) {
     const cache = await caches.open(AUDIO_CACHE_NAME);
-    const cached = await cache.match(createRuntimePrecacheCacheUrl(requestUrl, self.registration.scope));
+    const cacheUrl = createRuntimePrecacheCacheUrl(requestUrl, self.registration.scope);
+    const cached = await cache.match(cacheUrl);
+    if (cached === undefined && AUDIO_ENTRIES.some((entry) => createCacheUrl(entry.url) === cacheUrl)
+      && await hasOptionalPrecacheCompleteMarker(cache, "audio")) {
+      await cache.delete(AUDIO_COMPLETE_MARKER_CACHE_URL);
+      await broadcastMessage({ type: "PWA_AUDIO_CACHE_INVALIDATED", cacheName: AUDIO_CACHE_NAME });
+    }
     return cached ?? fetch(request);
   }
 
@@ -925,7 +1009,7 @@ async function resolvePrecachedResponse(request: Request): Promise<Response> {
 async function resolveAnimationPrecachedResponse(request: Request): Promise<Response> {
   const cache = await caches.open(ANIMATION_CACHE_NAME);
 
-  if (await isAnimationPrecacheComplete(cache)) {
+  if (await hasOptionalPrecacheCompleteMarker(cache, "animation")) {
     const cacheUrl = createRuntimePrecacheCacheUrl(
       new URL(request.url),
       self.registration.scope,
@@ -936,18 +1020,21 @@ async function resolveAnimationPrecachedResponse(request: Request): Promise<Resp
       return cachedResponse;
     }
 
-    await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
-    await broadcastMessage({
-      type: "PWA_ANIMATION_CACHE_INVALIDATED",
-      cacheName: ANIMATION_CACHE_NAME,
-    });
+    // 只有当前清单管理的资源缺失才使整包失效；其他路径继续按在线请求处理。
+    if (ANIMATION_ENTRIES.some((entry) => createCacheUrl(entry.url) === cacheUrl)) {
+      await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+      await broadcastMessage({
+        type: "PWA_ANIMATION_CACHE_INVALIDATED",
+        cacheName: ANIMATION_CACHE_NAME,
+      });
+    }
   }
 
   return fetch(request);
 }
 
-async function isAnimationPrecacheComplete(cache: Cache): Promise<boolean> {
-  const response = await cache.match(ANIMATION_COMPLETE_MARKER_CACHE_URL);
+async function hasOptionalPrecacheCompleteMarker(cache: Cache, task: "animation" | "audio"): Promise<boolean> {
+  const response = await cache.match(task === "animation" ? ANIMATION_COMPLETE_MARKER_CACHE_URL : AUDIO_COMPLETE_MARKER_CACHE_URL);
 
   if (response === undefined) {
     return false;
@@ -956,12 +1043,9 @@ async function isAnimationPrecacheComplete(cache: Cache): Promise<boolean> {
   try {
     const value: unknown = await response.json();
 
-    return isRecord(value)
-      && value.version === ANIMATION_COMPLETE_MARKER_VERSION
-      && value.cacheName === ANIMATION_CACHE_NAME
-      && value.manifestHash === ANIMATION_MANIFEST_HASH
-      && value.totalFiles === ANIMATION_ENTRIES.length
-      && value.totalBytes === calculateTotalBytes(ANIMATION_ENTRIES);
+    return isPrecacheCompleteMarker(value,
+      task === "animation" ? ANIMATION_ENTRIES : AUDIO_ENTRIES,
+      task === "animation" ? ANIMATION_CACHE_NAME : AUDIO_CACHE_NAME);
   } catch {
     return false;
   }

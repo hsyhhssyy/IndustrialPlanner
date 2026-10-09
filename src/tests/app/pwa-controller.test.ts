@@ -178,7 +178,7 @@ describe("PwaController", () => {
       .toMatchObject({ deviceAnimationsRequested: false });
   });
 
-  it("checks for a PWA update before starting the animation package", async () => {
+  it.each([true, false])("restores cached animation silently and checks updates before missing downloads (cached=%s)", async (cached) => {
     vi.stubEnv("BASE_URL", "/");
     vi.stubEnv("DEV", false);
     window.localStorage.setItem("industrial-planner-pwa-preference", JSON.stringify({
@@ -209,11 +209,47 @@ describe("PwaController", () => {
     controller.setDeviceAnimationsEnabled(true);
 
     await vi.waitFor(() => {
+      expect(worker.postMessage).toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_CHECK" });
+    });
+    expect(registration.update).not.toHaveBeenCalled();
+    if (cached) {
+      deliverServiceWorkerMessage(controller, {
+        type: "PWA_PRECACHE_DONE",
+        cacheName: "industrial-planner-animation-precache-current",
+        task: "animation",
+        totalBytes: 256,
+        totalFiles: 2,
+      });
+      expect(registration.update).not.toHaveBeenCalled();
+      expect(worker.postMessage).not.toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_START" });
+      expect(controller.deviceAnimationStatus).toBe("complete");
+      expect(controller.progress).toBeNull();
+      expect(animationsEnabled).toBe(true);
+      return;
+    }
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_ANIMATION_CACHE_MISSING",
+      cacheName: "industrial-planner-animation-precache-current",
+    });
+
+    await vi.waitFor(() => {
       expect(registration.update).toHaveBeenCalledTimes(1);
       expect(worker.postMessage).toHaveBeenCalledWith({ type: "PWA_ANIMATION_CACHE_START" });
     });
-    expect(controller.deviceAnimationStatus).toBe("downloading");
+    expect(controller.deviceAnimationStatus).toBe("checking-cache");
+    expect(controller.progress).toBeNull();
     expect(animationsEnabled).toBe(false);
+
+    deliverServiceWorkerMessage(controller, {
+      type: "PWA_PRECACHE_DONE",
+      cacheName: "industrial-planner-animation-precache-current",
+      task: "animation",
+      totalBytes: 256,
+      totalFiles: 2,
+    });
+    expect(controller.deviceAnimationStatus).toBe("complete");
+    expect(controller.progress).toBeNull();
+    expect(animationsEnabled).toBe(true);
   });
 
   it("preempts completed animation playback when a core update starts", () => {

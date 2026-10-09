@@ -6,6 +6,7 @@ import {
   hashPrecacheEntries,
   isDeviceAnimationAssetUrl,
   isDeviceAudioAssetUrl,
+  isPrecacheCompleteMarker,
   normalizePrecacheEntries,
   partitionPrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -68,6 +69,24 @@ describe("precache manifest helpers", () => {
         url: "asset-b.js",
       },
     ])).toBe(36);
+  });
+
+  it.each(["animation", "audio"])("accepts only a complete marker for the current %s manifest", (task) => {
+    const entries: readonly PrecacheEntry[] = [{ bytes: 24, revision: "current", sha256: "a".repeat(64), url: "asset.bin" }];
+    const cacheName = `industrial-planner-${task}-precache-${hashPrecacheEntries(entries)}`;
+    const marker = { version: 1, cacheName, manifestHash: hashPrecacheEntries(entries), totalFiles: 1, totalBytes: 24 };
+
+    expect(isPrecacheCompleteMarker(marker, entries, cacheName)).toBe(true);
+    for (const invalid of [null, false, [], {},
+      { ...marker, version: 2 }, { ...marker, cacheName: "other" },
+      { ...marker, manifestHash: "outdated" }, { ...marker, totalFiles: 0 },
+      { ...marker, totalBytes: 23 }, { ...marker, totalFiles: "1" }]) {
+      expect(isPrecacheCompleteMarker(invalid, entries, cacheName)).toBe(false);
+    }
+    expect(isPrecacheCompleteMarker(marker, [{ ...entries[0]!, sha256: "b".repeat(64) }], cacheName)).toBe(false);
+    expect(isPrecacheCompleteMarker(marker, [{ ...entries[0]!, revision: "next" }], cacheName)).toBe(false);
+    expect(isPrecacheCompleteMarker(marker, [{ ...entries[0]!, bytes: 25 }], cacheName)).toBe(false);
+    expect(isPrecacheCompleteMarker(marker, [...entries, { ...entries[0]!, url: "added.bin" }], cacheName)).toBe(false);
   });
 
   it("partitions device animation assets from the atomic core package", () => {

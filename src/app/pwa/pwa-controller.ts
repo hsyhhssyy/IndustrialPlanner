@@ -42,6 +42,7 @@ export type PwaProgressTask = "animation" | "audio" | "core";
 export type PwaDeviceAnimationStatus =
   | "idle"
   | "checking-update"
+  | "checking-cache"
   | "downloading"
   | "complete"
   | "preempted-by-update"
@@ -100,11 +101,11 @@ type PwaServiceWorkerMessage =
     readonly task: PwaProgressTask;
   }
   | {
-    readonly type: "PWA_ANIMATION_CACHE_CANCELLED";
+    readonly type: "PWA_ANIMATION_CACHE_CANCELLED" | "PWA_ANIMATION_CACHE_MISSING";
     readonly cacheName: string;
   }
   | {
-    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED";
+    readonly type: "PWA_ANIMATION_CACHE_INVALIDATED" | "PWA_AUDIO_CACHE_INVALIDATED";
     readonly cacheName: string;
   }
   | {
@@ -136,8 +137,10 @@ export class PwaController {
   private get canCacheDeviceAudio(): boolean {
     return this.deviceAudioRequested && this.isOfflineModeAccepted
       && isServiceWorkerSupported() && isRootPublicAssetBaseUrl()
+      && (this.registration === null || !hasPendingServiceWorkerUpdate(this.registration))
       && !hasBlockingPwaStatus(this.offlineStatus)
       && this.offlineStatus !== "checking-update" && this.offlineStatus !== "error"
+      && this.deviceAnimationStatus !== "checking-cache"
       && this.deviceAnimationStatus !== "downloading" && this.deviceAnimationStatus !== "checking-update";
   }
 
@@ -147,8 +150,9 @@ export class PwaController {
   }
 
   private requestDeviceAudioDownload(): void {
-    if (!this.canCacheDeviceAudio || this.deviceAudioStatus === "complete" || this.deviceAudioStatus === "downloading") return;
-    if (this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_START" })) this.deviceAudioStatus = "downloading";
+    if (!this.canCacheDeviceAudio || this.deviceAudioStatus === "complete"
+      || this.deviceAudioStatus === "checking-cache" || this.deviceAudioStatus === "downloading") return;
+    if (this.postMessageToActiveServiceWorker({ type: "PWA_AUDIO_CACHE_START" })) this.deviceAudioStatus = "checking-cache";
   }
   public deviceAnimationErrorMessage: string | null = null;
   public deviceAnimationStatus: PwaDeviceAnimationStatus = "idle";
@@ -514,7 +518,7 @@ export class PwaController {
     void this.prepareDeviceAnimationDownload();
   }
 
-  private async prepareDeviceAnimationDownload(): Promise<void> {
+  private async prepareDeviceAnimationDownload(checkCache = true): Promise<void> {
     if (!this.shouldGateDeviceAnimations || !this.deviceAnimationsRequested) {
       return;
     }
@@ -522,7 +526,7 @@ export class PwaController {
     const operationId = this.deviceAnimationOperationId + 1;
     this.deviceAnimationOperationId = operationId;
     this.deviceAnimationErrorMessage = null;
-    this.deviceAnimationStatus = "checking-update";
+    this.deviceAnimationStatus = checkCache ? "checking-cache" : "checking-update";
     this.progress = this.progress?.task === "animation" ? null : this.progress;
     this.writeDeviceAnimationsEnabled(false);
 
@@ -531,6 +535,16 @@ export class PwaController {
     }
 
     if (!this.isCurrentDeviceAnimationOperation(operationId)) {
+      return;
+    }
+
+    if (checkCache) {
+      if (this.registration === null || hasPendingServiceWorkerUpdate(this.registration)
+        || hasBlockingPwaStatus(this.offlineStatus)) {
+        this.preemptDeviceAnimationForUpdate();
+      } else if (!this.postMessageToActiveServiceWorker({ type: "PWA_ANIMATION_CACHE_CHECK" })) {
+        this.deviceAnimationStatus = "idle";
+      }
       return;
     }
 
@@ -553,7 +567,7 @@ export class PwaController {
       type: "PWA_ANIMATION_CACHE_START",
     });
 
-    this.deviceAnimationStatus = messageSent ? "downloading" : "idle";
+    this.deviceAnimationStatus = messageSent ? "checking-cache" : "idle";
   }
 
   private isCurrentDeviceAnimationOperation(operationId: number): boolean {
@@ -587,7 +601,7 @@ export class PwaController {
   }
 
   private postMessageToActiveServiceWorker(message: {
-    readonly type: "PWA_ANIMATION_CACHE_CANCEL" | "PWA_ANIMATION_CACHE_START" | "PWA_AUDIO_CACHE_START" | "PWA_AUDIO_CACHE_CANCEL";
+    readonly type: "PWA_ANIMATION_CACHE_CANCEL" | "PWA_ANIMATION_CACHE_START" | "PWA_ANIMATION_CACHE_CHECK" | "PWA_AUDIO_CACHE_START" | "PWA_AUDIO_CACHE_CANCEL";
   }): boolean {
     if (!isServiceWorkerRuntimeSupported()) {
       return false;
@@ -869,6 +883,7 @@ export class PwaController {
 
         if (this.deviceAnimationsRequested
           && this.shouldGateDeviceAnimations
+          && (this.registration === null || !hasPendingServiceWorkerUpdate(this.registration))
           && !hasBlockingPwaStatus(this.offlineStatus)) {
           this.deviceAnimationStatus = "complete";
           this.deviceAnimationErrorMessage = null;
@@ -908,11 +923,26 @@ export class PwaController {
       return;
     }
 
+    if (message.type === "PWA_ANIMATION_CACHE_MISSING") {
+      if (this.deviceAnimationStatus === "checking-cache" && this.deviceAnimationsRequested
+        && this.shouldGateDeviceAnimations && !hasBlockingPwaStatus(this.offlineStatus)) {
+        void this.prepareDeviceAnimationDownload(false);
+      }
+      return;
+    }
+
     if (message.type === "PWA_ANIMATION_CACHE_CANCELLED") {
       if (!this.deviceAnimationsRequested) {
         this.deviceAnimationStatus = "idle";
       }
 
+      return;
+    }
+
+    if (message.type === "PWA_AUDIO_CACHE_INVALIDATED") {
+      this.deviceAudioStatus = "idle";
+      this.deviceAudioProgress = null;
+      this.requestDeviceAudioDownload();
       return;
     }
 
@@ -1101,7 +1131,9 @@ function parseServiceWorkerMessage(value: unknown): PwaServiceWorkerMessage | nu
   }
 
   if ((value.type === "PWA_ANIMATION_CACHE_CANCELLED"
-    || value.type === "PWA_ANIMATION_CACHE_INVALIDATED")
+    || value.type === "PWA_ANIMATION_CACHE_MISSING"
+    || value.type === "PWA_ANIMATION_CACHE_INVALIDATED"
+    || value.type === "PWA_AUDIO_CACHE_INVALIDATED")
     && typeof value.cacheName === "string") {
     return value as PwaServiceWorkerMessage;
   }

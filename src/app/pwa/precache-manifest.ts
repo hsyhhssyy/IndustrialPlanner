@@ -73,6 +73,20 @@ export function calculateTotalBytes(entries: readonly PrecacheEntry[]): number {
   return entries.reduce((total, entry) => total + resolvePrecacheEntryByteSize(entry), 0);
 }
 
+/** 完成标记只证明对应清单已校验完成；调用方仍需检查实际缓存条目是否存在。 */
+export function isPrecacheCompleteMarker(
+  value: unknown,
+  entries: readonly PrecacheEntry[],
+  cacheName: string,
+): boolean {
+  return typeof value === "object" && value !== null
+    && "version" in value && value.version === 1
+    && "cacheName" in value && value.cacheName === cacheName
+    && "manifestHash" in value && value.manifestHash === hashPrecacheEntries(entries)
+    && "totalFiles" in value && value.totalFiles === entries.length
+    && "totalBytes" in value && value.totalBytes === calculateTotalBytes(entries);
+}
+
 export function resolvePrecacheEntryByteSize(entry: PrecacheEntry): number {
   if (typeof entry.bytes === "number" && Number.isFinite(entry.bytes) && entry.bytes >= 0) {
     return entry.bytes;
