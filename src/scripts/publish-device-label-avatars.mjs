@@ -1,4 +1,7 @@
-#!/usr/bin/env node
+// 订正 2026-10-07：原首行 `#!/usr/bin/env node` 已删除。Vite/Vitest 的 SSR 变换不剥离 shebang，
+// 导入本模块的测试会在 transform 阶段直接 `SyntaxError: Invalid or unexpected token`；而本模块的所有
+// 入口都以 `node src/scripts/publish-device-label-avatars.mjs` 方式调用，不依赖 shebang。
+// 原首行：#!/usr/bin/env node
 
 /**
  * 以蓝图 avatar 的透明度轮廓为准，发布白色右下投影的设备标签头像。

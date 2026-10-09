@@ -1,4 +1,7 @@
-#!/usr/bin/env node
+// 订正 2026-10-07：原首行 `#!/usr/bin/env node` 已删除。Vite/Vitest 的 SSR 变换不剥离 shebang，
+// 导入本模块的测试会在 transform 阶段直接 `SyntaxError: Invalid or unexpected token`；而本模块的所有
+// 入口都以 `node src/scripts/import-building-assets.mjs ...` 方式调用，不依赖 shebang。
+// 原首行：#!/usr/bin/env node
 /** 网站导入的发布、验收、整批应用与恢复入口；下载及无损 JSON 转换由同目录 Python 工具负责。 */
 import { copyFile, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';

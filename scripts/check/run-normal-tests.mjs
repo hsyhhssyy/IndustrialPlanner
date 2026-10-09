@@ -105,7 +105,11 @@ async function runVitest(directory, label, extraArgs) {
   return new Promise((done, reject) => {
     const child = spawn(process.execPath, args, {
       cwd: root,
-      env: { ...process.env, INDUSTRIAL_NORMAL_TEST_METADATA: paths.metadata },
+      // 2026-10-07：直接执行 `npm run test` 时不经过 check-runner.sh，这里同样补上 Python 的
+      // UTF-8 默认值（原因见 check-runner.sh 顶部说明）；已显式设置的环境变量优先。
+      env: { ...process.env, INDUSTRIAL_NORMAL_TEST_METADATA: paths.metadata,
+        PYTHONUTF8: process.env.PYTHONUTF8 ?? "1",
+        PYTHONIOENCODING: process.env.PYTHONIOENCODING ?? "utf-8" },
       stdio: "inherit",
     });
     const stop = () => child.kill("SIGTERM");

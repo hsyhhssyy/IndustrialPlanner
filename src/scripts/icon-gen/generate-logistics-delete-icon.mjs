@@ -2,6 +2,11 @@
  * 物流删除图标生成脚本
  * 将 ant-design:stop-outlined（禁止符号）与 forward-filled / backward-filled（方向箭头）拼合，
  * 生成 remove-forward.svg 和 remove-backward.svg，放置于 public/svg/icons/ 目录。
+ *
+ * 订正 2026-10-07：产物目录已改为 src/app/shell/shared/icons/（唯一消费者 workbench-icons.tsx 的同级目录）。
+ * 原因：这两个文件只以 `?raw` 被内联进组件，没有任何运行时 URL 引用，而 Vite 不支持从 public 导入资源——
+ * Vitest 的 SSR 变换会把它解析成 file:///svg/... 交给 fs，导致 22 个 app 测试文件无法收集。
+ * 旧位置 public/svg/icons/ 下的文件已随本次改动迁走，public 不再保留副本。
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -45,7 +50,8 @@ function generateIcon(icons, { name, parts }) {
   const bodies = parts.map((iconName) => getIconBody(icons, iconName));
   const svg = composeSvg(bodies);
 
-  const outDir = join(REPO_ROOT, 'public', 'svg', 'icons');
+  // 订正 2026-10-07：原为 join(REPO_ROOT, 'public', 'svg', 'icons')，随导入方式改为源码内相对导入而改址。
+  const outDir = join(REPO_ROOT, 'src', 'app', 'shell', 'shared', 'icons');
   mkdirSync(outDir, { recursive: true });
 
   const outPath = join(outDir, `${name}.svg`);

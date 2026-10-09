@@ -1,4 +1,7 @@
-#!/usr/bin/env node
+// 订正 2026-10-07：原首行 `#!/usr/bin/env node` 已删除。Vite/Vitest 的 SSR 变换不剥离 shebang，
+// 导入本模块的测试会在 transform 阶段直接 `SyntaxError: Invalid or unexpected token`；而本模块的所有
+// 入口都以 `node src/scripts/sync-device-sprites.mjs` 方式调用，不依赖 shebang。
+// 原首行：#!/usr/bin/env node
 
 /**
  * 同步设备原始精灵图到运行时资源目录。

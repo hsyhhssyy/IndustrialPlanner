@@ -22,7 +22,12 @@ async function main(): Promise<void> {
   if (!Number.isSafeInteger(proposals) || proposals <= 0) throw new Error("proposals 必须为正安全整数。");
   if (values.strategy !== "compact" && values.strategy !== "baseline") throw new Error("strategy 必须为 compact 或 baseline。");
   const execute = promisify(execFile);
-  await execute(values.python, ["-c", "import matplotlib"]);
+  // 2026-10-07：Windows 上 Python 默认以 GBK 读写，而这里传给 -c 的源码与生成的 JSON 都是 UTF-8，
+  // plot-eda-curve.py 读取报告时会以 UnicodeDecodeError 失败。显式给子进程补 UTF-8 默认值，
+  // 已显式设置的环境变量优先。CI（ubuntu）本身即为 UTF-8，无副作用。
+  const pythonEnv = { ...process.env,
+    PYTHONUTF8: process.env.PYTHONUTF8 ?? "1", PYTHONIOENCODING: process.env.PYTHONIOENCODING ?? "utf-8" };
+  await execute(values.python, ["-c", "import matplotlib"], { env: pythonEnv });
   const output = edaOutputPath("evaluations", `${Date.now()}-${process.pid}`);
   await mkdir(output, { recursive: true });
   const rawInput = await readFile(resolve(values.plan), "utf8");
@@ -64,7 +69,7 @@ async function main(): Promise<void> {
       stopReason: result.localEvaluations >= proposals ? "proposal-budget" : "time-budget" };
     await writeFile(resolve(output, "report.json"), JSON.stringify(report, null, 2));
     await saveProposalCurve(output, result.proposalCurve);
-    await execute(values.python, ["src/scripts/plot-eda-curve.py", resolve(output, "report.json")]);
+    await execute(values.python, ["src/scripts/plot-eda-curve.py", resolve(output, "report.json")], { env: pythonEnv });
     console.log(JSON.stringify({ output, elapsedMs: result.elapsedMs, bestArea: result.proposalCurve.bestArea,
       bestCoverage: result.proposalCurve.bestCoverage,
       budgetCompletedExactly: report.budgetCompletedExactly, improvements: result.proposalCurve.improvements }));

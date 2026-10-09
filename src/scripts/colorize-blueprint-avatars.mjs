@@ -1,4 +1,7 @@
-#!/usr/bin/env node
+// 订正 2026-10-07：原首行 `#!/usr/bin/env node` 已删除。Vite/Vitest 的 SSR 变换不剥离 shebang，
+// 一旦有测试或构建链路导入本模块就会在 transform 阶段 `SyntaxError: Invalid or unexpected token`；
+// 本模块以 `node src/scripts/colorize-blueprint-avatars.mjs` 方式调用，不依赖 shebang。
+// 原首行：#!/usr/bin/env node
 
 /**
  * 将 public/blueprint-view/avatar 下的纯白色 avatar 转换为深灰色。

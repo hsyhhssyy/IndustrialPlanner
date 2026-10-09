@@ -30,6 +30,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
+# 2026-10-07：Windows 上 Python 默认以 GBK 读写，而仓库内调用 python3 的测试
+# （src/tests/scripts/eda-acceptance.test.ts 等）以 -c 传入 UTF-8 源码并解析 UTF-8 输出，
+# 会以 `UnicodeDecodeError: 'gbk' codec can't decode byte ...` 失败——与本机 Python 是否存在无关。
+# 这里为全部检查步骤提供 UTF-8 默认值；已显式设置的环境变量优先，不受影响。
+# CI（ubuntu-latest）本身即为 UTF-8，此设置无副作用。
+: "${PYTHONUTF8:=1}"
+: "${PYTHONIOENCODING:=utf-8}"
+export PYTHONUTF8 PYTHONIOENCODING
+
 # ---- 辅助函数 ----
 
 init_run_dir() {

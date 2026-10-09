@@ -1,0 +1,77 @@
+name: CI
+
+# 订正 2026-10-06（代码检查：全项目没有自动化质量门禁）：
+# 此前仓库只有 ai-issue-analysis.yml 与 release.yml 两个工作流，而 release.yml 仅在 tag push 时
+# 执行 npm run build，没有任何 lint / tsc / test 步骤。于是 .docs 规范里
+# 「full-check 的发布版测试失败、未执行或清理失败均不得算通过」这类约束完全依赖人工或 AI
+# 主动执行 skill，回归缺陷没有任何自动拦截。
+# 本工作流把 scripts/check/check-runner.sh 已有的四道基础检查固化为 PR 与分支推送的门禁：
+# ESLint → TypeScript → Vitest normal → Build。与 simple-check 的范围一致。
+# E2E、Blueprint 与发布版测试仍只在 full-check 中按用户授权执行，不在此处。
+#
+# 未验证说明：本文件由代码检查任务生成，执行环境无法 push，故未经真实 CI 运行验证；
+# 首次运行若暴露环境差异（平台相关用例、runner 资源不足），按失败日志调整步骤范围即可，
+# 不要为通过而删除检查项。
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Vitest normal 在本仓库耗时很长，超时留足余量；真挂死时宁可失败也不无限占用 runner。
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npx eslint . --ext .ts,.tsx
+
+      - name: TypeScript
+        run: npx tsc -b --noEmit
+
+      - name: Build
+        run: npm run build
+
+      # 2026-10-06 实测基线（用于判断本步骤的失败是否属于既有问题）：
+      #   · Node 26：normal 套件 626 failed / 2871 passed —— 根因是 Node 22+ 在 globalThis 上
+      #     预定义了实验性 localStorage getter（无 --localstorage-file 时值为 undefined），
+      #     而 vitest 的 jsdom 全局注入只填充尚不存在的键，于是 jsdom 的 storage 被整体跳过。
+      #   · Node 24：19 failed / 3483 passed —— 上述遮蔽消失，基线正常。
+      #     其中 11 个在本机是 python3 缺失、5 个依赖 /proc（Windows 无）、1 个是 fixture 路径差异，
+      #     GitHub Actions 的 ubuntu 上这几类通常不出现；剩余 3 个（checkpoint-memory、task-sharding）
+      #     是仓库既有真实失败，与本工作流无关。
+      #   · Node 22 未实测，但大概率同 Node 24（该 getter 是较新版本才默认定义的）。
+      #     若本步骤出现大批 localStorage/undefined 相关失败，把 node-version 改为 24 即可。
+      # 建议首次通过 workflow_dispatch 手动触发一次，建立 CI 侧的真实基线。
+      - name: Vitest (normal)
+        run: npm run test:normal
+
+      - name: Upload normal-test evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: normal-tests-evidence
+          path: .temp/full-check/normal-tests
+          if-no-files-found: ignore
+          retention-days: 7
