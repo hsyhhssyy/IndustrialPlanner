@@ -14,8 +14,17 @@ spec:
       labels:
         app: industrial-planner
     spec:
-      imagePullSecrets:
-        - name: ${IMAGE_PULL_SECRET}
+      # AI-REMOVED 2026-10-09:
+      # Reason: 非 Alpha 镜像改为公开 GHCR 包，不再引用私有拉取 Secret。
+      # Trigger: 用户要求全部渠道迁移，普通渠道公开。
+      # Evidence: release workflow 在部署前验证包为 public 且可匿名读取镜像。
+      # Replacement: None
+      # Risk: 首次包未公开时部署会在前置验证阶段失败。
+      # Human Review: Required
+      #
+      # Original code:
+      #       imagePullSecrets:
+      #         - name: ${IMAGE_PULL_SECRET}
       containers:
         - name: industrial-planner
           image: ${IMAGE}

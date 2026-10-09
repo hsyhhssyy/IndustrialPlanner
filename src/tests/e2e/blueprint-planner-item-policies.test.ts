@@ -160,8 +160,16 @@ const scenario = resolve(directory, "scenario.js");
       //     }}) : result;
       //   };
       // });
+      await page.addInitScript(() => {
+        const settings = JSON.parse(localStorage.getItem('v3-user-settings-dialog') || '{}');
+        settings.values = {...settings.values, 'other-experimental-features': true};
+        localStorage.setItem('v3-user-settings-dialog', JSON.stringify(settings));
+      });
       await page.goto(${JSON.stringify(baseURL ?? "http://127.0.0.1:4174")});
-      await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.blueprintPlanner != null);
+      await page.waitForFunction(() => {
+        const ready = window.__test__?.readiness();
+        return ready?.assembled && ready.canvasAttached && ready.viewportValid;
+      });
       await page.evaluate(async plan => {
         const host = window.__industrialPlannerAppHost;
         const { createSimulationHost } = await import('/src/simulation/simulation-host.ts');
@@ -175,6 +183,7 @@ const scenario = resolve(directory, "scenario.js");
       assert(screen.deviceClass === ${JSON.stringify(profile.name)} && screen.hasTouch, '屏幕档位不匹配');
       const dialog = page.getByRole('dialog').filter({has:page.locator('#blueprint-planner-title')});
       const tree = dialog.getByRole('region', {name:'环境供料'});
+      await tree.waitFor({state:'visible'});
       assert(await tree.getByRole('row').count() === 4, '环境依赖树缺少上游');
       await tree.getByRole('button', {name:'折叠',exact:true}).click();
       assert(await tree.getByRole('row').count() === 2, '环境树没有折叠');

@@ -51,6 +51,7 @@ const TEST_WORLD_DOCUMENT_ASSET_TYPE = "world-document";
 
 interface BrowserWorldDocument {
   readonly baseId: string;
+  readonly entityOrder: readonly string[];
   readonly entities: Readonly<Record<string, {
     readonly definitionId: string;
   }>>;
@@ -819,16 +820,23 @@ async function runAutoDownloadScenario(options: {
   console.log(`[TEST] Check completed, revision=${revisionAfterCheck}`);
 
   // ─── Phase 6: 通过 API 推送远端新版本（移除精炼炉） ───
-  const currentDocument = await page.evaluate(() =>
-    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.editor?.document?.getSnapshot()
-  );
+  const currentDocument = await page.evaluate(async (): Promise<BrowserWorldDocument> => {
+    const documentSnapshot = (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+      ?.workspace?.editor?.document?.getSnapshot();
+    if (!documentSnapshot) throw new Error("Current world document is unavailable.");
+    const syncHostModuleUrl = "/src/sync/sync-host.ts";
+    const { createWorldDocumentRemoteValue } = await import(/* @vite-ignore */ syncHostModuleUrl);
+    return createWorldDocumentRemoteValue(documentSnapshot);
+  });
   const remoteDocumentWithoutFurnace = {
     ...currentDocument,
     entities: Object.fromEntries(
-      Object.entries(currentDocument!.entities).filter(
+      Object.entries(currentDocument.entities).filter(
         ([, entity]) => entity.definitionId !== "furnance_1",
       ),
+    ),
+    entityOrder: currentDocument.entityOrder.filter(
+      id => currentDocument.entities[id]?.definitionId !== "furnance_1",
     ),
   };
   const remoteContent = JSON.stringify(remoteDocumentWithoutFurnace);

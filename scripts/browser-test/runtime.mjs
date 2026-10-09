@@ -174,6 +174,8 @@ export class BrowserRound {
 
   async openCli(name, config) {
     this.#assertRunning();
+    await mkdir(this.directory, { recursive: true });
+    this.#assertRunning();
     // 在启动之前登记，open 部分成功时也能关闭自己的 daemon。
     this.sessions.set(name, null);
     const filename = resolve(this.directory, `${name}.config.json`);

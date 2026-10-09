@@ -10,11 +10,22 @@ for (const profile of SCREEN_PROFILES) {
     const cli = await browserSession.openCli(profile);
     const result = await cli.runJson(`async page => {
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await page.addInitScript(() => localStorage.setItem('industrial-planner.experimental.eda', 'true'));
+      await page.addInitScript(() => {
+        const settings = JSON.parse(localStorage.getItem('v3-user-settings-dialog') || '{}');
+        settings.values = {...settings.values, 'other-experimental-features': true};
+        localStorage.setItem('v3-user-settings-dialog', JSON.stringify(settings));
+        localStorage.setItem('industrial-planner.experimental.eda', 'true');
+      });
       await page.goto(${JSON.stringify(baseURL ?? "http://127.0.0.1:4174")}, {waitUntil:'domcontentloaded'});
       const open = async () => {
-        await page.waitForFunction(() => !!window.__industrialPlannerAppHost?.workspace.blueprintPlanner);
-        await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan), ${JSON.stringify(separator.request.plan)});
+        await page.waitForFunction(() => {
+          const ready = window.__test__?.readiness();
+          return ready?.assembled && ready.canvasAttached && ready.viewportValid;
+        });
+        await page.evaluate(plan => {
+          const controller = window.__industrialPlannerAppHost.blueprintPlannerDialog;
+          controller.setEnabled(true); controller.open(plan);
+        }, ${JSON.stringify(separator.request.plan)});
       };
       await open();
       const field = page.getByRole('combobox', {name:'存取线形态', exact:true});

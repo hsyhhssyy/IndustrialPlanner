@@ -1,4 +1,5 @@
 {
+  "_comment": "AI-REMOVED 2026-10-09: registry、username、password、image_name、alpha_image_name、image_pull_secret 六个旧字段仅保留原值供审计，当前发布不读取。Reason: 全渠道从旧 Registry 迁到 GHCR。Trigger: 用户要求从下一版迁移、普通渠道公开、Alpha 私有。Evidence: release.yml 使用 GITHUB_TOKEN 和固定 GHCR 包名。Replacement: .github/scripts/ghcr-image.sh、GHCR_READ_TOKEN 与固定 K8s Secret ghcr-alpha。Risk: 首次公开包需网页设置 Public，Alpha 需配置 GHCR_READ_TOKEN。Human Review: Required。",
   "registry": "docker.com",
   "username": "your-username",
   "password": "your-password",

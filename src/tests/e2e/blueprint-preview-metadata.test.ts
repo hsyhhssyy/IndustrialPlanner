@@ -21,7 +21,7 @@ for (const profile of SCREEN_PROFILES) {
           if (!await saveBlueprintDocument(blueprint)) throw Error('测试蓝图准备失败');
         }, ${JSON.stringify(blueprint)});
         await page.getByRole('button', {
-          name:${JSON.stringify(locale === "zh-CN" ? "蓝图模式" : "Blueprint Mode")},exact:true,
+          name:${JSON.stringify(locale === "zh-CN" ? "蓝图模式" : "Blueprint")},exact:true,
         }).click();
         await page.locator('[data-blueprint-id="fixture:copy-selection"]').click();
         const dialog = page.locator('[data-dialog-key="blueprint-preview"]');
@@ -70,7 +70,7 @@ for (const profile of SCREEN_PROFILES) {
         },
         entityCount: "2",
         values: [
-          ["fixture-v1", locale === "zh-CN" ? "架构版本" : "Schema Version", "6"],
+          ["fixture-v1", locale === "zh-CN" ? "架构版本" : "Schema Version", String(blueprint.schemaVersion)],
           // 两个实体之间留一格，面积应为包围盒 3×1，而非实体数量 2。
           ["3 x 1", locale === "zh-CN" ? "面积" : "Area", "3"],
         ],

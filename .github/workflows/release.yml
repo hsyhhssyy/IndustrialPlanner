@@ -5,6 +5,7 @@ run-name: Release ${{ inputs.tag_name || github.ref_name }}
 # AI-CORRECTION 2026-08-15: 发布阶梯现为 pre: Docker + K8s；beta: Docker + K8s → EdgeOne；stable/Patch: Docker + K8s → EdgeOne → GitHub Pages。GitHub Release 和 dist zip 仅由 stable/Patch 创建。
 # AI-CORRECTION 2026-08-15: 上述箭头仅表示发布等级覆盖范围；同一 tag 面向所有允许环境的部署在 dist 构建完成后并行执行。
 # AI-CORRECTION 2026-08-29: alpha: 私有 Docker 镜像 + 单实例 K8s Alpha；pre/beta/stable 规则保持不变。Alpha 只在完整 commit SHA 路径暴露当前构建。
+# AI-CORRECTION 2026-10-09: 全渠道镜像改为 GHCR；Pre/Beta/Stable/Patch 共用公开包 industrial-planner-beta，Alpha 使用独立私有包 industrial-planner-alpha-private。
 
 on:
   push:
@@ -335,6 +336,9 @@ jobs:
       - prepare
       - build-dist
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       RELEASE_CHANNEL: ${{ needs.prepare.outputs.channel }}
@@ -352,55 +356,93 @@ jobs:
           name: dist
           path: ./dist
 
-      - name: Load container publish config
+      # AI-REMOVED 2026-10-09:
+      # Reason: 全渠道改为 GHCR，停止读取旧 Registry、长期推送密码和镜像名。
+      # Trigger: 用户要求从下一版统一迁移到 GHCR，公开普通渠道并隔离私有 Alpha。
+      # Evidence: Search-First 确认现有 Docker login/build-push 可直接使用 GITHUB_TOKEN；原配置共用 Registry。
+      # Replacement: .github/scripts/ghcr-image.sh 与下方 GHCR login。
+      # Risk: 首次公开包默认私有，需要网页设置 Public；旧配置中的镜像字段不再生效。
+      # Human Review: Required
+      #
+      # Original code:
+      #       - name: Load container publish config
+      #         id: container
+      #         env:
+      #           DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+      #         shell: bash
+      #         run: |
+      #           set -euo pipefail
+      #
+      #           config_file="$RUNNER_TEMP/deploy-config.json"
+      #           printf '%s' "$DEPLOY_CONFIG" > "$config_file"
+      #           image_name_key='image_name'
+      #           if [ "$RELEASE_CHANNEL" = 'alpha' ]; then
+      #             image_name_key='alpha_image_name'
+      #           fi
+      #
+      #           jq -e --arg image_name_key "$image_name_key" '
+      #             [.registry, .username, .password, .[$image_name_key]]
+      #             | all(type == "string" and length > 0)
+      #           ' "$config_file" > /dev/null
+      #
+      #           registry="$(jq -r '.registry' "$config_file")"
+      #           username="$(jq -r '.username' "$config_file")"
+      #           password="$(jq -r '.password' "$config_file")"
+      #           image_name="$(jq -r --arg image_name_key "$image_name_key" '.[$image_name_key]' "$config_file")"
+      #           image="${registry}/${image_name}:${RELEASE_TAG}"
+      #
+      #           echo "::add-mask::$password"
+      #           echo "registry=$registry" >> "$GITHUB_OUTPUT"
+      #           echo "username=$username" >> "$GITHUB_OUTPUT"
+      #           echo "password=$password" >> "$GITHUB_OUTPUT"
+      #           echo "image=$image" >> "$GITHUB_OUTPUT"
+      #           {
+      #             echo 'tags<<EOF'
+      #             echo "$image"
+      #             if [ "$RELEASE_CHANNEL" = 'stable' ]; then
+      #               echo "${registry}/${image_name}:latest"
+      #             fi
+      #             echo 'EOF'
+      #           } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve GHCR image
         id: container
-        env:
-          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
         shell: bash
-        run: |
-          set -euo pipefail
+        run: bash .github/scripts/ghcr-image.sh
 
-          config_file="$RUNNER_TEMP/deploy-config.json"
-          printf '%s' "$DEPLOY_CONFIG" > "$config_file"
-          image_name_key='image_name'
-          if [ "$RELEASE_CHANNEL" = 'alpha' ]; then
-            image_name_key='alpha_image_name'
-          fi
-
-          jq -e --arg image_name_key "$image_name_key" '
-            [.registry, .username, .password, .[$image_name_key]]
-            | all(type == "string" and length > 0)
-          ' "$config_file" > /dev/null
-
-          registry="$(jq -r '.registry' "$config_file")"
-          username="$(jq -r '.username' "$config_file")"
-          password="$(jq -r '.password' "$config_file")"
-          image_name="$(jq -r --arg image_name_key "$image_name_key" '.[$image_name_key]' "$config_file")"
-          image="${registry}/${image_name}:${RELEASE_TAG}"
-
-          echo "::add-mask::$password"
-          echo "registry=$registry" >> "$GITHUB_OUTPUT"
-          echo "username=$username" >> "$GITHUB_OUTPUT"
-          echo "password=$password" >> "$GITHUB_OUTPUT"
-          echo "image=$image" >> "$GITHUB_OUTPUT"
-          {
-            echo 'tags<<EOF'
-            echo "$image"
-            if [ "$RELEASE_CHANNEL" = 'stable' ]; then
-              echo "${registry}/${image_name}:latest"
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+      - name: Validate existing GHCR package visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GHCR_NAMESPACE: ${{ steps.container.outputs.namespace }}
+          GHCR_PACKAGE: ${{ steps.container.outputs.package_name }}
+          GHCR_VISIBILITY: ${{ steps.container.outputs.visibility }}
+        run: bash .github/scripts/check-ghcr-visibility.sh "$GHCR_NAMESPACE" "$GHCR_PACKAGE" "$GHCR_VISIBILITY" true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Registry
+      # AI-REMOVED 2026-10-09:
+      # Reason: GHCR 推送复用当前 workflow 的临时 Token，不再传递旧 Registry 密码。
+      # Trigger: 全渠道 GHCR 迁移。
+      # Evidence: build-docker 已声明 packages: write，GHCR 支持 GITHUB_TOKEN。
+      # Replacement: Log in to GHCR。
+      # Risk: 已有包必须授予当前 workflow 仓库 Actions 写权限。
+      # Human Review: Required
+      #
+      # Original code:
+      #       - name: Log in to Docker Registry
+      #         uses: docker/login-action@v3
+      #         with:
+      #           registry: ${{ steps.container.outputs.registry }}
+      #           username: ${{ steps.container.outputs.username }}
+      #           password: ${{ steps.container.outputs.password }}
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ steps.container.outputs.registry }}
-          username: ${{ steps.container.outputs.username }}
-          password: ${{ steps.container.outputs.password }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -409,6 +451,26 @@ jobs:
           file: .github/Dockerfile
           push: true
           tags: ${{ steps.container.outputs.tags }}
+          # 避免公开镜像通过构建证明附带私有源仓库提交和构建参数。
+          provenance: false
+
+      - name: Validate published GHCR package visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GHCR_NAMESPACE: ${{ steps.container.outputs.namespace }}
+          GHCR_PACKAGE: ${{ steps.container.outputs.package_name }}
+          GHCR_VISIBILITY: ${{ steps.container.outputs.visibility }}
+        run: bash .github/scripts/check-ghcr-visibility.sh "$GHCR_NAMESPACE" "$GHCR_PACKAGE" "$GHCR_VISIBILITY"
+
+      - name: Verify anonymous image access
+        if: env.RELEASE_CHANNEL != 'alpha'
+        env:
+          IMAGE: ${{ steps.container.outputs.image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker logout ghcr.io
+          docker buildx imagetools inspect "$IMAGE" > /dev/null
 
   deploy-container:
     name: Deploy container
@@ -442,18 +504,36 @@ jobs:
           echo "domain=$(jq -r '.domain' "$config_file")" >> "$GITHUB_ENV"
           echo "namespace=$(jq -r '.namespace' "$config_file")" >> "$GITHUB_ENV"
 
-          # image_pull_secret: 未配置时回退到 registry 名
-          image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
-          if [ -z "$image_pull_secret" ]; then
-            image_pull_secret="$(jq -r '.registry' "$config_file")"
-          fi
-          echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
+          # AI-REMOVED 2026-10-09:
+          # Reason: 非 Alpha 使用公开 GHCR 镜像，K8s 匿名拉取，无需 imagePullSecret。
+          # Trigger: 用户明确选择公开镜像。
+          # Evidence: GHCR public 包支持匿名访问；旧回退读取的是已废弃 Registry。
+          # Replacement: .github/k8s/deployment.yaml 删除凭据引用并注释保留。
+          # Risk: 首次发布必须先将 GHCR 包设置为 Public。
+          # Human Review: Required
+          #
+          # Original code:
+          #           # image_pull_secret: 未配置时回退到 registry 名
+          #           image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
+          #           if [ -z "$image_pull_secret" ]; then
+          #             image_pull_secret="$(jq -r '.registry' "$config_file")"
+          #           fi
+          #           echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
 
       - name: Render and apply K8s manifests
         env:
           DOMAIN: ${{ env.domain }}
           NAMESPACE: ${{ env.namespace }}
-          IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
+          # AI-REMOVED 2026-10-09:
+          # Reason: 常规部署不再渲染私有拉取凭据。
+          # Trigger: 公开 GHCR 镜像。
+          # Evidence: deployment.yaml 不再包含活动 IMAGE_PULL_SECRET 引用。
+          # Replacement: None
+          # Risk: Low
+          # Human Review: Required
+          #
+          # Original code:
+          #           IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
           KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
         shell: bash
         run: |
@@ -507,12 +587,21 @@ jobs:
           echo "alpha_domain=$alpha_domain" >> "$GITHUB_ENV"
           echo "namespace=$(jq -r '.namespace' "$config_file")" >> "$GITHUB_ENV"
 
-          # image_pull_secret: 未配置时回退到 registry 名
-          image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
-          if [ -z "$image_pull_secret" ]; then
-            image_pull_secret="$(jq -r '.registry' "$config_file")"
-          fi
-          echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
+          # AI-REMOVED 2026-10-09:
+          # Reason: Alpha 改用专用 ghcr-alpha Secret，避免继承旧 Registry 的凭据。
+          # Trigger: 全渠道 GHCR 迁移且 Alpha 保持私有。
+          # Evidence: 旧 Secret 的凭据不能用于 GHCR，GITHUB_TOKEN 不适合长期保存在集群。
+          # Replacement: Render and apply Alpha K8s manifests 中通过 GHCR_READ_TOKEN 维护 ghcr-alpha。
+          # Risk: 首次 Alpha 部署需要配置拥有 read:packages 的 PAT classic。
+          # Human Review: Required
+          #
+          # Original code:
+          #           # image_pull_secret: 未配置时回退到 registry 名
+          #           image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
+          #           if [ -z "$image_pull_secret" ]; then
+          #             image_pull_secret="$(jq -r '.registry' "$config_file")"
+          #           fi
+          #           echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
 
       - name: Validate Alpha source identity
         shell: bash
@@ -528,7 +617,18 @@ jobs:
         env:
           ALPHA_DOMAIN: ${{ env.alpha_domain }}
           NAMESPACE: ${{ env.namespace }}
-          IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
+          # AI-REMOVED 2026-10-09:
+          # Reason: 私有镜像改为专用 GHCR 拉取 Secret。
+          # Trigger: GHCR 迁移。
+          # Evidence: 下方固定创建或更新 ghcr-alpha。
+          # Replacement: IMAGE_PULL_SECRET: ghcr-alpha。
+          # Risk: Low
+          # Human Review: Required
+          #
+          # Original code:
+          #           IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
+          IMAGE_PULL_SECRET: ghcr-alpha
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
           KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
         shell: bash
         run: |
@@ -538,6 +638,14 @@ jobs:
           printf '%s' "$KUBECONFIG_DATA" > "$kubeconfig_file"
           chmod 600 "$kubeconfig_file"
           export KUBECONFIG="$kubeconfig_file"
+
+          : "${GHCR_READ_TOKEN:?Set GHCR_READ_TOKEN to a hsyhhssyy PAT classic with read:packages and access to the private Alpha package.}"
+          kubectl create secret docker-registry "$IMAGE_PULL_SECRET" \
+            --docker-server=ghcr.io \
+            --docker-username=hsyhhssyy \
+            --docker-password="$GHCR_READ_TOKEN" \
+            --namespace="$NAMESPACE" --dry-run=client -o yaml \
+            | kubectl apply -n "$NAMESPACE" -f -
 
           envsubst < .github/k8s/alpha-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
           kubectl rollout status deployment/industrial-planner-alpha -n "$NAMESPACE" --timeout=120s
