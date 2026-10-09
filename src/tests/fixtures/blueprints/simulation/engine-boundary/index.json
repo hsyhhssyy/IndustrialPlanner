@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/engine-boundary.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-engine-boundary-storage-9bf3f855.schema6.json",
+        "file": "scene-01-engine-boundary-storage-9bf3f855.schema7.json",
         "blueprintId": "req-076-engine-boundary-storage",
         "version": "fixture-v1"
       }
@@ -18,7 +18,7 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-engine-boundary-topology-9097583b.schema6.json",
+        "file": "scene-02-engine-boundary-topology-9097583b.schema7.json",
         "blueprintId": "req-076-engine-boundary-topology",
         "version": "fixture-v1"
       }
@@ -26,7 +26,7 @@
     "scene-03": [
       {
         "parameters": {},
-        "file": "scene-03-engine-boundary-operating-status-83ae3b34.schema6.json",
+        "file": "scene-03-engine-boundary-operating-status-83ae3b34.schema7.json",
         "blueprintId": "req-076-engine-boundary-operating-status",
         "version": "fixture-v1"
       }
@@ -34,11 +34,10 @@
     "scene-04": [
       {
         "parameters": {},
-        "file": "scene-04-dense-lazy-snapshot-8752f8a6.schema6.json",
+        "file": "scene-04-dense-lazy-snapshot-8752f8a6.schema7.json",
         "blueprintId": "req-076-dense-lazy-snapshot",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

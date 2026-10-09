@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/registry/device-default-orientation.test.ts",
   "createdAt": "2026-09-14",
   "scenes": {
@@ -44,7 +44,7 @@
           "rotation": 0,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-1.schema6.json",
+        "file": "scene-01-variant-1.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -85,7 +85,7 @@
           "rotation": 90,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-2.schema6.json",
+        "file": "scene-01-variant-2.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -126,7 +126,7 @@
           "rotation": 180,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-3.schema6.json",
+        "file": "scene-01-variant-3.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -167,7 +167,7 @@
           "rotation": 270,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-4.schema6.json",
+        "file": "scene-01-variant-4.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -208,7 +208,7 @@
           "rotation": 0,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-5.schema6.json",
+        "file": "scene-01-variant-5.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -249,7 +249,7 @@
           "rotation": 90,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-6.schema6.json",
+        "file": "scene-01-variant-6.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -290,7 +290,7 @@
           "rotation": 180,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-7.schema6.json",
+        "file": "scene-01-variant-7.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -331,7 +331,7 @@
           "rotation": 270,
           "rotationOffset": 270
         },
-        "file": "scene-01-variant-8.schema6.json",
+        "file": "scene-01-variant-8.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -358,7 +358,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-9.schema6.json",
+        "file": "scene-01-variant-9.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -385,7 +385,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-10.schema6.json",
+        "file": "scene-01-variant-10.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -412,7 +412,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-11.schema6.json",
+        "file": "scene-01-variant-11.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -439,7 +439,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-12.schema6.json",
+        "file": "scene-01-variant-12.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -466,7 +466,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-13.schema6.json",
+        "file": "scene-01-variant-13.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -493,7 +493,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-14.schema6.json",
+        "file": "scene-01-variant-14.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -520,7 +520,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-15.schema6.json",
+        "file": "scene-01-variant-15.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -547,7 +547,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-16.schema6.json",
+        "file": "scene-01-variant-16.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -616,7 +616,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-17.schema6.json",
+        "file": "scene-01-variant-17.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -685,7 +685,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-18.schema6.json",
+        "file": "scene-01-variant-18.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -754,7 +754,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-19.schema6.json",
+        "file": "scene-01-variant-19.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -823,7 +823,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-20.schema6.json",
+        "file": "scene-01-variant-20.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -892,7 +892,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-21.schema6.json",
+        "file": "scene-01-variant-21.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -961,7 +961,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-22.schema6.json",
+        "file": "scene-01-variant-22.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1030,7 +1030,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-23.schema6.json",
+        "file": "scene-01-variant-23.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1099,7 +1099,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-24.schema6.json",
+        "file": "scene-01-variant-24.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1126,7 +1126,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-25.schema6.json",
+        "file": "scene-01-variant-25.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1153,7 +1153,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-26.schema6.json",
+        "file": "scene-01-variant-26.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1180,7 +1180,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-27.schema6.json",
+        "file": "scene-01-variant-27.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1207,7 +1207,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-28.schema6.json",
+        "file": "scene-01-variant-28.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1248,7 +1248,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-29.schema6.json",
+        "file": "scene-01-variant-29.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1289,7 +1289,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-30.schema6.json",
+        "file": "scene-01-variant-30.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1330,7 +1330,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-31.schema6.json",
+        "file": "scene-01-variant-31.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1371,7 +1371,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-32.schema6.json",
+        "file": "scene-01-variant-32.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1412,7 +1412,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-33.schema6.json",
+        "file": "scene-01-variant-33.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1453,7 +1453,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-34.schema6.json",
+        "file": "scene-01-variant-34.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1494,7 +1494,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-35.schema6.json",
+        "file": "scene-01-variant-35.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1535,7 +1535,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-36.schema6.json",
+        "file": "scene-01-variant-36.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1562,7 +1562,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-37.schema6.json",
+        "file": "scene-01-variant-37.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1589,7 +1589,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-38.schema6.json",
+        "file": "scene-01-variant-38.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1616,7 +1616,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-39.schema6.json",
+        "file": "scene-01-variant-39.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1643,7 +1643,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-40.schema6.json",
+        "file": "scene-01-variant-40.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1684,7 +1684,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-41.schema6.json",
+        "file": "scene-01-variant-41.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1725,7 +1725,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-42.schema6.json",
+        "file": "scene-01-variant-42.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1766,7 +1766,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-43.schema6.json",
+        "file": "scene-01-variant-43.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1807,7 +1807,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-44.schema6.json",
+        "file": "scene-01-variant-44.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1848,7 +1848,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-45.schema6.json",
+        "file": "scene-01-variant-45.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1889,7 +1889,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-46.schema6.json",
+        "file": "scene-01-variant-46.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1930,7 +1930,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-47.schema6.json",
+        "file": "scene-01-variant-47.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1971,7 +1971,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-48.schema6.json",
+        "file": "scene-01-variant-48.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1998,7 +1998,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-49.schema6.json",
+        "file": "scene-01-variant-49.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2025,7 +2025,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-50.schema6.json",
+        "file": "scene-01-variant-50.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2052,7 +2052,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-51.schema6.json",
+        "file": "scene-01-variant-51.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2079,7 +2079,7 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-52.schema6.json",
+        "file": "scene-01-variant-52.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2106,7 +2106,7 @@
           "rotation": 0,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-53.schema6.json",
+        "file": "scene-01-variant-53.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2133,7 +2133,7 @@
           "rotation": 90,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-54.schema6.json",
+        "file": "scene-01-variant-54.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2160,7 +2160,7 @@
           "rotation": 180,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-55.schema6.json",
+        "file": "scene-01-variant-55.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2187,10 +2187,9 @@
           "rotation": 270,
           "rotationOffset": 180
         },
-        "file": "scene-01-variant-56.schema6.json",
+        "file": "scene-01-variant-56.schema7.json",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

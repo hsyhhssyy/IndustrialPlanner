@@ -120,7 +120,7 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
     //       createEntity("outside-belt", "belt_straight_1x1", -1, 0),
     //       createEntity("valid-pipe", "pipe_straight_1x1", 4, 0),
     //     ]
-    const document = createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-01-variant-1.schema6.json")));
+    const document = createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-01-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
 
@@ -172,7 +172,7 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
     //         createEntity("document-storage", "storager_1", 10, 0),
     //       ]
     const document = {
-      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-02-variant-1.schema6.json")), TEST_BUILTIN_BASE_ID),
+      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-02-variant-1.schema7.json")), TEST_BUILTIN_BASE_ID),
       slotLinks: [
         {
           id: "builtin-storage-link",
@@ -228,7 +228,7 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
     //         createEntity("unloader", "unloader_1", 2, 0),
     //       ]
     const document = {
-      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-03-variant-1.schema6.json")), "valley4_infra_outpost"),
+      ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-03-variant-1.schema7.json")), "valley4_infra_outpost"),
       slotLinks: [
         createWarehouseSlotLink("unloader", "item_plant_moss_3"),
       ],

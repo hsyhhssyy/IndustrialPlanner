@@ -6,7 +6,7 @@ import type { SlotLinkDefinition } from "@/domain/shared/slot-link";
 import { createDarkPipeSlotLink, findDarkPipeSlotLinkForEntity, listDocumentRegionalDarkPipeLinks } from "@/shared/dark-pipe-link";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
-import fixture from "../fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema6.json";
+import fixture from "../fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema7.json";
 
 const baseId = fixture.baseId;
 const localLink = createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" });

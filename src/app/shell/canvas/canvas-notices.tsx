@@ -1,3 +1,4 @@
+import { readDataMigrationProgress, subscribeDataMigration } from "@/shared/data-migration";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useSyncExternalStore } from "react";
@@ -23,6 +24,7 @@ export const CanvasNotices = observer(function CanvasNotices({ state, translate,
   const { canvasToastKey, canvasAlertKey } = state;
   const t = translate;
   const storageFailed = useSyncExternalStore(subscribeToStorageFailures, hasStorageFailure);
+  const migration = useSyncExternalStore(subscribeDataMigration, readDataMigrationProgress);
 
   return (
     <div className={`${styles.notices} ${isTouchLandscapeScreenProfile(screenProfile) ? styles.compact : ""}`}>
@@ -31,6 +33,7 @@ export const CanvasNotices = observer(function CanvasNotices({ state, translate,
           {t("canvas.storageFailure")}
         </div>
       ) : null}
+      {migration.notice && <div className={styles.alert} role="status">{migration.notice}</div>}
       {canvasToastKey !== null ? (
         <div className={`canvas-toast ${styles.toast}`} role="status" aria-live="polite" aria-atomic="true">
           {t(canvasToastKey)}

@@ -5,6 +5,7 @@ import { AYU_LIGHT_THEME } from "./ayu-light";
 
 export { AYU_DARK_THEME } from "./ayu-dark";
 export { AYU_LIGHT_THEME } from "./ayu-light";
+export { applyAppThemeToDocument } from "./theme-applicator";
 
 export const DEFAULT_APP_THEME_ID: AppThemeId = "ayu-light";
 

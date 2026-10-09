@@ -29,7 +29,7 @@ function setup(records?: Map<string, BlueprintPlannerTaskFile>) {
 
 describe("持久蓝图识别任务", () => {
   it("边界检查运行中即可导出，输入配置、未知出口和原图可导入并继续识别", async () => {
-    const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema6.json`);
+    const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema7.json`);
     const original = JSON.stringify(blueprint);
     try {
       const id = await env.host.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
@@ -62,7 +62,7 @@ describe("持久蓝图识别任务", () => {
 
   it("刷新恢复部分识别任务，失败和取消仍可下载", async () => {
     const records = new Map<string, BlueprintPlannerTaskFile>(), env = setup(records);
-    const blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema6.json`);
+    const blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema7.json`);
     let restored: ReturnType<typeof setup> | null = null;
     let initialDisposed = false;
     try {
@@ -85,7 +85,7 @@ describe("持久蓝图识别任务", () => {
   });
 
   it("识别成功沿用任务身份进入优化，固定配置不可覆盖", async () => {
-    const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}plant-cycle.schema6.json`);
+    const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}plant-cycle.schema7.json`);
     try {
       const id = await env.host.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
       await vi.waitFor(() => expect(env.host.state.activeTaskId).toBeNull());

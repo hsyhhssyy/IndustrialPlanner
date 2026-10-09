@@ -1,4 +1,4 @@
-import { migrateIncomingData } from "@/shared/data-migration";
+import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { observer } from "mobx-react-lite";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
@@ -500,7 +500,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
 
       let saved: Awaited<ReturnType<typeof save>> = null;
       if (controller.requiresMigration) {
-        await migrateIncomingData([{ label: "导入蓝图", run: async () => {
+        await adoptIncomingDataAndReload([{ label: "导入蓝图", run: async () => {
           saved = await save();
           if (saved === null) throw new Error(copy.saveFailed);
         } }]);

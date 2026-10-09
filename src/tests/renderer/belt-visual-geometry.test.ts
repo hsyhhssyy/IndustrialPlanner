@@ -41,7 +41,7 @@ describe("BeltVisualGeometry", () => {
     //         },
     //       ]
     const ctx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-01-variant-1.schema7.json")),
     })
 
     const entries = resolveBeltInsertionEntries(ctx as never)
@@ -87,7 +87,7 @@ describe("BeltVisualGeometry", () => {
     //         },
     //       ]
     const beltToBeltCtx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-02-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-02-variant-1.schema7.json")),
     })
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -117,7 +117,7 @@ describe("BeltVisualGeometry", () => {
     //       ]
     const simplifiedCtx = createGeometryContext({
       simplifiedDeviceIcons: true,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-03-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-03-variant-1.schema7.json")),
     })
 
     expect(resolveBeltInsertionEntries(beltToBeltCtx as never)).toEqual([])
@@ -145,7 +145,7 @@ describe("BeltVisualGeometry", () => {
     //         },
     //       ]
     const beltToLogisticsCtx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-04-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-04-variant-1.schema7.json")),
     })
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -167,7 +167,7 @@ describe("BeltVisualGeometry", () => {
     //         createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
     //       ]
     const logisticsToBeltCtx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-05-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-05-variant-1.schema7.json")),
     })
 
     expect(resolveBeltPortExtensionEntries(beltToLogisticsCtx as never)).toEqual([])
@@ -195,7 +195,7 @@ describe("BeltVisualGeometry", () => {
     //         },
     //       ]
     const beltToInfiniteCtx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-06-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-06-variant-1.schema7.json")),
     })
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -217,7 +217,7 @@ describe("BeltVisualGeometry", () => {
     //         createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
     //       ]
     const infiniteToBeltCtx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-07-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-07-variant-1.schema7.json")),
     })
 
     expect(resolveBeltPortExtensionEntries(beltToInfiniteCtx as never)).toEqual([])
@@ -252,7 +252,7 @@ describe("BeltVisualGeometry", () => {
     //         },
     //       ]
     const ctx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-08-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-08-variant-1.schema7.json")),
     })
 
     expect(resolveBeltPortExtensionEntries(ctx as never)).toEqual([{
@@ -312,7 +312,7 @@ describe("BeltVisualGeometry", () => {
     //         createBeltEntity("belt-c", { x: 2, y: 0 }, 0),
     //       ]
     const ctx = createGeometryContext({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-09-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-09-variant-1.schema7.json")),
     })
 
     const entries = resolveBeltVisualPathEntries(ctx as never)

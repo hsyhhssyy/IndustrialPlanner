@@ -213,7 +213,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     // [beltA, beltB, beltC, pipe]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-01-variant-1.schema6.json"))),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-01-variant-1.schema7.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -272,7 +272,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     // [pipeA, pipeB, pipeC, belt]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-02-variant-1.schema6.json"))),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-02-variant-1.schema7.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -328,7 +328,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     // [beltA, beltB, beltC, pipe]
     const { context, appHost, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-03-variant-1.schema6.json"))),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-03-variant-1.schema7.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
@@ -382,7 +382,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     // [beltA, beltB]
     const { context, editor } = createContext({
       activeTool: "marquee",
-      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-04-variant-1.schema6.json"))),
+      document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-04-variant-1.schema7.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 

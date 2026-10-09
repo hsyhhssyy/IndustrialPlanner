@@ -1,15 +1,57 @@
+import { isDataMigrationComplete } from "@/shared/storage/data-migration-state";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: notifyDataMigrationAbandoned，不报告虚假的持久化失败
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import { reportStorageFailure } from "@/shared/storage/storage-failure";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { prepareLocalMigrationRecovery } from "@/shared/storage/local-migration-recovery";
-import { createDataMigrationController, installDataMigrationController, isDataMigrationFrozen } from "@/shared/data-migration";
+import { createDataMigrationController, installDataMigrationController, isDataMigrationFrozen, notifyDataMigrationAbandoned } from "@/shared/data-migration";
 import { prepareBlueprintLibraryMigration } from "@/shared/blueprint-library-migration";
 import { prepareEditorDataMigration } from "./editor/data-migration";
-import type { EditorHost } from "./editor/editor-host";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: startWorkbench 启动迁移
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import type { EditorHost } from "./editor/editor-host";
 import { prepareAppDataMigration } from "./app/data-migration";
-import { pauseAppStorageForMigration, refreshAppStorageAfterMigration } from "./app/state/storage-hook";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: startWorkbench 启动迁移
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import { pauseAppStorageForMigration, refreshAppStorageAfterMigration } from "./app/state/storage-hook";
 import { prepareEdaDataMigration, EDA_MIGRATION_VERSION } from "./blueprint-planner/data-migration";
-import type { BlueprintPlannerHost } from "./blueprint-planner/blueprint-planner-host";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: startWorkbench 启动迁移
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import type { BlueprintPlannerHost } from "./blueprint-planner/blueprint-planner-host";
 import { DataMigrationOverlay } from "./app/migration/data-migration-overlay";
-import { createMigrationVerification } from "./simulation/migration-verification";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: startWorkbench 启动迁移
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import { createMigrationVerification } from "./simulation/migration-verification";
 
 import { createBlueprintPlannerHost } from "./blueprint-planner";
 import { createAudioHost } from "./audio";
@@ -54,7 +96,7 @@ declare global {
 
 // 数据安全入口必须先于所有主机初始化和同步任务。
 async function startWorkbench(): Promise<void> {
-  const migrationVersion = `local-data-1:${BLUEPRINT_SCHEMA_VERSION}:${EDA_MIGRATION_VERSION}`;
+  const migrationVersion = `local-data-2:${BLUEPRINT_SCHEMA_VERSION}:${EDA_MIGRATION_VERSION}:${import.meta.env.VITE_APP_VERSION_CACHE_KEY}`;
   const reactRoot = ReactDOM.createRoot(document.getElementById("root")!);
   reactRoot.render(<DataMigrationOverlay />);
   const disposeStorageGeneration = await prepareLocalMigrationRecovery({
@@ -94,42 +136,51 @@ async function startWorkbench(): Promise<void> {
     blueprintPlanner: null,
   }
 
-  let migrationApp: AppHost | null = null;
-  let migrationEditor: EditorHost | null = null;
-  let migrationPlanner: BlueprintPlannerHost | null = null;
-  let migrationSimulation: ReturnType<typeof createSimulationHost> | null = null;
-  let resumeSimulation = false;
-  const verification = createMigrationVerification(registry);
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: createDataMigrationController 只装配 JSON 迁移参与者
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   let migrationApp: AppHost | null = null;
+//   let migrationEditor: EditorHost | null = null;
+//   let migrationPlanner: BlueprintPlannerHost | null = null;
+//   let migrationSimulation: ReturnType<typeof createSimulationHost> | null = null;
+//   let resumeSimulation = false;
+//   const verification = createMigrationVerification(registry);
+//   const migration = createDataMigrationController(migrationVersion, [
+//     {
+//       prepare: async () => ({ jobs: [] }),
+//       pause: async () => {
+//         resumeSimulation = workspace.simulation?.state.runningState === "start";
+//         workspace.simulation?.actions.pause();
+//         await migrationPlanner?.pauseForMigration();
+//         if (migrationEditor !== null) {
+//           await migrationEditor.internalDocuments.flush();
+//           await migrationEditor.internalHistory.flush();
+//         }
+//         if (migrationApp !== null) await pauseAppStorageForMigration(migrationApp);
+//       },
+//       refresh: async () => {
+//         if (migrationApp !== null) await refreshAppStorageAfterMigration(migrationApp);
+//         await migrationEditor?.internalDocuments.refreshAfterMigration();
+//         await migrationEditor?.internalHistory.refreshAfterMigration();
+//         await migrationPlanner?.reloadAfterMigration();
+//         if (migrationSimulation?.internalState.hasStarted) {
+//           const refreshed = await migrationSimulation.internalActions.refreshFromCurrentDocument();
+//           migrationSimulation.actions.pause();
+//           if (refreshed.status === "failed") throw new Error(refreshed.error ?? "升级后的仿真状态未能恢复。");
+//         }
+//       },
+//       resume: () => { if (resumeSimulation) workspace.simulation?.actions.resume(); },
+//     },
   const migration = createDataMigrationController(migrationVersion, [
-    {
-      prepare: async () => ({ jobs: [] }),
-      pause: async () => {
-        resumeSimulation = workspace.simulation?.state.runningState === "start";
-        workspace.simulation?.actions.pause();
-        await migrationPlanner?.pauseForMigration();
-        if (migrationEditor !== null) {
-          await migrationEditor.internalDocuments.flush();
-          await migrationEditor.internalHistory.flush();
-        }
-        if (migrationApp !== null) await pauseAppStorageForMigration(migrationApp);
-      },
-      refresh: async () => {
-        if (migrationApp !== null) await refreshAppStorageAfterMigration(migrationApp);
-        await migrationEditor?.internalDocuments.refreshAfterMigration();
-        await migrationEditor?.internalHistory.refreshAfterMigration();
-        await migrationPlanner?.reloadAfterMigration();
-        if (migrationSimulation?.internalState.hasStarted) {
-          const refreshed = await migrationSimulation.internalActions.refreshFromCurrentDocument();
-          migrationSimulation.actions.pause();
-          if (refreshed.status === "failed") throw new Error(refreshed.error ?? "升级后的仿真状态未能恢复。");
-        }
-      },
-      resume: () => { if (resumeSimulation) workspace.simulation?.actions.resume(); },
-    },
-    { label: "检查应用设置", prepare: () => prepareAppDataMigration(registry) },
-    { label: "检查基地与编辑历史", prepare: () => prepareEditorDataMigration(registry) },
+    { label: "检查应用设置", prepare: version => prepareAppDataMigration(registry, version) },
+    { label: "检查基地与编辑历史", prepare: version => prepareEditorDataMigration(registry, version) },
     { label: "检查蓝图库", prepare: prepareBlueprintLibraryMigration },
-    { label: "检查计算任务", prepare: () => prepareEdaDataMigration(registry, request => verification.run(request)) },
+    { label: "检查计算任务", prepare: prepareEdaDataMigration },
   ]);
   const disposeMigration = installDataMigrationController(migration);
   const freezeInput = (event: Event) => {
@@ -139,13 +190,21 @@ async function startWorkbench(): Promise<void> {
   const inputEvents = ["pointerdown", "pointermove", "pointerup", "keydown", "keyup", "wheel", "touchstart", "touchmove", "drop", "click", "submit", "beforeinput", "paste"];
   for (const event of inputEvents) window.addEventListener(event, freezeInput, { capture: true, passive: false });
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    disposeMigration(); verification.dispose();
+    disposeMigration();
     for (const event of inputEvents) window.removeEventListener(event, freezeInput, true);
   });
   await migration.run();
 
   const appHost = createAppHost(workspace);
-  migrationApp = appHost;
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: None
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   migrationApp = appHost;
   await appHost.regionalSettings.hydrate();
   if (import.meta.env.DEV) {
     window.__industrialPlannerAppHost = appHost;
@@ -171,7 +230,8 @@ async function startWorkbench(): Promise<void> {
   // Original code:
   // const editorHost = createEditorHost(workspace);
   // AI-CORRECTION 2026-10-08: 组合根保留具体 Host 供全局迁移结算与刷新，不增加 Domain 属性。
-  migrationEditor = createEditorHost(workspace);
+  // AI-CORRECTION 2026-10-09: 启动迁移先于 Host；不再保留运行期刷新引用。
+  createEditorHost(workspace);
   // AI-REMOVED 2026-09-25:
   // Reason: Editor 区域文档负责关系生命周期，App 资产仅保留旧记录迁移入口。
   // Trigger: REQ-038 出口文档权威。
@@ -223,15 +283,34 @@ async function startWorkbench(): Promise<void> {
   //     appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
   });
 
-  migrationSimulation = simulationHost;
-  migrationPlanner = createBlueprintPlannerHost(workspace);
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: None
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   migrationSimulation = simulationHost;
+  createBlueprintPlannerHost(workspace);
 
-  await createSyncHost(workspace, {
+  if (await isDataMigrationComplete(migrationVersion)) await createSyncHost(workspace, {
     assetSources: [
       ...createModuleBalancingSyncSources(appHost),
       appHost.regionalSettings.createSyncSource(),
     ],
-  });
+  }); else {
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: notifyDataMigrationAbandoned
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//     reportStorageFailure("data-migration", new Error("部分本地数据暂时无法升级，原件已保留。为保护远端数据，网络同步已暂停；更新版本后会重新尝试。"));
+    notifyDataMigrationAbandoned();
+  }
 
 
   const audioHost = createAudioHost(workspace, {

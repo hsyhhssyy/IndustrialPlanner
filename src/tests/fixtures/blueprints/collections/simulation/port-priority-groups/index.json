@@ -1,14 +1,14 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/port-priority-groups.test.ts",
   "createdAt": "2026-09-14",
   "scenes": {
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-variant-1.schema6.json",
+        "file": "scene-01-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
@@ -17,7 +17,7 @@
         "parameters": {
           "config": {}
         },
-        "file": "scene-02-variant-1.schema6.json",
+        "file": "scene-02-variant-1.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -30,7 +30,7 @@
             }
           }
         },
-        "file": "scene-02-variant-2.schema6.json",
+        "file": "scene-02-variant-2.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -42,7 +42,7 @@
             }
           }
         },
-        "file": "scene-02-variant-3.schema6.json",
+        "file": "scene-02-variant-3.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -51,10 +51,9 @@
             "portGroups[1].ports[0].priorityGroup": 0
           }
         },
-        "file": "scene-02-variant-4.schema6.json",
+        "file": "scene-02-variant-4.schema7.json",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

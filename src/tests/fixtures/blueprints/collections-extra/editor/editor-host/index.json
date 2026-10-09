@@ -1,56 +1,56 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 5,
-  "schemaVersion": 6,
+  "fixtureRevision": 7,
+  "schemaVersion": 7,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
   "scenes": {
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-variant-1.schema6.json",
+        "file": "scene-01-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-variant-1.schema6.json",
+        "file": "scene-02-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-03": [
       {
         "parameters": {},
-        "file": "scene-03-variant-1.schema6.json",
+        "file": "scene-03-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-04": [
       {
         "parameters": {},
-        "file": "scene-04-variant-1.schema6.json",
+        "file": "scene-04-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-05": [
       {
         "parameters": {},
-        "file": "scene-05-variant-1.schema6.json",
+        "file": "scene-05-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-06": [
       {
         "parameters": {},
-        "file": "scene-06-variant-1.schema6.json",
+        "file": "scene-06-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
     "scene-07": [
       {
         "parameters": {},
-        "file": "scene-07-variant-1.schema6.json",
+        "file": "scene-07-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ],
@@ -398,7 +398,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-1.schema6.json",
+        "file": "scene-08-variant-1.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -453,7 +453,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-2.schema6.json",
+        "file": "scene-08-variant-2.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -505,7 +505,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-3.schema6.json",
+        "file": "scene-08-variant-3.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -617,7 +617,7 @@
             "recipeChannels": []
           }
         },
-        "file": "scene-08-variant-4.schema6.json",
+        "file": "scene-08-variant-4.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -984,7 +984,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-5.schema6.json",
+        "file": "scene-08-variant-5.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1201,7 +1201,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-6.schema6.json",
+        "file": "scene-08-variant-6.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1557,7 +1557,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-7.schema6.json",
+        "file": "scene-08-variant-7.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -1871,7 +1871,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-8.schema6.json",
+        "file": "scene-08-variant-8.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2013,7 +2013,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-9.schema6.json",
+        "file": "scene-08-variant-9.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2149,7 +2149,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-10.schema6.json",
+        "file": "scene-08-variant-10.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2285,7 +2285,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-11.schema6.json",
+        "file": "scene-08-variant-11.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2448,7 +2448,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-12.schema6.json",
+        "file": "scene-08-variant-12.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2611,7 +2611,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-13.schema6.json",
+        "file": "scene-08-variant-13.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2887,7 +2887,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-14.schema6.json",
+        "file": "scene-08-variant-14.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -2990,7 +2990,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-15.schema6.json",
+        "file": "scene-08-variant-15.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3093,7 +3093,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-16.schema6.json",
+        "file": "scene-08-variant-16.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3196,7 +3196,7 @@
             "displayOrder": 100
           }
         },
-        "file": "scene-08-variant-17.schema6.json",
+        "file": "scene-08-variant-17.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3357,7 +3357,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-18.schema6.json",
+        "file": "scene-08-variant-18.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3518,7 +3518,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-19.schema6.json",
+        "file": "scene-08-variant-19.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3792,7 +3792,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-20.schema6.json",
+        "file": "scene-08-variant-20.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -3907,7 +3907,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-21.schema6.json",
+        "file": "scene-08-variant-21.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -4060,7 +4060,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-22.schema6.json",
+        "file": "scene-08-variant-22.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -4182,7 +4182,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-23.schema6.json",
+        "file": "scene-08-variant-23.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -4402,7 +4402,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-24.schema6.json",
+        "file": "scene-08-variant-24.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -4716,7 +4716,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-25.schema6.json",
+        "file": "scene-08-variant-25.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -4933,7 +4933,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-26.schema6.json",
+        "file": "scene-08-variant-26.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -5153,7 +5153,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-27.schema6.json",
+        "file": "scene-08-variant-27.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -5419,7 +5419,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-28.schema6.json",
+        "file": "scene-08-variant-28.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -5696,7 +5696,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-29.schema6.json",
+        "file": "scene-08-variant-29.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -5976,7 +5976,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-30.schema6.json",
+        "file": "scene-08-variant-30.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -6303,7 +6303,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-31.schema6.json",
+        "file": "scene-08-variant-31.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -6620,7 +6620,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-32.schema6.json",
+        "file": "scene-08-variant-32.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -6937,7 +6937,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-33.schema6.json",
+        "file": "scene-08-variant-33.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -7254,7 +7254,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-34.schema6.json",
+        "file": "scene-08-variant-34.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -7378,7 +7378,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-35.schema6.json",
+        "file": "scene-08-variant-35.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -7904,7 +7904,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-36.schema6.json",
+        "file": "scene-08-variant-36.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -8125,7 +8125,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-37.schema6.json",
+        "file": "scene-08-variant-37.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -8417,7 +8417,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-38.schema6.json",
+        "file": "scene-08-variant-38.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -8742,7 +8742,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-39.schema6.json",
+        "file": "scene-08-variant-39.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -9097,7 +9097,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-40.schema6.json",
+        "file": "scene-08-variant-40.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -9392,7 +9392,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-41.schema6.json",
+        "file": "scene-08-variant-41.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -9686,7 +9686,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-42.schema6.json",
+        "file": "scene-08-variant-42.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -9884,7 +9884,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-43.schema6.json",
+        "file": "scene-08-variant-43.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -10179,7 +10179,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-44.schema6.json",
+        "file": "scene-08-variant-44.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -10473,7 +10473,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-45.schema6.json",
+        "file": "scene-08-variant-45.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -11438,7 +11438,7 @@
             "recipeChannels": []
           }
         },
-        "file": "scene-08-variant-46.schema6.json",
+        "file": "scene-08-variant-46.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -11565,7 +11565,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-47.schema6.json",
+        "file": "scene-08-variant-47.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -11695,7 +11695,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-48.schema6.json",
+        "file": "scene-08-variant-48.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -11883,7 +11883,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-49.schema6.json",
+        "file": "scene-08-variant-49.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -11994,7 +11994,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-50.schema6.json",
+        "file": "scene-08-variant-50.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12328,7 +12328,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-51.schema6.json",
+        "file": "scene-08-variant-51.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12451,7 +12451,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-52.schema6.json",
+        "file": "scene-08-variant-52.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12571,7 +12571,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-53.schema6.json",
+        "file": "scene-08-variant-53.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12619,7 +12619,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-54.schema6.json",
+        "file": "scene-08-variant-54.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12777,7 +12777,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-55.schema6.json",
+        "file": "scene-08-variant-55.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -12918,7 +12918,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-56.schema6.json",
+        "file": "scene-08-variant-56.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -13070,7 +13070,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-57.schema6.json",
+        "file": "scene-08-variant-57.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -13433,7 +13433,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-58.schema6.json",
+        "file": "scene-08-variant-58.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -13795,7 +13795,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-59.schema6.json",
+        "file": "scene-08-variant-59.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14157,7 +14157,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-60.schema6.json",
+        "file": "scene-08-variant-60.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14194,7 +14194,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-61.schema6.json",
+        "file": "scene-08-variant-61.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14310,7 +14310,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-62.schema6.json",
+        "file": "scene-08-variant-62.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14347,7 +14347,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-63.schema6.json",
+        "file": "scene-08-variant-63.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14384,7 +14384,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-64.schema6.json",
+        "file": "scene-08-variant-64.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -14421,7 +14421,7 @@
             ]
           }
         },
-        "file": "scene-08-variant-65.schema6.json",
+        "file": "scene-08-variant-65.schema7.json",
         "version": "fixture-v1"
       },
       {
@@ -15386,7 +15386,7 @@
             "recipeChannels": []
           }
         },
-        "file": "scene-08-variant-66.schema6.json",
+        "file": "scene-08-variant-66.schema7.json",
         "version": "fixture-v1"
       }
     ]

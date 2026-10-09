@@ -8,7 +8,7 @@ import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "../simu
 
 it("Dense 2 TPS：五个运行消耗通道同时消耗库存，不能被普通配方去重规则串行化", () => {
   const registry = createRegistryContract();
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema7.json");
   const document = createWorldDocumentFromBlueprint(blueprint);
   const topology = compileSimulationTopology({ document, registry, simulationMode: "single-base",
     standardTickRate: 2, poweredEntityIds: new Set(document.entityOrder) });

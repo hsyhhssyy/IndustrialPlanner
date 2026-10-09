@@ -788,7 +788,7 @@ function createConsumptionTimelineTopology(): CompiledSimulationTopology {
   //     createEntity("gas-diffuser", "vaporizer_1", 0, 0),
   //     createEntity("power", "power_diffuser_1", 3, 5),
   //   ])
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-01-timeline-consumption-gas-5740c606.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-01-timeline-consumption-gas-5740c606.schema7.json");
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({
     document,
@@ -827,7 +827,7 @@ function createAdmissionTimelineTopology(): CompiledSimulationTopology {
   //     createEntity("belt", "belt_straight_1x1", 4, 1),
   //     createEntity("sink", "loader_1", 5, 0, 270),
   //   ])
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-02-timeline-admission-snapshot-981329ef.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-02-timeline-admission-snapshot-981329ef.schema7.json");
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({
     document,

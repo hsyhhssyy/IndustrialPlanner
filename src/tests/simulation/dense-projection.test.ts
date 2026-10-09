@@ -70,7 +70,7 @@ function createDenseProjectionBlueprint(): BlueprintDocument {
   //     createEntity("belt", "belt_straight_1x1", 0, -1, 270),
   //     createEntity("sink-storage", "storager_1", 0, -4),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-01-dense-projection-a109aa22.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-01-dense-projection-a109aa22.schema7.json");
 }
 
 describe("ST2-RQ-023 dense projection", () => {
@@ -177,7 +177,7 @@ describe("ST2-RQ-023 dense projection", () => {
     //         }),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-02-dense-v2-host-3c40013b.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-02-dense-v2-host-3c40013b.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 1,
       engineKind: "dense-v2",
@@ -235,7 +235,7 @@ describe("ST2-RQ-023 dense projection", () => {
     //       }),
     //       createEntity("power", "power_diffuser_1", 4, 0),
     //     ])
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-03-dense-v2-warehouse-stats-c45d5354.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-03-dense-v2-warehouse-stats-c45d5354.schema7.json");
     const maxTickNumber = 60 * STANDARD_TICK_RATE_PER_SECOND;
     const registry = createRegistryContract();
     const [legacy, dense] = await Promise.all([

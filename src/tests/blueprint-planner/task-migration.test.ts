@@ -87,8 +87,8 @@ it("旧边界不合格仍保留曲线，真实 Worker 从原累计次数续算",
   try {
     const file = structuredClone(invalid.file) as unknown as BlueprintPlannerTaskFile;
     const id = await host.actions.importTask(file);
-    expect(host.queries.getResult(id)).toBeNull();
-    expect(host.queries.getTask(id)).toMatchObject({ bestArea: null, areaHistory: file.progress.areaHistory,
+    expect(host.queries.getResult(id)?.metrics).toEqual((file.checkpoint as PlannerCheckpoint).result?.metrics);
+    expect(host.queries.getTask(id)).toMatchObject({ bestArea: file.progress.bestArea, areaHistory: file.progress.areaHistory,
       evaluatedProposals: 12345, elapsedMs: 54321, candidateCount: 7 });
     host.actions.continuePlanning(id, 10000, 1);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
@@ -113,7 +113,7 @@ it("旧曲线与新规则最优结果分段验证，新规则首解面积可以�
   } finally { await session.dispose(); }
 });
 
-it("加载历史任务验收后持久化，可导出、重新加载并带最优种子继续搜索", async () => {
+it("启动只读取历史；用户继续时才验收持久化，刷新仍保持暂停", async () => {
   const session = new PlannerBatchSession();
   const file = taskFile();
   const records = new Map([[file.taskId, file as BlueprintPlannerTaskFile]]);
@@ -125,7 +125,12 @@ it("加载历史任务验收后持久化，可导出、重新加载并带最优�
     dispose: () => {} } });
   let reloaded: ReturnType<typeof createBlueprintPlannerHost> | undefined;
   try {
-    await vi.waitFor(() => expect(host.queries.getTask(file.taskId)?.bestArea).toBe(60), { timeout: 15000 });
+    await host.whenSettled();
+    expect(records.get(file.taskId)).toEqual(file);
+    expect(host.queries.getTask(file.taskId)?.status).toBe("waiting");
+    host.actions.continuePlanning(file.taskId, 10000, 1);
+    await host.whenSettled();
+    expect(host.queries.getTask(file.taskId)?.bestArea).toBe(60);
     await vi.waitFor(() => expect(records.get(file.taskId)!.algorithmVersion).toBe("external-boundary-1"));
     const persisted = parsePlannerTaskFile(records.get(file.taskId), session.workspace.registry);
     expect(host.queries.exportTask(file.taskId).progress.areaHistory).toEqual(persisted.progress.areaHistory);
@@ -133,7 +138,7 @@ it("加载历史任务验收后持久化，可导出、重新加载并带最优�
     expect(host.queries.getResult(id)!.blueprint.blueprintId).not.toBe(persisted.checkpoint.result!.blueprint.blueprintId);
     host.actions.continuePlanning(id, 10000, 1);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
-    expect(host.queries.getTask(id)!.evaluatedProposals).toBe(12365);
+    expect(host.queries.getTask(id)!.evaluatedProposals).toBe(persisted.progress.evaluatedProposals + 20);
     expect(host.queries.getTask(id)!.bestArea).toBe(60);
     expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools.length).toBeGreaterThan(0);
     host.dispose();
@@ -151,7 +156,12 @@ it("仿真不可用时保留旧任务原文、历史与计数，不自动写入�
   const host = createBlueprintPlannerHost(workspace, { storage: { load: async () => [file],
     save: async value => { writes.push(value); }, delete: async () => {} } });
   try {
-    await vi.waitFor(() => expect(host.queries.getTask(file.taskId)?.status).toBe("failed"));
+    await host.whenSettled();
+    expect(host.queries.getTask(file.taskId)?.status).toBe("waiting");
+    expect(writes).toEqual([]);
+    host.actions.continuePlanning(file.taskId, 10000);
+    await host.whenSettled();
+    expect(host.queries.getTask(file.taskId)?.status).toBe("failed");
     expect(host.queries.getTask(file.taskId)).toMatchObject({ evaluatedProposals: 12345, elapsedMs: 54321, areaHistory: file.progress.areaHistory });
     expect(host.queries.exportTask(file.taskId)).toEqual(file);
     expect(writes).toEqual([]);
@@ -160,29 +170,59 @@ it("仿真不可用时保留旧任务原文、历史与计数，不自动写入�
   expect(writes).toEqual([]);
 });
 
-it("导入验收期间关闭 Host 会取消恢复，不能迟到写入任务", async () => {
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 实际继续计算期间取消的回归
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// it("导入验收期间关闭 Host 会取消恢复，不能迟到写入任务", async () => {
+//   const session = new PlannerBatchSession();
+//   const host = createBlueprintPlannerHost(session.workspace, { storage: null });
+//   try {
+//     const pending = host.actions.importTask(taskFile());
+//     await Promise.resolve();
+//     host.dispose();
+//     await expect(pending).rejects.toThrow();
+//     expect(host.queries.listTasks()).toEqual([]);
+//   } finally { host.dispose(); await session.dispose(); }
+// });
+it("导入不做验收；继续计算时关闭 Host，不能迟到改写任务", async () => {
   const session = new PlannerBatchSession();
-  const host = createBlueprintPlannerHost(session.workspace, { storage: null });
+  const saved: BlueprintPlannerTaskFile[] = [];
+  const host = createBlueprintPlannerHost(session.workspace, { storage: { load: async () => [],
+    save: async file => { saved.push(structuredClone(file)); }, delete: async () => {} } });
+  const verify = vi.spyOn(session.simulation.actions, "runBlueprint");
   try {
-    const pending = host.actions.importTask(taskFile());
-    await Promise.resolve();
+    const id = await host.actions.importTask(taskFile());
+    expect(verify).not.toHaveBeenCalled();
+    const before = structuredClone(saved);
+    host.actions.continuePlanning(id, 10000);
     host.dispose();
-    await expect(pending).rejects.toThrow();
-    expect(host.queries.listTasks()).toEqual([]);
+    await host.whenSettled();
+    expect(saved).toEqual(before);
   } finally { host.dispose(); await session.dispose(); }
 });
 
-it("导入验收失败的旧任务可原样导出，服务恢复后重新导入成功", async () => {
+it("继续时验收失败可导出原件；服务恢复后可重新导入并恢复", async () => {
   const session = new PlannerBatchSession();
   const unavailable = createBlueprintPlannerHost({ ...session.workspace, simulation: null }, { storage: null });
   const available = createBlueprintPlannerHost(session.workspace, { storage: null });
   try {
     const id = await unavailable.actions.importTask(taskFile());
+    expect(unavailable.queries.getTask(id)?.status).toBe("waiting");
+    unavailable.actions.continuePlanning(id, 10000);
+    await unavailable.whenSettled();
     expect(unavailable.queries.getTask(id)?.status).toBe("failed");
     const file = unavailable.queries.exportTask(id);
     expect(file.progress.taskId).toBe(id);
     const restoredId = await available.actions.importTask(JSON.parse(JSON.stringify(file)));
-    expect(available.queries.getTask(restoredId)).toMatchObject({ bestArea: 60, evaluatedProposals: 12345, elapsedMs: 54321 });
-    expect(available.queries.getResult(restoredId)?.blueprint.entityOrder).toHaveLength(9);
+    expect(available.queries.getTask(restoredId)).toMatchObject({ status: "waiting", evaluatedProposals: 12345, elapsedMs: 54321 });
+    // 保存也是明确用户操作，此时才恢复验收；只需验证恢复输出，无需再运行搜索。
+    const restored = await restorePlannerTaskFile(available.queries.exportTask(restoredId), session.workspace.registry,
+      request => session.simulation.actions.runBlueprint(request));
+    expect(restored.checkpoint.result?.blueprint.entityOrder).toHaveLength(9);
   } finally { unavailable.dispose(); available.dispose(); await session.dispose(); }
 });

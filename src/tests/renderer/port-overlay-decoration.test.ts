@@ -46,7 +46,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-01-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -93,7 +93,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, connectedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-02-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-02-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -158,7 +158,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, left, crossing, right]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-03-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-03-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -200,7 +200,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, reversedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-04-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-04-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -242,7 +242,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-05-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-05-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -274,7 +274,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-06-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-06-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -321,7 +321,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, connectedBelt]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-07-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-07-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -366,7 +366,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-08-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-08-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -428,7 +428,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, left, crossing, right]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-09-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-09-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -470,7 +470,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device, wall]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-10-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-10-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -516,7 +516,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [liquid, gas]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-11-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-11-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "pipe",
@@ -592,7 +592,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-13-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-13-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -627,7 +627,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-14-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-14-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "pipe",
@@ -660,7 +660,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-15-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-15-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -711,7 +711,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [first, second]
     const entries = resolveLogisticsPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-16-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-16-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       kind: "belt",
@@ -736,7 +736,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-17-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-17-variant-1.schema7.json")),
       selectedEntityIds: new Set([device.id]),
       entityDefinitionMap,
     });
@@ -759,7 +759,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [first, second]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-18-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-18-variant-1.schema7.json")),
       selectedEntityIds: new Set([first.id, second.id]),
       entityDefinitionMap,
     });
@@ -780,7 +780,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     // Original code:
     // [device]
     const entries = resolveSelectedPortOverlayEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-19-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/port-overlay-decoration/scene-19-variant-1.schema7.json")),
       selectedEntityIds: new Set([device.id]),
       entityDefinitionMap,
     });

@@ -3049,7 +3049,7 @@ describe("createAppHost", () => {
     //         tags: [],
     //       },
     //     }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json").entities;
     document.entityOrder = ["target", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3188,7 +3188,7 @@ describe("createAppHost", () => {
     //         tags: [],
     //       },
     //     }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema7.json").entities;
     document.entityOrder = ["source", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3275,7 +3275,7 @@ describe("createAppHost", () => {
     //         tags: [],
     //       },
     //     }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema7.json").entities;
     document.entityOrder = ["predecessor", "crossing", "successor"];
     editorHost.internalDocument.setSnapshot(document);
     editorHost.actions.setViewportClientRect({
@@ -3691,7 +3691,7 @@ describe("createAppHost", () => {
     //         tags: [],
     //       },
     //     }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-04-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-04-variant-1.schema7.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
 
@@ -3768,7 +3768,7 @@ describe("createAppHost", () => {
     //         tags: [],
     //       },
     //     }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-05-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-05-variant-1.schema7.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
 
@@ -4444,7 +4444,7 @@ function createTestBlueprintRecord() {
       description: "蓝图放置测试",
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 10, y: 10 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-06-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-06-variant-1.schema7.json").entities,
       entityOrder: ["source", "target"],
       slotLinks: [{
         id: "source-target-link",

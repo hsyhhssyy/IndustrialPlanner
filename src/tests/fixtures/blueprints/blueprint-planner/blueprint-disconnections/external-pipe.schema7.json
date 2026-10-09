@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "eda-external-pipe",
+  "version": "fixture-v1",
+  "name": "external-pipe",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "external": {
+      "id": "external",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "external"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-08T00:00:00.000Z",
+  "updatedAt": "2026-10-08T00:00:00.000Z"
+}

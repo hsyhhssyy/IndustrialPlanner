@@ -1,14 +1,14 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 2,
+  "schemaVersion": 7,
   "source": "src/tests/e2e/editor-regional-dark-pipe.test.ts",
   "createdAt": "2026-09-25",
   "scenes": {
     "editing": [
       {
         "parameters": {},
-        "file": "scene.schema6.json",
+        "file": "scene.schema7.json",
         "version": "fixture-v1"
       }
     ]

@@ -25,7 +25,7 @@ describe("内部断连管道按支路排除", () => {
     ["intact-branch", []],
     ["external-pipe", []],
   ] as const)("%s：排除整段支路，保留正常支路和真正外接断口", (name, expected) => {
-    const blueprint = loadBlueprintFromFile(`${directory}${name}.schema6.json`), original = structuredClone(blueprint);
+    const blueprint = loadBlueprintFromFile(`${directory}${name}.schema7.json`), original = structuredClone(blueprint);
     const result = excludeDisconnectedBlueprintPipes(registry, { blueprint, boundaries: [], activeActivityIds: [] });
     expect([...result.excludedEntityIds].sort()).toEqual([...expected].sort());
     expect(blueprint).toEqual(original);
@@ -38,7 +38,7 @@ describe("内部断连管道按支路排除", () => {
       render: null, simulation: null, sync: null, blueprintPlanner: null };
     const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
     const planner = createBlueprintPlannerHost(workspace, { storage: null });
-    const blueprint = loadBlueprintFromFile(`${directory}plant-with-broken-pipe.schema6.json`), original = structuredClone(blueprint);
+    const blueprint = loadBlueprintFromFile(`${directory}plant-with-broken-pipe.schema7.json`), original = structuredClone(blueprint);
     try {
       const id = await planner.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
       await vi.waitFor(() => expect(planner.state.activeTaskId).toBeNull());
@@ -85,7 +85,7 @@ describe("内部断连管道按支路排除", () => {
       render: null, simulation: null, sync: null, blueprintPlanner: null };
     const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
     const planner = createBlueprintPlannerHost(workspace, { storage: null });
-    const blueprint = loadBlueprintFromFile(`${directory}broken-only.schema6.json`);
+    const blueprint = loadBlueprintFromFile(`${directory}broken-only.schema7.json`);
     try {
       const id = await planner.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
       await vi.waitFor(() => expect(planner.state.activeTaskId).toBeNull());

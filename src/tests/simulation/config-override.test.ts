@@ -50,7 +50,7 @@ describe("REQ-076: config overrides", () => {
     //       createEntity("belt", "belt_straight_1x1", 0, 0, 270),
     //       createEntity("sink-storage", "storager_1", 0, -3),
     //     ])
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/config-override/scene-01-config-overrides-a6643d0e.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/config-override/scene-01-config-overrides-a6643d0e.schema7.json");
 
     const report = await runBlueprintSimulation({
       blueprint,

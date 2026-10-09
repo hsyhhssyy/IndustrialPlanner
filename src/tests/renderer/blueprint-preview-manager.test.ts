@@ -284,7 +284,7 @@ describe("createBlueprintPreviewManager", () => {
       name: "Adaptive Label Test",
       baseId: "adaptive-label-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema7.json").entities,
       entityOrder: ["entity-1"],
       slotLinks: [],
     })
@@ -396,7 +396,7 @@ describe("createBlueprintPreviewManager", () => {
       name: "Inspector Label Test",
       baseId: "inspector-label-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema7.json").entities,
       entityOrder: ["selected"],
       slotLinks: [],
     })
@@ -507,7 +507,7 @@ describe("createBlueprintPreviewManager", () => {
       name: "Preview Background Test",
       baseId: "preview-background-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-01-variant-1.schema7.json").entities,
       entityOrder: ["entity-1"],
       slotLinks: [],
     })
@@ -608,7 +608,7 @@ describe("createBlueprintPreviewManager", () => {
       name: "Preview Highlight Test",
       baseId: "preview-highlight-test",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/blueprint-preview-manager/scene-02-variant-1.schema7.json").entities,
       entityOrder: ["selected"],
       slotLinks: [],
     })

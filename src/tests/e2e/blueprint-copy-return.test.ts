@@ -1,4 +1,4 @@
-import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema6.json" with { type: "json" };
+import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema7.json" with { type: "json" };
 import { waitForAppReady, expectCanvasHit } from "./harness/workbench";
 import { SCREEN_PROFILES as profiles } from "./harness/profiles";
 import { expect, test, type Page } from "./harness/fixture";

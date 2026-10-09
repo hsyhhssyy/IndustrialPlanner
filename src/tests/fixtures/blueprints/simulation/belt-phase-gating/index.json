@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/belt-phase-gating.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,11 +10,10 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-belt-phase-gating-23fe80d1.schema6.json",
+        "file": "scene-01-belt-phase-gating-23fe80d1.schema7.json",
         "blueprintId": "req-076-belt-phase-gating",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

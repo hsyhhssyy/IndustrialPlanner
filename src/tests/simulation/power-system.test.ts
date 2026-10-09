@@ -180,7 +180,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       // { ...currentDoc.entities, [powerEntity.id]: powerEntity }
       const nextDoc: WorldDocument = {
         ...currentDoc,
-        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/power-system/scene-01-variant-1.schema6.json").entities,
+        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/power-system/scene-01-variant-1.schema7.json").entities,
         entityOrder: [...currentDoc.entityOrder, powerEntity.id],
       };
       documentStore.setSnapshot(nextDoc);
@@ -312,7 +312,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
     // Original code:
     // [grinder]
     editorHost.internalDocument.setSnapshot(
-      createTestDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/power-system/scene-01-variant-1.schema6.json"))),
+      createTestDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/power-system/scene-01-variant-1.schema7.json"))),
     );
 
     // 2. 创建仿真 host（workerMode: runtime 用于同步测试）

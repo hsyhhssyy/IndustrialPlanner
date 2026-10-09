@@ -69,7 +69,7 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
     //       ],
     //       [createWarehouseSlotLink("water-source", "item_liquid_water")],
     //     )
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/splitter-dead-port/scene-01-splitter-dead-port-test-757c4db0.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/splitter-dead-port/scene-01-splitter-dead-port-test-757c4db0.schema7.json");
 
     const report = await runBlueprintSimulation({
       blueprint,

@@ -12,7 +12,7 @@ import fixture from "./fixtures/power-validation.json";
 /** 只控制 IO 完成顺序；产物、供电、产量判断都执行真实 Dense 2 TPS。 */
 function schedulingCase(concurrency: number | "auto", budget: number, progressMessages = 1, storage: PlannerHostOptions["storage"] = null) {
   const session = new PlannerBatchSession();
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
   const request = structuredClone(fixture.request) as BlueprintPlannerRequest;
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });

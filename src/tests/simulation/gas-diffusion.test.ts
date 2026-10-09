@@ -209,5 +209,5 @@ function createConvergerLockBlueprint(): BlueprintDocument {
   //     createEntity("converger", "pipe_converger", 0, 0),
   //     createEntity("locked-pipe", "pipe_straight_1x1", 0, 1, 90),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-02-gas-liquid-converger-lock-cd7b20bb.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/gas-diffusion/scene-02-gas-liquid-converger-lock-cd7b20bb.schema7.json");
 }

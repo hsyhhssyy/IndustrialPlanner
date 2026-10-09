@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "recipe-stability-alternating-ingredients",
+  "version": "fixture-v1",
+  "name": "alternating-ingredients",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "furnace": {
+      "id": "furnace",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_1",
+        "storageSlotGroups[0].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "furnace",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

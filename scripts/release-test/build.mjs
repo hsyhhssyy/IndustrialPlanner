@@ -40,8 +40,12 @@ const plugin = () => ({
     if (id.endsWith(`/${domainPath}`) || id.endsWith(`/${migrationPath}`)) {
       const name = id.endsWith(`/${domainPath}`) ? "BLUEPRINT_SCHEMA_VERSION" : "BLUEPRINT_DEVICE_ID_SCHEMA_VERSION";
       const node = declaration(source, name);
-      if (!ts.isNumericLiteral(node) || Number(node.text) !== schema) throw Error(`Schema mismatch: ${name}`);
-      replace(node, String(target));
+      if (name === "BLUEPRINT_SCHEMA_VERSION") {
+        if (!ts.isNumericLiteral(node) || Number(node.text) !== schema) throw Error(`Schema mismatch: ${name}`);
+        replace(node, String(target));
+      } else if (!ts.isIdentifier(node) || node.text !== "BLUEPRINT_SCHEMA_VERSION") {
+        throw Error("Migration target must reference the single document schema");
+      }
       if (label !== "A" && name === "BLUEPRINT_DEVICE_ID_SCHEMA_VERSION") {
         let array = declaration(source, "BLUEPRINT_DEVICE_ID_MIGRATION_SPECS");
         while (ts.isSatisfiesExpression(array) || ts.isAsExpression(array)) array = array.expression;
@@ -58,7 +62,8 @@ const plugin = () => ({
       changes.push({ start: position, end: position, text: `\n${bridge.replace("export function installReleaseBridge", "function installReleaseBridge")}\ninstallReleaseBridge(appHost, releaseStorage, releaseAction, ${JSON.stringify(label)}, BLUEPRINT_SCHEMA_VERSION);\n` });
       changes.push({ start: 0, end: 0, text: 'import * as releaseStorage from "@/shared/storage";\nimport { runInAction as releaseAction } from "mobx";\n' });
     }
-    if (!changes.length) return;
+    // A 不新增迁移步骤，但仍记录并输出已经核对唯一版本引用的迁移模块。
+    if (!changes.length && !id.endsWith(`/${migrationPath}`)) return;
     transformed.push(id);
     let code = source;
     for (const change of changes.sort((a, b) => b.start - a.start)) code = code.slice(0, change.start) + change.text + code.slice(change.end);

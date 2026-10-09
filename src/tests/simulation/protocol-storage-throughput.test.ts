@@ -137,7 +137,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("协议储存箱持续吞吐 [%s]", (eng
       //           createMeteredBeltAdmission("output-meter-3", 16, 19),
       //         ])
       const report = await runBlueprintSimulation({
-        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/scene-01-protocol-storage-full-throughput-3ef8c713.schema6.json"),
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-storage-throughput/scene-01-protocol-storage-full-throughput-3ef8c713.schema7.json"),
         maxDurationSeconds: FINAL_DURATION_SECONDS,
         // AI-REMOVED 2026-09-08:
         // Reason: 本用例暂时使用 Blueprint runner 的 Legacy 默认引擎。

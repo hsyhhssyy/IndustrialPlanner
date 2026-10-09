@@ -2,7 +2,7 @@ import { SCREEN_PROFILES as profiles } from "./harness/profiles";
 import { expect, test, type Page } from "./harness/fixture";
 import { clickEntity as clickCanvasEntity, waitForAppReady } from "./harness/workbench";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
-import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema6.json" with { type: "json" };
+import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema7.json" with { type: "json" };
 
 const fixture = normalizeBlueprintDocument(fixtureJson)!;
 // AI-REMOVED 2026-10-05:

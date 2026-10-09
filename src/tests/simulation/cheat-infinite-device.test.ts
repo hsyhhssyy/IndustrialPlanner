@@ -96,7 +96,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("cheat infinite device simulation [%s]",
     //         )),
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/cheat-infinite-device/scene-01-cheat-infinite-device-34fe6490.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/cheat-infinite-device/scene-01-cheat-infinite-device-34fe6490.schema7.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry: createRegistryContract(),

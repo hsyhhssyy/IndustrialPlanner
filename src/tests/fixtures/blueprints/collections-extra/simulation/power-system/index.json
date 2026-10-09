@@ -1,17 +1,16 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/power-system.test.ts",
   "createdAt": "2026-09-14",
   "scenes": {
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-variant-1.schema6.json",
+        "file": "scene-01-variant-1.schema7.json",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

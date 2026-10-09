@@ -34,7 +34,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("definition slot links [%s]", (engineKin
     //         }),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/definition-slot-link/scene-01-cleared-definition-slot-link-d0afa449.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/definition-slot-link/scene-01-cleared-definition-slot-link-d0afa449.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 0,
       engineKind,

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 2,
-  "schemaVersion": 6,
+  "fixtureRevision": 4,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/cheat-infinite-device.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-cheat-infinite-device-34fe6490.schema6.json",
+        "file": "scene-01-cheat-infinite-device-34fe6490.schema7.json",
         "blueprintId": "req-076-cheat-infinite-device",
         "version": "fixture-v1"
       }

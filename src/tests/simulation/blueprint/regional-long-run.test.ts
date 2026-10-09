@@ -44,7 +44,7 @@ describe("区域会话 10 分钟长跑", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_copper_ore"),
     //     ])
-    const consumerDoc = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema6.json"));
+    const consumerDoc = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema7.json"));
     consumerDoc.baseId = "base-consumer";
 
     // AI-REMOVED 2026-09-14:
@@ -64,7 +64,7 @@ describe("区域会话 10 分钟长跑", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_copper_ore"),
     //     ])
-    const producerDoc = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-long-run/scene-02-region-long-producer-9372c5d2.schema6.json"));
+    const producerDoc = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-long-run/scene-02-region-long-producer-9372c5d2.schema7.json"));
     producerDoc.baseId = "base-producer";
 
     const topologies: RegionalBaseTopologyInput[] = [

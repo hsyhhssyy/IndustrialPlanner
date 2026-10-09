@@ -97,7 +97,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("dark pipe linked throughput [%s]", (eng
     //         [createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" })],
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-01-single-dark-pipe-linked-throughput-c7499722.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-01-single-dark-pipe-linked-throughput-c7499722.schema7.json"),
       maxDurationSeconds: FINAL_DURATION_SECONDS,
       engineKind,
       registry: createRegistryContract(),
@@ -158,7 +158,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("dark pipe linked throughput [%s]", (eng
     //         [createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" })],
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-02-multi-dark-pipe-linked-throughput-31358255.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/scene-02-multi-dark-pipe-linked-throughput-31358255.schema7.json"),
       maxDurationSeconds: FINAL_DURATION_SECONDS,
       engineKind,
       registry: createRegistryContract(),

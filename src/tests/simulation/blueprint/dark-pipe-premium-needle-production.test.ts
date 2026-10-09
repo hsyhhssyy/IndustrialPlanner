@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
@@ -169,7 +170,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)("暗管芽针针剂完整产线
       //         "public/blueprints/dark-pipe-premium-needle-line.json",
       //         EXTRA_ENTITIES,
       //       )
-      const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema6.json");
+      const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dark-pipe-premium-needle-production.schema7.json");
 
       // 2. 建立暗管链接
       // AI-REMOVED 2026-09-14:

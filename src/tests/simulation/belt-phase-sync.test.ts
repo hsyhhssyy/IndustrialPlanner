@@ -119,7 +119,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
     //       // 起点传送带（取货口→设备），不参与分组，仅参与相位校验
     //       createEntity(START_BELT_ID, "belt_straight_1x1", BELT_POSITIONS[START_BELT_ID]!.x, BELT_POSITIONS[START_BELT_ID]!.y, 270),
     //     ])
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-01-belt-phase-sync-1567dd17.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-01-belt-phase-sync-1567dd17.schema7.json");
 
     const report = await runBlueprintSimulation({
       blueprint,
@@ -236,7 +236,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
     //       createEntity("logistics-draft:belt:22:0:1", "belt_straight_1x1", 52, 20, 270),
     //       createEntity("logistics-draft:belt:28:0", "belt_straight_1x1", 53, 20, 270),
     //     ])
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-02-belt-partial-dead-end-da2af98d.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-02-belt-partial-dead-end-da2af98d.schema7.json");
 
     const report = await runBlueprintSimulation({
       blueprint,

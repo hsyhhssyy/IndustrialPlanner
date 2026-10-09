@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/pipe-transport.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -12,7 +12,7 @@
         "parameters": {
           "initialCount": 2
         },
-        "file": "scene-01-pipe-transport-c70d91fa.schema6.json",
+        "file": "scene-01-pipe-transport-c70d91fa.schema7.json",
         "blueprintId": "req-076-pipe-transport",
         "version": "fixture-v1"
       },
@@ -20,11 +20,10 @@
         "parameters": {
           "initialCount": 1
         },
-        "file": "scene-01-pipe-transport-0b364cc6.schema6.json",
+        "file": "scene-01-pipe-transport-0b364cc6.schema7.json",
         "blueprintId": "req-076-pipe-transport",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

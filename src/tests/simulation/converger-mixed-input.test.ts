@@ -17,7 +17,7 @@ const cases = [
 describe.each(SIMULATION_ENGINE_MATRIX)("汇流器持续输入轮询 [%s]", (engineKind) => {
   it.each(cases)("$scene 在缓存腾空后仍按入口游标接收", async ({ scene, ports, itemCount }) => {
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile(`${directory}/${scene}.schema6.json`),
+      blueprint: loadBlueprintFromFile(`${directory}/${scene}.schema7.json`),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 30,

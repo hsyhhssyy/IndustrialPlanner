@@ -45,7 +45,7 @@ describe("区域仓库出口表与仲裁器", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_copper_ore"),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-01-regional-outlet-legal-1739201e.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-warehouse-arbiter/scene-01-regional-outlet-legal-1739201e.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,

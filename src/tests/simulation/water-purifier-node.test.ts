@@ -101,7 +101,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("净水节点 runtime [%s]", (engineKind
     //         createEntity("power", "power_diffuser_1", 28, -5),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-01-water-purifier-node-input-derived-2dfe453b.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-01-water-purifier-node-input-derived-2dfe453b.schema7.json"),
       maxDurationSeconds: 2,
       engineKind,
       registry: createRegistryContract(),
@@ -159,7 +159,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("净水节点 runtime [%s]", (engineKind
     //         createEntity("power", "power_diffuser_1", 28, -5),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-02-water-purifier-node-byproduct-9df3881d.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-02-water-purifier-node-byproduct-9df3881d.schema7.json"),
       maxDurationSeconds: 2,
       engineKind,
       registry: createRegistryContract(),
@@ -197,7 +197,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("净水节点 runtime [%s]", (engineKind
     //         createEntity("power", "power_diffuser_1", 28, -5),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-03-water-purifier-node-manual-output-c36647a8.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-03-water-purifier-node-manual-output-c36647a8.schema7.json"),
       maxDurationSeconds: 2,
       engineKind,
       registry: createRegistryContract(),
@@ -239,7 +239,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("净水节点 runtime [%s]", (engineKind
     //         createEntity("power", "power_diffuser_1", 28, -5),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-04-water-purifier-node-manual-disables-input-293b656a.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/water-purifier-node/scene-04-water-purifier-node-manual-disables-input-293b656a.schema7.json"),
       maxDurationSeconds: 1,
       engineKind,
       registry: createRegistryContract(),

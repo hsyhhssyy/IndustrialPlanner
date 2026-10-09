@@ -7,7 +7,7 @@ import ts from "typescript";
 import { BrowserRound, acquireBrowserLease, assertBrowserIdle, parseCliResult, portIsOpen } from "../../../scripts/browser-test/runtime.mjs";
 import { SCREEN_PROFILES, contextOptions } from "../e2e/harness/profiles";
 import type { DockWidthMeasurement } from "./left-dock-width-scenario";
-import fixture from "../fixtures/blueprints/layout/left-dock.schema6.json";
+import fixture from "../fixtures/blueprints/layout/left-dock.schema7.json";
 
 const APP_URL = "http://127.0.0.1:4174";
 const variants = SCREEN_PROFILES.flatMap(profile => (["zh-CN", "en-US"] as const).map(locale => ({ profile, locale })));

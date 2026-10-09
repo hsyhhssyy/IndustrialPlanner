@@ -731,7 +731,7 @@ describe("createHypergryphSelectGestureModule", () => {
       hideCanvasFloatingToolbar,
     } = createToolbarFallbackContext({
       activeTool: "move",
-      selectedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-01-variant-1.schema6.json")),
+      selectedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-01-variant-1.schema7.json")),
     });
     const module = createHypergryphSelectGestureModule();
 
@@ -979,7 +979,7 @@ function createOverlapSelectContext(): {
   // Human Review: Required
   // Original code:
   // [bottomEntity, topEntity]
-  const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema6.json"));
+  const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema7.json"));
   const addToCollection = vi.fn();
   const clearCollection = vi.fn();
   const selection = createSelectionCollection([]);

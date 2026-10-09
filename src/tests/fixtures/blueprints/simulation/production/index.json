@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/production.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-grinder-production-435fad2a.schema6.json",
+        "file": "scene-01-grinder-production-435fad2a.schema7.json",
         "blueprintId": "req-076-grinder-production",
         "version": "fixture-v1"
       }
@@ -18,7 +18,7 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-furnace-production-8321f8a2.schema6.json",
+        "file": "scene-02-furnace-production-8321f8a2.schema7.json",
         "blueprintId": "req-076-furnace-production",
         "version": "fixture-v1"
       }
@@ -26,11 +26,10 @@
     "scene-03": [
       {
         "parameters": {},
-        "file": "scene-03-infinite-gas-purifier-inputs-afaf693e.schema6.json",
+        "file": "scene-03-infinite-gas-purifier-inputs-afaf693e.schema7.json",
         "blueprintId": "req-076-infinite-gas-purifier-inputs",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

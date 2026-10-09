@@ -52,7 +52,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("反应池 Recipe Channel 模式 [%s]", 
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-01-legacy-reactor-manual-mode-82b00369.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-01-legacy-reactor-manual-mode-82b00369.schema7.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry: createRegistryContract(),
@@ -91,7 +91,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("反应池 Recipe Channel 模式 [%s]", 
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-02-reactor-automatic-distinct-recipes-980d786d.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-02-reactor-automatic-distinct-recipes-980d786d.schema7.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry: createRegistryContract(),
@@ -127,7 +127,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("反应池 Recipe Channel 模式 [%s]", 
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-03-reactor-automatic-no-duplicate-recipe-95b28f14.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-recipe-channel-mode/scene-03-reactor-automatic-no-duplicate-recipe-95b28f14.schema7.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry: createRegistryContract(),

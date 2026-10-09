@@ -175,20 +175,27 @@ export class EditorDocumentRepository {
     await this.flush();
   }
 
-  /** 全局升级提交后刷新驻留快照，不把升级前缓存重新排入自动保存。 */
-  public async refreshAfterMigration(): Promise<void> {
-    await this.flush();
-    const active = this.options.activeDocument.getSnapshot();
-    const ids = new Set([...this.documents.keys(), active.baseId]);
-    for (const id of ids) {
-      const document = freezeSnapshot(await this.options.read(id));
-      this.documents.set(id, document);
-      this.bumpGeneration(id);
-      if (id === active.baseId) this.publishActive(document, "remote-sync");
-    }
-    this.notify([...ids]);
-  }
-
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 刷新页面后重新创建 Editor
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   /** 全局升级提交后刷新驻留快照，不把升级前缓存重新排入自动保存。 */
+//   public async refreshAfterMigration(): Promise<void> {
+//     await this.flush();
+//     const active = this.options.activeDocument.getSnapshot();
+//     const ids = new Set([...this.documents.keys(), active.baseId]);
+//     for (const id of ids) {
+//       const document = freezeSnapshot(await this.options.read(id));
+//       this.documents.set(id, document);
+//       this.bumpGeneration(id);
+//       if (id === active.baseId) this.publishActive(document, "remote-sync");
+//     }
+//     this.notify([...ids]);
+//   }
   /** 先保存再发布；等待期间任一参与文档变化都会取消事务。 */
   public async commit(
     changes: readonly EditorDocumentChange[],

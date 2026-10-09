@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/dense-projection.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-dense-projection-a109aa22.schema6.json",
+        "file": "scene-01-dense-projection-a109aa22.schema7.json",
         "blueprintId": "req-076-dense-projection",
         "version": "fixture-v1"
       }
@@ -18,7 +18,7 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-dense-v2-host-3c40013b.schema6.json",
+        "file": "scene-02-dense-v2-host-3c40013b.schema7.json",
         "blueprintId": "req-076-dense-v2-host",
         "version": "fixture-v1"
       }
@@ -26,11 +26,10 @@
     "scene-03": [
       {
         "parameters": {},
-        "file": "scene-03-dense-v2-warehouse-stats-c45d5354.schema6.json",
+        "file": "scene-03-dense-v2-warehouse-stats-c45d5354.schema7.json",
         "blueprintId": "req-076-dense-v2-warehouse-stats",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

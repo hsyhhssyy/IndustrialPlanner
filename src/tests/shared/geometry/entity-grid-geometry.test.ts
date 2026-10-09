@@ -58,7 +58,7 @@ describe("resolveEntityGridGeometry", () => {
     //         rotation: 90,
     //       }),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema7.json"));
     const entityDefinitionMap = new Map<string, EntityDefinition>([
       ["wide", createDefinition("wide", { width: 3, height: 2 })],
       ["tall-after-rotation", createDefinition("tall-after-rotation", { width: 4, height: 2 })],
@@ -119,7 +119,7 @@ describe("resolveEntityGridGeometry", () => {
     // Original code:
     // [knownEntity, unknownEntity]
     const geometry = resolveEntityGridGeometry({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/shared/geometry/entity-grid-geometry/scene-01-variant-1.schema7.json")),
       entityDefinitionMap,
     });
 

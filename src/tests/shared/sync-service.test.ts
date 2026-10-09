@@ -1702,7 +1702,7 @@ function createSettings(enabled = true) {
   };
 }
 
-it("收齐整个下载批次后一次迁移，再提交同步基线", async () => {
+it("收齐下载批次后保存并提交基线，再刷新；本页不执行全库迁移", async () => {
   const { createDataMigrationController, installDataMigrationController } = await import("@/shared/data-migration");
   const { prepareLocalMigrationRecovery } = await import("@/shared/storage/local-migration-recovery");
   const { isDataMigrationComplete } = await import("@/shared/storage/data-migration-state");
@@ -1713,10 +1713,20 @@ it("收齐整个下载批次后一次迁移，再提交同步基线", async () =
   const dispose = await prepareLocalMigrationRecovery({ schemaVersion: 7, buildId: "sync-test", onInvalidated: () => {} });
   const events: string[] = [];
   const controller = createDataMigrationController("sync-test", [{
-    pause: async () => { events.push("freeze"); },
-    prepare: async () => ({ jobs: [{ label: "全库", run: async () => { events.push("migrate"); } }] }),
-    refresh: async () => { events.push("refresh"); },
-  }]);
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 刷新后由启动迁移统一执行
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//     pause: async () => { events.push("freeze"); },
+//     prepare: async () => ({ jobs: [{ label: "全库", run: async () => { events.push("migrate"); } }] }),
+//     refresh: async () => { events.push("refresh"); },
+//   }]);
+    prepare: async () => { throw new Error("运行期不允许调用全库迁移"); },
+  }], () => { events.push("reload"); });
   const uninstall = installDataMigrationController(controller);
   const adapter = createAdapter();
   adapter.sync.mockImplementation(async (_session: SyncRemoteSession, options: Parameters<SyncAdapter["sync"]>[1]) => {
@@ -1730,12 +1740,12 @@ it("收齐整个下载批次后一次迁移，再提交同步基线", async () =
   });
   const service = createSyncService({ readSettings: () => createSettings(), adapters: [adapter],
     createRemote: () => createTestRemote({ complete: async () => {
-      expect(await isDataMigrationComplete("sync-test")).toBe(true); events.push("complete");
+      expect(await isDataMigrationComplete("sync-test")).toBe(false); events.push("complete");
     } }),
   });
   try {
     await service.syncNow("manual");
-    expect(events).toEqual(["download-a", "download-b", "freeze", "apply-a", "apply-b", "migrate", "refresh", "complete"]);
+    expect(events).toEqual(["download-a", "download-b", "apply-a", "apply-b", "complete", "reload"]);
     expect(service.getStatus().lastError).toBeNull();
   } finally { service.stop(); uninstall(); dispose(); localStorage.clear(); vi.unstubAllGlobals(); }
 });

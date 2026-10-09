@@ -1,5 +1,5 @@
 import { hasStorageGeneration } from "./storage-generation";
-import { migratedRecordJob } from "./migration-records";
+import { prepareStoredJsonMigration } from "./migration-records";
 import type { IndexedDbStorageLocation } from "./browser-storage";
 import {
   readFromIndexedDb,
@@ -36,14 +36,27 @@ interface VersionedPayload<T> {
 /** 全库升级使用与单项读取相同的版本规则，显式产生持久化任务。 */
 export async function prepareVersionedStorageMigration<T, TContext>(
   location: IndexedDbStorageLocation, currentVersion: number, migrations: readonly StorageMigration<T, TContext>[],
-  context: TContext, normalize: (value: T) => T | null, label: string,
+  context: TContext, normalize: (value: T) => T | null, label: string, version = String(currentVersion),
 ) {
-  const raw = await readFromIndexedDb<unknown>(location, { strict: true });
-  if (raw === null) return { jobs: [] };
-  const value = applyMigrations(raw, currentVersion, migrations, context);
-  const normalized = value === null ? null : normalize(value);
-  if (normalized === null) throw new Error(`${label} 无法升级，原件已保留。`);
-  return { jobs: migratedRecordJob(location, { key: location.key, value: raw }, { _v: currentVersion, data: normalized }, label) };
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: prepareStoredJsonMigration 统一原件隔离
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   const raw = await readFromIndexedDb<unknown>(location, { strict: true });
+//   if (raw === null) return { jobs: [] };
+//   const value = applyMigrations(raw, currentVersion, migrations, context);
+//   const normalized = value === null ? null : normalize(value);
+//   if (normalized === null) throw new Error(`${label} 无法升级，原件已保留。`);
+//   return { jobs: migratedRecordJob(location, { key: location.key, value: raw }, { _v: currentVersion, data: normalized }, label) };
+  return prepareStoredJsonMigration(location, raw => {
+    const value = applyMigrations(raw, currentVersion, migrations, context);
+    const normalized = value === null ? null : normalize(value);
+    return normalized === null ? null : { _v: currentVersion, data: normalized };
+  }, label, version);
 }
 
 function isVersionedPayload(value: unknown): value is VersionedPayload<unknown> {

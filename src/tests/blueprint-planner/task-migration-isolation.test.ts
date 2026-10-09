@@ -19,7 +19,7 @@ import * as browserStorage from "@/shared/storage/browser-storage";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import environment from "./fixtures/environment-supply.json";
-import sourceBlueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema6.json";
+import sourceBlueprint from "../fixtures/blueprints/migration/plant-cycle.schema6.json";
 
 const registry = createRegistryContract();
 let disposeRecovery: (() => void) | undefined;
@@ -47,7 +47,7 @@ async function boot() {
 }
 
 function controller(verify = vi.fn(async () => { throw new Error("本场景不应启动验收"); })) {
-  const prepare = vi.fn(() => prepareEdaDataMigration(registry, verify));
+  const prepare = vi.fn(() => prepareEdaDataMigration());
   const value = createDataMigrationController(EDA_MIGRATION_VERSION, [{ prepare }]);
   uninstall?.(); uninstall = installDataMigrationController(value);
   return { value, prepare, verify };
@@ -115,7 +115,7 @@ it("迁移不能把不一致的旧池或其他生产方案的指纹修成合法�
 
 it("启动逐项隔离失败任务，保留磁盘原文和旧库，完成后刷新不重复迁移", async () => {
   const good = draft();
-  const unknown = { ...draft("unknown"), algorithmVersion: "future" };
+  const unknown = { ...draft("unknown"), request: null } as unknown as BlueprintPlannerTaskFile;
   const raw = "{broken-json";
   for (const file of [good, unknown]) await browserStorage.saveToIndexedDb({ ...LEGACY_EDA_TASK_LOCATION, key: file.taskId }, file);
   expect(await browserStorage.applyRawIndexedDbTransactionMutations(LEGACY_EDA_TASK_LOCATION, [
@@ -134,7 +134,7 @@ it("启动逐项隔离失败任务，保留磁盘原文和旧库，完成后刷�
   expect(await browserStorage.readFromIndexedDb({ ...LEGACY_EDA_TASK_LOCATION, key: unknown.taskId })).toEqual(unknown);
   const first = host();
   try {
-    await first.pauseForMigration();
+    await first.whenSettled();
     expect(first.queries.getTask(good.taskId)?.status).toBe("waiting");
     expect(first.queries.getTask(unknown.taskId)?.status).toBe("failed");
     expect(first.queries.exportTask(unknown.taskId)).toEqual(unknown);
@@ -142,19 +142,19 @@ it("启动逐项隔离失败任务，保留磁盘原文和旧库，完成后刷�
     expect(() => first.actions.continuePlanning(unknown.taskId, 10000)).toThrow("无法继续");
     // 正常任务入口仍能接受新任务，不受隔离记录影响。
     expect(await first.actions.importTask(good)).not.toBe(good.taskId);
-  } finally { first.dispose(); await first.pauseForMigration(); }
+  } finally { first.dispose(); await first.whenSettled(); }
   await boot();
   await migration.value.run();
   expect(migration.prepare).toHaveBeenCalledTimes(1);
   const second = host();
   try {
-    await second.pauseForMigration();
+    await second.whenSettled();
     expect(second.queries.exportTask(unknown.taskId)).toEqual(unknown);
     await second.actions.deleteTask(unknown.taskId);
     await second.actions.deleteTask("broken-json");
     expect(await edaTaskStorage.loadQuarantined()).toEqual([]);
-    expect((await prepareEdaDataMigration(registry, migration.verify)).jobs).toHaveLength(0);
-  } finally { second.dispose(); await second.pauseForMigration(); }
+    expect((await prepareEdaDataMigration()).jobs).toHaveLength(0);
+  } finally { second.dispose(); await second.whenSettled(); }
   expect(migration.verify).not.toHaveBeenCalled();
 });
 
@@ -167,7 +167,15 @@ it.each([
   }],
   ["wrong-key", (): BlueprintPlannerTaskFile => draft("different-id")],
   ["null-record", (): null => null],
-  ["bad-progress", (): BlueprintPlannerTaskFile => ({ ...draft("bad-progress"), progress: { ...draft("bad-progress").progress, elapsedMs: -1 } })],
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 启动不做业务验收；新测试断言数据保留至用户操作
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   ["bad-progress", (): BlueprintPlannerTaskFile => ({ ...draft("bad-progress"), progress: { ...draft("bad-progress").progress, elapsedMs: -1 } })],
 ] as const)("已迁入主库的 %s 在预检失败时也能原文隔离并移出活动库", async (key, makeSource) => {
   const source = makeSource();
   await browserStorage.saveToIndexedDb({ ...EDA_TASK_LOCATION, storeName: DATA_MIGRATION_STORE, key: "eda-store" }, 1);
@@ -186,7 +194,7 @@ it.each([
 });
 
 it("隔离事务未提交时不移除活动原件、不写完成标记，重试后正常进入", async () => {
-  const file = { ...draft("blocked"), algorithmVersion: "future" };
+  const file = { ...draft("blocked"), request: null } as unknown as BlueprintPlannerTaskFile;
   await browserStorage.saveToIndexedDb({ ...EDA_TASK_LOCATION, storeName: DATA_MIGRATION_STORE, key: "eda-store" }, 1);
   await browserStorage.saveToIndexedDb({ ...EDA_TASK_LOCATION, key: file.taskId }, file);
   await boot();
@@ -197,7 +205,8 @@ it("隔离事务未提交时不移除活动原件、不写完成标记，重试�
   expect(await edaTaskStorage.load()).toEqual([file]);
   expect(await edaTaskStorage.loadQuarantined()).toEqual([]);
   fail.mockRestore();
-  await migration.value.run();
+  const retried = controller();
+  await retried.value.run();
   expect(await edaTaskStorage.load()).toEqual([]);
   expect(await isDataMigrationComplete(EDA_MIGRATION_VERSION)).toBe(true);
 });
@@ -209,7 +218,7 @@ it("工作台已打开时导入无法升级的任务不进入全局冻结，仍�
   const file = { ...draft("bad-import"), request: null } as unknown as BlueprintPlannerTaskFile;
   const planner = host();
   try {
-    await planner.pauseForMigration();
+    await planner.whenSettled();
     const id = await planner.actions.importTask(file);
     expect(planner.queries.getTask(id)?.status).toBe("failed");
     expect(planner.queries.exportTask(id)).toMatchObject({ algorithmVersion: file.algorithmVersion, request: null });
@@ -220,5 +229,5 @@ it("工作台已打开时导入无法升级的任务不进入全局冻结，仍�
     expect(readDataMigrationProgress().phase).toBe("idle");
     expect(migration.prepare).toHaveBeenCalledTimes(1);
     expect(await isDataMigrationComplete(EDA_MIGRATION_VERSION)).toBe(true);
-  } finally { planner.dispose(); await planner.pauseForMigration(); }
+  } finally { planner.dispose(); await planner.whenSettled(); }
 });

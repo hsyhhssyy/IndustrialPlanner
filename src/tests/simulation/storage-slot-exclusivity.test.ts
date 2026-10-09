@@ -57,7 +57,7 @@ describe("存储槽位组内互斥规则", () => {
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-01-slot-exclusivity-overflow-7fbac9a2.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-01-slot-exclusivity-overflow-7fbac9a2.schema7.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -112,7 +112,7 @@ describe("存储槽位组内互斥规则", () => {
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-02-slot-exclusivity-block-74fbe269.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-02-slot-exclusivity-block-74fbe269.schema7.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -156,7 +156,7 @@ describe("存储槽位组内互斥规则", () => {
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-03-slot-exclusivity-normal-96579b85.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-03-slot-exclusivity-normal-96579b85.schema7.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });
@@ -210,7 +210,7 @@ describe("存储槽位组内互斥规则", () => {
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-04-slot-exclusivity-mix-pool-1-d293e525.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-slot-exclusivity/scene-04-slot-exclusivity-mix-pool-1-d293e525.schema7.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });

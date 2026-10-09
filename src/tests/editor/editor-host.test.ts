@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -95,7 +96,7 @@ function createOuterRingPumpBlueprint() {
     name: "抽水泵边缘蓝图",
     baseId: DEFAULT_WORLD_BASE_ID,
     initialGridPoint: { x: 0, y: 20 },
-    entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema6.json").entities,
+    entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json").entities,
     entityOrder: ["pump", "storage"],
     slotLinks: [{
       id: "pump-storage-link",
@@ -155,7 +156,7 @@ function createComplexRotationDrafts(): DraftEntity[] {
   //     createRotationDraft("preview-large-pool", "mix_pool_2", 42, 18, 270),
   //     createRotationDraft("preview-planter", "planter_1", 20, 30, 0),
   //   ]
-  return getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-01-variant-1.schema6.json"));
+  return getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-01-variant-1.schema7.json"));
 }
 
 // AI-REMOVED 2026-09-14:
@@ -669,7 +670,7 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithTestEntities(
-      getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema6.json")),
+      getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json")),
     );
     editorHost.internalDocument.setSnapshot(document);
     const entityId = document.entityOrder[0]!;
@@ -961,7 +962,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pipe", "pipe_straight_1x1", 5, 5),
     //       createTestEntity("belt", "belt_straight_1x1", 5, 5),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-04-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-04-variant-1.schema7.json"))));
     editorHost.actions.setViewportClientRect({
       left: 120,
       top: 80,
@@ -996,7 +997,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("belt", "belt_straight_1x1", 5, 5),
     //       createTestEntity("pipe-admission", "pipe_admission", 5, 5),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-05-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-05-variant-1.schema7.json"))));
     editorHost.actions.setViewportClientRect({
       left: 120,
       top: 80,
@@ -1049,7 +1050,7 @@ describe("createEditorHost", () => {
     //         tags: ["preview"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-06-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-06-variant-1.schema7.json"));
     editorHost.actions.setViewportClientRect({
       left: 120,
       top: 80,
@@ -1102,7 +1103,7 @@ describe("createEditorHost", () => {
     //         tags: ["draft-shadow"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-07-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-07-variant-1.schema7.json"));
 
     expect(editorHost.queries.getEntityById("dummy-entity-1")).toBe(
       document.entities["dummy-entity-1"],
@@ -1172,7 +1173,7 @@ describe("createEditorHost", () => {
     //         tags: ["draft-shadow"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-08-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-08-variant-1.schema7.json"));
 
     const entityIds = editorHost.queries.listEntities().map((entity) => entity.id);
 
@@ -1217,7 +1218,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [draftEntity]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-02-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-02-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -1334,7 +1335,7 @@ describe("createEditorHost", () => {
     //         tags: [],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-09-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-09-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.marquee,
@@ -1414,7 +1415,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pipe", "pipe_straight_1x1", 2, 1),
     //       createTestEntity("machine", "storager_1", 3, 1),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-10-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-10-variant-1.schema7.json"))));
 
     editorHost.actions.setLogisticsSuppression("belt", true);
     editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
@@ -1476,7 +1477,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pipe-admission", "pipe_admission", 2, 1),
     //       createTestEntity("machine", "storager_1", 3, 1),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-11-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-11-variant-1.schema7.json"))));
 
     editorHost.actions.setLogisticsSuppression("pipe", true);
     editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
@@ -1525,7 +1526,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [draftEntity]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-03-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-03-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -1771,7 +1772,7 @@ describe("createEditorHost", () => {
     // [
     //       createTestEntity("warehouse-source", "log_hongs_bus_source", 0, 0),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema7.json"))));
     editorHost.actions.createSinglePlacementDraft("loader_1", { x: 4, y: 1 });
     const draftId = editorHost.state.collections.preview[0];
 
@@ -1824,7 +1825,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("bottom-middle", "log_hongs_bus_source", 24, 28),
     //       createTestEntity("bottom-right", "log_hongs_bus_source", 28, 28),
     //     ]
-    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-13-variant-1.schema6.json"))));
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-13-variant-1.schema7.json"))));
     editorHost.actions.createSinglePlacementDraft("loader_1", { x: 25, y: 24 });
     const draftId = editorHost.state.collections.preview[0];
 
@@ -1887,7 +1888,7 @@ describe("createEditorHost", () => {
       name: "双设备蓝图",
       baseId: DEFAULT_WORLD_BASE_ID,
       initialGridPoint: { x: 10, y: 10 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-14-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-14-variant-1.schema7.json").entities,
       entityOrder: ["source", "target"],
       slotLinks: [{
         id: "blueprint-link",
@@ -2062,7 +2063,7 @@ describe("createEditorHost", () => {
     //         tags: ["persisted"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-15-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-15-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
       "dummy-entity-2",
@@ -2134,7 +2135,7 @@ describe("createEditorHost", () => {
     //         tags: ["persisted"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-16-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-16-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 
     editorHost.actions.createMoveOperationDraft();
@@ -2178,7 +2179,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pump", "water_pump_1", -10, 20, 180),
     //       createTestEntity("storage", "storager_1", 0, 20),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-17-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-17-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace(["pump", "storage"]);
@@ -2230,7 +2231,7 @@ describe("createEditorHost", () => {
     //       },
     //       createTestEntity("storage", "storager_1", 4, 10),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-18-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-18-variant-1.schema7.json")));
     document.slotLinks = [createStorageToFactorySlotLink()];
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2269,7 +2270,7 @@ describe("createEditorHost", () => {
     //       },
     //       createTestEntity("storage", "storager_1", 4, 10),
     //     ]
-    const applyDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-19-variant-1.schema6.json")));
+    const applyDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-19-variant-1.schema7.json")));
     applyDocument.slotLinks = [createStorageToFactorySlotLink()];
     applyEditorHost.internalDocument.setSnapshot(applyDocument);
     applyEditorHost.internalState.collections.selection.replace(["factory"]);
@@ -2306,7 +2307,7 @@ describe("createEditorHost", () => {
     //         config: { recipe: "old" },
     //       },
     //     ]
-    const cancelDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-20-variant-1.schema6.json")));
+    const cancelDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-20-variant-1.schema7.json")));
     cancelEditorHost.internalDocument.setSnapshot(cancelDocument);
     cancelEditorHost.internalState.collections.selection.replace(["factory"]);
     cancelEditorHost.actions.createMoveOperationDraft();
@@ -2396,7 +2397,7 @@ describe("createEditorHost", () => {
     //         tags: ["persisted"],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-21-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-21-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
     editorHost.actions.createMoveOperationDraft();
@@ -2462,7 +2463,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [draftOnlyEntity, documentShadowDraft]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-04-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-04-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
       "draft-only",
@@ -2510,7 +2511,7 @@ describe("createEditorHost", () => {
     // [
     //       createTestEntity("pipe", "pipe_straight_1x1", -4, 5),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-22-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-22-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace(["pipe"]);
@@ -2593,7 +2594,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [draftOnlyEntity, movePreviewDraft, unrelatedDraft]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-05-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-05-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
       "draft-only",
@@ -2652,7 +2653,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
     //       createTestEntity("ordered-second", "belt_straight_1x1", 2, 0, 270),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-23-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-23-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace([
@@ -2693,7 +2694,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
     //       createTestEntity("fallback-first", "belt_straight_1x1", 2, 0, 270),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-24-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-24-variant-1.schema7.json")));
 
     document.entityOrder = ["ordered-first"];
     editorHost.internalDocument.setSnapshot(document);
@@ -2745,7 +2746,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [firstDraft, secondDraft]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-06-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-06-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace([
       firstDraft.id,
       secondDraft.id,
@@ -2786,7 +2787,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("left", "belt_straight_1x1", 10, 10),
     //       createTestEntity("right", "belt_straight_1x1", 11, 10),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-25-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-25-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace(["left", "right"]);
@@ -2900,7 +2901,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pipe-top", "pipe_straight_1x1", -15, 0),
     //       createTestEntity("pipe-bottom", "pipe_straight_1x1", -15, 8),
     //     ]
-    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-26-variant-1.schema6.json")));
+    const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-26-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace(["pipe-top", "pipe-bottom"]);
@@ -2941,7 +2942,7 @@ describe("createEditorHost", () => {
     //         tags: [],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-27-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-27-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace(["preview-belt"]);
 
     editorHost.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
@@ -2987,7 +2988,7 @@ describe("createEditorHost", () => {
     //         tags: [],
     //       },
     //     ]
-    const drafts: DraftEntity[] = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-28-variant-1.schema6.json"));
+    const drafts: DraftEntity[] = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-28-variant-1.schema7.json"));
 
     editorHost.internalState.drafts = drafts;
     editorHost.internalState.collections.preview.replace(drafts.map((draft) => draft.id));
@@ -3030,7 +3031,7 @@ describe("createEditorHost", () => {
     // Human Review: Required
     // Original code:
     // [initialDraft]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-07-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-07-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace([initialDraft.id]);
 
     for (let step = 0; step < 4; step += 1) {
@@ -3137,7 +3138,7 @@ describe("createEditorHost", () => {
     //         tags: [],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-29-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-29-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       selectedStorager.id,
       selectedBelt.id,
@@ -3189,7 +3190,7 @@ describe("createEditorHost", () => {
     //         tags: [],
     //       },
     //     ]
-    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-30-variant-1.schema6.json"));
+    editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-30-variant-1.schema7.json"));
 
     expect(Object.values(EntityCollectionType)).toEqual([
       "selection",

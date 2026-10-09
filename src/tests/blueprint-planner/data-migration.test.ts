@@ -13,7 +13,7 @@ import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import legacy from "./fixtures/legacy-boundary-task.json";
-import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema6.json";
+import blueprint from "../fixtures/blueprints/migration/plant-cycle.schema6.json";
 
 beforeEach(() => { vi.stubGlobal("indexedDB", createFakeIndexedDbFactory()); });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
@@ -48,7 +48,7 @@ it("EDA 一次性迁入主库，无同步事件；删光后不重新导入旧库
   const stop = subscribeToStorageChanges(changed);
   const verify = vi.fn(async () => { throw new Error("识别检查点不应提前运行仿真"); });
   try {
-    const plan = await prepareEdaDataMigration(registry, verify);
+    const plan = await prepareEdaDataMigration();
     expect(plan.jobs).toHaveLength(1);
     for (const job of plan.jobs) await job.run();
     expect(await readFromIndexedDb({ ...EDA_TASK_LOCATION, key: old.taskId })).toBeNull();
@@ -58,9 +58,22 @@ it("EDA 一次性迁入主库，无同步事件；删光后不重新导入旧库
     expect(current?.progress).toEqual(old.progress);
     expect(await readFromIndexedDb({ ...LEGACY_EDA_TASK_LOCATION, key: old.taskId })).toEqual(old);
     await edaTaskStorage.delete(old.taskId);
-    expect((await prepareEdaDataMigration(registry, verify)).jobs).toHaveLength(0);
+    expect((await prepareEdaDataMigration()).jobs).toHaveLength(0);
     expect(await edaTaskStorage.load()).toEqual([]);
     expect(changed).not.toHaveBeenCalled();
     expect(verify).not.toHaveBeenCalled();
   } finally { stop(); }
+});
+
+it("启动迁移仅更新 JSON；旧算法和验收结果原样保留，不进入任务恢复", async () => {
+  const file = structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile;
+  await saveToIndexedDb({ ...LEGACY_EDA_TASK_LOCATION, key: file.taskId }, file);
+  const plan = await prepareEdaDataMigration();
+  for (const job of plan.jobs) await job.run();
+  await plan.finish?.();
+  const [stored] = await edaTaskStorage.load();
+  expect(stored).toEqual(migrateTaskBlueprintSchemas(file));
+  expect(stored?.algorithmVersion).toBe(file.algorithmVersion);
+  expect(stored?.progress).toEqual(file.progress);
+  expect((stored?.checkpoint as PlannerCheckpoint).best?.report).toEqual((file.checkpoint as PlannerCheckpoint).best?.report);
 });

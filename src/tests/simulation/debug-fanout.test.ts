@@ -59,7 +59,7 @@ describe("debug-fanout", () => {
     //         createEntity("open-storage", "storager_1", 2, -1, 90),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/debug-fanout/scene-01-blocked-fanout-64edc15f.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/debug-fanout/scene-01-blocked-fanout-64edc15f.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 150,
     });

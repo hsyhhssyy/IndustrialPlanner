@@ -51,7 +51,7 @@ describe("dark pipe warehouse ingress", () => {
     //         createEntity("inlet", "udpipe_loader_1", 4, 0, 180),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-01-single-dark-pipe-inlet-warehouse-e12525bf.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-01-single-dark-pipe-inlet-warehouse-e12525bf.schema7.json"),
       maxTickNumber: finalTick,
       registry: createRegistryContract(),
     });
@@ -85,7 +85,7 @@ describe("dark pipe warehouse ingress", () => {
     //         createEntity("inlet", "udpipe_loader_2", 4, 0, 180),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-02-multi-dark-pipe-inlet-warehouse-60217eb6.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-02-multi-dark-pipe-inlet-warehouse-60217eb6.schema7.json"),
       maxTickNumber: finalTick,
       registry: createRegistryContract(),
     });
@@ -114,7 +114,7 @@ describe("dark pipe warehouse ingress", () => {
     //         createEntity("multi-outlet", "udpipe_unloader_2", 4, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-03-dark-pipe-outlet-default-empty-faa7ebc1.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-03-dark-pipe-outlet-default-empty-faa7ebc1.schema7.json"),
       maxTickNumber: STANDARD_TICK_RATE_PER_SECOND,
       registry: createRegistryContract(),
     });
@@ -152,7 +152,7 @@ describe("dark pipe warehouse ingress", () => {
     //         ],
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema7.json"),
       maxTickNumber: finalTick,
       registry: createRegistryContract(),
     });
@@ -195,7 +195,7 @@ describe("dark pipe warehouse ingress", () => {
       //           ],
       //         )
       const report = await runBlueprintSimulation({
-        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-05-linked-dark-pipe-inlet-warehouse-source-853d73d7.schema6.json"),
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-05-linked-dark-pipe-inlet-warehouse-source-853d73d7.schema7.json"),
         maxTickNumber: finalTick,
         engineKind,
         registry: createRegistryContract(),

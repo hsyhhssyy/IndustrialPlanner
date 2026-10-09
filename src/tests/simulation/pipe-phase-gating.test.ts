@@ -210,7 +210,7 @@ function createLiquidPhaseGatingBlueprint() {
   //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
   //     createEntity("sink", "liquid_storager_1", 4, 0, 180),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-phase-gating/scene-01-pipe-phase-gating-c9ec427f.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-phase-gating/scene-01-pipe-phase-gating-c9ec427f.schema7.json");
 }
 
 function resolveLegacyFirstTick(elapsedMilliseconds: number): number {

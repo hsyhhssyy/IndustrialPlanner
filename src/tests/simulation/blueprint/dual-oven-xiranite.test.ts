@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
@@ -70,7 +71,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
     //       createWarehouseSlotLink("extra-top", "item_liquid_water"),
     //       createWarehouseSlotLink("extra-bottom", "item_liquid_water"),
     //     ])
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema7.json");
 
     // 收集蓝图中所有息壤烘炉实体 ID
     const ovenIds = Object.values(blueprint.entities)

@@ -8,6 +8,8 @@ export interface DataMigrationCompletion {
   readonly version: string;
   readonly generation: string;
   readonly complete: boolean;
+  /** 已放弃失败记录的本轮迁移；不伪装成全部完成，下次迁移版本再尝试原件。 */
+  readonly abandoned?: boolean;
 }
 
 export async function isDataMigrationComplete(version: string): Promise<boolean> {
@@ -15,11 +17,17 @@ export async function isDataMigrationComplete(version: string): Promise<boolean>
   return value?.complete === true && value.version === version && value.generation === getStorageGeneration()?.generation;
 }
 
+export async function isDataMigrationSettled(version: string): Promise<boolean> {
+  const value = await readFromIndexedDb<DataMigrationCompletion>(DATA_MIGRATION_LOCATION, { strict: true });
+  return (value?.complete === true || value?.abandoned === true)
+    && value.version === version && value.generation === getStorageGeneration()?.generation;
+}
+
 /** 完成记录独立于旧恢复协议的 ready；失败和输入采纳前先持久化失效。 */
-export async function writeDataMigrationCompletion(version: string, complete: boolean): Promise<void> {
+export async function writeDataMigrationCompletion(version: string, complete: boolean, abandoned = false): Promise<void> {
   const generation = getStorageGeneration();
   if (generation === null) throw new Error("尚未建立本地数据恢复屏障。");
-  await saveToIndexedDb(DATA_MIGRATION_LOCATION, { version, generation: generation.generation, complete } satisfies DataMigrationCompletion);
+  await saveToIndexedDb(DATA_MIGRATION_LOCATION, { version, generation: generation.generation, complete, abandoned } satisfies DataMigrationCompletion);
 }
 
 /** 必须在枚举迁移源之前建立跨页屏障，失效标记与新代际同事务提交。 */

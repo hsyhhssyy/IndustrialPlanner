@@ -45,7 +45,7 @@ describe("EditorQuery.listPowerRangeProvidersCoveringGridRect", () => {
     //       createEntity("power-outside", "power_diffuser_1", 24, 0),
     //       createEntity("storage", "storager_1", 5, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/power-range-query/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/power-range-query/scene-01-variant-1.schema7.json"));
     const document = createWorldDocument();
     document.entities = Object.fromEntries(entities.map((entity) => [entity.id, entity]));
     document.entityOrder = entities.map((entity) => entity.id);

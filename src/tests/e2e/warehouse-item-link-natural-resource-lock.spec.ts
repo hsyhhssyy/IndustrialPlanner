@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { SCREEN_PROFILES } from "./harness/profiles";
 import { readFileSync } from "node:fs";
 import type { BlueprintDocument } from "../../domain/document/blueprint-document";
@@ -237,7 +238,7 @@ for (const profile of SCREEN_PROFILES) {
 //   });
 // }
 async function installNaturalResourceWarehouseLink(page: Page): Promise<void> {
-  const payload = JSON.parse(readFileSync("src/tests/fixtures/blueprints/e2e/natural-resource-warehouse-link.schema6.json", "utf8")) as BlueprintDocument;
+  const payload = JSON.parse(readFileSync("src/tests/fixtures/blueprints/e2e/natural-resource-warehouse-link.schema7.json", "utf8")) as BlueprintDocument;
   // AI-REMOVED 2026-10-05:
   // Reason: 场景基地与版本化数据由基座统一装载。
   // Trigger: 用户授权基座与用例迁移。

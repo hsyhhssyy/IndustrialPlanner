@@ -28,7 +28,7 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [original]
     const initial = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-01-variant-1.schema7.json")),
       previewEntities: [],
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
@@ -53,8 +53,8 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [original, draftAtFirstPosition]
     const whileMoving = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-02-variant-1.schema6.json")),
-      previewEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-03-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-02-variant-1.schema7.json")),
+      previewEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-03-variant-1.schema7.json")),
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
     const draftAtSecondPosition = entity("move-draft:admission", "log_admission", 8);
@@ -78,8 +78,8 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [original, draftAtSecondPosition]
     const afterMoving = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-04-variant-1.schema6.json")),
-      previewEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-05-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-04-variant-1.schema7.json")),
+      previewEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-05-variant-1.schema7.json")),
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
     // AI-REMOVED 2026-09-14:
@@ -93,7 +93,7 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [original]
     const afterCancel = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-06-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-06-variant-1.schema7.json")),
       previewEntities: [],
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
@@ -128,7 +128,7 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [admission]
     const first = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-07-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-07-variant-1.schema7.json")),
       previewEntities: [],
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
@@ -143,7 +143,7 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [admission]
     const second = cache.resolve({
       documentSnapshot,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-08-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-08-variant-1.schema7.json")),
       previewEntities: [],
       isConfiguredItemIconDefinition: (definitionId) => CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),
     });
@@ -177,7 +177,7 @@ describe("ConfiguredItemIconEntityCache", () => {
     // [admission, warehousePickup, unrelated]
     const result = cache.resolve({
       documentSnapshot: {},
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-09-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/configured-item-icon-entity-cache/scene-09-variant-1.schema7.json")),
       previewEntities: [],
       isConfiguredItemIconDefinition: (definitionId) =>
         CONFIGURED_ITEM_ICON_DEFINITION_IDS.has(definitionId),

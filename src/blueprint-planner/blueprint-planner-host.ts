@@ -1,5 +1,13 @@
-import { BLUEPRINT_RECOGNITION_VERSION } from "./blueprint-recognition-task";
-import { migrateIncomingData } from "@/shared/data-migration";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 启动迁移不再比较算法版本
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import { BLUEPRINT_RECOGNITION_VERSION } from "./blueprint-recognition-task";
+import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 import { EDA_MIGRATION_VERSION } from "./data-migration";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
@@ -54,8 +62,17 @@ interface PlannerTask {
 
 export interface BlueprintPlannerHost extends BlueprintPlannerContract {
   dispose(): void;
-  pauseForMigration(): Promise<void>;
-  reloadAfterMigration(): Promise<void>;
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: whenSettled；运行期迁移已删除
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   pauseForMigration(): Promise<void>;
+//   reloadAfterMigration(): Promise<void>;
+  whenSettled(): Promise<void>;
 }
 
 /** 浏览器与无头客户端只替换 IO，任务状态机、检查点与验收共用。 */
@@ -80,18 +97,29 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const candidateSearchTarget = (candidate: PlannerCandidate) => JSON.stringify({
     blueprintId: candidate.execution.blueprint.blueprintId, ...rank(candidate) });
   const state = observable<{ activeTaskId: string | null; revision: number }>({ activeTaskId: null, revision: 0 });
-  const migrationWriteErrors = new Map<string, unknown>();
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: reportStorageFailure；存储失败不再反馈全局迁移
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   const migrationWriteErrors = new Map<string, unknown>();
   const tasks = new Map<string, PlannerTask>();
   // 识别使用阶段检查点，不实例化尚未存在的搜索计划或种子池。
   const recognitionTasks = new Map<string, BlueprintRecognitionTask>();
   // 无法恢复的记录独立保留原文，禁止生命周期自动保存覆盖它们。
   const blockedTasks = new Map<string, { file: BlueprintPlannerTaskFile; progress: BlueprintPlannerProgress }>();
-  const retainBlocked = (file: BlueprintPlannerTaskFile, error: unknown, taskId = file?.taskId) => {
+  const deferredTasks = new Map<string, { file: BlueprintPlannerTaskFile; progress: BlueprintPlannerProgress; originTaskId: string }>();
+  let deferredOperation: Promise<void> | null = null;
+  let restoringTask: { id: string; abort: AbortController } | null = null;
+  const retainedProgress = (file: BlueprintPlannerTaskFile, error: unknown, taskId = file?.taskId): BlueprintPlannerProgress => {
     const id = taskId;
     const count = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : 0;
     const evaluatedProposals = count(file?.progress?.evaluatedProposals);
     const history = file?.progress?.areaHistory;
-    blockedTasks.set(id, { file: structuredClone(file), progress: { ...file?.progress, taskId: id, status: "failed", phase: "preparing",
+    return { ...file?.progress, taskId: id, status: "failed", phase: "preparing",
       startedAt: Number.isFinite(file?.progress?.startedAt) ? file.progress.startedAt : 0,
       elapsedMs: Number.isFinite(file?.progress?.elapsedMs) && file.progress.elapsedMs >= 0 ? file.progress.elapsedMs : 0,
       estimatedProgress: null, candidateCount: count(file?.progress?.candidateCount), evaluatedProposals,
@@ -101,7 +129,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       areaHistory: Array.isArray(history) && history.every(point => point && Number.isSafeInteger(point.evaluatedProposals)
         && point.evaluatedProposals >= 0 && point.evaluatedProposals <= evaluatedProposals
         && Number.isSafeInteger(point.bestArea) && point.bestArea > 0) ? structuredClone(history) : [],
-      message: `任务无法继续，原始记录已保留，可导出或删除。${errorMessage(error)}` } });
+      message: `任务无法继续，原始记录已保留，可导出或删除。${errorMessage(error)}` };
+  };
+  const retainBlocked = (file: BlueprintPlannerTaskFile, error: unknown, taskId = file?.taskId) => {
+    blockedTasks.set(taskId, { file: structuredClone(file), progress: retainedProgress(file, error, taskId) });
+  };
+  const deferTask = (file: BlueprintPlannerTaskFile, originTaskId = (file.checkpoint as PlannerCheckpoint)?.parallel?.originTaskId ?? file.taskId) => {
+    deferredTasks.set(file.taskId, { file: structuredClone(file), originTaskId, progress: { ...retainedProgress(file, ""),
+      status: "waiting", bestArea: file.progress?.bestArea ?? null,
+      message: "任务已读取，继续计算时恢复。" } });
   };
   const concurrencyMemory = new PlannerConcurrencyMemory();
   const worker = options.worker ?? new PlannerWorkerClient();
@@ -192,8 +228,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           pendingWrites.delete(next);
           lastWriteAt = performance.now();
           // 等待期间只保留任务引用；写入中的独立快照不会随继续搜索而变化。
-          try { await storage.save(snapshot(next)); migrationWriteErrors.delete(next.file.taskId); }
-          catch (error) { migrationWriteErrors.set(next.file.taskId, error); reportStorageFailure("eda-task", error); }
+          try { await storage.save(snapshot(next)); }
+          catch (error) { reportStorageFailure("eda-task", error); }
         }
       } finally { writing = false; }
     });
@@ -241,16 +277,45 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       portfolio, portfolios, liveEvaluations: new Map(), activeShards: new Set(), activeShapes: new Set(), abort: new AbortController(),
       resumedAt: null, roundStartedEvaluations: parsed.checkpoint.evaluations - parsed.progress.roundEvaluatedProposals, remaining: 0, running: null };
   };
-  const restore = async (file: BlueprintPlannerTaskFile): Promise<PlannerTask> => {
+  const restore = async (file: BlueprintPlannerTaskFile, signal = restorationAbort.signal): Promise<PlannerTask> => {
     const parsed = await restorePlannerTaskFile(file, workspace.registry, async execution => {
       restorationAbort.signal.throwIfAborted();
       if (workspace.simulation === null) throw new Error("仿真服务不可用，无法验收旧最优蓝图。");
-      const report = await workspace.simulation.actions.runBlueprint(execution, restorationAbort.signal);
+      const report = await workspace.simulation.actions.runBlueprint(execution, AbortSignal.any([restorationAbort.signal, signal]));
+      signal.throwIfAborted();
       restorationAbort.signal.throwIfAborted();
       return report;
     });
     restorationAbort.signal.throwIfAborted();
     return materialize(parsed);
+  };
+  const restoreDeferred = async (id: string): Promise<PlannerTask> => {
+    assertReady();
+    const deferred = deferredTasks.get(id);
+    if (!deferred) return requireTask(id);
+    if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+    const abort = new AbortController();
+    restoringTask = { id, abort };
+    runInAction(() => { state.activeTaskId = id; });
+    deferred.progress = { ...deferred.progress, status: "running", roundEvaluatedProposals: 0, message: "正在恢复计算任务" };
+    notify();
+    try {
+      const task = await restore(deferred.file, abort.signal);
+      task.originTaskId = deferred.originTaskId;
+      abort.signal.throwIfAborted();
+      await storage?.save(snapshot(task));
+      tasks.set(id, task);
+      deferredTasks.delete(id);
+      return task;
+    } catch (error) {
+      deferred.progress = { ...deferred.progress, status: abort.signal.aborted ? "waiting" : "failed",
+        message: abort.signal.aborted ? "恢复已暂停，原始任务已保留。" : `无法继续计算，原始任务已保留。${errorMessage(error)}` };
+      throw error;
+    } finally {
+      restoringTask = null;
+      runInAction(() => { state.activeTaskId = null; });
+      notify();
+    }
   };
   const settle = async (task: PlannerTask) => {
     publish(task, { estimatedProgress: null, activeWorkerCount: 0 });
@@ -1126,7 +1191,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     return task.running;
   }
 
-  let taskLoadError: unknown = null;
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: reportStorageFailure
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   let taskLoadError: unknown = null;
   const loadStoredTasks = () => storage === null ? Promise.resolve() : storage.load().then(async files => {
     if (disposed) return;
     for (const record of await storage.loadQuarantined?.() ?? []) {
@@ -1150,12 +1223,22 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           if (JSON.stringify(task.file) !== JSON.stringify(file)) persist(task);
           continue;
         }
-        const task = hasDataMigrationController() ? materialize(parsePlannerTaskFile(file, workspace.registry)) : await restore(file);
-        if (["running", "saving"].includes(task.file.progress.status)) task.file = { ...task.file,
-          progress: { ...task.file.progress, status: "waiting", message: "计算已恢复，可以继续。", estimatedProgress: null } };
-        tasks.set(file.taskId, task);
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: deferTask；用户操作时 restoreDeferred
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//         const task = hasDataMigrationController() ? materialize(parsePlannerTaskFile(file, workspace.registry)) : await restore(file);
+//         if (["running", "saving"].includes(task.file.progress.status)) task.file = { ...task.file,
+//           progress: { ...task.file.progress, status: "waiting", message: "计算已恢复，可以继续。", estimatedProgress: null } };
+//         tasks.set(file.taskId, task);
+//         latestId = file.taskId;
+//         if (file.algorithmVersion !== task.file.algorithmVersion) persist(task);
+        deferTask(file);
         latestId = file.taskId;
-        if (file.algorithmVersion !== task.file.algorithmVersion) persist(task);
       // AI-REMOVED 2026-09-30:
       // Reason: 任务不兼容不是数据库故障。Trigger: 旧算法任务触发全局红条。
       // Evidence: eda-task-restore 日志。Replacement: retainBlocked。
@@ -1164,105 +1247,173 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // } catch (error) { reportStorageFailure("eda-task-restore", error); }
       } catch (error) { if (disposed) return; retainBlocked(file, error); latestId = file.taskId; }
     }
-  }).catch(error => { taskLoadError = error; reportStorageFailure("eda-task-load", error); }).finally(() => { loaded = true; notify(); });
+  }).catch(error => { reportStorageFailure("eda-task-load", error); }).finally(() => { loaded = true; notify(); });
   const ready = loadStoredTasks();
 
-  const importTaskFile = async (file: BlueprintPlannerTaskFile, duringMigration = false): Promise<string> => {
-        if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
-        importing = true;
-        try {
-          await ready;
-          if (!duringMigration) assertReady();
-          const original = file;
-          let task: PlannerTask | BlueprintRecognitionTask;
-          try { file = migrateTaskBlueprintSchemas(original);
-            task = file?.request && isBlueprintRecognitionRequest(file.request)
-            ? recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)) : await restore(file); } catch (error) {
-            if (disposed) throw error;
-            if (!original || typeof original !== "object" || typeof original.taskId !== "string" || !original.taskId) throw error;
-            const id = createUuid();
-            const retained = { ...structuredClone(original), taskId: id };
-            // 独立导入的编号须同步内部引用，否则原文导出后仍会因编号不匹配而无法重试恢复。
-            if (retained.progress && typeof retained.progress === "object" && !Array.isArray(retained.progress)) {
-              retained.progress = { ...retained.progress, taskId: id };
-            }
-            const point = retained.checkpoint;
-            if (point && typeof point === "object" && "result" in point && point.result
-              && typeof point.result === "object" && !Array.isArray(point.result)) Object.assign(point.result, { taskId: id });
-            if (storage?.saveQuarantined) await storage.saveQuarantined({ taskId: id, sourceKey: id, sourceValue: retained,
-              message: errorMessage(error), migrationVersion: EDA_MIGRATION_VERSION });
-            else await storage?.save(retained);
-            retainBlocked(retained, error);
-            latestId = id;
-            notify();
-            return id;
-          }
-          // 导入始终创建独立任务，不能覆盖正在计算的同名任务或本机历史。
-          // AI-CORRECTION 2026-10-05：活动任务存在时禁止导入；导入提交前也禁止启动、续算和保存。
-          const id = createUuid();
-          if (!("portfolio" in task)) {
-            task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
-              message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已导入，可以继续识别。"), estimatedProgress: null } };
-            await storage?.save(snapshot(task)); recognitionTasks.set(id, task); latestId = id; notify(); return id;
-          }
-          task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
-            message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
-          const result = task.file.checkpoint.result;
-          const blueprint = task.file.checkpoint.best?.candidate.execution.blueprint;
-          if (blueprint) {
-            const best = task.file.checkpoint.best!.candidate;
-            const previousTarget = candidateSearchTarget(best);
-            blueprint.blueprintId = createUuid();
-            const target = candidateSearchTarget(best);
-            // 导入创建独立身份，但对应当前最优的已完成搜索机会仍然有效。
-            for (const shard of task.file.checkpoint.parallel?.shards ?? []) {
-              if (shard.searchTarget === previousTarget) shard.searchTarget = target;
-            }
-          }
-          const pendingBlueprint = task.file.checkpoint.pendingCandidate?.execution.blueprint;
-          if (pendingBlueprint && pendingBlueprint !== blueprint) pendingBlueprint.blueprintId = createUuid();
-          if (result !== null) task.file.checkpoint.result = { ...result, taskId: id, folderId: null,
-            blueprint: { ...result.blueprint, blueprintId: blueprint!.blueprintId } };
-          task.file.checkpoint.savedBlueprintId = null;
-          await storage?.save(snapshot(task));
-          tasks.set(id, task);
-          latestId = id;
-          notify();
-          return id;
-        } finally { importing = false; }
-  };
-
-  const taskNeedsMigration = (file: BlueprintPlannerTaskFile): boolean => {
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 下方 importTaskFile：读取 JSON、独立编号和持久化，恢复延后
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   const importTaskFile = async (file: BlueprintPlannerTaskFile, duringMigration = false): Promise<string> => {
+//         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+//         importing = true;
+//         try {
+//           await ready;
+//           if (!duringMigration) assertReady();
+//           const original = file;
+//           let task: PlannerTask | BlueprintRecognitionTask;
+//           try { file = migrateTaskBlueprintSchemas(original);
+//             task = file?.request && isBlueprintRecognitionRequest(file.request)
+//             ? recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)) : await restore(file); } catch (error) {
+//             if (disposed) throw error;
+//             if (!original || typeof original !== "object" || typeof original.taskId !== "string" || !original.taskId) throw error;
+//             const id = createUuid();
+//             const retained = { ...structuredClone(original), taskId: id };
+//             // 独立导入的编号须同步内部引用，否则原文导出后仍会因编号不匹配而无法重试恢复。
+//             if (retained.progress && typeof retained.progress === "object" && !Array.isArray(retained.progress)) {
+//               retained.progress = { ...retained.progress, taskId: id };
+//             }
+//             const point = retained.checkpoint;
+//             if (point && typeof point === "object" && "result" in point && point.result
+//               && typeof point.result === "object" && !Array.isArray(point.result)) Object.assign(point.result, { taskId: id });
+//             if (storage?.saveQuarantined) await storage.saveQuarantined({ taskId: id, sourceKey: id, sourceValue: retained,
+//               message: errorMessage(error), migrationVersion: EDA_MIGRATION_VERSION });
+//             else await storage?.save(retained);
+//             retainBlocked(retained, error);
+//             latestId = id;
+//             notify();
+//             return id;
+//           }
+//           // 导入始终创建独立任务，不能覆盖正在计算的同名任务或本机历史。
+//           // AI-CORRECTION 2026-10-05：活动任务存在时禁止导入；导入提交前也禁止启动、续算和保存。
+//           const id = createUuid();
+//           if (!("portfolio" in task)) {
+//             task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
+//               message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已导入，可以继续识别。"), estimatedProgress: null } };
+//             await storage?.save(snapshot(task)); recognitionTasks.set(id, task); latestId = id; notify(); return id;
+//           }
+//           task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
+//             message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
+//           const result = task.file.checkpoint.result;
+//           const blueprint = task.file.checkpoint.best?.candidate.execution.blueprint;
+//           if (blueprint) {
+//             const best = task.file.checkpoint.best!.candidate;
+//             const previousTarget = candidateSearchTarget(best);
+//             blueprint.blueprintId = createUuid();
+//             const target = candidateSearchTarget(best);
+//             // 导入创建独立身份，但对应当前最优的已完成搜索机会仍然有效。
+//             for (const shard of task.file.checkpoint.parallel?.shards ?? []) {
+//               if (shard.searchTarget === previousTarget) shard.searchTarget = target;
+//             }
+//           }
+//           const pendingBlueprint = task.file.checkpoint.pendingCandidate?.execution.blueprint;
+//           if (pendingBlueprint && pendingBlueprint !== blueprint) pendingBlueprint.blueprintId = createUuid();
+//           if (result !== null) task.file.checkpoint.result = { ...result, taskId: id, folderId: null,
+//             blueprint: { ...result.blueprint, blueprintId: blueprint!.blueprintId } };
+//           task.file.checkpoint.savedBlueprintId = null;
+//           await storage?.save(snapshot(task));
+//           tasks.set(id, task);
+//           latestId = id;
+//           notify();
+//           return id;
+//         } finally { importing = false; }
+//   };
+//
+//   const taskNeedsMigration = (file: BlueprintPlannerTaskFile): boolean => {
+//     try {
+//       return file.algorithmVersion !== (isBlueprintRecognitionRequest(file.request) ? BLUEPRINT_RECOGNITION_VERSION : PLANNER_ALGORITHM_VERSION)
+//         || createStableJsonHash(file) !== createStableJsonHash(migrateTaskBlueprintSchemas(file));
+//     } catch {
+//       // 无法预检的输入交给 importTaskFile 保留原件；预检异常不能冻结已打开的仿真工作台。
+//       return false;
+//     }
+//   };
+  const importTaskFile = async (source: BlueprintPlannerTaskFile): Promise<string> => {
+    await ready; assertReady();
+    if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+    if (!source || source.formatVersion !== 1 || !source.taskId) throw new Error("任务文件格式无效。");
+    importing = true;
     try {
-      return file.algorithmVersion !== (isBlueprintRecognitionRequest(file.request) ? BLUEPRINT_RECOGNITION_VERSION : PLANNER_ALGORITHM_VERSION)
-        || createStableJsonHash(file) !== createStableJsonHash(migrateTaskBlueprintSchemas(file));
-    } catch {
-      // 无法预检的输入交给 importTaskFile 保留原件；预检异常不能冻结已打开的仿真工作台。
-      return false;
-    }
+      const id = createUuid();
+      let file: BlueprintPlannerTaskFile = { ...structuredClone(source), taskId: id,
+        progress: { ...source.progress, taskId: id, status: "waiting" as const, activeWorkerCount: 0 } };
+      const point = file.checkpoint as PlannerCheckpoint;
+      if (point?.result) point.result = { ...point.result, taskId: id, folderId: null };
+      if (point && "savedBlueprintId" in point) point.savedBlueprintId = null;
+      const best = point?.best?.candidate;
+      if (best) {
+        const previousTarget = candidateSearchTarget(best);
+        best.execution.blueprint.blueprintId = createUuid();
+        const target = candidateSearchTarget(best);
+        for (const shard of point.parallel?.shards ?? []) if (shard.searchTarget === previousTarget) shard.searchTarget = target;
+        if (point.result) point.result = { ...point.result, blueprint: { ...point.result.blueprint,
+          blueprintId: best.execution.blueprint.blueprintId } };
+      }
+      if (point?.pendingCandidate) point.pendingCandidate.execution.blueprint.blueprintId = createUuid();
+      let requiresMigration = false;
+      try {
+        requiresMigration = createStableJsonHash(file) !== createStableJsonHash(migrateTaskBlueprintSchemas(file));
+      } catch (error) {
+        if (storage?.saveQuarantined) await storage.saveQuarantined({ taskId: id, sourceKey: id, sourceValue: file,
+          message: errorMessage(error), migrationVersion: EDA_MIGRATION_VERSION });
+        else await storage?.save(file);
+        retainBlocked(file, error); latestId = id; notify(); return id;
+      }
+      const saveInput = async () => { await storage?.save(file); };
+      if (requiresMigration && hasDataMigrationController()) {
+        await adoptIncomingDataAndReload([{ label: "计算任务", run: saveInput }]);
+        return id;
+      }
+      if (requiresMigration) file = migrateTaskBlueprintSchemas(file);
+      await saveInput();
+      if (isBlueprintRecognitionRequest(file.request)) {
+        recognitionTasks.set(id, recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)));
+      } else deferTask(file, (file.checkpoint as PlannerCheckpoint)?.parallel?.originTaskId ?? source.taskId);
+      latestId = id; notify();
+      return id;
+    } finally { importing = false; }
   };
 
   const host: BlueprintPlannerHost = {
-    async pauseForMigration() {
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: whenSettled；不再装配迁移生命周期
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//     async pauseForMigration() {
+//       await ready;
+//       if (taskLoadError !== null) throw taskLoadError;
+//       const active = [...tasks.values(), ...recognitionTasks.values()];
+//       for (const task of active) task.abort.abort();
+//       await Promise.all(active.map(task => task.running?.catch(error => {
+//         if (!task.abort.signal.aborted) throw error;
+//       })));
+//       flushWrite?.();
+//       await writes;
+//       if (migrationWriteErrors.size > 0) throw migrationWriteErrors.values().next().value;
+//     },
+//     async reloadAfterMigration() {
+//       tasks.clear(); recognitionTasks.clear(); blockedTasks.clear();
+//       loaded = false;
+//       await loadStoredTasks();
+//       if (taskLoadError !== null) throw taskLoadError;
+//       flushWrite?.();
+//       await writes;
+//       if (migrationWriteErrors.size > 0) throw migrationWriteErrors.values().next().value;
+//     },
+    async whenSettled() {
       await ready;
-      if (taskLoadError !== null) throw taskLoadError;
-      const active = [...tasks.values(), ...recognitionTasks.values()];
-      for (const task of active) task.abort.abort();
-      await Promise.all(active.map(task => task.running?.catch(error => {
-        if (!task.abort.signal.aborted) throw error;
-      })));
+      await deferredOperation;
+      await Promise.all([...tasks.values(), ...recognitionTasks.values()].map(task => task.running));
       flushWrite?.();
       await writes;
-      if (migrationWriteErrors.size > 0) throw migrationWriteErrors.values().next().value;
-    },
-    async reloadAfterMigration() {
-      tasks.clear(); recognitionTasks.clear(); blockedTasks.clear();
-      loaded = false;
-      await loadStoredTasks();
-      if (taskLoadError !== null) throw taskLoadError;
-      flushWrite?.();
-      await writes;
-      if (migrationWriteErrors.size > 0) throw migrationWriteErrors.values().next().value;
     },
     state,
     actions: {
@@ -1386,24 +1537,35 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         return id;
       },
       continuePlanning(id, evaluations, concurrency, gpu) {
-        const task = requireTask(id);
-        launch(task, evaluations, concurrency, gpu);
+        assertReady();
+        if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+        if (deferredTasks.has(id)) {
+          deferredOperation = restoreDeferred(id).then(task => launch(task, evaluations, concurrency, gpu)).catch(error => {
+            const task = tasks.get(id);
+            if (task) publish(task, { status: "failed", message: errorMessage(error) });
+          }).finally(() => { deferredOperation = null; });
+          return;
+        }
+        launch(requireTask(id), evaluations, concurrency, gpu);
       },
       cancel(id) {
+        if (restoringTask?.id === id) { restoringTask.abort.abort(); return; }
+        if (deferredTasks.has(id)) return;
         const task = recognitionTasks.get(id) ?? requireTask(id);
         if (task.file.progress.status === "running") task.abort.abort();
       },
-      save: id => save(requireTask(id)),
-      retrySave: id => save(requireTask(id)),
+      save: async id => save(await restoreDeferred(id)),
+      retrySave: async id => save(await restoreDeferred(id)),
       async deleteTask(id) {
         assertReady();
-        const task = blockedTasks.has(id) ? null : recognitionTasks.get(id) ?? requireTask(id);
+        const task = blockedTasks.has(id) || deferredTasks.has(id) ? null : recognitionTasks.get(id) ?? requireTask(id);
         if (state.activeTaskId === id || task?.running != null) throw new Error("请先暂停任务并等待计算结束。");
         await writes;
         await storage?.delete(id);
         tasks.delete(id);
         recognitionTasks.delete(id);
         blockedTasks.delete(id);
+        deferredTasks.delete(id);
         notify();
       },
 // AI-REMOVED 2026-10-08:
@@ -1414,90 +1576,102 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 // Risk: 需回归迁移失败与恢复。
 // Human Review: Required
 // Original code:
+// // AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: importTaskFile 延迟恢复
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
 //       async importTask(file) {
-//         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
-//         importing = true;
-//         try {
-//           await ready;
-//           assertReady();
-//           let task: PlannerTask | BlueprintRecognitionTask;
-//           try { task = file?.request && isBlueprintRecognitionRequest(file.request)
-//             ? recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)) : await restore(file); } catch (error) {
-//             if (disposed) throw error;
-//             if (!file || typeof file !== "object" || typeof file.taskId !== "string" || !file.taskId) throw error;
-//             const id = createUuid();
-//             const retained = { ...structuredClone(file), taskId: id };
-//             // 独立导入的编号须同步内部引用，否则原文导出后仍会因编号不匹配而无法重试恢复。
-//             if (retained.progress && typeof retained.progress === "object" && !Array.isArray(retained.progress)) {
-//               retained.progress = { ...retained.progress, taskId: id };
-//             }
-//             const point = retained.checkpoint;
-//             if (point && typeof point === "object" && "result" in point && point.result
-//               && typeof point.result === "object" && !Array.isArray(point.result)) Object.assign(point.result, { taskId: id });
-//             await storage?.save(retained);
-//             retainBlocked(retained, error);
-//             latestId = id;
-//             notify();
-//             return id;
-//           }
-//           // 导入始终创建独立任务，不能覆盖正在计算的同名任务或本机历史。
-//           // AI-CORRECTION 2026-10-05：活动任务存在时禁止导入；导入提交前也禁止启动、续算和保存。
-//           const id = createUuid();
-//           if (!("portfolio" in task)) {
-//             task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
-//               message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已导入，可以继续识别。"), estimatedProgress: null } };
-//             await storage?.save(snapshot(task)); recognitionTasks.set(id, task); latestId = id; notify(); return id;
-//           }
-//           task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
-//             message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
-//           const result = task.file.checkpoint.result;
-//           const blueprint = task.file.checkpoint.best?.candidate.execution.blueprint;
-//           if (blueprint) {
-//             const best = task.file.checkpoint.best!.candidate;
-//             const previousTarget = candidateSearchTarget(best);
-//             blueprint.blueprintId = createUuid();
-//             const target = candidateSearchTarget(best);
-//             // 导入创建独立身份，但对应当前最优的已完成搜索机会仍然有效。
-//             for (const shard of task.file.checkpoint.parallel?.shards ?? []) {
-//               if (shard.searchTarget === previousTarget) shard.searchTarget = target;
-//             }
-//           }
-//           const pendingBlueprint = task.file.checkpoint.pendingCandidate?.execution.blueprint;
-//           if (pendingBlueprint && pendingBlueprint !== blueprint) pendingBlueprint.blueprintId = createUuid();
-//           if (result !== null) task.file.checkpoint.result = { ...result, taskId: id, folderId: null,
-//             blueprint: { ...result.blueprint, blueprintId: blueprint!.blueprintId } };
-//           task.file.checkpoint.savedBlueprintId = null;
-//           await storage?.save(snapshot(task));
-//           tasks.set(id, task);
-//           latestId = id;
-//           notify();
-//           return id;
-//         } finally { importing = false; }
+// //         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
+// //         importing = true;
+// //         try {
+// //           await ready;
+// //           assertReady();
+// //           let task: PlannerTask | BlueprintRecognitionTask;
+// //           try { task = file?.request && isBlueprintRecognitionRequest(file.request)
+// //             ? recognitionRuntime(parseRecognitionTaskFile(file, workspace.registry)) : await restore(file); } catch (error) {
+// //             if (disposed) throw error;
+// //             if (!file || typeof file !== "object" || typeof file.taskId !== "string" || !file.taskId) throw error;
+// //             const id = createUuid();
+// //             const retained = { ...structuredClone(file), taskId: id };
+// //             // 独立导入的编号须同步内部引用，否则原文导出后仍会因编号不匹配而无法重试恢复。
+// //             if (retained.progress && typeof retained.progress === "object" && !Array.isArray(retained.progress)) {
+// //               retained.progress = { ...retained.progress, taskId: id };
+// //             }
+// //             const point = retained.checkpoint;
+// //             if (point && typeof point === "object" && "result" in point && point.result
+// //               && typeof point.result === "object" && !Array.isArray(point.result)) Object.assign(point.result, { taskId: id });
+// //             await storage?.save(retained);
+// //             retainBlocked(retained, error);
+// //             latestId = id;
+// //             notify();
+// //             return id;
+// //           }
+// //           // 导入始终创建独立任务，不能覆盖正在计算的同名任务或本机历史。
+// //           // AI-CORRECTION 2026-10-05：活动任务存在时禁止导入；导入提交前也禁止启动、续算和保存。
+// //           const id = createUuid();
+// //           if (!("portfolio" in task)) {
+// //             task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
+// //               message: withBlueprintDisconnectionWarning(workspace.registry, task.file.request.input, "识别任务已导入，可以继续识别。"), estimatedProgress: null } };
+// //             await storage?.save(snapshot(task)); recognitionTasks.set(id, task); latestId = id; notify(); return id;
+// //           }
+// //           task.file = { ...task.file, taskId: id, progress: { ...task.file.progress, taskId: id, status: "waiting",
+// //             message: file.algorithmVersion === task.file.algorithmVersion ? "任务已导入，可以继续计算。" : task.file.progress.message, estimatedProgress: null } };
+// //           const result = task.file.checkpoint.result;
+// //           const blueprint = task.file.checkpoint.best?.candidate.execution.blueprint;
+// //           if (blueprint) {
+// //             const best = task.file.checkpoint.best!.candidate;
+// //             const previousTarget = candidateSearchTarget(best);
+// //             blueprint.blueprintId = createUuid();
+// //             const target = candidateSearchTarget(best);
+// //             // 导入创建独立身份，但对应当前最优的已完成搜索机会仍然有效。
+// //             for (const shard of task.file.checkpoint.parallel?.shards ?? []) {
+// //               if (shard.searchTarget === previousTarget) shard.searchTarget = target;
+// //             }
+// //           }
+// //           const pendingBlueprint = task.file.checkpoint.pendingCandidate?.execution.blueprint;
+// //           if (pendingBlueprint && pendingBlueprint !== blueprint) pendingBlueprint.blueprintId = createUuid();
+// //           if (result !== null) task.file.checkpoint.result = { ...result, taskId: id, folderId: null,
+// //             blueprint: { ...result.blueprint, blueprintId: blueprint!.blueprintId } };
+// //           task.file.checkpoint.savedBlueprintId = null;
+// //           await storage?.save(snapshot(task));
+// //           tasks.set(id, task);
+// //           latestId = id;
+// //           notify();
+// //           return id;
+// //         } finally { importing = false; }
+// //       },
+//       async importTask(file) {
+//         if (!hasDataMigrationController() || !taskNeedsMigration(file)) return await importTaskFile(file);
+//         assertReady();
+//         let id = "";
+//         await migrateIncomingData([{ label: "计算任务", run: async () => { id = await importTaskFile(file, true); } }]);
+//         return id;
 //       },
-      async importTask(file) {
-        if (!hasDataMigrationController() || !taskNeedsMigration(file)) return await importTaskFile(file);
-        assertReady();
-        let id = "";
-        await migrateIncomingData([{ label: "计算任务", run: async () => { id = await importTaskFile(file, true); } }]);
-        return id;
-      },
+      importTask: importTaskFile,
     },
     queries: {
       listTasks: () => [...[...tasks.values(), ...recognitionTasks.values()].map(task => ({ ...task.file.progress, elapsedMs: elapsed(task) })),
-        ...[...blockedTasks.values()].map(task => ({ ...task.progress }))].sort((a, b) => b.startedAt - a.startedAt),
+        ...[...blockedTasks.values(), ...deferredTasks.values()].map(task => ({ ...task.progress }))].sort((a, b) => b.startedAt - a.startedAt),
       getTask: (id = state.activeTaskId ?? latestId) => {
         const task = id === undefined ? undefined : tasks.get(id) ?? recognitionTasks.get(id);
         return task ? { ...task.file.progress, elapsedMs: elapsed(task) }
-          : id !== undefined && blockedTasks.has(id) ? { ...blockedTasks.get(id)!.progress } : null;
+          : id !== undefined && (blockedTasks.has(id) || deferredTasks.has(id))
+            ? { ...(blockedTasks.get(id) ?? deferredTasks.get(id))!.progress } : null;
       },
       getLastRequest: (id = state.activeTaskId ?? latestId) => {
         const task = id === undefined ? undefined : tasks.get(id) ?? recognitionTasks.get(id);
-        return task ? structuredClone(task.file.request) : null;
+        return task ? structuredClone(task.file.request) : id !== undefined ? structuredClone(deferredTasks.get(id)?.file.request ?? null) : null;
       },
-      getResult: id => structuredClone(tasks.get(id)?.file.checkpoint.result ?? null),
+      getResult: id => structuredClone(tasks.get(id)?.file.checkpoint.result
+        ?? (deferredTasks.get(id)?.file.checkpoint as PlannerCheckpoint | undefined)?.result ?? null),
       exportTask: id => {
         assertReady();
-        return blockedTasks.has(id) ? structuredClone(blockedTasks.get(id)!.file) : snapshot(recognitionTasks.get(id) ?? requireTask(id));
+        return blockedTasks.has(id) || deferredTasks.has(id)
+          ? structuredClone((blockedTasks.get(id) ?? deferredTasks.get(id))!.file) : snapshot(recognitionTasks.get(id) ?? requireTask(id));
       },
       exportDraft: request => {
         assertReady();

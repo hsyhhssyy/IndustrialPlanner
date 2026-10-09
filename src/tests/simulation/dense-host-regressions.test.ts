@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { readSimulationSnapshot } from "@/simulation/testkit";
@@ -26,8 +27,8 @@ import { resolveDarkPipeStatusSourceByDeviceId } from "@/simulation/projection";
 // Original code:
 // import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
-import regionalInletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-inlet.world.schema6.json";
-import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema6.json";
+import regionalInletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-inlet.world.schema7.json";
+import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema7.json";
 import { compileSimulationTopology } from "@/simulation/topology";
 import {
   DENSE_STANDARD_TICK_RATE_PER_SECOND,
@@ -774,7 +775,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
       (definition) => definition.tag === "武陵" && definition.id !== currentBaseId,
     )!.id;
     const blueprint = loadBlueprintFromFile(
-      "src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema6.json",
+      "src/tests/fixtures/blueprints/simulation/regional-long-run/scene-01-region-long-consumer-2d13761d.schema7.json",
     );
     const documentsByBaseId = Object.fromEntries(
       registry.baseDefinitions
@@ -932,7 +933,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
   it("starts dense regional simulation after excluding unknown entities from a background base", async () => {
     const registry = createRegistryContract();
     const currentDocument = createWorldDocument({ baseId: "wuling_tianwangping_aid" });
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-01-variant-1.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-01-variant-1.schema7.json");
     const staleEntity = blueprint.entities["transmuter_2:1"]!;
     const protocolCoreDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     // AI-REMOVED 2026-09-14:
@@ -1016,7 +1017,7 @@ describe("ST2-RQ-023 dense host regressions", () => {
   });
 
   it("starts dense single-base simulation with an unknown entity admission warning", async () => {
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-02-variant-1.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/dense-host-regressions/scene-02-variant-1.schema7.json");
     const staleEntity = blueprint.entities["transmuter_2:1"]!;
     const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
     // AI-REMOVED 2026-09-14:

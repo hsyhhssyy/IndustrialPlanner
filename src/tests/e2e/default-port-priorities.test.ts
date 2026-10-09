@@ -119,7 +119,7 @@ for (const profile of profiles) {
 
     const code = resolve(output, "scenario.js");
     const blueprint = JSON.parse(await readFile(
-      "src/tests/fixtures/blueprints/simulation/default-port-priorities/stash-splitter-last.schema6.json", "utf8",
+      "src/tests/fixtures/blueprints/simulation/default-port-priorities/stash-splitter-last.schema7.json", "utf8",
     ));
     // AI-REMOVED 2026-10-05:
     // Reason: CLI 配置、进程检查与清理收敛到受管会话。

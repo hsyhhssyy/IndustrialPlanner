@@ -49,7 +49,7 @@ describeSimulationEngineMatrix("runtime slot patch", (engineKind) => {
     //         createEntity("storage", "storager_1", 20, 20, 0),
     //       ])
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
-      loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/runtime-slot-patch/scene-01-runtime-slot-patch-45d43076.schema6.json"),
+      loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/runtime-slot-patch/scene-01-runtime-slot-patch-45d43076.schema7.json"),
     ));
     const workspace = createWorkspace(documentStore);
     const simulationHost = createSimulationHost(workspace, {

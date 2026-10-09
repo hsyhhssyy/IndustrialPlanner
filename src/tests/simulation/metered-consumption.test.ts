@@ -142,7 +142,7 @@ describe("consumption channel device mechanism", () => {
     // createBlueprint("one-consumption-item", [
     //       createEntity("vaporizer", "vaporizer_1", 0, 0),
     //     ])
-    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-03-one-consumption-item-62849b3a.schema6.json"));
+    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-03-one-consumption-item-62849b3a.schema7.json"));
     const device = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
     const slotId = getConsumptionSlotId(topology, device.id);
@@ -175,7 +175,7 @@ describe("consumption channel device mechanism", () => {
     // createBlueprint("five-consumption-items", [
     //       createEntity("vaporizer", "vaporizer_1", 0, 0),
     //     ])
-    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema6.json"));
+    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema7.json"));
     const device = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
     const slotId = getConsumptionSlotId(topology, device.id);
@@ -205,7 +205,7 @@ describe("consumption channel device mechanism", () => {
     // createBlueprint("out-of-range-consumption", [
     //       createEntity("transmuter", "transmuter_1_gastrans", 0, 0),
     //     ])
-    const topology = compileBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-05-out-of-range-consumption-cd40b977.schema6.json"), false);
+    const topology = compileBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-05-out-of-range-consumption-cd40b977.schema7.json"), false);
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
@@ -231,7 +231,7 @@ describe("consumption channel device mechanism", () => {
     // createBlueprint("staggered-consumption", [
     //       createEntity("vaporizer", "vaporizer_1", 0, 0),
     //     ])
-    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-06-staggered-consumption-5134c1df.schema6.json"));
+    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-06-staggered-consumption-5134c1df.schema7.json"));
     const vaporizer = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
     const slotId = getConsumptionSlotId(topology, vaporizer.id);
@@ -265,7 +265,7 @@ describe("consumption channel device mechanism", () => {
     //         channelRecipes: { default: recipeId },
     //       }),
     //     ])
-    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-07-consumption-gated-transmuter-db40639e.schema6.json"));
+    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-07-consumption-gated-transmuter-db40639e.schema7.json"));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
@@ -316,7 +316,7 @@ describe("consumption channel device mechanism", () => {
     //         "storageSlotGroups[1].slots[0].initialCount": 50,
     //       }),
     //     ])
-    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-08-powerless-consumption-67b7fae1.schema6.json"));
+    const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-08-powerless-consumption-67b7fae1.schema7.json"));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;

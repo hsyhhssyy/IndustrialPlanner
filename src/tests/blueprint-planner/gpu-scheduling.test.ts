@@ -13,7 +13,7 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
   { pause: false, concurrency: 1 }, { pause: true, concurrency: 1 }] as const)(
   "GPU 独立领批、共享预算且可与 CPU 重叠；暂停=$pause，CPU=$concurrency", async ({ pause, concurrency }) => {
   const session = new PlannerBatchSession();
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
   let gpuStarted = false, gpuEnded = false, disposed = false, cpuWhileGpu = 0;
   const variants = new Set<number>();
   const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => ({

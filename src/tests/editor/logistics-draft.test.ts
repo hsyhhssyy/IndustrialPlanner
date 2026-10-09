@@ -148,7 +148,7 @@ describe("物流绘制模式", () => {
   ] as const)("$kind / $routeType 根据当前交叉拓扑切换汇流器与桥接器，结果不依赖中间预览", ({ kind, routeType, scene, y, converger, connector }) => {
     const editorHost = createEditorHost(createWorkspace());
     try {
-      const blueprint = loadBlueprintFromFile(`src/tests/fixtures/blueprints/logistics-placement-complete/${scene}.schema6.json`);
+      const blueprint = loadBlueprintFromFile(`src/tests/fixtures/blueprints/logistics-placement-complete/${scene}.schema7.json`);
       editorHost.internalDocument.setSnapshot({
         ...createDummyWorldDocument(),
         baseId: blueprint.baseId,
@@ -2777,7 +2777,7 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(createWorkspace());
     try {
       const blueprint = loadBlueprintFromFile(
-        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema7.json",
       );
       const blockedCell = createTestEntity("blocked-near-port", "pipe_straight_1x1", 7, 8);
       editorHost.internalDocument.setSnapshot({
@@ -2824,7 +2824,7 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(createWorkspace());
     try {
       const blueprint = loadBlueprintFromFile(
-        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+        "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema7.json",
       );
       const blockedCell = createTestEntity("blocked-near-port", "pipe_straight_1x1", 7, 8);
       editorHost.internalDocument.setSnapshot({

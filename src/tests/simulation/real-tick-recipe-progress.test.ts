@@ -186,7 +186,7 @@ describe("ST2-RQ-024 real tick recipe progress", () => {
     // Human Review: Required
     // Original code:
     // { grinder }
-    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/scene-01-variant-1.schema6.json").entities;
+    document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/scene-01-variant-1.schema7.json").entities;
     document.entityOrder = [grinder.id];
 
     const topology = compileSimulationTopology({

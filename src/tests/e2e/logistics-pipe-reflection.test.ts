@@ -6,7 +6,7 @@ import type { WorldDocument } from '@/domain/document/world-document';
 
 // 复用已版本化的三节空管蓝图；本用例验证真正的 Canvas alpha，而不是截屏中的 CSS 底色。
 const fixture = JSON.parse(readFileSync(new URL(
-  '../fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema6.json',
+  '../fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema7.json',
   import.meta.url,
 ), 'utf8')) as Pick<WorldDocument, 'entities' | 'entityOrder' | 'baseId' | 'slotLinks' | 'regions'>;
 

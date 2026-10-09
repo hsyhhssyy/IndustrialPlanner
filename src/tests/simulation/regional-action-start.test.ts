@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { readSimulationSnapshot } from "@/simulation/testkit";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,7 +19,7 @@ import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 // Original code:
 // import { createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
-import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema6.json";
+import regionalOutletJson from "../fixtures/blueprints/simulation/dense-host-regressions/regional-outlet.world.schema7.json";
 import type { AppContract } from "@/domain/app/app-contract";
 
 describe("区域多基地启动模式固化", () => {

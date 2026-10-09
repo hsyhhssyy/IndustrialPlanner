@@ -59,7 +59,7 @@ describe("Dense checkpoint 的传输缓冲区所有权", () => {
     //         createEntity("sink-storage", "storager_1", 0, -4),
     //       ],
     //     )
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,
@@ -140,7 +140,7 @@ describe("Dense checkpoint 的传输缓冲区所有权", () => {
   it("在半秒相位边界热切换 4/2 TPS 并保留运行态", () => {
     const registry = createRegistryContract();
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile(
-      "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json",
+      "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema7.json",
     ));
     const compileAtRate = (standardTickRate: number) => compileSimulationTopology({
       document,

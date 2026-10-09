@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "req-076-cheat-infinite-device",
+  "version": "fixture-v1",
+  "name": "cheat-infinite-device",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "solid": {
+      "id": "solid",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_originium_ore",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_quartz_sand",
+        "storageSlotGroups[4].slots[0].initialCount": 2
+      },
+      "tags": []
+    },
+    "liquid": {
+      "id": "liquid",
+      "definitionId": "cheat_infinite_liquid",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_liquid_acid",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_liquid_sewage",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_liquid_plant_grass_1",
+        "storageSlotGroups[4].slots[0].initialCount": 2
+      },
+      "tags": []
+    },
+    "gas": {
+      "id": "gas",
+      "definitionId": "cheat_infinite_gas",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[0].slots[0].initialCount": 2,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[2].slots[0].initialItemType": "item_gas_xiranite",
+        "storageSlotGroups[2].slots[0].initialCount": 2,
+        "storageSlotGroups[3].slots[0].initialItemType": "item_gas_copper",
+        "storageSlotGroups[3].slots[0].initialCount": 2,
+        "storageSlotGroups[4].slots[0].initialItemType": "item_gas_acid",
+        "storageSlotGroups[4].slots[0].initialCount": 2
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "solid",
+    "liquid",
+    "gas"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

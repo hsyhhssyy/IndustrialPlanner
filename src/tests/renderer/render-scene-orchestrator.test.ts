@@ -528,7 +528,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
     //         },
     //       ]
     const layouts = resolveWorldEntitySelectionOverlayLayouts({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-01-variant-1.schema7.json")),
       entityDefinitionMap,
       selectedEntityIds: ["selected", "missing"],
       viewportBounds: {
@@ -577,7 +577,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
     //         },
     //       ]
     const layouts = resolveWorldEntitySelectionOverlayLayouts({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-02-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-02-variant-1.schema7.json")),
       entityDefinitionMap,
       selectedEntityIds: ["draft-only"],
       viewportBounds: {
@@ -733,7 +733,7 @@ describe("resolvePowerRangeOutlineLayouts", () => {
     //         tags: [],
     //       },
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-03-variant-1.schema6.json"))
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-03-variant-1.schema7.json"))
     const layoutOptions = {
       entities,
       entityDefinitionMap,
@@ -790,7 +790,7 @@ describe("resolvePowerRangeOutlineLayouts", () => {
     //         tags: [],
     //       }]
     const layouts = resolvePowerRangeOutlineLayouts({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-04-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-04-variant-1.schema7.json")),
       entityDefinitionMap,
       visibleWorldRect: {
         left: 6.5,

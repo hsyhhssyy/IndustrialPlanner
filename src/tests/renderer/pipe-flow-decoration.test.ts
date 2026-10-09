@@ -193,7 +193,7 @@ function createPipeFlowContext(options: {
   //       tags: [],
   //     },
   //   ]
-  const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/pipe-flow-decoration/scene-01-variant-1.schema6.json"))
+  const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/pipe-flow-decoration/scene-01-variant-1.schema7.json"))
 
   return {
     viewportState: {

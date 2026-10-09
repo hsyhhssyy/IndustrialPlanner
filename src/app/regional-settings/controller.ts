@@ -128,7 +128,15 @@ export class RegionalSettingsController {
 //     return this.asset.darkPipeLinks;
 //   }
 //
-  public async flushForMigration(): Promise<void> { await this.persistenceQueue; }
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 正常持久化队列；无需运行期迁移 flush
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   public async flushForMigration(): Promise<void> { await this.persistenceQueue; }
 
   public async hydrate(): Promise<void> {
     const stored = await loadRegionalSettingsAsset(this.registry.itemDefinitions);

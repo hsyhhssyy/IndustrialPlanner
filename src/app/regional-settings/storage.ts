@@ -55,12 +55,14 @@ const REGIONAL_SETTINGS_STORE_LOCATION: IndexedDbStorageLocation = {
   ...LEGACY_REGIONAL_SETTINGS_LOCATION,
 };
 
-export async function prepareRegionalSettingsMigration(itemDefinitions: readonly ItemDefinition[]) {
+export async function prepareRegionalSettingsMigration(itemDefinitions: readonly ItemDefinition[], version?: string) {
   const normalize = (raw: unknown) => normalizeRegionalSettingsAsset(raw, itemDefinitions);
   const plan = await prepareVersionedStorageMigration(REGIONAL_SETTINGS_STORE_LOCATION, REGIONAL_SETTINGS_SCHEMA_VERSION,
-    [{ version: REGIONAL_SETTINGS_SCHEMA_VERSION, migrate: normalize }], undefined, normalize, "地区设置");
+    [{ version: REGIONAL_SETTINGS_SCHEMA_VERSION, migrate: normalize }], undefined, normalize, "地区设置", version);
   return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    const issuesBefore = plan.issues.length;
     await job.run();
+    if (plan.issues.length !== issuesBefore) return;
     emitRegionalSettingsStorageChange({ origin: "local" });
   } })) };
 }

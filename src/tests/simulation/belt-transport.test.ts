@@ -48,7 +48,7 @@ function createBeltTransportBlueprint(): BlueprintDocument {
   //     createEntity("belt", "belt_straight_1x1", 0, -1, 270),
   //     createEntity("sink-storage", "storager_1", 0, -4),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema7.json");
 }
 
 // AI-REMOVED 2026-09-08:

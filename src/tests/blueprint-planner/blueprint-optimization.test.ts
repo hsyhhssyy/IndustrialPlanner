@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -30,7 +31,7 @@ function setup(engineKind: "legacy" | "dense-v2" = "dense-v2") {
 
 describe("原蓝图识别与受约束优化", () => {
   it("真实仿真建立净产率基线，保留原图并通过导出、导入与检查点校验", async () => {
-    const env = setup("legacy"), blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema6.json`);
+    const env = setup("legacy"), blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema7.json`);
     const before = JSON.stringify(blueprint);
     try {
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
@@ -77,7 +78,7 @@ describe("原蓝图识别与受约束优化", () => {
   it("真实 Worker 压缩 150→140 格，设备和配置不变，产率仍为 30/min，夹具不进入交付", async () => {
     const env = setup(), client = new NodePlannerClient();
     try {
-      const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema6.json`);
+      const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema7.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
       const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
       await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());
@@ -129,7 +130,7 @@ describe("原蓝图识别与受约束优化", () => {
   it("未说明物品的输入必须配置，取消识别保留任务和原图", async () => {
     const env = setup();
     try {
-      const blueprint = loadBlueprintFromFile(`${directory}unknown-entry.schema6.json`);
+      const blueprint = loadBlueprintFromFile(`${directory}unknown-entry.schema7.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
       expect(boundaries).toHaveLength(2);
       expect(boundaries.every(boundary => boundary.kind === "port" && boundary.itemId === null)).toBe(true);
@@ -146,9 +147,9 @@ describe("原蓝图识别与受约束优化", () => {
   });
 
   it.each([
-    [`${directory}mixed-powered.schema6.json`, true],
-    ["src/tests/fixtures/blueprints/simulation/converger-mixed-input/three-same-items.schema6.json", false],
-    ["src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema6.json", false],
+    [`${directory}mixed-powered.schema7.json`, true],
+    ["src/tests/fixtures/blueprints/simulation/converger-mixed-input/three-same-items.schema7.json", false],
+    ["src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema7.json", false],
   ])("按库存通道追踪混带，不把同物品汇流或桥接器独立通道误报：%s", async (path, mixed) => {
     const env = setup();
     try {
@@ -171,7 +172,7 @@ describe("原蓝图识别与受约束优化", () => {
   it("删减组合先遍历所有设施个体，超过 16 个也覆盖非相邻组合", async () => {
     const env = setup();
     try {
-      const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema6.json`);
+      const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema7.json`);
       const boundaries = await env.planner.actions.inspectBlueprint(blueprint, []);
       const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
       await vi.waitFor(() => expect(env.planner.state.activeTaskId).toBeNull());

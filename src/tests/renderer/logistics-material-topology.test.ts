@@ -25,7 +25,7 @@ function topology(entities: readonly WorldEntity[], extra: readonly EntityDefini
 describe("物流材质线路与设备端点", () => {
   it("移动虚影时复用正式拓扑，预览结果与完整求解一致", () => {
     const actual = getBlueprintEntityArray(loadBlueprintFromFile(
-      "src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema6.json",
+      "src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema7.json",
     ));
     const committed = topology(actual).committed;
     const draft = { ...actual[0]!, id: "preview", originalEntityId: null };
@@ -89,7 +89,7 @@ describe("物流材质线路与设备端点", () => {
     // Human Review: Required
     // Original code:
     // [pipe("p0", 0), pipe("p1", 1), pipe("p2", 2)]
-    const pipes = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema6.json"));
+    const pipes = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/logistics-material-topology/scene-01-variant-1.schema7.json"));
     const connected = topology([...pipes, sourceEntity, targetEntity], [device, sink]);
     expect([...connected.placements.values()].every((entry) => !entry.support)).toBe(true);
     // AI-REMOVED 2026-09-14:
@@ -101,7 +101,7 @@ describe("物流材质线路与设备端点", () => {
     // Human Review: Required
     // Original code:
     // [...pipes, { ...sourceEntity, definitionId: sink.id }, targetEntity]
-    const reversed = topology(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/logistics-material-topology/scene-01-variant-1.schema6.json")), [device, sink]);
+    const reversed = topology(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/logistics-material-topology/scene-01-variant-1.schema7.json")), [device, sink]);
     expect(reversed.placements.get("p0")?.support).toBe(true);
     expect(reversed.placements.get("p2")?.support).toBe(false);
   });

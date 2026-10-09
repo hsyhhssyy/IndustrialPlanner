@@ -826,7 +826,7 @@ describe("createBeltCargoDecoration", () => {
     const ctx = createContext({
       getTexture,
       includeOutputSource: true,
-      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-01-variant-1.schema6.json")),
+      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-01-variant-1.schema7.json")),
       entries: [{
         beltShape: "straight",
         position: { x: 0, y: 0 },
@@ -863,7 +863,7 @@ describe("createBeltCargoDecoration", () => {
     //       ]
     const ctx = createContext({
       getTexture,
-      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-02-variant-1.schema6.json")),
+      extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-02-variant-1.schema7.json")),
     })
 
     decoration.sync(ctx as never)

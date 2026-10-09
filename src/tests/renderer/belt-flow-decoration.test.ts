@@ -251,7 +251,7 @@ describe("BeltFlowDecoration", () => {
     //       createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
     //       createEntity("belt-b", "belt_straight_1x1", { x: 1, y: 0 }),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-01-variant-1.schema6.json"))
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-01-variant-1.schema7.json"))
     const listEntities = vi.fn(() => entities)
     const versions = {
       document: 1,
@@ -288,7 +288,7 @@ describe("BeltFlowDecoration", () => {
     // [createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 })]
     const emptyEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-02-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-02-variant-1.schema7.json")),
     }) as never)
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -304,7 +304,7 @@ describe("BeltFlowDecoration", () => {
     //       ]
     const admissionEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 500,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-03-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-03-variant-1.schema7.json")),
     }) as never)
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -320,7 +320,7 @@ describe("BeltFlowDecoration", () => {
     //       ]
     const generalLogisticsEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-04-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-04-variant-1.schema7.json")),
     }) as never)
 
     expect(emptyEndMarks.filter((mark) => mark.kind === "arrow").map((mark) =>
@@ -364,7 +364,7 @@ describe("BeltFlowDecoration", () => {
     //       ]
     admissionDecoration.sync(createFlowContext({
       nowMs: 0,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-05-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-05-variant-1.schema7.json")),
     }) as never)
 
     const admissionMask = admissionDecoration.container.children[3] as unknown as {
@@ -409,7 +409,7 @@ describe("BeltFlowDecoration", () => {
     //       ]
     logisticsDecoration.sync(createFlowContext({
       nowMs: 0,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-06-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-06-variant-1.schema7.json")),
     }) as never)
 
     const logisticsMask = logisticsDecoration.container.children[3] as unknown as {
@@ -467,7 +467,7 @@ describe("BeltFlowDecoration", () => {
     //       ]
     const marks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 0,
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-07-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-07-variant-1.schema7.json")),
     }) as never)
 
     expect(marks.some((mark) => mark.kind === "highlight")).toBe(false)
@@ -692,7 +692,7 @@ function createFlowContext(options: {
             },
           },
           queries: {
-            listEntities: options.listEntities ?? (() => options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema6.json"))),
+            listEntities: options.listEntities ?? (() => options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema7.json"))),
           },
         },
       } as never,

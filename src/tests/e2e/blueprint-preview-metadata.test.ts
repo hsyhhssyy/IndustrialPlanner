@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
-import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema6.json" with { type: "json" };
+import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema7.json" with { type: "json" };
 
 // 开发期三屏视觉验证完成后独立编写；通过蓝图库真实按钮打开预览，验证版本来源与同一行排版。
 for (const profile of SCREEN_PROFILES) {

@@ -17,7 +17,7 @@ const reactorRecipes = ["r_mix_pool_liquid_plant_grass_1_from_powder_and_water_b
 const gasPatch: SimulationRuntimeSlotPatch = { entityId: "gas-diffuser", storageGroupId: "consume_buffer",
   slotId: "consume_slot", itemType: "item_gas_inert", count: 5, ignoreStock: false };
 
-function setup(path = `${directory}gas-purifier.schema6.json`) {
+function setup(path = `${directory}gas-purifier.schema7.json`) {
   const registry = createRegistryContract();
   const workspace: WorkspaceContract = { state: createWorkspaceState(), registry,
     app: null, audio: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null };
@@ -32,7 +32,7 @@ function setup(path = `${directory}gas-purifier.schema6.json`) {
 
 describe("蓝图配方稳定性以正式观察期的设备整体组合为准", () => {
   it("配方在真实生产通道之间交换，整体组合相同且允许暂时空闲", async () => {
-    const env = setup(`${directory}multichannel-auto.schema6.json`);
+    const env = setup(`${directory}multichannel-auto.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint({ ...env.request, warmupSeconds: 0, observationSeconds: 16,
         scene: { ...env.request.scene, scheduledSlots: [{ simulationSeconds: 3, patch: {
@@ -51,7 +51,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("自动设备运行一套已知配方时，保留共享库存的三个全程空闲通道", async () => {
-    const env = setup(`${directory}multichannel-idle.schema6.json`);
+    const env = setup(`${directory}multichannel-idle.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint(env.request);
       expect(report.status).toBe("completed");
@@ -62,7 +62,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("完整组合已在观察期出现，后续单独运行组合中的一个配方也接受", async () => {
-    const env = setup(`${directory}multichannel-auto.schema6.json`);
+    const env = setup(`${directory}multichannel-auto.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint({ ...env.request, warmupSeconds: 0, observationSeconds: 16 });
       expect(report.status).toBe("completed");
@@ -83,7 +83,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("全程空闲的自动生产设备没有完整组合证据，仍拒绝未知配方", async () => {
-    const env = setup(`${directory}multichannel-idle.schema6.json`);
+    const env = setup(`${directory}multichannel-idle.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint({ ...env.request, scene: { ...env.request.scene,
         initialSlots: [{ entityId: "reactor", storageGroupId: "shared_input_buffer", slotId: "input_slot_1",
@@ -94,7 +94,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("多通道设备串行运行 A 和 B，也不能把历史合集当作完整组合", async () => {
-    const env = setup(`${directory}multichannel-idle.schema6.json`);
+    const env = setup(`${directory}multichannel-idle.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint({ ...env.request, warmupSeconds: 0, observationSeconds: 16,
         scene: { ...env.request.scene, scheduledSlots: [{ simulationSeconds: 8, patch: {
@@ -108,7 +108,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("实际出现完整 A+B 后又运行组合外的 C，仍拒绝", async () => {
-    const env = setup(`${directory}multichannel-auto.schema6.json`);
+    const env = setup(`${directory}multichannel-auto.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint({ ...env.request, warmupSeconds: 0, observationSeconds: 16,
         scene: { ...env.request.scene, scheduledSlots: [{ simulationSeconds: 8, patch: {
@@ -123,7 +123,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("旧分析报告缺少同时运行的组合证据时要求重新识别", async () => {
-    const env = setup(`${directory}multichannel-idle.schema6.json`);
+    const env = setup(`${directory}multichannel-idle.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint(env.request);
       expect(report.status).toBe("completed");
@@ -134,7 +134,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("手动配置明确的空闲配方可以保留，未配置的手动通道保持关闭", async () => {
-    const env = setup(`${directory}multichannel-manual.schema6.json`);
+    const env = setup(`${directory}multichannel-manual.schema7.json`);
     try {
       const report = await env.host.actions.runBlueprint(env.request);
       expect(report.status).toBe("completed");
@@ -216,7 +216,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("交替输入原料时，即使产物相同也拒绝两个实际配方", async () => {
-    const env = setup(`${directory}alternating-ingredients.schema6.json`);
+    const env = setup(`${directory}alternating-ingredients.schema7.json`);
     const patch: SimulationRuntimeSlotPatch = { entityId: "furnace", storageGroupId: "item_input_buffer",
       slotId: "input_item_slot_1", itemType: "item_plant_moss_2", count: 50, ignoreStock: false };
     try {
@@ -231,7 +231,7 @@ describe("蓝图配方稳定性以正式观察期的设备整体组合为准", (
   });
 
   it("预热中已传送的另一种物品仍保留证据，不能被观察期覆盖", async () => {
-    const env = setup(`${directory}prewarm-material-history.schema6.json`);
+    const env = setup(`${directory}prewarm-material-history.schema7.json`);
     const group = env.registry.queries.findEntityDefinition("storager_1")!.storageSlotGroups[0]!;
     const patch: SimulationRuntimeSlotPatch = { entityId: "source-storage", storageGroupId: group.id,
       slotId: group.slots[0]!.id, itemType: "item_iron_ore", count: 1, ignoreStock: false };

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/topology-migration.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -18,7 +18,7 @@
             "y": 0
           }
         },
-        "file": "scene-01-migration-original-4be8d38b.schema6.json",
+        "file": "scene-01-migration-original-4be8d38b.schema7.json",
         "blueprintId": "req-076-migration-original",
         "version": "fixture-v1"
       },
@@ -32,7 +32,7 @@
             "y": 0
           }
         },
-        "file": "scene-01-migration-moved-1bea6d04.schema6.json",
+        "file": "scene-01-migration-moved-1bea6d04.schema7.json",
         "blueprintId": "req-076-migration-moved",
         "version": "fixture-v1"
       },
@@ -46,7 +46,7 @@
             "y": 0
           }
         },
-        "file": "scene-01-migration-config-changed-42e0e69d.schema6.json",
+        "file": "scene-01-migration-config-changed-42e0e69d.schema7.json",
         "blueprintId": "req-076-migration-config-changed",
         "version": "fixture-v1"
       }
@@ -54,11 +54,10 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-linked-grinder-aa285dd5.schema6.json",
+        "file": "scene-02-linked-grinder-aa285dd5.schema7.json",
         "blueprintId": "req-076-linked-grinder",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

@@ -11,8 +11,8 @@ import { createSimulationHost } from "@/simulation/simulation-host";
 import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { createHeadlessWorkspace } from "./blueprint-runner";
 
-const transportFixture = "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema6.json";
-const productionFixture = "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema6.json";
+const transportFixture = "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/scene-01-dense-checkpoint-transfer-c5624ff4.schema7.json";
+const productionFixture = "src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema7.json";
 
 function createScenario(path = transportFixture) {
   const registry = createRegistryContract();

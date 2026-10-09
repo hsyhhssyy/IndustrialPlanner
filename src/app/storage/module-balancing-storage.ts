@@ -44,11 +44,13 @@ const MODULE_BALANCING_STORE_LOCATION: IndexedDbStorageLocation = {
 
 const CURRENT_VERSION = 2;
 
-export async function prepareModuleBalancingMigration() {
+export async function prepareModuleBalancingMigration(version?: string) {
   const plan = await prepareVersionedStorageMigration(MODULE_BALANCING_STORE_LOCATION, CURRENT_VERSION, MIGRATIONS,
-    undefined, normalizeModuleBalancingState, "模块配平");
+    undefined, normalizeModuleBalancingState, "模块配平", version);
   return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    const issuesBefore = plan.issues.length;
     await job.run();
+    if (plan.issues.length !== issuesBefore) return;
     emitStorageChange({ assetType: "module-canvas", assetId: "all", origin: "local", timestamp: Date.now() });
     emitStorageChange({ assetType: "custom-module", assetId: "all", origin: "local", timestamp: Date.now() });
   } })) };

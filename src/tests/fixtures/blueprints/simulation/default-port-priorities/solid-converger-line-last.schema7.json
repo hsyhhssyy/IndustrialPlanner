@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:default-port-priorities:solid-converger-line-last",
+  "version": "fixture-v1",
+  "name": "solid-converger-line-last",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "target": {
+      "id": "target",
+      "definitionId": "log_converger",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "splitter-a": {
+      "id": "splitter-a",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 10,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "line": {
+      "id": "line",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "splitter-b": {
+      "id": "splitter-b",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 11,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "splitter-a",
+    "splitter-b",
+    "line",
+    "target"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

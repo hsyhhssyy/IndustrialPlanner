@@ -3,7 +3,7 @@ import { createWorldDocument } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { createDarkPipeSlotLink, createRegionalDarkPipeLink } from "@/shared/dark-pipe-link";
 import { planLegacyRegionalDarkPipeMigration, readLegacyRegionalDarkPipeAsset } from "@/shared/legacy-regional-dark-pipe";
-import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema6.json";
+import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema7.json";
 
 const blueprint = normalizeBlueprintDocument(fixtureJson)!;
 const bases = [{ id: "inlet-base", tag: "武陵" }, { id: "outlet-base", tag: "武陵" }];

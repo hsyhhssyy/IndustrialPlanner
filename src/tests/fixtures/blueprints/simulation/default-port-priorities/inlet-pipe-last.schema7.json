@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:default-port-priorities:inlet-pipe-last",
+  "version": "fixture-v1",
+  "name": "inlet-pipe-last",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "target": {
+      "id": "target",
+      "definitionId": "udpipe_loader_2",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "splitter": {
+      "id": "splitter",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 9,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe": {
+      "id": "pipe",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "target",
+    "splitter",
+    "pipe"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -39,7 +39,7 @@ describe("resolveGasInteractionVisualState", () => {
     //       createEntity("partially-covered-oven", "xiranite_oven_1", 4, 0),
     //       createEntity("unrelated-storage", "storager_1", 3, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-01-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool,
@@ -76,7 +76,7 @@ describe("resolveGasInteractionVisualState", () => {
     //       createEntity("partially-covering-vaporizer", "vaporizer_1", 9, 0),
     //       createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-02-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-02-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool,
@@ -105,7 +105,7 @@ describe("resolveGasInteractionVisualState", () => {
     //       createEntity("vaporizer", "vaporizer_1", 0, 0),
     //       createPreviewEntity("oven-preview", "xiranite_oven_1", 3, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-03-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-03-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool: "move",
@@ -132,7 +132,7 @@ describe("resolveGasInteractionVisualState", () => {
     //       createPreviewEntity("oven-preview-a", "xiranite_oven_1", 3, 0),
     //       createPreviewEntity("oven-preview-b", "xiranite_oven_1", 3, 1),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-04-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-04-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool: "single-placement",

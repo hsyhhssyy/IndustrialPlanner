@@ -4,10 +4,10 @@ import { createRegistryContract } from "@/registry";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 import { createDenseRegionalDocument } from "@/simulation/dense/dense-regional-document";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import inletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-inlet.world.schema6.json";
-import outletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-outlet.world.schema6.json";
-import blockedInletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-blocked-inlet.world.schema6.json";
-import blockedJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-blocked-outlet.world.schema6.json";
+import inletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-inlet.world.schema7.json";
+import outletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-outlet.world.schema7.json";
+import blockedInletJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-blocked-inlet.world.schema7.json";
+import blockedJson from "../fixtures/blueprints/simulation/dense-host-regressions/throughput-blocked-outlet.world.schema7.json";
 
 describe("文档跨基地暗管的 Dense 执行", () => {
   it.each([

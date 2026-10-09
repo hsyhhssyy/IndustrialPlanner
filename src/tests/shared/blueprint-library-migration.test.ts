@@ -4,7 +4,7 @@ import { BLUEPRINT_STORE_LOCATION } from "@/shared/storage/blueprint-storage";
 import { readFromIndexedDb, saveToIndexedDb } from "@/shared/storage/browser-storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
-import fixture from "../fixtures/blueprints/common/dummy-world.schema6.json";
+import fixture from "../fixtures/blueprints/migration/dummy-world.schema6.json";
 
 beforeEach(() => { vi.stubGlobal("indexedDB", createFakeIndexedDbFactory()); });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });

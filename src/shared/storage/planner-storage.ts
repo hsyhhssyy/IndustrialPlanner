@@ -163,11 +163,13 @@ const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
 
 const CURRENT_VERSION = 4;
 
-export async function preparePlannerStorageMigration() {
+export async function preparePlannerStorageMigration(version?: string) {
   const plan = await prepareVersionedStorageMigration(PLANNER_STORE_LOCATION, CURRENT_VERSION, MIGRATIONS,
-    undefined, normalizePlannerPersistedState, "产线规划");
+    undefined, normalizePlannerPersistedState, "产线规划", version);
   return { ...plan, jobs: plan.jobs.map(job => ({ ...job, run: async () => {
+    const issuesBefore = plan.issues.length;
     await job.run();
+    if (plan.issues.length !== issuesBefore) return;
     emitStorageChange({ assetType: "production-planning", assetId: "v3", origin: "local", timestamp: Date.now() });
   } })) };
 }

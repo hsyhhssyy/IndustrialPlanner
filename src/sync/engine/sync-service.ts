@@ -36,7 +36,7 @@ import {
   type SyncPlanUpload,
 } from "./sync-adapters";
 
-import { isDataMigrationFrozen, migrateIncomingData, subscribeDataMigration } from "@/shared/data-migration";
+import { isDataMigrationFrozen, adoptIncomingDataAndReload, reloadPendingDataMigration, subscribeDataMigration } from "@/shared/data-migration";
 
 const logger = createLogger("sync-service");
 
@@ -537,6 +537,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           results = await runSyncPass(settings, trigger, isInitialSync);
           break;
         } catch (error) {
+          if (isDataMigrationFrozen()) throw error;
           if (
             error instanceof SyncDownloadDirtyAbortError
           ) {
@@ -684,6 +685,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         canvasLocked: false,
       });
     } finally {
+      reloadPendingDataMigration();
       syncing = false;
       if (trigger === "local-change" && localChangeVersion === syncLocalChangeVersion) {
         clearLocalChangeTimers();
@@ -1014,7 +1016,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
 
         const downloads = [...transaction.stagedDownloads.values()];
-        if (downloads.some(download => download.requiresMigration)) await migrateIncomingData(downloads, true);
+        if (downloads.some(download => download.requiresMigration)) await adoptIncomingDataAndReload(downloads, true);
         else for (const download of downloads) await download.run();
 
         // AI-CORRECTION 2026-08-10: big-check 已删除，目录维护仅在初始同步时执行。

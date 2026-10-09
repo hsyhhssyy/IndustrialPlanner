@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import { expect, test } from "./harness/fixture";
 import { SCREEN_PROFILES } from "./harness/profiles";
-import plant from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema6.json" with { type: "json" };
-import unknown from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema6.json" with { type: "json" };
+import plant from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json" with { type: "json" };
+import unknown from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json" with { type: "json" };
 
 // 三种尺寸开发验证后独立编写；固定蓝图只用于布景，识别和边界配置均通过真实 UI。
 for (const profile of SCREEN_PROFILES) {

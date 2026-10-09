@@ -1,4 +1,12 @@
-import { pausePlannerStorageForMigration, refreshPlannerStorageAfterMigration } from "../shell";
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: None
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// import { pausePlannerStorageForMigration, refreshPlannerStorageAfterMigration } from "../shell";
 import { reaction, runInAction } from "mobx";
 import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { reportStorageFailure, runStorageEffect } from "@/shared/storage/storage-failure";
@@ -57,22 +65,37 @@ import {
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
-const migrationLifecycles = new WeakMap<AppHost, { pause: () => Promise<void>; refresh: () => Promise<void> }>();
-export async function pauseAppStorageForMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.pause(); }
-export async function refreshAppStorageAfterMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.refresh(); }
-
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 页面刷新重新装配持久化
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+// const migrationLifecycles = new WeakMap<AppHost, { pause: () => Promise<void>; refresh: () => Promise<void> }>();
+// export async function pauseAppStorageForMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.pause(); }
+// export async function refreshAppStorageAfterMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.refresh(); }
 export function hookLocalstorage(appHost: AppHost): () => void {
   let disposed = false;
   let moduleBalancingHydrated = false;
   let moduleBalancingWriteQueue = Promise.resolve();
-  let writeError: unknown = null;
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: reportStorageFailure
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   let writeError: unknown = null;
   const persistModuleBalancing = (): void => {
     if (disposed || !moduleBalancingHydrated || isDataMigrationFrozen()) return;
     // 排队前冻结数据，避免异步读取期间收到后续编辑，旧任务写入新的可变对象。
     const snapshot = JSON.parse(JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing)) as ModuleBalancingStateReadWrite;
     moduleBalancingWriteQueue = moduleBalancingWriteQueue
-      .then(async () => { await saveModuleBalancingState(snapshot); writeError = null; })
-      .catch(error => { writeError = error; reportStorageFailure("module-balancing", error); });
+      .then(async () => { await saveModuleBalancingState(snapshot); })
+      .catch(error => { reportStorageFailure("module-balancing", error); });
   };
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
     APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -118,7 +141,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   }
 
   const moduleBalancingHydrationBaseline = JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing);
-  const hydration = loadModuleBalancingState().then((persistedModuleBalancingState) => {
+  void loadModuleBalancingState().then((persistedModuleBalancingState) => {
     if (disposed) return;
     moduleBalancingHydrated = true;
     const currentModuleBalancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
@@ -136,7 +159,15 @@ export function hookLocalstorage(appHost: AppHost): () => void {
 
     persistModuleBalancing();
   }).catch(error => {
-    writeError = error;
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: reportStorageFailure
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//     writeError = error;
     moduleBalancingHydrated = false;
     if (!disposed) reportStorageFailure("module-balancing load", error);
   });
@@ -192,28 +223,44 @@ export function hookLocalstorage(appHost: AppHost): () => void {
     },
   );
 
-  migrationLifecycles.set(appHost, {
-    pause: async () => {
-      await hydration; await moduleBalancingWriteQueue;
-      await appHost.regionalSettings.flushForMigration();
-      await pausePlannerStorageForMigration();
-      if (writeError !== null) throw writeError;
-    },
-    refresh: async () => {
-      const settings = readFromLocalStorage<AppSettingsReadWrite>(APP_SETTINGS_LOCAL_STORAGE_KEY);
-      const workbench = readFromLocalStorage<unknown>(WORKBENCH_STATE_LOCAL_STORAGE_KEY);
-      const modules = await loadModuleBalancingState();
-      runInAction(() => {
-        if (settings !== null) Object.assign(appHost.internalState.settings, normalizePersistedAppSettings(settings, appHost.internalState.settings));
-        if (workbench !== null) Object.assign(appHost.internalState.workbench, normalizePersistedWorkbenchState(workbench, appHost.internalState.workbench));
-        if (modules !== null) appHost.internalState.workbench.toolbox.moduleBalancing = modules;
-      });
-      await appHost.regionalSettings.hydrate();
-      await refreshPlannerStorageAfterMigration();
-    },
-  });
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: 页面刷新
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//   migrationLifecycles.set(appHost, {
+//     pause: async () => {
+//       await hydration; await moduleBalancingWriteQueue;
+//       await appHost.regionalSettings.flushForMigration();
+//       await pausePlannerStorageForMigration();
+//       if (writeError !== null) throw writeError;
+//     },
+//     refresh: async () => {
+//       const settings = readFromLocalStorage<AppSettingsReadWrite>(APP_SETTINGS_LOCAL_STORAGE_KEY);
+//       const workbench = readFromLocalStorage<unknown>(WORKBENCH_STATE_LOCAL_STORAGE_KEY);
+//       const modules = await loadModuleBalancingState();
+//       runInAction(() => {
+//         if (settings !== null) Object.assign(appHost.internalState.settings, normalizePersistedAppSettings(settings, appHost.internalState.settings));
+//         if (workbench !== null) Object.assign(appHost.internalState.workbench, normalizePersistedWorkbenchState(workbench, appHost.internalState.workbench));
+//         if (modules !== null) appHost.internalState.workbench.toolbox.moduleBalancing = modules;
+//       });
+//       await appHost.regionalSettings.hydrate();
+//       await refreshPlannerStorageAfterMigration();
+//     },
+//   });
   return () => {
-    migrationLifecycles.delete(appHost);
+// AI-REMOVED 2026-10-09:
+// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
+// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
+// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
+// Replacement: None
+// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
+// Human Review: Required
+// Original code:
+//     migrationLifecycles.delete(appHost);
     disposed = true;
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();

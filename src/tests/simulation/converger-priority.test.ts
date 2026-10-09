@@ -24,7 +24,7 @@ const reorderedCases = [
 describe.each(SIMULATION_ENGINE_MATRIX)("汇流器自定义输入优先级 [%s]", (engineKind) => {
   it.each([...cases, ...reorderedCases])("$scene 仅在最小组号内持续轮询", async ({ scene, groups }) => {
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile(`${directory}/${scene}.schema6.json`),
+      blueprint: loadBlueprintFromFile(`${directory}/${scene}.schema7.json`),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 40,
@@ -63,7 +63,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("汇流器自定义输入优先级 [%s]"
 
   it("最高优先级无货时持续使用下一优先级", async () => {
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile(`${directory}/high-empty.schema6.json`),
+      blueprint: loadBlueprintFromFile(`${directory}/high-empty.schema7.json`),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 30,
@@ -82,7 +82,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("汇流器自定义输入优先级 [%s]"
 
   it("按优先级依次耗尽有限货源后回退，保持输送畅通", async () => {
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile(`${directory}/high-depleted.schema6.json`),
+      blueprint: loadBlueprintFromFile(`${directory}/high-depleted.schema7.json`),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 40,

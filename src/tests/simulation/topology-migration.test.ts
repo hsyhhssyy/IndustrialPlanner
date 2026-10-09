@@ -83,7 +83,7 @@ function createLinkedGrinderBlueprint(): BlueprintDocument {
   //       },
   //     }],
   //   )
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/topology-migration/scene-02-linked-grinder-aa285dd5.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/topology-migration/scene-02-linked-grinder-aa285dd5.schema7.json");
 }
 
 describe("REQ-076: topology migration", () => {

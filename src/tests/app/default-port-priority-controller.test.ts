@@ -7,7 +7,7 @@ import { createRegistryContract } from "@/registry";
 import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 
 const load = (name: string) => createWorldDocumentFromBlueprint(loadBlueprintFromFile(
-  `src/tests/fixtures/blueprints/simulation/default-port-priorities/${name}.schema6.json`,
+  `src/tests/fixtures/blueprints/simulation/default-port-priorities/${name}.schema7.json`,
 ));
 
 describe("编辑文档默认端口优先级缓存", () => {

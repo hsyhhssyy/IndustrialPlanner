@@ -1,4 +1,5 @@
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
+import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type {
   SlotLinkDefinition,
   WorldEntity,
@@ -25,7 +26,8 @@ import {
 // AI-CORRECTION 2026-09-11: 远端发布 tag v1.5.0 仍为 schema 5；所有当前未发布变更统一进入 5→6。
 // USER-REQUIREMENT 2026-09-18: 修改迁移目标前必须先核查目标 schema 是否已经上线；未上线时不得增加下一个版本，只能把新增迁移追加到现有生产版本至目标版本的 step。当前固定追加到 5→6。
 // AI-CORRECTION 2026-10-08: 用户允许 REQ-041 增加 6→7 空步骤，专用于迁移模式切换及旧 fallback，既有 1→6 规则保留。
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 7;
+// AI-CORRECTION 2026-10-08: 迁移链目标同样取自唯一文档版本，避免蓝图、基地和转换器分别维护数字。
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = BLUEPRINT_SCHEMA_VERSION;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {

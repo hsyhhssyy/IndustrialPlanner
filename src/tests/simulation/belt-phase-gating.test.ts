@@ -314,7 +314,7 @@ function createBeltPhaseGatingBlueprint() {
   //     createEntity("belt2", "belt_straight_1x1", 1, -1, 270),
   //     createEntity("sink2", "storager_1", 1, -4, 0),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-gating/scene-01-belt-phase-gating-23fe80d1.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-gating/scene-01-belt-phase-gating-23fe80d1.schema7.json");
 }
 
 function patchStorageSlot2(runtime: SimulationWorkerRuntime, itemType: string, count: number): void {

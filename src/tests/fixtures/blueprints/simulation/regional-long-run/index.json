@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/regional-long-run.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-region-long-consumer-2d13761d.schema6.json",
+        "file": "scene-01-region-long-consumer-2d13761d.schema7.json",
         "blueprintId": "req-076-region-long-consumer",
         "version": "fixture-v1"
       }
@@ -18,11 +18,10 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-region-long-producer-9372c5d2.schema6.json",
+        "file": "scene-02-region-long-producer-9372c5d2.schema7.json",
         "blueprintId": "req-076-region-long-producer",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

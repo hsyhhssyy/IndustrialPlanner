@@ -120,7 +120,7 @@ describe("扩容反应池自动清堵 - ignoreStock 保护 (端到端复现 #26)
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/scene-01-issue-26-e2e-c429d9a9.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/blockage-auto-clearance-ignore-stock-e2e/scene-01-issue-26-e2e-c429d9a9.schema7.json"),
       maxTickNumber: TICK_COUNT,
       registry,
     });

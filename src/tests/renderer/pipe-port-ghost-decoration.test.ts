@@ -78,7 +78,7 @@ describe("生产设备管口虚影语义", () => {
     // Original code:
     // [pipeSplitter]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-02-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-02-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -118,7 +118,7 @@ describe("生产设备管口虚影语义", () => {
     // Original code:
     // [device, connectedPipe]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-03-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-03-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -162,7 +162,7 @@ describe("生产设备管口虚影语义", () => {
     // Original code:
     // [device, overlappingBelt]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-04-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-04-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -206,7 +206,7 @@ describe("生产设备管口虚影语义", () => {
     // Original code:
     // [device, blocker]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-05-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-05-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
     });
@@ -230,7 +230,7 @@ describe("生产设备管口虚影语义", () => {
     // Original code:
     // [device]
     const entries = resolveProductionPipePortGhostEntries({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-06-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/renderer/pipe-port-ghost-decoration/scene-06-variant-1.schema7.json")),
       entityDefinitionMap,
       queries: registry.queries,
       hiddenEntityIds: new Set([device.id]),

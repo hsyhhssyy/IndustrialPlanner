@@ -9,7 +9,7 @@ import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 function request(): SimulationBlueprintRunRequest {
   return {
-    blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema6.json"),
+    blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema7.json"),
     scene: { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" },
     probes: [
       { id: "delivered", entityIds: ["sink-storage"], itemId: "item_iron_ore", direction: "input" },

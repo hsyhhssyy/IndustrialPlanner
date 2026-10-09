@@ -28,7 +28,7 @@ it("恢复检查点拒绝超限宽高，并保持原始任务数据不变", () =
   const registry = createRegistryContract();
   const candidate: PlannerCandidate = {
     execution: { ...powerFixture.execution,
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema6.json") } as SimulationBlueprintRunRequest,
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json") } as SimulationBlueprintRunRequest,
     metrics: powerFixture.metrics, connections: [], supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
     search: { seed: 0, evaluationLimit: 10000, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
       initialWireLength: 0, finalWireLength: 0, outline: powerFixture.metrics },
@@ -246,7 +246,7 @@ it("已知旧算法保留累计进度并重建搜索状态，未知版本与无�
     options: { ...file.request.options, evaluationsPerRound: -1 } } }, registry)).rejects.toThrow();
 });
 
-it("恢复隔离不兼容记录、保留原文且允许删除；旧算法迁移持久化后可重新加载", async () => {
+it("启动不验收旧算法；无法读取的任务保留原文，继续操作才报错", async () => {
   const session = new PlannerBatchSession();
   const original = { ...taskFile(), taskId: "blocked", algorithmVersion: "future", request: null } as unknown as BlueprintPlannerTaskFile;
   const old = { ...taskFile(), algorithmVersion: "compact-portfolio-1" };
@@ -263,16 +263,18 @@ it("恢复隔离不兼容记录、保留原文且允许删除；旧算法迁移�
   try {
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(host.queries.listTasks()).toHaveLength(2);
-    expect(host.queries.getTask("blocked")).toMatchObject({ status: "failed", message: expect.stringContaining("无法继续") });
+    expect(host.queries.getTask("blocked")?.status).toBe("waiting");
     expect(host.queries.getLastRequest("blocked")).toBeNull();
     expect(host.queries.exportTask("blocked")).toEqual(original);
-    expect(() => host.actions.continuePlanning("blocked", 10_000)).toThrow("无法继续");
+    host.actions.continuePlanning("blocked", 10_000);
+    await host.whenSettled();
+    expect(host.queries.getTask("blocked")?.status).toBe("failed");
     expect(hasStorageFailure()).toBe(before);
-    expect(records.get(old.taskId)?.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
-    expect(host.queries.getTask(old.taskId)?.message).toContain("保留");
+    expect(records.get(old.taskId)).toEqual(old);
+    expect(host.queries.getTask(old.taskId)?.message).toContain("继续");
     const imported = await host.actions.importTask(original);
     expect(host.queries.getTask(imported)?.status).toBe("failed");
-    expect(host.queries.exportTask(imported)).toEqual({ ...original, taskId: imported, progress: { ...original.progress, taskId: imported } });
+    expect(host.queries.exportTask(imported)).toEqual({ ...original, taskId: imported, progress: { ...original.progress, taskId: imported, status: "waiting", activeWorkerCount: 0 } });
     await host.actions.deleteTask(imported);
     expect(records.has(imported)).toBe(false);
     host.dispose();
@@ -321,8 +323,8 @@ it("隔离损坏的历史时只展示可读取的曲线和计数，导出保留�
       const file = { ...taskFile(), algorithmVersion: "future", progress: { ...taskFile().progress,
         evaluatedProposals: -1, elapsedMs: -1, areaHistory } } as unknown as BlueprintPlannerTaskFile;
       const id = await host.actions.importTask(file);
-      expect(host.queries.getTask(id)).toMatchObject({ status: "failed", evaluatedProposals: 0, elapsedMs: 0, areaHistory: [] });
-      expect(host.queries.exportTask(id)).toEqual({ ...file, taskId: id, progress: { ...file.progress, taskId: id } });
+      expect(host.queries.getTask(id)).toMatchObject({ status: "waiting", evaluatedProposals: 0, elapsedMs: 0, areaHistory: [] });
+      expect(host.queries.exportTask(id)).toEqual({ ...file, taskId: id, progress: { ...file.progress, taskId: id, status: "waiting", activeWorkerCount: 0 } });
     }
   } finally { host.dispose(); }
 });

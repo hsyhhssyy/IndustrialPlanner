@@ -13,12 +13,12 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
     it.each([
       {
         name: "routes scarce cargo only through the higher-priority output",
-        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-02-mix-pool-solid-output-priority-scarce.schema6.json",
+        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-02-mix-pool-solid-output-priority-scarce.schema7.json",
         expectedPortIds: ["out_n_4"],
       },
       {
         name: "fills the higher-priority output before overflowing through the lower-priority output in the same tick",
-        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-01-mix-pool-solid-output-priority-routing.schema6.json",
+        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-01-mix-pool-solid-output-priority-routing.schema7.json",
         expectedPortIds: ["out_n_4", "out_n_3"],
       },
     ])("$name", async ({ blueprintFile, expectedPortIds }) => {
@@ -55,11 +55,11 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
     it.each([
       {
         beltLength: 1,
-        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-03-mix-pool-single-input-priority-stream.schema6.json",
+        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-03-mix-pool-single-input-priority-stream.schema7.json",
       },
       {
         beltLength: 4,
-        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-04-mix-pool-four-belt-priority-stream.schema6.json",
+        blueprintFile: "src/tests/fixtures/blueprints/simulation/port-priority-routing/scene-04-mix-pool-four-belt-priority-stream.schema7.json",
       },
     ])("keeps a 32.5-second single-input stream on G1 with separate storage sinks and $beltLength belt tile(s)", async ({ beltLength, blueprintFile }) => {
       const report = await runBlueprintSimulation({

@@ -1,3 +1,4 @@
+import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { selectDocumentSimulation } from "@/shared/snapshot/world-document-selection";
 import { createLegacySimulationState } from "./state";
@@ -164,7 +165,7 @@ export function createLegacySimulationHost(
   const document = workspace.editor?.document;
   if (document !== undefined) {
     disposers.push(createSnapshotSelector(document, selectDocumentSimulation, shallowSnapshotEqual).subscribe(() => {
-      if (internalState.hasStarted) {
+      if (internalState.hasStarted && !isDataMigrationFrozen()) {
         void internalActions.refreshFromCurrentDocument();
       }
     }));

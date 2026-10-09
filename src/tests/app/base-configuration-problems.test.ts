@@ -33,7 +33,7 @@ describe("base configuration problems", () => {
     //       createEntity("cheat-liquid", "cheat_infinite_liquid"),
     //       createEntity("cheat-gas", "cheat_infinite_gas"),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/base-configuration-problems/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/base-configuration-problems/scene-01-variant-1.schema7.json"));
 
     expect(collectProblems({ entities })).toEqual([
       createExpectedProblem("使用了作弊物品", "cheat-solid"),
@@ -165,7 +165,7 @@ describe("base configuration problems", () => {
     // Human Review: Required
     // Original code:
     // [configuredEntity, runtimeEntity, finiteEntity, waterPump]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/scene-01-variant-1.schema7.json"));
     const runtimeInfiniteStorageEntityIds = collectRuntimeInfiniteStorageEntityIds({
       entities,
       entityDefinitions: registry.entityDefinitions,

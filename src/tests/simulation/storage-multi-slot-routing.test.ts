@@ -177,7 +177,7 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
   //     createWarehouseSlotLink("originium-source", "item_originium_ore"),
   //     createWarehouseSlotLink("iron-source", "item_iron_ore"),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-02-storage-fill-observe-6fec1489.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/storage-multi-slot-routing/scene-02-storage-fill-observe-6fec1489.schema7.json");
 }
 
 // AI-REMOVED 2026-09-14:

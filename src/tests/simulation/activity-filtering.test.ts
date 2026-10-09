@@ -120,7 +120,7 @@ function createActivityTestDocument(): WorldDocument {
   //     }
   return {
     ...createWorldDocument(),
-    entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/activity-filtering/scene-01-variant-1.schema6.json").entities,
+    entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/activity-filtering/scene-01-variant-1.schema7.json").entities,
     entityOrder: ["machine"],
   };
 }

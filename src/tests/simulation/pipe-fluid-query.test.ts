@@ -65,7 +65,7 @@ function createWorkspace(): WorkspaceContract {
   //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
   //     createEntity("sink-liquid-storage", "liquid_storager_1", 4, 0, 180),
   //   ])
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-fluid-query/scene-01-pipe-fluid-query-f1fc4156.schema6.json")
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-fluid-query/scene-01-pipe-fluid-query-f1fc4156.schema7.json")
   const document = createSnapshotStore(createWorldDocumentFromBlueprint(blueprint))
 
   return {

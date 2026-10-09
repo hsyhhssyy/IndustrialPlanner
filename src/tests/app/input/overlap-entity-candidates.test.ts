@@ -34,7 +34,7 @@ describe("overlap entity candidates logistics suppression", () => {
       },
       queries: {
         findGridCellForClientPixelPoint: () => ({ x: 5, y: 5 }),
-        listEntities: () => getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/scene-01-variant-1.schema6.json")),
+        listEntities: () => getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/overlap-entity-candidates/scene-01-variant-1.schema7.json")),
       },
     };
     const appHost = {

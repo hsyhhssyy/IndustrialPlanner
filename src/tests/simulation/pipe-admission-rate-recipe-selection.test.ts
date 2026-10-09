@@ -74,7 +74,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
     //         createEntity("sink", "liquid_storager_1", 4, 0, 180),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-01-pipe-admission-one-item-window-e8225a8a.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-01-pipe-admission-one-item-window-e8225a8a.schema7.json"),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 1.5,
@@ -168,7 +168,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
     //         createEntity("sink", "liquid_storager_1", 4, 0, 180),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-02-pipe-admission-rate-recipe-selection-e63e1fd2.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/scene-02-pipe-admission-rate-recipe-selection-e63e1fd2.schema7.json"),
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 2.5,

@@ -20,7 +20,7 @@ const cases = [
 
 describe("拓扑默认端口组合规则", () => {
   it.each(cases)("%s 的端口与调度表一致且不改写输入蓝图", async (name, expected) => {
-    const blueprint = loadBlueprintFromFile(`${directory}/${name}.schema6.json`);
+    const blueprint = loadBlueprintFromFile(`${directory}/${name}.schema7.json`);
     const document = createWorldDocumentFromBlueprint(blueprint);
     const before = JSON.stringify({ blueprint, document });
     const registry = createRegistryContract();

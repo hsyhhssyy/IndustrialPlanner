@@ -162,7 +162,7 @@ describe("区域基地 Runtime 门禁", () => {
     //         outletEntityId: "linked-outlet",
     //       })],
     //     )
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-02-regional-linked-dark-pipe-266c8d9b.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-02-regional-linked-dark-pipe-266c8d9b.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,
@@ -219,7 +219,7 @@ describe("区域基地 Runtime 门禁", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_copper_ore"),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-03-regional-runtime-belt-0af9999d.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-03-regional-runtime-belt-0af9999d.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,
@@ -351,7 +351,7 @@ describe("区域基地 Runtime 门禁", () => {
     //       "regional-snapshot-retention",
     //       [createEntity("belt", "belt_straight_1x1", 0, 0)],
     //     )
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-04-regional-snapshot-retention-78c359e0.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-04-regional-snapshot-retention-78c359e0.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/protocol-storage-throughput.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,11 +10,10 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-protocol-storage-full-throughput-3ef8c713.schema6.json",
+        "file": "scene-01-protocol-storage-full-throughput-3ef8c713.schema7.json",
         "blueprintId": "req-076-protocol-storage-full-throughput",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

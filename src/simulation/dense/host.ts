@@ -1,3 +1,4 @@
+import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { createDenseBlueprintEngine } from "./blueprint-engine";
 import { BlueprintExecutionClient } from "../blueprint";
 import type { SimulationBlueprintRunRequest, SimulationBlueprintRunReport } from "@/domain/simulation";
@@ -247,7 +248,7 @@ export function createDenseSimulationHost(
     disposers.push(createSnapshotSelector(documentStore, selectDocumentSimulation, shallowSnapshotEqual).subscribe(() => {
       const document = documentStore.getSnapshot();
       if (
-        internalState.hasStarted
+        internalState.hasStarted && !isDataMigrationFrozen()
         && controller.hasSimulationRelevantDocumentChange(document)
       ) {
         void controller.refreshFromCurrentDocument();

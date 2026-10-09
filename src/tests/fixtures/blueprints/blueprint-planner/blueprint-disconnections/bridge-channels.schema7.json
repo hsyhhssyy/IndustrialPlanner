@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "eda-bridge-channels",
+  "version": "fixture-v1",
+  "name": "bridge-channels",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "bridge": {
+      "id": "bridge",
+      "definitionId": "pipe_connector",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "west": {
+      "id": "west",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": -1,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "east": {
+      "id": "east",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "bad1": {
+      "id": "bad1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "bad2": {
+      "id": "bad2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -2
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "admission": {
+      "id": "admission",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 0,
+        "y": -3
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "bad3": {
+      "id": "bad3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": -4
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "bridge",
+    "west",
+    "east",
+    "bad1",
+    "bad2",
+    "admission",
+    "bad3"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-08T00:00:00.000Z",
+  "updatedAt": "2026-10-08T00:00:00.000Z"
+}

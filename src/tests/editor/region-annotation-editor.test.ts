@@ -166,7 +166,7 @@ describe("region annotation editor integration", () => {
     // Original code:
     // [contained, boundary]
     editor.internalDocument.setSnapshot(createDocument({
-      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-01-variant-1.schema6.json")),
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-01-variant-1.schema7.json")),
       regions: [region],
     }));
 
@@ -188,7 +188,7 @@ describe("region annotation editor integration", () => {
     const feedback = createRegionMoveFeedback({
       phase: "preview",
       document: editor.document.getSnapshot(),
-      movedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-02-variant-1.schema6.json")),
+      movedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-02-variant-1.schema7.json")),
       entityDefinitionMap: new Map(
         workspace.registry.entityDefinitions.map((candidate) => [candidate.id, candidate]),
       ),
@@ -250,7 +250,7 @@ describe("region annotation editor integration", () => {
       name: "含区域蓝图",
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-01-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-01-variant-1.schema7.json").entities,
       entityOrder: ["belt"],
       slotLinks: [],
       regions: [sourceRegion],
@@ -305,7 +305,7 @@ describe("region annotation editor integration", () => {
       name: "部分成功区域蓝图",
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-02-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-02-variant-1.schema7.json").entities,
       entityOrder: ["inside", "outside"],
       slotLinks: [],
       regions: [{
@@ -341,7 +341,7 @@ describe("region annotation editor integration", () => {
       name: "全部失败区域蓝图",
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 0, y: 0 },
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-03-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/scene-03-variant-1.schema7.json").entities,
       entityOrder: ["outside"],
       slotLinks: [],
       regions: [sourceRegion],

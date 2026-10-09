@@ -6,7 +6,7 @@ import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "./bluep
 
 describe.each(["dense-v2", "legacy"] as const)("实际物品交接查询 [%s]", (engineKind) => {
   it("公开真实搬运的来源、目标和物品，停止后清空", async () => {
-    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema6.json");
+    const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-transport/scene-01-belt-transport-56e0e3f4.schema7.json");
     const workspace = createHeadlessWorkspace(createWorldDocumentFromBlueprint(blueprint), createRegistryContract());
     const host = createSimulationHost(workspace, { workerMode: "runtime", engineKind });
     try {

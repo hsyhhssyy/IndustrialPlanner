@@ -39,7 +39,7 @@ describe("协议储存箱仓库提交", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_plant_moss_3"),
     //     ])
-    const bp = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-01-wh-submit-9ea2b8b7.schema6.json");
+    const bp = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-01-wh-submit-9ea2b8b7.schema7.json");
     const report = await runBlueprintSimulation({ blueprint: bp, maxTickNumber: MAX_TICK, registry: createRegistryContract() });
 
     const perSecond: number[] = [];
@@ -77,7 +77,7 @@ describe("协议储存箱仓库提交", () => {
     //     ], [
     //       createWarehouseSlotLink("unloader", "item_plant_moss_3"),
     //     ])
-    const bp = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-02-wh-off-1f553461.schema6.json");
+    const bp = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/warehouse-submit/scene-02-wh-off-1f553461.schema7.json");
     const report = await runBlueprintSimulation({ blueprint: bp, maxTickNumber: MAX_TICK, registry: createRegistryContract() });
     const items = sumSlot(getDevice(report, MAX_TICK, "storager").slotItems);
     console.log(`[wh-off] 未选配，120s 后物品数: ${items}`);

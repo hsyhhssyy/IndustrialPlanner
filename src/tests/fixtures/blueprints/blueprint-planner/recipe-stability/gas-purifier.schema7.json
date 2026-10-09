@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "recipe-stability-gas-purifier",
+  "version": "fixture-v1",
+  "name": "gas-purifier",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "purifier": {
+      "id": "purifier",
+      "definitionId": "liquid_purifier_1_gas",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_copper",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[2].slots[0].initialItemType": "item_filter_core",
+        "storageSlotGroups[2].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "gas-diffuser": {
+      "id": "gas-diffuser",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+        "storageSlotGroups[0].slots[0].initialCount": 0
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "purifier",
+    "gas-diffuser",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

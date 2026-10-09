@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/regional-warehouse-arbiter.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-regional-outlet-legal-1739201e.schema6.json",
+        "file": "scene-01-regional-outlet-legal-1739201e.schema7.json",
         "blueprintId": "req-076-regional-outlet-legal",
         "version": "fixture-v1"
       }
@@ -26,7 +26,7 @@
           "targetX": 52,
           "targetY": 35
         },
-        "file": "scene-02-regional-outlet-log-splitter-4a9bd9f0.schema6.json",
+        "file": "scene-02-regional-outlet-log-splitter-4a9bd9f0.schema7.json",
         "blueprintId": "req-076-regional-outlet-log_splitter",
         "version": "fixture-v1"
       },
@@ -40,7 +40,7 @@
           "targetX": 52,
           "targetY": 35
         },
-        "file": "scene-02-regional-outlet-log-converger-faf2f4ce.schema6.json",
+        "file": "scene-02-regional-outlet-log-converger-faf2f4ce.schema7.json",
         "blueprintId": "req-076-regional-outlet-log_converger",
         "version": "fixture-v1"
       },
@@ -54,7 +54,7 @@
           "targetX": 52,
           "targetY": 35
         },
-        "file": "scene-02-regional-outlet-log-connector-2a3b8d87.schema6.json",
+        "file": "scene-02-regional-outlet-log-connector-2a3b8d87.schema7.json",
         "blueprintId": "req-076-regional-outlet-log_connector",
         "version": "fixture-v1"
       },
@@ -68,7 +68,7 @@
           "targetX": 52,
           "targetY": 35
         },
-        "file": "scene-02-regional-outlet-log-admission-2f4b1dae.schema6.json",
+        "file": "scene-02-regional-outlet-log-admission-2f4b1dae.schema7.json",
         "blueprintId": "req-076-regional-outlet-log_admission",
         "version": "fixture-v1"
       },
@@ -82,7 +82,7 @@
           "targetX": 3,
           "targetY": 1
         },
-        "file": "scene-02-regional-outlet-pipe-splitter-c3ca5bcf.schema6.json",
+        "file": "scene-02-regional-outlet-pipe-splitter-c3ca5bcf.schema7.json",
         "blueprintId": "req-076-regional-outlet-pipe_splitter",
         "version": "fixture-v1"
       },
@@ -96,7 +96,7 @@
           "targetX": 3,
           "targetY": 1
         },
-        "file": "scene-02-regional-outlet-pipe-converger-8bf806a4.schema6.json",
+        "file": "scene-02-regional-outlet-pipe-converger-8bf806a4.schema7.json",
         "blueprintId": "req-076-regional-outlet-pipe_converger",
         "version": "fixture-v1"
       },
@@ -110,7 +110,7 @@
           "targetX": 3,
           "targetY": 1
         },
-        "file": "scene-02-regional-outlet-pipe-connector-ce24750a.schema6.json",
+        "file": "scene-02-regional-outlet-pipe-connector-ce24750a.schema7.json",
         "blueprintId": "req-076-regional-outlet-pipe_connector",
         "version": "fixture-v1"
       },
@@ -124,11 +124,10 @@
           "targetX": 3,
           "targetY": 1
         },
-        "file": "scene-02-regional-outlet-pipe-admission-bb7761cd.schema6.json",
+        "file": "scene-02-regional-outlet-pipe-admission-bb7761cd.schema7.json",
         "blueprintId": "req-076-regional-outlet-pipe_admission",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

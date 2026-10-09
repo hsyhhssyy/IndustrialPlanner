@@ -47,7 +47,7 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
     //       }),
     //       createEntity("power", "power_diffuser_1", 4, 0),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-01-engine-boundary-storage-9bf3f855.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-01-engine-boundary-storage-9bf3f855.schema7.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
     try {
@@ -122,7 +122,7 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
     //       createEntity("storage", "storager_1", 0, 0),
     //       createEntity("power", "power_diffuser_1", 4, 0),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-02-engine-boundary-topology-9097583b.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-02-engine-boundary-topology-9097583b.schema7.json"));
     const documentStore = createSnapshotStore(document);
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     if (workspace.editor === null) throw new Error("Expected headless editor");
@@ -152,7 +152,7 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
       //         }
       documentStore.setSnapshot({
         ...document,
-        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/scene-01-variant-1.schema6.json").entities,
+        entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/engine-boundary/scene-01-variant-1.schema7.json").entities,
         entityOrder: [replacement.id, replacementPower.id],
       });
       expect((await host.internalActions.refreshFromCurrentDocument()).status).toBe("started");
@@ -185,7 +185,7 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
     //       }),
     //       createEntity("power", "power_diffuser_1", 4, 0),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-03-engine-boundary-operating-status-83ae3b34.schema7.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
     try {
@@ -211,7 +211,7 @@ describeSimulationEngineMatrix("simulation engine boundary", (engineKind) => {
 
   it("projects a linked dark-pipe pair from the outlet transport recipe status", async () => {
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile(
-      "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema6.json",
+      "src/tests/fixtures/blueprints/simulation/dark-pipe-void/scene-04-linked-dark-pipe-inlet-manual-void-cc6d9123.schema7.json",
     ));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind, workerMode: "runtime" });
@@ -246,7 +246,7 @@ describe("dense projection observation", () => {
     // createBlueprint("dense-lazy-snapshot", [
     //       createEntity("storage", "storager_1", 0, 0),
     //     ])
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-04-dense-lazy-snapshot-8752f8a6.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/engine-boundary/scene-04-dense-lazy-snapshot-8752f8a6.schema7.json"));
     const workspace = createHeadlessWorkspace(document, createRegistryContract());
     const host = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime" });
     try {

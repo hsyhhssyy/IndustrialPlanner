@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
-import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema6.json" with { type: "json" };
+import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json" with { type: "json" };
 
 // 独立于开发脚本编写；通过真实优化入口、定位按钮、下拉框、下载和文件导入操作验证。
 for (const profile of SCREEN_PROFILES) {

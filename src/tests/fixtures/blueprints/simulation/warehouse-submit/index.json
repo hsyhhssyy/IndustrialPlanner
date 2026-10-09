@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/warehouse-submit.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-wh-submit-9ea2b8b7.schema6.json",
+        "file": "scene-01-wh-submit-9ea2b8b7.schema7.json",
         "blueprintId": "req-076-wh-submit",
         "version": "fixture-v1"
       }
@@ -18,11 +18,10 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-wh-off-1f553461.schema6.json",
+        "file": "scene-02-wh-off-1f553461.schema7.json",
         "blueprintId": "req-076-wh-off",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

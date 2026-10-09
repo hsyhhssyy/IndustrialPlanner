@@ -60,7 +60,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind)
     //         createEntity("power", "power_diffuser_1", 4, 0),
     //       ])
     const grinderReport = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-01-grinder-production-435fad2a.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-01-grinder-production-435fad2a.schema7.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry,
@@ -81,7 +81,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind)
     //         createEntity("power", "power_diffuser_1", 4, 0),
     //       ])
     const furnaceReport = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-02-furnace-production-8321f8a2.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-02-furnace-production-8321f8a2.schema7.json"),
       maxDurationSeconds: 3,
       engineKind,
       registry,
@@ -159,7 +159,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-076: production [%s]", (engineKind)
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-03-infinite-gas-purifier-inputs-afaf693e.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/production/scene-03-infinite-gas-purifier-inputs-afaf693e.schema7.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry: createRegistryContract(),

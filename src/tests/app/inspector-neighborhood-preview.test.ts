@@ -110,7 +110,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     // Original code:
     // [selectedEntity]
     const model = resolveInspectorNeighborhoodPreviewModel({
-      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-01-variant-1.schema6.json"))),
+      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-01-variant-1.schema7.json"))),
       entityDefinitionMap,
       selectedEntityId: selectedEntity.id,
     });
@@ -200,7 +200,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     //         outsideEntity,
     //       ]
     const model = resolveInspectorNeighborhoodPreviewModel({
-      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-02-variant-1.schema6.json"))),
+      document: createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-02-variant-1.schema7.json"))),
       entityDefinitionMap,
       selectedEntityId: selectedEntity.id,
     });
@@ -237,7 +237,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     // Human Review: Required
     // Original code:
     // [selectedEntity]
-    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-03-variant-1.schema6.json")));
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-03-variant-1.schema7.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -304,7 +304,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     // Human Review: Required
     // Original code:
     // [selectedEntity]
-    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-04-variant-1.schema6.json")));
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-04-variant-1.schema7.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -378,7 +378,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     // Human Review: Required
     // Original code:
     // [selectedEntity]
-    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-05-variant-1.schema6.json")));
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-05-variant-1.schema7.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);
@@ -439,7 +439,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     // Human Review: Required
     // Original code:
     // [selectedEntity]
-    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-06-variant-1.schema6.json")));
+    const document = createWorldDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/inspector-neighborhood-preview/scene-06-variant-1.schema7.json")));
     const entityDefinitionMap = new Map([
       [selectedDefinition.id, selectedDefinition],
     ]);

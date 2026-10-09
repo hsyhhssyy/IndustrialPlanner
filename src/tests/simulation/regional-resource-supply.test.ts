@@ -64,7 +64,7 @@ describe("地区资源供给", () => {
       // Original code:
       // createBlueprint("regional-resource-single", [])
       const report = await runBlueprintSimulation({
-        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-01-regional-resource-single-7396c6c1.schema6.json"),
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-01-regional-resource-single-7396c6c1.schema7.json"),
         maxDurationSeconds: 10.5,
         registry: createRegistryContract(),
         engineKind,
@@ -128,7 +128,7 @@ describe("地区资源供给", () => {
     //       ],
     //       [createWarehouseSlotLink("unloader", "item_originium_ore")],
     //     )
-    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-02-regional-resource-policy-precedence-234650c4.schema6.json"));
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-02-regional-resource-policy-precedence-234650c4.schema7.json"));
     const topology = compileSimulationTopology({
       document,
       registry,

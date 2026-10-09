@@ -66,7 +66,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-01-step1-xiranite-liquid-b9e91d12.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-01-step1-xiranite-liquid-b9e91d12.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,
       engineKind,
       registry,
@@ -108,7 +108,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-02-step2-waste-liquid-dfe9142a.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-02-step2-waste-liquid-dfe9142a.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,
       engineKind,
       registry,
@@ -153,7 +153,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-03-step3-xiranite-enr-149d8711.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-03-step3-xiranite-enr-149d8711.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,
       engineKind,
       registry,

@@ -47,7 +47,7 @@ describe("createHypergryphMoveGestureModule", () => {
     // [bottomEntity, topEntity]
     const { context, editor, appHost } = createContext({
       overlapEntityMenu,
-      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-01-variant-1.schema6.json")),
+      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-01-variant-1.schema7.json")),
     });
     const module = createHypergryphMoveGestureModule();
 
@@ -111,7 +111,7 @@ describe("createHypergryphMoveGestureModule", () => {
     // [bottomEntity, topEntity]
     const { context, editor } = createContext({
       overlapEntityMenu,
-      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-02-variant-1.schema6.json")),
+      listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-02-variant-1.schema7.json")),
     });
     const module = createHypergryphMoveGestureModule();
 

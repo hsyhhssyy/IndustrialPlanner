@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/reactor-none-accept-rule.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,11 +10,10 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-reactor-none-blocks-output-3a071dc4.schema6.json",
+        "file": "scene-01-reactor-none-blocks-output-3a071dc4.schema7.json",
         "blueprintId": "req-076-reactor-none-blocks-output",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

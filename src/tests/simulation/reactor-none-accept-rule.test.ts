@@ -63,7 +63,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
     //         createEntity("power", "power_diffuser_1", 6, 0),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-none-accept-rule/scene-01-reactor-none-blocks-output-3a071dc4.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/reactor-none-accept-rule/scene-01-reactor-none-blocks-output-3a071dc4.schema7.json"),
       maxDurationSeconds: 0.5,
       engineKind,
       registry,

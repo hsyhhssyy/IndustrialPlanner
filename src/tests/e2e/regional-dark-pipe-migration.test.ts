@@ -1,6 +1,6 @@
 import { expect, test } from "./harness/fixture";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
-import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema6.json" with { type: "json" };
+import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.schema7.json" with { type: "json" };
 
 test("晚到旧资产只迁入出口文档；失败原子回滚，重复同步不复制链接", async ({ page }, testInfo) => {
   test.setTimeout(90_000);

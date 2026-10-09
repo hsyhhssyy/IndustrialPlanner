@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 import {
   DEFAULT_WORLD_BASE_ID,
@@ -6,7 +7,7 @@ import {
 } from "@/domain/document/world-document";
 
 export function createDummyWorldDocument(): WorldDocument {
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/common/dummy-world.schema6.json");
+  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/common/dummy-world.schema7.json");
   return {
     schemaVersion: WORLD_DOCUMENT_SCHEMA_VERSION,
     documentKey: "11111111-1111-4111-8111-111111111111",

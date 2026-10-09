@@ -57,7 +57,7 @@ export async function prepareLocalMigrationRecovery(options: {
         try { completed = rawCompletion === undefined ? undefined : JSON.parse(rawCompletion) as DataMigrationCompletion; }
         catch { /* 不可读完成记录按未完成处理，继续原件保护路径。 */ }
         if (current !== undefined && isGeneration(current) && current.phase === "ready"
-          && current.schemaVersion === options.schemaVersion && completed?.complete === true
+          && current.schemaVersion === options.schemaVersion && (completed?.complete === true || completed?.abandoned === true)
           && completed.version === options.migrationVersion && completed.generation === current.generation) {
           localStorage.setItem(RECOVERY_GENERATION_KEY, current.generation);
           return installStorageGeneration(current, options.onInvalidated);

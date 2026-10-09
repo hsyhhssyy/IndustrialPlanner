@@ -86,7 +86,7 @@ describe("Bug #24 - mix_pool_2 传送带预览", () => {
     //       }
     editorHost.internalDocument.setSnapshot({
       ...createDummyWorldDocument(),
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-01-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-01-variant-1.schema7.json").entities,
       entityOrder: ["mix-pool"],
     });
 
@@ -131,7 +131,7 @@ describe("Bug #24 - mix_pool_2 传送带预览", () => {
     //       }
     editorHost.internalDocument.setSnapshot({
       ...createDummyWorldDocument(),
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-02-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-02-variant-1.schema7.json").entities,
       entityOrder: ["mix-pool"],
     });
 

@@ -170,7 +170,7 @@ describe("protocol core warehouse links", () => {
     //       slotLinks,
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-01-protocol-core-all-outputs-b5fb41b2.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-01-protocol-core-all-outputs-b5fb41b2.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 1,
     });
@@ -229,7 +229,7 @@ describe("protocol core warehouse links", () => {
     //       slotLinks,
     //       )
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-02-protocol-core-e8-loop-to-s8-345041b5.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-02-protocol-core-e8-loop-to-s8-345041b5.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 320,
     });
@@ -267,7 +267,7 @@ describe("protocol core warehouse links", () => {
     //         createWarehouseSlotLink("unloader", "item_plant_moss_3"),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-03-warehouse-loader-sink-6fadc0f9.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/protocol-core-warehouse-loop/scene-03-warehouse-loader-sink-6fadc0f9.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 80,
     });

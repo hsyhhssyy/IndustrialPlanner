@@ -62,7 +62,7 @@ describe("REQ-076: fanout routing", () => {
     //         createEntity("open-storage", "storager_1", 2, -1, 90),
     //       ])
     const report = await runBlueprintSimulation({
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/fanout-routing/scene-01-blocked-fanout-652e2252.schema6.json"),
+      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/fanout-routing/scene-01-blocked-fanout-652e2252.schema7.json"),
       registry: createRegistryContract(),
       maxTickNumber: 150,
     });

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/liquid-purifier-output-filter.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -19,7 +19,7 @@
             "rightOutputItemId": "item_liquid_xiranite_poly"
           }
         },
-        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema6.json",
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema7.json",
         "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
         "version": "fixture-v1"
       },
@@ -34,7 +34,7 @@
             "rightOutputItemId": "item_liquid_copper_enr"
           }
         },
-        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema6.json",
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema7.json",
         "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_copper",
         "version": "fixture-v1"
       },
@@ -49,7 +49,7 @@
             "rightOutputItemId": "item_liquid_xiranite_poly"
           }
         },
-        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema6.json",
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-xiranite-lowpoly-e62c7aee.schema7.json",
         "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_xiranite_lowpoly",
         "version": "fixture-v1"
       },
@@ -64,11 +64,10 @@
             "rightOutputItemId": "item_liquid_copper_enr"
           }
         },
-        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema6.json",
+        "file": "scene-01-liquid-purifier-output-filter-item-liquid-copper-53e7c2dc.schema7.json",
         "blueprintId": "req-076-liquid-purifier-output-filter-item_liquid_copper",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

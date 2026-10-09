@@ -29,7 +29,7 @@ describe("resolvePowerInteractionVisualState", () => {
     //       createEntity("power", "power_diffuser_1", 0, 0),
     //       createPreviewEntity("storage-preview", "storager_1", 3, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-01-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-01-variant-1.schema7.json"));
 
     const state = resolveState({
       alwaysShowPowerRange: true,
@@ -63,7 +63,7 @@ describe("resolvePowerInteractionVisualState", () => {
     //       createEntity("power-b", "power_diffuser_1", 8, 0),
     //       createPreviewEntity("storage-preview", "storager_1", 5, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-02-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-02-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool,
@@ -90,7 +90,7 @@ describe("resolvePowerInteractionVisualState", () => {
     //       createEntity("power", "power_diffuser_1", 0, 0),
     //       createPreviewEntity("storage-preview", "storager_1", 3, 0),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-03-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-03-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool: "move",
@@ -125,7 +125,7 @@ describe("resolvePowerInteractionVisualState", () => {
     //       createEntity("outside-storage", "storager_1", 20, 0),
     //       createEntity("zero-demand", "power_diffuser_1", 4, 3),
     //     ]
-    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-04-variant-1.schema6.json"));
+    const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-04-variant-1.schema7.json"));
 
     const state = resolveState({
       activeTool,

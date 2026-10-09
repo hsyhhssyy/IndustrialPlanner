@@ -94,7 +94,7 @@ function createBridgeDirectionBlueprint(): BlueprintDocument {
   //     // sink rot 90: in_s→W, 接收 belt 的 E 输出
   //     createEntity("sink-ew", "storager_1", 2, 1, 90),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema7.json");
 }
 
 // AI-REMOVED 2026-09-08:
@@ -294,7 +294,7 @@ function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
   //     createEntity("pipe_ew_out", "pipe_straight_1x1", 1, 1, 0),
   //     createEntity("liquid-sink-ew", "liquid_storager_1", 2, 0, 180),
   //   ])
-  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-02-pipe-bridge-direction-verify-72c18fbb.schema6.json");
+  return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-02-pipe-bridge-direction-verify-72c18fbb.schema7.json");
 }
 
 // AI-REMOVED 2026-09-08:

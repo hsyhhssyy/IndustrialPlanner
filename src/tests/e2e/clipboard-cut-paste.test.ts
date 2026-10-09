@@ -1,4 +1,4 @@
-import blueprint from "../fixtures/blueprints/e2e/clipboard-selection.schema6.json" with { type: "json" };
+import blueprint from "../fixtures/blueprints/e2e/clipboard-selection.schema7.json" with { type: "json" };
 import { waitForAppReady, clickEntity } from "./harness/workbench";
 import { SCREEN_PROFILES } from "./harness/profiles";
 import { expect, test } from "./harness/fixture";

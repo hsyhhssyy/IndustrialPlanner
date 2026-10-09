@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { filterDarkPipeOutletWarehouseLinks, prepareDarkPipeLinkDocument } from "@/shared/dark-pipe-link";
-import fixture from "../fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema6.json";
+import fixture from "../fixtures/blueprints/collections-extra/app/input/dark-pipe-link-gesture-module/scene-01-variant-1.schema7.json";
 
 const warehouseLink: SlotLinkDefinition = {
   id: "warehouse-link:outlet",

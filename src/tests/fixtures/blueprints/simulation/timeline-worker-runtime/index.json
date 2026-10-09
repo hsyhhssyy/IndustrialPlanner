@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 1,
-  "schemaVersion": 6,
+  "fixtureRevision": 3,
+  "schemaVersion": 7,
   "source": "src/tests/simulation/timeline-worker-runtime.test.ts",
   "migratedAt": "2026-09-14",
   "sourceSchemaVersion": 5,
@@ -10,7 +10,7 @@
     "scene-01": [
       {
         "parameters": {},
-        "file": "scene-01-timeline-consumption-gas-5740c606.schema6.json",
+        "file": "scene-01-timeline-consumption-gas-5740c606.schema7.json",
         "blueprintId": "req-076-timeline-consumption-gas",
         "version": "fixture-v1"
       }
@@ -18,11 +18,10 @@
     "scene-02": [
       {
         "parameters": {},
-        "file": "scene-02-timeline-admission-snapshot-981329ef.schema6.json",
+        "file": "scene-02-timeline-admission-snapshot-981329ef.schema7.json",
         "blueprintId": "req-076-timeline-admission-snapshot",
         "version": "fixture-v1"
       }
     ]
   }
 }
-

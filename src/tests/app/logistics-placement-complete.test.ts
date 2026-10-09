@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 // @vitest-environment jsdom
 
 import { runInAction } from "mobx";
@@ -405,7 +406,7 @@ describe("物流布设模式完全测试集", () => {
 //     blueprintWithoutOverlappingBelt.entityOrder = blueprintWithoutOverlappingBelt.entityOrder.filter(
 //       (entityId) => entityId !== "logistics-draft:belt:572:3",
 //     );
-    const blueprintWithoutOverlappingBelt = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-without-overlapping-belt.schema6.json");
+    const blueprintWithoutOverlappingBelt = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-without-overlapping-belt.schema7.json");
     resetCanvasFromUserBlueprint(editorHost, blueprintWithoutOverlappingBelt);
     enterPipeLogisticsPlacement(appHost);
     pressRouteOrderShortcut(appHost);
@@ -446,7 +447,7 @@ describe("物流布设模式完全测试集", () => {
 //       ),
 //       "logistics-draft:belt:572:3",
 //     ];
-    const blueprintWithOverlappingBeltOnTop = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-belt-on-top.schema6.json");
+    const blueprintWithOverlappingBeltOnTop = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-belt-on-top.schema7.json");
     resetCanvasFromUserBlueprint(editorHost, blueprintWithOverlappingBeltOnTop);
     enterPipeLogisticsPlacement(appHost);
     pressRouteOrderShortcut(appHost);
@@ -796,7 +797,7 @@ describe("物流布设模式完全测试集", () => {
 //   updatedAt: "2026-06-19T08:48:20.300Z",
 // };
 const USER_PROVIDED_BLUEPRINT: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -924,7 +925,7 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = loadBlueprintFromFile(
 //   updatedAt: "2026-06-19T13:28:08.212Z",
 // };
 const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-2.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-2.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -998,7 +999,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = loadBlueprintFromFile(
 //   updatedAt: "2026-06-19T13:36:00.575Z",
 // };
 const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-3.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-3.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -1072,11 +1073,11 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = loadBlueprintFromFile(
 //   updatedAt: "2026-07-22T13:26:26.853Z",
 // };
 const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema7.json",
 );
 
 const USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/bridge-crossing.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/bridge-crossing.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -1159,7 +1160,7 @@ const USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING: BlueprintDocument = loadBlueprint
 //   updatedAt: "2026-07-23T02:56:24.419Z",
 // };
 const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-deadend.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-deadend.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -1219,7 +1220,7 @@ const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = loadBlueprintFro
 //   updatedAt: "2026-07-23T10:00:00.000Z",
 // };
 const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema7.json",
 );
 
 // AI-REMOVED 2026-09-14:
@@ -1284,11 +1285,11 @@ const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = loadBlueprintFrom
 //   updatedAt: "2026-09-13T15:04:03.139Z",
 // };
 const USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema7.json",
 );
 
 const USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema7.json",
 );
 
 function createWorkspace(): WorkspaceContract {
@@ -1665,7 +1666,7 @@ function keyEvent(
 //   updatedAt: "2026-08-01T06:19:44.518Z",
 // };
 const USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP: BlueprintDocument = loadBlueprintFromFile(
-  "src/tests/fixtures/blueprints/logistics-placement-complete/suppression-overlap.schema6.json",
+  "src/tests/fixtures/blueprints/logistics-placement-complete/suppression-overlap.schema7.json",
 );
 
 function resolveClientPixelPointForGridCell(

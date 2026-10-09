@@ -1,5 +1,5 @@
 import { expect, test, SCREEN_PROFILES } from "./harness/fixture";
-import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema6.json" with { type: "json" };
+import blueprint from "../fixtures/blueprints/e2e/copy-selection.schema7.json" with { type: "json" };
 
 // 三屏场景装载、交互与截图开发验证完成后，独立验证基座边界。
 for (const profile of SCREEN_PROFILES) {

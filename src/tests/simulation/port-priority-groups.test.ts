@@ -27,7 +27,7 @@ describe("port priority groups", () => {
     //       }
     const document: WorldDocument = {
       ...createWorldDocument(),
-      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-01-variant-1.schema6.json").entities,
+      entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/port-priority-groups/scene-01-variant-1.schema7.json").entities,
       entityOrder: ["source", "belt", "sink"],
     };
     const topology = compileSimulationTopology({
