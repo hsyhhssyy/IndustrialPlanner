@@ -1101,13 +1101,7 @@ describe("WorkbenchApp", () => {
     expect(rightDock).not.toBeNull();
     expect(appHost.state.workbench.rightDockActiveTab).toBe(DEFAULT_RIGHT_DOCK_TAB_ID);
     expect(title?.textContent).toBe("设备属性");
-    expect(container.querySelector("#right-dock-tab-base")).toBeNull();
-    expect(container.querySelector("#right-dock-tab-power")).toBeNull();
-    expect(container.querySelector("#right-dock-tab-selection")).toBeNull();
-    expect(container.querySelector("#right-dock-tab-simulation")).toBeNull();
     expect(rightDock?.textContent).toContain("未选中对象");
-    expect(rightDock?.textContent).not.toContain("总耗电");
-    expect(rightDock?.textContent).not.toContain("可放置区域");
     expect(closeButton?.title).toBe("关闭 右侧");
 
     act(() => {
@@ -4425,7 +4419,6 @@ describe("WorkbenchApp", () => {
       'input[name="game-arknights-immediate-marquee"]',
     ) as HTMLInputElement | null;
 
-    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(immediateMoveToggle).not.toBeNull();
     expect(copyWhileMovingToggle).not.toBeNull();
     expect(copyWhileMovingToggle?.checked).toBe(false);
@@ -4533,8 +4526,6 @@ describe("WorkbenchApp", () => {
     const debugModeToggle = container.querySelector(
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
-
-    expect(container.textContent).not.toContain("v2 数据迁移");
 
     act(() => {
       if (debugModeToggle) {

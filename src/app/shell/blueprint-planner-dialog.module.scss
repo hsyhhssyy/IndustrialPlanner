@@ -28,10 +28,25 @@
 
 .main { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .history { display: flex; flex-direction: column; gap: 8px; width: 210px; flex-shrink: 0; min-height: 0; overflow: auto; padding: 14px; border-right: 1px solid var(--line); }
-.taskList { display: flex; flex-direction: column; gap: 8px; }
-.content .task { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 10px; overflow-wrap: anywhere; }
-.task span, .task time { font-size: 11px; color: var(--text-1); }
+.history > strong { font-size: 16px; font-weight: 600; line-height: 1.5; }
+.taskList { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.content .task { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 10px; min-width: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.task strong { min-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+.task span, .task time { font-size: 12px; color: var(--text-1); }
+.taskMeta { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; width: 100%; min-width: 0; }
+.task .taskCategory { color: var(--text-0); font-weight: 500; }
+.taskStatus { margin-left: auto; white-space: nowrap; }
+.task time { font-variant-numeric: tabular-nums; }
+/* AI-REMOVED 2026-10-09:
+Reason: 选中态选择器优先级低于公共按钮规则，强调边框无法生效。
+Trigger: 用户要求沿用当前强调色机制突出左侧选中任务。
+Evidence: .content button:not(.environmentTree button) 的优先级高于原选择器。
+Replacement: 下方 .content .task[aria-pressed="true"]。
+Risk: Low；沿用已有主题变量。Human Review: Required
+Original code:
 .task[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--surface-3, var(--surface-2)); }
+*/
+.content .task[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--surface-3, var(--surface-2)); }
 .heading { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .heading > div > span { color: var(--text-1); font-size: 12px; }
 .heading .target { margin: 4px 0 8px; overflow-wrap: anywhere; }

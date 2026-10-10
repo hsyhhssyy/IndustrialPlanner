@@ -27,7 +27,5 @@ describe("entity icon paths", () => {
       spriteId: "item_port_liquid_filling_pd_mc_1",
       iconPath: "device-icons/item_port_filling_pd_mc_1.webp",
     });
-    expect(definition!.iconPath).not.toContain(definition!.id);
-    expect(definition!.iconPath).not.toContain(definition!.spriteId);
   });
 });

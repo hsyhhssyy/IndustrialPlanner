@@ -18,7 +18,7 @@ import { lookupText } from "@/shared/i18n";
 import { createProductionNetwork, supplyAuxiliaryDemand } from "./production-network";
 import { createPlainNode, PlannerPlacement, placeProduction, redundantEnvironmentStations } from "./placement";
 import { addTerminals, configureSource, getPlannerStashDrainPorts, materialBalance } from "./terminals";
-import { connectPlantStartups, placePower, preparePlantStartups, prepareConverterStartups, configureConverterStartupInventory, scheduleConverterStartups } from "./support";
+import { connectPlantStartups, placePower, preparePlantStartups, prepareConverterStartups, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes } from "./support";
 import { wireProductionNetwork } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, opposite, resolveTransportPose, transportCapacity } from "./geometry";
@@ -38,6 +38,8 @@ import { PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continua
 import { assertPlannerCandidateBounds } from "./verification";
 import { PlannerBoundary } from "./boundary";
 import { createBlueprintCandidate } from "./blueprint-candidate";
+import { planConverterSupply } from "./converter-supply";
+import { routeConverterAlternatives } from "./converter-routing";
 
 export interface PlannerCandidate {
   readonly seed?: PlannerSearchSeed;
@@ -85,6 +87,7 @@ export async function createPlannerCandidate(
     rebuildCompleted: (first.rebuildCompleted ?? 0) + (last.rebuildCompleted ?? 0),
     rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
     strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
+    supplyTopologyAttempts: (first.supplyTopologyAttempts ?? 0) + (last.supplyTopologyAttempts ?? 0),
     diagnostics: first.diagnostics && last.diagnostics ? { ...last.diagnostics,
       timingsMs: Object.fromEntries(Object.entries(last.diagnostics.timingsMs).map(([key, value]) =>
         [key, value + first.diagnostics!.timingsMs[key as PlannerDiagnosticPhase]])) as PlannerSearchDiagnostics["timingsMs"],
@@ -211,7 +214,7 @@ async function createPlannerAttempt(
       restored = undefined;
     }
   }
-  const network = restored?.network ?? createProductionNetwork(registry, request);
+  let network = restored?.network ?? createProductionNetwork(registry, request);
   if (environmentLimits) {
     const counts = new Map<string, number>();
     const nodes = network.nodes.filter(node => {
@@ -381,7 +384,7 @@ async function createPlannerAttempt(
     // Risk: Low。Human Review: Required。
     // Original code: await placePower(registry, network, placement, checkBudget);
     startups = preparePlantStartups(registry, network, placement);
-    prepareConverterStartups(registry, network, placement);
+    prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, variant));
     addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
       strategy === "compact", options.stashPackingVariant, options.conduitTopology);
     }
@@ -401,7 +404,7 @@ async function createPlannerAttempt(
     // Risk: 回退拓扑增加准入口及缓冲占地。Human Review: Required
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
-    const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
+    let wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
       strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
     connectPlantStartups(registry, startups, wires);
     statistics.wireCount = wires.length;
@@ -533,7 +536,7 @@ async function createPlannerAttempt(
       return [{ edges, inventory: preload + admitted, processing }];
     });
     let fixtures: WorldEntity[] = [];
-    const external = network.nodes.filter(node => node.external);
+    let external = network.nodes.filter(node => node.external);
     let router: PlannerRouter | null = null;
     let powerNodes: PlannerNode[] = [];
     const travelSeconds: number[] = [];
@@ -651,6 +654,28 @@ async function createPlannerAttempt(
         }
       }
       if (router !== null) break;
+      update("routing", "正在尝试当前摆位的其他供气关系");
+      const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, variant, fixtures, checkBudget,
+        async (alternative, connections, routed) => {
+          if (circulationLimits.some(limit => limit.processing + limit.edges.reduce((sum, index) => {
+            const wire = wires[index]!;
+            const route = routed.routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+              && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
+            return sum + (route ? wire.perMinute * (route.cells.length + 1) / transportCapacity(wire.source.kind) : Infinity);
+          }, 0) > limit.inventory)) return false;
+          auditPlannerSupply(registry, alternative, connections, routed.routes);
+          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget);
+          if (!coverage) return false;
+          powerNodes = coverage;
+          return true;
+        }, routing);
+      if (adaptive) {
+        network = adaptive.network; wires = adaptive.wires; router = adaptive.router;
+        external = network.nodes.filter(node => node.external);
+        travelSeconds.splice(0, travelSeconds.length, ...adaptive.travelSeconds);
+        statistics.wireCount = wires.length; statistics.bestRoutedWireCount = wires.length;
+        break;
+      }
       enterPhase("layout");
       const blocked = wires[blockedIndex]!;
       search.penalize(blocked.source.entityId, blocked.target.entityId);
@@ -666,22 +691,30 @@ async function createPlannerAttempt(
     statistics.routeSnapshot = undefined;
     statistics.blockedWire = undefined;
     const supplyAudit = auditPlannerSupply(registry, network, wires, router.routes);
-    const graph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), wires.map((wire) => ({ from: wire.source.entityId, to: wire.target.entityId })));
-    const arrival = graph.groups.map(() => 0);
-    for (const { group, index } of graph.groups.map((group, index) => ({ group, index })).sort((a, b) => a.group.rank - b.group.rank)) {
-      const processing = network.nodes.filter((node) => group.nodeIds.includes(node.entity.id)).reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0), 0);
-      const cycleTravel = wires.reduce((sum, wire, wireIndex) => sum + (graph.groupIndexByNodeId.get(wire.source.entityId) === index
-        && graph.groupIndexByNodeId.get(wire.target.entityId) === index ? travelSeconds[wireIndex]! : 0), 0);
-      arrival[index] = arrival[index]! + processing + cycleTravel;
-      wires.forEach((wire, wireIndex) => {
-        if (graph.groupIndexByNodeId.get(wire.source.entityId) !== index) return;
-        const target = graph.groupIndexByNodeId.get(wire.target.entityId)!;
-        if (target !== index) arrival[target] = Math.max(arrival[target]!, arrival[index]! + travelSeconds[wireIndex]! + 10);
-      });
-    }
+    // AI-REMOVED 2026-10-09:
+    // Reason: 两个规划入口与冷态识别共用实际依赖到达时间，避免全网串联估时。
+    // Trigger: 同摆位重建及按根启动需求。
+    // Evidence: 原图全网累加等待远大于实际最长依赖路径。
+    // Replacement: support.ts converterStartupTimes，保留原 SCC 时序公式。
+    // Risk: 仍须 Dense 检查有限库存；Human Review: Required。
+    // Original code:
+    // const graph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), wires.map((wire) => ({ from: wire.source.entityId, to: wire.target.entityId })));
+    // const arrival = graph.groups.map(() => 0);
+    // for (const { group, index } of graph.groups.map((group, index) => ({ group, index })).sort((a, b) => a.group.rank - b.group.rank)) {
+    // const processing = network.nodes.filter((node) => group.nodeIds.includes(node.entity.id)).reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0), 0);
+    // const cycleTravel = wires.reduce((sum, wire, wireIndex) => sum + (graph.groupIndexByNodeId.get(wire.source.entityId) === index
+    // && graph.groupIndexByNodeId.get(wire.target.entityId) === index ? travelSeconds[wireIndex]! : 0), 0);
+    // arrival[index] = arrival[index]! + processing + cycleTravel;
+    // wires.forEach((wire, wireIndex) => {
+    // if (graph.groupIndexByNodeId.get(wire.source.entityId) !== index) return;
+    // const target = graph.groupIndexByNodeId.get(wire.target.entityId)!;
+    // if (target !== index) arrival[target] = Math.max(arrival[target]!, arrival[index]! + travelSeconds[wireIndex]! + 10);
+    // });
+    // }
+    const arrival = converterStartupTimes(network, wires, travelSeconds);
     const entities = [...network.nodes.map((node) => node.entity), ...router.entities];
-    configureConverterStartupInventory(network, id => arrival[graph.groupIndexByNodeId.get(id)!]!);
-    const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival[graph.groupIndexByNodeId.get(id)!]!);
+    configureConverterStartupInventory(network, id => arrival.get(id)!);
+    const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival.get(id)!, wires);
   // AI-REMOVED 2026-10-05:
   // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
   // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -751,8 +784,10 @@ async function createPlannerAttempt(
         })), ...supplyAudit.operatingLimits.map(limit => ({ id: `operating:${limit.entityId}`, itemId: limit.itemId,
           direction: "output" as const, entityIds: [limit.entityId] })), ...(supplyAudit.startupProduction ?? []).map(limit => ({
           id: `startup:${limit.entityId}`, itemId: limit.itemId, direction: "output" as const, entityIds: [limit.entityId],
-        }))],
-        warmupSeconds: Math.max(180, Math.ceil(Math.max(...arrival) * 3)),
+        })), ...(supplyAudit.startupStorage ?? []).flatMap(storage => (["input", "output"] as const).map(direction => ({
+          id: `startup-storage:${direction}:${storage.entityId}`, itemId: storage.itemId, direction, entityIds: [storage.entityId],
+        })))],
+        warmupSeconds: Math.max(180, Math.ceil(Math.max(...arrival.values()) * 3)),
         observationSeconds: 120, inventorySampleCount: 9, maxWallTimeMs: 120_000,
         activeActivityIds: request.plan.activeActivityIds,
       },

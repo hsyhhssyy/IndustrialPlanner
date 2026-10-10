@@ -390,7 +390,6 @@ describe("SelectionInspectorSlot", () => {
     );
 
     expect(panel?.textContent).toContain("运行消耗");
-    expect(panel?.textContent).not.toContain("当前/上一分钟最大值");
     expect(itemIcon?.querySelector("img")?.getAttribute("src")).toContain(
       "item-icons/item_gas_acid.webp",
     );

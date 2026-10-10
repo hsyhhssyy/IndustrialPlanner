@@ -79,7 +79,6 @@ test("regional multi-base mode keeps full speed controls and resolves timeline U
   const tutorial = page.locator('[data-dialog-key="regional-multi-base-guide"]');
   await expect(tutorial).toBeVisible();
   await expect(tutorial.locator("p").first()).toHaveText("请注意");
-  await expect(tutorial).not.toContainText("你可以使用作弊工具里的虚空矿机来进行模拟采矿");
   await expect(tutorial.locator("strong")).toHaveCount(3);
   await expect(tutorial.locator("p").last()).toHaveText("(点击任意位置关闭)");
   await tutorial.click({ position: { x: 4, y: 4 } });

@@ -10,6 +10,7 @@ export interface PlannerSupplyAudit {
   readonly bufferedAdmissions: number;
   /** 自循环产出的真实通量必须覆盖全部计划消耗，不能靠罐体库存代替持续生产。 */
   readonly startupProduction?: readonly { entityId: string; itemId: string; perMinute: number }[];
+  readonly startupStorage?: readonly { entityId: string; itemId: string }[];
 }
 
 /** 在交付前用实际路由长度核验，不以曼哈顿距离代替缓冲管道。 */
@@ -137,8 +138,12 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
   const rules = new PlannerSupplyRules(registry, network.request.plan, network.request.options.converterStartup);
   const startupProduction = network.nodes.flatMap(node => {
     const self = node.recipe ? rules.selfConsumption(node.recipe) : null;
-    const output = self ? node.outputs.find(flow => flow.itemId === self.itemId) : null;
-    return output ? [{ entityId: node.entity.id, itemId: output.itemId, perMinute: output.perMinute }] : [];
+    const outputs = self ? node.outputs.filter(flow => flow.itemId === self.itemId) : [];
+    return self && outputs.length ? [{ entityId: node.entity.id, itemId: self.itemId,
+      perMinute: outputs.reduce((sum, output) => sum + output.perMinute, 0) }] : [];
   });
-  return { operatingLimits: [...operatingLimits.values()], splitterCount: splitters.size, bufferedAdmissions, startupProduction };
+  const startupStorage = network.nodes.filter(node => node.purpose === "startup" && node.supplyTarget
+    && ["gas_storager_1", "liquid_storager_1"].includes(node.definition.id))
+    .map(node => ({ entityId: node.entity.id, itemId: node.outputs[0]!.itemId }));
+  return { operatingLimits: [...operatingLimits.values()], splitterCount: splitters.size, bufferedAdmissions, startupProduction, startupStorage };
 }

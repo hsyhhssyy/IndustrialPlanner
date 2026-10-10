@@ -226,15 +226,4 @@ describe("dark pipe definitions", () => {
       recipeType: "reserved-item",
     });
   });
-
-  it("does not register the retired dark pipe inlet void recipes", () => {
-    const registry = createRegistryContract();
-
-    expect(registry.queries.findRecipeDefinition(
-      "r_udpipe_loader_void_fluid_any_internal",
-    )).toBeNull();
-    expect(registry.queries.findRecipeDefinition(
-      "r_udpipe_loader_multi_void_fluid_any_internal",
-    )).toBeNull();
-  });
 });

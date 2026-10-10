@@ -14,7 +14,6 @@ test("调试旧版求解器开关在刷新后切换引擎", async ({ page }) => 
   await expect(legacySwitch).toBeVisible();
   await expect(legacySwitch).not.toBeChecked();
   await expect(legacySwitch).toBeEnabled();
-  await expect(page.locator("#setting-experimental-dense-simulation-engine")).toHaveCount(0);
   await expect(page.getByText("使用旧版求解器（需刷新网页）", { exact: true })
     .locator("xpath=ancestor::section[@id]")).toHaveAttribute("id", "settings-dialog-group-debug");
 

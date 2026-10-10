@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 20,
-  "updatedAt": "2026-10-08",
+  "fixtureRevision": 21,
+  "updatedAt": "2026-10-09",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -54,13 +54,6 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-01-variant-1.schema7.json",
-      "role": "test-scene",
-      "schemaVersion": 7,
-      "version": "fixture-v1",
-      "unknownDefinitionIds": []
-    },
-    {
-      "file": "src/tests/fixtures/blueprints/collections/editor/bug-24-mix-pool-2-conveyor/scene-02-variant-1.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
       "version": "fixture-v1",
@@ -2346,13 +2339,6 @@
       "unknownDefinitionIds": []
     },
     {
-      "file": "src/tests/fixtures/blueprints/simulation/debug-fanout/scene-01-blocked-fanout-64edc15f.schema7.json",
-      "role": "test-scene",
-      "schemaVersion": 7,
-      "version": "fixture-v1",
-      "unknownDefinitionIds": []
-    },
-    {
       "file": "src/tests/fixtures/blueprints/simulation/definition-slot-link/scene-01-cleared-definition-slot-link-d0afa449.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
@@ -3826,7 +3812,6 @@
     "src/tests/fixtures/blueprints/simulation/config-override/index.json",
     "src/tests/fixtures/blueprints/simulation/dark-pipe-throughput/index.json",
     "src/tests/fixtures/blueprints/simulation/dark-pipe-void/index.json",
-    "src/tests/fixtures/blueprints/simulation/debug-fanout/index.json",
     "src/tests/fixtures/blueprints/simulation/definition-slot-link/index.json",
     "src/tests/fixtures/blueprints/simulation/dense-checkpoint-transfer/index.json",
     "src/tests/fixtures/blueprints/simulation/dense-host-regressions/index.json",

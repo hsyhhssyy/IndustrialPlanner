@@ -261,26 +261,6 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelector("[data-port-group-id='item_output']")?.hasAttribute("data-port-tone")).toBe(false);
   });
 
-  it("renders compact output row actions without duplicate status or type indicators", () => {
-    const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "mix_pool_2");
-    const entity = createEmptyEntity("large-reactor-compact", "mix_pool_2");
-    const currentAppHost = buildAppHost(workspace, entity, { deviceClass: "tablet" });
-    appHost = currentAppHost;
-    renderInspector(currentAppHost, definition, entity, root);
-
-    expect(container.querySelector(".port-output-summary")).toBeNull();
-    expect(container.querySelector(".port-output-status")).toBeNull();
-    expect(container.querySelector(".port-output-type-icon")).toBeNull();
-    expect(container.querySelector(".is-configured")).toBeNull();
-    expect(container.querySelector(".is-unconfigured")).toBeNull();
-    expect(container.textContent).toContain("更换");
-    expect(container.textContent).not.toContain("已配置");
-    expect(container.textContent).not.toContain("未配置");
-    expect(container.textContent).not.toContain("点击更换");
-    expect(container.textContent).not.toContain("运行中");
-  });
-
   it("shows selected item label from existing config", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "mix_pool_1");

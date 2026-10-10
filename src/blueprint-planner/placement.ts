@@ -12,6 +12,8 @@ import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./
 export class PlannerPlacement {
   readonly placed: PlannerNode[] = [];
   maximumX: number | null = null;
+  maximumY: number | null = null;
+  auxiliaryRotation: GridRotation | null = null;
   private readonly rectangles: GridRect[] = [];
   private readonly portCells: GridPoint[] = [];
 
@@ -31,6 +33,7 @@ export class PlannerPlacement {
     const entity = { ...node.entity, position, rotation };
     const rect = resolveEntityGridRect({ entity, definition: node.definition });
     if (rect.x < this.minimumX || rect.y < this.minimumY || (this.maximumX !== null && rect.x + rect.width > this.maximumX)) return false;
+    if (this.maximumY !== null && rect.y + rect.height > this.maximumY) return false;
     if (this.rectangles.some((other) => areGridRectsIntersecting(rect, other))) return false;
     if (node.purpose === "logistics" || node.purpose === "startup") {
       const clearance = { x: rect.x - 1, y: rect.y - 1, width: rect.width + 2, height: rect.height + 2 };
@@ -45,6 +48,9 @@ export class PlannerPlacement {
     }
     if (this.portCells.some((point) => containsCell(rect, point))) return false;
     const ports = ["input", "output"].flatMap((direction) => getPlannerPorts(this.registry, entity, node.definition, direction as "input" | "output"));
+    // 同摆位补放设施的盒子已经固定，设备本体合法仍不足以保证端口在盒内可接。
+    if (this.maximumY !== null && ports.some(port => port.outside.x < this.minimumX || port.outside.y < this.minimumY
+      || port.outside.y >= this.maximumY! || this.maximumX !== null && port.outside.x >= this.maximumX)) return false;
     if (ports.some((port) => escapeCells(port, this.escapeLength).some((point) => this.rectangles.some((other) => containsCell(other, point))))) return false;
     for (let index = 0; index < this.placed.length; index++) {
       const other = this.placed[index]!;
@@ -70,6 +76,7 @@ export class PlannerPlacement {
   }
 
   placeAnywhere(node: PlannerNode, rotation: GridRotation = 0, preferred?: GridPoint): void {
+    if (this.auxiliaryRotation !== null && (node.purpose === "logistics" || node.purpose === "startup")) rotation = this.auxiliaryRotation;
     const height = this.bounds().height;
     let best: GridPoint | null = null;
     let bestScore = Infinity;
@@ -92,6 +99,16 @@ export class PlannerPlacement {
     this.rectangles.splice(0, this.rectangles.length, ...remaining.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })));
     this.portCells.splice(0, this.portCells.length, ...remaining.flatMap(node => (["input", "output"] as const)
       .flatMap(direction => getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength)))));
+  }
+
+  /** 同摆位重建物流时登记已通过几何检查的固定设备，不重新移动主体或套用初排间距。 */
+  reserve(nodes: readonly PlannerNode[]): void {
+    for (const node of nodes) {
+      this.placed.push(node);
+      this.rectangles.push(resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
+      this.portCells.push(...(["input", "output"] as const).flatMap(direction =>
+        getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength))));
+    }
   }
 
   placeInEnvironment(node: PlannerNode, diffuser: PlannerNode, rotationOffset: number): boolean {

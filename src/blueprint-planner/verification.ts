@@ -10,6 +10,12 @@ export function meetsOperatingLimits(audit: PlannerSupplyAudit, report: Simulati
   return (audit.startupProduction ?? []).every(limit => {
     const measured = report.probes.find(probe => probe.id === `startup:${limit.entityId}`)?.perMinute;
     return measured !== undefined && Number.isFinite(measured) && measured + 1e-6 >= limit.perMinute;
+  }) && (audit.startupStorage ?? []).every(storage => {
+    const input = report.probes.find(probe => probe.id === `startup-storage:input:${storage.entityId}`)?.amount;
+    const output = report.probes.find(probe => probe.id === `startup-storage:output:${storage.entityId}`)?.amount;
+    // 离散搬运允许窗口端点相差一个物品；每只启动罐分别检查，禁止库存互相抵消。
+    return input !== undefined && output !== undefined && Number.isFinite(input) && Number.isFinite(output)
+      && input >= 0 && output >= 0 && output <= input + 1;
   }) && audit.operatingLimits.every(limit => {
     const measured = report.probes.find(probe => probe.id === `operating:${limit.entityId}`)?.perMinute;
     return measured !== undefined && Number.isFinite(measured) && measured >= 0 && measured <= limit.perMinute + 1e-6;

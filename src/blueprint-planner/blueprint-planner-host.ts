@@ -41,6 +41,7 @@ import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecogn
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
+import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
 import { browserPlannerResources, observePlannerPressure, plannerConcurrencyLimit, PlannerAutomaticConcurrency, PlannerConcurrencyMemory,
   type PlannerResourceHints, type PlannerConcurrencySample } from "./automatic-concurrency";
@@ -503,7 +504,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       }
       if (task.file.request.blueprintSource) {
         try {
-          assertBlueprintPreserved(workspace.registry, task.file.request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint);
+          assertBlueprintPreserved(workspace.registry, task.file.request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint, candidate.seed);
           assertBlueprintRecognition(workspace.registry, { ...task.file.request.blueprintSource, blueprint: candidate.execution.blueprint }, report);
           assertBlueprintSteadyState(workspace.registry, report, candidate.execution.probes);
         } catch (error) { lastFailure = errorMessage(error); persist(task); return; }
@@ -1138,7 +1139,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           request.input.activeActivityIds, request.input.boundaries);
         // 静态传播不足时先观察真实生产；最终产率仍由完整持续收货场景验证。
         if (boundaries.some(boundary => boundary.direction === "output" && !boundary.itemId)) {
-          const discovery = blueprintRecognitionScene(workspace.registry, { ...request.input, boundaries }, request.input.blueprint, 30, true);
+          const discoveryInput = { ...request.input, boundaries };
+          const discovery = withBlueprintConverterStartup(workspace.registry, discoveryInput, request.options, initial.analysis,
+            blueprintRecognitionScene(workspace.registry, discoveryInput, request.input.blueprint, 30, true));
           const observed = await workspace.simulation!.actions.runBlueprint(discovery, combined);
           combined.throwIfAborted();
           if (observed.status !== "completed" || !observed.analysis) throw new Error("出口发现未完成，请继续识别。");
@@ -1153,23 +1156,27 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         request = { ...request, input: { ...request.input, boundaries } };
         task.file = { ...task.file, request, checkpoint: { step: "verification" } };
         publish(task, { message: "正在验证持续净产率。" }); persist(task); await writes; combined.throwIfAborted();
-        const execution = blueprintRecognitionScene(workspace.registry, structuredClone(request.input));
+        const execution = withBlueprintConverterStartup(workspace.registry, request.input, request.options, initial.analysis,
+          blueprintRecognitionScene(workspace.registry, structuredClone(request.input)));
         const report = await workspace.simulation!.actions.runBlueprint(execution, combined);
         combined.throwIfAborted();
         const identified = identifyBlueprintNetwork(workspace.registry, request.input, request.options, execution, report);
         assertPlannerCandidateBounds(workspace.registry, identified.candidate);
         const file = createTaskFile(identified.request, id), baseline = { candidate: identified.candidate, report };
-        const best = structuredClone(baseline);
+        const requiresTankConstruction = request.options.converterStartup === "tank" && Boolean(execution.scene.scheduledSlots?.length);
+        const best = requiresTankConstruction ? null : structuredClone(baseline);
         // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
-        best.candidate.execution.blueprint.blueprintId = createUuid();
+        // 订正 2026-10-09：借一次补料识别的携罐任务只有产率参考，先完成实体启动罐再进入最佳结果。
+        if (best) best.candidate.execution.blueprint.blueprintId = createUuid();
         const planning = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
           portfolio: new PlannerSearchPortfolio(identified.request, identified.candidate.seed).snapshot(),
-          result: { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
+          result: best ? { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
             measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
-            observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } },
+            observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } : null },
           progress: { ...file.progress, startedAt: task.file.progress.startedAt, elapsedMs: elapsed(task),
-            message: withBlueprintDisconnectionWarning(workspace.registry, request.input, "蓝图识别完成，可以开始优化。"), bestArea: identified.candidate.metrics.area,
-            areaHistory: [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] } });
+            message: withBlueprintDisconnectionWarning(workspace.registry, request.input, requiresTankConstruction
+              ? "蓝图产率已识别，开始优化后将构建自启动供气。" : "蓝图识别完成，可以开始优化。"), bestArea: best ? identified.candidate.metrics.area : null,
+            areaHistory: best ? [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] : [] } });
         await writes; combined.throwIfAborted();
         pendingWrites.delete(task); recognitionTasks.delete(id); tasks.set(id, planning);
         persist(planning); await writes; notify();

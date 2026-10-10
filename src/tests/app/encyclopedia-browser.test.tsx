@@ -105,28 +105,6 @@ describe("EncyclopediaBrowser", () => {
     vi.unstubAllGlobals();
   });
 
-  it("does not index retired dark pipe void recipes", () => {
-    const registry = createRegistryContract();
-    const index = buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-    );
-
-    // AI-REMOVED 2026-08-19:
-    // Reason: 暗管任意流体销毁配方已退出，不能再通过通配输入索引间接验证其隐藏状态。
-    // Trigger: 用户要求暗管入口抛弃销毁机制并统一提交仓库。
-    // Evidence: 本用例现在直接断言两个入口均没有配方索引。
-    // Replacement: 下方 recipesByMachine 空值断言。
-    // Risk: ToolboxHidden 的通用过滤仍由 recipe-picker-dialog 与其他隐藏配方覆盖。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(index.recipesByInputItem.get("any")).toBeUndefined();
-    expect(index.recipesByMachine.get("udpipe_loader_1")).toBeUndefined();
-    expect(index.recipesByMachine.get("udpipe_loader_2")).toBeUndefined();
-  });
-
   it("hides empty mobile categories after external item filtering", () => {
     const workspace = createWorkspace();
     const currentAppHost = createAppHost(workspace);

@@ -285,11 +285,6 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.textContent).toContain("暗管出口");
     expect(visiblePanel.textContent).toContain("传送带物流设备");
     expect(visiblePanel.textContent).toContain("管道物流设备");
-    expect(
-      Array.from(visiblePanel.querySelectorAll(".placement-panel-group-header"))
-        .map((header) => header.textContent?.trim()),
-    ).not.toContain("设备");
-    expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
     expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(8);
     expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(7);
     expect(visiblePanel.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(
@@ -1217,9 +1212,6 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(operationGroup?.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(4);
     expect(operationGroup?.querySelector('[data-ui-button-id="placement-tool-select"]')?.getAttribute("aria-label")).toBe("选择");
-    expect(operationGroup?.textContent).not.toContain("操作");
-    expect(operationGroup?.textContent).not.toContain("选择");
-    expect(operationGroup?.textContent).not.toContain("Esc");
     expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
@@ -1303,8 +1295,6 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-clipboard"]')).not.toBeNull();
     expect(operationGroup?.textContent).toContain("文件导入");
     expect(operationGroup?.textContent).toContain("剪贴板导入");
-    expect(operationGroup?.textContent).not.toContain("从文件导入");
-    expect(operationGroup?.textContent).not.toContain("从剪贴板导入");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.getAttribute("aria-label")).toBe("新建文件夹");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("");
   });

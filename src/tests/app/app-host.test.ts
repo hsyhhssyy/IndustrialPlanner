@@ -559,7 +559,6 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -574,7 +573,6 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.rightDockActiveTab).toBe(DEFAULT_RIGHT_DOCK_TAB_ID);
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
-    expect(appHost.internalState.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
@@ -588,7 +586,6 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
-    expect(workspace.app?.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -636,7 +633,6 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
@@ -649,7 +645,6 @@ describe("createAppHost", () => {
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
-    expect(appHost.internalState.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
@@ -661,7 +656,6 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
-    expect(workspace.app?.state.settings).not.toHaveProperty("hypergryphOperationMode");
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);

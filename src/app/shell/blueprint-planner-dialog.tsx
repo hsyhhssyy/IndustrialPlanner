@@ -18,6 +18,7 @@ import styles from "./blueprint-planner-dialog.module.scss";
 import { BlueprintPlannerEnvironment } from "./blueprint-planner-environment";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { BlueprintIdentification } from "./blueprint-identification";
+import { describePlannerHistoryTask } from "./blueprint-planner-history";
 
 const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup"; label: UiKey; choices: readonly [string, UiKey][] }[] = [
   // AI-REMOVED 2026-10-03:
@@ -194,12 +195,24 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   }, [planner, revision, selectedId]);
   const history = useMemo(() => {
     void revision;
+    const timeFormatter = new Intl.DateTimeFormat(appHost.state.settings.locale, {
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+    });
     return planner?.queries.listTasks().map(task => {
       const request = planner.queries.getLastRequest(task.taskId);
-      return { ...task, recognizing: !!request && isBlueprintRecognitionRequest(request),
-        name: request ? isBlueprintRecognitionRequest(request) ? request.input.blueprint.name : request.plan.name : task.taskId };
+      // AI-REMOVED 2026-10-09:
+      // Reason: 空名称缺少兜底，蓝图优化被识别阶段二分法误标为产线计算。
+      // Trigger: 用户要求统一左侧任务标题、类别和布局。
+      // Evidence: 新建产线入口传入空名称；优化请求保留 blueprintSource。
+      // Replacement: describePlannerHistoryTask。
+      // Risk: Low；仅修改展示，不改写任务数据。Human Review: Required
+      // Original code:
+      // return { ...task, recognizing: !!request && isBlueprintRecognitionRequest(request),
+      //   name: request ? isBlueprintRecognitionRequest(request) ? request.input.blueprint.name : request.plan.name : task.taskId };
+      return { ...task, ...describePlannerHistoryTask(request, appHost.workspace.registry, t),
+        timeLabel: timeFormatter.format(task.startedAt) };
     }) ?? [];
-  }, [planner, revision]);
+  }, [planner, revision, appHost.state.settings.locale, appHost.workspace.registry, t]);
   const supply = useMemo(() => {
     if (!controller.plan) return { view: null, error: null };
     try { return { view: new PlannerSupplyRules(appHost.workspace.registry, controller.plan, controller.options.converterStartup).view(), error: null }; }
@@ -309,8 +322,22 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           {history.length === 0 ? <p>{t("eda.noHistory")}</p> : history.map(task => <button type="button" key={task.taskId}
             disabled={fileBusy || anyBusy && task.taskId !== controller.activeTaskId}
             className={styles.task} aria-pressed={selectedId === task.taskId} onClick={() => select(task.taskId)}>
-            <strong>{task.name}</strong><span>{t(task.recognizing ? "eda.identifyBlueprint" : "eda.productionMode")} · {statusLabel(task.status)}</span>
-            <time>{new Date(task.startedAt).toLocaleString()}</time>
+            {/* AI-REMOVED 2026-10-09:
+              Reason: 类别和状态混排，空标题和完整时间破坏列表层级。
+              Trigger: 用户确认左侧任务栏设计并要求沿用当前按钮风格。
+              Evidence: 原卡片将类别与状态合为一行 11px 文本。
+              Replacement: 下方标题、类别与状态行、简短时间。
+              Risk: Low；交互和右侧内容不变。Human Review: Required
+              Original code:
+              <strong>{task.name}</strong><span>{t(task.recognizing ? "eda.identifyBlueprint" : "eda.productionMode")} · {statusLabel(task.status)}</span>
+              <time>{new Date(task.startedAt).toLocaleString()}</time>
+            */}
+            <strong title={task.name}>{task.name}</strong>
+            <span className={styles.taskMeta}>
+              <span className={styles.taskCategory}>{t(task.categoryKey)}</span>
+              <span className={styles.taskStatus}>{statusLabel(task.status)}</span>
+            </span>
+            <time dateTime={new Date(task.startedAt).toISOString()}>{task.timeLabel}</time>
           </button>)}
         </div>
       </aside>

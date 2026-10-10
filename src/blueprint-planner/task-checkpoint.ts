@@ -13,6 +13,7 @@ import { restorePlannerSeed } from "./search-seed";
 import { migratePlannerCandidate } from "./task-migration";
 import { assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
+import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
@@ -84,7 +85,9 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
     const file = parsePlannerTaskFile(value, registry);
     if (!verify) return file;
     const source = file.request.blueprintSource!;
-    const execution = blueprintRecognitionScene(registry, source);
+    const scene = blueprintRecognitionScene(registry, source);
+    const analysis = file.checkpoint.blueprintBaseline!.report.analysis;
+    const execution = analysis ? withBlueprintConverterStartup(registry, source, file.request.options, analysis, scene) : scene;
     const report = await verify(execution);
     const baseline = identifyBlueprintNetwork(registry, source, file.request.options, execution, report);
     const seedContents = (candidate: PlannerCandidate) => JSON.stringify({ ...candidate.seed,
@@ -95,11 +98,15 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
     }
     const best = file.checkpoint.best;
     if (best && JSON.stringify(best.candidate.execution.blueprint) !== JSON.stringify(execution.blueprint)) {
-      const request = blueprintRecognitionScene(registry, source, best.candidate.execution.blueprint);
+      const base = blueprintRecognitionScene(registry, source, best.candidate.execution.blueprint);
+      const request = { ...base, probes: best.candidate.execution.probes, warmupSeconds: best.candidate.execution.warmupSeconds,
+        scene: { ...base.scene, scheduledSlots: best.candidate.execution.scene.scheduledSlots } };
       const measured = await verify(request);
       assertBlueprintRecognition(registry, { ...source, blueprint: request.blueprint }, measured);
       assertBlueprintSteadyState(registry, measured, request.probes);
-      if (!meetsProductionTargets(file.request, measured)) throw new Error("恢复的最优蓝图未通过原产率验收。");
+      if (!meetsProductionTargets(file.request, measured) || !meetsOperatingLimits(best.candidate.supplyAudit, measured)) {
+        throw new Error("恢复的最优蓝图未通过原产率及循环供料验收。");
+      }
     }
     return file;
   }
@@ -237,7 +244,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
       }
       assertPlannerCandidateBounds(registry, candidate);
       if (candidate.seed) restorePlannerSeed(registry, restorePlannerOutputRequest(request, candidate.seed.network.request.options), candidate.seed);
-      if (request.blueprintSource) assertBlueprintPreserved(registry, request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint);
+      if (request.blueprintSource) assertBlueprintPreserved(registry, request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint, candidate.seed);
     }
     if (point.best !== null && (!Array.isArray(point.best.report?.probes) || point.best.report.status !== "completed")) throw new Error("最优结果缺少验证报告。");
     if (point.result !== null && (point.result.taskId !== file.taskId || !point.best

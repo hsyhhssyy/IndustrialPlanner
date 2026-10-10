@@ -10,6 +10,7 @@ import { filterPort, findLogisticsDevice, getPlannerPorts } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
+import { converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
 
 export interface PlantStartup {
   readonly picker: PlannerNode;
@@ -18,8 +19,27 @@ export interface PlantStartup {
   readonly itemId: string;
 }
 
+/** 沿凝聚图传播上游到达时间；循环内部计入真实路程，不把无关并行线路串联累加。 */
+export function converterStartupTimes(network: PlannerNetwork, wires: readonly PlannerWire[], travelSeconds: readonly number[], transitionDelay = 10): Map<string, number> {
+  const graph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
+  const arrival = graph.groups.map(() => 0);
+  for (const { group, index } of graph.groups.map((group, index) => ({ group, index })).sort((a, b) => a.group.rank - b.group.rank)) {
+    const processing = network.nodes.filter(node => group.nodeIds.includes(node.entity.id)).reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0), 0);
+    const cycleTravel = wires.reduce((sum, wire, wireIndex) => sum + (graph.groupIndexByNodeId.get(wire.source.entityId) === index
+      && graph.groupIndexByNodeId.get(wire.target.entityId) === index ? travelSeconds[wireIndex]! : 0), 0);
+    arrival[index] = arrival[index]! + processing + cycleTravel;
+    wires.forEach((wire, wireIndex) => {
+      if (graph.groupIndexByNodeId.get(wire.source.entityId) !== index) return;
+      const target = graph.groupIndexByNodeId.get(wire.target.entityId)!;
+      if (target !== index) arrival[target] = Math.max(arrival[target]!, arrival[index]! + travelSeconds[wireIndex]! + transitionDelay);
+    });
+  }
+  return new Map(network.nodes.map(node => [node.entity.id, arrival[graph.groupIndexByNodeId.get(node.entity.id)!]!]));
+}
+
 /** 启动库存有限；持续运行仍由产物回流并经过原有工作消耗限速。 */
-export function prepareConverterStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement): void {
+export function prepareConverterStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement,
+  supplies: readonly ConverterSupply[] = planConverterSupply(registry, network)): void {
   const mode = network.request.options.converterStartup ?? "reject";
   const rules = new PlannerSupplyRules(registry, network.request.plan, mode);
   for (const producer of [...network.nodes]) {
@@ -31,6 +51,10 @@ export function prepareConverterStartups(registry: RegistryContract, network: Pl
     const group = producer.definition.storageSlotGroups.find(entry => input?.storageGroupIds?.includes(entry.id));
     const slot = group?.slots[0];
     if (!input || !group || !slot) throw new PlannerCandidateError("转化设备缺少可初始化的运行耗材槽。");
+    const supply = supplies.find(entry => entry.entityId === producer.entity.id && entry.itemId === self.itemId);
+    if (!supply) throw new PlannerCandidateError("转化设备缺少耗材供给关系。");
+    producer.inputs.splice(producer.inputs.indexOf(input), 1, { ...input, sourceEntityIds: [supply.sourceId] });
+    if (supply.sourceId !== producer.entity.id) continue;
     if (mode === "manual") {
       // AI-REMOVED 2026-10-05:
       // Reason: 第 0 秒补入的 5 个耗材可能在上游原料抵达前耗尽。
@@ -46,11 +70,15 @@ export function prepareConverterStartups(registry: RegistryContract, network: Pl
     }
     const domain = registry.queries.resolveItemDomain(self.itemId);
     if (domain !== ItemDomainFlag.Liquid && domain !== ItemDomainFlag.Gas) throw new PlannerCandidateError("转化设备启动耗材必须是液体或气体。");
+    let sequence = network.nodes.length;
+    while (network.nodes.some(node => node.entity.id === `eda-converter-startup-${sequence}`)) sequence++;
     const tank = createPlainNode(registry, domain === ItemDomainFlag.Gas ? "gas_storager_1" : "liquid_storager_1",
-      `eda-converter-startup-${network.nodes.length}`, "startup");
+      `eda-converter-startup-${sequence}`, "startup");
     const storage = tank.definition.storageSlotGroups[0]!;
-    tank.inputs.push({ itemId: self.itemId, perMinute: input.perMinute, storageGroupIds: [storage.id] });
+    tank.inputs.push({ itemId: self.itemId, perMinute: input.perMinute, storageGroupIds: [storage.id], sourceEntityIds: [producer.entity.id] });
     tank.outputs.push({ itemId: self.itemId, perMinute: input.perMinute, storageGroupIds: [storage.id] });
+    const selectedInput = producer.inputs.findIndex(flow => flow.itemId === input.itemId && flow.storageGroupIds === input.storageGroupIds);
+    producer.inputs[selectedInput] = { ...producer.inputs[selectedInput]!, sourceEntityIds: [tank.entity.id] };
     // 罐体只供给该设备的耗材口，由该设备的真实产出补回，不充当额外的稳态来源。
     Object.assign(tank, { supplyTarget: { entityId: producer.entity.id, storageGroupIds: input.storageGroupIds },
       outputSource: { entityId: producer.entity.id, storageGroupIds: producer.outputs.find(flow => flow.itemId === self.itemId)!.storageGroupIds } });
@@ -65,12 +93,14 @@ export function prepareConverterStartups(registry: RegistryContract, network: Pl
 /** 手动启动仅进入独立验证场景；原料到达后补满一次耗材槽。 */
 export function scheduleConverterStartups(
   registry: RegistryContract, network: PlannerNetwork, startupSeconds: (entityId: string) => number,
+  wires?: readonly PlannerWire[],
 ): NonNullable<SimulationBlueprintScene["scheduledSlots"]> {
   if (network.request.options.converterStartup !== "manual") return [];
   const rules = new PlannerSupplyRules(registry, network.request.plan, "manual");
+  const roots = converterStartupRoots(registry, network, wires);
   return network.nodes.flatMap(producer => {
     const self = producer.recipe ? rules.selfConsumption(producer.recipe) : null;
-    if (!self) return [];
+    if (!self || !roots.has(producer.entity.id)) return [];
     const groupIds = producer.definition.recipeChannels.filter(channel => channel.type === "consumption-channel")
       .flatMap(channel => channel.ingredientStorageGroupIds);
     return producer.definition.storageSlotGroups.filter(group => groupIds.includes(group.id)).flatMap(group => group.slots.map(slot => ({

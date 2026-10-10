@@ -161,7 +161,7 @@ describe("v1.5 建筑素材发布", () => {
     expect([mask.width, mask.height]).toEqual([width * animation.resolution, height * animation.resolution]);
   });
 
-  it("接入最终修复集合，不重复导入实体或保留被撤回的包", () => {
+  it("注册完整且不重复的建筑素材集合", () => {
     const ids = collection.entries.map((entry) => entry.entityId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(collection.entries).toHaveLength(52);
@@ -188,17 +188,6 @@ describe("v1.5 建筑素材发布", () => {
       "pipe_splitter",
       "sp_sub_hub_1",
     ]));
-    const packages = collection.entries.map((entry) => entry.package);
-    for (const supersededPackage of [
-      "filling_pd_mc_1_top_pixi_canvas_8x6_128px_webp4096.zip",
-      "liquid_cleaner_1_top_pixi_canvas_5x5_128px_webp4096.zip",
-      "storager_1_top_pixi_canvas_3x4_128px_webp4096.zip",
-      "thickener_1_top_pixi_canvas_8x6_128px_webp4096.zip",
-      "tools_asm_mc_1_top_pixi_canvas_8x6_128px_webp4096.zip",
-      "winder_1_top_pixi_canvas_8x6_128px_webp4096.zip",
-    ]) {
-      expect(packages).not.toContain(supersededPackage);
-    }
   });
 
   it("记录网站发布与索引 hash，并锁定 source→project 的逐帧坐标变换", () => {

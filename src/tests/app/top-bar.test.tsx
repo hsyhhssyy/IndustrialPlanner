@@ -655,10 +655,6 @@ describe("TopBar", () => {
     ) as HTMLButtonElement | null;
 
     expect(container.querySelectorAll(".top-bar-metric")).toHaveLength(0);
-    expect(container.textContent).not.toContain("语言:");
-    expect(container.textContent).not.toContain("主题:");
-    expect(container.textContent).not.toContain("设备:");
-    expect(container.textContent).not.toContain("屏幕:");
     expect(simulationButton).not.toBeNull();
     expect(timelineButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();

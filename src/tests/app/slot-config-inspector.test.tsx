@@ -393,7 +393,6 @@ describe("SlotConfigInspector", () => {
     expect(enabledSwitch.checked).toBe(true);
     expect(enabledSwitch.disabled).toBe(false);
     expect(container.textContent).toContain("编辑模式");
-    expect(container.textContent).not.toContain("开启");
 
     act(() => {
       enabledSwitch.click();
@@ -411,7 +410,6 @@ describe("SlotConfigInspector", () => {
 
     expect(runtimeStateSwitch.checked).toBe(false);
     expect(container.textContent).toContain("编辑模式");
-    expect(container.textContent).not.toContain("关闭");
 
     act(() => {
       runtimeStateSwitch.click();

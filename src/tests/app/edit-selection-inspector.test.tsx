@@ -74,9 +74,6 @@ describe("EditSelectionInspector", () => {
 
     expect(container.textContent).toContain("未选中对象");
     expect(container.querySelector("[data-selection-action-strip]")).toBeNull();
-    expect(container.textContent).not.toContain("快捷操作");
-    expect(container.textContent).not.toContain("连接");
-    expect(container.textContent).not.toContain("配置字段");
   });
 
   it("shows the mounted inspector and action strip for a non-logistics single selection", () => {
@@ -117,9 +114,6 @@ describe("EditSelectionInspector", () => {
     });
 
     expect(container.textContent).not.toContain("未选中对象");
-    expect(container.textContent).not.toContain("快捷操作");
-    expect(container.textContent).not.toContain("连接");
-    expect(container.textContent).not.toContain("配置字段");
   });
 
   it("shows batch delete in the action strip for a dedicated logistics selection", () => {

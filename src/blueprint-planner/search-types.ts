@@ -90,6 +90,9 @@ export interface PlannerSearchStatistics {
   gpuFeasibleLayouts?: number;
   acceptedMoves: number;
   routingAttempts: number;
+  /** 在固定主体摆位下重建并尝试的供料关系数量，已计入 evaluations。 */
+  supplyTopologyAttempts?: number;
+  lastSupplyTopologyFailure?: string;
   wireCount?: number;
   bestRoutedWireCount?: number;
   initialWireLength: number;

@@ -14,6 +14,7 @@ interface Allocation {
   readonly amounts: Map<string, number>;
   remaining: number;
   consumption: boolean;
+  sourceEntityIds?: readonly string[];
 }
 
 interface Connection {
@@ -22,7 +23,13 @@ interface Connection {
   readonly amounts: Map<string, number>;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false): Promise<PlannerWire[]> {
+function availableNodeId(network: PlannerNetwork, prefix: string): string {
+  let sequence = network.nodes.length;
+  while (network.nodes.some(node => node.entity.id === `${prefix}-${sequence}`)) sequence++;
+  return `${prefix}-${sequence}`;
+}
+
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>): Promise<PlannerWire[]> {
   const outputs = allocatePorts(registry, network.nodes, "output");
   const inputs = allocatePorts(registry, network.nodes, "input");
   const connections: Connection[] = [];
@@ -35,7 +42,8 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     }
   }
   // 先满足生产和回流，再接目标与副产物出口；不会把循环的回流量当成净产出。
-  const consumerOrder = [...inputs].sort((left, right) => Number(isSink(left.node)) - Number(isSink(right.node)));
+  const consumerOrder = [...inputs].sort((left, right) => Number(isSink(left.node)) - Number(isSink(right.node))
+    || Number(Boolean(right.sourceEntityIds)) - Number(Boolean(left.sourceEntityIds)));
   for (const consumer of consumerOrder) {
     for (const [itemId, amount] of consumer.amounts) {
       let remaining = amount;
@@ -45,6 +53,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       for (const provider of providers) {
         if (remaining < 1e-6) break;
         if (provider.remaining < 1e-6) continue;
+        if (consumer.sourceEntityIds && !consumer.sourceEntityIds.includes(provider.allocation.node.entity.id)) continue;
         // AI-REMOVED 2026-09-16:
         // Reason: 供料目标从单个消费者扩展到同类需求池。
         // Trigger: 允许独立分组运行消耗，以比较外供数量与实际面积。
@@ -88,6 +97,21 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       }
       if (remaining > 1e-6) throw new PlannerCandidateError(`物料不足：${itemId}，缺少 ${remaining.toFixed(2)}/min`);
     }
+  }
+  // 启动根的回填优先独占同库存组空闲出口，避免分流树尚未蓄满时耗尽一次性启动库存。
+  for (const group of groupConnections(connections, "source").values()) {
+    if (group.length < 2) continue;
+    const source = group[0]!.source;
+    const node = network.nodes.find(entry => entry.entity.id === source.entityId)!;
+    const returning = group.find(connection => connection.target.entityId === source.entityId || network.nodes.some(target =>
+      target.entity.id === connection.target.entityId && target.purpose === "startup" && target.outputSource?.entityId === source.entityId));
+    if (!returning) continue;
+    const items = [...returning.amounts.keys()];
+    const spare = getPlannerPorts(registry, node.entity, node.definition, "output", items[0])
+      .filter(port => port.groupIndex === source.groupIndex && !connections.some(connection => samePort(connection.source, port))
+        && items.every(item => getPlannerPorts(registry, node.entity, node.definition, "output", item).some(candidate => samePort(candidate, port))))
+      .sort((a, b) => distance(a, returning.target) - distance(b, returning.target))[0];
+    if (spare) returning.source = spare;
   }
   // 同一库存组的空闲输出口优先直连，避免先合并再分流引入限速、缓冲和额外占地。
   // AI-CORRECTION 2026-10-07: 普通生产分流已取消额外限速与缓冲；空闲口直连仍作为减少物流设施的候选。
@@ -159,7 +183,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     if (input.amounts.size !== 1) throw new PlannerCandidateError("运行消耗端口需要独立物料线路。");
     const [itemId, rate] = [...input.amounts][0]!;
     const definition = findLogisticsDevice(registry, input.port.kind, "admission");
-    const limiter = createPlainNode(registry, definition.id, `eda-limiter-${network.nodes.length}`, "logistics");
+    const limiter = createPlainNode(registry, definition.id, availableNodeId(network, "eda-limiter"), "logistics");
     placement.placeAnywhere(limiter, 0, input.port.outside);
     network.nodes.push(limiter);
     const inlet = getPlannerPorts(registry, limiter.entity, definition, "input", itemId)[0]!;
@@ -176,7 +200,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     const [itemId] = group[0]!.amounts.keys();
     const rate = group.reduce((sum, connection) => sum + connection.amounts.get(itemId!)!, 0);
     const definition = findLogisticsDevice(registry, source.kind, "admission");
-    const limiter = createPlainNode(registry, definition.id, `eda-shared-limiter-${network.nodes.length}`, "logistics");
+    const limiter = createPlainNode(registry, definition.id, availableNodeId(network, "eda-shared-limiter"), "logistics");
     placement.placeAnywhere(limiter, 0, source.outside);
     network.nodes.push(limiter);
     const inlet = getPlannerPorts(registry, limiter.entity, definition, "input", itemId)[0]!;
@@ -205,11 +229,16 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   // 未使用端口关闭，避免靠近设备的其他线路意外取走产物或送入错误原料。
   for (const node of network.nodes.filter((entry) => entry.recipe !== null)) {
     for (const direction of ["input", "output"] as const) {
-      for (const port of getPlannerPorts(registry, node.entity, node.definition, direction)) restrictPort(registry, node, port, []);
+      for (const port of getPlannerPorts(registry, node.entity, node.definition, direction)) {
+        if (managedItems && !(direction === "input" ? node.inputs : node.outputs).some(flow => managedItems.has(flow.itemId)
+          && getPlannerPorts(registry, node.entity, node.definition, direction, flow.itemId, flow.storageGroupIds)
+            .some(candidate => samePort(candidate, port)))) continue;
+        restrictPort(registry, node, port, []);
+      }
     }
   }
   for (const allocation of [...outputs, ...inputs]) restrictPort(registry, allocation.node, allocation.port, [...allocation.amounts.keys()]);
-  if (compact) for (const group of groupConnections(connections, "source").values()) {
+  for (const group of groupConnections(connections, "source").values()) {
     const node = network.nodes.find(entry => entry.entity.id === group[0]!.source.entityId)!;
     restrictPort(registry, node, group[0]!.source, [...new Set(group.flatMap(connection => [...connection.amounts.keys()]))]);
   }
@@ -248,6 +277,18 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
     const flows = direction === "input" ? node.inputs : node.outputs;
     for (const flow of flows) {
       let remaining = flow.perMinute;
+      // AI-REMOVED 2026-10-09:
+      // Reason: 在初排坐标上按来源缩窄端口距离池，耦合了最终关系与尚未优化的几何，退化双根案例。
+      // Trigger: 五机双根真实回归退化；同摆位失败已定位为辅助端口越界及朝向问题。
+      // Evidence: 双根旧端口池 120/min，新池触发额外分组后仅 109/min。
+      // Replacement: 保留既有端口候选池，实际物料分配仍严格执行 sourceEntityIds。
+      // Risk: 端口池是启发式；最终仍需真实路由和 Dense 验收。Human Review: Required。
+      // Original code:
+      // const counterparts = nodes.filter(other => other !== node && (direction !== "input" || !flow.sourceEntityIds || flow.sourceEntityIds.includes(other.entity.id)))
+      // .flatMap(other => (direction === "input" ? other.outputs : other.inputs)
+      // .filter(otherFlow => otherFlow.itemId === flow.itemId && (direction !== "output" || !otherFlow.sourceEntityIds || otherFlow.sourceEntityIds.includes(node.entity.id)))
+      // .flatMap(otherFlow => getPlannerPorts(registry, other.entity, other.definition,
+      // direction === "input" ? "output" : "input", flow.itemId, otherFlow.storageGroupIds)));
       const counterparts = nodes.filter(other => other !== node).flatMap(other => (direction === "input" ? other.outputs : other.inputs)
         .filter(otherFlow => otherFlow.itemId === flow.itemId).flatMap(otherFlow => getPlannerPorts(registry, other.entity, other.definition,
           direction === "input" ? "output" : "input", flow.itemId, otherFlow.storageGroupIds)));
@@ -259,8 +300,10 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
         if (remaining < 1e-6) break;
         let allocation = allocations.get(portKey(port));
         if (allocation !== undefined && port.kind === LOGISTICS_KIND.pipe && !allocation.amounts.has(flow.itemId)) continue;
+        if (allocation !== undefined && JSON.stringify(allocation.sourceEntityIds) !== JSON.stringify(flow.sourceEntityIds)) continue;
         if (allocation === undefined) {
           allocation = { port, node, remaining: transportCapacity(port.kind), amounts: new Map(), consumption: false };
+          allocation.sourceEntityIds = flow.sourceEntityIds;
           allocations.set(portKey(port), allocation);
         }
         const amount = Math.min(remaining, allocation.remaining);
@@ -337,7 +380,7 @@ function expandConvergers(
   let offset = 0;
   while (offset < group.length) {
     const definition = findLogisticsDevice(registry, root.kind, "converger");
-    const node = createPlainNode(registry, definition.id, `eda-junction-${network.nodes.length}`, "logistics");
+    const node = createPlainNode(registry, definition.id, availableNodeId(network, "eda-junction"), "logistics");
     placement.placeAnywhere(node, 0, root.outside);
     network.nodes.push(node);
     const trunk = getPlannerPorts(registry, node.entity, definition, "output")[0]!;
@@ -429,7 +472,7 @@ function expandSplitTree(registry: RegistryContract, network: PlannerNetwork, pl
     return;
   }
   const definition = findLogisticsDevice(registry, root.kind, "splitter");
-  const node = createPlainNode(registry, definition.id, `eda-split-${network.nodes.length}`, "logistics");
+  const node = createPlainNode(registry, definition.id, availableNodeId(network, "eda-split"), "logistics");
   placement.placeAnywhere(node, 0, root.outside); network.nodes.push(node);
   const inlet = getPlannerPorts(registry, node.entity, definition, "input")[0]!;
   const branches = getPlannerPorts(registry, node.entity, definition, "output");

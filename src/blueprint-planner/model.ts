@@ -8,6 +8,8 @@ import type { PlannerSearchStatistics } from "./search-types";
 
 export interface MaterialDemand extends BlueprintPlannerFlow {
   readonly storageGroupIds?: readonly string[];
+  /** 本候选已选定的供料设备；缺省由通用物料分配选择，约束仅作用于该输入通道。 */
+  readonly sourceEntityIds?: readonly string[];
 }
 
 export interface PlannerNode {
