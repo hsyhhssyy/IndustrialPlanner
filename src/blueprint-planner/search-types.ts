@@ -13,6 +13,8 @@ export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "con
 /** 订正 2026-09-30：任务化界面改为整轮提案总预算；Host 将剩余额度映射到每次搜索的 maxEvaluations，无头客户端共用此计数。 */
 export interface PlannerSearchOptions {
   /** baseline 保留旧搜索组织用于同预算对照；规则修复和最终验收始终共用。 */
+  /** Host 分配的当前 Worker 续搜身份；只在运行期生效。 */
+  readonly sessionKey?: string;
   readonly strategy?: "baseline" | "compact";
   readonly seed?: PlannerSearchSeed;
   /** 导入蓝图的不可变基线；独立重启及减量组合始终从原图出发。 */
@@ -42,7 +44,7 @@ export interface PlannerSearchOptions {
 
 export interface PlannerLayoutIssue {
   readonly kind: "minimum-coordinate" | "body-overlap" | "body-boundary" | "same-device-distance"
-    | "environment-coverage" | "fixture-blocked" | "port-minimum-coordinate" | "port-blocked"
+    | "environment-coverage" | "power-coverage" | "fixture-blocked" | "port-minimum-coordinate" | "port-blocked"
     | "port-competition" | "port-boundary" | "disconnected" | "boundary-access";
   readonly amount: number;
   readonly entityIds: readonly string[];
@@ -67,6 +69,10 @@ export interface PlannerSearchDiagnostics {
 export interface PlannerSearchStatistics {
   readonly strategy?: "baseline" | "compact";
   readonly resumedFromArea?: number;
+  searchResumed?: boolean;
+  layoutInitialCost?: number;
+  layoutBestCost?: number;
+  preparationRejected?: boolean;
   constructiveEvaluations?: number;
   constructivePlaced?: boolean;
   restartEvaluations?: number;

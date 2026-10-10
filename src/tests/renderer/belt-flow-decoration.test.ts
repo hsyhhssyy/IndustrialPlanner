@@ -163,11 +163,10 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 describe("BeltFlowDecoration", () => {
-  it("resolves only arrow marks with path-continuous phase across belt tiles", () => {
+  it("resolves arrow marks with path-continuous phase across belt tiles", () => {
     const marksAtStart = resolveBeltFlowMarks(createFlowContext({ nowMs: 0 }) as never)
     const marksAfterHalfSecond = resolveBeltFlowMarks(createFlowContext({ nowMs: 500 }) as never)
 
-    expect(marksAtStart.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marksAtStart.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -176,7 +175,6 @@ describe("BeltFlowDecoration", () => {
       { kind: "arrow", x: 200 },
       { kind: "arrow", x: 300 },
     ])
-    expect(marksAfterHalfSecond.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marksAfterHalfSecond.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -186,7 +184,7 @@ describe("BeltFlowDecoration", () => {
     ])
   })
 
-  it("draws only solid belt-colored arrows after removing highlight ribbons", async () => {
+  it("draws solid belt-colored arrows without loading a texture", async () => {
     const decoration = createBeltFlowDecoration()
     const highlightTexture = { id: "highlight-texture" }
     const getTexture = vi.fn().mockResolvedValue(highlightTexture)
@@ -197,10 +195,6 @@ describe("BeltFlowDecoration", () => {
     await flushMicrotasks()
     decoration.sync(createFlowContext({ nowMs: 0, getTexture }) as never)
 
-    const highlightLayer = decoration.container.children[0] as {
-      children: unknown[];
-      visible: boolean;
-    }
     const graphics = decoration.container.children[2] as unknown as {
       drawCommands: Array<{
         type: "poly";
@@ -215,8 +209,6 @@ describe("BeltFlowDecoration", () => {
       }>;
     }
     expect(decoration.container.visible).toBe(true)
-    expect(highlightLayer.visible).toBe(false)
-    expect(highlightLayer.children).toHaveLength(0)
     expect(graphics.drawCommands).toHaveLength(3)
     expect(arrowMask.drawCommands).toHaveLength(2)
     expect(graphics.drawCommands[0]?.points?.map((value) => Number(value.toFixed(2)))).toEqual([
@@ -434,7 +426,6 @@ describe("BeltFlowDecoration", () => {
       AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
     )
 
-    expect(marks.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marks.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -446,7 +437,7 @@ describe("BeltFlowDecoration", () => {
     ])
   })
 
-  it("skips highlight ribbons on turn belts while keeping flow arrows", () => {
+  it("draws flow arrows on turn belts", () => {
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -470,7 +461,6 @@ describe("BeltFlowDecoration", () => {
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-07-variant-1.schema7.json")),
     }) as never)
 
-    expect(marks.some((mark) => mark.kind === "highlight")).toBe(false)
     expect(marks.some((mark) => mark.kind === "arrow")).toBe(true)
   })
 

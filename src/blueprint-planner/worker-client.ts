@@ -19,7 +19,7 @@ export class PlannerWorkerClient {
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
-    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number }, originSeed?: PlannerSearchSeed): Promise<PlannerCandidate> {
+    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number }, originSeed?: PlannerSearchSeed, sessionKey?: string): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
@@ -66,7 +66,7 @@ export class PlannerWorkerClient {
       const timer = budgetMs === null ? undefined : setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
       // GPU 能力由 Host 为本轮创建的专用通道决定；种子池中的 request 可能保留旧的执行选项。
       try { worker.postMessage({ id, request, variant, budgetMs, gpu: this.allowGpu,
-        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed } } satisfies PlannerWorkerRequest); }
+        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey } } satisfies PlannerWorkerRequest); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }

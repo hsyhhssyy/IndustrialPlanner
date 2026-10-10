@@ -15,13 +15,15 @@ import { lookupText } from "@/shared/i18n";
 // Original code:
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
-import { createProductionNetwork, supplyAuxiliaryDemand } from "./production-network";
-import { createPlainNode, PlannerPlacement, placeProduction, redundantEnvironmentStations } from "./placement";
-import { addTerminals, configureSource, getPlannerStashDrainPorts, materialBalance } from "./terminals";
-import { connectPlantStartups, placePower, preparePlantStartups, prepareConverterStartups, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes } from "./support";
+import { createProductionNetwork } from "./production-network";
+import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from "./placement";
+// AI-REMOVED 2026-10-10: 统一排空装配后原导入 getPlannerStashDrainPorts, opposite, resolveTransportPose 不再使用。
+// Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
+import { configureSource } from "./terminals";
+import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes } from "./support";
 import { wireProductionNetwork } from "./wiring";
 import { PlannerRouter } from "./router";
-import { getPlannerPorts, opposite, resolveTransportPose, transportCapacity } from "./geometry";
+import { getPlannerPorts, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
 import { PlannerCandidateError, type PlannerNode } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
@@ -32,13 +34,24 @@ import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchExp
 import type { PlannerRoutingBackend } from "./routing-backend";
 import type { PlannerLayoutBackend } from "./layout-backend";
 import { constructCompactLayout } from "./constructive-layout";
-import { capturePlannerSeed, restorePlannerSeed, type PlannerSearchSeed } from "./search-seed";
+import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import { resolvePlannerAttempt } from "./search-portfolio";
 import { PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum } from "./search-outline";
 import { assertPlannerCandidateBounds } from "./verification";
 import { PlannerBoundary } from "./boundary";
+import { createPlannerDiagnostics } from "./search-diagnostics";
+import type { PlannerSearchSession, PlannerSearchSessions } from "./search-sessions";
 import { createBlueprintCandidate } from "./blueprint-candidate";
-import { planConverterSupply } from "./converter-supply";
+// AI-REMOVED 2026-10-10:
+// Reason: 设备准备移入共享过程，调度器与 Worker 复用同一份设施清单。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: production-preparation.ts
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+// import { planConverterSupply } from "./converter-supply";
+import { prepareProductionDevices } from "./production-preparation";
 import { routeConverterAlternatives } from "./converter-routing";
 
 export interface PlannerCandidate {
@@ -54,9 +67,9 @@ export async function createPlannerCandidate(
   registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
   checkBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void,
   options: PlannerSearchOptions = {}, reportEvaluations: (count: number) => void = () => undefined,
-  routing?: PlannerRoutingBackend, layoutBackend?: PlannerLayoutBackend,
+  routing?: PlannerRoutingBackend, layoutBackend?: PlannerLayoutBackend, sessions?: PlannerSearchSessions,
 ): Promise<PlannerCandidate> {
-  if (request.blueprintSource) return createBlueprintCandidate(registry, request, variant, checkBudget, update, options, reportEvaluations, routing);
+  if (request.blueprintSource) return createBlueprintCandidate(registry, request, variant, checkBudget, update, options, reportEvaluations, routing, layoutBackend, sessions);
   ({ request, variant } = resolvePlannerAttempt(request, variant));
   // 独立重启轮换箱数；预算内重排必须保持本轮拓扑选择。
   options = { ...options, stashPackingVariant: options.stashPackingVariant ?? Math.floor((variant + 1) / 4) };
@@ -64,6 +77,14 @@ export async function createPlannerCandidate(
   // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
   options = { ...options, conduitTopology: options.conduitTopology
     ?? (["shared", "trunk", "local"] as const)[Math.floor((variant + 1) / 4) % 3] };
+  // 切片额度和诊断开关不改变搜索身份；输入、种子、外框、策略或拓扑变化必须重新准备。
+  const session = sessions && options.sessionKey ? { store: sessions, fingerprint: JSON.stringify([
+    "production", plannerRequestKey(request), variant,
+    { ...options, maxEvaluations: undefined, sessionKey: undefined, diagnostics: undefined },
+  ]) } : undefined;
+  const resumed = session?.store.get(options.sessionKey, session.fingerprint);
+  if (resumed?.production) return createPlannerAttempt(registry, request, resumed.production.variant,
+    checkBudget, update, options, reportEvaluations, routing, false, layoutBackend, session, resumed);
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
   const reserve = !options.seed && options.strategy !== "baseline" && total >= 20_000;
@@ -109,7 +130,7 @@ export async function createPlannerCandidate(
     try {
       const result = await createPlannerAttempt(registry, request, phase.strategy === "baseline" && index > 0 ? variant % 9 : variant,
         checkBudget, update, { ...options, strategy: phase.strategy, maxEvaluations: Math.max(1, Math.floor(remaining * phase.fraction)),
-          coolingEvaluations: phase.strategy === "baseline" && index > 0 ? total : options.coolingEvaluations }, count => reportEvaluations(used + count), routing, phase.initial, layoutBackend);
+          coolingEvaluations: phase.strategy === "baseline" && index > 0 ? total : options.coolingEvaluations }, count => reportEvaluations(used + count), routing, phase.initial, layoutBackend, session);
       return { ...result, search: finish(result.search) };
     } catch (error) {
       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
@@ -187,20 +208,21 @@ async function createPlannerAttempt(
   assertBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void,
   options: PlannerSearchOptions, reportEvaluations: (count: number) => void,
   routing?: PlannerRoutingBackend, initialPass = false, layoutBackend?: PlannerLayoutBackend,
+  session?: { readonly store: PlannerSearchSessions; readonly fingerprint: string }, resumed?: PlannerSearchSession,
 ): Promise<PlannerCandidate> {
   let readEvaluations = () => 0;
   const checkBudget = () => { reportEvaluations(readEvaluations()); assertBudget(); };
   const diagnosticStarted = performance.now();
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   checkBudget();
-  const experiments: readonly PlannerSearchExperiment[] = options.experiments
+  const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
     ?? (options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
-  const strategy = options.strategy ?? "compact";
-  const profile = resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}), ...options.profile });
-  let restored = options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
+  const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
+  const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}), ...options.profile });
+  let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {
     const redundant = redundantEnvironmentStations(restored.network);
@@ -214,7 +236,7 @@ async function createPlannerAttempt(
       restored = undefined;
     }
   }
-  let network = restored?.network ?? createProductionNetwork(registry, request);
+  let network = resumed?.network ?? restored?.network ?? createProductionNetwork(registry, request);
   if (environmentLimits) {
     const counts = new Map<string, number>();
     const nodes = network.nodes.filter(node => {
@@ -248,7 +270,8 @@ async function createPlannerAttempt(
   for (const node of network.nodes) for (const flow of node.outputs) producers.set(flow.itemId, [...(producers.get(flow.itemId) ?? []), node.entity.id]);
   const initialGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), network.nodes.flatMap(node => node.inputs.flatMap(flow =>
     (producers.get(flow.itemId) ?? []).map(from => ({ from, to: node.entity.id })))));
-  network.nodes.sort((a, b) => initialGraph.groups[initialGraph.groupIndexByNodeId.get(a.entity.id)!]!.rank
+  // 续搜中节点下标属于几何快照与重建游标，不得再次排序。
+  if (!resumed) network.nodes.sort((a, b) => initialGraph.groups[initialGraph.groupIndexByNodeId.get(a.entity.id)!]!.rank
     - initialGraph.groups[initialGraph.groupIndexByNodeId.get(b.entity.id)!]!.rank);
   const bodyArea = network.nodes.reduce((sum, node) => sum + node.definition.footprint.width * node.definition.footprint.height, 0);
   // AI-REMOVED 2026-10-06:
@@ -307,7 +330,7 @@ async function createPlannerAttempt(
   //     : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / 0.5) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / 0.5) * 1.2 * scale) + 2) }
   //       : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
   // AI-CORRECTION 2026-10-06：两倍面积仅约束初次紧凑搜索；后续紧凑重排与宽松重排仍在原预算和 70 格上限内扩框。
-  let outline = options.targetOutline ? { ...options.targetOutline } : options.seed
+  let outline = resumed ? { ...resumed.search.statistics.outline } : options.targetOutline ? { ...options.targetOutline } : options.seed
     ? continuationOutline(options.seed, variant, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
     : options.outline ? { ...options.outline }
     : initialPass ? initialPlannerOutline(bodyArea, fixedMinimum, variant)
@@ -316,81 +339,97 @@ async function createPlannerAttempt(
     : { width: Math.min(PLANNER_MAX_SIDE, Math.max(24, fixedMinimum.width, Math.ceil(expandedSide))),
       height: Math.min(PLANNER_MAX_SIDE, Math.max(32, fixedMinimum.height, Math.ceil(expandedSide * 1.35))) };
   // AI-CORRECTION 2026-10-02: 调度器指定的盒子不可由冷启动回退改成另一尺寸；原注释所述面积上限仍有效。
-  if (!options.seed && !options.targetOutline && options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
+  if (!resumed && !options.seed && !options.targetOutline && options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
     outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea);
   }
   assertPlannerOutline(outline);
-  const statistics: PlannerSearchStatistics = { seed: variant, evaluationLimit: options.maxEvaluations ?? 50_000,
+  const freshStatistics: PlannerSearchStatistics = { seed: variant, evaluationLimit: options.maxEvaluations ?? 50_000,
     evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline, profile, strategy,
-    resumedFromArea: options.seed ? options.seed.width * options.seed.height : undefined, coolingEvaluations: options.coolingEvaluations,
-    maximumArea: options.maximumArea };
+    resumedFromArea: options.seed ? options.seed.width * options.seed.height : undefined,
+    coolingEvaluations: resumed?.search.statistics.coolingEvaluations ?? options.coolingEvaluations,
+    maximumArea: options.maximumArea, experiments: [...experiments] };
+  if (resumed) resumed.search.beginSlice(freshStatistics);
+  const statistics = resumed?.search.statistics ?? freshStatistics;
   readEvaluations = () => statistics.evaluations;
   if (experiments.length) Object.assign(statistics, { experiments: [...experiments] });
-  const diagnostics: PlannerSearchDiagnostics | undefined = options.diagnostics ? {
-    timingsMs: { setup: 0, layout: 0, routing: 0, power: 0, supply: 0, finalization: 0 },
-    layoutChecks: 0, feasibleLayouts: 0, fullyRoutedAttempts: 0,
-    rejectionCounts: { routing: 0, power: 0, supply: 0, circulation: 0 }, rejections: [], omittedRejectionDetails: 0,
-  } : undefined;
-  if (diagnostics) statistics.diagnostics = diagnostics;
-  let diagnosticPhase: PlannerDiagnosticPhase = "setup", diagnosticSince = diagnosticStarted;
-  const enterPhase = (next: PlannerDiagnosticPhase): void => {
-    if (!diagnostics) return;
-    const now = performance.now();
-    diagnostics.timingsMs[diagnosticPhase] += now - diagnosticSince;
-    diagnosticPhase = next; diagnosticSince = now;
-  };
-  const reject = (phase: keyof PlannerSearchDiagnostics["rejectionCounts"], reason: string): void => {
-    if (!diagnostics) return;
-    diagnostics.rejectionCounts[phase]++;
-    const existing = diagnostics.rejections.find(entry => entry.phase === phase && entry.reason === reason);
-    if (existing) { existing.count++; existing.lastEvaluation = statistics.evaluations; }
-    else if (diagnostics.rejections.length < 64) diagnostics.rejections.push({ phase, reason, count: 1,
-      firstEvaluation: statistics.evaluations, lastEvaluation: statistics.evaluations });
-    else diagnostics.omittedRejectionDetails++;
-  };
+  // AI-REMOVED 2026-10-10: 两条候选路径统一诊断语义；Replacement: createPlannerDiagnostics。
+  // Trigger: 原图失败不可观测；Evidence: 旧分支无阶段统计；Risk: Low；Human Review: Required。
+  //   const diagnostics: PlannerSearchDiagnostics | undefined = options.diagnostics ? {
+  //     timingsMs: { setup: 0, layout: 0, routing: 0, power: 0, supply: 0, finalization: 0 },
+  //     layoutChecks: 0, feasibleLayouts: 0, fullyRoutedAttempts: 0,
+  //     rejectionCounts: { routing: 0, power: 0, supply: 0, circulation: 0 }, rejections: [], omittedRejectionDetails: 0,
+  //   } : undefined;
+  //   if (diagnostics) statistics.diagnostics = diagnostics;
+  //   let diagnosticPhase: PlannerDiagnosticPhase = "setup", diagnosticSince = diagnosticStarted;
+  //   const enterPhase = (next: PlannerDiagnosticPhase): void => {
+  //     if (!diagnostics) return;
+  //     const now = performance.now();
+  //     diagnostics.timingsMs[diagnosticPhase] += now - diagnosticSince;
+  //     diagnosticPhase = next; diagnosticSince = now;
+  //   };
+  //   const reject = (phase: keyof PlannerSearchDiagnostics["rejectionCounts"], reason: string): void => {
+  //     if (!diagnostics) return;
+  //     diagnostics.rejectionCounts[phase]++;
+  //     const existing = diagnostics.rejections.find(entry => entry.phase === phase && entry.reason === reason);
+  //     if (existing) { existing.count++; existing.lastEvaluation = statistics.evaluations; }
+  //     else if (diagnostics.rejections.length < 64) diagnostics.rejections.push({ phase, reason, count: 1,
+  //       firstEvaluation: statistics.evaluations, lastEvaluation: statistics.evaluations });
+  //     else diagnostics.omittedRejectionDetails++;
+  //   };
+  const { diagnostics, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true, diagnosticStarted);
   if (!Number.isInteger(statistics.evaluationLimit) || statistics.evaluationLimit <= 0 || !Number.isInteger(outline.width) || !Number.isInteger(outline.height)
     || outline.width <= 0 || outline.height <= 0) throw new Error("布局搜索预算和边界必须是正整数。");
   try {
     const placement = new PlannerPlacement(registry, Math.max(1, outline.width - 2), 1, 1, profile.initialClearance, 1);
     placement.maximumX = outline.width;
-    let startups: ReturnType<typeof preparePlantStartups> = [];
+    let startups: PlantStartup[] = [];
     update("layout", "正在安排设备与环境设施");
-    if (!restored) {
-    await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
-    const redundant = redundantEnvironmentStations(network);
-    if (redundant.length) {
-      placement.remove(redundant);
-      network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => !redundant.includes(node)));
-    }
-    const processedEnvironments = new Set<string>();
-    for (;;) {
-      checkBudget();
-      const added = network.nodes.filter((node) => node.purpose === "environment" && !processedEnvironments.has(node.entity.id));
-      if (!added.length) break;
-      for (const environment of added) {
-        processedEnvironments.add(environment.entity.id);
-        for (const input of environment.inputs) {
-          const deficit = -(materialBalance(network).get(input.itemId) ?? 0);
-          if (deficit > 1e-6) supplyAuxiliaryDemand(registry, network, input.itemId, deficit);
-        }
-      }
-      await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    }
-    // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
-    // Reason: 不能把初排的桩数固定为搜索约束。Trigger: 赤铜矿覆盖缺口。
-    // Evidence: 1789569174504-774676。Replacement: 布线前 placePower。
-    // 订正 2026-09-16：最终实现在布线后补桩，避免桩位占用物流通道。
-    // Risk: Low。Human Review: Required。
-    // Original code: await placePower(registry, network, placement, checkBudget);
-    startups = preparePlantStartups(registry, network, placement);
-    prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, variant));
-    addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
-      strategy === "compact", options.stashPackingVariant, options.conduitTopology);
+    if (!resumed && !restored) {
+// AI-REMOVED 2026-10-10:
+// Reason: 抽取原设备准备过程供初始面积计算复用，不遗漏已确定的辅助设备。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: production-preparation.ts prepareProductionDevices
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//     await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
+//     const redundant = redundantEnvironmentStations(network);
+//     if (redundant.length) {
+//       placement.remove(redundant);
+//       network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => !redundant.includes(node)));
+//     }
+//     const processedEnvironments = new Set<string>();
+//     for (;;) {
+//       checkBudget();
+//       const added = network.nodes.filter((node) => node.purpose === "environment" && !processedEnvironments.has(node.entity.id));
+//       if (!added.length) break;
+//       for (const environment of added) {
+//         processedEnvironments.add(environment.entity.id);
+//         for (const input of environment.inputs) {
+//           const deficit = -(materialBalance(network).get(input.itemId) ?? 0);
+//           if (deficit > 1e-6) supplyAuxiliaryDemand(registry, network, input.itemId, deficit);
+//         }
+//       }
+//       await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
+//       await new Promise<void>((resolve) => setTimeout(resolve, 0));
+//     }
+//     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
+//     // Reason: 不能把初排的桩数固定为搜索约束。Trigger: 赤铜矿覆盖缺口。
+//     // Evidence: 1789569174504-774676。Replacement: 布线前 placePower。
+//     // 订正 2026-09-16：最终实现在布线后补桩，避免桩位占用物流通道。
+//     // Risk: Low。Human Review: Required。
+//     // Original code: await placePower(registry, network, placement, checkBudget);
+//     startups = preparePlantStartups(registry, network, placement);
+//     prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, variant));
+//     addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
+//       strategy === "compact", options.stashPackingVariant, options.conduitTopology);
+    startups = await prepareProductionDevices(registry, network, placement, variant, profile,
+      { ...options, strategy }, checkBudget, environmentLimits);
     }
     const boundary = new PlannerBoundary(registry, network, outline);
-    if (!restored) boundary.arrange(variant);
-    else for (const entry of boundary.entries) {
+    if (!resumed && !restored) boundary.arrange(variant);
+    else if (!resumed) for (const entry of boundary.entries) {
       const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
       boundary.snap(entry.index, pose);
       node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
@@ -404,7 +443,7 @@ async function createPlannerAttempt(
     // Risk: 回退拓扑增加准入口及缓冲占地。Human Review: Required
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
-    let wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
+    let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
       strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
     connectPlantStartups(registry, startups, wires);
     statistics.wireCount = wires.length;
@@ -502,7 +541,7 @@ async function createPlannerAttempt(
   //       router = makeRouter();
   //     }
   //   }
-    if (strategy === "compact" && !restored && statistics.evaluationLimit >= 3000) {
+    if (strategy === "compact" && !resumed && !restored && statistics.evaluationLimit >= 3000) {
       const limit = Math.min(8000, Math.floor(statistics.evaluationLimit * 0.4));
       const poses = constructCompactLayout(registry, network, wires, outline, variant, () => {
         checkBudget();
@@ -513,10 +552,10 @@ async function createPlannerAttempt(
       statistics.constructivePlaced = poses !== null;
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
-    const search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+    const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
     enterPhase("layout");
     const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
-    const circulationLimits = routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
+    const circulationLimits = resumed?.production?.circulationLimits ?? routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
       const nodes = network.nodes.filter(node => group.nodeIds.includes(node.entity.id));
       if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
         && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
@@ -535,41 +574,48 @@ async function createPlannerAttempt(
         * edges.reduce((rate, index) => rate + (wires[index]!.target.entityId === node.entity.id ? wires[index]!.perMinute : 0), 0) / 60, 0);
       return [{ edges, inventory: preload + admitted, processing }];
     });
+    const production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: options.seed?.routes ?? [] };
+    if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
     let fixtures: WorldEntity[] = [];
     let external = network.nodes.filter(node => node.external);
     let router: PlannerRouter | null = null;
     let powerNodes: PlannerNode[] = [];
     const travelSeconds: number[] = [];
     let failure = "当前预算内尚未找到符合边界的合法布局";
-    let reusableRoutes = options.seed?.routes ?? [];
-    let inspectSeed = restored !== undefined;
+    let reusableRoutes = production.reusableRoutes;
+    let inspectSeed = !resumed && restored !== undefined;
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
       update("optimization", "正在优化布局");
       enterPhase("layout");
       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
-      const feasible = await search.advance(inspectSeed ? 0 : Math.min(layoutBackend ? 20_000 : 750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
+      // 硬件后端只决定批量执行器，不改变可行布局检查和布线反馈的节奏。
+      const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
       if (!feasible) continue;
       search.applyBest();
       enterPhase("routing");
-      fixtures = [];
-      for (const node of network.nodes.filter(entry => entry.definition.id === "storager_1" && (entry.purpose === "product" || entry.purpose === "byproduct"))) {
-        // AI-REMOVED 2026-09-30:
-        // Reason: 单排空线不足以验收多线合箱。Trigger: 分离芯 60/min 合箱需求。
-        // Evidence: 单线额定 30/min，小于箱接收速率。Replacement: getPlannerStashDrainPorts。
-        // Risk: 需长窗口验收。Human Review: Required。
-        // Original code: const output = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)[0]!;
-        for (const output of getPlannerStashDrainPorts(registry, node)) {
-          // 验证中持续清空成品容器；夹具不进入交付蓝图，实际放置后由用户取走成品。
-          const sink = createPlainNode(registry, "cheat_infinite_solid", `eda-validation-sink-${fixtures.length}`, "logistics");
-          const drain: WorldEntity = { id: `eda-validation-drain-${fixtures.length}`,
-            ...resolveTransportPose(registry, output.kind, opposite(output.edge), output.edge), position: output.outside, config: {}, tags: [] };
-          sink.entity.position = { x: output.outside.x * 2 - output.cell.x, y: output.outside.y * 2 - output.cell.y };
-          fixtures.push(drain, sink.entity);
-        }
-      }
+      // AI-REMOVED 2026-10-10: 布线与布局必须共用选定的排空端口和真实夹具。
+      // Trigger: 夹具占用分叉；Evidence: 灼铜断连；Replacement: search.fixtures。
+      // Risk: Low；Human Review: Required。
+      //       fixtures = [];
+      //       for (const node of network.nodes.filter(entry => entry.definition.id === "storager_1" && (entry.purpose === "product" || entry.purpose === "byproduct"))) {
+      //         // AI-REMOVED 2026-09-30:
+      //         // Reason: 单排空线不足以验收多线合箱。Trigger: 分离芯 60/min 合箱需求。
+      //         // Evidence: 单线额定 30/min，小于箱接收速率。Replacement: getPlannerStashDrainPorts。
+      //         // Risk: 需长窗口验收。Human Review: Required。
+      //         // Original code: const output = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)[0]!;
+      //         for (const output of getPlannerStashDrainPorts(registry, node)) {
+      //           // 验证中持续清空成品容器；夹具不进入交付蓝图，实际放置后由用户取走成品。
+      //           const sink = createPlainNode(registry, "cheat_infinite_solid", `eda-validation-sink-${fixtures.length}`, "logistics");
+      //           const drain: WorldEntity = { id: `eda-validation-drain-${fixtures.length}`,
+      //             ...resolveTransportPose(registry, output.kind, opposite(output.edge), output.edge), position: output.outside, config: {}, tags: [] };
+      //           sink.entity.position = { x: output.outside.x * 2 - output.cell.x, y: output.outside.y * 2 - output.cell.y };
+      //           fixtures.push(drain, sink.entity);
+      //         }
+      //       }
+      fixtures = search.fixtures;
       // AI-REMOVED 2026-09-16: 供电移到布线后补齐，防止新桩阻断原本可达的通道。
       // Reason: 稀疏覆盖贪心不应抢占物流通道。Trigger: 布线受阻。
       // Evidence: 1789569625663-777721。Replacement: 成功布线后的 placePower。
@@ -642,7 +688,7 @@ async function createPlannerAttempt(
           reject(rejectionPhase, failure);
           statistics.routeSnapshot = candidateRouter.entities;
           statistics.blockedWire = wires[blockedIndex];
-          if (strategy === "compact") reusableRoutes = candidateRouter.routes;
+          if (strategy === "compact") production.reusableRoutes = reusableRoutes = candidateRouter.routes;
           // 对实际阻挡线路累计历史拥塞成本，让它们下一轮主动绕开争抢的格子。
           for (const [route, cells] of candidateRouter.conflicts) for (const cell of cells) {
             const key = `${route}|${cell}`; history.set(key, (history.get(key) ?? 0) + 3);
@@ -681,12 +727,20 @@ async function createPlannerAttempt(
       search.penalize(blocked.source.entityId, blocked.target.entityId);
     }
     if (router === null) {
-      search.applyBest();
-      statistics.layoutSnapshot = network.nodes.map(node => structuredClone(node.entity));
+      // AI-REMOVED 2026-10-10:
+      // Reason: 导出失败快照不能把仍在续搜的当前链回滚到历史最优。
+      // Trigger: 普通产线跨切片续搜；Evidence: applyBest 会覆盖 poses/current。
+      // Replacement: CompactLayoutSearch.snapshotBest；Risk: Low；Human Review: Required。
+      // Original code:
+      // search.applyBest();
+      // statistics.layoutSnapshot = network.nodes.map(node => structuredClone(node.entity));
+      statistics.layoutSnapshot = search.snapshotBest();
       enterPhase("finalization");
       throw new PlannerCandidateError(`${failure}；局部评估 ${statistics.evaluations}/${statistics.evaluationLimit}`, statistics);
     }
     enterPhase("finalization");
+    // 交付装配会追加供电及改写启动配置；此后不得恢复布局会话。
+    session?.store.delete(options.sessionKey);
     network.nodes.push(...powerNodes);
     statistics.routeSnapshot = undefined;
     statistics.blockedWire = undefined;
@@ -777,6 +831,7 @@ async function createPlannerAttempt(
       metrics, connections, search: statistics, supplyAudit, seed,
       execution: {
         blueprint,
+        engine: { kind: "dense-v2", ticksPerSecond: 2 },
         scene: { externalEntities: fixtures, externalSlotLinks: [], initialSlots: network.initialSlots, scheduledSlots, powerMode: "infinite" },
         probes: [...request.plan.targets.map((flow) => ({
           id: flow.itemId, itemId: flow.itemId, direction: "input" as const,
@@ -796,6 +851,7 @@ async function createPlannerAttempt(
     assertPlannerCandidateBounds(registry, result);
     return result;
   } catch (error) {
+    if (!(error instanceof PlannerCandidateError)) session?.store.delete(options.sessionKey);
     // 边界安排等准备阶段也可能没有可行几何；保留精确的零计数，让上层在原预算内扩框重排。
     if (error instanceof PlannerCandidateError && !error.search) {
       enterPhase("finalization");

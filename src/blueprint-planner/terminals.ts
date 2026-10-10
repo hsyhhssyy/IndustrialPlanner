@@ -14,10 +14,12 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
-import { getPlannerPorts, itemLogisticsKind, transportCapacity } from "./geometry";
+import { getPlannerPorts, plannerPortAcceptsItem, itemLogisticsKind, transportCapacity } from "./geometry";
 import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNode } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { createRecipeNode } from "./production-network";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { plannerDrainEntities, plannerFixtureConflicts } from "./fixtures";
 import { restrictPort } from "./wiring";
 import type { PlannerSearchOptions } from "./search-types";
 
@@ -286,13 +288,17 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
 }
 
 /** 验收排空与布局预留共用，按接收速率开启足量独立出口，不能靠箱内库存掩盖瓶颈。 */
-export function getPlannerStashDrainPorts(registry: RegistryContract, node: PlannerNode) {
+export function getPlannerStashDrainPorts(registry: RegistryContract, node: PlannerNode, obstacles?: readonly WorldEntity[]) {
   if (node.definition.id !== "storager_1" || (node.purpose !== "product" && node.purpose !== "byproduct")) return [];
   const items = new Set(node.inputs.map(flow => flow.itemId));
   if (items.size !== 1) throw new PlannerCandidateError("协议储存箱只能接收同一种物品。");
-  const ports = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId);
+  const ports = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)
+    .filter(port => !obstacles || plannerPortAcceptsItem(registry, node.entity, node.definition, port, node.inputs[0]!.itemId));
   const count = Math.max(1, Math.ceil(node.inputs.reduce((sum, flow) => sum + flow.perMinute, 0) / transportCapacity("belt") - 1e-6));
   if (count > ports.length) throw new PlannerCandidateError("储存箱持续排空运力不足。");
+  // 原图端口配置保持不变；优先从当前真实可放夹具的位置选足量端口，之后跟随设备姿态。
+  if (obstacles) ports.sort((a, b) => plannerFixtureConflicts(registry, plannerDrainEntities(registry, a, "__probe"), obstacles).length
+    - plannerFixtureConflicts(registry, plannerDrainEntities(registry, b, "__probe"), obstacles).length);
   return ports.slice(0, count);
 }
 

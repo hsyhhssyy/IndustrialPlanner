@@ -5,10 +5,11 @@ import type { PlannerCandidate } from "./candidate";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { restorePlannerSeed, capturePlannerSeed } from "./search-seed";
 import type { PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
-import { getPlannerPorts, transportCapacity } from "./geometry";
+import { getPlannerPorts, plannerPortAcceptsItem, transportCapacity } from "./geometry";
 import { CompactLayoutSearch } from "./compact-layout";
 import { resolveSearchProfile } from "./search-profile";
 import { PlannerRouter } from "./router";
+import type { PlannerLayoutBackend } from "./layout-backend";
 import type { PlannerRoutingBackend } from "./routing-backend";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { measurePlannerQuality, boundedPlannerScore } from "./quality";
@@ -17,6 +18,8 @@ import { assertPlannerCandidateBounds } from "./verification";
 import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { auditConverterSupply, routeConverterAlternatives, converterRebuildScope, isConverterRouteControl } from "./converter-routing";
 import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes } from "./support";
+import { createPlannerDiagnostics } from "./search-diagnostics";
+import type { PlannerSearchSessions } from "./search-sessions";
 import type { PlannerSupplyAudit } from "./supply-audit";
 
 /** 按原图个体选择删减，不按设备类型预排序；小集合完整轮换，大集合先覆盖所有单减。 */
@@ -40,9 +43,13 @@ export function blueprintReductionIds(nodes: readonly PlannerNode[], variant: nu
   return removed;
 }
 
-function reduceBlueprintNetwork(registry: RegistryContract, network: PlannerNetwork, wires: PlannerWire[], removed: ReadonlySet<string>, variant: number) {
+export function reduceBlueprintNetwork(registry: RegistryContract, network: PlannerNetwork, wires: PlannerWire[], removed: ReadonlySet<string>, variant: number) {
   const existing = new Map(network.nodes.map(node => [node.entity.id, node]));
   const remaining = network.nodes.filter(node => !removed.has(node.entity.id));
+  if (remaining.some(node => node.recipe?.requiredGasDiffusion && !remaining.some(other =>
+    other.recipe?.gasDiffusionOutput?.gasItemId === node.recipe!.requiredGasDiffusion))) {
+    throw new PlannerCandidateError("减量后缺少必要的气体扩散环境。");
+  }
   const retainedWires = wires.filter(wire => !(removed.has(wire.target.entityId) && existing.get(wire.target.entityId)!.purpose === "environment"));
   // 裁撤环境设施后反向追踪仍有需求的支路，保留控制设备本体，但不强迫外供继续喂无消费者的支路。
   const needed = new Set(network.nodes.filter(node => node.purpose === "product"
@@ -57,24 +64,60 @@ function reduceBlueprintNetwork(registry: RegistryContract, network: PlannerNetw
   const activeWires = retainedWires.filter(wire => needed.has(wire.target.entityId));
   const used = new Set(activeWires.filter(wire => !removed.has(wire.source.entityId) && !removed.has(wire.target.entityId))
     .flatMap(wire => [key(wire.source), key(wire.target)]));
-  const reconnect = (wire: PlannerWire, source: boolean) => {
+  // AI-REMOVED 2026-10-10:
+  // Reason: 顺序贪心占端口会误拒存在完整匹配的组合。
+  // Trigger: 减量长期准备失败；Evidence: 兼容端口集合有交叠时早期任取会耗尽专用端口。
+  // Replacement: 下方增广路径匹配；Risk: 图规模内有界，未改变设备/端口容量；Human Review: Required。
+  //   const reconnect = (wire: PlannerWire, source: boolean) => {
+  //     const old = existing.get(source ? wire.source.entityId : wire.target.entityId)!;
+  //     const peers = remaining.filter(node => node.purpose === old.purpose
+  //       && (source ? node.outputs : node.inputs).some(flow => wire.itemIds.includes(flow.itemId)));
+  //     const ports = peers.flatMap(node => getPlannerPorts(registry, node.entity, node.definition, source ? "output" : "input", wire.itemIds[0]));
+  //     const available = ports.filter(port => !used.has(key(port)) && wire.perMinute <= transportCapacity(port.kind) + 1e-6);
+  //     if (!available.length) throw new PlannerCandidateError("本次入口／出口减量没有可用的剩余端口。");
+  //     const port = available[variant % available.length]!; used.add(key(port));
+  //     return { ...wire, [source ? "source" : "target"]: port };
+  //   };
+  //   const next: PlannerWire[] = [];
+  //   for (let wire of activeWires) {
+  //     if (removed.has(wire.target.entityId) && existing.get(wire.target.entityId)!.purpose === "environment") continue;
+  //     if (removed.has(wire.source.entityId) && removed.has(wire.target.entityId)) continue;
+  //     if (removed.has(wire.source.entityId)) wire = reconnect(wire, true);
+  //     if (removed.has(wire.target.entityId)) wire = reconnect(wire, false);
+  //     next.push(wire);
+  //   }
+  // 对全部待重接端口求二分图匹配；局部贪心失败不能证明该减量组合不可行。
+  const next = activeWires.filter(wire => !(removed.has(wire.source.entityId) && removed.has(wire.target.entityId))).map(wire => ({ ...wire }));
+  const demands = next.flatMap((wire, index) => ([true, false] as const).flatMap(source => {
     const old = existing.get(source ? wire.source.entityId : wire.target.entityId)!;
-    const peers = remaining.filter(node => node.purpose === old.purpose
-      && (source ? node.outputs : node.inputs).some(flow => wire.itemIds.includes(flow.itemId)));
-    const ports = peers.flatMap(node => getPlannerPorts(registry, node.entity, node.definition, source ? "output" : "input", wire.itemIds[0]));
-    const available = ports.filter(port => !used.has(key(port)) && wire.perMinute <= transportCapacity(port.kind) + 1e-6);
-    if (!available.length) throw new PlannerCandidateError("本次入口／出口减量没有可用的剩余端口。");
-    const port = available[variant % available.length]!; used.add(key(port));
-    return { ...wire, [source ? "source" : "target"]: port };
+    if (!removed.has(old.entity.id)) return [];
+    const ports = remaining.filter(node => node.purpose === old.purpose)
+      .flatMap(node => getPlannerPorts(registry, node.entity, node.definition, source ? "output" : "input")
+        .filter(port => !used.has(key(port)) && port.kind === (source ? wire.source.kind : wire.target.kind)
+          && wire.perMinute <= transportCapacity(port.kind) + 1e-6 && wire.itemIds.every(item =>
+            (source ? node.outputs : node.inputs).some(flow => flow.itemId === item)
+            && getPlannerPorts(registry, node.entity, node.definition, source ? "output" : "input", item)
+              .some(allowed => key(allowed) === key(port))
+            && plannerPortAcceptsItem(registry, node.entity, node.definition, port, item))));
+    const offset = ports.length ? variant % ports.length : 0;
+    return [{ index, source, ports: [...ports.slice(offset), ...ports.slice(0, offset)] }];
+  }));
+  const owners = new Map<string, number>(), assignments = new Map<number, PlannerWire["source"]>();
+  const assign = (index: number, visited: Set<string>): boolean => {
+    for (const port of demands[index]!.ports) {
+      const id = key(port);
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const previous = owners.get(id);
+      if (previous !== undefined && !assign(previous, visited)) continue;
+      owners.set(id, index); assignments.set(index, port); return true;
+    }
+    return false;
   };
-  const next: PlannerWire[] = [];
-  for (let wire of activeWires) {
-    if (removed.has(wire.target.entityId) && existing.get(wire.target.entityId)!.purpose === "environment") continue;
-    if (removed.has(wire.source.entityId) && removed.has(wire.target.entityId)) continue;
-    if (removed.has(wire.source.entityId)) wire = reconnect(wire, true);
-    if (removed.has(wire.target.entityId)) wire = reconnect(wire, false);
-    next.push(wire);
+  for (const [index] of demands.entries()) if (!assign(index, new Set())) {
+    throw new PlannerCandidateError("本次入口／出口减量没有可用的剩余端口。");
   }
+  for (const [index, demand] of demands.entries()) next[demand.index]![demand.source ? "source" : "target"] = assignments.get(index)!;
   network.nodes.splice(0, network.nodes.length, ...remaining);
   // 数量变化后重新汇总端口需求；辅助需求由真实剩余连接决定，不递减主体设备。
   for (const node of remaining) {
@@ -94,7 +137,7 @@ const key = (port: PlannerWire["source"]) => `${port.entityId}/${port.groupIndex
 /** 复用正式紧凑布局和 Router；导入模式只替换输入准备、可变约束与交付装配。 */
 export async function createBlueprintCandidate(registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
   checkBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void, options: PlannerSearchOptions,
-  reportEvaluations: (count: number) => void, routing?: PlannerRoutingBackend): Promise<PlannerCandidate> {
+  reportEvaluations: (count: number) => void, routing?: PlannerRoutingBackend, layoutBackend?: PlannerLayoutBackend, sessions?: PlannerSearchSessions): Promise<PlannerCandidate> {
   const original = options.originSeed ?? options.seed;
   if (!original || !request.blueprintSource) throw new Error("蓝图任务缺少已识别的原图基线。");
   // 每隔一次回到原图探索减量；续搜失败不会永久失去已删设施。
@@ -105,35 +148,59 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
   const originalWires = restored.wires;
   const outline = options.targetOutline ?? { width: source.width, height: source.height };
   assertPlannerOutline(outline);
-  const statistics: PlannerSearchStatistics = { strategy: "compact", seed: variant, evaluationLimit: options.maxEvaluations ?? 5000,
+  let statistics: PlannerSearchStatistics = { strategy: "compact", seed: variant, evaluationLimit: options.maxEvaluations ?? 5000,
+    maximumArea: options.maximumArea, experiments: options.experiments ?? ["constraint-repair", "partial-rebuild"],
     outline, evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 };
   try {
     const removed = reduction ? blueprintReductionIds(network.nodes, Math.floor(variant / 2)) : new Set<string>();
     statistics.evaluations++; reportEvaluations(statistics.evaluations);
-    let wires = removed.size ? reduceBlueprintNetwork(registry, network, originalWires, removed, variant) : originalWires;
+    const fingerprint = JSON.stringify([source, outline, [...removed].sort(), options.profile, options.experiments]);
+    const resumed = sessions?.get(options.sessionKey, fingerprint);
+    const fresh = statistics;
+    const reductionKey = [...removed].sort().join("\n"), scope = JSON.stringify(source);
+    const rejected = removed.size ? sessions?.reduction(scope, reductionKey) : undefined;
+    if (rejected) { statistics.preparationRejected = true; throw new PlannerCandidateError(rejected); }
+    let wires: PlannerWire[];
+    try { wires = resumed?.wires ?? (removed.size ? reduceBlueprintNetwork(registry, network, originalWires, removed, variant) : originalWires); }
+    catch (error) {
+      if (error instanceof PlannerCandidateError) { statistics.preparationRejected = true; sessions?.reduction(scope, reductionKey, error.message); }
+      throw error;
+    }
+    if (resumed) network = resumed.network;
     if (network.nodes.some(node => node.recipe?.requiredGasDiffusion
       && !network.nodes.some(other => other.recipe?.gasDiffusionOutput?.gasItemId === node.recipe!.requiredGasDiffusion))) {
       throw new PlannerCandidateError("减量后缺少必要的气体扩散环境。");
     }
-    const search = new CompactLayoutSearch(registry, network, wires, statistics, resolveSearchProfile(options.profile));
-    let inspectSeed = true;
-    while (statistics.evaluations < statistics.evaluationLimit) {
-      checkBudget(); update("layout", "正在优化原图设备位置与减量组合");
+    const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, resolveSearchProfile(options.profile), layoutBackend);
+    if (resumed) { search.beginSlice(fresh); statistics = search.statistics; }
+    sessions?.set(options.sessionKey, { fingerprint, network, wires, search });
+    const { diagnostics, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true);
+    statistics.wireCount = wires.length;
+    const assertBudget = checkBudget;
+    checkBudget = () => { reportEvaluations(statistics.evaluations); assertBudget(); };
+    let inspectSeed = !resumed;
+    while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
+      checkBudget(); enterPhase("layout"); update("layout", "正在优化原图设备位置与减量组合");
       const feasible = await search.advance(inspectSeed ? 0 : Math.min(250, statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
       reportEvaluations(statistics.evaluations);
+      if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
       if (!feasible) continue;
       search.applyBest();
+      enterPhase("power");
       const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
-      if (network.nodes.some(node => node.definition.requiresPower && !powered.has(node.entity.id))) continue;
-      let router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+      if (network.nodes.some(node => node.definition.requiresPower && !powered.has(node.entity.id))) { reject("power", "原图供电覆盖不足"); continue; }
+      let router = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...search.fixtures], wires.flatMap(wire => [wire.source, wire.target]),
         { minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0 }, routing);
       statistics.routingAttempts++;
       update("routing", "正在重建原图物流路径");
       const layoutNetwork = network;
+      let blockedWire: PlannerWire | undefined;
+      let rejectionPhase: "routing" | "supply" = "routing";
+      enterPhase("routing");
       try {
         let supplyAudit: PlannerSupplyAudit = { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 };
-        const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, variant, [], checkBudget,
+        const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, variant, search.fixtures, checkBudget,
           async (alternative, connections, routed) => {
             const scope = converterRebuildScope(registry, alternative, connections);
             if (routed.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId)
@@ -141,15 +208,22 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
             supplyAudit = auditConverterSupply(registry, alternative, connections, routed.routes);
             return true;
           }, routing, source.routes);
-        if (adaptive) { network = adaptive.network; wires = adaptive.wires; router = adaptive.router; }
+        if (adaptive) { sessions?.delete(options.sessionKey); network = adaptive.network; wires = adaptive.wires; router = adaptive.router; }
         for (const wire of adaptive ? [] : wires) {
+          blockedWire = wire;
           const cached = source.routes.find(route => route.sourcePort === key(wire.source) && route.targetPort === key(wire.target));
           if (cached && router.reuse(wire.source, wire.target, cached.cells, wire.minimumCells)) statistics.reusedRoutes = (statistics.reusedRoutes ?? 0) + 1;
           else await router.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
         }
+        statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, router.routes.length);
+        if (diagnostics) diagnostics.fullyRoutedAttempts++;
+        blockedWire = undefined;
+        rejectionPhase = "supply"; enterPhase("supply");
         if (!adaptive && router.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId))) {
           throw new PlannerCandidateError("重布线需要新增物流控制设备，本次候选不满足数量约束。");
         }
+        // 供气重建未成功时仍须审计复用线路，不能漏掉启动产量与库存探针。
+        if (!adaptive) supplyAudit = auditConverterSupply(registry, network, wires, router.routes);
         const reservedIds = new Set(request.blueprintSource.blueprint.entityOrder);
         const tracks = router.entities.map((entity, index) => {
           let id = `__blueprint_route_${index}`;
@@ -179,7 +253,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           baseId: request.plan.sourceBaseId, initialGridPoint: { x: 0, y: 0 }, entities: Object.fromEntries(entities.map(entity => [entity.id, entity])),
           entityOrder: entities.map(entity => entity.id), slotLinks: network.slotLinks, regions: request.blueprintSource.blueprint.regions });
         let execution = (() => {
-          try { return blueprintRecognitionScene(registry, request.blueprintSource!, blueprint); }
+          try { return blueprintRecognitionScene(registry, request.blueprintSource!, blueprint, 600, false, search.drainPorts); }
           catch (error) { throw new PlannerCandidateError(error instanceof Error ? error.message : String(error)); }
         })();
         if (adaptive || scheduledSlots.length) {
@@ -205,17 +279,27 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
             productionDeviceCount: network.nodes.filter(node => node.purpose === "production").length,
             gasDiffuserCount: network.nodes.filter(node => node.purpose === "environment").length, additionalGasDiffuserCount: 0,
             score: boundedPlannerScore(area, quality.secondary) } };
+        enterPhase("finalization");
         assertPlannerCandidateBounds(registry, candidate);
+        sessions?.delete(options.sessionKey);
         return candidate;
       } catch (error) {
         if (!(error instanceof PlannerCandidateError)) throw error;
+        reject(rejectionPhase, error.message);
+        statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, router.routes.length);
         if (network !== layoutNetwork) throw error;
-        for (const wire of wires) search.penalize(wire.source.entityId, wire.target.entityId);
+        // AI-REMOVED 2026-10-10: 全网惩罚会稀释真实堵点并错误加重已连通边。
+        // Trigger: 长期无候选；Evidence: Router 逐边失败；Replacement: blockedWire。
+        // Risk: Low；Human Review: Required。
+        // for (const wire of wires) search.penalize(wire.source.entityId, wire.target.entityId);
+        statistics.blockedWire = blockedWire;
+        if (blockedWire) search.penalize(blockedWire.source.entityId, blockedWire.target.entityId);
       }
     }
+    enterPhase("finalization");
     throw new PlannerCandidateError("本轮未找到满足原图约束的更优布局。", statistics);
   } catch (error) {
     if (error instanceof PlannerCandidateError) throw new PlannerCandidateError(error.message, statistics);
     throw error;
-  }
+  } finally { reportEvaluations(statistics.evaluations); }
 }

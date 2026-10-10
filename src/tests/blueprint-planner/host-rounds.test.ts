@@ -109,7 +109,9 @@ describe("EDA Host 多轮规划", () => {
       expect(host.queries.getResult(taskId)?.metrics.area).toBe(90);
 
       // 2026-10-02：Worker 按布局批次领取额度；找到最佳后缩小单批预算并换尺寸。
-      expect(workerBuild.mock.calls.map((call) => call[3])).toEqual([20_000, 5_000, 5_000, 5_000, 5_000, 5_000]);
+      // AI-CORRECTION 2026-10-10：用户要求统一分配；有最优后每批上限 40k，最后一批取本轮剩余次数。
+      // AI-CORRECTION 2026-10-10：用户新分片规则将每次领取上限固定为 X=5000。
+      expect(workerBuild.mock.calls.map((call) => call[3])).toEqual([5000, 5000, 5000, 5000, 5000, 5000]);
       expect(new Set(workerBuild.mock.calls.map((call) => call[0]))).toEqual(new Set([workerBuild.mock.calls[0]![0]]));
       expect(saveBlueprintDocument).toHaveBeenCalledTimes(2);
     } finally {

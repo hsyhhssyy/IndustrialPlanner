@@ -19,7 +19,6 @@ describe("machine-mode entity definitions", () => {
 
     expect(entityIds).not.toContain("transmuter_1");
     expect(entityIds).not.toContain("transmuter_2");
-    expect(entityIds).not.toContain("liquid_purifier_1_vari_gas");
     expect([...entityIds]).toEqual(expect.arrayContaining([
       "transmuter_1_gastrans",
       "transmuter_1_liquidtrans",

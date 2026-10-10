@@ -114,3 +114,30 @@ export function filterPort(entity: WorldEntity, port: PlannerPort, itemId: strin
     base: { kind: "item", itemId }, exclude: [],
   } satisfies EntityAcceptRuleDefinition;
 }
+
+/** 已有设备端口的有效过滤；候选构网可用的物理端口仍由 getPlannerPorts 枚举。 */
+export function plannerPortAcceptsItem(registry: RegistryContract, entity: WorldEntity, definition: EntityDefinition,
+  port: PlannerPort, itemId: string): boolean {
+  const original = definition.portGroups[port.groupIndex]!.ports[port.portIndex]!.acceptRule;
+  const rule = structuredClone(original);
+  const path = ["portGroups", String(port.groupIndex), "ports", String(port.portIndex), "acceptRule"];
+  const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object";
+  const merge = (target: Record<string, unknown>, value: Record<string, unknown>) => {
+    for (const [key, entry] of Object.entries(value)) {
+      if (key === "__proto__" || key === "prototype" || key === "constructor") continue;
+      if (object(target[key]) && object(entry)) merge(target[key], entry);
+      else target[key] = structuredClone(entry);
+    }
+  };
+  for (const [key, configured] of Object.entries(entity.config)) {
+    const parts = key.replace(/\[(\d+)\]/g, ".$1").split(".");
+    const common = Math.min(parts.length, path.length);
+    if (parts.slice(0, common).some((part, index) => part !== path[index])) continue;
+    let value: unknown = configured;
+    for (const part of path.slice(parts.length)) value = object(value) ? value[part] : undefined;
+    const remainder = parts.slice(path.length);
+    const update = remainder.reduceRight<unknown>((value, part) => ({ [part]: value }), value);
+    if (object(update)) merge(rule as unknown as Record<string, unknown>, update);
+  }
+  return acceptsItem(registry, rule, itemId);
+}

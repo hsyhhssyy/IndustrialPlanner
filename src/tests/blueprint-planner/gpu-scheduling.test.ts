@@ -56,7 +56,8 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
     const file = host.queries.exportTask(id);
     expect(file.progress.status).toBe("waiting");
     expect(file.progress.evaluatedProposals).toBeLessThanOrEqual(100_000);
-    expect(file.progress.evaluatedProposals).toBeGreaterThanOrEqual(20_100);
+    // AI-CORRECTION 2026-10-10：首个 CPU 候选最多 5,000 次，加上已报告的 100 次 GPU 提案。
+    expect(file.progress.evaluatedProposals).toBeGreaterThanOrEqual(5_100);
     if (!pause) expect(file.progress.evaluatedProposals).toBe(100_000);
     expect(gpuEnded).toBe(true); expect(disposed).toBe(true);
     expect(host.queries.getResult(id)).not.toBeNull();

@@ -81,18 +81,32 @@ export function breadthOutlineKey(mode: string, shape: PlannerOutline): string {
   return `${mode}/${shape.width}/${shape.height}`;
 }
 
-/** 优先未占用、访问次数最少的尺寸；分片文件以稳定宽度模数减少跨客户端重复。 */
-export function selectBreadthOutline(shapes: readonly PlannerOutline[], mode: string,
-  visits: (key: string) => number, occupied: ReadonlySet<string>, partition?: { readonly count: number; readonly index: number }): PlannerOutline | undefined {
-  const assigned = partition ? shapes.filter(shape => shape.width % partition.count === partition.index) : shapes;
-  const available = (choices: readonly PlannerOutline[]) => choices.filter(shape => !occupied.has(breadthOutlineKey(mode, shape)));
-  const assignedFree = available(assigned);
-  const globalFree = assignedFree.length ? assignedFree : available(shapes);
-  const candidates = assignedFree.length ? assignedFree : globalFree.length ? globalFree : assigned.length ? assigned : shapes;
-  return candidates.reduce<PlannerOutline | undefined>((best, shape) => !best
-    || visits(breadthOutlineKey(mode, shape)) < visits(breadthOutlineKey(mode, best)) ? shape : best, undefined);
-}
-
+// AI-REMOVED 2026-10-10:
+// Reason: 全局临时选尺寸及跨分片借用已被唯一归属替代，移除未使用的旧调度入口。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: dimension-schedule.ts partitionPlannerDimensions
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+// /** 优先未占用、访问次数最少的尺寸；分片文件以稳定宽度模数减少跨客户端重复。 */
+// // AI-CORRECTION 2026-10-10：主排序为已用与在途提案；相同预算才比较派发次数，避免早退变体锁死宽度。
+// export function selectBreadthOutline(shapes: readonly PlannerOutline[], mode: string,
+//   evaluations: (key: string) => number, occupied: ReadonlySet<string>, partition?: { readonly count: number; readonly index: number },
+//   attempts?: (key: string) => number): PlannerOutline | undefined {
+//   const assigned = partition ? shapes.filter(shape => shape.width % partition.count === partition.index) : shapes;
+//   const available = (choices: readonly PlannerOutline[]) => choices.filter(shape => !occupied.has(breadthOutlineKey(mode, shape)));
+//   const assignedFree = available(assigned);
+//   const globalFree = assignedFree.length ? assignedFree : available(shapes);
+//   const candidates = assignedFree.length ? assignedFree : globalFree.length ? globalFree : assigned.length ? assigned : shapes;
+//   return candidates.reduce<PlannerOutline | undefined>((best, shape) => {
+//     if (!best) return shape;
+//     const key = breadthOutlineKey(mode, shape), bestKey = breadthOutlineKey(mode, best);
+//     return evaluations(key) < evaluations(bestKey) || (evaluations(key) === evaluations(bestKey)
+//       && (attempts?.(key) ?? 0) < (attempts?.(bestKey) ?? 0)) ? shape : best;
+//   }, undefined);
+// }
+//
 /** 停滞后枚举较小面积的整数长宽组合；允许一边增长，固定设施和显式边界始终是硬约束。 */
 export function continuationOutline(seed: { width: number; height: number }, variant: number, step = 0,
   minimum = { width: 1, height: 1 }, cap?: { readonly width: number; readonly height: number }, maximumArea?: number) {

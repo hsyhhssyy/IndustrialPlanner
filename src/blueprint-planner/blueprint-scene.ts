@@ -4,15 +4,17 @@ import type { BlueprintPlannerBlueprintInput } from "@/domain/blueprint-planner"
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-import { getPlannerPorts, ROTATIONS, opposite, resolveTransportPose, allowsPlannerOverlap, type PlannerPort } from "./geometry";
+import { getPlannerPorts, ROTATIONS, allowsPlannerOverlap, type PlannerPort } from "./geometry";
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { createPlainNode } from "./placement";
+// AI-REMOVED 2026-10-10: 重复排空装配已由 fixtures.ts 接管；原导入 opposite, resolveTransportPose；Risk: Low；Human Review: Required。
+import { plannerDrainEntities } from "./fixtures";
 import { configureSource } from "./terminals";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 
 /** 夹具只作用于独立场景；供料只补用户声明的边界，绝不补贴内部生产。 */
 export function blueprintRecognitionScene(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
-  blueprint: BlueprintDocument = input.blueprint, seconds = 600, discoverOutputs = false): SimulationBlueprintRunRequest {
+  blueprint: BlueprintDocument = input.blueprint, seconds = 600, discoverOutputs = false, plannedDrains?: ReadonlyMap<string, readonly PlannerPort[]>): SimulationBlueprintRunRequest {
   // 2026-10-08：原图保持在任务中；识别夹具和真实仿真使用排除断连支路后的副本。
   const effective = excludeDisconnectedBlueprintPipes(registry, input).input;
   if (blueprint === input.blueprint) blueprint = effective.blueprint;
@@ -45,8 +47,12 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
       placed = true; break;
     }
     if (!placed) throw new Error(`无法为入口 ${port.entityId} 装配仿真条件。`);
-    const additions: WorldEntity[] = drain ? [{ id: `__blueprint_drain_${scene.externalEntities.length}`,
-      ...resolveTransportPose(registry, port.kind, opposite(port.edge), port.edge), position: port.outside, config: {}, tags: [] }, fixture.entity] : [fixture.entity];
+    // AI-REMOVED 2026-10-10: 排空夹具统一建模，避免布局与仿真实体规则分叉。
+    // Trigger: 排空线误封堵管道；Evidence: 灼铜原图；Replacement: plannerDrainEntities。
+    // Risk: Low；Human Review: Required。
+    //     const additions: WorldEntity[] = drain ? [{ id: `__blueprint_drain_${scene.externalEntities.length}`,
+    //       ...resolveTransportPose(registry, port.kind, opposite(port.edge), port.edge), position: port.outside, config: {}, tags: [] }, fixture.entity] : [fixture.entity];
+    const additions = drain ? plannerDrainEntities(registry, port, `__blueprint_drain_${scene.externalEntities.length}`) : [fixture.entity];
     if (additions.some(fixture => {
       const definition = registry.queries.findEntityDefinition(fixture.definitionId)!;
       const rect = resolveEntityGridRect({ entity: fixture, definition });
@@ -59,7 +65,7 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
       throw new Error(`边界 ${port.entityId} 没有足够空间接入仿真条件。`);
     }
     scene.externalEntities.push(...additions);
-    return fixture.entity.id;
+    return additions[additions.length - 1]!.id;
   };
   for (const boundary of input.boundaries) {
     const entity = blueprint.entities[boundary.entityId];
@@ -89,7 +95,8 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
     } else {
       sinks.set(itemId, [...sinks.get(itemId) ?? [], entity.id]);
       if (entity.definitionId === "storager_1") {
-        const drains = getPlannerPorts(registry, entity, definition, "output").map(port => attach(port, itemId, "output", true));
+        const drains = (plannedDrains?.get(entity.id) ?? getPlannerPorts(registry, entity, definition, "output")).map(port => attach(port, itemId, "output", true));
+        if (plannedDrains && drains.some(id => id === null)) throw new Error(`出口 ${entity.id} 的规划排空端口被占用。`);
         if (drains.every(id => id === null)) throw new Error(`出口 ${entity.id} 没有可用的排空端口。`);
       }
     }

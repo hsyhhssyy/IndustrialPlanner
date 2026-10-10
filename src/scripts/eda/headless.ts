@@ -13,6 +13,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { NodePlannerClient } from "./node-planner-client";
+import { PLANNER_SHARD_COUNT } from "@/blueprint-planner/dimension-schedule";
 import { saveSuccessfulPlanning } from "./artifacts";
 
 export async function runHeadlessPlanner(args: readonly string[]): Promise<void> {
@@ -50,15 +51,34 @@ export async function runHeadlessPlanner(args: readonly string[]): Promise<void>
         execution => simulation.actions.runBlueprint(execution, restorationAbort.signal))
         .finally(() => { process.off("SIGINT", stopRestoration); process.off("SIGTERM", stopRestoration); });
       restorationAbort.signal.throwIfAborted();
-      const count = values.has("--shard-count") ? Number(values.get("--shard-count"))
-        : input.checkpoint.parallel?.count ?? (input.request.options.concurrency === "auto" ? 32 : input.request.options.concurrency ?? 1);
+// AI-REMOVED 2026-10-10:
+// Reason: 浏览器和离线入口都使用固定 32 个尺寸分片，Worker 数不决定分片数。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//       const count = values.has("--shard-count") ? Number(values.get("--shard-count"))
+//         : input.checkpoint.parallel?.count ?? (input.request.options.concurrency === "auto" ? 32 : input.request.options.concurrency ?? 1);
+      const count = values.has("--shard-count") ? Number(values.get("--shard-count")) : PLANNER_SHARD_COUNT;
       const range = values.get("--shard-range") ?? `0:${count}`;
       const match = /^(\d+):(\d+)$/.exec(range);
       const start = Number(match?.[1]), end = Number(match?.[2]);
-      if (!Number.isSafeInteger(count) || count < 1 || count > 32 || !match || !Number.isSafeInteger(start)
-        || !Number.isSafeInteger(end) || start < 0 || end > count || start >= end
-        || input.checkpoint.parallel && input.checkpoint.parallel.count !== count
-          && (input.checkpoint.parallel.count !== 1 || input.checkpoint.parallel.ownedShards.length !== 1)) throw new Error("分片范围无效。");
+// AI-REMOVED 2026-10-10:
+// Reason: 移除自定义总分片数；旧任务转换统一交给共享 Host。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//       if (!Number.isSafeInteger(count) || count < 1 || count > 32 || !match || !Number.isSafeInteger(start)
+//         || !Number.isSafeInteger(end) || start < 0 || end > count || start >= end
+//         || input.checkpoint.parallel && input.checkpoint.parallel.count !== count
+//           && (input.checkpoint.parallel.count !== 1 || input.checkpoint.parallel.ownedShards.length !== 1)) throw new Error("分片范围无效。");
+      if (count !== PLANNER_SHARD_COUNT || !match || !Number.isSafeInteger(start)
+        || !Number.isSafeInteger(end) || start < 0 || end > count || start >= end) throw new Error("固定 32 分片，范围必须在 0:32 内。");
       const totalLocalLimit = Number.isFinite(limit) ? Math.ceil(limit * (end - start) / count) : Infinity;
       let remaining = totalLocalLimit;
       const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => {
@@ -78,8 +98,8 @@ export async function runHeadlessPlanner(args: readonly string[]): Promise<void>
           //           return session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea })
           //             .finally(() => signal.removeEventListener("abort", abort));
           //         },
-          build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed) =>
-            planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed }, update, signal),
+          build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey) =>
+            planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey }, update, signal),
           dispose: () => { void planner.dispose(); },
         };
       };
@@ -112,6 +132,7 @@ export async function runHeadlessPlanner(args: readonly string[]): Promise<void>
         const initialEvaluations = input.checkpoint.evaluations;
         await persist();
         while (!stopped && remaining > 0) {
+          const beforeRound = (host.queries.exportTask(id).checkpoint as PlannerCheckpoint).evaluations;
           // 无头持续运行不受网页单轮短时间限制；仍以有限阶段落盘并响应退出。
           // 订正 2026-09-30：网页与无头均只按提案预算停止，内部阶段仍落盘并响应退出。
           host.actions.continuePlanning(id,
@@ -129,6 +150,10 @@ export async function runHeadlessPlanner(args: readonly string[]): Promise<void>
           remaining = totalLocalLimit - (file.checkpoint.evaluations - initialEvaluations);
           console.log(`累计提案 ${file.checkpoint.evaluations}，布局 ${file.checkpoint.attempt}，最优面积 ${file.progress.bestArea ?? "暂无"}；检查点 ${output}`);
           if (file.progress.status === "failed" && !stopped) throw new Error(file.progress.message ?? "计算失败。");
+          if (file.checkpoint.evaluations === beforeRound) {
+            console.log("当前分片没有可继续消耗预算的尺寸，检查点已保存。");
+            break;
+          }
         }
       } finally {
         process.off("SIGINT", stop); process.off("SIGTERM", stop);

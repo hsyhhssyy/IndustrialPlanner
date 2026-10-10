@@ -33,7 +33,12 @@ import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import { comparePlannerRanks } from "./quality";
 import { assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
-import { breadthOutlineKey, breadthOutlines, fixedOutlineMinimum, selectBreadthOutline } from "./search-outline";
+import { breadthOutlineKey, fixedOutlineMinimum, PLANNER_MAX_SIDE } from "./search-outline";
+import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
+import { prepareProductionDevices } from "./production-preparation";
+import { PlannerPlacement } from "./placement";
+import { resolveSearchProfile } from "./search-profile";
+import { resolvePlannerAttempt } from "./search-portfolio";
 import { createProductionNetwork } from "./production-network";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
 import { plannerRequestKey } from "./search-seed";
@@ -53,7 +58,16 @@ interface PlannerTask {
   portfolios: Map<number, PlannerSearchPortfolio>;
   liveEvaluations: Map<number, number>;
   activeShards: Set<number>;
-  activeShapes: Set<string>;
+// AI-REMOVED 2026-10-10:
+// Reason: 唯一尺寸归属与分片租约已经保证互斥，无需临时尺寸占用表。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//   activeShapes: Set<string>;
+
   abort: AbortController;
   resumedAt: number | null;
   roundStartedEvaluations: number;
@@ -275,7 +289,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       portfolios.set(shard.index, pool);
     }
     return { file: parsed, originTaskId: parsed.checkpoint.parallel?.originTaskId ?? parsed.taskId,
-      portfolio, portfolios, liveEvaluations: new Map(), activeShards: new Set(), activeShapes: new Set(), abort: new AbortController(),
+      portfolio, portfolios, liveEvaluations: new Map(), activeShards: new Set(), abort: new AbortController(),
       resumedAt: null, roundStartedEvaluations: parsed.checkpoint.evaluations - parsed.progress.roundEvaluatedProposals, remaining: 0, running: null };
   };
   const restore = async (file: BlueprintPlannerTaskFile, signal = restorationAbort.signal): Promise<PlannerTask> => {
@@ -351,7 +365,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // Risk: 检查点增加空分片；Human Review: Required。
     // Original code:
     // const count = requested?.count ?? Math.max(point.parallel?.count ?? 0, concurrency);
-    const count = requested?.count ?? 32;
+    const count = PLANNER_SHARD_COUNT;
+    if (requested && requested.count !== count) throw new Error("尺寸调度固定使用 32 个分片。");
     if (concurrency !== "auto" && (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 32)) {
       throw new Error("并发计算数必须介于 1 到 32。");
     }
@@ -485,7 +500,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     };
     const verify = async (shard: PlannerShardCheckpoint, portfolio: PlannerSearchPortfolio) => {
       const candidate = shard.pendingCandidate;
-      if (candidate === null) return;
+      const generation = parallel.dimensionSchedule;
+      const signal = searchAbort.signal;
+      if (candidate === null || signal.aborted) return;
       // 旧目标下已完成的候选仅在仍可能改善全局结果时启动验收；已启动的验收正常结算。
       if (!canImprove(candidate)) { shard.pendingCandidate = null; persist(task); return; }
       assertPlannerCandidateBounds(workspace.registry, candidate);
@@ -493,8 +510,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const simulation = workspace.simulation;
       if (simulation === null) throw new Error("仿真服务不可用。");
       publish(task, { phase: "verification", message: "正在验证产量与循环运行" }, false);
-      const report = await simulation.actions.runBlueprint(candidate.execution, task.abort.signal);
-      if (task.abort.signal.aborted) return;
+      const report = await simulation.actions.runBlueprint({ ...candidate.execution,
+        engine: { kind: "dense-v2", ticksPerSecond: 2 } }, signal);
+      if (signal.aborted || generation !== parallel.dimensionSchedule || task.abort.signal.aborted) return;
       if (report.status === "timeout") throw new PlanningBudgetExhausted("产量验证超时，检查点已保留");
       shard.pendingCandidate = null;
       if (!meetsProductionTargets(task.file.request, report) || !meetsOperatingLimits(candidate.supplyAudit, report)) {
@@ -529,7 +547,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       if (canImprove(candidate)) {
         point.best = { candidate, report };
         // 立即停止旧目标派发，Worker 协作取消后结算实际提案；不取消任务或其他候选的在途验收。
-        cancelSearch();
+        if (oldArea === null || candidate.metrics.area < oldArea) {
+          cancelSearch();
+          for (const { shard: queued } of verificationQueue.splice(0)) {
+            pendingVerifications--; verifying.delete(queued.index);
+          }
+          rebuildDimensions(candidate.metrics.area, candidate.seed
+            ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
+          searchAbort = new AbortController();
+        }
         wake?.();
         point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
           metrics: candidate.metrics, connections: candidate.connections,
@@ -573,9 +599,12 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         && verificationActive.size < verificationTarget && cpuActiveCount() + verificationActive.size < maximum) {
         const { shard, portfolio } = verificationQueue.shift()!;
         const started = performance.now();
+        const generation = parallel.dimensionSchedule;
+        const signal = searchAbort.signal;
         const running = verify(shard, portfolio).then(() => {
           if (!task.abort.signal.aborted) completedVerifications++;
         }).catch(error => {
+          if (signal.aborted || generation !== parallel.dimensionSchedule) return;
           if (interruption === null) interruption = error;
           task.abort.abort();
         }).finally(() => {
@@ -601,176 +630,401 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // const quotas = owned.map((_, index) => Math.floor(task.remaining / owned.length) + Number(index < task.remaining % owned.length));
     let available = task.remaining, zeroAttempts = 0;
     const leased = new Set<number>();
-    const outlineCache = new Map<string, ReturnType<typeof breadthOutlines>>();
-    const minimumCache = new Map<string, ReturnType<typeof fixedOutlineMinimum>>();
-    const synchronizeSearch = () => {
-      const target = searchTarget();
-      if (target !== undefined) {
-        for (const index of owned) {
-          const shard = parallel.shards[index]!;
-          if (shard.searchTarget === target) continue;
-          const portfolio = task.portfolios.get(index)!;
-          portfolio.restart(point.best!.candidate.seed);
+// AI-REMOVED 2026-10-10:
+// Reason: 尺寸分配在代际创建时一次完成，停止按在途计数临时挑选或重复尺寸。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//     const outlineCache = new Map<string, ReturnType<typeof breadthOutlines>>();
+//     const minimumCache = new Map<string, ReturnType<typeof fixedOutlineMinimum>>();
+//     const widthVisits = new Map<string, number>();
+//     const widthEvaluations = new Map<string, number>();
+//     const synchronizeSearch = () => {
+//       const target = searchTarget();
+//       if (target !== undefined) {
+//         for (const index of owned) {
+//           const shard = parallel.shards[index]!;
+//           if (shard.searchTarget === target) continue;
+//           const portfolio = task.portfolios.get(index)!;
+//           portfolio.restart(point.best!.candidate.seed);
+//           shard.portfolio = portfolio.snapshot();
+//           // AI-REMOVED 2026-10-10:
+//           // Reason: 新最优清空访问历史使固定顺序前缀反复抢占预算。
+//           // Trigger: 用户要求两种任务均匀分配尺寸搜索机会。
+//           // Evidence: 产线 1M 最后阶段仅访问 66 个可选宽度中的前 12 个。
+//           // Replacement: 保留原尺寸记录，按输出模式和宽度累计轮换。
+//           // Risk: 调度次序改变；Human Review: Required。
+//           // Original code:
+//           // shard.shapeVisits = {};
+//           shard.searchTarget = target;
+//         }
+//         task.portfolio.restart(point.best!.candidate.seed);
+//       }
+//       outlineCache.clear(); minimumCache.clear();
+//       widthVisits.clear(); widthEvaluations.clear();
+//       // 面积下降时高度随前沿变化；同一宽度的历史机会仍有效，离线分片记录也参与排序。
+//       for (const shard of parallel.shards) for (const [key, visits] of Object.entries(shard.shapeVisits)) {
+//         const widthKey = key.slice(0, key.lastIndexOf("/"));
+//         widthVisits.set(widthKey, (widthVisits.get(widthKey) ?? 0) + visits);
+//       }
+//       for (const shard of parallel.shards) for (const [key, used] of Object.entries(shard.shapeEvaluations ?? {})) {
+//         const widthKey = key.slice(0, key.lastIndexOf("/"));
+//         widthEvaluations.set(widthKey, (widthEvaluations.get(widthKey) ?? 0) + used);
+//       }
+//       zeroAttempts = 0;
+//       persist(task);
+//     };
+//     // 连续切片保留在同一 Worker；至多八片、停滞两片即让出，之后继续全局尺寸广度。
+//     // 2026-10-10：普通产线和原图优化共用续搜调度；只重置切片额度，不重置链。
+//     // AI-CORRECTION 2026-10-10：八个短片合为一次 40k 连续搜索；之后必须重新参与公平尺寸分配。
+//     // AI-REMOVED 2026-10-10:
+//     // Reason: 同 Worker 的连续切片绕过最少访问排序。
+//     // Trigger: 用户要求两种任务均匀分配尺寸搜索机会。
+//     // Evidence: 产线 1M 最后阶段仅访问 66 个可选宽度中的前 12 个。
+//     // Replacement: 每次公平领取完整 40k 连续额度，由 Worker 在批次内保留搜索链。
+//     // Risk: 调度次序改变；Human Review: Required。
+//     // Original code:
+//     // const continuations = new Map<ReturnType<typeof workerFor>, {
+//     //   selection: ReturnType<PlannerSearchPortfolio["next"]>; outline: { readonly width: number; readonly height: number };
+//     //   target: string | undefined; sessionKey: string; slices: number; stagnant: number; cost: number;
+//     // }>();
+    const rebuildDimensions = (targetArea: number, minimum: { width: number; height: number }) => {
+      const dimensions = partitionPlannerDimensions(targetArea, minimum);
+      parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
+        targetArea, minimum: { ...minimum }, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
+      for (const shard of parallel.shards) {
+        shard.dimensions = dimensions[shard.index]!;
+        shard.dimensionCursor = 0;
+        shard.pendingCandidate = null;
+        if (owned.includes(shard.index)) {
+          const portfolio = task.portfolios.get(shard.index)!;
+          portfolio.restart(point.best?.candidate.seed);
           shard.portfolio = portfolio.snapshot();
-          shard.shapeVisits = {};
-          shard.searchTarget = target;
+          shard.searchTarget = searchTarget();
         }
-        task.portfolio.restart(point.best!.candidate.seed);
       }
-      outlineCache.clear(); minimumCache.clear();
+      task.portfolio.restart(point.best?.candidate.seed);
+      parallel.nextShard = 0;
       zeroAttempts = 0;
+    };
+    const initializeDimensions = async () => {
+      if (parallel.dimensionSchedule && (!point.best
+        || parallel.dimensionSchedule.targetArea === point.best.candidate.metrics.area)) {
+        if (point.best) for (const index of owned) {
+          const shard = parallel.shards[index]!;
+          if (shard.searchTarget === searchTarget()) continue;
+          const portfolio = task.portfolios.get(index)!;
+          portfolio.restart(point.best.candidate.seed);
+          shard.portfolio = portfolio.snapshot();
+          shard.searchTarget = searchTarget();
+        }
+        return;
+      }
+      const best = point.best?.candidate;
+      if (best) {
+        const nodes = best.seed?.network.nodes ?? createProductionNetwork(workspace.registry, task.file.request).nodes;
+        rebuildDimensions(best.metrics.area, fixedOutlineMinimum(workspace.registry, nodes));
+      } else {
+        if (task.file.request.blueprintSource && point.blueprintBaseline?.candidate.seed) {
+          const nodes = point.blueprintBaseline.candidate.seed.network.nodes;
+          const bodyArea = nodes.reduce((sum, node) => {
+            const definition = workspace.registry.queries.findEntityDefinition(node.entity.definitionId)!;
+            return sum + definition.footprint.width * definition.footprint.height;
+          }, 0);
+          rebuildDimensions(bodyArea * 2, fixedOutlineMinimum(workspace.registry, nodes));
+          persist(task);
+          return;
+        }
+        const { request, variant } = resolvePlannerAttempt(task.file.request, 0);
+        const network = createProductionNetwork(workspace.registry, request);
+        const profile = resolveSearchProfile({ areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 });
+        const placement = new PlannerPlacement(workspace.registry, PLANNER_MAX_SIDE - 2, 1, 1, profile.initialClearance, 1);
+        placement.maximumX = PLANNER_MAX_SIDE;
+        // 先复用设备准备阶段补齐已确定的辅助设施；未知线路和按最终布局补放的桩不虚构数量。
+        await prepareProductionDevices(workspace.registry, network, placement, variant, profile,
+          { strategy: "compact", stashPackingVariant: 0, conduitTopology: "shared" }, () => check(task));
+        const bodyArea = network.nodes.reduce((sum, node) => sum + node.definition.footprint.width * node.definition.footprint.height, 0);
+        rebuildDimensions(bodyArea * 2, fixedOutlineMinimum(workspace.registry, network.nodes));
+      }
       persist(task);
     };
+// AI-REMOVED 2026-10-10:
+// Reason: 每次领取只执行一个固定尺寸，提交后推进游标；取消的旧代不再更新新游标。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//     const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>) => {
+//       const portfolio = task.portfolios.get(shard.index)!;
+//       const signal = searchAbort.signal;
+//       // AI-REMOVED 2026-10-02:
+//       // Reason: 零提案失败应按整轮统计，不能每个短批重置。
+//       // Trigger: 尺寸广度批次可能因固定设施不合而零提案跳过。
+//       // Evidence: 原局部 zeroAttempts 只在一个长期占用分片内累计。
+//       // Replacement: run 级 zeroAttempts；Risk: Low；Human Review: Required。
+//       // Original code:
+//       // let remaining = quota, zeroAttempts = 0;
+//       let remaining = quota;
+//       while (remaining > 0 || shard.pendingCandidate !== null) {
+//         check(task);
+//         if (shard.pendingCandidate === null) {
+//           // AI-REMOVED 2026-10-07:
+//           // Reason: 只初始化空池使已有旧种子的分片永远不采用新最优。
+//           // Trigger: 288 最优仅存在于一个分片，且从未用于 19×15 续搜。
+//           // Evidence: 用户任务的分片池和尺寸访问记录。
+//           // Replacement: synchronizeSearch；Risk: 改进时重新分配搜索机会；Human Review: Required。
+//           // Original code:
+//           // if (shard.portfolio.pools.length === 0 && point.best?.candidate.seed) portfolio.remember(point.best.candidate.seed);
+//           const before = portfolio.snapshot();
+//           // AI-REMOVED 2026-10-10:
+//           // Reason: 删除绕过公平队列的 Worker 私有续跑优先权。
+//           // Trigger: 用户要求两种任务均匀分配尺寸搜索机会。
+//           // Evidence: 产线 1M 最后阶段仅访问 66 个可选宽度中的前 12 个。
+//           // Replacement: 下方统一 portfolio.next 与 selectBreadthOutline。
+//           // Risk: 调度次序改变；Human Review: Required。
+//           // Original code:
+//           // const previous = continuations.get(laneWorker);
+//           // const continuation = previous && previous.target === searchTarget() && previous.slices < 8 && previous.stagnant < 2
+//           //   && !task.activeShapes.has(breadthOutlineKey(plannerOutputModeKey(previous.selection.request.options), previous.outline)) ? previous : undefined;
+//           // continuations.delete(laneWorker);
+//           const selection = portfolio.next(shard.nextVariant, true, point.best ? rank(point.best.candidate) : undefined);
+//           const sessionKey = `${task.file.taskId}/${shard.index}/${shard.nextVariant}`;
+//           const sharedArea = point.best?.candidate.metrics.area;
+//           const maximumArea = sharedArea === undefined ? selection.maximumArea
+//             : Math.min(selection.maximumArea ?? sharedArea, sharedArea);
+//           let shapeKey: string | undefined;
+//           let reserved = 0;
+//           let targetOutline: { readonly width: number; readonly height: number } | undefined;
+//           const requestKey = plannerRequestKey(selection.request);
+//           const bestSeed = point.best?.candidate.seed;
+//           const source = selection.seed ?? (bestSeed?.requestKey === requestKey ? bestSeed : undefined);
+//           if (maximumArea !== undefined) {
+//             let minimum = minimumCache.get(requestKey);
+//             if (!minimum) {
+//               minimum = fixedOutlineMinimum(workspace.registry,
+//                 source?.network.nodes ?? createProductionNetwork(workspace.registry, selection.request).nodes);
+//               minimumCache.set(requestKey, minimum);
+//             }
+//             const cacheKey = `${maximumArea}/${minimum.width}/${minimum.height}`;
+//             let shapes = outlineCache.get(cacheKey);
+//             if (!shapes) { shapes = breadthOutlines(maximumArea, minimum); outlineCache.set(cacheKey, shapes); }
+//             const mode = plannerOutputModeKey(selection.request.options);
+//             const visits = (key: string) => widthVisits.get(key.slice(0, key.lastIndexOf("/"))) ?? 0;
+//             const evaluations = (key: string) => widthEvaluations.get(key.slice(0, key.lastIndexOf("/"))) ?? 0;
+//             // AI-REMOVED 2026-10-02:
+//             // Reason: 尺寸领取规则移至纯函数，供真实调度与回归测试共用。
+//             // Trigger: 多 Worker 防重复与可验证的跨客户端分片归属。
+//             // Evidence: 内联选择无法独立验证同尺寸占用和最少访问策略。
+//             // Replacement: selectBreadthOutline；Risk: Low；Human Review: Required。
+//             // Original code:
+//             // const ownedShapes = owned.length === parallel.count ? shapes
+//             //   : shapes.filter(shape => shape.width % parallel.count === shard.index);
+//             // const choices = ownedShapes.length ? ownedShapes : shapes;
+//             // const unoccupied = choices.filter(shape => !task.activeShapes.has(`${mode}/${shape.width}/${shape.height}`));
+//             // const candidates = unoccupied.length ? unoccupied : choices;
+//             // targetOutline = candidates.reduce<typeof targetOutline>((best, shape) => {
+//             //   const key = `${mode}/${shape.width}/${shape.height}`;
+//             //   return !best || visits(key) < visits(`${mode}/${best.width}/${best.height}`) ? shape : best;
+//             // }, undefined);
+//             targetOutline = selectBreadthOutline(shapes, mode, evaluations, task.activeShapes,
+//               owned.length === parallel.count ? undefined : { count: parallel.count, index: shard.index }, visits);
+//             if (targetOutline) {
+//               shapeKey = breadthOutlineKey(mode, targetOutline);
+//               task.activeShapes.add(shapeKey);
+//               // 在途预算也参与排序；不同高度但同宽度的候选不能重复领取同一份欠账。
+//               reserved = remaining;
+//               const widthKey = shapeKey.slice(0, shapeKey.lastIndexOf("/"));
+//               widthEvaluations.set(widthKey, (widthEvaluations.get(widthKey) ?? 0) + reserved);
+//             }
+//           }
+//           let observed = 0;
+//           task.activeShards.add(shard.index);
+//           live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
+//           const commit = (used: number, candidate: PlannerCandidate | null) => {
+//             if (!Number.isSafeInteger(used) || used < observed || used > remaining) throw new Error("Worker 尝试计数无效。");
+//             shard.attempts++;
+//             shard.nextVariant += parallel.count;
+//             shard.evaluations += used;
+//             if (shapeKey) {
+//               // 取消和初排拒绝也消耗一次派发机会，避免新最优使已派发的前缀重新抢占。
+//               shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
+//               const widthKey = shapeKey.slice(0, shapeKey.lastIndexOf("/"));
+//               widthVisits.set(widthKey, (widthVisits.get(widthKey) ?? 0) + 1);
+//               const charged = shard.shapeEvaluations ??= {};
+//               charged[shapeKey] = (charged[shapeKey] ?? 0) + used;
+//               widthEvaluations.set(widthKey, (widthEvaluations.get(widthKey) ?? 0) + used - reserved);
+//               reserved = 0;
+//             }
+//             shard.portfolio = portfolio.snapshot();
+//             shard.pendingCandidate = candidate;
+//             point.attempt++;
+//             point.evaluations += used;
+//             if (shard.index === gpuShard) gpuLaneEvaluations += used;
+//             remaining -= used;
+//             if (!signal.aborted) zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
+//             task.liveEvaluations.delete(shard.index);
+//             task.activeShards.delete(shard.index);
+//             live();
+//             persist(task);
+//           };
+//           try {
+//             const candidate = await laneWorker.build(selection.request, selection.variant, null, remaining,
+//               signal, (phase, message, count) => {
+//                 if (!Number.isSafeInteger(count) || count < observed || count > remaining) throw new Error("Worker 尝试计数无效。");
+//                 observed = count;
+//                 task.liveEvaluations.set(shard.index, count);
+//                 live(phase, message);
+//               }, selection.seed, selection.continuationStep, maximumArea, targetOutline, point.blueprintBaseline?.candidate.seed, sessionKey);
+//             commit(candidate.search.evaluations, canImprove(candidate) ? candidate : null);
+//           } catch (error) {
+//             if (signal.aborted) {
+//               // 包含零提案的取消也推进已派发序号，避免全局改进或恢复后重复随机轨迹。
+//               commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
+//               break;
+//             } else if (error instanceof PlannerCandidateError) {
+//               const used = error.search?.evaluations ?? observed;
+//               // AI-CORRECTION 2026-10-02: 显式尺寸不合时跳过该批；连续零提案仍停止以免无限循环。
+//               // AI-REMOVED 2026-10-03:
+//               // Reason: 一次初排失败不能代表所有摆位失败。
+//               // Trigger: 环境设施位置与数量参与搜索。Evidence: eda2 的首轮固定坐标越界。
+//               // Replacement: commit 后继续领取其他变体，保留连续零提案的上限。
+//               // Risk: 不可行输入最多检查 64 次初排；Human Review: Required。
+//               // Original code:
+//               // if (used === 0 && !targetOutline) throw new Error(`当前布局无法启动搜索：${error.message}`);
+//               commit(used, null);
+//               // AI-REMOVED 2026-10-10:
+//               // Reason: 失败批次不能自行预订下一次尺寸机会。
+//               // Trigger: 用户要求两种任务均匀分配尺寸搜索机会。
+//               // Evidence: 产线 1M 最后阶段仅访问 66 个可选宽度中的前 12 个。
+//               // Replacement: 40k 连续批次完成后统一按宽度历史重新领取。
+//               // Risk: 调度次序改变；Human Review: Required。
+//               // Original code:
+//               // if (targetOutline && !error.search?.preparationRejected
+//               //   && error.search?.layoutBestCost !== undefined && used > 1) {
+//               //   const cost = error.search.layoutBestCost;
+//               //   continuations.set(laneWorker, { selection, outline: targetOutline, target: searchTarget(), sessionKey,
+//               //     slices: (continuation?.slices ?? 0) + 1, cost,
+//               //     stagnant: cost < (continuation?.cost ?? error.search.layoutInitialCost ?? Infinity) ? 0 : (continuation?.stagnant ?? 0) + 1 });
+//               // }
+//               lastFailure = error.message;
+//             // AI-REMOVED 2026-10-07:
+//             // Reason: 全局重调度需要独立取消，零提案也必须推进已派发序号。
+//             // Trigger: 用户要求新最优出现后立即取消旧批次并重新搜索。
+//             // Evidence: 原逻辑仅检查任务暂停，且零提案恢复旧序号。
+//             // Replacement: 上方 signal.aborted 分支；Risk: 取消批次计入布局次数；Human Review: Required。
+//             // Original code:
+//             // } else if (task.abort.signal.aborted) {
+//             //   if (observed > 0) commit(observed, null);
+//             //   else { portfolio.restore(before); task.liveEvaluations.delete(shard.index); task.activeShards.delete(shard.index); }
+//             //   break;
+//             } else {
+//               portfolio.restore(before);
+//               task.liveEvaluations.delete(shard.index);
+//               task.activeShards.delete(shard.index);
+//               throw error;
+//             }
+//           } finally {
+//             if (shapeKey) {
+//               task.activeShapes.delete(shapeKey);
+//               const widthKey = shapeKey.slice(0, shapeKey.lastIndexOf("/"));
+//               widthEvaluations.set(widthKey, (widthEvaluations.get(widthKey) ?? 0) - reserved);
+//             }
+//           }
+//           // AI-CORRECTION 2026-10-02: 广度轮换可能遇到多个固定设施无法容纳的盒子，按整轮计数。
+//           if (zeroAttempts >= 64) throw new Error(`连续 64 次初排未能启动搜索：${lastFailure ?? "未找到合法布局"}`);
+//         }
+//         // AI-REMOVED 2026-10-03:
+//         // Reason: 已结束计算的 Worker 不应占着通道等待串行仿真。
+//         // Trigger: 自动并发 0/1 抖动。Evidence: Windows 验证队列积压时所有通道空闲。
+//         // Replacement: verifying 分片集合与 claim 背压，末尾统一等待 verificationTail。
+//         // Risk: 取消必须同时结算验证与搜索。Human Review: Required
+//         // Original code:
+//         // if (shard.pendingCandidate !== null) await queueVerification(shard, portfolio);
+//         if (shard.pendingCandidate !== null) void queueVerification(shard, portfolio);
+//         await new Promise<void>(resolve => setTimeout(resolve, 0));
+//         break;
+//       }
+//       return quota - remaining;
+//     };
     const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>) => {
       const portfolio = task.portfolios.get(shard.index)!;
+      if (shard.pendingCandidate !== null) { queueVerification(shard, portfolio); return 0; }
+      check(task);
+      const schedule = parallel.dimensionSchedule!;
       const signal = searchAbort.signal;
-      // AI-REMOVED 2026-10-02:
-      // Reason: 零提案失败应按整轮统计，不能每个短批重置。
-      // Trigger: 尺寸广度批次可能因固定设施不合而零提案跳过。
-      // Evidence: 原局部 zeroAttempts 只在一个长期占用分片内累计。
-      // Replacement: run 级 zeroAttempts；Risk: Low；Human Review: Required。
-      // Original code:
-      // let remaining = quota, zeroAttempts = 0;
-      let remaining = quota;
-      while (remaining > 0 || shard.pendingCandidate !== null) {
-        check(task);
-        if (shard.pendingCandidate === null) {
-          // AI-REMOVED 2026-10-07:
-          // Reason: 只初始化空池使已有旧种子的分片永远不采用新最优。
-          // Trigger: 288 最优仅存在于一个分片，且从未用于 19×15 续搜。
-          // Evidence: 用户任务的分片池和尺寸访问记录。
-          // Replacement: synchronizeSearch；Risk: 改进时重新分配搜索机会；Human Review: Required。
-          // Original code:
-          // if (shard.portfolio.pools.length === 0 && point.best?.candidate.seed) portfolio.remember(point.best.candidate.seed);
-          const before = portfolio.snapshot();
-          const selection = portfolio.next(shard.nextVariant, true, point.best ? rank(point.best.candidate) : undefined);
-          const sharedArea = point.best?.candidate.metrics.area;
-          const maximumArea = sharedArea === undefined ? selection.maximumArea
-            : Math.min(selection.maximumArea ?? sharedArea, sharedArea);
-          let shapeKey: string | undefined;
-          let targetOutline: { readonly width: number; readonly height: number } | undefined;
-          const requestKey = plannerRequestKey(selection.request);
-          const bestSeed = point.best?.candidate.seed;
-          const source = selection.seed ?? (bestSeed?.requestKey === requestKey ? bestSeed : undefined);
-          if (maximumArea !== undefined) {
-            let minimum = minimumCache.get(requestKey);
-            if (!minimum) {
-              minimum = fixedOutlineMinimum(workspace.registry,
-                source?.network.nodes ?? createProductionNetwork(workspace.registry, selection.request).nodes);
-              minimumCache.set(requestKey, minimum);
-            }
-            const cacheKey = `${maximumArea}/${minimum.width}/${minimum.height}`;
-            let shapes = outlineCache.get(cacheKey);
-            if (!shapes) { shapes = breadthOutlines(maximumArea, minimum); outlineCache.set(cacheKey, shapes); }
-            const mode = plannerOutputModeKey(selection.request.options);
-            const visits = (key: string) => parallel.shards.reduce((sum, entry) => sum
-              + (entry.searchTarget === shard.searchTarget ? entry.shapeVisits[key] ?? 0 : 0), 0);
-            // AI-REMOVED 2026-10-02:
-            // Reason: 尺寸领取规则移至纯函数，供真实调度与回归测试共用。
-            // Trigger: 多 Worker 防重复与可验证的跨客户端分片归属。
-            // Evidence: 内联选择无法独立验证同尺寸占用和最少访问策略。
-            // Replacement: selectBreadthOutline；Risk: Low；Human Review: Required。
-            // Original code:
-            // const ownedShapes = owned.length === parallel.count ? shapes
-            //   : shapes.filter(shape => shape.width % parallel.count === shard.index);
-            // const choices = ownedShapes.length ? ownedShapes : shapes;
-            // const unoccupied = choices.filter(shape => !task.activeShapes.has(`${mode}/${shape.width}/${shape.height}`));
-            // const candidates = unoccupied.length ? unoccupied : choices;
-            // targetOutline = candidates.reduce<typeof targetOutline>((best, shape) => {
-            //   const key = `${mode}/${shape.width}/${shape.height}`;
-            //   return !best || visits(key) < visits(`${mode}/${best.width}/${best.height}`) ? shape : best;
-            // }, undefined);
-            targetOutline = selectBreadthOutline(shapes, mode, visits, task.activeShapes,
-              owned.length === parallel.count ? undefined : { count: parallel.count, index: shard.index });
-            if (targetOutline) {
-              shapeKey = breadthOutlineKey(mode, targetOutline);
-              task.activeShapes.add(shapeKey);
-            }
-          }
-          let observed = 0;
-          task.activeShards.add(shard.index);
-          live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
-          const commit = (used: number, candidate: PlannerCandidate | null) => {
-            if (!Number.isSafeInteger(used) || used < observed || used > remaining) throw new Error("Worker 尝试计数无效。");
-            shard.attempts++;
-            shard.nextVariant += parallel.count;
-            shard.evaluations += used;
-            if (shapeKey && !signal.aborted) shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
-            shard.portfolio = portfolio.snapshot();
-            shard.pendingCandidate = candidate;
-            point.attempt++;
-            point.evaluations += used;
-            if (shard.index === gpuShard) gpuLaneEvaluations += used;
-            remaining -= used;
-            if (!signal.aborted) zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
-            task.liveEvaluations.delete(shard.index);
-            task.activeShards.delete(shard.index);
-            live();
-            persist(task);
-          };
-          try {
-            const candidate = await laneWorker.build(selection.request, selection.variant, null, remaining,
-              signal, (phase, message, count) => {
-                if (!Number.isSafeInteger(count) || count < observed || count > remaining) throw new Error("Worker 尝试计数无效。");
-                observed = count;
-                task.liveEvaluations.set(shard.index, count);
-                live(phase, message);
-              }, selection.seed, selection.continuationStep, maximumArea, targetOutline, point.blueprintBaseline?.candidate.seed);
-            commit(candidate.search.evaluations, canImprove(candidate) ? candidate : null);
-          } catch (error) {
-            if (signal.aborted) {
-              // 包含零提案的取消也推进已派发序号，避免全局改进或恢复后重复随机轨迹。
-              commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
-              break;
-            } else if (error instanceof PlannerCandidateError) {
-              const used = error.search?.evaluations ?? observed;
-              // AI-CORRECTION 2026-10-02: 显式尺寸不合时跳过该批；连续零提案仍停止以免无限循环。
-              // AI-REMOVED 2026-10-03:
-              // Reason: 一次初排失败不能代表所有摆位失败。
-              // Trigger: 环境设施位置与数量参与搜索。Evidence: eda2 的首轮固定坐标越界。
-              // Replacement: commit 后继续领取其他变体，保留连续零提案的上限。
-              // Risk: 不可行输入最多检查 64 次初排；Human Review: Required。
-              // Original code:
-              // if (used === 0 && !targetOutline) throw new Error(`当前布局无法启动搜索：${error.message}`);
-              commit(used, null);
-              lastFailure = error.message;
-            // AI-REMOVED 2026-10-07:
-            // Reason: 全局重调度需要独立取消，零提案也必须推进已派发序号。
-            // Trigger: 用户要求新最优出现后立即取消旧批次并重新搜索。
-            // Evidence: 原逻辑仅检查任务暂停，且零提案恢复旧序号。
-            // Replacement: 上方 signal.aborted 分支；Risk: 取消批次计入布局次数；Human Review: Required。
-            // Original code:
-            // } else if (task.abort.signal.aborted) {
-            //   if (observed > 0) commit(observed, null);
-            //   else { portfolio.restore(before); task.liveEvaluations.delete(shard.index); task.activeShards.delete(shard.index); }
-            //   break;
-            } else {
-              portfolio.restore(before);
-              task.liveEvaluations.delete(shard.index);
-              task.activeShards.delete(shard.index);
-              throw error;
-            }
-          } finally {
-            if (shapeKey) task.activeShapes.delete(shapeKey);
-          }
-          // AI-CORRECTION 2026-10-02: 广度轮换可能遇到多个固定设施无法容纳的盒子，按整轮计数。
-          if (zeroAttempts >= 64) throw new Error(`连续 64 次初排未能启动搜索：${lastFailure ?? "未找到合法布局"}`);
+      const cursor = shard.dimensionCursor!;
+      const { width, height } = shard.dimensions![cursor]!;
+      const targetOutline = { width, height };
+      const before = portfolio.snapshot();
+      // 尺寸轮转与拓扑轮转独立；分片编号不能把输出方式永久锁在同一个变体。
+      const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined);
+      const variant = shard.nextVariant;
+      const sessionKey = `${task.file.taskId}/${schedule.generation}/${shard.index}/${variant}`;
+      const shapeKey = breadthOutlineKey(plannerOutputModeKey(selection.request.options), targetOutline);
+      let observed = 0, used = 0;
+      task.activeShards.add(shard.index);
+      live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
+      const commit = (count: number, candidate: PlannerCandidate | null) => {
+        if (!Number.isSafeInteger(count) || count < observed || count > quota) throw new Error("Worker 尝试计数无效。");
+        used = count;
+        shard.attempts++;
+        shard.nextVariant += parallel.count;
+        shard.evaluations += used;
+        shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
+        const charged = shard.shapeEvaluations ??= {};
+        charged[shapeKey] = (charged[shapeKey] ?? 0) + used;
+        point.attempt++;
+        point.evaluations += used;
+        if (shard.index === gpuShard) gpuLaneEvaluations += used;
+        // 旧代只结算实际消耗；取消或暂停均不能提前跳过未完成的尺寸。
+        if (!signal.aborted && parallel.dimensionSchedule === schedule) {
+          shard.dimensionCursor = (cursor + 1) % shard.dimensions!.length;
+          shard.portfolio = portfolio.snapshot();
+          shard.pendingCandidate = candidate;
+          zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
+        } else if (parallel.dimensionSchedule === schedule) portfolio.restore(before);
+        task.liveEvaluations.delete(shard.index);
+        task.activeShards.delete(shard.index);
+        live();
+        persist(task);
+      };
+      try {
+        const candidate = await laneWorker.build(selection.request, variant, null, quota, signal, (phase, message, count) => {
+          if (!Number.isSafeInteger(count) || count < observed || count > quota) throw new Error("Worker 尝试计数无效。");
+          observed = count;
+          task.liveEvaluations.set(shard.index, count);
+          live(phase, message);
+        }, selection.seed, selection.continuationStep, schedule.targetArea - 1, targetOutline,
+        point.blueprintBaseline?.candidate.seed, sessionKey);
+        commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null);
+      } catch (error) {
+        if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
+        else if (error instanceof PlannerCandidateError) {
+          commit(error.search?.evaluations ?? observed, null);
+          lastFailure = error.message;
+        } else {
+          if (parallel.dimensionSchedule === schedule) portfolio.restore(before);
+          throw error;
         }
-        // AI-REMOVED 2026-10-03:
-        // Reason: 已结束计算的 Worker 不应占着通道等待串行仿真。
-        // Trigger: 自动并发 0/1 抖动。Evidence: Windows 验证队列积压时所有通道空闲。
-        // Replacement: verifying 分片集合与 claim 背压，末尾统一等待 verificationTail。
-        // Risk: 取消必须同时结算验证与搜索。Human Review: Required
-        // Original code:
-        // if (shard.pendingCandidate !== null) await queueVerification(shard, portfolio);
-        if (shard.pendingCandidate !== null) void queueVerification(shard, portfolio);
-        await new Promise<void>(resolve => setTimeout(resolve, 0));
-        break;
+      } finally {
+        task.liveEvaluations.delete(shard.index);
+        task.activeShards.delete(shard.index);
       }
-      return quota - remaining;
+      // 至少让全部合法尺寸轮转一次，再判断初排连续失败，避免 64 次把长队列截断。
+      const nonempty = parallel.shards.filter(entry => owned.includes(entry.index) && entry.dimensions?.length);
+      const cycle = nonempty.length * Math.max(0, ...nonempty.map(entry => entry.dimensions!.length));
+      if (zeroAttempts >= Math.max(64, cycle * 4)) throw new Error(`连续初排未能启动搜索：${lastFailure}`);
+      if (shard.pendingCandidate !== null) queueVerification(shard, portfolio);
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      return used;
     };
     try {
-      synchronizeSearch();
+      await initializeDimensions();
       const concurrency = task.file.request.options.concurrency ?? 1;
       if (task.file.request.options.gpu === true && owned.length > 1 && options.gpuLayout !== false && (options.gpuWorkerFactory
         || (!options.worker && !options.workerFactory && typeof navigator !== "undefined" && "gpu" in navigator))) {
@@ -817,7 +1071,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         }, 1000);
         stopMonitoring = () => { clearInterval(timer); stopPressure(); };
       }
-      const claim = (gpu = false) => {
+      const claim = () => {
         // 队列有界，背压只暂停新批次；不把串行验收误报为整机 CPU 满载。
         // 订正 2026-10-06：验证已可并行；高水位跟随共享上限，两个阶段分别测量吞吐。
         if (searchAbort.signal.aborted || pendingVerifications >= Math.max(2, maximum)) return null;
@@ -825,8 +1079,22 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           const index = (parallel.nextShard + step) % parallel.count;
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
           const shard = parallel.shards[index]!;
-          if (available <= 0 && shard.pendingCandidate === null) continue;
-          const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, point.best && !gpu ? 5_000 : 20_000);
+          if (shard.pendingCandidate === null && (available <= 0 || !shard.dimensions?.length)) continue;
+          // 同一搜索阶段的额度和冷却周期不随硬件变化。
+          // 尾部预算分给尚空闲的执行通道，避免不足一批时被首个 Worker 独占。
+          // AI-CORRECTION 2026-10-10：只对已有最优均分，每份至少 5k（不足则取剩余额度）；冷启动仍按 20k 领批。
+// AI-REMOVED 2026-10-10:
+// Reason: 单次领取统一最多 X 次，不再按首解阶段或剩余通道动态放大。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//           const freeLanes = Math.max(1, target + Number(!!gpuWorker?.gpuAvailable && !!point.best) - active.size);
+//           const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, point.best
+//             ? Math.min(40_000, Math.max(5_000, Math.ceil(available / freeLanes))) : 20_000);
+          const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, parallel.dimensionSchedule!.attemptsPerTask);
           available -= quota;
           leased.add(index);
           parallel.nextShard = (index + 1) % parallel.count;
@@ -837,16 +1105,26 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // 同一批预算、分片租约与验证队列由主线程统一管理；缩容只阻止后续领批。
       while (!task.abort.signal.aborted) {
         // 所有旧批次结算后才清空尺寸访问与更新种子，迟到回调不能写进新目标的记录。
-        if (searchAbort.signal.aborted && active.size === 0) {
-          synchronizeSearch();
-          searchAbort = new AbortController();
-        }
+        // AI-CORRECTION 2026-10-10：仅更新种子和尺寸缓存，宽度访问历史保留，包含已取消批次。
+// AI-REMOVED 2026-10-10:
+// Reason: Dense 通过时同步作废并重建，空闲 Worker 无需等待全部旧搜索返回。
+// Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// Replacement: 本文件新尺寸调度
+// Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// Human Review: Required
+// Original code:
+//         if (searchAbort.signal.aborted && active.size === 0) {
+//           synchronizeSearch();
+//           searchAbort = new AbortController();
+//         }
+
         startVerifications(); retire();
         // 初排构造主要是 CPU 工作；已有可用种子后，GPU 专注不同尺寸上的独立续搜。
         for (const index of [...(gpuWorker?.gpuAvailable && point.best ? [-1] : []), ...Array.from({ length: target }, (_, index) => index)]) {
           if (index >= 0 && cpuActiveCount() + verificationActive.size >= maximum) break;
           if (active.has(index)) continue;
-          const job = claim(index === -1);
+          const job = claim();
           if (job === null) break;
           if (index === -1) gpuShard = job.shard.index;
           else searchStarted.set(index, performance.now());

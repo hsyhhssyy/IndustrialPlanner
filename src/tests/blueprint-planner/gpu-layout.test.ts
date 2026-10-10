@@ -66,6 +66,17 @@ it("GPU 批次完成后暂停也结算次数；无硬件时回退 CPU 且不虚�
   try {
     const fallback = layout(gpu);
     await fallback.search.advance(100, () => {});
+    // AI-REMOVED 2026-10-10: 回退使用同一个批量协议，96 次批次后仍剩 4 次预算。
+    // Trigger: 用户要求统一 CPU/GPU；Evidence: 两后端相同 batch；Replacement: 下方分批计费断言。
+    // Risk: Low；Human Review: Required。
+    // expect(fallback.statistics.evaluations).toBe(100);
+    expect(fallback.statistics.evaluations).toBe(96);
+    // CPU 回退同样保留已计费的其他独立链候选，领取队列不重复扣费。
+    while (fallback.search.hasPendingLayouts) {
+      await fallback.search.advance(0, () => {});
+      expect(fallback.statistics.evaluations).toBe(96);
+    }
+    await fallback.search.advance(4, () => {});
     expect(fallback.statistics.evaluations).toBe(100);
     expect(fallback.statistics.gpuEvaluations ?? 0).toBe(0);
     expect(gpu.available).toBe(false);

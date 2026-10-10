@@ -28,8 +28,17 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
     return { build: async (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) => {
       active++;
       maximumActive = Math.max(maximumActive, active);
-      try { return await client.build(request, variant, budgetMs,
-        { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal); }
+      try {
+        expect(targetOutline).toBeDefined();
+        expect(evaluations).toBeLessThanOrEqual(5000);
+        const candidate = await client.build(request, variant, budgetMs,
+          { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal);
+        expect(candidate.search.outline).toEqual(targetOutline);
+        return candidate;
+      } catch (error) {
+        if (error instanceof PlannerCandidateError && error.search) expect(error.search.outline).toEqual(targetOutline);
+        throw error;
+      }
       finally { active--; }
     }, dispose: () => { void client.dispose(); } };
   };
@@ -50,31 +59,31 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
 }
 
 it("真实 Node Worker 在分片内执行有界批次，并保存可恢复计数", async () => {
-  const { file, maximumActive, clientCount } = await runRange(0, 2, 2, originalTask(2));
+  const { file, maximumActive, clientCount } = await runRange(0, 32, 32, originalTask(2));
   const point = file.checkpoint;
   expect(maximumActive).toBe(1);
   expect(clientCount).toBe(1);
-  expect(point.parallel?.shards.map(shard => shard.index)).toEqual([0, 1]);
+  expect(point.parallel?.shards.map(shard => shard.index)).toEqual(Array.from({ length: 32 }, (_, index) => index));
   expect(point.parallel?.shards.some(shard => shard.attempts > 0)).toBe(true);
   expect(point.evaluations).toBe(40);
   expect(file.progress.evaluatedProposals).toBe(point.evaluations);
 }, 90_000);
 
 it("自动模式通过真实 Worker 运行，导出不携带上次机器的活动并发", async () => {
-  const { file } = await runRange(0, 2, 2, originalTask("auto"));
+  const { file } = await runRange(0, 32, 32, originalTask("auto"));
   expect(file.request.options.concurrency).toBe("auto");
   expect(file.progress.activeWorkerCount).toBe(0);
   expect(file.checkpoint.evaluations).toBe(40);
-  expect(file.checkpoint.parallel?.count).toBe(2);
+  expect(file.checkpoint.parallel?.count).toBe(32);
 }, 90_000);
 
 it("独立分片能从同一旧任务出发并合并，重叠和缺失均拒绝", async () => {
   const input = originalTask();
-  const first = await runRange(0, 1, 2, input);
-  const second = await runRange(1, 2, 2, input);
+  const first = await runRange(0, 16, 32, input);
+  const second = await runRange(16, 32, 32, input);
   const merged = parsePlannerTaskFile(await mergePlannerTaskFiles([first.file, second.file], first.registry), first.registry);
   expect(merged.checkpoint.parallel?.originTaskId).toBe(input.taskId);
-  expect(merged.checkpoint.parallel?.ownedShards).toEqual([0, 1]);
+  expect(merged.checkpoint.parallel?.ownedShards).toEqual(Array.from({ length: 32 }, (_, index) => index));
   expect(merged.checkpoint.attempt).toBe(first.file.checkpoint.attempt + second.file.checkpoint.attempt);
   expect(merged.checkpoint.evaluations).toBe(first.file.checkpoint.evaluations + second.file.checkpoint.evaluations);
   await expect(mergePlannerTaskFiles([first.file, first.file], first.registry)).rejects.toThrow("重复");
@@ -82,9 +91,9 @@ it("独立分片能从同一旧任务出发并合并，重叠和缺失均拒绝"
 }, 90_000);
 
 it("已运行的并行任务继续分给多人后合并，不重复累计原有验证数", async () => {
-  const initial = await runRange(0, 2, 2, originalTask(2));
-  const first = await runRange(0, 1, 2, initial.file);
-  const second = await runRange(1, 2, 2, initial.file);
+  const initial = await runRange(0, 32, 32, originalTask(2));
+  const first = await runRange(0, 16, 32, initial.file);
+  const second = await runRange(16, 32, 32, initial.file);
   const merged = parsePlannerTaskFile(await mergePlannerTaskFiles([first.file, second.file], first.registry), first.registry);
   const oldValidated = initial.file.progress.validatedCandidateCount;
   expect(merged.progress.validatedCandidateCount).toBe(oldValidated
@@ -95,9 +104,22 @@ it("已运行的并行任务继续分给多人后合并，不重复累计原有�
 }, 90_000);
 
 it("较小总分片数转换到浏览器虚拟分片后，保留累计进度并重建尺寸访问记录", async () => {
-  const previous = (await runRange(0, 2, 2, originalTask(2))).file;
+  const previous = (await runRange(0, 32, 32, originalTask(2))).file;
+  // 旧算法允许两片；构造其合法计数，验证升级只重建调度，不丢历史。
+  const parallel = previous.checkpoint.parallel!;
+  parallel.count = 2;
+  parallel.shards = parallel.shards.slice(0, 2);
+  parallel.ownedShards = [0, 1];
+  parallel.nextShard %= 2;
+  Reflect.deleteProperty(parallel, "dimensionSchedule");
+  for (const shard of parallel.shards) {
+    shard.nextVariant = parallel.baseAttempt + shard.index + shard.attempts * 2;
+    Reflect.deleteProperty(shard, "dimensions"); Reflect.deleteProperty(shard, "dimensionCursor");
+  }
+
   const counted = previous.checkpoint.parallel!.shards.find(shard => shard.attempts > 0)!;
-  counted.shapeVisits["stash/999/999"] = 1;
+  counted.shapeVisits = { "stash/999/999": counted.attempts };
+  counted.shapeEvaluations = { "stash/999/999": counted.evaluations };
   const session = new PlannerBatchSession();
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 10,
     worker: { build: async (_request, _variant, _budgetMs, _evaluations, _signal, update) => {
@@ -126,7 +148,7 @@ it("暂停后调整提案预算与并发数，保留检查点且不重复搜索�
       variants.push(variant);
       try {
         await new Promise(resolve => setTimeout(resolve, 2));
-        update("layout", "搜索中", 20_000);
+        update("layout", "搜索中", _evaluations);
         throw new PlannerCandidateError("本次布局无候选");
       } finally { active--; }
     },

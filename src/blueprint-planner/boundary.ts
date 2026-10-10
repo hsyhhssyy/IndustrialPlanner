@@ -6,6 +6,7 @@ import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geomet
 import { EDGES, getPlannerPorts, opposite, ROTATIONS } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
 import { createPlainNode } from "./placement";
+import { plannerBusConflictCount } from "./layout-backend";
 
 export interface PlannerBoundaryPose { x: number; y: number; rotation: GridRotation; }
 interface BoundaryGeometry { width: number; height: number; edge: GridEdge; }
@@ -94,6 +95,7 @@ export class PlannerBoundary {
 
   resolve(poses: readonly PlannerBoundaryPose[], selected?: ReadonlySet<number>, override?: { index: number; pose: PlannerBoundaryPose }) {
     let warehouse = 0, externalBelts = 0, violations = 0;
+    const warehouseCounts = [0, 0, 0, 0], beltCounts = [0, 0, 0, 0];
     for (const entry of this.entries) {
       if (selected && !selected.has(entry.index)) continue;
       const pose = override?.index === entry.index ? override.pose : poses[entry.index]!;
@@ -105,13 +107,18 @@ export class PlannerBoundary {
       const bit = 1 << EDGES.indexOf(edge);
       if (entry.kind === "warehouse") warehouse |= bit;
       else if (entry.kind === "belt") externalBelts |= bit;
+      if (entry.kind === "warehouse") warehouseCounts[EDGES.indexOf(edge)]!++;
+      else if (entry.kind === "belt") beltCounts[EDGES.indexOf(edge)]!++;
     }
     const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts);
-    return { busMask, violations: violations + Number(busMask === null) };
+    return { busMask, violations: violations + plannerBusConflictCount(
+      this.network.request.options.warehouseBus === "straight" ? 1 : this.network.request.options.warehouseBus === "corner" ? 2 : 3,
+      warehouseCounts, beltCounts) };
   }
 
   /** 初始口位只提供种子，后续构造和退火仍可重新选边；不把初始口位纳入最小盒子尺寸。 */
-  arrange(variant: number): void {
+  // 订正 2026-10-10：传入搜索姿态时只返回整组提案，不写实体；固定入口保持原位。
+  arrange(variant: number, state?: { readonly poses: readonly PlannerBoundaryPose[]; readonly movable: ReadonlySet<number> }): PlannerBoundaryPose[] {
     const preferredEdge = EDGES[(3 + variant) % 4]!;
     const preferredBit = 1 << EDGES.indexOf(preferredEdge);
     const masks = BUS_MASKS.slice(0, MASK_COUNTS[this.network.request.options.warehouseBus])
@@ -119,15 +126,24 @@ export class PlannerBoundary {
       .sort((a, b) => Number((b & preferredBit) !== 0) - Number((a & preferredBit) !== 0));
     // 至多尝试 13 种连续边组合，避免第一只仓库口选了短边就把整个可行盒子误判失败。
     for (const mask of masks) {
-      const poses = this.network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
-      const selected = new Set<number>();
+      const poses = state ? state.poses.map(pose => ({ ...pose }))
+        : this.network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
+      const selected = new Set(this.entries.filter(entry => state && !state.movable.has(entry.index)).map(entry => entry.index));
+      if (this.resolve(poses, selected).violations) continue;
+      if (this.entries.some(entry => selected.has(entry.index) && (entry.kind === "warehouse"
+        ? !(mask & (1 << EDGES.indexOf(entry.geometry[poses[entry.index]!.rotation / 90]!.edge)))
+        : entry.kind === "belt" && (mask & (1 << EDGES.indexOf(entry.geometry[poses[entry.index]!.rotation / 90]!.edge)))))) continue;
       let complete = true;
       for (const entry of this.entries) {
+        if (selected.has(entry.index)) continue;
         selected.add(entry.index);
         const candidates = [...this.proposals(entry.index)].sort((a, b) => {
           const ga = entry.geometry[a.rotation / 90]!, gb = entry.geometry[b.rotation / 90]!;
           const preferred = entry.kind === "warehouse" ? preferredEdge : opposite(preferredEdge);
-          return Number(gb.edge === preferred) - Number(ga.edge === preferred) || a.y - b.y || a.x - b.x;
+          const current = poses[entry.index]!;
+          const distance = (pose: PlannerBoundaryPose) => Math.abs(pose.x - current.x) + Math.abs(pose.y - current.y);
+          return Number(gb.edge === preferred) - Number(ga.edge === preferred)
+            || (state ? distance(a) - distance(b) : 0) || a.y - b.y || a.x - b.x;
         });
         const pose = candidates.find(pose => {
           const bit = 1 << EDGES.indexOf(entry.geometry[pose.rotation / 90]!.edge);
@@ -141,11 +157,12 @@ export class PlannerBoundary {
         poses[entry.index] = pose;
       }
       if (!complete) continue;
+      if (state) return poses;
       for (const entry of this.entries) {
         const node = this.network.nodes[entry.index]!, pose = poses[entry.index]!;
         node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
       }
-      return;
+      return poses;
     }
     throw new PlannerCandidateError("包围盒边长或存取线形态无法容纳边界入口。");
   }

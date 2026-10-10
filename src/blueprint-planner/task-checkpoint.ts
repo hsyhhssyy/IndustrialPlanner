@@ -18,6 +18,8 @@ import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
+import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_SHARD_COUNT,
+  type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
 
 // AI-REMOVED 2026-10-02:
 // Reason: 多尺寸批次增加持久化访问记录，旧检查点需要显式迁移。
@@ -26,7 +28,7 @@ import { identifyBlueprintNetwork } from "./blueprint-network";
 // Replacement: compact-breadth-1 与 restorePlannerTaskFile 迁移；Risk: 旧任务无历史尺寸访问记录；Human Review: Required。
 // Original code:
 // export const PLANNER_ALGORITHM_VERSION = "compact-portfolio-2";
-export const PLANNER_ALGORITHM_VERSION = "external-boundary-1";
+export const PLANNER_ALGORITHM_VERSION = "dimension-shards-1";
 
 export interface PlannerShardCheckpoint {
   index: number;
@@ -37,8 +39,14 @@ export interface PlannerShardCheckpoint {
   portfolio: PlannerPortfolioSnapshot;
   pendingCandidate: PlannerCandidate | null;
   shapeVisits: Record<string, number>;
+  /** 各尺寸已结算的真实提案数；旧记录未采集时缺省，不把派发次数冒充提案数。 */
+  shapeEvaluations?: Record<string, number>;
   /** 尺寸访问次数所属的全局最优目标；旧任务缺省时在下次运行同步，累计计数保留。 */
+  // AI-CORRECTION 2026-10-10：searchTarget 仅标识种子目标；尺寸访问和实际提案历史跨目标保留。
   searchTarget?: string;
+  /** 尺寸唯一归属及跨领取轮转位置；旧算法恢复后首次运行生成，不能由访问次数推算。 */
+  dimensions?: PlannerDimension[];
+  dimensionCursor?: number;
 }
 
 export interface PlannerParallelCheckpoint {
@@ -52,6 +60,7 @@ export interface PlannerParallelCheckpoint {
   shards: PlannerShardCheckpoint[];
   requestKey: string;
   nextShard: number;
+  dimensionSchedule?: PlannerDimensionSchedule;
 }
 
 export interface PlannerCheckpoint {
@@ -81,6 +90,8 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
 ): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
   value = migrateTaskBlueprintSchemas(value);
+  // 仅调度规则升级：保留结果、计数、历史和旧种子池，首次运行时创建尺寸清单。
+  if (value.algorithmVersion === "external-boundary-1") value = { ...value, algorithmVersion: PLANNER_ALGORITHM_VERSION };
   if (value?.request && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
     const file = parsePlannerTaskFile(value, registry);
     if (!verify) return file;
@@ -263,6 +274,13 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     if (history.length > legacyHistoryLength && (point.best === null || history.at(-1)!.bestArea < point.best.candidate.metrics.area)) throw new Error("面积曲线与最优结果不匹配。");
     if (point.parallel) {
       const parallel = point.parallel;
+      if (parallel.dimensionSchedule !== undefined) {
+        assertPlannerDimensionSchedule(parallel.dimensionSchedule, parallel.shards);
+        if (parallel.count !== PLANNER_SHARD_COUNT || point.best
+          && parallel.dimensionSchedule.targetArea !== point.best.candidate.metrics.area) throw new Error("尺寸调度与最优面积不一致。");
+      } else if (parallel.shards?.some(shard => shard.dimensions !== undefined || shard.dimensionCursor !== undefined)) {
+        throw new Error("分片尺寸缺少调度身份。");
+      }
       if (!Number.isSafeInteger(parallel.count) || parallel.count < 1 || parallel.count > 32
         || !Number.isSafeInteger(parallel.nextShard) || parallel.nextShard < 0 || parallel.nextShard >= parallel.count
         || parallel.originTaskId.length < 1 || parallel.requestKey !== plannerRequestKey(request)
@@ -289,6 +307,11 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           || Object.entries(shard.shapeVisits).some(([key, visits]) => (!/^.+\/\d+\/\d+$/.test(key) || !outputModes.has(key.split("/").slice(0, -2).join("/")))
             || !Number.isSafeInteger(visits) || visits < 0)
           || Object.values(shard.shapeVisits).reduce((sum, visits) => sum + visits, 0) > shard.attempts
+          || (shard.shapeEvaluations !== undefined && (!shard.shapeEvaluations || typeof shard.shapeEvaluations !== "object"
+            || Array.isArray(shard.shapeEvaluations)
+            || Object.entries(shard.shapeEvaluations).some(([key, used]) => !(shard.shapeVisits[key]! > 0)
+              || !Number.isSafeInteger(used) || used < 0)
+            || Object.values(shard.shapeEvaluations).reduce((sum, used) => sum + used, 0) > shard.evaluations))
           || !Array.isArray(shard.portfolio?.pools))) throw new Error("分片检查点无效。");
       if (point.attempt !== parallel.baseAttempt + parallel.shards.reduce((sum, shard) => sum + shard.attempts, 0)
         || point.evaluations !== parallel.baseEvaluations + parallel.shards.reduce((sum, shard) => sum + shard.evaluations, 0)
@@ -400,13 +423,31 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const winner = ranked[0];
   const best = winner?.checkpoint.best ?? null;
   const result = winner?.checkpoint.result ?? null;
+  // 离线进程可能独立发现不同面积；合并采用胜出目标的唯一分配，异目标游标不能拼接。
+  const schedule = winner?.checkpoint.parallel?.dimensionSchedule
+    ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
+  if (schedule) {
+    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum);
+    for (const shard of shards) {
+      const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
+      const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea
+        && source.dimensionSchedule.minimum.width === schedule.minimum.width
+        && source.dimensionSchedule.minimum.height === schedule.minimum.height;
+      shard.dimensions = dimensions[shard.index]!;
+      if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; }
+    }
+  } else for (const shard of shards) {
+    // 新旧算法混合且胜出目标尚无分配：保留统计，下一次运行统一生成，不能拼接不同目标的清单。
+    Reflect.deleteProperty(shard, "dimensions");
+    Reflect.deleteProperty(shard, "dimensionCursor");
+  }
   const taskId = base.originTaskId;
   const merged: BlueprintPlannerTaskFile = {
     ...first, taskId,
     checkpoint: { ...first.checkpoint, attempt, evaluations, best,
       result: result ? { ...result, taskId, folderId: null } : null,
       savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
-      parallel: { ...base, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
+      parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
     progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
       elapsedMs: Math.max(...files.map(file => file.progress.elapsedMs)),
       evaluatedProposals: evaluations, roundEvaluatedProposals: 0, candidateCount: attempt,

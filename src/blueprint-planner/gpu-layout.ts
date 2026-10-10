@@ -55,13 +55,16 @@ export class PlannerGpuLayout implements PlannerLayoutBackend {
       const allocate = (size: number, usage: GPUBufferUsageFlags) => {
         const buffer = device.createBuffer({ size: Math.max(4, size), usage }); buffers.push(buffer); return buffer;
       };
-      const inputs = [input.parameters, input.geometry, input.edges, input.overlaps, input.poses].map(array => {
+      const initial = new Int32Array(input.poses.length + (input.states?.length ?? 0));
+      initial.set(input.poses); if (input.states) initial.set(input.states, input.poses.length);
+      const parameters = input.parameters.slice(); parameters[9] = Math.floor((input.states?.length ?? 0) / (nodes! * 3 + 2));
+      const inputs = [parameters, input.geometry, input.edges, input.overlaps, initial].map(array => {
         const buffer = allocate(array.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
         device.queue.writeBuffer(buffer, 0, array as Int32Array<ArrayBuffer>);
         this.metrics.uploadedBytes += array.byteLength;
         return buffer;
       });
-      const stride = nodes! * 3 + 1, size = input.chains * stride * 4;
+      const stride = nodes! * 6 + 3, size = input.chains * stride * 4;
       const output = allocate(size, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
       const readback = allocate(size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
       const binding = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [...inputs, output]
@@ -79,19 +82,22 @@ export class PlannerGpuLayout implements PlannerLayoutBackend {
       const data = new Int32Array(readback.getMappedRange());
       // 每批至多完整检查 16 个不同快照；代理分只排序，不允许直接把 GPU 的“可行”交付。
       const order = Array.from({ length: input.chains }, (_, index) => index).sort((a, b) => data[a * stride]! - data[b * stride]!);
+      const states = new Int32Array(input.chains * (nodes! * 3 + 2));
+      for (let chain = 0; chain < input.chains; chain++) states.set(data.subarray(chain * stride + nodes! * 3 + 1, (chain + 1) * stride), chain * (nodes! * 3 + 2));
+      const scores: number[] = [];
       const seen = new Set<string>();
       const poses: Array<Array<{ x: number; y: number; rotation: GridRotation }>> = [];
       for (const chain of order) {
         const offset = chain * stride + 1, values = data.subarray(offset, offset + nodes! * 3), key = values.join(",");
         if (seen.has(key)) continue;
-        seen.add(key);
+        seen.add(key); scores.push(data[chain * stride]!);
         poses.push(Array.from({ length: nodes! }, (_, index) => ({ x: values[index * 3]!, y: values[index * 3 + 1]!,
           rotation: (values[index * 3 + 2]! * 90) as GridRotation })));
         if (poses.length === 16) break;
       }
       let kernelMs = 0;
       if (timing) { const times = new BigUint64Array(timing.getMappedRange()); kernelMs = Number(times[1]! - times[0]!) / 1e6; }
-      return { poses, evaluations: input.chains * steps!, kernelMs };
+      return { poses, states, scores, evaluations: input.chains * steps!, kernelMs };
     } finally { for (const buffer of buffers) buffer.destroy(); query?.destroy(); }
   }
 

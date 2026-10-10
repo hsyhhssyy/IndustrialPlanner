@@ -3,6 +3,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createPlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import type { PlannerWorkerRequest, PlannerWorkerResponse } from "./worker-protocol";
+import { PlannerSearchSessions } from "./search-sessions";
 import type { PlannerGpuLayout } from "./gpu-layout";
 // AI-REMOVED 2026-10-07: 单路 GPU 布线被独立布局批次替代。
 // Trigger: 实测单路往返慢于 CPU；Replacement: PlannerGpuLayout；Risk: 搜索顺序变化；Human Review: Required
@@ -14,6 +15,7 @@ const cancellations = new Set<number>();
 // Original code: let gpuRouting: PlannerGpuRouting | undefined;
 let gpuLayout: PlannerGpuLayout | undefined;
 let gpuLoadError: string | undefined;
+const searchSessions = new PlannerSearchSessions();
 export function cancelPlannerWorkerRequest(id: number): void { cancellations.add(id); }
 
 /** 浏览器与 Node 测试使用同一消息处理器，Registry 仅由各自组合根注入。 */
@@ -57,7 +59,7 @@ export async function runPlannerWorkerRequest(
       if (performance.now() >= deadline) throw new PlanningBudgetExhausted();
     }, (phase, message) => {
       currentPhase = phase; currentMessage = message; progress();
-    }, input.search, count => { evaluations = count; progress(); }, undefined, input.gpu ? gpuLayout : undefined);
+    }, input.search, count => { evaluations = count; progress(); }, undefined, input.gpu ? gpuLayout : undefined, searchSessions);
     send({ id: input.id, type: "completed", candidate, layout: input.gpu ? layoutMetrics() : undefined });
   } catch (error) {
     send({ id: input.id, type: "failed",

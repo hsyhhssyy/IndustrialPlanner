@@ -159,9 +159,14 @@ export async function routeConverterAlternatives(registry: RegistryContract, net
       const local: PlannerSearchStatistics = { ...statistics, seed: choice, diagnostics: undefined, experiments: [],
         evaluationLimit: Math.min(statistics.evaluationLimit, statistics.evaluations + 1000) };
       const layout = new CompactLayoutSearch(registry, candidate.network, candidate.wires, local, resolveSearchProfile(statistics.profile), undefined, fixed);
-      const preserved = new Set(wires.filter(wire => !candidate.scope.wires.has(wire)).map(wire => `${portKey(wire.source)}>${portKey(wire.target)}`));
-      const cachedRoute = (wire: PlannerWire) => preserved.has(`${portKey(wire.source)}>${portKey(wire.target)}`)
-        ? existingRoutes.find(route => route.sourcePort === portKey(wire.source) && route.targetPort === portKey(wire.target)) : undefined;
+      // AI-REMOVED 2026-10-10:
+      // Reason: 供气关系重建不代表所有原路径都失效，仍可复用端点未变且通过当前约束的线路。
+      // Trigger: 搜索轨迹变化后原图供气重建耗尽预算；Evidence: Router.reuse 重验端点、障碍、交叉及 minimumCells。
+      // Replacement: 下方按端口索引候选路径，实际复用仍经 Router.reuse；Risk: 路由顺序变化；Human Review: Required。
+      // Original code:
+      // const preserved = new Set(wires.filter(wire => !candidate.scope.wires.has(wire)).map(wire => `${portKey(wire.source)}>${portKey(wire.target)}`));
+      const cachedRoute = (wire: PlannerWire) => existingRoutes.find(route => route.sourcePort === portKey(wire.source)
+        && route.targetPort === portKey(wire.target));
       const orderWires = () => [...candidate.wires].sort((a, b) => Number(Boolean(cachedRoute(b))) - Number(Boolean(cachedRoute(a))) || distance(a) - distance(b));
       let order = orderWires();
       for (let retry = 0; retry < 12; retry++) {

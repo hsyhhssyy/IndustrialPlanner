@@ -79,7 +79,8 @@ it("搜索和真实验证共用并发上限，乱序结束后计数与最优产�
     const point = file.checkpoint as PlannerCheckpoint;
     expect(file.progress.status).toBe("waiting");
     expect(file.progress.evaluatedProposals).toBe(80_000);
-    expect(file.progress.validatedCandidateCount).toBe(4);
+    // AI-CORRECTION 2026-10-10：首个 Dense 新最优使同代其他验证失效，只有胜出的验证提交计数。
+    expect(file.progress.validatedCandidateCount).toBe(1);
     expect(test.stats.verified).toBe(4);
     expect(test.stats.peakVerifiers).toBe(4);
     expect(point.parallel!.shards.every(shard => shard.pendingCandidate === null)).toBe(true);
@@ -106,10 +107,11 @@ it("高频进度合并界面通知，但最终次数和真实验证结果立即�
   try {
     const initialRevision = test.host.state.revision;
     await vi.waitFor(() => expect(test.stats.verifiers).toBe(4));
-    expect(test.host.queries.getTask(test.id)?.evaluatedProposals).toBe(80_000);
+    // AI-CORRECTION 2026-10-10：四个候选各用一个固定 5,000 次额度，队列阻塞时仅提交 20,000 次。
+    expect(test.host.queries.getTask(test.id)?.evaluatedProposals).toBe(20_000);
     expect(test.host.state.revision - initialRevision).toBeLessThan(50);
     test.release(); await test.idle();
-    expect(test.host.queries.getTask(test.id)?.validatedCandidateCount).toBe(4);
+    expect(test.host.queries.getTask(test.id)?.validatedCandidateCount).toBe(1);
     expect(test.host.queries.getResult(test.id)).not.toBeNull();
     const revision = test.host.state.revision;
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -144,7 +146,7 @@ it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续�
     test.release(); await test.idle();
     const before = test.host.queries.exportTask(test.id);
     expect(before.progress.status).toBe(mode === "pause" ? "waiting" : "failed");
-    expect(before.progress.evaluatedProposals).toBe(100_000);
+    expect(before.progress.evaluatedProposals).toBe(25_000);
     expect((before.checkpoint as PlannerCheckpoint).parallel!.shards.filter(shard => shard.pendingCandidate !== null)).toHaveLength(5);
     expect(test.stats.verified).toBe(1);
     expect(test.stats.searches + test.stats.verifiers).toBe(0);
@@ -153,7 +155,7 @@ it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续�
     await test.idle();
     const resumed = test.host.queries.exportTask(test.id);
     expect(resumed.progress.status).toBe("waiting");
-    expect(resumed.progress.evaluatedProposals).toBe(110_000);
+    expect(resumed.progress.evaluatedProposals).toBe(35_000);
     // AI-REMOVED 2026-10-07:
     // Reason: 首个通过验收后，其余同排名排队候选已不可能改善，不再重复启动仿真。
     // Trigger: 用户要求全局改进立即重调度并淘汰旧候选。

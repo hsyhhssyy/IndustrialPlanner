@@ -5,7 +5,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
-import { parsePlannerTaskFile, restorePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { plannerRequestKey, restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
@@ -131,7 +131,7 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
     host.actions.continuePlanning(file.taskId, 10000, 1);
     await host.whenSettled();
     expect(host.queries.getTask(file.taskId)?.bestArea).toBe(60);
-    await vi.waitFor(() => expect(records.get(file.taskId)!.algorithmVersion).toBe("external-boundary-1"));
+    await vi.waitFor(() => expect(records.get(file.taskId)!.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION));
     const persisted = parsePlannerTaskFile(records.get(file.taskId), session.workspace.registry);
     expect(host.queries.exportTask(file.taskId).progress.areaHistory).toEqual(persisted.progress.areaHistory);
     const id = await host.actions.importTask(persisted);
