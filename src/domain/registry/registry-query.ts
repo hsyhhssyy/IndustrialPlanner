@@ -87,6 +87,7 @@ export interface RegistryQuery {
 	/**
 	 * 判定 definitionId 是否为协议核心设备。
 	 * 协议核心不可删除，基地初始化时自动创建，蓝图放置含协议核心时移动而非新增。
+	 * AI-CORRECTION 2026-10-11: 上述管理约束仅适用于普通基地；草稿箱允许新增和删除核心，此查询只判定设备身份。
 	 */
 	isProtocolCore(definitionId: string): boolean;
 

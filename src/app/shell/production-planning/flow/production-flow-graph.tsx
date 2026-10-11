@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { CompositeItemIcon } from "@/app/shell/shared";
@@ -10,6 +11,7 @@ import styles from "../production-planning-panel.module.scss";
 interface ProductionFlowGraphProps {
   readonly displayMode: ProductionPlanningDisplayMode;
   readonly initialViewport?: ViewportState;
+  readonly invertWheelZoom?: boolean;
   readonly plan?: ProductionPlanningResult;
   readonly index?: ProductionPlanningIndex;
   readonly input?: ProductionFlowGraphInput;
@@ -68,6 +70,7 @@ const MAX_SCALE = 3.0;
 export function ProductionFlowGraph({
   displayMode,
   initialViewport,
+  invertWheelZoom = false,
   plan,
   index,
   input,
@@ -168,7 +171,8 @@ export function ProductionFlowGraph({
     const cursorY = event.clientY - rect.top;
 
     setViewport((current) => {
-      const direction = event.deltaY > 0 ? -1 : 1;
+      const direction = resolveWheelZoomDirection(event.deltaY, invertWheelZoom);
+      if (direction === 0) return current;
       const nextScale = clamp(current.scale + direction * 0.1, MIN_SCALE, MAX_SCALE);
       const ratio = nextScale / current.scale;
       return {
@@ -177,7 +181,7 @@ export function ProductionFlowGraph({
         scale: nextScale,
       };
     });
-  }, [setViewport]);
+  }, [invertWheelZoom, setViewport]);
 
   // --- unified pointer down on canvas (not on a node / toolbar) ---
   const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {

@@ -529,6 +529,8 @@ const UI: Record<string, string> = {
     "settingsField.game-arknights-immediate-marqueeDescription": "Mouse mode only: immediately start marquee selection when dragging from empty canvas without a long press.",
     "settingsField.game-arknights-immediate-move": "Immediate Move",
     "settingsField.game-arknights-immediate-moveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
+    "settingsField.game-invert-wheel-zoom": "Invert Wheel Zoom",
+    "settingsField.game-invert-wheel-zoomDescription": "Reverse wheel zoom direction for the canvas, blueprint previews, and flow charts.",
     "settingsField.game-arknights-inspector-open-on-second-click": "Open Inspector On Second Click",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "When enabled, the first click only selects the device. Click the selected device again to open the properties panel.",
     // AI-REMOVED 2026-09-10:
@@ -769,7 +771,7 @@ const UI: Record<string, string> = {
     "settingsGroup.game": "Game",
     "settingsGroup.gameDescription": "Display style adjustments",
     "settingsGroup.interactionMode": "Interaction Mode",
-    "settingsGroup.interactionModeDescription": "Adjust device selection and inspector panel interactions.",
+    "settingsGroup.interactionModeDescription": "Adjust canvas zoom, device selection, and inspector panel interactions.",
     "settingsGroup.auxiliaryDisplay": "Auxiliary Display",
     "settingsGroup.auxiliaryDisplayDescription": "Control auxiliary information such as the grid, power ranges, and logistics state.",
     "settingsGroup.operation": "Operation",

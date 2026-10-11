@@ -26,6 +26,7 @@ import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/
 import type { BlueprintPreviewHandle, BlueprintPreviewViewport } from "@/domain/renderer";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
+import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 import { createLogger } from "@/shared/logging/logger";
 import {
   createEmptyBlueprintLibraryDirectory,
@@ -881,7 +882,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     event.preventDefault();
     event.stopPropagation();
 
-    const zoomFactor = event.deltaY < 0
+    const direction = resolveWheelZoomDirection(event.deltaY, appHost.internalState.settings.invertWheelZoom);
+    if (direction === 0) return;
+
+    const zoomFactor = direction > 0
       ? BLUEPRINT_PREVIEW_ZOOM_FACTOR
       : 1 / BLUEPRINT_PREVIEW_ZOOM_FACTOR;
 

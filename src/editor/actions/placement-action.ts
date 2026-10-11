@@ -22,7 +22,7 @@ import { snapPlacementToOuterRingEdge } from "../placement-snapping";
 import { cloneEntityConfig } from "../entity-config-clone";
 import { translateRegionRects } from "@/shared/geometry/region-rects";
 import { cloneRegionAnnotation } from "@/shared/region-annotations";
-import { resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
+import { allowsFreeProtocolCorePlacement, resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
 
 type EditorPlacementActions = Pick<
   EditorAction,
@@ -50,6 +50,7 @@ export function createEditorPlacementActions({
     ) => {
       state.regionAnnotations.moveFeedback = null;
       const targetDefinitionId = workspace.registry.queries.isProtocolCore(deviceDefinitionId)
+        && !allowsFreeProtocolCorePlacement(document.getSnapshot().baseId, workspace.registry.baseDefinitions)
         ? resolveProtocolCoreDefinitionIdForBase(document.getSnapshot().baseId)
         : deviceDefinitionId;
       if (targetDefinitionId === null) {
@@ -159,6 +160,7 @@ export function createEditorPlacementActions({
         }
 
         const targetDefinitionId = workspace.registry.queries.isProtocolCore(entity.definitionId)
+          && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)
           ? resolveProtocolCoreDefinitionIdForBase(currentDocument.baseId)
           : entity.definitionId;
         if (targetDefinitionId === null) {
@@ -254,6 +256,7 @@ export function createEditorPlacementActions({
       const committedPreviewDrafts = previewDrafts.filter(
         (draft) => !outsideBaseDraftIds.has(draft.id)
           && !(resolveProtocolCoreDefinitionIdForBase(currentDocument.baseId) === null
+            && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)
             && workspace.registry.queries.isProtocolCore(draft.definitionId)),
       );
       if (
@@ -300,6 +303,7 @@ export function createEditorPlacementActions({
       // 蓝图包含协议核心时，标记当前文档中的协议核心为被替换实体，
       // 使其在同一 commit 内被移除，避免出现两个协议核心。
       // AI-CORRECTION 2026-08-23: 仅实际提交的合法子集可以触发现有协议核心替换。
+      // AI-CORRECTION 2026-10-11: 草稿箱放置核心正常新增，不替换文档中的其他核心。
       const committedPreviewHasProtocolCore = committedPreviewDrafts.some(
         (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
       );
@@ -317,7 +321,8 @@ export function createEditorPlacementActions({
           (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
         );
       */
-      if (committedPreviewHasProtocolCore) {
+      if (committedPreviewHasProtocolCore
+        && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)) {
         for (const [entityId, entity] of Object.entries(currentDocument.entities)) {
           if (workspace.registry.queries.isProtocolCore(entity.definitionId)) {
             replacedEntityIds.add(entityId);

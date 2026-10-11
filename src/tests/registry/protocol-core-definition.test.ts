@@ -19,6 +19,7 @@ describe("protocol core definitions", () => {
       spriteId: "item_port_sp_sub_hub_1",
       iconPath: "device-icons/item_port_sp_sub_hub_1.webp",
       spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
+      uiGroup: "hidden",
     });
   });
 });

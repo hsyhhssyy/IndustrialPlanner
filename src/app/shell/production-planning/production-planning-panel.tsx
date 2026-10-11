@@ -939,6 +939,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               ) : (
                 <PlanGraph
                   displayMode={displayMode}
+                  invertWheelZoom={appHost.internalState.settings.invertWheelZoom}
                   flowViewport={session.flowViewport}
                   processViewport={session.processViewport}
                   viewMode={viewMode}
@@ -1412,6 +1413,7 @@ function SegmentedControl<T extends string>({
 
 function PlanGraph({
   displayMode,
+  invertWheelZoom,
   flowViewport,
   processViewport,
   viewMode,
@@ -1433,6 +1435,7 @@ function PlanGraph({
   t,
 }: {
   displayMode: ProductionPlanningDisplayMode;
+  invertWheelZoom: boolean;
   flowViewport: PlannerFlowViewportState;
   processViewport: PlannerFlowViewportState;
   viewMode: ProductionPlanningViewMode;
@@ -1458,6 +1461,7 @@ function PlanGraph({
     return (
       <ProcessGraphView
         plan={plan}
+        invertWheelZoom={invertWheelZoom}
         index={index}
         recipeChoices={recipeChoices}
         expandedItemIds={expandedSet}
@@ -1474,6 +1478,7 @@ function PlanGraph({
     return (
       <FlowGraph
         displayMode={displayMode}
+        invertWheelZoom={invertWheelZoom}
         flowViewport={flowViewport}
         plan={plan}
         index={index}
@@ -3937,6 +3942,7 @@ function resolveProductionPlanningTreeRowTitle(
 
 function FlowGraph({
   displayMode,
+  invertWheelZoom,
   flowViewport,
   plan,
   index,
@@ -3947,6 +3953,7 @@ function FlowGraph({
   t,
 }: {
   displayMode: ProductionPlanningDisplayMode;
+  invertWheelZoom: boolean;
   flowViewport: PlannerFlowViewportState;
   plan: ProductionPlanningResult;
   index: ProductionPlanningIndex;
@@ -3963,6 +3970,7 @@ function FlowGraph({
   return (
     <ProductionFlowGraph
       displayMode={displayMode}
+      invertWheelZoom={invertWheelZoom}
       initialViewport={flowViewport}
       plan={plan}
       index={index}

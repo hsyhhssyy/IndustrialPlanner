@@ -1,6 +1,6 @@
 import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { makeAutoObservable, observable, toJS } from "mobx";
-import type { BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import { runStorageEffect } from "@/shared/storage/storage-failure";
 import { createDefaultDialogStateForKey } from "../state";
@@ -136,7 +136,8 @@ export class BlueprintPlannerDialogController {
 //     }; }
 //   }
 //
-  openBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[] = []): void {
+  openBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[] = [],
+    boundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): void {
     if (this.taskLocked) { this.open(); return; }
     this.options = createDefaultPlannerOptions();
     const draft = structuredClone(toJS(blueprint));
@@ -145,10 +146,25 @@ export class BlueprintPlannerDialogController {
     this.dialogState.visible = true;
     const planner = this.getPlanner();
     if (!planner) { this.blueprintCreationError = "蓝图规划服务不可用。"; return; }
-    void planner.actions.createBlueprintTask({ blueprint: draft, boundaries: [],
+    void planner.actions.createBlueprintTask({ blueprint: draft, boundaries: structuredClone(toJS(boundaries)),
       activeActivityIds }, toJS(this.options)).then(id => {
       if (this.blueprintDraft === draft && this.viewTaskId === null) this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     }).catch(error => { this.blueprintCreationError = error instanceof Error ? error.message : String(error); });
+  }
+
+  /** 复制任务输入，规划选项恢复默认；蓝图从原图重新识别，不继承搜索检查点。 */
+  duplicateTask(): void {
+    if (this.taskLocked || this.viewTaskId === null) return;
+    const request = this.getPlanner()?.queries.getLastRequest(this.viewTaskId);
+    if (!request) throw new Error("当前任务不可复制。");
+    if (isBlueprintRecognitionRequest(request)) {
+      const input = request.input;
+      this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
+    } else {
+      const input = request.blueprintSource;
+      if (input) this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
+      else this.open(request.plan);
+    }
   }
 
   selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {

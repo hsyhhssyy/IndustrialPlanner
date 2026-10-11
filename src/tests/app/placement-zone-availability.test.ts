@@ -11,6 +11,17 @@ import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { EntityDefinition, UiGroup } from "@/domain/registry/types/entity-definition";
 
 describe("placement-zone-availability", () => {
+  it("only exposes manual protocol core placement in marked bases while retaining ordinary blueprint placement", () => {
+    const core = createEntityDefinition("sp_hub_1", [], "warehouse");
+    const ordinaryHost = createAppHostStub("wuling_protocol_core", [core]);
+    const draftHost = createAppHostStub("draft_box", [core]);
+    expect(canPlaceEntityDefinitionInCurrentBase(ordinaryHost, core)).toBe(false);
+    expect(canPlaceEntityDefinitionInCurrentBase(draftHost, core)).toBe(true);
+    expect(canPlaceEntityDefinitionInBase(draftHost, core, null)).toBe(false);
+    expect(canPlaceBlueprintDocumentInCurrentBase(ordinaryHost, createBlueprintDocumentStub([core.id]))).toBe(true);
+    expect(canPlaceBlueprintDocumentInCurrentBase(draftHost, createBlueprintDocumentStub([core.id]))).toBe(true);
+  });
+
   it("blocks Wuling-only entities outside Wuling bases", () => {
     const normalDefinition = createEntityDefinition("normal-device", [], "basicProduction");
     const wulingDefinition = createEntityDefinition("wuling-device", ["武陵"], "basicProduction");
@@ -114,7 +125,7 @@ function createAppHostStub(
         baseDefinitions: [
           { id: "wuling_protocol_core", name: "协议核心区", tag: "武陵", tags: [] },
           { id: "valley4_protocol_core", name: "协议核心区", tag: "四号谷地", tags: [] },
-          { id: "draft_box", name: "草稿箱", tag: "草稿箱", tags: ["allRegionEntities"] },
+          { id: "draft_box", name: "草稿箱", tag: "草稿箱", tags: ["allRegionEntities", "草稿箱"] },
           { id: "future_base", name: "未来地区基地", tag: "未来地区", tags: [] },
         ],
         entityDefinitions,

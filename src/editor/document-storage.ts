@@ -54,13 +54,18 @@ export function createEditorDocumentRepository(options: {
 }): EditorDocumentRepository {
   return new EditorDocumentRepository({
     activeDocument: options.document,
-    read: async (baseId) => ensureProtocolCoreEntity({
-      document: await resolveLatestWorldDocumentForBase({
+    read: async (baseId) => {
+      const storedDocument = await resolveLatestWorldDocumentForBase({
         baseId,
         latestDocumentIdByBaseId: options.state.internalPersistState.latestDocumentIdByBaseId,
-      }) ?? createWorldDocument({ baseId }),
-      queries: options.workspace.registry.queries,
-    }),
+      });
+      return ensureProtocolCoreEntity({
+        document: storedDocument ?? createWorldDocument({ baseId }),
+        queries: options.workspace.registry.queries,
+        baseDefinitions: options.workspace.registry.baseDefinitions,
+        isNewDocument: storedDocument === null,
+      });
+    },
     write: async (document, origin = "local") => {
       const saved = await trySaveToIndexedDb(createWordDocumentLocation(document.documentKey), document);
       if (saved) emitStorageChange({
@@ -205,6 +210,7 @@ async function resolveInitialDocument(
   logger.info("resolveInitialDocument start", { lastDocumentId });
 
   let document: WorldDocument | null = null;
+  let isNewDocument = false;
 
   if (lastDocumentId !== null) {
     document = await readWorldDocument(lastDocumentId);
@@ -231,6 +237,7 @@ async function resolveInitialDocument(
   }
 
   if (document === null) {
+    isNewDocument = true;
     document = createWorldDocument();
     logger.info("resolveInitialDocument created new document", {
       baseId: document.baseId,
@@ -239,9 +246,12 @@ async function resolveInitialDocument(
   }
 
   // 确保协议核心实体在首次加载时即存在，与 loadLatestBaseDocument 路径保持一致。
+  // AI-CORRECTION 2026-10-11: 草稿箱仅首次新建初始化核心，已有文档允许没有核心或包含多个核心。
   const result = ensureProtocolCoreEntity({
     document,
     queries: editorHost.workspace.registry.queries,
+    baseDefinitions: editorHost.workspace.registry.baseDefinitions,
+    isNewDocument,
   });
 
   logger.info("resolveInitialDocument done", {

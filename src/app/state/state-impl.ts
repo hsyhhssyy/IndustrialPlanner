@@ -90,6 +90,7 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   hypergryphAllowEmptyLogisticsEndpoints: boolean;
   hypergryphAutoCreateSplittersAndConvergers: boolean;
   quickPlaceEnabled: boolean;
+  invertWheelZoom: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
@@ -849,6 +850,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateSplittersAndConvergers: true,
     quickPlaceEnabled: true,
+    invertWheelZoom: false,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,

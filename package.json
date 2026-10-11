@@ -13,6 +13,7 @@
     "test": "node scripts/check/run-normal-tests.mjs",
     "test:normal": "node scripts/check/run-normal-tests.mjs",
     "test:dev-tools": "vitest run --project dev-tools",
+    "test:contract": "vitest run --project contract",
     "test:eda": "node src/scripts/run-eda.mjs",
     "test:blueprint": "vitest run --project blueprint",
     "test:e2e": "playwright test",

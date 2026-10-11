@@ -1,6 +1,7 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
-import { removeForbiddenProtocolCoreEntities, resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import { allowsFreeProtocolCorePlacement, PRIMARY_PROTOCOL_CORE_DEFINITION_ID, removeForbiddenProtocolCoreEntities, resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
 
 /**
  * 确保文档中包含协议核心实体（item_port_sp_hub_1）。
@@ -8,14 +9,21 @@ import { removeForbiddenProtocolCoreEntities, resolveProtocolCoreDefinitionIdFor
  * 如果已存在则直接返回原文档，否则在 (0,0) 注入核心并置顶 entityOrder。
  * AI-CORRECTION 2026-09-18: 核心类型由基地决定；已有错误类型原位替换，多余核心同步清理。
  * AI-CORRECTION 2026-10-10: 无核心基地不注入核心，并清理已有核心及关联连线。
+ * AI-CORRECTION 2026-10-11: 带草稿箱标记的基地仅新建时初始化主核心；加载已有文档不补回、不归一化、不去重。
  */
 export function ensureProtocolCoreEntity(options: {
   document: WorldDocument;
   queries: RegistryQuery;
+  baseDefinitions: readonly BaseDefinition[];
+  isNewDocument?: boolean;
 }): WorldDocument {
-  const expectedDefinitionId = resolveProtocolCoreDefinitionIdForBase(
-    options.document.baseId,
-  );
+  const freePlacement = allowsFreeProtocolCorePlacement(options.document.baseId, options.baseDefinitions);
+  if (freePlacement && options.isNewDocument !== true) {
+    return options.document;
+  }
+  const expectedDefinitionId = freePlacement
+    ? PRIMARY_PROTOCOL_CORE_DEFINITION_ID
+    : resolveProtocolCoreDefinitionIdForBase(options.document.baseId);
   if (expectedDefinitionId === null) {
     return removeForbiddenProtocolCoreEntities(options.document);
   }

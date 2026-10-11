@@ -231,6 +231,7 @@ export default defineConfig({
           maxWorkers: 2,
           testTimeout: 30_000,
           exclude: [
+            "src/tests/contracts/**",
             "src/tests/e2e/**",
             "src/tests/layout/**",
             "src/tests/release/**",
@@ -240,6 +241,17 @@ export default defineConfig({
             "src/tests/blueprint-planner/training-worker.test.ts",
             "src/tests/scripts/unpack-table-source.test.ts",
           ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "contract",
+          environment: "node",
+          include: ["src/tests/contracts/**/*.test.ts"],
+          fileParallelism: false,
+          maxWorkers: 1,
+          testTimeout: 180_000,
         },
       },
       {

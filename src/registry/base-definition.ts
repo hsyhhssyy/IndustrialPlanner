@@ -1,6 +1,6 @@
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BaseBuiltinEntityDefinition } from "@/domain/registry/types/base-definition";
-import { ALL_REGION_ENTITIES_BASE_TAG } from "@/shared/base-tags";
+import { ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG } from "@/shared/base-tags";
 
 const VALLEY4_BUILTIN_BUS_SOURCE_ID = "valley4_bus_source";
 const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
@@ -230,6 +230,6 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     //   outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
     // }],
     tag: "草稿箱",
-    tags: [ALL_REGION_ENTITIES_BASE_TAG],
+    tags: [ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG],
   },
 ];

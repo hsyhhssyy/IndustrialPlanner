@@ -511,8 +511,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 controller.selectTask(selectedId, planner!.queries.getLastRequest(selectedId) ?? undefined);
               })}>{t(progress?.status === "running" ? "eda.identifyingBlueprint" : "eda.identifyBlueprint")}</button> : null}
 
-            {progress !== null && plan !== null && !busy && !controller.blueprintRequest ? <button type="button" disabled={anyBusy}
-              onClick={() => { controller.open(plan); setError(null); }}>{t("eda.replan")}</button> : null}
+            {progress !== null && (plan !== null || recognition !== null) && !busy ? <button type="button" disabled={anyBusy}
+              onClick={() => act(controller.duplicateTask)}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
               onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId,

@@ -91,7 +91,7 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
       const scene = ensureCore({ document: { ...before,
         entities: blueprint.entities, entityOrder: blueprint.entityOrder,
         slotLinks: blueprint.slotLinks, regions: blueprint.regions,
-      }, queries: app.workspace.registry.queries });
+      }, queries: app.workspace.registry.queries, baseDefinitions: app.workspace.registry.baseDefinitions });
       await editor.actions.applySynchronizedDocument(scene);
       editor.actions.clearCollection("selection");
       const loaded = editor.document.getSnapshot();

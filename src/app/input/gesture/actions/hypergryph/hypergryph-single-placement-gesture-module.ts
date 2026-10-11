@@ -706,6 +706,10 @@ function handlePlacementEntryButtonTap(options: {
   allowFromAnyTool?: boolean;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
+  const definition = options.appHost.workspace.registry.entityDefinitions.find((entry) => entry.id === options.deviceId);
+  if (definition !== undefined && !canPlaceEntityDefinitionInCurrentBase(options.appHost, definition)) {
+    return { status: "ignored" };
+  }
 
   if (previousTool === "single-placement") {
     if (

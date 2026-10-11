@@ -24,6 +24,7 @@ import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { CompositeItemIcon } from "@/app/shell/shared";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 import styles from "./process-graph.module.scss";
 
 interface ProcessGraphViewProps {
@@ -33,6 +34,7 @@ interface ProcessGraphViewProps {
   readonly expandedItemIds: ReadonlySet<string>;
   readonly displayMode: ProductionPlanningDisplayMode;
   readonly initialViewport?: ViewportState;
+  readonly invertWheelZoom?: boolean;
   readonly onToggleItem: (itemId: string) => void;
   readonly onViewportChange?: (viewport: ViewportState) => void;
   readonly t: (key: string) => string;
@@ -66,6 +68,7 @@ export function ProcessGraphView({
   expandedItemIds,
   displayMode,
   initialViewport,
+  invertWheelZoom = false,
   onToggleItem,
   onViewportChange,
   t,
@@ -170,7 +173,8 @@ export function ProcessGraphView({
     const cx = event.clientX - rect.left;
     const cy = event.clientY - rect.top;
     const current = viewportRef.current;
-    const direction = event.deltaY > 0 ? -1 : 1;
+    const direction = resolveWheelZoomDirection(event.deltaY, invertWheelZoom);
+    if (direction === 0) return;
     const nextScale = clamp(current.scale + direction * 0.1, MIN_SCALE, MAX_SCALE);
     const ratio = nextScale / current.scale;
     setViewport({
@@ -178,7 +182,7 @@ export function ProcessGraphView({
       y: cy - ratio * (cy - current.y),
       scale: nextScale,
     });
-  }, [setViewport]);
+  }, [invertWheelZoom, setViewport]);
 
   // Pan
   const handlePointerDown = useCallback((event: React.PointerEvent) => {

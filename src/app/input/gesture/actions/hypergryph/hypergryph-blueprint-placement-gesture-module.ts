@@ -3,6 +3,7 @@ import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
+import { allowsFreeProtocolCorePlacement } from "@/shared/protocol-core";
 import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
@@ -127,7 +128,8 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             || selectionIds.some((entityId) => {
               const entity = currentDocument.entities[entityId];
               return entity === undefined
-                || context.workspace.registry.queries.isProtocolCore(entity.definitionId);
+                || (context.workspace.registry.queries.isProtocolCore(entity.definitionId)
+                  && !allowsFreeProtocolCorePlacement(currentDocument.baseId, context.workspace.registry.baseDefinitions));
             })
           ) {
             return { status: "ignored" };

@@ -421,6 +421,7 @@ function composeBaseDocument(options: {
   return ensureProtocolCoreEntity({
     document,
     queries: options.registry.queries,
+    baseDefinitions: options.registry.baseDefinitions,
   });
 }
 

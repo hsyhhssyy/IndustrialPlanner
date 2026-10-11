@@ -306,6 +306,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.hypergryphImmediateMove = value;
         }),
       },
+      "game-invert-wheel-zoom": {
+        readValue: () => appHost.internalState.settings.invertWheelZoom,
+        writeValue: action((value) => {
+          if (typeof value === "boolean") {
+            appHost.internalState.settings.invertWheelZoom = value;
+          }
+        }),
+      },
       "game-quick-place": {
         readValue: () => appHost.internalState.settings.quickPlaceEnabled,
         writeValue: action((value) => {

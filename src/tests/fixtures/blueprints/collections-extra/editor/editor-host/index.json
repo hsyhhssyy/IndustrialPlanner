@@ -10498,7 +10498,7 @@
                 "height": 11
               }
             },
-            "uiGroup": "hidden",
+            "uiGroup": "warehouse",
             "tags": [
               "WarehouseSink"
             ],

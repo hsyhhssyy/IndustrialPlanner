@@ -479,6 +479,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.interactionModeDescription",
     items: [
       {
+        id: "game-invert-wheel-zoom",
+        kind: "switch",
+        labelKey: "settingsField.game-invert-wheel-zoom",
+        descriptionKey: "settingsField.game-invert-wheel-zoomDescription",
+        defaultValue: false,
+      },
+      {
         id: "game-use-inspector-panel",
         kind: "switch",
         labelKey: "settingsField.game-use-inspector-panel",

@@ -1,5 +1,6 @@
 const MAX_PIPE_LOGISTICS_TAG_PREFIX = "maxPipeLogistics=";
 export const ALL_REGION_ENTITIES_BASE_TAG = "allRegionEntities";
+export const DRAFT_BOX_BASE_TAG = "草稿箱";
 export const BASE_AREA_ONLY_TAG_PREFIX = "baseAreaOnly=";
 
 /**

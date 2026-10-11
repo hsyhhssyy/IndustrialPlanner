@@ -56,7 +56,7 @@ Simulation 层测试使用在测试代码中动态构造的最小蓝图，属于
 
 - Simulation：蓝图驱动端到端，禁止 mock Worker 或 SimulationHost。
 - Blueprint project：使用预制蓝图 JSON，设备规模大、耗时长、串行执行；新增系统蓝图在此添加。
-- App / Editor：Playwright E2E + 双重验证，使用真实浏览器事件。
+- App / Editor：普通 Controller、数据和 DOM 状态使用 Vitest，并组合真实主机；真实布局、Canvas、原生交互和浏览器生命周期使用 Playwright E2E + 双重验证。每条 E2E 必须包含普通 Node/jsdom 环境无法有效验证的目标（用户要求，2026-10-11）。
 - Renderer：纯几何计算去 mock、Sprite 视觉比对、完整场景集成。
 - Shared：纯逻辑单元测试，不依赖 DOM 或 Canvas。
 

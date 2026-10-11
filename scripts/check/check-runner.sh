@@ -95,6 +95,24 @@ run_step() {
   echo "==== [$step_name] 退出码: $exit_code ===="
 }
 
+run_e2e_checks() {
+  # 2026-10-11：远端 HTTP 契约迁到 Node Vitest；保留完整检查原有门禁且分别记录证据。
+  run_step "HTTP 契约" \
+    "npm run test:contract" \
+    "$RUN_DIR/contract.log" \
+    "$RUN_DIR/contract.exit"
+  run_step "E2E" \
+    "npm run test:e2e" \
+    "$RUN_DIR/e2e.log" \
+    "$RUN_DIR/e2e.exit"
+  # 契约失败时继续浏览器检查，最终阶段结果仍为失败。
+  if [ "$(cat "$RUN_DIR/contract.exit")" != "0" ]; then
+    printf '1\n' > "$RUN_DIR/e2e.exit"
+  fi
+  print_fail_summary "$RUN_DIR/contract.log"
+  print_fail_summary "$RUN_DIR/e2e.log"
+}
+
 print_fail_summary() {
   local log_file="$1"
   echo "--- 失败摘要 ---"
@@ -180,11 +198,7 @@ case "$CMD" in
 
   e2e)
     RUN_DIR=$(get_run_dir "$RUN_DIR_ARG")
-    run_step "E2E" \
-      "npm run test:e2e" \
-      "$RUN_DIR/e2e.log" \
-      "$RUN_DIR/e2e.exit"
-    print_fail_summary "$RUN_DIR/e2e.log"
+    run_e2e_checks
     ;;
 
   release)
@@ -274,14 +288,14 @@ case "$CMD" in
     echo "| TypeScript | npx tsc -b --noEmit | $(pass_fail "$TSC_EXIT") | $TSC_EXIT |"
     echo "| Vitest 常规测试 | npm run test | $(pass_fail "$TEST_EXIT") | $TEST_EXIT |"
     echo "| Build | npm run build | $(pass_fail "$BUILD_EXIT") | $BUILD_EXIT |"
-    echo "| E2E 测试 | npm run test:e2e | $(pass_fail "$E2E_EXIT") | $E2E_EXIT |"
+    echo "| HTTP 契约与 E2E | npm run test:contract、npm run test:e2e | $(pass_fail "$E2E_EXIT") | $E2E_EXIT |"
     echo "| 发布版测试 | npm run test:release | $(pass_fail "$RELEASE_EXIT") | $RELEASE_EXIT |"
     echo "| Blueprint 测试 | npm run test:blueprint | $(pass_fail "$BLUEPRINT_EXIT") | $BLUEPRINT_EXIT |"
     echo ""
 
     echo "未通过的测试"
     FAIL_FOUND=0
-    for LOG in "$RUN_DIR/test.log" "$RUN_DIR/e2e.log" "$RUN_DIR/release.log" "$RUN_DIR/blueprint.log"; do
+    for LOG in "$RUN_DIR/test.log" "$RUN_DIR/contract.log" "$RUN_DIR/e2e.log" "$RUN_DIR/release.log" "$RUN_DIR/blueprint.log"; do
       # AI-CORRECTION 2026-10-02: normal 首轮超时若已串行复跑通过，首轮 FAIL 日志仍保留，但不是最终失败用例。
       if [ "$LOG" = "$RUN_DIR/test.log" ] && [ "$TEST_EXIT" = "0" ]; then
         continue
@@ -342,11 +356,7 @@ case "$CMD" in
     echo "Build 日志摘要:"
     tail -n 20 "$RUN_DIR/build.log" || true
 
-    run_step "E2E" \
-      "npm run test:e2e" \
-      "$RUN_DIR/e2e.log" \
-      "$RUN_DIR/e2e.exit"
-    print_fail_summary "$RUN_DIR/e2e.log"
+    run_e2e_checks
 
     run_step "发布版测试" \
       "npm run test:release" \

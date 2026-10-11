@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GestureMappingModule } from "../types";
+import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 // AI-REMOVED 2026-09-10:
 // Reason: 操作模式总开关已废弃，不再保留关闭分支
 // Trigger: 用户要求彻底移除 hypergryphOperationMode。
@@ -40,7 +41,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
       switch (event.type) {
         case "wheel up":
         case "wheel down": {
-          const step = resolveWheelZoomStep(event.normalizedDelta);
+          const step = resolveWheelZoomStep(event.normalizedDelta, context.appHost.internalState.settings.invertWheelZoom);
 
           if (step === null) {
             return { status: "ignored" };
@@ -79,8 +80,9 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
   };
 }
 
-function resolveWheelZoomStep(normalizedDelta: number): number | null {
-  if (!Number.isFinite(normalizedDelta) || normalizedDelta === 0) {
+function resolveWheelZoomStep(normalizedDelta: number, inverted: boolean): number | null {
+  const direction = resolveWheelZoomDirection(normalizedDelta, inverted);
+  if (direction === 0) {
     return null;
   }
 
@@ -89,7 +91,7 @@ function resolveWheelZoomStep(normalizedDelta: number): number | null {
     Math.max(MIN_WHEEL_ZOOM_STEP, Math.abs(normalizedDelta)),
   );
 
-  return normalizedDelta < 0 ? magnitude : -magnitude;
+  return direction * magnitude;
 }
 
 function resolvePinchZoomStep(scaleDelta: number): number | null {

@@ -40,6 +40,7 @@ import {
 } from "../auto-rotate-align-ports";
 import type { EditorActionsContext } from "./types";
 import { createRegionMoveFeedback } from "../region-relations";
+import { allowsFreeProtocolCorePlacement } from "@/shared/protocol-core";
 
 type EditorCollectionActions = Pick<
   EditorAction,
@@ -1302,7 +1303,9 @@ export function createEditorSelectionActions({
         }
 
         // 协议核心不可删除
-        if (workspace.registry.queries.isProtocolCore(entity.definitionId)) {
+        // AI-CORRECTION 2026-10-11: 草稿箱中的协议核心允许删除，其他基地继续保护核心。
+        if (workspace.registry.queries.isProtocolCore(entity.definitionId)
+          && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)) {
           continue;
         }
 

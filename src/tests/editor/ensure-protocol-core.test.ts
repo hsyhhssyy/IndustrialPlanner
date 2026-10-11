@@ -19,11 +19,32 @@ function createProtocolCore(
 }
 
 describe("ensureProtocolCoreEntity", () => {
-  const queries = createRegistryContract().queries;
+  const { queries, baseDefinitions } = createRegistryContract();
+
+  it("initializes a draft box once and leaves an existing empty document empty", () => {
+    const document = createWorldDocument({ baseId: "draft_box" });
+    const initialized = ensureProtocolCoreEntity({ document, queries, baseDefinitions, isNewDocument: true });
+    expect(initialized.entityOrder).toEqual(["protocol-core:draft_box"]);
+    expect(initialized.entities["protocol-core:draft_box"]?.definitionId).toBe("sp_hub_1");
+    expect(ensureProtocolCoreEntity({ document, queries, baseDefinitions })).toBe(document);
+  });
+
+  it("preserves multiple draft box cores, their types, configurations and links on load", () => {
+    const primary = createProtocolCore("primary", "sp_hub_1");
+    const secondary = createProtocolCore("secondary", "sp_sub_hub_1");
+    const document = {
+      ...createWorldDocument({ baseId: "draft_box" }),
+      entities: { primary, secondary }, entityOrder: [primary.id, secondary.id],
+      slotLinks: [{ id: "retained-link", linkType: "share-all" as const,
+        source: { entityId: primary.id, storageSlotGroupId: "unbuffer_w2", slotId: "slot" },
+        target: { entityId: secondary.id, storageSlotGroupId: "inbuffer_n2", slotId: "slot" } }],
+    };
+    expect(ensureProtocolCoreEntity({ document, queries, baseDefinitions })).toBe(document);
+  });
 
   it("does not inject a core into agricultural land", () => {
     const document = createWorldDocument({ baseId: "wuling_agricultural_land" });
-    expect(ensureProtocolCoreEntity({ document, queries })).toBe(document);
+    expect(ensureProtocolCoreEntity({ document, queries, baseDefinitions })).toBe(document);
     expect(document.entityOrder).toEqual([]);
   });
 
@@ -35,10 +56,10 @@ describe("ensureProtocolCoreEntity", () => {
       entities: { primary, secondary },
       entityOrder: [primary.id, secondary.id],
     };
-    const result = ensureProtocolCoreEntity({ document, queries });
+    const result = ensureProtocolCoreEntity({ document, queries, baseDefinitions });
     expect(result.entities).toEqual({});
     expect(result.entityOrder).toEqual([]);
-    expect(ensureProtocolCoreEntity({ document: result, queries })).toBe(result);
+    expect(ensureProtocolCoreEntity({ document: result, queries, baseDefinitions })).toBe(result);
     expect(document.entities).toEqual({ primary, secondary });
   });
 
@@ -54,7 +75,7 @@ describe("ensureProtocolCoreEntity", () => {
   ])("injects the expected protocol core for %s", (baseId, definitionId) => {
     const result = ensureProtocolCoreEntity({
       document: createWorldDocument({ baseId }),
-      queries,
+      queries, baseDefinitions,
     });
 
     expect(result.entityOrder).toEqual([`protocol-core:${baseId}`]);
@@ -79,7 +100,7 @@ describe("ensureProtocolCoreEntity", () => {
       }],
     };
 
-    const result = ensureProtocolCoreEntity({ document, queries });
+    const result = ensureProtocolCoreEntity({ document, queries, baseDefinitions });
 
     expect(result.entities).toEqual({ [retained.id]: retained });
     expect(result.entityOrder).toEqual([retained.id]);
@@ -100,7 +121,7 @@ describe("ensureProtocolCoreEntity", () => {
       }],
     };
 
-    const result = ensureProtocolCoreEntity({ document, queries });
+    const result = ensureProtocolCoreEntity({ document, queries, baseDefinitions });
 
     expect(result.entities[core.id]).toEqual({
       ...core,

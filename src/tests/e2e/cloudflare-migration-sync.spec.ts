@@ -324,9 +324,11 @@ async function prepareWorldDocumentMigrationFixture(
     // if (currentDocument === undefined) {
     //   throw new Error("Current world document is unavailable.");
     // }
+    const registryContract = registry.createRegistryContract();
     const currentDocument = protocolCore.ensureProtocolCoreEntity({
       document: worldDocument.createWorldDocument(),
-      queries: registry.createRegistryContract().queries,
+      queries: registryContract.queries,
+      baseDefinitions: registryContract.baseDefinitions,
     });
 
     const legacyDocument = {

@@ -522,6 +522,8 @@ const UI: Record<string, string> = {
     "settingsField.game-arknights-immediate-marqueeDescription": "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
     "settingsField.game-arknights-immediate-move": "立即移动",
     "settingsField.game-arknights-immediate-moveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
+    "settingsField.game-invert-wheel-zoom": "反转滚轮缩放",
+    "settingsField.game-invert-wheel-zoomDescription": "反转画布、蓝图预览和流程图的滚轮缩放方向。",
     "settingsField.game-arknights-inspector-open-on-second-click": "再次点击打开设备属性",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开属性面板。",
     // AI-REMOVED 2026-09-10:
@@ -762,7 +764,7 @@ const UI: Record<string, string> = {
     "settingsGroup.game": "游戏",
     "settingsGroup.gameDescription": "显示风格调整",
     "settingsGroup.interactionMode": "交互模式",
-    "settingsGroup.interactionModeDescription": "调整设备选择与属性面板的交互方式。",
+    "settingsGroup.interactionModeDescription": "调整画布缩放、设备选择与属性面板的交互方式。",
     "settingsGroup.auxiliaryDisplay": "辅助显示",
     "settingsGroup.auxiliaryDisplayDescription": "控制网格、供电范围与物流状态等辅助信息。",
     "settingsGroup.operation": "操作",

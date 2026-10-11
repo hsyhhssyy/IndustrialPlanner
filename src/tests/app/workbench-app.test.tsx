@@ -79,6 +79,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphAllowEmptyLogisticsEndpoints: false,
   hypergryphAutoCreateSplittersAndConvergers: true,
   quickPlaceEnabled: true,
+  invertWheelZoom: false,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
@@ -2960,7 +2961,7 @@ describe("WorkbenchApp", () => {
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
       "调整设备与画布的外观、动画和音效。",
-      "调整设备选择与属性面板的交互方式。",
+      "调整画布缩放、设备选择与属性面板的交互方式。",
       "控制网格、供电范围与物流状态等辅助信息。",
       "提供简化规划操作流程的便捷功能。",
       "选择生效的活动数据与活动内容显示范围。",

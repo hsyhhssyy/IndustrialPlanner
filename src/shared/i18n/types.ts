@@ -690,6 +690,8 @@ export type UiKey =
   | "settingsField.game-arknights-immediate-marqueeDescription"
   | "settingsField.game-arknights-immediate-move"
   | "settingsField.game-arknights-immediate-moveDescription"
+  | "settingsField.game-invert-wheel-zoom"
+  | "settingsField.game-invert-wheel-zoomDescription"
   | "settingsField.game-arknights-inspector-open-on-second-click"
   | "settingsField.game-arknights-inspector-open-on-second-clickDescription"
   // AI-REMOVED 2026-09-10:

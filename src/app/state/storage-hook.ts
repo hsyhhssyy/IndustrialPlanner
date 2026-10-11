@@ -331,6 +331,9 @@ export function normalizePersistedAppSettings(
     quickPlaceEnabled: typeof persistedAppSettings.quickPlaceEnabled === "boolean"
       ? persistedAppSettings.quickPlaceEnabled
       : fallback.quickPlaceEnabled,
+    invertWheelZoom: typeof persistedAppSettings.invertWheelZoom === "boolean"
+      ? persistedAppSettings.invertWheelZoom
+      : fallback.invertWheelZoom,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync

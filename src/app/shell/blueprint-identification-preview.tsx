@@ -6,6 +6,7 @@ import type { AppHost } from "../host";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { resolveViewportAxisPixelPosition } from "@/shared/geometry/viewport-transform";
+import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 import { blueprintBoundaryKey } from "@/shared/planner-task";
 import { layoutIdentificationMarkers } from "./blueprint-identification-marker-layout";
 import styles from "./blueprint-planner-dialog.module.scss";
@@ -184,11 +185,14 @@ export function BlueprintIdentificationPreview({ appHost, blueprint, boundaries,
     const element = frame.current;
     if (!element) return;
     const wheel = (event: WheelEvent) => {
-      event.preventDefault(); setView(previous => ({ ...previous, zoom: Math.max(.25, Math.min(6, previous.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12))) }));
+      event.preventDefault();
+      const direction = resolveWheelZoomDirection(event.deltaY, appHost.internalState.settings.invertWheelZoom);
+      if (direction === 0) return;
+      setView(previous => ({ ...previous, zoom: Math.max(.25, Math.min(6, previous.zoom * (direction > 0 ? 1.12 : 1 / 1.12))) }));
     };
     element.addEventListener("wheel", wheel, { passive: false });
     return () => element.removeEventListener("wheel", wheel);
-  }, []);
+  }, [appHost]);
   const active = markers.find(marker => marker.key === selected);
   return <div className={styles.identificationPreview}>
     <div ref={frame} className={styles.previewFrame} aria-label={t("eda.preview")}

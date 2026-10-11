@@ -116,7 +116,7 @@ describe("createRegistryContract", () => {
       name: "草稿箱",
       placeableArea: { width: 320, height: 320 },
       outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      tags: ["allRegionEntities"],
+      tags: ["allRegionEntities", "草稿箱"],
       // AI-REMOVED 2026-09-28:
       // Reason: 草稿箱取消左上角独立外环区。
       // Trigger: 用户要求删除该区域并更新对应测试。

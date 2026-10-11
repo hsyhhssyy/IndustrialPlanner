@@ -2,6 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { ALL_REGION_ENTITIES_BASE_TAG } from "@/shared/base-tags";
+import { allowsFreeProtocolCorePlacement, isProtocolCoreDefinitionId } from "@/shared/protocol-core";
 
 // AI-REMOVED 2026-09-25:
 // Reason: 地区建筑限制由基地定义与所有已注册地区共同决定，不再由武陵特判。
@@ -31,6 +32,7 @@ const UNPLACEABLE_TAG = "不可摆放";
 export function canPlaceEntityDefinitionInCurrentBase(
   appHost: AppHost,
   definition: EntityDefinition,
+  placementKind: "manual" | "blueprint" = "manual",
 ): boolean {
   let baseId: string | null = null;
   try {
@@ -40,15 +42,20 @@ export function canPlaceEntityDefinitionInCurrentBase(
     baseId = null;
   }
 
-  return canPlaceEntityDefinitionInBase(appHost, definition, baseId);
+  return canPlaceEntityDefinitionInBase(appHost, definition, baseId, placementKind);
 }
 
 export function canPlaceEntityDefinitionInBase(
   appHost: AppHost,
   definition: EntityDefinition,
   baseId: string | null,
+  placementKind: "manual" | "blueprint" = "manual",
 ): boolean {
   const baseDefinitions = appHost.workspace.registry.baseDefinitions;
+  if (placementKind === "manual" && isProtocolCoreDefinitionId(definition.id)
+    && !allowsFreeProtocolCorePlacement(baseId ?? "", baseDefinitions)) {
+    return false;
+  }
   const baseDefinition = baseDefinitions.find((candidate) => candidate.id === baseId);
   if (baseDefinition === undefined || baseDefinition.tags.includes(ALL_REGION_ENTITIES_BASE_TAG)) {
     return true;
@@ -85,7 +92,7 @@ export function canPlaceBlueprintDocumentInCurrentBase(
     const definition = definitionById.get(entity.definitionId);
 
     return definition === undefined
-      || canPlaceEntityDefinitionInCurrentBase(appHost, definition);
+      || canPlaceEntityDefinitionInCurrentBase(appHost, definition, "blueprint");
   });
 }
 

@@ -276,6 +276,7 @@ function createProtocolCoreDefinitions(
       iconPath: "device-icons/item_port_sp_sub_hub_1.webp",
       // AI-CORRECTION 2026-09-18: 四级次级协议核心画布仅在西侧扩展 1 格，网站 spatial.json 为 11×9。
       spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
+      uiGroup: "hidden",
     },
   ];
 }
@@ -4165,6 +4166,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 编译节点：20 个（14 input-view + 6 output-view）
    */
   // AI-CORRECTION 2026-09-18: 协议核心与次级协议核心共用完整功能定义，仅身份与素材不同。
+  // AI-CORRECTION 2026-10-11: 主核心进入仓库存取分组，由基地规则限制手动入口；次级核心继续隐藏。
   ...createProtocolCoreDefinitions(createEntityDefinition({
     id: "sp_hub_1",
     nameKey: "registry.entity.sp_hub_1.name",
@@ -4174,7 +4176,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将协议核心画布更新为四周各扩展 1 格。
     spriteOffset: { topView: { x: -1, y: -1, width: 11, height: 11 } },
-    uiGroup: "hidden",
+    uiGroup: "warehouse",
     tags: [WAREHOUSE_SINK_TAG],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },

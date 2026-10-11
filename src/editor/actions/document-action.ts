@@ -83,6 +83,7 @@ export function createEditorDocumentActions({
         return removed;
       }, () => ensureProtocolCoreEntity({
         document: createWorldDocument({ baseId }), queries: workspace.registry.queries,
+        baseDefinitions: workspace.registry.baseDefinitions, isNewDocument: true,
       }));
     }),
 

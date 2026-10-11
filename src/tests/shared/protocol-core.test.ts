@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import {
   removeForbiddenProtocolCoreEntities,
+  allowsFreeProtocolCorePlacement,
   resolveProtocolCoreDefinitionIdForBase,
 } from "@/shared/protocol-core";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
+import { createRegistryContract } from "@/registry";
 
 function createDocument() {
   const entities: WorldEntity[] = [
@@ -29,6 +31,18 @@ function createDocument() {
 }
 
 describe("基地协议核心规则", () => {
+  it("草稿箱规则只由 tags 标记决定，不依赖基地 ID、地区分类或跨地区建筑权限", () => {
+    const definitions = createRegistryContract().baseDefinitions;
+    const draft = definitions.find((base) => base.id === "draft_box")!;
+    const ordinary = definitions.find((base) => base.id === "wuling_protocol_core")!;
+    const renamed = { ...draft, id: "custom-draft", tag: "武陵" };
+    const unmarked = { ...draft, tags: ["allRegionEntities"] };
+    expect(allowsFreeProtocolCorePlacement(renamed.id, [renamed])).toBe(true);
+    expect(allowsFreeProtocolCorePlacement(draft.id, [unmarked])).toBe(false);
+    expect(allowsFreeProtocolCorePlacement(ordinary.id, [ordinary])).toBe(false);
+    expect(allowsFreeProtocolCorePlacement("unknown", definitions)).toBe(false);
+  });
+
   it("明确区分无核心基地、主核心、次级核心和未知基地的默认值", () => {
     expect(resolveProtocolCoreDefinitionIdForBase("wuling_agricultural_land")).toBeNull();
     expect(resolveProtocolCoreDefinitionIdForBase("wuling_protocol_core")).toBe("sp_hub_1");

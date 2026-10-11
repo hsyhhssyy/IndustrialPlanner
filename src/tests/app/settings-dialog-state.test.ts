@@ -10,6 +10,16 @@ import {
 import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
+  it("defaults wheel zoom inversion to off and persists the user's choice", () => {
+    const controller = new WorkbenchSettingsDialogController();
+    expect(controller.getValue("game-invert-wheel-zoom")).toBe(false);
+    expect(controller.isSettingEditable("game-invert-wheel-zoom")).toBe(true);
+    controller.updateSwitchValue("game-invert-wheel-zoom", true);
+    expect(new WorkbenchSettingsDialogController().getValue("game-invert-wheel-zoom")).toBe(true);
+    controller.updateSwitchValue("game-invert-wheel-zoom", false);
+    expect(new WorkbenchSettingsDialogController().getValue("game-invert-wheel-zoom")).toBe(false);
+  });
+
   it("keeps device audio independent of animation, image style and experiments, and persists it", () => {
     const controller = new WorkbenchSettingsDialogController();
     expect(controller.getValue("game-play-device-audio")).toBe(false);
@@ -80,6 +90,7 @@ describe("WorkbenchSettingsDialogController", () => {
     ]);
     expect(resolveGroupSettingIds("experimental")).toContain("game-show-region-annotations");
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
+      "game-invert-wheel-zoom",
       "game-use-inspector-panel",
       "game-arknights-selection-right-dock-sync",
       "game-arknights-inspector-open-on-second-click",
@@ -144,6 +155,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-quick-place": true,
+        "game-invert-wheel-zoom": false,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         // AI-REMOVED 2026-08-03:
@@ -660,6 +672,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-quick-place": true,
+        "game-invert-wheel-zoom": false,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         // AI-REMOVED 2026-08-03:

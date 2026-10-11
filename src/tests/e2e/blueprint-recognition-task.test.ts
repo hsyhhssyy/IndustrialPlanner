@@ -1,10 +1,12 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json" with { type: "json" };
+import plant from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json" with { type: "json" };
 
 // 独立于开发脚本编写；通过真实优化入口、定位按钮、下拉框、下载和文件导入操作验证。
 for (const profile of SCREEN_PROFILES) {
   test(`识别任务部分配置导出恢复与预览定位 [${profile.name}]`, async ({ browserSession, baseURL }) => {
+    test.setTimeout(180_000);
     const cli = await browserSession.openCli(profile);
     const result = await cli.runJson(`async page => {
       const assert = (value, message) => { if (!value) throw Error(message); };
@@ -104,6 +106,23 @@ for (const profile of SCREEN_PROFILES) {
       await dialog.getByRole('alert').waitFor();
       assert((await dialog.getByRole('alert').innerText()).includes('净产出'), '直接透传不能被当作净产物');
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "restored.png"))}});
+      // 2026-10-11：优化页的只读原图定位并入真实预览场景，基线与保存恢复规则由 Vitest 验证。
+      await page.evaluate(record => window.__industrialPlannerAppHost.blueprintPreview.open({...record,parentFolderId:null}), ${JSON.stringify(plant)});
+      await page.getByRole('button', {name:'优化此蓝图',exact:true}).click();
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId
+        && window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
+      await rule.selectOption('any');
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.warehousePortPlacement === 'any');
+      await dialog.getByRole('button', {name:'识别蓝图',exact:true}).click();
+      await dialog.getByLabel('原图净产率').waitFor({timeout:60000});
+      assert(await dialog.locator('[class*="boundaryGroup"]').getByRole('combobox').count() === 0, '优化页原图边界必须只读');
+      const baselineLocate = dialog.locator('[class*="boundaryRow"]').first().getByRole('button');
+      await baselineLocate.click();
+      await dialog.locator('[class*="previewSelection"]').waitFor();
+      assert(await baselineLocate.getAttribute('aria-pressed') === 'true', '只读优化页定位失效');
+      await dialog.locator('[class*="boundaryMarker"]').first().click();
+      assert(await dialog.locator('[class*="boundaryRow"]').first().getAttribute('data-selected') === 'true', '优化页标记未联动列表');
+      await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "optimization-preview.png"))}});
       return {passed:true,taskId:restored.taskId};
     }`);
     expect(result).toMatchObject({ passed: true });

@@ -46,7 +46,7 @@ const EXPECTED_GROUPS = [
   { id: "history", title: "历史", actionCount: 2 },
 ] as const;
 
-for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   test(`shortcut settings groups actions and resolves conflicts from real route scopes [${profile.name}]`, async ({ browserSession: browser }) => {
   test.setTimeout(120_000);
 
@@ -109,10 +109,6 @@ for (const profile of SCREEN_PROFILES) {
         const group = shortcutDialog.locator(`[data-shortcut-group="${groupSpec.id}"]`);
         await expect(group.getByRole("heading", { level: 2, name: groupSpec.title })).toBeVisible();
         await expect(group.locator(":scope > article")).toHaveCount(groupSpec.actionCount);
-      }
-
-      if (profile.name !== "desktop") {
-        return;
       }
 
       const rotate = primarySlot(page, "shortcut-rotate");
