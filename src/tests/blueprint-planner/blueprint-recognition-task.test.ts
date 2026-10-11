@@ -28,6 +28,48 @@ function setup(records?: Map<string, BlueprintPlannerTaskFile>) {
 }
 
 describe("持久蓝图识别任务", () => {
+  it("识别后可修改摆放规则并重建种子，首次启动前导入仍可编辑，零提案暂停后保持锁定", async () => {
+    const records = new Map<string, BlueprintPlannerTaskFile>(), env = setup(records);
+    const blueprint = loadBlueprintFromFile(`${fixtures}plant-cycle.schema7.json`);
+    let restored: ReturnType<typeof setup> | null = null;
+    try {
+      const id = await env.host.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.host.state.activeTaskId).toBeNull());
+      await env.host.actions.identifyBlueprint(id);
+      const initial = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
+      expect(initial.progress.planningStarted).toBe(false);
+      const request = initial.request;
+      await expect(env.host.actions.updateBlueprintOptions(id, { ...request.options, converterStartup: "manual" })).rejects.toThrow("启动条件");
+      await env.host.actions.updateBlueprintOptions(id, { ...request.options, warehouseBus: "corner", warehousePortPlacement: "continuous" });
+      const changed = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
+      expect(changed.request.options).toMatchObject({ warehouseBus: "corner", warehousePortPlacement: "continuous" });
+      expect(changed.checkpoint.blueprintBaseline!.report).toEqual(initial.checkpoint.blueprintBaseline!.report);
+      expect(changed.request.blueprintSource).toEqual(request.blueprintSource);
+      expect(changed.request.plan).toEqual(request.plan);
+      await env.host.actions.updateBlueprintOptions(id, { ...changed.request.options, warehousePortPlacement: "any" });
+      expect(env.host.queries.getResult(id)?.metrics.area).toBe(150);
+      const imported = await env.host.actions.importTask(env.host.queries.exportTask(id));
+      expect(env.host.queries.getTask(imported)?.planningStarted).toBe(false);
+      await env.host.actions.updateBlueprintOptions(imported, { ...env.host.queries.getLastRequest(imported)!.options, warehouseBus: "u-shaped" });
+      expect(env.host.queries.getLastRequest(imported)?.options.warehouseBus).toBe("u-shaped");
+      expect(() => env.host.actions.continuePlanning(imported, 1, 1, false)).toThrow("尝试次数");
+      expect(env.host.queries.getTask(imported)?.planningStarted).toBe(false);
+      env.host.actions.continuePlanning(imported, 10_000, 1, false);
+      expect(env.host.queries.getTask(imported)?.planningStarted).toBe(true);
+      env.host.actions.cancel(imported);
+      await env.host.whenSettled();
+      expect(env.host.queries.getTask(imported)).toMatchObject({ planningStarted: true, evaluatedProposals: 0 });
+      const lockedOptions = env.host.queries.getLastRequest(imported)!.options;
+      await expect(env.host.actions.updateBlueprintOptions(imported, { ...lockedOptions, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");
+      restored = setup(records);
+      await restored.host.whenSettled();
+      expect(restored.host.queries.getTask(imported)?.planningStarted).toBe(true);
+      const lockedImport = await restored.host.actions.importTask(restored.host.queries.exportTask(imported));
+      expect(restored.host.queries.getTask(lockedImport)?.planningStarted).toBe(true);
+      await expect(restored.host.actions.updateBlueprintOptions(lockedImport, { ...lockedOptions, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");
+    } finally { restored?.dispose(); env.dispose(); }
+  }, 60_000);
+
   it("识别前保存摆放选项，恢复保留配置并拦截非仓库固体入口", async () => {
     const records = new Map<string, BlueprintPlannerTaskFile>(), env = setup(records);
     const blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema7.json`);
@@ -112,7 +154,7 @@ describe("持久蓝图识别任务", () => {
     } finally { restored?.dispose(); if (!initialDisposed) env.dispose(); }
   });
 
-  it("识别成功沿用任务身份进入优化，固定配置不可覆盖", async () => {
+  it("识别成功沿用任务身份进入优化，固定边界及首次启动后的配置不可覆盖", async () => {
     const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}plant-cycle.schema7.json`);
     try {
       const id = await env.host.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
@@ -121,7 +163,10 @@ describe("持久蓝图识别任务", () => {
       await expect(env.host.actions.updateBlueprintBoundaries(id, request.input.boundaries.map(boundary =>
         ({ ...boundary, itemId: "item_iron_ore" })))).rejects.toThrow("固定");
       await env.host.actions.identifyBlueprint(id);
-      await expect(env.host.actions.updateBlueprintOptions(id, options)).rejects.toThrow("不存在");
+      env.host.actions.continuePlanning(id, 10_000, 1, false);
+      env.host.actions.cancel(id);
+      await env.host.whenSettled();
+      await expect(env.host.actions.updateBlueprintOptions(id, env.host.queries.getLastRequest(id)!.options)).rejects.toThrow("首次开始规划");
       expect(env.host.queries.listTasks().map(task => task.taskId)).toEqual([id]);
       expect(env.host.queries.getResult(id)?.measuredOutputs).toEqual([{ itemId: "item_plant_moss_3", perMinute: 30 }]);
       const file = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);

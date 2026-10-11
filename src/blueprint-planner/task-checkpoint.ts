@@ -8,7 +8,7 @@ import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type { PlannerCandidate } from "./candidate";
 import { validatePlannerRequest } from "./production-network";
 import { PlannerSearchPortfolio, type PlannerPortfolioSnapshot } from "./search-portfolio";
-import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { plannerRequestKey } from "./search-seed";
 import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
@@ -227,6 +227,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     const outputModes = new Set(Array.from({ length: MAX_PLANNER_OUTPUT_MODES }, (_, variant) =>
       plannerOutputModeKey(resolvePlannerOutputAttempt(request, variant).request.options)));
     if (!point || !progress || progress.taskId !== file.taskId) throw new Error("任务缺少检查点或进度。");
+    if (progress.planningStarted !== undefined && typeof progress.planningStarted !== "boolean") throw new Error("规划启动状态无效。");
     if (point.randomSeed !== undefined) assertPlannerRandomState(point.randomSeed);
     for (const count of [point.attempt, point.evaluations, progress.candidateCount, progress.validatedCandidateCount]) {
       if (!Number.isSafeInteger(count) || count < 0) throw new Error("任务计数无效。");
@@ -507,6 +508,7 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
       savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
       parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
     progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
+      planningStarted: files.some(file => hasPlannerStarted(file.progress)),
       elapsedMs: Math.max(...files.map(file => file.progress.elapsedMs)),
       evaluatedProposals: evaluations, roundEvaluatedProposals: 0, candidateCount: attempt,
       validatedCandidateCount: base.baseValidatedCandidates + shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0),

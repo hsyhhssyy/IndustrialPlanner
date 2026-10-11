@@ -1,4 +1,4 @@
-import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 // AI-REMOVED 2026-10-03: Reason: 全局选项字段收敛后无须 BlueprintPlannerOptions。Trigger: 逐物品配置。
 // Evidence: OPTION_FIELDS 仅保留两项。Replacement: 字段字面量。Risk: Low。Human Review: Required
 // Original code: import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
@@ -222,6 +222,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   }, [appHost.workspace.registry, controller.plan, controller.options.converterStartup]);
   if (!controller.dialogState.visible) return null;
   const busy = controller.taskLocked || fileBusy;
+  const planningStarted = progress !== null && hasPlannerStarted(progress);
+  const placementLocked = progress !== null && !recognition && (!controller.blueprintRequest || planningStarted);
   const anyBusy = controller.taskLocked;
   const compact = appHost.state.screenProfile.deviceClass === "mobile";
   const plan = controller.plan;
@@ -246,6 +248,18 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     try { void Promise.resolve(action()).catch(failure => setError(failure instanceof Error ? failure.message : String(failure))); }
     catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
   };
+  const updatePlacementOption = (key: "warehouseBus" | "plantStartup" | "warehousePortPlacement", value: string) => act(async () => {
+    if (busy || placementLocked) return;
+    if (selectedId === null) { controller.updateOptions({ [key]: value }); return; }
+    if (!planner) return;
+    setFileBusy(true);
+    try {
+      const options = { ...toJS(controller.options), [key]: value };
+      if (options.warehousePortPlacement === "full-side") options.warehouseBus = "straight";
+      await planner.actions.updateBlueprintOptions(selectedId, options);
+      if (controller.viewTaskId === selectedId) controller.updateOptions(options);
+    } finally { setFileBusy(false); }
+  });
   const select = (id: string) => {
     if (controller.taskLocked && id !== controller.activeTaskId) return;
     const request = planner?.queries.getLastRequest(id);
@@ -352,8 +366,13 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         <div className={styles.scroll}>
           {controller.blueprintDraft ? <><fieldset className={styles.options} disabled={busy}>
             {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-              <select value={controller.options[field.key]}
-                disabled={field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+              {/* AI-REMOVED 2026-10-11:
+                Reason: 识别阶段和识别后的摆放配置共用保存入口。
+                Trigger: 用户要求首次开始规划时才锁定摆放规则。
+                Evidence: 原 onChange 只在识别页保存，优化页只修改控制器草稿。
+                Replacement: updatePlacementOption。
+                Risk: 保存期间临时禁用操作；保存失败保留原配置。Human Review: Required
+                Original code:
                 onChange={event => {
                   const value = event.target.value;
                   act(async () => {
@@ -366,7 +385,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                       controller.updateOptions(options);
                     } finally { setFileBusy(false); }
                   });
-                }}>
+                }}
+              */}
+              <select value={controller.options[field.key]}
+                disabled={field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+                onChange={event => updatePlacementOption(field.key, event.target.value)}>
                 {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </select></label>)}
           </fieldset><BlueprintIdentification key={controller.blueprintDraft.blueprintId}
@@ -396,8 +419,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {supply.error && !controller.blueprintRequest ? <p role="alert" className={styles.error}>{supply.error}</p> : null}
             <fieldset className={styles.options} disabled={busy}>
               {OPTION_FIELDS.filter(field => !controller.blueprintRequest || field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-                <select disabled={progress !== null || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"} value={controller.options[field.key]}
-                  onChange={event => controller.updateOptions({ [field.key]: event.target.value })}>
+                <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"} value={controller.options[field.key]}
+                  onChange={event => updatePlacementOption(field.key, event.target.value)}>
                   {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
                 </select></label>)}
               {/* AI-REMOVED 2026-09-30: 用户批准删除时间预算；替代：下方提案预算。Risk: Low。Human Review: Required
@@ -516,7 +539,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
               onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId,
-                controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu))}>{t("eda.continue")}</button> : null}
+                controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu))}>{t(planningStarted ? "eda.continue" : "eda.start")}</button> : null}
             {result !== null ? <>
               <button type="button" onClick={() => {
                 appHost.blueprintPreview.open({ ...result.blueprint, parentFolderId: result.folderId }, { canDelete: false });

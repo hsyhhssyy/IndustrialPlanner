@@ -18,14 +18,15 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
   let app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
-  const readonlyBoundary = () => {
+  const readonlyBoundary = (planningStarted = false) => {
     // 仅检查实际组件输出；不执行 Canvas effects，几何与定位由识别预览 E2E 验证。
     const container = document.createElement("div");
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
     expect(container.querySelectorAll('[class*="boundaryGroup"] select')).toHaveLength(0);
     const options = [...container.querySelectorAll<HTMLSelectElement>('select')];
     expect(options).toHaveLength(2);
-    expect(options.every(option => option.disabled)).toBe(true);
+    expect(options.every(option => option.disabled === planningStarted)).toBe(true);
+    expect([...container.querySelectorAll('button')].some(button => button.textContent === (planningStarted ? "继续规划" : "开始规划"))).toBe(true);
     return [...container.querySelectorAll('[class*="boundaryRow"]')].map(row => row.textContent);
   };
   try {
@@ -41,6 +42,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(result.metrics.area).toBe(150);
     expect(result.measuredOutputs).toEqual([{ itemId: "item_plant_moss_3", perMinute: 30 }]);
     expect(result.blueprint.entities).toEqual(blueprint.entities);
+    const originalReport = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry).checkpoint.blueprintBaseline!.report;
     expect(parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry).checkpoint.blueprintBaseline?.report.engineKind).toBe("dense-v2");
     const rows = readonlyBoundary();
     expect(rows.length).toBeGreaterThan(0);
@@ -62,5 +64,30 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     app.blueprintPlannerDialog.open();
     expect(readonlyBoundary()).toEqual(rows);
+    const restoredRequest = planner.queries.getLastRequest(id)!;
+    await planner.actions.updateBlueprintOptions(id, { ...restoredRequest.options, warehouseBus: "corner" });
+    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    expect(readonlyBoundary()).toEqual(rows);
+    const changed = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry);
+    expect(changed.request.options.warehouseBus).toBe("corner");
+    expect(changed.checkpoint.blueprintBaseline!.report).toEqual(originalReport);
+    planner.actions.continuePlanning(id, 10_000, 1, false);
+    planner.actions.cancel(id);
+    await planner.whenSettled();
+    expect(planner.queries.getTask(id)).toMatchObject({ planningStarted: true, evaluatedProposals: 0 });
+    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    expect(readonlyBoundary(true)).toEqual(rows);
+    await expect(planner.actions.updateBlueprintOptions(id, { ...changed.request.options, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");
+    await planner.whenSettled();
+    planner.dispose(); app.dispose();
+    app = createAppHost(session.workspace);
+    planner = createBlueprintPlannerHost(session.workspace);
+    await planner.whenSettled();
+    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    app.blueprintPlannerDialog.open();
+    expect(readonlyBoundary(true)).toEqual(rows);
+    const imported = await planner.actions.importTask(planner.queries.exportTask(id));
+    app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    expect(readonlyBoundary(true)).toEqual(rows);
   } finally { planner.dispose(); app.dispose(); await session.dispose(); }
 }, 60_000);

@@ -57,9 +57,9 @@ for (const profile of SCREEN_PROFILES) {
         gpu:await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).isChecked()};
       await attempts.fill('');
       const clearedContinuation = {value:await attempts.inputValue(),
-        disabled:await dialog.getByRole('button',{name:'继续规划',exact:true}).isDisabled()};
+        disabled:await dialog.getByRole('button',{name:'开始规划',exact:true}).isDisabled()};
       await attempts.fill('7');
-      const continuationEnabled = await dialog.getByRole('button',{name:'继续规划',exact:true}).isEnabled();
+      const continuationEnabled = await dialog.getByRole('button',{name:'开始规划',exact:true}).isEnabled();
       const original = await page.evaluate(() => {
         const h = window.__industrialPlannerAppHost;
         return h.workspace.blueprintPlanner.queries.exportTask(h.blueprintPlannerDialog.viewTaskId);

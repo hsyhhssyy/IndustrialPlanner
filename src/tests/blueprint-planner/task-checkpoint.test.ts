@@ -16,6 +16,7 @@ import powerFixture from "./fixtures/power-validation.json";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+import { hasPlannerStarted } from "@/shared/planner-task";
 
 function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest } {
   return { formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId: "test-task",
@@ -23,6 +24,24 @@ function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerReque
     progress: { taskId: "test-task", status: "waiting", phase: "preparing", startedAt: 1,
       elapsedMs: 0, estimatedProgress: null, evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
+
+it("启动标记与历史零提案任务恢复，保存基线不会被当成已开始规划", () => {
+  const registry = createRegistryContract();
+  for (const [patch, started] of [
+    [{ planningStarted: false }, false],
+    [{ planningStarted: true }, true],
+    [{ phase: "saving", status: "completed" }, false],
+    [{ status: "running" }, true],
+    [{ status: "cancelled" }, true],
+    [{ phase: "layout" }, true],
+  ] as const) {
+    const file = taskFile();
+    const parsed = parsePlannerTaskFile({ ...file, progress: { ...file.progress, ...patch } }, registry);
+    expect(hasPlannerStarted(parsed.progress)).toBe(started);
+  }
+  const file = taskFile();
+  expect(() => parsePlannerTaskFile({ ...file, progress: { ...file.progress, planningStarted: "invalid" } }, registry)).toThrow("规划启动状态");
+});
 
 it("恢复检查点拒绝超限宽高，并保持原始任务数据不变", () => {
   const registry = createRegistryContract();

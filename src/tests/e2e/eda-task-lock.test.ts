@@ -198,7 +198,7 @@ for (const profile of profiles) {
         const dialog = page.getByRole('dialog').filter({ has: page.locator('#blueprint-planner-title') });
         const entry = page.getByRole('button', { name: /^规划(?: ·.*)?$/ });
         const other = dialog.getByRole('button', { name: /其他任务/ });
-        await dialog.getByRole('button', { name: '继续规划', exact: true }).click();
+        await dialog.getByRole('button', { name: '开始规划', exact: true }).click();
         assert(await other.isDisabled(), '计算时禁止切换任务');
         for (const name of ['新建产线计算', '导入任务']) {
           assert(await dialog.getByRole('button', { name, exact: true }).isDisabled(), '计算时禁止 '+name);

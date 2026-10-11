@@ -1,7 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import { ALL_REGION_ENTITIES_BASE_TAG } from "@/shared/base-tags";
+import { ALL_REGION_ENTITIES_BASE_TAG, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
 import { allowsFreeProtocolCorePlacement, isProtocolCoreDefinitionId } from "@/shared/protocol-core";
 
 // AI-REMOVED 2026-09-25:
@@ -51,6 +51,8 @@ export function canPlaceEntityDefinitionInBase(
   baseId: string | null,
   placementKind: "manual" | "blueprint" = "manual",
 ): boolean {
+  if (!matchesEntityBaseOnlyTag(definition.tags, baseId)) return false;
+
   const baseDefinitions = appHost.workspace.registry.baseDefinitions;
   if (placementKind === "manual" && isProtocolCoreDefinitionId(definition.id)
     && !allowsFreeProtocolCorePlacement(baseId ?? "", baseDefinitions)) {

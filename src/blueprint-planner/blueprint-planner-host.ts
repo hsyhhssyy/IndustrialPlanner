@@ -11,7 +11,7 @@ import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 import { EDA_MIGRATION_VERSION } from "./data-migration";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
-import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitionBoundaries,
   type BlueprintRecognitionTask } from "./blueprint-recognition-task";
 import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
@@ -156,7 +156,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   };
   const deferTask = (file: BlueprintPlannerTaskFile, originTaskId = (file.checkpoint as PlannerCheckpoint)?.parallel?.originTaskId ?? file.taskId) => {
     deferredTasks.set(file.taskId, { file: structuredClone(file), originTaskId, progress: { ...retainedProgress(file, ""),
-      status: "waiting", bestArea: file.progress?.bestArea ?? null,
+      status: "waiting", planningStarted: hasPlannerStarted(file.progress), bestArea: file.progress?.bestArea ?? null,
       message: "任务已读取，继续计算时恢复。" } });
   };
   const concurrencyMemory = new PlannerConcurrencyMemory();
@@ -176,6 +176,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   let latestId: string | undefined;
   let writes: Promise<void> = Promise.resolve();
   const pendingWrites = new Set<PlannerTask | BlueprintRecognitionTask>();
+  const immediateWrites = new Set<PlannerTask | BlueprintRecognitionTask>();
   let writing = false;
   let lastWriteAt = -Infinity;
   let flushWrite: (() => void) | null = null;
@@ -217,7 +218,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         roundEvaluatedProposals: Math.max(0, task.file.checkpoint.evaluations - task.roundStartedEvaluations), activeWorkerCount: 0 },
       checkpoint: { ...task.file.checkpoint, portfolio: task.portfolio.snapshot() } });
   };
-  const persist = (task: PlannerTask | BlueprintRecognitionTask) => {
+  const persist = (task: PlannerTask | BlueprintRecognitionTask, immediate = false) => {
     if (storage === null) return;
     // AI-REMOVED 2026-10-03:
     // Reason: 写入较慢时，Promise 链会无限保留每个批次的完整 32 分片快照。
@@ -229,16 +230,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // const file = snapshot(task);
     // writes = writes.then(() => storage.save(file)).catch(error => reportStorageFailure("eda-task", error));
     pendingWrites.add(task);
+    if (immediate) immediateWrites.add(task);
     // 运行时只保留最新引用，两秒内合并检查点；收尾与关闭立即唤醒，仍等待最终写入。
     // 识别阶段只在边界、输入和出口确认时提交，立即落盘；搜索批次仍合并写入。
-    if (disposed || !("portfolio" in task) || task.file.progress.status !== "running") flushWrite?.();
+    // AI-CORRECTION 2026-10-11：零提案的启动状态立即提交，避免首次启动标记被搜索批次的两秒合并延迟。
+    // AI-CORRECTION 2026-10-11：只立即提交首次启动标记；其余零提案检查点仍合并，保留存储调度间隔。
+    if (disposed || !("portfolio" in task) || task.file.progress.status !== "running" || immediate) flushWrite?.();
     if (writing) return;
     writing = true;
     writes = Promise.resolve().then(async () => {
       try {
         while (pendingWrites.size > 0) {
           const delay = 2000 - (performance.now() - lastWriteAt);
-          if (!disposed && delay > 0 && [...pendingWrites].every(value => "portfolio" in value && value.file.progress.status === "running")) {
+          if (!disposed && delay > 0 && [...pendingWrites].every(value => "portfolio" in value && value.file.progress.status === "running" && !immediateWrites.has(value))) {
             await new Promise<void>(resolve => {
               const timer = setTimeout(() => { flushWrite = null; resolve(); }, delay);
               flushWrite = () => { clearTimeout(timer); flushWrite = null; resolve(); };
@@ -246,6 +250,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           }
           const next = pendingWrites.values().next().value!;
           pendingWrites.delete(next);
+          immediateWrites.delete(next);
           lastWriteAt = performance.now();
           // 等待期间只保留任务引用；写入中的独立快照不会随继续搜索而变化。
           try { await storage.save(snapshot(next)); }
@@ -271,10 +276,35 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid()): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest } => ({
     formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId,
     request: structuredClone(request), checkpoint: emptyPlannerCheckpoint(), progress: { taskId, status: "waiting",
-      phase: "preparing", startedAt: Date.now(), elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
+      phase: "preparing", planningStarted: false, startedAt: Date.now(), elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
       evaluatedProposals: 0, roundEvaluatedProposals: 0,
       validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null },
   });
+  const createBlueprintPlanningFile = (request: BlueprintPlannerRequest, baseline: NonNullable<PlannerCheckpoint["blueprintBaseline"]>,
+    progress: BlueprintPlannerProgress) => {
+    const candidate = baseline.candidate, execution = candidate.execution, report = baseline.report;
+    assertPlannerCandidateBounds(workspace.registry, candidate);
+    const file = createTaskFile(request, progress.taskId);
+    const requiresTankConstruction = request.options.converterStartup === "tank" && Boolean(execution.scene.scheduledSlots?.length);
+    const network = restorePlannerSeed(workspace.registry, request, candidate.seed!).network;
+    const boundary = new PlannerBoundary(workspace.registry, network, candidate.metrics);
+    const invalidPorts = request.options.warehousePortPlacement !== "any"
+      && boundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations > 0;
+    const best = requiresTankConstruction || invalidPorts ? null : structuredClone(baseline);
+    // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
+    // 订正 2026-10-09：借一次补料识别的携罐任务只有产率参考，先完成实体启动罐再进入最佳结果。
+    if (best) best.candidate.execution.blueprint.blueprintId = createUuid();
+    return parsePlannerTaskFile({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
+      portfolio: new PlannerSearchPortfolio(request, best?.candidate.seed).snapshot(),
+      result: best ? { taskId: progress.taskId, blueprint: best.candidate.execution.blueprint, folderId: null,
+        metrics: candidate.metrics, connections: [], measuredOutputs: request.plan.targets, warmupSeconds: execution.warmupSeconds,
+        observationSeconds: report.observationSeconds, elapsedMs: progress.elapsedMs } : null },
+      progress: { ...file.progress, startedAt: progress.startedAt, elapsedMs: progress.elapsedMs,
+        message: withBlueprintDisconnectionWarning(workspace.registry, request.blueprintSource!, requiresTankConstruction
+          ? "蓝图产率已识别，开始优化后将构建自启动供气。" : "蓝图识别完成，可以开始优化。"),
+        bestArea: best ? candidate.metrics.area : null,
+        areaHistory: best ? [{ evaluatedProposals: 0, bestArea: candidate.metrics.area }] : [] } }, workspace.registry);
+  };
   const requireTask = (id: string) => {
     assertReady();
     const blocked = blockedTasks.get(id);
@@ -284,7 +314,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     return task;
   };
   const materialize = (file: ReturnType<typeof parsePlannerTaskFile>): PlannerTask => {
-    const parsed = file;
+    const parsed = { ...file, progress: { ...file.progress, planningStarted: hasPlannerStarted(file.progress) } };
     const portfolio = new PlannerSearchPortfolio(parsed.request);
     portfolio.restore(parsed.checkpoint.portfolio);
     const portfolios = new Map<number, PlannerSearchPortfolio>();
@@ -1375,9 +1405,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     workspace.simulation.actions.stop();
     latestId = task.file.taskId;
     runInAction(() => { state.activeTaskId = task.file.taskId; });
-    publish(task, { status: "running", message: "正在计算", estimatedProgress: 0, activeWorkerCount: 0,
+    const firstPlanningStart = !hasPlannerStarted(task.file.progress);
+    publish(task, { status: "running", planningStarted: true, message: "正在计算", estimatedProgress: 0, activeWorkerCount: 0,
       evaluatedProposals: task.file.checkpoint.evaluations, roundEvaluatedProposals: 0 });
-    persist(task);
+    persist(task, firstPlanningStart);
     task.running = Promise.resolve().then(() => run(task));
   }
 
@@ -1483,25 +1514,34 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         const report = await workspace.simulation!.actions.runBlueprint(execution, combined);
         combined.throwIfAborted();
         const identified = identifyBlueprintNetwork(workspace.registry, request.input, request.options, execution, report);
-        assertPlannerCandidateBounds(workspace.registry, identified.candidate);
-        const file = createTaskFile(identified.request, id), baseline = { candidate: identified.candidate, report };
-        const requiresTankConstruction = request.options.converterStartup === "tank" && Boolean(execution.scene.scheduledSlots?.length);
-        const baselineNetwork = restorePlannerSeed(workspace.registry, identified.request, identified.candidate.seed!).network;
-        const boundary = new PlannerBoundary(workspace.registry, baselineNetwork, identified.candidate.metrics);
-        const invalidPorts = identified.request.options.warehousePortPlacement !== "any" && boundary.resolve(baselineNetwork.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations > 0;
-        const best = requiresTankConstruction || invalidPorts ? null : structuredClone(baseline);
-        // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
-        // 订正 2026-10-09：借一次补料识别的携罐任务只有产率参考，先完成实体启动罐再进入最佳结果。
-        if (best) best.candidate.execution.blueprint.blueprintId = createUuid();
-        const planning = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
-          portfolio: new PlannerSearchPortfolio(identified.request, best?.candidate.seed).snapshot(),
-          result: best ? { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
-            measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
-            observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } : null },
-          progress: { ...file.progress, startedAt: task.file.progress.startedAt, elapsedMs: elapsed(task),
-            message: withBlueprintDisconnectionWarning(workspace.registry, request.input, requiresTankConstruction
-              ? "蓝图产率已识别，开始优化后将构建自启动供气。" : "蓝图识别完成，可以开始优化。"), bestArea: best ? identified.candidate.metrics.area : null,
-            areaHistory: best ? [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] : [] } });
+        // AI-REMOVED 2026-10-11:
+        // Reason: 识别成功与首次规划前修改摆放规则必须共用基线和保底结果构建。
+        // Trigger: 用户要求识别后摆放规则可编辑，首次开始规划时锁定。
+        // Evidence: 原构建内嵌于识别流程，选项变化后种子指纹和保底规则会失效。
+        // Replacement: 本文件 createBlueprintPlanningFile。
+        // Risk: 规则改变后不合规保底结果被撤下，原图与产率报告保留。Human Review: Required
+        // Original code:
+        // assertPlannerCandidateBounds(workspace.registry, identified.candidate);
+        // const file = createTaskFile(identified.request, id), baseline = { candidate: identified.candidate, report };
+        // const requiresTankConstruction = request.options.converterStartup === "tank" && Boolean(execution.scene.scheduledSlots?.length);
+        // const baselineNetwork = restorePlannerSeed(workspace.registry, identified.request, identified.candidate.seed!).network;
+        // const boundary = new PlannerBoundary(workspace.registry, baselineNetwork, identified.candidate.metrics);
+        // const invalidPorts = identified.request.options.warehousePortPlacement !== "any" && boundary.resolve(baselineNetwork.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations > 0;
+        // const best = requiresTankConstruction || invalidPorts ? null : structuredClone(baseline);
+        // // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
+        // // 订正 2026-10-09：借一次补料识别的携罐任务只有产率参考，先完成实体启动罐再进入最佳结果。
+        // if (best) best.candidate.execution.blueprint.blueprintId = createUuid();
+        // const planning = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
+        //   portfolio: new PlannerSearchPortfolio(identified.request, best?.candidate.seed).snapshot(),
+        //   result: best ? { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
+        //     measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
+        //     observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } : null },
+        //   progress: { ...file.progress, startedAt: task.file.progress.startedAt, elapsedMs: elapsed(task),
+        //     message: withBlueprintDisconnectionWarning(workspace.registry, request.input, requiresTankConstruction
+        //       ? "蓝图产率已识别，开始优化后将构建自启动供气。" : "蓝图识别完成，可以开始优化。"), bestArea: best ? identified.candidate.metrics.area : null,
+        //     areaHistory: best ? [{ evaluatedProposals: 0, bestArea: identified.candidate.metrics.area }] : [] } });
+        const planning = materialize(createBlueprintPlanningFile(identified.request, { candidate: identified.candidate, report },
+          { ...task.file.progress, elapsedMs: elapsed(task) }));
         await writes; combined.throwIfAborted();
         pendingWrites.delete(task); recognitionTasks.delete(id); tasks.set(id, planning);
         persist(planning); await writes; notify();
@@ -1841,6 +1881,35 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       },
       async updateBlueprintOptions(id, inputOptions) {
         await ready; assertReady();
+        if (state.activeTaskId !== null || importing) throw new Error("请先暂停当前任务并等待结束。");
+        validatePlannerTaskOptions(inputOptions);
+        if (!recognitionTasks.has(id)) {
+          const task = await restoreDeferred(id);
+          if (state.activeTaskId !== null || importing || task.running) throw new Error("请先暂停当前任务并等待结束。");
+          const request = task.file.request;
+          if (!request.blueprintSource) throw new Error("蓝图识别任务不存在。");
+          if (hasPlannerStarted(task.file.progress)) throw new Error("首次开始规划后不能修改摆放规则。");
+          const next = { ...request, options: { ...request.options,
+            warehousePortPlacement: inputOptions.warehousePortPlacement, warehouseBus: inputOptions.warehouseBus,
+            evaluationsPerRound: inputOptions.evaluationsPerRound, concurrency: inputOptions.concurrency, gpu: inputOptions.gpu } };
+          if (plannerRequestKey(next) !== plannerRequestKey({ ...request, options: inputOptions })) {
+            throw new Error("蓝图识别后不能修改供料、输出或启动条件，请复制任务重新识别。");
+          }
+          validateTaskRequest(workspace.registry, next);
+          if (plannerRequestKey(next) !== plannerRequestKey(request)) {
+            const baseline = task.file.checkpoint.blueprintBaseline!;
+            const identified = identifyBlueprintNetwork(workspace.registry, request.blueprintSource, next.options,
+              baseline.candidate.execution, baseline.report);
+            const replacement = materialize(createBlueprintPlanningFile(identified.request,
+              { candidate: identified.candidate, report: baseline.report }, task.file.progress));
+            pendingWrites.delete(task); tasks.set(id, replacement);
+            persist(replacement); await writes; notify();
+          } else {
+            task.file = { ...task.file, request: structuredClone(next) };
+            persist(task); await writes; notify();
+          }
+          return;
+        }
         const task = recognitionTasks.get(id);
         if (!task) throw new Error("蓝图识别任务不存在。");
         if (state.activeTaskId !== null || importing || task.running) throw new Error("请先暂停当前任务并等待结束。");

@@ -2,6 +2,16 @@ const MAX_PIPE_LOGISTICS_TAG_PREFIX = "maxPipeLogistics=";
 export const ALL_REGION_ENTITIES_BASE_TAG = "allRegionEntities";
 export const DRAFT_BOX_BASE_TAG = "草稿箱";
 export const BASE_AREA_ONLY_TAG_PREFIX = "baseAreaOnly=";
+export const BASE_ONLY_TAG_PREFIX = "baseOnly=";
+
+/** 地图限定按完整基地 ID 匹配；未声明时不限制，空参数或未知当前地图不放行。 */
+export function matchesEntityBaseOnlyTag(tags: readonly string[], baseId: string | null): boolean {
+  const tag = tags.find((candidate) => candidate.startsWith(BASE_ONLY_TAG_PREFIX));
+  if (tag === undefined) return true;
+
+  const requiredBaseId = tag.slice(BASE_ONLY_TAG_PREFIX.length);
+  return requiredBaseId.length > 0 && requiredBaseId === baseId;
+}
 
 /**
  * 从基地 tags 中解析最大管道物流数。

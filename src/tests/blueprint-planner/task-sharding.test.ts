@@ -18,7 +18,7 @@ function originalTask(concurrency: number | "auto" = 1): BlueprintPlannerTaskFil
       candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
 
-async function runRange(start: number, end: number, count: number, input: BlueprintPlannerTaskFile) {
+async function runRange(start: number, end: number, count: number, input: BlueprintPlannerTaskFile, cancelImmediately = false) {
   const session = new PlannerBatchSession();
   const clients: NodePlannerClient[] = [];
   let active = 0, maximumActive = 0;
@@ -47,6 +47,15 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
   try {
     const id = await host.actions.importTask(input);
     host.actions.continuePlanning(id, 10_000);
+    if (cancelImmediately) {
+      // 导入先异步恢复；在开始动作提交后立即暂停，不能把取消恢复当成取消规划。
+      const deadline = performance.now() + 1_000;
+      while (!host.queries.getTask(id)?.planningStarted) {
+        if (performance.now() > deadline) throw new Error("未能在恢复微任务完成后开始规划。");
+        await Promise.resolve();
+      }
+      host.actions.cancel(id);
+    }
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(file.progress.status, file.progress.message ?? undefined).toBe("waiting");
@@ -57,6 +66,17 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
     await session.dispose();
   }
 }
+
+it("零提案分片合并保留任一分片的首次启动标记，不受文件顺序影响", async () => {
+  const input = originalTask();
+  const first = await runRange(0, 16, 32, input, true);
+  const second = await runRange(16, 32, 32, input, true);
+  const unstarted = { ...first.file, progress: { ...first.file.progress, planningStarted: false } };
+  for (const files of [[unstarted, second.file], [second.file, unstarted]]) {
+    const merged = await mergePlannerTaskFiles(files, first.registry);
+    expect(merged.progress).toMatchObject({ planningStarted: true, evaluatedProposals: 0, candidateCount: 0 });
+  }
+}, 30_000);
 
 it("真实 Node Worker 在分片内执行有界批次，并保存可恢复计数", async () => {
   const { file, maximumActive, clientCount } = await runRange(0, 32, 32, originalTask(2));

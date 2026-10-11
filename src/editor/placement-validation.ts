@@ -22,7 +22,7 @@ import {
 import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
-import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
+import { BASE_AREA_ONLY_TAG_PREFIX, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
 import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
@@ -189,6 +189,11 @@ export function resolvePlacementValidations(options: {
     entries,
     document: options.document,
     registry: options.workspace.registry,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
+  applyBaseOnlyReasons({
+    entries,
+    document: options.document,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
   // AI-REMOVED 2026-09-16:
@@ -479,6 +484,19 @@ function applyInsideBaseForbiddenReasons(options: {
     if (baseAreas.some((area) =>
       areGridRectsIntersecting(area.placeableRect, entry.gridRect)
     )) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+  }
+}
+
+function applyBaseOnlyReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+    if (!matchesEntityBaseOnlyTag(entry.definition.tags, options.document.baseId)) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }

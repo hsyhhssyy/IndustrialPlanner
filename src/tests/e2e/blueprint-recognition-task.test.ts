@@ -115,6 +115,10 @@ for (const profile of SCREEN_PROFILES) {
       await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.warehousePortPlacement === 'any');
       await dialog.getByRole('button', {name:'识别蓝图',exact:true}).click();
       await dialog.getByLabel('原图净产率').waitFor({timeout:60000});
+      // 2026-10-11：原图边界识别后只读，摆放规则在首次开始规划时才锁定。
+      assert(!await rule.isDisabled() && !await bus.isDisabled(), '识别完成不能锁定摆放规则');
+      assert(await dialog.getByRole('button', {name:'开始规划',exact:true}).count() === 1, '首次规划前按钮应为开始规划');
+      assert(await dialog.getByRole('button', {name:'继续规划',exact:true}).count() === 0, '识别完成不能提前显示继续规划');
       assert(await dialog.locator('[class*="boundaryGroup"]').getByRole('combobox').count() === 0, '优化页原图边界必须只读');
       const baselineLocate = dialog.locator('[class*="boundaryRow"]').first().getByRole('button');
       await baselineLocate.click();

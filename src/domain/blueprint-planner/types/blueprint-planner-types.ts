@@ -125,6 +125,8 @@ export interface BlueprintPlannerAreaPoint {
 }
 
 export interface BlueprintPlannerProgress {
+  /** 首次接受规划执行时锁定；识别和保存原图不计入规划启动。 */
+  readonly planningStarted?: boolean;
   readonly activeWorkerCount?: number;
   readonly taskId: string;
   readonly status: BlueprintPlannerTaskStatus;
