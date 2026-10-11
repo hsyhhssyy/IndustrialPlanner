@@ -126,7 +126,7 @@ describe("BaseBoundaryDecoration", () => {
     decoration.sync(ctx)
     expect(graphics.rectCommands).toHaveLength(2)
     expect(graphics.children.map((text) => text.text)).toEqual(["武陵农用地", "缘缘庄"])
-    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([50, 550])
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([-50, 990])
     for (const plate of graphics.roundRectCommands) {
       expect(plate.y + plate.height).toBeLessThan(80)
     }
@@ -136,13 +136,13 @@ describe("BaseBoundaryDecoration", () => {
     expect(graphics.clearCount).toBe(1)
     ctx.viewportState.centerX += 2
     decoration.sync(ctx)
-    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([30, 530])
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([-70, 970])
     expect(graphics.children).toHaveLength(2)
 
     ctx.viewportState.displayRotation = 90
     decoration.sync(ctx)
-    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([300, 300])
-    expect(graphics.roundRectCommands[1]!.y - graphics.roundRectCommands[0]!.y).toBe(500)
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([-40, 20])
+    expect(graphics.roundRectCommands[1]!.y - graphics.roundRectCommands[0]!.y).toBe(1040)
     decoration.destroy()
     expect((graphics as unknown as { destroy: ReturnType<typeof vi.fn> }).destroy)
       .toHaveBeenCalledWith({ children: true })

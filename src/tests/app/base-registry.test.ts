@@ -16,13 +16,13 @@ describe("createRegistryContract", () => {
       name: "农牧用地",
       tag: "武陵",
       nameplate: "武陵农用地",
-      placeableArea: { width: 20, height: 20 },
-      outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+      placeableArea: { width: 44, height: 44 },
+      outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       subAreas: [{
         nameplate: "缘缘庄",
-        position: { x: 50, y: 0 },
-        placeableArea: { width: 20, height: 20 },
-        outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+        position: { x: 104, y: 0 },
+        placeableArea: { width: 38, height: 38 },
+        outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       }],
     });
     const names = registry.baseDefinitions.flatMap((base) =>

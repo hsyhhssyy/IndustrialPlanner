@@ -11,41 +11,41 @@ const draftBox = BASE_DEFINITIONS.find((base) => base.id === "draft_box")!;
 const agriculturalLand = BASE_DEFINITIONS.find((base) => base.id === "wuling_agricultural_land")!;
 
 describe("base areas", () => {
-  it("lays out two named agricultural areas with a 10-cell gap between outer rings", () => {
+  it("lays out two named agricultural areas with a 20-cell gap between outer rings", () => {
     const areas = resolveBaseAreas(agriculturalLand);
     expect(areas).toMatchObject([
       {
         nameplate: "武陵农用地",
-        placeableRect: { x: 0, y: 0, width: 20, height: 20 },
-        outerRect: { x: -10, y: -10, width: 40, height: 40 },
+        placeableRect: { x: 0, y: 0, width: 44, height: 44 },
+        outerRect: { x: -20, y: -20, width: 84, height: 84 },
       },
       {
         nameplate: "缘缘庄",
-        placeableRect: { x: 50, y: 0, width: 20, height: 20 },
-        outerRect: { x: 40, y: -10, width: 40, height: 40 },
+        placeableRect: { x: 104, y: 0, width: 38, height: 38 },
+        outerRect: { x: 84, y: -20, width: 78, height: 78 },
       },
     ]);
     expect(areas).toHaveLength(2);
-    expect(areas[1]!.outerRect.x - (areas[0]!.outerRect.x + areas[0]!.outerRect.width)).toBe(10);
+    expect(areas[1]!.outerRect.x - (areas[0]!.outerRect.x + areas[0]!.outerRect.width)).toBe(20);
     expect(resolveBaseOuterBounds(agriculturalLand)).toEqual({
-      x: -10, y: -10, width: 90, height: 40,
+      x: -20, y: -20, width: 182, height: 84,
     });
   });
 
   it("keeps the agricultural gap and rectangles bridging both areas unplaceable", () => {
     expect(resolveBaseAreaContainingRect(agriculturalLand, {
-      x: 0, y: 0, width: 20, height: 20,
+      x: 0, y: 0, width: 44, height: 44,
     }, "placeable")?.nameplate).toBe("武陵农用地");
     expect(resolveBaseAreaContainingRect(agriculturalLand, {
-      x: 50, y: 0, width: 20, height: 20,
+      x: 104, y: 0, width: 38, height: 38,
     }, "placeable")?.nameplate).toBe("缘缘庄");
-    expect(isGridPointInBaseArea(agriculturalLand, { x: 29, y: 0 }, "outer")).toBe(true);
-    for (let x = 30; x < 40; x += 1) {
+    expect(isGridPointInBaseArea(agriculturalLand, { x: 63, y: 0 }, "outer")).toBe(true);
+    for (let x = 64; x < 84; x += 1) {
       expect(isGridPointInBaseArea(agriculturalLand, { x, y: 0 }, "outer")).toBe(false);
     }
-    expect(isGridPointInBaseArea(agriculturalLand, { x: 40, y: 0 }, "outer")).toBe(true);
+    expect(isGridPointInBaseArea(agriculturalLand, { x: 84, y: 0 }, "outer")).toBe(true);
     expect(resolveBaseAreaContainingRect(agriculturalLand, {
-      x: 29, y: 0, width: 12, height: 1,
+      x: 63, y: 0, width: 22, height: 1,
     }, "outer")).toBeNull();
   });
 
