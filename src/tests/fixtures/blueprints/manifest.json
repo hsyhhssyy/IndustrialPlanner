@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 21,
-  "updatedAt": "2026-10-09",
+  "fixtureRevision": 22,
+  "updatedAt": "2026-10-11",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -3756,6 +3756,27 @@
       "file": "src/tests/fixtures/blueprints/migration/plant-cycle.schema6.json",
       "role": "migration-input",
       "schemaVersion": 6,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/blueprint-planner/stash-submission/powered.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/blueprint-planner/stash-submission/unpowered.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/blueprint-planner/stash-submission/disabled.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
       "version": "fixture-v1",
       "unknownDefinitionIds": []
     }

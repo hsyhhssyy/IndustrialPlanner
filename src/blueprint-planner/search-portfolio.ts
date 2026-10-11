@@ -2,6 +2,8 @@ import { resolvePlannerOutputAttempt, restorePlannerOutputRequest, plannerUsesOu
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import { countPlannerOutputStashes } from "./quality";
+import { plannerAttemptStrategy, type PlannerAttemptStrategy } from "./strategy-schedule";
+import { PlannerRandom } from "./search-random";
 
 interface SeedEntry {
   readonly seed: PlannerSearchSeed;
@@ -107,8 +109,9 @@ export class PlannerSearchPortfolio {
     }
   }
 
-  next(variant: number, continuation = true, globalBest?: { readonly area: number; readonly outputStashCount?: number }) {
-    const attempt = resolvePlannerAttempt(this.request, variant);
+  next(variant: number, continuation = true, globalBest?: { readonly area: number; readonly outputStashCount?: number }, assigned?: BlueprintPlannerRequest,
+    strategy: PlannerAttemptStrategy = plannerAttemptStrategy(variant)) {
+    const attempt = { request: assigned ?? resolvePlannerAttempt(this.request, strategy.outputSeed).request, variant };
     // AI-REMOVED 2026-09-30:
     // Reason: 单一种子会丢弃同面积但通道不同的有效布局。
     // Trigger: 用户要求尝试多布局续搜并用一百万提案评估。
@@ -126,14 +129,16 @@ export class PlannerSearchPortfolio {
     // 2026-09-30：同面积少箱也是改进；冷启动可能合箱，固定拓扑续搜只有本来更少箱时才放宽一格。
     let maximumArea = continuation && Number.isFinite(bestArea)
       ? bestArea - Number(!plannerUsesOutputStash(attempt.request.options) || bestStashCount <= 1) : undefined;
-    if (!continuation || attempt.variant % 4 === 3 || !pool) return { ...attempt, seed: undefined, continuationStep: undefined, maximumArea };
+    if (!continuation || strategy.restart || !pool) return { ...attempt, seed: undefined, continuationStep: undefined, maximumArea, attemptStrategy: strategy };
     const stalled = pool.attemptsWithoutImprovement++;
     // 最小面积分支占三分之二续搜机会；停滞两轮后才轮流探索其他结构。
-    const index = stalled >= 2 && stalled % 3 === 2 && pool.entries.length > 1
-      ? 1 + (Math.floor(stalled / 3) % (pool.entries.length - 1)) : 0;
+    // AI-CORRECTION 2026-10-11：停滞后以独立随机流按原权重选择，避免与尺寸周期绑定。
+    const random = new PlannerRandom(strategy.portfolioSeed);
+    const index = stalled >= 2 && random.integer(3) === 0 && pool.entries.length > 1
+      ? 1 + random.integer(pool.entries.length - 1) : 0;
     const entry = pool.entries[index]!;
     if (maximumArea !== undefined && countPlannerOutputStashes(entry.seed.network.nodes) >= bestStashCount) maximumArea = bestArea - 1;
-    return { ...attempt, seed: entry.seed, continuationStep: entry.visits++, maximumArea };
+    return { ...attempt, seed: entry.seed, continuationStep: entry.visits++, maximumArea, attemptStrategy: strategy };
   }
 
   remember(seed: PlannerSearchSeed | undefined): void {
@@ -161,6 +166,10 @@ export class PlannerSearchPortfolio {
     // Original code:
     // const previous = this.seeds.get(seed.requestKey);
     // if (!previous || seed.width * seed.height < previous.width * previous.height) this.seeds.set(seed.requestKey, seed);
+    if (!this.seeds.has(seed.requestKey) && this.seeds.size >= MAX_PLANNER_OUTPUT_MODES) {
+      // 2026-10-11：口数组合不截断；仅淘汰最早的续搜缓存，仍能独立重建该组合。
+      this.seeds.delete(this.seeds.keys().next().value!);
+    }
     const previous = this.seeds.get(seed.requestKey);
     const entry: SeedEntry = { seed, features: seedFeatures(seed), visits: 0 };
     if (previous?.entries.some(item => item.seed.width === seed.width && item.seed.height === seed.height && seedDistance(item, entry) === 0)) return;

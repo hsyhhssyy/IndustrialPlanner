@@ -19,6 +19,13 @@ export class PlannerPlacement {
 
   constructor(readonly registry: RegistryContract, readonly rowWidth: number, readonly minimumX = 8, readonly minimumY = 0, readonly deviceClearance = 2, readonly escapeLength = 1) {}
 
+  /** 没有下游物流的收货终点只预留入口，自动提交不产生物理出线需求。 */
+  private requiredPorts(node: PlannerNode, entity = node.entity): PlannerPort[] {
+    return (["input", "output"] as const).flatMap(direction => direction === "output" && node.outputs.length === 0
+      && (node.purpose === "product" || node.purpose === "byproduct") ? []
+      : getPlannerPorts(this.registry, entity, node.definition, direction));
+  }
+
   bounds(): GridRect {
     const left = Math.min(this.minimumX, ...this.rectangles.map((rect) => rect.x));
     const top = Math.min(this.minimumY, ...this.rectangles.map((rect) => rect.y));
@@ -47,7 +54,15 @@ export class PlannerPlacement {
         && areGridRectsIntersecting(corridor, this.rectangles[index]!))) return false;
     }
     if (this.portCells.some((point) => containsCell(rect, point))) return false;
-    const ports = ["input", "output"].flatMap((direction) => getPlannerPorts(this.registry, entity, node.definition, direction as "input" | "output"));
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement:     const ports = this.requiredPorts(node, entity);
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // const ports = ["input", "output"].flatMap((direction) => getPlannerPorts(this.registry, entity, node.definition, direction as "input" | "output"));
+    const ports = this.requiredPorts(node, entity);
     // 同摆位补放设施的盒子已经固定，设备本体合法仍不足以保证端口在盒内可接。
     if (this.maximumY !== null && ports.some(port => port.outside.x < this.minimumX || port.outside.y < this.minimumY
       || port.outside.y >= this.maximumY! || this.maximumX !== null && port.outside.x >= this.maximumX)) return false;
@@ -70,9 +85,17 @@ export class PlannerPlacement {
     node.entity.rotation = rotation;
     this.placed.push(node);
     this.rectangles.push(resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
-    for (const direction of ["input", "output"] as const) {
-      this.portCells.push(...getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap((port) => escapeCells(port, this.escapeLength)));
-    }
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement:     this.portCells.push(...this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength)));
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // for (const direction of ["input", "output"] as const) {
+    //   this.portCells.push(...getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap((port) => escapeCells(port, this.escapeLength)));
+    // }
+    this.portCells.push(...this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength)));
   }
 
   placeAnywhere(node: PlannerNode, rotation: GridRotation = 0, preferred?: GridPoint): void {
@@ -97,8 +120,16 @@ export class PlannerPlacement {
     const remaining = this.placed.filter(node => !nodes.includes(node));
     this.placed.splice(0, this.placed.length, ...remaining);
     this.rectangles.splice(0, this.rectangles.length, ...remaining.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })));
-    this.portCells.splice(0, this.portCells.length, ...remaining.flatMap(node => (["input", "output"] as const)
-      .flatMap(direction => getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength)))));
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement:     this.portCells.splice(0, this.portCells.length, ...remaining.flatMap(node => this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength))));
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // this.portCells.splice(0, this.portCells.length, ...remaining.flatMap(node => (["input", "output"] as const)
+    //   .flatMap(direction => getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength)))));
+    this.portCells.splice(0, this.portCells.length, ...remaining.flatMap(node => this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength))));
   }
 
   /** 同摆位重建物流时登记已通过几何检查的固定设备，不重新移动主体或套用初排间距。 */
@@ -106,8 +137,16 @@ export class PlannerPlacement {
     for (const node of nodes) {
       this.placed.push(node);
       this.rectangles.push(resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
-      this.portCells.push(...(["input", "output"] as const).flatMap(direction =>
-        getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength))));
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement:       this.portCells.push(...this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength)));
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // this.portCells.push(...(["input", "output"] as const).flatMap(direction =>
+      //   getPlannerPorts(this.registry, node.entity, node.definition, direction).flatMap(port => escapeCells(port, this.escapeLength))));
+      this.portCells.push(...this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength)));
     }
   }
 

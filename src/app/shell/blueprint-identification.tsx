@@ -75,6 +75,7 @@
 // }
 import { useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { BlueprintPlannerBlueprintBoundary } from "@/domain/blueprint-planner";
 import type { AppHost } from "../host";
@@ -97,6 +98,7 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
   const input = request?.input ?? (current && !isBlueprintRecognitionRequest(current) ? current.blueprintSource : null);
   const readOnly = !!input && !request;
   const boundaries = input?.boundaries ?? [];
+  const invalidSupplies = new Set(input ? invalidBlueprintWarehouseSupplies(appHost.workspace.registry, input, appHost.blueprintPlannerDialog.options) : []);
   const [selected, setSelected] = useState<string | null>(null);
   const [focusVersion, setFocusVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +161,7 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
             const marker = t(boundary.direction === "input" ? "eda.inputMarker" : "eda.outputMarker").replace("{index}", String(index + 1));
             const item = boundary.itemId ? registry.queries.findItemDefinition(boundary.itemId) : null;
             return <div key={key} ref={element => { if (element) rows.current.set(key, element); else rows.current.delete(key); }}
-              className={styles.boundaryRow} data-selected={selected === key}>
+              className={styles.boundaryRow} data-selected={selected === key} aria-invalid={boundary.direction === "input" && invalidSupplies.has(boundary.entityId)}>
               <button type="button" aria-pressed={selected === key} onClick={() => choose(boundary, true)}>
                 <strong>{marker}</strong><span>{t(definition.nameKey)} <small>({entity.position.x}, {entity.position.y})</small></span>
               </button>
@@ -177,6 +179,7 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
         </fieldset>)}
       </div>
     </div>
+    {invalidSupplies.size ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
     {error ? <p role="alert" className={styles.error}>{error}</p> : null}
     {/* AI-REMOVED 2026-10-07: 识别按钮移入统一底部操作区；原代码与审计说明保留在文件末尾。 */}
   </section>;

@@ -3,7 +3,7 @@
   "provenance": "2026-10-05：存取线移至盒外，宽度由 13 减去原四格条带至 9，保留无合法供电桩位置的原验证条件。",
   "request": {
     "options": {
-      "solidSupply": "warehouse",
+      "warehousePortPlacement": "any", "solidSupply": "warehouse",
       "fluidSupply": "conduit",
       "warehouseBus": "straight",
       "solidOutput": "stash",

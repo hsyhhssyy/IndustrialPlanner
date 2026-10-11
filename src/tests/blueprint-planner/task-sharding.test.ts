@@ -25,14 +25,14 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
   const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => {
     const client = new NodePlannerClient();
     clients.push(client);
-    return { build: async (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) => {
+    return { build: async (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) => {
       active++;
       maximumActive = Math.max(maximumActive, active);
       try {
         expect(targetOutline).toBeDefined();
         expect(evaluations).toBeLessThanOrEqual(5000);
         const candidate = await client.build(request, variant, budgetMs,
-          { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal);
+          { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal);
         expect(candidate.search.outline).toEqual(targetOutline);
         return candidate;
       } catch (error) {
@@ -84,6 +84,10 @@ it("独立分片能从同一旧任务出发并合并，重叠和缺失均拒绝"
   const merged = parsePlannerTaskFile(await mergePlannerTaskFiles([first.file, second.file], first.registry), first.registry);
   expect(merged.checkpoint.parallel?.originTaskId).toBe(input.taskId);
   expect(merged.checkpoint.parallel?.ownedShards).toEqual(Array.from({ length: 32 }, (_, index) => index));
+  expect(merged.checkpoint.randomSeed).toBe(first.file.checkpoint.randomSeed);
+  for (const file of [first.file, second.file]) for (const index of file.checkpoint.parallel!.ownedShards) {
+    expect(merged.checkpoint.parallel!.shards[index]!.strategyStates).toEqual(file.checkpoint.parallel!.shards[index]!.strategyStates);
+  }
   expect(merged.checkpoint.attempt).toBe(first.file.checkpoint.attempt + second.file.checkpoint.attempt);
   expect(merged.checkpoint.evaluations).toBe(first.file.checkpoint.evaluations + second.file.checkpoint.evaluations);
   await expect(mergePlannerTaskFiles([first.file, first.file], first.registry)).rejects.toThrow("重复");

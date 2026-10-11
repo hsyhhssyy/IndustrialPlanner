@@ -12,13 +12,14 @@ import {
 
 const TEN_MINUTE_EPOCHS = 1200;
 
-describe("武陵四基地区域会话 10 分钟长跑", () => {
-  it("四个武陵基地连续 1200 Epoch 同步提交", { timeout: 120_000 }, async () => {
+// AI-CORRECTION 2026-10-10: 新增农牧用地后，武陵共有五个基地入口，长跑覆盖全部五基地。
+describe("武陵五基地区域会话 10 分钟长跑", () => {
+  it("五个武陵基地连续 1200 Epoch 同步提交", { timeout: 120_000 }, async () => {
     const registry = createRegistryContract();
     const wulingBaseIds = registry.baseDefinitions
       .filter((definition) => definition.tag === "武陵")
       .map((definition) => definition.id);
-    expect(wulingBaseIds).toHaveLength(4);
+    expect(wulingBaseIds).toHaveLength(5);
 
     const topologies: RegionalBaseTopologyInput[] = wulingBaseIds.map((baseId, index) => ({
       baseId,
@@ -36,7 +37,7 @@ describe("武陵四基地区域会话 10 分钟长跑", () => {
 
     const initialWarehouseCounts: Record<string, number> = {};
     const session = new RegionalSimulationSession({
-      sessionId: "wuling-four-base-long-run",
+      sessionId: "wuling-five-base-long-run",
       registry,
       topologies,
       table: admission.table!,

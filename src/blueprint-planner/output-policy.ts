@@ -32,11 +32,20 @@ export function restorePlannerOutputRequest(request: BlueprintPlannerRequest, re
     if (mode !== "stash" && mode !== "warehouse") throw new Error("检查点含有未解析的自动输出规则。");
     return mode;
   };
+  const additional = request.options.warehousePortPlacement === "full-side" ? (resolved.itemPolicies ?? []).filter(policy =>
+    !request.options.itemPolicies?.some(original => original.itemId === policy.itemId)) : [];
+  if (additional.some(policy => request.options.solidOutput !== "auto" || policy.supply !== undefined || policy.byproducts !== undefined)) {
+    throw new Error("检查点改变了固定的物品规则。");
+  }
   const restored = { ...request, options: { ...request.options,
     solidOutput: request.options.solidOutput === "auto" ? concrete(resolved.solidOutput) : request.options.solidOutput,
     ...(request.options.itemPolicies === undefined ? {} : { itemPolicies: request.options.itemPolicies.map(policy => policy.output === "auto"
+        || request.options.warehousePortPlacement === "full-side" && policy.output === undefined && request.options.solidOutput === "auto"
+          && resolved.itemPolicies?.some(entry => entry.itemId === policy.itemId && entry.output !== undefined)
       ? { ...policy, output: concrete(resolved.itemPolicies?.find(entry => entry.itemId === policy.itemId)?.output) } : policy) }),
   } };
+  if (additional.length) Object.assign(restored.options, { itemPolicies: [...restored.options.itemPolicies ?? [],
+    ...additional.map(policy => ({ itemId: policy.itemId, output: concrete(policy.output) }))] });
   if (plannerRequestKey(restored) !== plannerRequestKey({ ...request, options: resolved })) throw new Error("续搜布局与当前生产方案或供给条件不一致：检查点改变了固定的物品规则。");
   return restored;
 }

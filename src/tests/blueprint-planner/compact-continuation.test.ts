@@ -9,6 +9,7 @@ import { rerouteReferenceLayout } from "@/scripts/eda/reference-analysis";
 import { PlannerRouter } from "@/blueprint-planner/router";
 import type { PlannerPort } from "@/blueprint-planner/geometry";
 import { restorePlannerSeed } from "@/blueprint-planner/search-seed";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { PlannerBatchSession, runPlannerBatch } from "@/scripts/eda/planner-runner";
 import yazhen from "./fixtures/yazhen-syringe.json";
 
@@ -64,7 +65,9 @@ it("芽针固定生产方案从可行解缩边续搜，保持输入与种子不�
     const seed = JSON.parse(readFileSync(`${record.artifactPath}/search-seed.json`, "utf8"));
     const originalSeed = JSON.stringify(seed);
     expect(() => restorePlannerSeed(session.workspace.registry, { ...request, options: { ...request.options, plantStartup: "warehouse" } }, seed)).toThrow("不一致");
-    const resumed = await runPlannerBatch(request, { engineKind: "dense-v2", attempts: 1, startVariant: 1, localEvaluations: 12_500, seed }, session);
+    // AI-CORRECTION 2026-10-11：本例验证固定的缩宽续搜，显式指定该分支，随机策略覆盖另有回归。
+    const resumed = await runPlannerBatch(request, { engineKind: "dense-v2", attempts: 1, startVariant: 1, localEvaluations: 12_500, seed,
+      attemptStrategy: { ...plannerAttemptStrategy(1), restart: false, outlineSeed: 1, layoutSeed: 1 } }, session);
     const result = resumed.records[0]!;
     expect(result.outcome).toBe("success");
     expect(result.area).toBeLessThan(record.area!);

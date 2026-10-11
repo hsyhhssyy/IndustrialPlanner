@@ -13,6 +13,7 @@ export interface BlueprintPlannerAction {
   // identifyBlueprint(input: BlueprintPlannerBlueprintInput, options: BlueprintPlannerOptions, signal?: AbortSignal): Promise<string>;
   createBlueprintTask(input: BlueprintPlannerBlueprintInput, options: BlueprintPlannerOptions): Promise<string>;
   updateBlueprintBoundaries(taskId: string, boundaries: readonly BlueprintPlannerBlueprintBoundary[]): Promise<void>;
+  updateBlueprintOptions(taskId: string, options: BlueprintPlannerOptions): Promise<void>;
   identifyBlueprint(taskId: string, signal?: AbortSignal): Promise<void>;
   deleteTask(taskId: string): Promise<void>;
   importTask(file: BlueprintPlannerTaskFile): Promise<string>;

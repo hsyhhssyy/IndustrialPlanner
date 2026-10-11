@@ -1,12 +1,13 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
-import { resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
+import { removeForbiddenProtocolCoreEntities, resolveProtocolCoreDefinitionIdForBase } from "@/shared/protocol-core";
 
 /**
  * 确保文档中包含协议核心实体（item_port_sp_hub_1）。
  * AI-CORRECTION 2026-07-19: 当前协议核心设备定义 ID 为 sp_hub_1；上行保留迁移前名称。
  * 如果已存在则直接返回原文档，否则在 (0,0) 注入核心并置顶 entityOrder。
  * AI-CORRECTION 2026-09-18: 核心类型由基地决定；已有错误类型原位替换，多余核心同步清理。
+ * AI-CORRECTION 2026-10-10: 无核心基地不注入核心，并清理已有核心及关联连线。
  */
 export function ensureProtocolCoreEntity(options: {
   document: WorldDocument;
@@ -15,6 +16,9 @@ export function ensureProtocolCoreEntity(options: {
   const expectedDefinitionId = resolveProtocolCoreDefinitionIdForBase(
     options.document.baseId,
   );
+  if (expectedDefinitionId === null) {
+    return removeForbiddenProtocolCoreEntities(options.document);
+  }
   const protocolCoreEntityIds = Object.values(options.document.entities)
     .filter((entity) => options.queries.isProtocolCore(entity.definitionId))
     .map((entity) => entity.id);

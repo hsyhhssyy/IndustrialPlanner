@@ -21,7 +21,7 @@
     ]
   },
   "options": {
-    "solidSupply": "warehouse", "fluidSupply": "conduit", "warehouseBus": "straight", "solidOutput": "stash",
+    "warehousePortPlacement": "any", "solidSupply": "warehouse", "fluidSupply": "conduit", "warehouseBus": "straight", "solidOutput": "stash",
     "byproducts": "destroy", "plantStartup": "preload", "evaluationsPerRound": 10000, "concurrency": 1
   }
 }

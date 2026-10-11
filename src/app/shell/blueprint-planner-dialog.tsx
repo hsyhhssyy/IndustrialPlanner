@@ -2,9 +2,10 @@ import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 // AI-REMOVED 2026-10-03: Reason: 全局选项字段收敛后无须 BlueprintPlannerOptions。Trigger: 逐物品配置。
 // Evidence: OPTION_FIELDS 仅保留两项。Replacement: 字段字面量。Risk: Low。Human Review: Required
 // Original code: import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
-import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner-item-policy";
+import { collectPlannerItemBoundaries, PlannerItemRules, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { BlueprintPlannerItemPolicies } from "./blueprint-planner-item-policies";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toJS } from "mobx";
 import { observer } from "mobx-react-lite";
 import type { BlueprintPlannerAreaPoint, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import type { UiKey } from "@/shared/i18n";
@@ -20,7 +21,7 @@ import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { BlueprintIdentification } from "./blueprint-identification";
 import { describePlannerHistoryTask } from "./blueprint-planner-history";
 
-const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup"; label: UiKey; choices: readonly [string, UiKey][] }[] = [
+const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup" | "warehousePortPlacement"; label: UiKey; choices: readonly [string, UiKey][] }[] = [
   // AI-REMOVED 2026-10-03:
   // Reason: 四类意图改为逐物品编辑。Trigger: 用户要求精确选择。
   // Evidence: BlueprintPlannerItemPolicies 展示任务边界。Replacement: BlueprintPlannerItemPolicies。
@@ -33,6 +34,7 @@ const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup"; label: UiK
   // Risk: Low；旧字段保留任务缺省值。Human Review: Required
   // Original code:
   //   { key: "fluidSupply", label: "eda.fluidSupply", choices: [["external", "eda.externalPipe"], ["conduit", "eda.conduitSupply"]] },
+  { key: "warehousePortPlacement", label: "eda.warehousePortPlacement", choices: [["any", "eda.portsAny"], ["continuous", "eda.portsContinuous"], ["full-side", "eda.portsFullSide"]] },
   { key: "warehouseBus", label: "eda.warehouseBus", choices: [["straight", "eda.straight"], ["corner", "eda.corner"], ["u-shaped", "eda.uShaped"]] },
   // AI-REMOVED 2026-10-03:
   // Reason: 四类意图改为逐物品编辑。Trigger: 用户要求精确选择。
@@ -223,6 +225,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const anyBusy = controller.taskLocked;
   const compact = appHost.state.screenProfile.deviceClass === "mobile";
   const plan = controller.plan;
+  const itemRules = new PlannerItemRules(appHost.workspace.registry, controller.options);
+  const blueprintInput = recognition?.input ?? controller.blueprintRequest?.blueprintSource;
+  const invalidBlueprintSupply = !!blueprintInput && invalidBlueprintWarehouseSupplies(appHost.workspace.registry, blueprintInput, controller.options).length > 0;
+  const invalidWarehouseSupply = invalidBlueprintSupply || !!(plan && supply.view && !controller.blueprintRequest
+    && collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view).some(row => row.supply && itemRules.requiresWarehouseSupply(row.itemId)));
   const validRoundSettings = Number.isSafeInteger(controller.options.evaluationsPerRound) && controller.options.evaluationsPerRound >= 10_000
     && controller.options.evaluationsPerRound % 10_000 === 0;
   // AI-REMOVED 2026-10-03:
@@ -343,8 +350,27 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       </aside>
       <div className={styles.main}>
         <div className={styles.scroll}>
-          {controller.blueprintDraft ? <BlueprintIdentification key={controller.blueprintDraft.blueprintId}
-            appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} /> : plan === null && progress === null ? <div className={styles.empty}><p>{t("eda.noPlan")}</p>
+          {controller.blueprintDraft ? <><fieldset className={styles.options} disabled={busy}>
+            {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+              <select value={controller.options[field.key]}
+                disabled={field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+                onChange={event => {
+                  const value = event.target.value;
+                  act(async () => {
+                    if (!planner || selectedId === null || busy) return;
+                    setFileBusy(true);
+                    try {
+                      const options = { ...toJS(controller.options), [field.key]: value };
+                      if (options.warehousePortPlacement === "full-side") options.warehouseBus = "straight";
+                      await planner.actions.updateBlueprintOptions(selectedId, options);
+                      controller.updateOptions(options);
+                    } finally { setFileBusy(false); }
+                  });
+                }}>
+                {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+              </select></label>)}
+          </fieldset><BlueprintIdentification key={controller.blueprintDraft.blueprintId}
+            appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} /></> : plan === null && progress === null ? <div className={styles.empty}><p>{t("eda.noPlan")}</p>
             <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.openProductionPlanning")}</button></div> : plan !== null ? <>
             <div className={styles.heading}><div><span>{t(controller.blueprintRequest ? "eda.blueprintMode" : "eda.productionMode")}</span><p className={styles.target}>{plan.name}</p></div>
 
@@ -366,10 +392,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               })} t={t} /> : null}
             {supply.view && !controller.blueprintRequest ? <BlueprintPlannerItemPolicies plan={plan} registry={appHost.workspace.registry} environment={supply.view}
               options={controller.options} disabled={busy || progress !== null} onChange={controller.updateItemPolicy} t={t} /> : null}
+            {invalidWarehouseSupply ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
             {supply.error && !controller.blueprintRequest ? <p role="alert" className={styles.error}>{supply.error}</p> : null}
             <fieldset className={styles.options} disabled={busy}>
-              {OPTION_FIELDS.filter(() => !controller.blueprintRequest).map(field => <label key={field.key}><span>{t(field.label)}</span>
-                <select disabled={progress !== null} value={controller.options[field.key]}
+              {OPTION_FIELDS.filter(field => !controller.blueprintRequest || field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+                <select disabled={progress !== null || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"} value={controller.options[field.key]}
                   onChange={event => controller.updateOptions({ [field.key]: event.target.value })}>
                   {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
                 </select></label>)}
@@ -377,7 +404,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <label><span>{t("eda.budget")}</span><input type="number" min="10" step="10" value={controller.options.budgetMs / 1000}
                 onChange={event => controller.updateOptions({ budgetMs: Number(event.target.value) * 1000 })} /></label>
               */}
-              <label><span>{t("eda.evaluationsPerRound")}</span><input type="number" min="1" step="1" value={controller.options.evaluationsPerRound / 10_000}
+              <label><span>{t("eda.evaluationsPerRound")}</span><input type="number" min="1" step="1"
+                value={controller.options.evaluationsPerRound === 0 ? "" : controller.options.evaluationsPerRound / 10_000}
                 onChange={event => controller.updateOptions({ evaluationsPerRound: Number(event.target.value) * 10_000 })} /></label>
               {/* AI-REMOVED 2026-10-03:
                 Reason: 并发数不再由用户手填。Trigger: 用户确认自动并发。
@@ -476,7 +504,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           </div> : null}
           <div className={styles.planningActions}>
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}
-              disabled={busy || !recognition.detectedBoundaries || !recognition.input.boundaries.length
+              disabled={busy || invalidBlueprintSupply || !recognition.detectedBoundaries || !recognition.input.boundaries.length
                 || recognition.input.boundaries.some(boundary => boundary.direction === "input" && !boundary.itemId)}
               onClick={() => act(async () => {
                 await planner!.actions.identifyBlueprint(selectedId);
@@ -486,7 +514,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {progress !== null && plan !== null && !busy && !controller.blueprintRequest ? <button type="button" disabled={anyBusy}
               onClick={() => { controller.open(plan); setError(null); }}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
-            {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy}
+            {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
               onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId,
                 controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu))}>{t("eda.continue")}</button> : null}
             {result !== null ? <>
@@ -508,7 +536,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 onClick={event => { if (event.detail === 0) place("mouse"); }}>{t("eda.place")}</button>
             </> : null}
             {progress === null && plan !== null ? <button type="button" className={styles.primary}
-              disabled={plan.containsModules || !planner || busy || !validRoundSettings || Boolean(supply.error) || Boolean(supply.view?.issues.length)} onClick={() => act(() => {
+              disabled={plan.containsModules || !planner || busy || !validRoundSettings || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length)} onClick={() => act(() => {
                 if (planner) {
                   // AI-REMOVED 2026-10-04:
                   // Reason: 启动与下载共用可见配置的整理逻辑。

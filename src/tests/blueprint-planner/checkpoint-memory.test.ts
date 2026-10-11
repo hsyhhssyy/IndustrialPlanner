@@ -36,9 +36,9 @@ it.each([false, true])("慢速存储不积压分片快照，最终检查点不�
       delete: async () => undefined,
     },
     worker: {
-      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) =>
+      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
         session.planner.build(request, variant, budgetMs,
-          { maxEvaluations: Math.min(10, evaluations), seed, continuationStep, maximumArea, targetOutline }, update, signal),
+          { maxEvaluations: Math.min(10, evaluations), seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
       dispose: () => { void session.planner.dispose(); },
     },
   });

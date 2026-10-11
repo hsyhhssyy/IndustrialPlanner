@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { PlannerSearchPortfolio, resolvePlannerAttempt } from "@/blueprint-planner/search-portfolio";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import type { PlannerSearchSeed } from "@/blueprint-planner/search-seed";
 import { PlannerBatchSession, runPlannerBatch } from "@/scripts/eda/planner-runner";
 import { readPlanningInput } from "@/scripts/eda/planning-input";
@@ -15,7 +16,9 @@ it("自动输出按完整有效面积择优，两种拓扑分别续搜并共享�
   const before = JSON.stringify(request);
   try {
     const result = await runPlannerBatch(request, { engineKind: "dense-v2", attempts: 4, localEvaluations: 50_000 }, session);
-    expect(result.records.map(record => record.solidOutput)).toEqual(["stash", "warehouse", "stash", "warehouse"]);
+    // AI-CORRECTION 2026-10-11：输出方式独立随机抽样；固定种子的本组搜索覆盖两种方式，不再要求交替顺序。
+    expect(result.records).toHaveLength(4);
+    expect(new Set(result.records.map(record => record.solidOutput))).toEqual(new Set(["stash", "warehouse"]));
     const successes = result.records.filter(record => record.outcome === "success");
     // AI-REMOVED 2026-09-30:
     // Reason: 全局面积上限可能淘汰另一输出拓扑，自动搜索不再承诺两种模式都生成较大的成功蓝图。
@@ -59,12 +62,24 @@ it("自动输出按完整有效面积择优，两种拓扑分别续搜并共享�
         expect(node.entity.config["storageSlotGroups[0].slots[0].initialCount"]).toBeGreaterThan(0);
       }
     }
-    expect(portfolio.next(4).seed?.network.request.options.solidOutput).toBe("stash");
-    expect(portfolio.next(5).seed?.network.request.options.solidOutput).toBe("warehouse");
-    expect(portfolio.next(6).seed).toBeUndefined();
-    expect(portfolio.next(7).seed).toBeUndefined();
-    expect(portfolio.next(8).seed).toBeDefined();
-    expect(portfolio.next(9).seed).toBeDefined();
+    // AI-REMOVED 2026-10-11:
+    // Reason: 冷启动及输出方式不再由编号取模指定。
+    // Trigger: 用户授权独立 PRNG 策略；Evidence: PlannerSearchPortfolio 接收已抽样策略。
+    // Replacement: 下方显式策略回归，随机覆盖由 strategy-schedule.test.ts 验证。
+    // Risk: 不再要求旧编号顺序；Human Review: Required
+    // Original code:
+    // expect(portfolio.next(4).seed?.network.request.options.solidOutput).toBe("stash");
+    // expect(portfolio.next(5).seed?.network.request.options.solidOutput).toBe("warehouse");
+    // expect(portfolio.next(6).seed).toBeUndefined();
+    // expect(portfolio.next(7).seed).toBeUndefined();
+    // expect(portfolio.next(8).seed).toBeDefined();
+    // expect(portfolio.next(9).seed).toBeDefined();
+    for (const mode of ["stash", "warehouse"] as const) {
+      const assigned = { ...request, options: { ...request.options, solidOutput: mode } };
+      const strategy = { ...plannerAttemptStrategy(4), restart: false };
+      expect(portfolio.next(4, true, undefined, assigned, strategy).seed?.network.request.options.solidOutput).toBe(mode);
+      expect(portfolio.next(4, true, undefined, assigned, { ...strategy, restart: true }).seed).toBeUndefined();
+    }
     expect(portfolio.next(8, false).seed).toBeUndefined();
     expect(resolvePlannerAttempt(input, 7)).toEqual({ request: input, variant: 7 });
     const foreign = portfolio.next(4).seed!;

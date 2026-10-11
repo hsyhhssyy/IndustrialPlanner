@@ -4,6 +4,7 @@ import { areGridRectsContaining, areGridRectsIntersecting, resolveEntityGridRect
 import { allowsPlannerOverlap, getPlannerPorts, ROTATIONS, type PlannerPort } from "./geometry";
 import type { PlannerNetwork, PlannerWire } from "./model";
 import { PlannerBoundary } from "./boundary";
+import { PlannerRandom, plannerRandomSeed } from "./search-random";
 
 export interface PlannerPose extends GridPoint { readonly rotation: GridRotation; }
 
@@ -24,6 +25,8 @@ export function constructCompactLayout(registry: RegistryContract, network: Plan
 export function* compactLayoutProposals(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   outline: { width: number; height: number }, seed: number,
   rebuild?: { readonly poses: readonly PlannerPose[]; readonly movable: readonly number[] }): Generator<void, PlannerPose[] | null> {
+  const random = new PlannerRandom(plannerRandomSeed(`construct/${seed}`));
+  const priorities = random.shuffle(network.nodes.map((_, index) => index));
   const indices = new Map(network.nodes.map((node, index) => [node.entity.id, index]));
   const poses: PlannerPose[] = rebuild ? rebuild.poses.map(pose => ({ ...pose }))
     : network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
@@ -66,13 +69,13 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
     const affinity = (index: number) => incident[index]!.reduce((sum, edge) => sum + Number(placed.has(edge.source === index ? edge.target : edge.source)), 0);
     remaining.sort((a, b) => Number(boundary.has(b)) - Number(boundary.has(a)) || affinity(b) - affinity(a)
       || geometry(b).width * geometry(b).height - geometry(a).width * geometry(a).height
-      || ((a + seed) % network.nodes.length) - ((b + seed) % network.nodes.length));
+      || priorities[a]! - priorities[b]!);
     const index = remaining.shift()!, node = network.nodes[index]!;
     const neighbors = [...placed].sort((a, b) => Number(incident[index]!.some(edge => edge.source === b || edge.target === b))
       - Number(incident[index]!.some(edge => edge.source === a || edge.target === a))).slice(0, 12);
     let best: { pose: PlannerPose; cost: number } | null = null;
-    for (let turn = 0; turn < 4; turn++) {
-      const rotation = ROTATIONS[(turn + seed) % 4]!, size = geometries[index]![rotation / 90]!;
+    for (const rotation of random.shuffle(ROTATIONS)) {
+      const size = geometries[index]![rotation / 90]!;
       const proposals = new Map<string, PlannerPose>();
       const add = (x: number, y: number) => {
         if (x < minimumX || y < minimumY || x + size.width > outline.width || y + size.height > outline.height) return;

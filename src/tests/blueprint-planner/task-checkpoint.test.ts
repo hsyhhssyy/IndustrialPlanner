@@ -145,8 +145,8 @@ it("真实 Worker 与仿真 Host 支持多任务导入、续算检查点与删�
   const session = new PlannerBatchSession();
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 10,
     worker: {
-      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) =>
-        session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal),
+      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+        session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
       dispose: () => { void session.planner.dispose(); },
     },
   });
@@ -186,8 +186,8 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
   let requestedPause = false;
   const host = createBlueprintPlannerHost(session.workspace, { storage: null,
     worker: {
-      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) =>
-        session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline },
+      build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+        session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy },
           (phase, message, count) => {
             update(phase, message, count);
             if (!requestedPause && count > 0) {

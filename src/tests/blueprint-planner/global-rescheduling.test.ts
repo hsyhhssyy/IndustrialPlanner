@@ -6,6 +6,7 @@ import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint-planner/blueprint-planner-host";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
+import { nextPlannerStrategy, type PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { fixedOutlineMinimum } from "@/blueprint-planner/search-outline";
 import { partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
@@ -429,15 +430,17 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
   const shardIndex = expected.findIndex(list => list.length >= 2);
   expect(shardIndex).toBeGreaterThanOrEqual(0);
   const dispatched: Array<{ width: number; height: number }> = [];
+  const strategies: PlannerAttemptStrategy[] = [];
   const variants = new Set<number>();
   let roundLimit = 5000;
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => roundLimit,
     shardSelection: { count: 32, start: shardIndex, end: shardIndex + 1 },
-    worker: { build: async (_request, variant, _ms, budget, _signal, update, _seed, _step, maximumArea, outline) => {
+    worker: { build: async (_request, variant, _ms, budget, _signal, update, _seed, _step, maximumArea, outline, _originSeed, _sessionKey, strategy) => {
       expect(variants.has(variant)).toBe(false); variants.add(variant);
       expect(maximumArea).toBe(4899);
       expect(budget).toBe(5000);
       dispatched.push({ width: outline!.width, height: outline!.height });
+      expect(strategy).toBeDefined(); strategies.push(strategy!);
       update("layout", "已完成评估", budget);
       throw new PlannerCandidateError("本批无候选");
     }, dispose: () => undefined } });
@@ -448,11 +451,22 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     await vi.waitFor(() => expect(host.state.activeTaskId).toBeNull());
     const first = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(first.checkpoint.parallel!.shards[shardIndex]!.dimensionCursor).toBe(1);
+    expect(first.checkpoint.randomSeed).toBeGreaterThan(0);
+    const randomStates = first.checkpoint.parallel!.shards[shardIndex]!.strategyStates!;
+    expect(Object.keys(randomStates)).toHaveLength(1);
+    const nextDimension = expected[shardIndex]![1]!;
+    const nextKey = `${nextDimension.width}/${nextDimension.height}/any/any`;
+    const expectedStrategy = nextPlannerStrategy(first.checkpoint.randomSeed!, nextKey, randomStates[nextKey]).strategy;
+    const invalid = structuredClone(first); invalid.checkpoint.randomSeed = 0;
+    expect(() => parsePlannerTaskFile(invalid, session.workspace.registry)).toThrow("随机状态");
     id = await host.actions.importTask(first);
     roundLimit = 15000;
     host.actions.continuePlanning(id, 20000, 1, false);
     await vi.waitFor(() => expect(host.state.activeTaskId).toBeNull());
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+    expect(strategies[1]).toEqual(expectedStrategy);
+    expect(file.checkpoint.randomSeed).toBe(first.checkpoint.randomSeed);
+    expect(Object.values(file.checkpoint.parallel!.shards[shardIndex]!.strategyStates!).reduce((sum, state) => sum + state.visits, 0)).toBe(4);
     expect(dispatched).toEqual(Array.from({ length: 4 }, (_, index) => {
       const { width, height } = expected[shardIndex]![index % expected[shardIndex]!.length]!;
       return { width, height };

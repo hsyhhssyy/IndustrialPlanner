@@ -1,10 +1,13 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { PlannerCandidate } from "./candidate";
+import { PlannerBoundary } from "./boundary";
+import { createPlainNode } from "./placement";
 import { assertPlannerOutline } from "./search-outline";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import type { PlannerSupplyAudit } from "./supply-audit";
+import { meetsStashSubmission } from "./stash-submission";
 
 export function meetsOperatingLimits(audit: PlannerSupplyAudit, report: SimulationBlueprintRunReport): boolean {
   return (audit.startupProduction ?? []).every(limit => {
@@ -23,7 +26,7 @@ export function meetsOperatingLimits(audit: PlannerSupplyAudit, report: Simulati
 }
 
 export function meetsProductionTargets(request: BlueprintPlannerRequest, report: SimulationBlueprintRunReport): boolean {
-  if (report.status !== "completed" || report.observationSeconds <= 0
+  if (report.status !== "completed" || report.observationSeconds <= 0 || !meetsStashSubmission(report)
     || report.diagnostics.some((entry) => entry.severity === "error")
     || report.deviceStatuses.some((entry) => entry.status === "not-in-power-net" || entry.status === "no-power")) return false;
   return request.plan.targets.every((target) => (report.probes.find((probe) => probe.id === target.itemId)?.perMinute ?? 0)
@@ -47,4 +50,26 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
   const height = Math.max(...rects.map(rect => rect.y + rect.height)) - Math.min(...rects.map(rect => rect.y));
   assertPlannerOutline({ width, height });
   if (width > candidate.metrics.width || height > candidate.metrics.height) throw new Error("实体超出蓝图声明范围。");
+}
+
+/** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
+export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
+  if (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any") return;
+  const blueprint = candidate.execution.blueprint;
+  const rects = blueprint.entityOrder.map(id => {
+    const entity = blueprint.entities[id]!;
+    return resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! });
+  });
+  const x = Math.min(...rects.map(rect => rect.x)), y = Math.min(...rects.map(rect => rect.y));
+  const nodes = blueprint.entityOrder.filter(id => ["loader_1", "unloader_1"].includes(blueprint.entities[id]!.definitionId)).map(id => {
+    const entity = blueprint.entities[id]!;
+    return { ...createPlainNode(registry, entity.definitionId, id, "logistics"),
+      entity: { ...entity, position: { x: entity.position.x - x, y: entity.position.y - y } } };
+  });
+  const boundary = new PlannerBoundary(registry, { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 },
+    { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide });
+  if (boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations
+    || candidate.search.outline.storageCount !== undefined && nodes.filter(node => node.entity.definitionId === "loader_1").length !== candidate.search.outline.storageCount) {
+    throw new Error("仓库口摆位不满足当前规则或分片口数。");
+  }
 }

@@ -3,6 +3,7 @@ import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
 
 export interface BaseAreaGeometry {
   readonly id: string;
+  readonly nameplate?: string;
   readonly placeableRect: GridRect;
   readonly outerRect: GridRect;
   readonly outerRing: BaseOuterRingDefinition;
@@ -20,9 +21,9 @@ export interface BaseAreaGeometry {
 
 export function resolveBaseAreas(base: BaseDefinition): BaseAreaGeometry[] {
   return [
-    createBaseAreaGeometry(base.id, { x: 0, y: 0 }, base.placeableArea, base.outerRing),
+    createBaseAreaGeometry(base.id, { x: 0, y: 0 }, base.placeableArea, base.outerRing, base.nameplate),
     ...(base.subAreas ?? []).map((area) =>
-      createBaseAreaGeometry(area.id, area.position, area.placeableArea, area.outerRing)
+      createBaseAreaGeometry(area.id, area.position, area.placeableArea, area.outerRing, area.nameplate)
     ),
   ];
 }
@@ -89,9 +90,11 @@ function createBaseAreaGeometry(
   position: GridPoint,
   placeableArea: GridRectSize,
   outerRing: BaseOuterRingDefinition,
+  nameplate?: string,
 ): BaseAreaGeometry {
   return {
     id,
+    nameplate,
     placeableRect: { ...position, ...placeableArea },
     outerRect: {
       x: position.x - outerRing.left,

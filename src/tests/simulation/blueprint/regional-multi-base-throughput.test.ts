@@ -15,6 +15,13 @@ const SECONDS_PER_MINUTE = 60;
 const WARMUP_MINUTES = 2;
 const OBSERVATION_MINUTES = 3;
 const CURRENT_BASE_ID = "wuling_tianwangping_aid";
+// 480/min 基线对应四份生产蓝图；固定场景基地，避免新增小型用地改变产线数量。
+const SCENARIO_BASE_IDS = new Set([
+  "wuling_protocol_core",
+  "wuling_tianwangping_aid",
+  "wuling_heart_repair_station",
+  "stm_hongs_3",
+]);
 
 describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
   "Regional Blueprint Runner - 武陵多基地吞吐量 [%s]",
@@ -23,7 +30,7 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
     const registry = createRegistryContract();
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
     const wulingBaseIds = registry.baseDefinitions
-      .filter((definition) => definition.tag === "武陵")
+      .filter((definition) => definition.tag === "武陵" && SCENARIO_BASE_IDS.has(definition.id))
       .map((definition) => definition.id);
     const report = await runRegionalBlueprintSimulation({
       engineKind,

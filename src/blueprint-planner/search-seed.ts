@@ -19,6 +19,7 @@ export interface PlannerSearchSeed {
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
+    warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,
     converterStartup: (request.options.converterStartup ?? "reject") === "reject" ? undefined : request.options.converterStartup,
     budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined } });
 }

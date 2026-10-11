@@ -96,6 +96,8 @@ export function createRecipeNode(
 export function validatePlannerRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
   const { plan, options } = request;
   new PlannerItemRules(registry, options);
+  if (options.warehousePortPlacement !== undefined && !["any", "continuous", "full-side"].includes(options.warehousePortPlacement)) throw new Error("未知取货口摆放规则。");
+  if (options.warehousePortPlacement === "full-side" && options.warehouseBus !== "straight") throw new Error("连续且占据一边要求存取线使用一面。");
   if (!["straight", "corner", "u-shaped"].includes(options.warehouseBus)) throw new Error("未知存取线形态。");
   if (!["warehouse", "stash", "auto"].includes(options.solidOutput)) throw new Error("未知固体输出方式。");
   if (plan.containsModules) throw new Error("包含模块的规划不能自动规划产线。");

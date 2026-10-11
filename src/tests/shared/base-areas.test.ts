@@ -8,8 +8,47 @@ import {
 } from "@/shared/geometry/base-areas";
 
 const draftBox = BASE_DEFINITIONS.find((base) => base.id === "draft_box")!;
+const agriculturalLand = BASE_DEFINITIONS.find((base) => base.id === "wuling_agricultural_land")!;
 
 describe("base areas", () => {
+  it("lays out two named agricultural areas with a 10-cell gap between outer rings", () => {
+    const areas = resolveBaseAreas(agriculturalLand);
+    expect(areas).toMatchObject([
+      {
+        nameplate: "武陵农用地",
+        placeableRect: { x: 0, y: 0, width: 20, height: 20 },
+        outerRect: { x: -10, y: -10, width: 40, height: 40 },
+      },
+      {
+        nameplate: "缘缘庄",
+        placeableRect: { x: 50, y: 0, width: 20, height: 20 },
+        outerRect: { x: 40, y: -10, width: 40, height: 40 },
+      },
+    ]);
+    expect(areas).toHaveLength(2);
+    expect(areas[1]!.outerRect.x - (areas[0]!.outerRect.x + areas[0]!.outerRect.width)).toBe(10);
+    expect(resolveBaseOuterBounds(agriculturalLand)).toEqual({
+      x: -10, y: -10, width: 90, height: 40,
+    });
+  });
+
+  it("keeps the agricultural gap and rectangles bridging both areas unplaceable", () => {
+    expect(resolveBaseAreaContainingRect(agriculturalLand, {
+      x: 0, y: 0, width: 20, height: 20,
+    }, "placeable")?.nameplate).toBe("武陵农用地");
+    expect(resolveBaseAreaContainingRect(agriculturalLand, {
+      x: 50, y: 0, width: 20, height: 20,
+    }, "placeable")?.nameplate).toBe("缘缘庄");
+    expect(isGridPointInBaseArea(agriculturalLand, { x: 29, y: 0 }, "outer")).toBe(true);
+    for (let x = 30; x < 40; x += 1) {
+      expect(isGridPointInBaseArea(agriculturalLand, { x, y: 0 }, "outer")).toBe(false);
+    }
+    expect(isGridPointInBaseArea(agriculturalLand, { x: 40, y: 0 }, "outer")).toBe(true);
+    expect(resolveBaseAreaContainingRect(agriculturalLand, {
+      x: 29, y: 0, width: 12, height: 1,
+    }, "outer")).toBeNull();
+  });
+
   it("resolves only the draft box main area", () => {
     expect(resolveBaseAreas(draftBox)).toMatchObject([
       {

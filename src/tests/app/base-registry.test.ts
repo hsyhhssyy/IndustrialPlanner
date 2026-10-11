@@ -9,6 +9,29 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { describe, expect, it } from "vitest";
 
 describe("createRegistryContract", () => {
+  it("registers agricultural land under Wuling and limits nameplates to its two areas", () => {
+    const registry = createRegistryContract();
+    const agriculturalLand = registry.baseDefinitions.find((base) => base.id === "wuling_agricultural_land");
+    expect(agriculturalLand).toMatchObject({
+      name: "农牧用地",
+      tag: "武陵",
+      nameplate: "武陵农用地",
+      placeableArea: { width: 20, height: 20 },
+      outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+      subAreas: [{
+        nameplate: "缘缘庄",
+        position: { x: 50, y: 0 },
+        placeableArea: { width: 20, height: 20 },
+        outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+      }],
+    });
+    const names = registry.baseDefinitions.flatMap((base) =>
+      [base.nameplate, ...(base.subAreas ?? []).map((area) => area.nameplate)]
+        .filter((name) => name !== undefined),
+    );
+    expect(names).toEqual(["武陵农用地", "缘缘庄"]);
+  });
+
   it("exposes local base definitions without reusing the source array", () => {
     const registry = createRegistryContract();
 

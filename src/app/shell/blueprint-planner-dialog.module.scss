@@ -91,6 +91,7 @@ Original code:
 .supplyControls { display: flex; flex-wrap: wrap; align-items: start; gap: 10px; flex: 2 1 240px; min-width: 0; }
 .supplyControls label { display: flex; flex: 1 1 125px; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; }
 .supplyControls select { width: 100%; min-width: 0; min-height: 34px; box-sizing: border-box; padding: 6px 9px; color: var(--text-0); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; }
+.supplyControls select[aria-invalid="true"] { color: var(--danger); border-color: var(--danger); }
 .supplyControls select:disabled { opacity: .6; }
 .supplyInherited { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 7px 0; font-size: 13px; }
 .supplyInherited > span:first-child { color: var(--text-1); font-size: 12px; }
@@ -133,6 +134,8 @@ Original code:
 .boundaryGroup { margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
 .boundaryGroup legend { padding: 0 0 8px; font-size: 13px; font-weight: 600; }
 .boundaryRow { padding: 6px; margin-bottom: 6px; border: 1px solid var(--line); border-radius: 6px; }
+.boundaryRow[aria-invalid="true"] { border-color: var(--danger); }
+.boundaryRow[aria-invalid="true"] output, .content .boundaryRow[aria-invalid="true"] > button { color: var(--danger); }
 .boundaryRow[data-selected="true"] { border-color: var(--accent-strong); background: var(--surface-2); }
 .content .boundaryRow > button { display: flex; align-items: start; gap: 8px; width: 100%; min-height: 26px; padding: 0; border: 0; background: transparent; text-align: left; font-size: 12px; }
 .boundaryRow > button strong { flex-shrink: 0; color: var(--accent-strong); }

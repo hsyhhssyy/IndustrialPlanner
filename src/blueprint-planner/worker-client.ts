@@ -4,6 +4,7 @@ import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import type { PlannerWorkerRequest, PlannerWorkerResponse } from "./worker-protocol";
 import type { PlannerSearchSeed } from "./search-seed";
 import type { PlannerGpuLayoutMetrics } from "./layout-backend";
+import type { PlannerAttemptStrategy } from "./strategy-schedule";
 
 /** 一个 Host 复用一个布局 Worker；取消和超时直接终止计算，不回退主线程。 */
 // 订正 2026-09-30：暂停发送协作取消消息并结算计数；dispose 或异常才直接终止。
@@ -19,7 +20,8 @@ export class PlannerWorkerClient {
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
-    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number }, originSeed?: PlannerSearchSeed, sessionKey?: string): Promise<PlannerCandidate> {
+    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number }, originSeed?: PlannerSearchSeed, sessionKey?: string,
+    attemptStrategy?: PlannerAttemptStrategy): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
@@ -66,7 +68,7 @@ export class PlannerWorkerClient {
       const timer = budgetMs === null ? undefined : setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
       // GPU 能力由 Host 为本轮创建的专用通道决定；种子池中的 request 可能保留旧的执行选项。
       try { worker.postMessage({ id, request, variant, budgetMs, gpu: this.allowGpu,
-        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey } } satisfies PlannerWorkerRequest); }
+        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy } } satisfies PlannerWorkerRequest); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }

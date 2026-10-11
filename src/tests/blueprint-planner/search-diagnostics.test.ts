@@ -31,7 +31,18 @@ it("真实 Worker 的诊断开关不改变提案轨迹；违例分项精确还�
     expect(sum(kind => !boundaryKinds.includes(kind) && kind !== "disconnected")).toBe(layout.conflicts.geometry);
     expect(sum(kind => boundaryKinds.includes(kind))).toBe(layout.conflicts.boundary);
     expect(sum(kind => kind === "disconnected")).toBe(layout.conflicts.connections);
-    expect(layout.issues.length).toBeGreaterThan(0);
+    // AI-REMOVED 2026-10-11:
+    // Reason: 布局诊断允许零冲突，不再要求违例列表始终非空。
+    // Trigger: 用户批准按协议储存箱出口放宽后的行为更新断言。
+    // Evidence: 当前回归样例的冲突评分和违例列表均为零。
+    // Replacement: 下方违例列表为空与总冲突为零的等价断言。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // expect(layout.issues.length).toBeGreaterThan(0);
+    expect(layout.issues.length === 0).toBe(
+      layout.conflicts.geometry + layout.conflicts.boundary + layout.conflicts.connections === 0
+    );
     expect(layout.issues.every(issue => issue.entityIds.length > 0 && issue.amount > 0)).toBe(true);
     expect(layout.evaluation).toBe(750);
     expect(observed.diagnostics!.layoutChecks).toBe(1);

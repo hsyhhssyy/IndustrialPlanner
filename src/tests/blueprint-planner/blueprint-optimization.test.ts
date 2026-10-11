@@ -11,6 +11,8 @@ import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planne
 import { blueprintMaterialGraph, assertBlueprintRecognition, assertBlueprintSteadyState } from "@/blueprint-planner/blueprint-analysis";
 import { assertBlueprintPreserved } from "@/blueprint-planner/blueprint-constraints";
 import { blueprintReductionIds } from "@/blueprint-planner/blueprint-candidate";
+import { PlannerRandom } from "@/blueprint-planner/search-random";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { parsePlannerTaskFile, restorePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { meetsProductionTargets } from "@/blueprint-planner/verification";
@@ -18,7 +20,7 @@ import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 const directory = "src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/";
-const options: BlueprintPlannerOptions = { solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
+const options: BlueprintPlannerOptions = { warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
   solidOutput: "auto", byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 20_000, concurrency: 1 };
 
 function setup(engineKind: "legacy" | "dense-v2" = "dense-v2") {
@@ -85,7 +87,8 @@ describe("原蓝图识别与受约束优化", () => {
       await env.planner.actions.identifyBlueprint(id);
       const file = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry), baseline = (file.checkpoint as PlannerCheckpoint).blueprintBaseline!.candidate;
       const candidate = await client.build(file.request, 1, 40_000, { originSeed: baseline.seed, seed: baseline.seed,
-        targetOutline: { width: 10, height: 14 }, maxEvaluations: 15_000 });
+        targetOutline: { width: 10, height: 14 }, maxEvaluations: 15_000,
+        attemptStrategy: { ...plannerAttemptStrategy(1), reduce: false, layoutSeed: 1 } });
       const report = await env.simulation.actions.runBlueprint(candidate.execution);
       expect(candidate.metrics.area).toBe(140);
       expect(candidate.metrics.productionDeviceCount).toBe(3);
@@ -169,7 +172,7 @@ describe("原蓝图识别与受约束优化", () => {
     } finally { env.dispose(); }
   });
 
-  it("删减组合先遍历所有设施个体，超过 16 个也覆盖非相邻组合", async () => {
+  it("随机删减偏向小改动，超过 16 个也覆盖所有个体及非相邻组合", async () => {
     const env = setup();
     try {
       const blueprint = loadBlueprintFromFile(`${directory}plant-cycle.schema7.json`);
@@ -183,11 +186,22 @@ describe("原蓝图识别与受约束优化", () => {
       const nodes = Array.from({ length: 18 }, (_, index) => ({ ...terminal,
         entity: { ...terminal.entity, id: `source-${String(index).padStart(2, "0")}` },
         purpose: (["supply", "product", "environment"] as const)[index % 3]! }));
-      const singles = Array.from({ length: 18 }, (_, index) => [...blueprintReductionIds(nodes, index + 1)]);
-      expect(singles.every(ids => ids.length === 1)).toBe(true);
-      expect(new Set(singles.flat()).size).toBe(18);
-      expect(Array.from({ length: 153 }, (_, index) => [...blueprintReductionIds(nodes, index + 19)].join(",")))
-        .toContain("source-00,source-17");
+      // AI-REMOVED 2026-10-11:
+      // Reason: 用户将编号枚举改为种子随机抽样，顺序已不属于契约。
+      // Trigger: 五点随机调度方案；Evidence: blueprintReductionIds 改为独立 PRNG。
+      // Replacement: 下方验证小改动权重和实际可访问对象。
+      // Risk: 不再要求固定枚举顺序；Human Review: Required
+      // Original code:
+      // const singles = Array.from({ length: 18 }, (_, index) => [...blueprintReductionIds(nodes, index + 1)]);
+      // expect(singles.every(ids => ids.length === 1)).toBe(true);
+      // expect(new Set(singles.flat()).size).toBe(18);
+      // expect(Array.from({ length: 153 }, (_, index) => [...blueprintReductionIds(nodes, index + 19)].join(",")))
+      //   .toContain("source-00,source-17");
+      const random = new PlannerRandom(12345);
+      const samples = Array.from({ length: 8192 }, () => [...blueprintReductionIds(nodes, random)].sort());
+      expect(new Set(samples.filter(ids => ids.length === 1).flat()).size).toBe(18);
+      expect(samples.filter(ids => ids.length <= 2).length / samples.length).toBeGreaterThan(0.9);
+      expect(samples.some(ids => ids.join(",") === "source-00,source-17")).toBe(true);
     } finally { env.dispose(); }
   });
 });

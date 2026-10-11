@@ -7,7 +7,7 @@
     "taskId": "legacy-boundary-fixture",
     "request": {
       "options": {
-        "solidSupply": "warehouse",
+        "warehousePortPlacement": "any", "solidSupply": "warehouse",
         "fluidSupply": "conduit",
         "warehouseBus": "straight",
         "solidOutput": "stash",
@@ -370,7 +370,7 @@
             "network": {
               "request": {
                 "options": {
-                  "solidSupply": "warehouse",
+                  "warehousePortPlacement": "any", "solidSupply": "warehouse",
                   "fluidSupply": "conduit",
                   "warehouseBus": "straight",
                   "solidOutput": "stash",

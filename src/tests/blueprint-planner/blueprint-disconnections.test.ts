@@ -15,7 +15,7 @@ import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 const directory = "src/tests/fixtures/blueprints/blueprint-planner/blueprint-disconnections/";
 const registry = createRegistryContract();
-const options = { solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
+const options = { warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
   byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 10_000, concurrency: 1 } as const;
 
 describe("内部断连管道按支路排除", () => {

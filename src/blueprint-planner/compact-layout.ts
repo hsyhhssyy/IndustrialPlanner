@@ -10,8 +10,25 @@ import { buildLayoutGraph } from "./layout-graph";
 import { compactSequencePair } from "./sequence-pair";
 import { restrictPort } from "./wiring";
 import { compactLayoutProposals, type PlannerPose } from "./constructive-layout";
-import { getPlannerStashDrainPorts } from "./terminals";
-import { plannerDrainEntities, plannerFixtureConflicts, plannerObstacleMask } from "./fixtures";
+import { plannerRandomStep } from "./search-random";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { getPlannerStashDrainPorts } from "./terminals";
+
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { plannerDrainEntities, plannerFixtureConflicts, plannerObstacleMask } from "./fixtures";
+
 import { PlannerBoundary } from "./boundary";
 import { PlannerCpuLayout } from "./cpu-layout";
 import { PLANNER_LAYOUT_GEOMETRY_STRIDE, plannerLayoutBatchSize, type PlannerLayoutBackend, type PlannerLayoutBatch } from "./layout-backend";
@@ -46,7 +63,15 @@ export class CompactLayoutSearch {
   private readonly environmentPairs: Array<{ device: number; environment: number }>;
   private readonly localTerminals: Array<{ parent: number; terminal: number }>;
   private readonly blockedKinds: number[];
-  private readonly stashDrainKeys: string[][];
+  // AI-REMOVED 2026-10-11:
+  // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+  // Trigger: 用户要求允许中心放置且全部出口堵死。
+  // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+  // Replacement: None
+  // Risk: 旧任务必须重新验收；Human Review: Required。
+  // Original code:
+  // private readonly stashDrainKeys: string[][];
+
   private current: Evaluation;
   private best: Pose[];
   private bestEvaluation: Evaluation;
@@ -77,9 +102,18 @@ export class CompactLayoutSearch {
     private readonly wires: PlannerWire[], readonly statistics: PlannerSearchStatistics, private readonly profile: PlannerSearchProfile = DEFAULT_SEARCH_PROFILE,
     private readonly layoutBackend?: PlannerLayoutBackend, private readonly fixedNodeIds: ReadonlySet<string> = new Set()) {
     this.coolingHorizon = statistics.coolingEvaluations ?? statistics.evaluationLimit;
-    this.randomState = (statistics.seed + 1) * 2654435761 >>> 0;
+    // 2026-10-11：策略分离后布局种子可占满 32 位；使用整数乘法避免精度丢失，并排除 xorshift 零状态。
+    this.randomState = (Math.imul(statistics.seed + 1, 2654435761) >>> 0) || 1;
     this.poses = network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
-    this.stashDrainKeys = network.nodes.map(node => getPlannerStashDrainPorts(registry, node, network.request.blueprintSource ? network.nodes.map(other => other.entity) : undefined).map(portKey));
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement: None
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // this.stashDrainKeys = network.nodes.map(node => getPlannerStashDrainPorts(registry, node, network.request.blueprintSource ? network.nodes.map(other => other.entity) : undefined).map(portKey));
+
     this.geometry = network.nodes.map(node => ROTATIONS.map(rotation => {
       const entity = { ...node.entity, position: { x: 0, y: 0 }, rotation };
       const rect = resolveEntityGridRect({ entity, definition: node.definition });
@@ -365,12 +399,20 @@ export class CompactLayoutSearch {
     return !this.pendingRebuild && this.bestEvaluation.feasible;
   }
 
-  get drainPorts(): ReadonlyMap<string, readonly PlannerPort[]> {
-    return new Map(this.network.nodes.map((node, index) => [node.entity.id, this.stashDrainKeys[index]!.map(key => this.port(index, key))]));
-  }
+  // AI-REMOVED 2026-10-11:
+  // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+  // Trigger: 用户要求允许中心放置且全部出口堵死。
+  // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+  // Replacement: None
+  // Risk: 旧任务必须重新验收；Human Review: Required。
+  // Original code:
+  // get drainPorts(): ReadonlyMap<string, readonly PlannerPort[]> {
+  //   return new Map(this.network.nodes.map((node, index) => [node.entity.id, this.stashDrainKeys[index]!.map(key => this.port(index, key))]));
+  // }
+  //
+  // get fixtures() { return [...this.drainPorts.values()].flatMap(ports => ports.flatMap(port =>
+  //   plannerDrainEntities(this.registry, port, `__eda_fixture_${port.entityId}_${port.groupIndex}_${port.portIndex}`))); }
 
-  get fixtures() { return [...this.drainPorts.values()].flatMap(ports => ports.flatMap(port =>
-    plannerDrainEntities(this.registry, port, `__eda_fixture_${port.entityId}_${port.groupIndex}_${port.portIndex}`))); }
 
   get hasPendingLayouts(): boolean { return this.pendingLayouts.length > 0; }
 
@@ -402,18 +444,29 @@ export class CompactLayoutSearch {
     const definitions = [...new Set(this.network.nodes.map(node => node.definition.id))];
     for (let i = 0; i < n; i++) for (let turn = 0; turn < 4; turn++) {
       const dimension = this.geometry[i]![turn]!, entry = entries.get(i);
-      const drains = this.stashDrainKeys[i]!.flatMap(key => {
-        const port = dimension.ports.get(key)!;
-        return [port.outside.x, port.outside.y, port.outside.x * 2 - port.cell.x, port.outside.y * 2 - port.cell.y];
-      });
-      if (drains.length > 32) return null;
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // const drains = this.stashDrainKeys[i]!.flatMap(key => {
+      //   const port = dimension.ports.get(key)!;
+      //   return [port.outside.x, port.outside.y, port.outside.x * 2 - port.cell.x, port.outside.y * 2 - port.cell.y];
+      // });
+      // if (drains.length > 32) return null;
+
       const start = geometry.length;
       geometry.push(dimension.width, dimension.height, entry ? directions.indexOf(entry.geometry[turn]!.edge) : -1,
-        entry?.kind === "warehouse" ? 1 : entry?.kind === "belt" ? 2 : 0, this.blockedKinds[i]!, drains.length / 2,
-        (this.localTerminals.find(pair => pair.terminal === i)?.parent ?? -1) + 1, Number(this.focus.includes(i)), ...drains, ...Array<number>(32 - drains.length).fill(0));
+        entry?.kind === "warehouse" ? 1 : entry?.kind === "belt" ? 2 : 0, this.blockedKinds[i]!, 0,
+        (this.localTerminals.find(pair => pair.terminal === i)?.parent ?? -1) + 1, Number(this.focus.includes(i)), ...Array<number>(32).fill(0));
       geometry.push(...Array<number>(PLANNER_LAYOUT_GEOMETRY_STRIDE - 40).fill(0));
       const node = this.network.nodes[i]!, entity = { ...node.entity, position: { x: 0, y: 0 }, rotation: ROTATIONS[turn]! };
       const noNear = node.definition.placementBehaviors.find(rule => rule.type === "no-near-same-entity");
+      geometry[start + 72] = node.entity.definitionId === "unloader_1" ? 1 : node.entity.definitionId === "loader_1" ? 2 : 0;
+      geometry[start + 73] = this.network.request.options.warehousePortPlacement === "continuous" ? 1 : this.network.request.options.warehousePortPlacement === "full-side" ? 2 : 0;
+      geometry[start + 74] = (this.statistics.outline.warehouseSide ?? -1) + 1;
       geometry[start + 40] = Number(this.fixedNodeIds.has(node.entity.id));
       geometry[start + 41] = noNear?.type === "no-near-same-entity" ? noNear.range : 0;
       geometry[start + 42] = definitions.indexOf(node.definition.id);
@@ -427,9 +480,17 @@ export class CompactLayoutSearch {
         const range = resolveGasDiffusionRangeGridRect({ entity, definition: node.definition, gasDiffusionRange: gas.range })!;
         [Math.ceil(range.x), Math.ceil(range.y), Math.floor(range.x + range.width) - Math.ceil(range.x), Math.floor(range.y + range.height) - Math.ceil(range.y)].forEach((value, at) => geometry[start + 50 + at] = value);
       }
-      for (let at = 0; at < drains.length / 2; at++) geometry[start + 56 + at] = at % 2 === 0
-        ? plannerObstacleMask(this.registry, this.registry.queries.resolveLogisticsDefinitionId("belt", "straight"))
-        : plannerObstacleMask(this.registry, "cheat_infinite_solid");
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // for (let at = 0; at < drains.length / 2; at++) geometry[start + 56 + at] = at % 2 === 0
+      //   ? plannerObstacleMask(this.registry, this.registry.queries.resolveLogisticsDefinitionId("belt", "straight"))
+      //   : plannerObstacleMask(this.registry, "cheat_infinite_solid");
+
     }
     for (const edge of this.edges) {
       const kind = this.geometry[edge.source]![0]!.ports.get(edge.sourceKey)!.kind === "belt" ? 1 : 2;
@@ -961,6 +1022,7 @@ export class CompactLayoutSearch {
       record?.("environment-coverage", distance, [pair.device, closest], device);
     }
     // 成品箱清空夹具不计交付面积，但验证时占据的格子必须在布局阶段预留。
+    // AI-CORRECTION 2026-10-11：该排空预留规则已删除，自动提交不占用出口外空间。
     // AI-REMOVED 2026-10-10:
     // Reason: 排空传送带与收货实体不能一律阻挡管道。
     // Trigger: 已验证原图被误判断连。Evidence: 原图管道经过排空传送带格。
@@ -987,24 +1049,32 @@ export class CompactLayoutSearch {
     //       return cells.map(cell => ({ ...cell, width: 1, height: 1 }));
     //     });
     //     const obstacles = [...rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! })), ...fixtureRects.map(rect => ({ ...rect, blockedKinds: 3 }))];
-    const fixtureEntities = this.network.nodes.map((other, at) => ({ ...other.entity, position: { x: this.poses[at]!.x, y: this.poses[at]!.y }, rotation: this.poses[at]!.rotation }));
-    const placedFixtures: Array<{ entity: typeof fixtureEntities[number]; owner: number }> = [];
-    const fixtureRects = this.network.nodes.flatMap((node, index) => {
-      const fixtures = this.stashDrainKeys[index]!.flatMap(key => plannerDrainEntities(this.registry, this.port(index, key), `layout-${index}-${key}`));
-      for (const fixture of fixtures) {
-        const otherFixtures = placedFixtures.filter(other => plannerFixtureConflicts(this.registry, [fixture], [other.entity]).length);
-        violations += otherFixtures.length;
-        if (otherFixtures.length) record?.("fixture-blocked", otherFixtures.length, [index, ...otherFixtures.map(other => other.owner)], fixture.position);
-        placedFixtures.push({ entity: fixture, owner: index });
-        const blockers = plannerFixtureConflicts(this.registry, [fixture], fixtureEntities);
-        violations += blockers.length;
-        if (blockers.length) record?.("fixture-blocked", blockers.length,
-          [index, ...blockers.map(id => this.network.nodes.findIndex(other => other.entity.id === id))], fixture.position);
-      }
-      return fixtures.map(entity => ({ ...resolveEntityGridRect({ entity, definition: this.registry.queries.findEntityDefinition(entity.definitionId)! }),
-        blockedKinds: plannerObstacleMask(this.registry, entity.definitionId) }));
-    });
-    const obstacles = [...rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! })), ...fixtureRects];
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement:     const obstacles = rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! }));
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // const fixtureEntities = this.network.nodes.map((other, at) => ({ ...other.entity, position: { x: this.poses[at]!.x, y: this.poses[at]!.y }, rotation: this.poses[at]!.rotation }));
+    // const placedFixtures: Array<{ entity: typeof fixtureEntities[number]; owner: number }> = [];
+    // const fixtureRects = this.network.nodes.flatMap((node, index) => {
+    //   const fixtures = this.stashDrainKeys[index]!.flatMap(key => plannerDrainEntities(this.registry, this.port(index, key), `layout-${index}-${key}`));
+    //   for (const fixture of fixtures) {
+    //     const otherFixtures = placedFixtures.filter(other => plannerFixtureConflicts(this.registry, [fixture], [other.entity]).length);
+    //     violations += otherFixtures.length;
+    //     if (otherFixtures.length) record?.("fixture-blocked", otherFixtures.length, [index, ...otherFixtures.map(other => other.owner)], fixture.position);
+    //     placedFixtures.push({ entity: fixture, owner: index });
+    //     const blockers = plannerFixtureConflicts(this.registry, [fixture], fixtureEntities);
+    //     violations += blockers.length;
+    //     if (blockers.length) record?.("fixture-blocked", blockers.length,
+    //       [index, ...blockers.map(id => this.network.nodes.findIndex(other => other.entity.id === id))], fixture.position);
+    //   }
+    //   return fixtures.map(entity => ({ ...resolveEntityGridRect({ entity, definition: this.registry.queries.findEntityDefinition(entity.definitionId)! }),
+    //     blockedKinds: plannerObstacleMask(this.registry, entity.definitionId) }));
+    // });
+    // const obstacles = [...rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! })), ...fixtureRects];
+    const obstacles = rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! }));
     // 一次建立格子占用，供端口检查与拥塞估计复用，避免每个格子重复扫描所有建筑。
     const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
     const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
@@ -1119,7 +1189,13 @@ export class CompactLayoutSearch {
   }
   private snapshot(): Pose[] { return this.poses.map(pose => ({ ...pose })); }
   private restore(poses: readonly Pose[]): void { poses.forEach((pose, index) => Object.assign(this.poses[index]!, pose)); }
-  private random(): number { let x = this.randomState; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; this.randomState = x >>> 0; return this.randomState / 4294967296; }
+  // AI-REMOVED 2026-10-11:
+  // Reason: 提取现有 xorshift 供调度和布局共用，避免重复维护算法。
+  // Trigger: 用户授权统一种子随机数；Evidence: CPU 与 WGSL 使用相同移位序列。
+  // Replacement: search-random.ts::plannerRandomStep；Risk: Low；Human Review: Required
+  // Original code:
+  // private random(): number { let x = this.randomState; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; this.randomState = x >>> 0; return this.randomState / 4294967296; }
+  private random(): number { this.randomState = plannerRandomStep(this.randomState); return this.randomState / 4294967296; }
 }
 
 function portKey(port: PlannerPort): string { return `${port.groupIndex}/${port.portIndex}/${port.direction}`; }

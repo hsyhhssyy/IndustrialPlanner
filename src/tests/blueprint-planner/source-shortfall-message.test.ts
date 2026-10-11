@@ -29,7 +29,7 @@ const request: BlueprintPlannerRequest = {
     ],
   },
   options: {
-    solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
+    warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
     byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 1000,
   },
 };

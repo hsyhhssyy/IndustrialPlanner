@@ -2,6 +2,7 @@ import type {
   WorldDocument,
 } from "@/domain/document/world-document";
 import { isDataMigrationFrozen } from "@/shared/data-migration";
+import { removeForbiddenProtocolCoreEntities } from "@/shared/protocol-core";
 import type {
   EditorHistoryActionDescriptor,
 } from "@/domain/editor/editor-history";
@@ -55,7 +56,9 @@ export function createEditorDocumentWriter(options: {
     if (isDataMigrationFrozen() && mode !== "remote-sync") return null;
     const currentDocument = options.document.getSnapshot();
     // 历史重放恢复已记录的关系；只有新的用户编辑需要重新判断覆盖。
+    // AI-CORRECTION 2026-10-10: 无核心基地约束适用于所有写入模式，历史重放也不能恢复核心。
     if (mode === "record") nextDocument = options.normalizeEdit?.(currentDocument, nextDocument) ?? nextDocument;
+    nextDocument = removeForbiddenProtocolCoreEntities(nextDocument);
     const documentToWrite = mode === "record"
       ? stampWorldDocumentUpdatedAt(nextDocument)
       : nextDocument;

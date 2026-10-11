@@ -1,4 +1,5 @@
 import { PlannerItemRules } from "@/shared/planner-item-policy";
+import { PlannerRandom } from "./search-random";
 import type { BlueprintPlannerFlow } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
@@ -14,12 +15,36 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
-import { getPlannerPorts, plannerPortAcceptsItem, itemLogisticsKind, transportCapacity } from "./geometry";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: import { getPlannerPorts, itemLogisticsKind, transportCapacity } from "./geometry";
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { getPlannerPorts, plannerPortAcceptsItem, itemLogisticsKind, transportCapacity } from "./geometry";
+import { getPlannerPorts, itemLogisticsKind, transportCapacity } from "./geometry";
 import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNode } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { createRecipeNode } from "./production-network";
-import type { WorldEntity } from "@/domain/document/world-document";
-import { plannerDrainEntities, plannerFixtureConflicts } from "./fixtures";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import type { WorldEntity } from "@/domain/document/world-document";
+
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { plannerDrainEntities, plannerFixtureConflicts } from "./fixtures";
+
 import { restrictPort } from "./wiring";
 import type { PlannerSearchOptions } from "./search-types";
 
@@ -49,8 +74,9 @@ function isRoundedRunningConsumptionShortfall(network: PlannerNetwork, itemId: s
   return extraRunning > 1e-6 && Math.abs(extraRunning - plannedProduction - shortfall) <= 1e-4;
 }
 
-export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local"): void {
-  if (!Number.isSafeInteger(stashPackingVariant) || stashPackingVariant < 0) throw new Error("储存箱分组序号必须为非负整数。");
+export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant: number | PlannerRandom = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local"): void {
+  if (!(stashPackingVariant instanceof PlannerRandom)
+    && (!Number.isSafeInteger(stashPackingVariant) || stashPackingVariant < 0)) throw new Error("储存箱分组序号必须为非负整数。");
   const itemRules = new PlannerItemRules(registry, network.request.options);
   const available = new Set([...network.request.plan.infiniteItemIds, ...network.request.plan.externalSupplies.map((entry) => entry.itemId)]);
   const balance = materialBalance(network);
@@ -89,6 +115,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
   for (const flow of sources) {
     const kind = itemLogisticsKind(registry, flow.itemId);
     const mode = itemRules.supply(flow.itemId);
+    if (itemRules.requiresWarehouseSupply(flow.itemId)) throw new Error(`连续且占据一边要求固体使用仓库取货口：${flow.itemId}`);
     const deliveries: Array<{ perMinute: number; consumer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["supplyTargets"] }> = [];
 // AI-REMOVED 2026-09-16:
 // Reason: 按容量合并外供，禁止默认逐设备复制无限源。
@@ -232,8 +259,8 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       const requiredLanes = Math.max(1, Math.ceil(rate / outputCapacity - 1e-6));
       const minimum = Math.ceil(requiredLanes / lanes);
       const alternatives = requiredLanes - minimum + 1;
-      const count = minimum + stashPackingChoice % alternatives;
-      stashPackingChoice = Math.floor(stashPackingChoice / alternatives);
+      const count = minimum + (stashPackingChoice instanceof PlannerRandom ? stashPackingChoice.integer(alternatives) : stashPackingChoice % alternatives);
+      if (typeof stashPackingChoice === "number") stashPackingChoice = Math.floor(stashPackingChoice / alternatives);
       let remaining = rate;
       for (let index = 0; index < count; index++) {
         const portCount = Math.max(1, Math.ceil(Math.ceil(remaining / outputCapacity - 1e-6) / (count - index)));
@@ -256,9 +283,25 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         node.definition.storageSlotGroups.forEach((group, groupIndex) => group.slots.forEach((_, slotIndex) => {
           node.entity.config[`storageSlotGroups[${groupIndex}].slots[${slotIndex}].lock`] = itemId;
         }));
-        const drains = getPlannerStashDrainPorts(registry, node);
+        // AI-REMOVED 2026-10-11:
+        // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+        // Trigger: 用户要求允许中心放置且全部出口堵死。
+        // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+        // Replacement:         node.entity.config.channelRecipes = structuredClone(node.definition.placementDefaults?.config?.channelRecipes);
+        // Risk: 旧任务必须重新验收；Human Review: Required。
+        // Original code:
+        // const drains = getPlannerStashDrainPorts(registry, node);
+        node.entity.config.channelRecipes = structuredClone(node.definition.placementDefaults?.config?.channelRecipes);
         for (const direction of ["input", "output"] as const) for (const port of getPlannerPorts(registry, node.entity, node.definition, direction)) {
-          restrictPort(registry, node, port, direction === "input" || drains.some(drain => drain.groupIndex === port.groupIndex && drain.portIndex === port.portIndex) ? [itemId] : []);
+          // AI-REMOVED 2026-10-11:
+          // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+          // Trigger: 用户要求允许中心放置且全部出口堵死。
+          // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+          // Replacement:           restrictPort(registry, node, port, direction === "input" ? [itemId] : []);
+          // Risk: 旧任务必须重新验收；Human Review: Required。
+          // Original code:
+          // restrictPort(registry, node, port, direction === "input" || drains.some(drain => drain.groupIndex === port.groupIndex && drain.portIndex === port.portIndex) ? [itemId] : []);
+          restrictPort(registry, node, port, direction === "input" ? [itemId] : []);
         }
       }
       network.nodes.push(node);
@@ -287,20 +330,28 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
 
 }
 
-/** 验收排空与布局预留共用，按接收速率开启足量独立出口，不能靠箱内库存掩盖瓶颈。 */
-export function getPlannerStashDrainPorts(registry: RegistryContract, node: PlannerNode, obstacles?: readonly WorldEntity[]) {
-  if (node.definition.id !== "storager_1" || (node.purpose !== "product" && node.purpose !== "byproduct")) return [];
-  const items = new Set(node.inputs.map(flow => flow.itemId));
-  if (items.size !== 1) throw new PlannerCandidateError("协议储存箱只能接收同一种物品。");
-  const ports = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)
-    .filter(port => !obstacles || plannerPortAcceptsItem(registry, node.entity, node.definition, port, node.inputs[0]!.itemId));
-  const count = Math.max(1, Math.ceil(node.inputs.reduce((sum, flow) => sum + flow.perMinute, 0) / transportCapacity("belt") - 1e-6));
-  if (count > ports.length) throw new PlannerCandidateError("储存箱持续排空运力不足。");
-  // 原图端口配置保持不变；优先从当前真实可放夹具的位置选足量端口，之后跟随设备姿态。
-  if (obstacles) ports.sort((a, b) => plannerFixtureConflicts(registry, plannerDrainEntities(registry, a, "__probe"), obstacles).length
-    - plannerFixtureConflicts(registry, plannerDrainEntities(registry, b, "__probe"), obstacles).length);
-  return ports.slice(0, count);
-}
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// /** 验收排空与布局预留共用，按接收速率开启足量独立出口，不能靠箱内库存掩盖瓶颈。 */
+// export function getPlannerStashDrainPorts(registry: RegistryContract, node: PlannerNode, obstacles?: readonly WorldEntity[]) {
+//   if (node.definition.id !== "storager_1" || (node.purpose !== "product" && node.purpose !== "byproduct")) return [];
+//   const items = new Set(node.inputs.map(flow => flow.itemId));
+//   if (items.size !== 1) throw new PlannerCandidateError("协议储存箱只能接收同一种物品。");
+//   const ports = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)
+//     .filter(port => !obstacles || plannerPortAcceptsItem(registry, node.entity, node.definition, port, node.inputs[0]!.itemId));
+//   const count = Math.max(1, Math.ceil(node.inputs.reduce((sum, flow) => sum + flow.perMinute, 0) / transportCapacity("belt") - 1e-6));
+//   if (count > ports.length) throw new PlannerCandidateError("储存箱持续排空运力不足。");
+//   // 原图端口配置保持不变；优先从当前真实可放夹具的位置选足量端口，之后跟随设备姿态。
+//   if (obstacles) ports.sort((a, b) => plannerFixtureConflicts(registry, plannerDrainEntities(registry, a, "__probe"), obstacles).length
+//     - plannerFixtureConflicts(registry, plannerDrainEntities(registry, b, "__probe"), obstacles).length);
+//   return ports.slice(0, count);
+// }
+
 
 /** 按初始几何邻近性分组，使一个供排设施服务一个局部区域，避免所有支路集中到同一狭窄入口。 */
 function clusterTerminalDemands(demands: readonly { node: PlannerNode; perMinute: number; storageGroupIds?: readonly string[] }[], maximum: number) {

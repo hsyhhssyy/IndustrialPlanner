@@ -8,8 +8,13 @@ import { plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import type { PlannerCandidate } from "./candidate";
 
 /** 内嵌蓝图有自己的版本；空升级不重置算法状态，也不执行旧算法的几何转换。 */
+// 订正 2026-10-11：同步补齐旧任务的任意摆放选项与尺寸算法版本，不改变旧任务的几何规则。
 export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): BlueprintPlannerTaskFile {
   const file: { -readonly [K in keyof BlueprintPlannerTaskFile]: BlueprintPlannerTaskFile[K] } = structuredClone(value);
+  const options = (value: BlueprintPlannerRequest["options"]) => value.warehousePortPlacement === undefined
+    ? { ...value, warehousePortPlacement: "any" as const } : value;
+  file.request = { ...file.request, options: options(file.request.options) };
+  if (["dimension-shards-1", "warehouse-port-shards-1"].includes(file.algorithmVersion)) file.algorithmVersion = "seeded-strategies-1";
   const upgrade = (blueprint: BlueprintDocument): BlueprintDocument => {
     if (blueprint.schemaVersion === BLUEPRINT_SCHEMA_VERSION) return blueprint;
     const next = normalizeBlueprintDocument(blueprint);
@@ -20,8 +25,8 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
     file.request = { ...file.request, input: { ...file.request.input, blueprint: upgrade(file.request.input.blueprint) } };
     return file;
   }
-  const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => request.blueprintSource
-    ? { ...request, blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : request;
+  const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => ({ ...request, options: options(request.options),
+    ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}) });
   // 指纹保存原始请求，network.request 可能已被归一化；分别升级，不能用网络请求重建指纹。
   const upgradeKey = (key: string): string => {
     const request = JSON.parse(key) as BlueprintPlannerRequest;

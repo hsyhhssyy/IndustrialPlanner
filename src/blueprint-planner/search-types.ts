@@ -2,6 +2,7 @@ import type { PlannerSearchProfile } from "./search-profile";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { PlannerWire } from "./model";
 import type { PlannerSearchSeed } from "./search-seed";
+import type { PlannerAttemptStrategy } from "./strategy-schedule";
 
 /** M1 消融实验只控制搜索策略，不参与参数训练或改变验收。 */
 /** 订正 2026-09-30：同时承载 M2 局部重建消融；未证明面积收益前不默认启用。 */
@@ -12,6 +13,8 @@ export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "con
 /** 订正 2026-09-22：生产界面现在同时配置每个独立搜索的局部评估次数，并由 Host 映射到 maxEvaluations。 */
 /** 订正 2026-09-30：任务化界面改为整轮提案总预算；Host 将剩余额度映射到每次搜索的 maxEvaluations，无头客户端共用此计数。 */
 export interface PlannerSearchOptions {
+  /** 调度层已抽样的策略；与布局内核的随机流分离，Worker 不重新决定策略。 */
+  readonly attemptStrategy?: PlannerAttemptStrategy;
   /** baseline 保留旧搜索组织用于同预算对照；规则修复和最终验收始终共用。 */
   /** Host 分配的当前 Worker 续搜身份；只在运行期生效。 */
   readonly sessionKey?: string;
@@ -31,9 +34,9 @@ export interface PlannerSearchOptions {
   readonly maxEvaluations?: number;
   /** 有界重排保持退火日程独立于剩余提案配额；不增加实际评估上限。 */
   readonly coolingEvaluations?: number;
-  readonly outline?: { readonly width: number; readonly height: number };
+  readonly outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
   /** 调度器指定的单批搜索盒子；与 outline 的显式上限语义分开。 */
-  readonly targetOutline?: { readonly width: number; readonly height: number };
+  readonly targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
   readonly profile?: Partial<PlannerSearchProfile>;
   /** 离线诊断按布局检查点采样，不改变提案、随机数或验收规则。 */
   readonly diagnostics?: boolean;
@@ -67,6 +70,8 @@ export interface PlannerSearchDiagnostics {
 }
 
 export interface PlannerSearchStatistics {
+  /** 候选及失败诊断保留本次决策，便于重放；不会消费随机数。 */
+  readonly attemptStrategy?: PlannerAttemptStrategy;
   readonly strategy?: "baseline" | "compact";
   readonly resumedFromArea?: number;
   searchResumed?: boolean;
@@ -86,7 +91,7 @@ export interface PlannerSearchStatistics {
   readonly seed: number;
   readonly evaluationLimit: number;
   readonly coolingEvaluations?: number;
-  readonly outline: { readonly width: number; readonly height: number };
+  readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
   evaluations: number;
   /** GPU 代理搜索次数属于 evaluations 的子集，不能与完整 CPU 评分作等价性能比较。 */
   gpuEvaluations?: number;

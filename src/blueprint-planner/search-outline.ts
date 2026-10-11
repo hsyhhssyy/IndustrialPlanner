@@ -3,7 +3,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
-export interface PlannerOutline { readonly width: number; readonly height: number; }
+export interface PlannerOutline { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number; }
 
 export const PLANNER_MAX_SIDE = 70;
 

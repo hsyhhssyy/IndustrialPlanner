@@ -7,6 +7,7 @@ import { PlannerPlacement, placeProduction } from "@/blueprint-planner/placement
 import { addTerminals } from "@/blueprint-planner/terminals";
 import { capturePlannerSeed, plannerRequestKey } from "@/blueprint-planner/search-seed";
 import { PlannerSearchPortfolio, resolvePlannerAttempt } from "@/blueprint-planner/search-portfolio";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { plannerOutputModeKey } from "@/blueprint-planner/output-policy";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
 import separator from "./fixtures/separator-core.json";
@@ -54,7 +55,11 @@ it("自动输出搜索混合组合，固定供给和去向不会被覆盖，种�
   const copy = new PlannerSearchPortfolio(request);
   copy.restore(JSON.parse(JSON.stringify(portfolio.snapshot())));
   expect(copy.snapshot().pools).toHaveLength(4);
-  for (let i = 0; i < 4; i++) expect(copy.next(i).seed?.requestKey).toBe(plannerRequestKey(resolvePlannerAttempt(request, i).request));
+  // AI-CORRECTION 2026-10-11：恢复验证明确指定组合与续搜分支，不依赖旧编号轮转。
+  for (let i = 0; i < 4; i++) {
+    const assigned = resolvePlannerAttempt(request, i).request;
+    expect(copy.next(i, true, undefined, assigned, { ...plannerAttemptStrategy(i), restart: false }).seed?.requestKey).toBe(plannerRequestKey(assigned));
+  }
   const changed = structuredClone(portfolio.snapshot());
   const seed = changed.pools[0]!.entries[0]!.seed;
   Object.assign(seed.network.request.options.itemPolicies![1]!, { supply: "warehouse" });

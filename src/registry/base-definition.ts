@@ -126,6 +126,23 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     tags: ["maxPipeLogistics=64"],
   },
   {
+    id: "wuling_agricultural_land",
+    name: "农牧用地",
+    nameplate: "武陵农用地",
+    placeableArea: { width: 20, height: 20 },
+    outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+    subAreas: [{
+      id: "wuling_yuanyuan_zhuang",
+      nameplate: "缘缘庄",
+      // 两块外围区域各宽 40 格，外围之间再留 10 格。
+      position: { x: 50, y: 0 },
+      placeableArea: { width: 20, height: 20 },
+      outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
+    }],
+    tag: "武陵",
+    tags: [],
+  },
+  {
     id: "valley4_protocol_core",
     name: "协议核心区",
     placeableArea: {

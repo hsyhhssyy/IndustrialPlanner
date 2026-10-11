@@ -8,16 +8,25 @@ import { restorePlannerOutputRequest } from "./output-policy";
 import { createPlainNode } from "./placement";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
 import { capturePlannerSeed, plannerRequestKey, restorePlannerSeed } from "./search-seed";
+import { stashSubmissionProbe } from "./stash-submission";
 
 const isBus = (definitionId: string) => definitionId === "log_hongs_bus" || definitionId === "log_hongs_bus_source";
 
 /** 只移除盒外设施并整体平移，不替旧布局移动口位；不满足新边界的布局不能作为最优解。 */
+// AI-CORRECTION 2026-10-11：同时移除旧排空夹具、补齐自动规划遗漏的提交默认配置，再采集真实提交配方运行证据；不覆盖显式配置。
 export function migratePlannerCandidate(registry: RegistryContract, request: BlueprintPlannerRequest,
   original: PlannerCandidate): PlannerCandidate | null {
   const candidate = structuredClone(original);
   const blueprint = candidate.execution.blueprint;
   const entities = blueprint.entityOrder.map(id => blueprint.entities[id]!).filter(entity => !isBus(entity.definitionId));
   if (!entities.length) return null;
+  // 旧自动规划漏写放置默认配置；只补缺省字段，不覆盖显式关闭提交的配置，也不改用户原图。
+  if (!request.blueprintSource) for (const entity of entities.filter(entity => entity.definitionId === "storager_1")) {
+    if (entity.config.channelRecipes !== undefined) continue;
+    entity.config.channelRecipes = structuredClone(registry.queries.findEntityDefinition(entity.definitionId)!.placementDefaults?.config?.channelRecipes);
+    const node = candidate.seed?.network.nodes.find(node => node.entity.id === entity.id);
+    if (node) node.entity.config.channelRecipes = structuredClone(entity.config.channelRecipes);
+  }
   const rectangles = entities.map(entity => resolveEntityGridRect({ entity,
     definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
   const origin = { x: Math.min(...rectangles.map(rect => rect.x)), y: Math.min(...rectangles.map(rect => rect.y)) };
@@ -40,7 +49,8 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   const resolved = boundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
   if (resolved.violations !== 0 || resolved.busMask === null) return null;
   const fixtures = boundary.fixtures(resolved.busMask);
-  const externalEntities = (candidate.execution.scene?.externalEntities ?? []).filter(entity => !isBus(entity.definitionId))
+  const externalEntities = (candidate.execution.scene?.externalEntities ?? []).filter(entity => !isBus(entity.definitionId)
+    && !entity.id.startsWith("__eda_fixture_") && !entity.id.startsWith("eda-validation-drain-") && !entity.id.startsWith("eda-validation-sink-"))
     .map(entity => ({ ...entity, position: translate(entity.position) }));
   let seed: PlannerCandidate["seed"];
   let quality = measurePlannerQuality(registry, network, entities, [], area, width, height);
@@ -77,5 +87,12 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   blueprint.description = `${blueprint.description ?? ""}\n按当前规则重算：${width} × ${height}；存取线${sides.length ? `请在包围盒外${sides.join("、")}侧自行放置` : "无需接入"}。`;
   return { ...candidate, seed, connections, search: { ...candidate.search, quality },
     metrics: { ...candidate.metrics, width, height, area, entityCount: entities.length, score: boundedPlannerScore(area, quality.secondary) },
-    execution: { ...candidate.execution, blueprint, scene: { ...candidate.execution.scene, externalEntities: [...externalEntities, ...fixtures] } } };
+    execution: { ...candidate.execution, blueprint, collectAnalysis: true,
+      probes: [...candidate.execution.probes.filter(probe => !probe.id.startsWith("stash-submit:")),
+        ...entities.filter(entity => entity.definitionId === "storager_1").map(entity => {
+          const input = candidate.seed?.network.nodes.find(node => node.entity.id === entity.id)?.inputs[0];
+          const itemId = input?.itemId ?? candidate.execution.probes.find(probe => probe.direction === "input" && probe.entityIds.includes(entity.id))?.itemId;
+          if (!itemId) throw new Error("旧协议储存箱缺少物品证据，无法重新验收。");
+          return stashSubmissionProbe(entity.id, itemId);
+        })], scene: { ...candidate.execution.scene, externalEntities: [...externalEntities, ...fixtures] } } };
 }

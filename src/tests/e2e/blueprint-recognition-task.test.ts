@@ -20,7 +20,7 @@ for (const profile of SCREEN_PROFILES) {
         && window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
       const dialog = page.getByRole('dialog').filter({has:page.locator('#blueprint-planner-title')});
       const id = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId);
-      assert(await dialog.getByRole('combobox').count() === 1, '仅未知输入应提供选择');
+      assert(await dialog.locator('[class*="boundaryGroup"]').getByRole('combobox').count() === 1, '仅未知输入应提供选择');
       const locate = dialog.locator('[class*="boundaryRow"]').first().getByRole('button');
       await locate.click();
       await dialog.locator('[class*="previewSelection"]').waitFor();
@@ -66,7 +66,17 @@ for (const profile of SCREEN_PROFILES) {
       const afterFit = await readLabels();
       assert(JSON.stringify(afterFit.labels.map(label => label.position))
         === JSON.stringify(beforeZoom.labels.map(label => label.position)), '显示全图改变了标签布局');
-      await dialog.getByRole('combobox').selectOption('item_iron_ore');
+      await dialog.locator('[class*="boundaryGroup"]').getByRole('combobox').selectOption('item_iron_ore');
+      const rule = dialog.getByRole('combobox', {name:'取货口摆放规则',exact:true});
+      const bus = dialog.getByRole('combobox', {name:'存取线形态',exact:true});
+      assert(await rule.inputValue() === 'continuous', '新蓝图默认连续');
+      await bus.selectOption('corner');
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.warehouseBus === 'corner');
+      await rule.selectOption('full-side');
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.warehousePortPlacement === 'full-side');
+      assert(await bus.inputValue() === 'straight' && await bus.isDisabled(), '单面规则未联动存取线');
+      assert(await dialog.locator('[aria-invalid="true"]').count() === 1, '只能标红非法输入');
+      assert(await dialog.getByRole('button', {name:'识别蓝图',exact:true}).isDisabled(), '非法供料未拦截');
       const exported = page.waitForEvent('download');
       await dialog.getByRole('button', {name:'下载任务',exact:true}).click();
       await (await exported).saveAs(${JSON.stringify(resolve(cli.directory, "partial.eda-task.json"))});
@@ -76,7 +86,8 @@ for (const profile of SCREEN_PROFILES) {
         const h = window.__industrialPlannerAppHost;
         h.blueprintPlannerDialog.selectTask(id, h.workspace.blueprintPlanner.queries.getLastRequest(id)); h.blueprintPlannerDialog.open();
       }, id);
-      assert(await dialog.getByRole('combobox').inputValue() === 'item_iron_ore', '刷新丢失输入配置');
+      assert(await dialog.locator('[class*="boundaryGroup"]').getByRole('combobox').inputValue() === 'item_iron_ore', '刷新丢失输入配置');
+      assert(await rule.inputValue() === 'full-side' && await bus.isDisabled(), '刷新丢失摆放配置');
       await dialog.locator('input[type="file"]').setInputFiles(${JSON.stringify(resolve(cli.directory, "partial.eda-task.json"))});
       await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length === 2);
       const restored = await page.evaluate(() => {
@@ -85,6 +96,10 @@ for (const profile of SCREEN_PROFILES) {
       });
       assert(restored.taskId !== id && restored.request.kind === 'blueprint-recognition'
         && restored.request.input.blueprint.blueprintId === ${JSON.stringify(blueprint.blueprintId)}, '导入未携带原图或覆盖了任务');
+      assert(await rule.inputValue() === 'full-side', '导入丢失摆放配置');
+      await rule.selectOption('continuous');
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.warehousePortPlacement === 'continuous');
+      assert(!await bus.isDisabled(), '切回连续未解锁');
       await dialog.getByRole('button', {name:'识别蓝图',exact:true}).click();
       await dialog.getByRole('alert').waitFor();
       assert((await dialog.getByRole('alert').innerText()).includes('净产出'), '直接透传不能被当作净产物');

@@ -23,6 +23,24 @@ for (const profile of SCREEN_PROFILES) {
       const attempts = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});
       const initial = await attempts.inputValue();
       const defaults = await page.evaluate(() => JSON.parse(JSON.stringify(window.__industrialPlannerAppHost.blueprintPlannerDialog.options)));
+      await attempts.focus();
+      await attempts.press('End');
+      for (let index = 0; index < 5; index++) await attempts.press('Backspace');
+      const clearedAttempts = {value:await attempts.inputValue(),
+        attempts:await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.getRequest().options.evaluationsPerRound),
+        startDisabled:await dialog.getByRole('button',{name:'开始规划',exact:true}).isDisabled()};
+      await attempts.blur();
+      await page.waitForTimeout(600);
+      const clearedAfterBlur = await attempts.inputValue();
+      await attempts.focus();
+      const typedAttempts = [];
+      for (const digit of '1000') {
+        await attempts.press(digit);
+        typedAttempts.push(await attempts.inputValue());
+      }
+      const enteredAttempts = {value:await attempts.inputValue(),
+        attempts:await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.getRequest().options.evaluationsPerRound),
+        startDisabled:await dialog.getByRole('button',{name:'开始规划',exact:true}).isDisabled()};
       await attempts.fill('7'); await attempts.blur();
       await dialog.getByRole('checkbox',{name:'CPU 并行计算'}).uncheck();
       if (!await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).isChecked()) throw Error('CPU 开关影响了 GPU');
@@ -37,6 +55,11 @@ for (const profile of SCREEN_PROFILES) {
       });
       const retained = {attempts:await attempts.inputValue(),parallel:await dialog.getByRole('checkbox',{name:'CPU 并行计算'}).isChecked(),
         gpu:await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).isChecked()};
+      await attempts.fill('');
+      const clearedContinuation = {value:await attempts.inputValue(),
+        disabled:await dialog.getByRole('button',{name:'继续规划',exact:true}).isDisabled()};
+      await attempts.fill('7');
+      const continuationEnabled = await dialog.getByRole('button',{name:'继续规划',exact:true}).isEnabled();
       const original = await page.evaluate(() => {
         const h = window.__industrialPlannerAppHost;
         return h.workspace.blueprintPlanner.queries.exportTask(h.blueprintPlannerDialog.viewTaskId);
@@ -87,12 +110,22 @@ for (const profile of SCREEN_PROFILES) {
       const zoomChanged = await surface.getAttribute('style') !== before;
       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
       return {initial,defaults,retained,reset,resetInput,bounds,scrollTop,graphUnchanged,zoomChanged,copyPreservedHistory,footerLayout,
+        clearedAttempts,clearedAfterBlur,typedAttempts,enteredAttempts,clearedContinuation,continuationEnabled,
         resetView:await surface.getAttribute('style')===before};
     }`) as { initial: string; defaults: unknown; retained: { attempts: string; parallel: boolean; gpu: boolean }; reset: unknown;
       resetInput: string; bounds: { height: number; parentHeight: number; touchAction: string }; scrollTop: number;
       graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean; copyPreservedHistory: boolean;
-      footerLayout: { leftAligned: boolean; visible: boolean } };
+      footerLayout: { leftAligned: boolean; visible: boolean };
+      clearedAttempts: { value: string; attempts: number; startDisabled: boolean }; clearedAfterBlur: string;
+      typedAttempts: string[]; enteredAttempts: { value: string; attempts: number; startDisabled: boolean };
+      clearedContinuation: { value: string; disabled: boolean }; continuationEnabled: boolean };
     expect(result.initial).toBe("500");
+    expect(result.clearedAttempts).toEqual({ value: "", attempts: 0, startDisabled: true });
+    expect(result.clearedAfterBlur).toBe("");
+    expect(result.typedAttempts).toEqual(["1", "10", "100", "1000"]);
+    expect(result.enteredAttempts).toEqual({ value: "1000", attempts: 10_000_000, startDisabled: false });
+    expect(result.clearedContinuation).toEqual({ value: "", disabled: true });
+    expect(result.continuationEnabled).toBe(true);
     expect(result.retained).toEqual({ attempts: "7", parallel: false, gpu: false });
     expect(result.defaults).toMatchObject({ concurrency: "auto", gpu: true });
     expect(result.reset).toEqual(result.defaults);

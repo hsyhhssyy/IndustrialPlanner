@@ -1,5 +1,14 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
+// AI-REMOVED 2026-10-10:
+// Reason: 世界文档复用现有统一解码边界，避免新增 shared 子目录对父级实现的引用。
+// Trigger: 农牧用地核心约束与模块隔离规范。
+// Evidence: migrateBlueprintDocumentState 已接收 baseId 并涵盖同版本文档。
+// Replacement: src/shared/blueprint-device-id-migration.ts 的共享核心约束校验。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { removeForbiddenProtocolCoreEntities } from "@/shared/protocol-core";
 
 import {
   applyIndexedDbStoreMutations,

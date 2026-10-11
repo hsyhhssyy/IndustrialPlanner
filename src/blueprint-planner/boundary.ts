@@ -6,6 +6,7 @@ import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geomet
 import { EDGES, getPlannerPorts, opposite, ROTATIONS } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
 import { createPlainNode } from "./placement";
+import { warehousePortViolations } from "./warehouse-ports";
 import { plannerBusConflictCount } from "./layout-backend";
 
 export interface PlannerBoundaryPose { x: number; y: number; rotation: GridRotation; }
@@ -36,7 +37,7 @@ export class PlannerBoundary {
   private readonly proposalCache = new Map<number, PlannerBoundaryPose[]>();
 
   constructor(private readonly registry: RegistryContract, private readonly network: PlannerNetwork,
-    readonly outline: { readonly width: number; readonly height: number }) {
+    readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number }) {
     this.entries = network.nodes.flatMap((node, index) => {
       if (!isPlannerBoundaryNode(node)) return [];
       const direction = node.boundaryPort?.direction ?? (node.external || node.entity.definitionId === "loader_1" ? "input" : "output");
@@ -60,6 +61,10 @@ export class PlannerBoundary {
   snap(index: number, pose: PlannerBoundaryPose): void {
     const entry = this.byIndex.get(index);
     if (!entry) return;
+    if (entry.kind === "warehouse" && this.outline.warehouseSide !== undefined) {
+      const turn = entry.geometry.findIndex(value => EDGES.indexOf(value.edge) === this.outline.warehouseSide);
+      if (turn >= 0) pose.rotation = ROTATIONS[turn]!;
+    }
     const current = entry.geometry[pose.rotation / 90]!;
     if (current.width > this.outline.width || current.height > this.outline.height) {
       const turn = entry.geometry.findIndex(size => size.width <= this.outline.width && size.height <= this.outline.height);
@@ -80,7 +85,8 @@ export class PlannerBoundary {
     const entry = this.byIndex.get(index);
     if (!entry) return [];
     const result = entry.geometry.flatMap(({ width, height, edge }, turn) => {
-      if (width > this.outline.width || height > this.outline.height) return [];
+      if (width > this.outline.width || height > this.outline.height
+        || entry.kind === "warehouse" && this.outline.warehouseSide !== undefined && EDGES.indexOf(edge) !== this.outline.warehouseSide) return [];
       const horizontal = edge === "NORTH" || edge === "SOUTH";
       const count = horizontal ? this.outline.width - width : this.outline.height - height;
       return Array.from({ length: count + 1 }, (_, offset) => {
@@ -110,6 +116,13 @@ export class PlannerBoundary {
       if (entry.kind === "warehouse") warehouseCounts[EDGES.indexOf(edge)]!++;
       else if (entry.kind === "belt") beltCounts[EDGES.indexOf(edge)]!++;
     }
+    // 增量初排只检查已放口的边界；完整连通性在整组放完后判定。
+    if (!selected) violations += warehousePortViolations(this.entries.filter(entry => entry.kind === "warehouse").map(entry => {
+      const pose = override?.index === entry.index ? override.pose : poses[entry.index]!;
+      const geometry = entry.geometry[pose.rotation / 90]!;
+      return { ...pose, width: geometry.width, height: geometry.height, side: EDGES.indexOf(geometry.edge),
+        kind: this.network.nodes[entry.index]!.entity.definitionId === "unloader_1" ? 1 : 2 };
+    }), this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height, this.outline.warehouseSide);
     const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts);
     return { busMask, violations: violations + plannerBusConflictCount(
       this.network.request.options.warehouseBus === "straight" ? 1 : this.network.request.options.warehouseBus === "corner" ? 2 : 3,
@@ -119,7 +132,7 @@ export class PlannerBoundary {
   /** 初始口位只提供种子，后续构造和退火仍可重新选边；不把初始口位纳入最小盒子尺寸。 */
   // 订正 2026-10-10：传入搜索姿态时只返回整组提案，不写实体；固定入口保持原位。
   arrange(variant: number, state?: { readonly poses: readonly PlannerBoundaryPose[]; readonly movable: ReadonlySet<number> }): PlannerBoundaryPose[] {
-    const preferredEdge = EDGES[(3 + variant) % 4]!;
+    const preferredEdge = EDGES[this.outline.warehouseSide ?? (3 + variant) % 4]!;
     const preferredBit = 1 << EDGES.indexOf(preferredEdge);
     const masks = BUS_MASKS.slice(0, MASK_COUNTS[this.network.request.options.warehouseBus])
       .filter(mask => this.entries.some(entry => entry.kind === "warehouse") ? mask !== 0 : mask === 0)
@@ -156,7 +169,7 @@ export class PlannerBoundary {
         if (!pose) { complete = false; break; }
         poses[entry.index] = pose;
       }
-      if (!complete) continue;
+      if (!complete || this.resolve(poses).violations) continue;
       if (state) return poses;
       for (const entry of this.entries) {
         const node = this.network.nodes[entry.index]!, pose = poses[entry.index]!;

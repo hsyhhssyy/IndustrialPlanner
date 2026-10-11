@@ -21,6 +21,27 @@ function createProtocolCore(
 describe("ensureProtocolCoreEntity", () => {
   const queries = createRegistryContract().queries;
 
+  it("does not inject a core into agricultural land", () => {
+    const document = createWorldDocument({ baseId: "wuling_agricultural_land" });
+    expect(ensureProtocolCoreEntity({ document, queries })).toBe(document);
+    expect(document.entityOrder).toEqual([]);
+  });
+
+  it("removes both core types from agricultural land and stays empty on subsequent loads", () => {
+    const primary = createProtocolCore("primary", "sp_hub_1");
+    const secondary = createProtocolCore("secondary", "sp_sub_hub_1");
+    const document = {
+      ...createWorldDocument({ baseId: "wuling_agricultural_land" }),
+      entities: { primary, secondary },
+      entityOrder: [primary.id, secondary.id],
+    };
+    const result = ensureProtocolCoreEntity({ document, queries });
+    expect(result.entities).toEqual({});
+    expect(result.entityOrder).toEqual([]);
+    expect(ensureProtocolCoreEntity({ document: result, queries })).toBe(result);
+    expect(document.entities).toEqual({ primary, secondary });
+  });
+
   it.each([
     ["wuling_protocol_core", "sp_hub_1"],
     ["valley4_protocol_core", "sp_hub_1"],

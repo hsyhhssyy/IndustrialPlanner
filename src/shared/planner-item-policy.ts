@@ -1,4 +1,4 @@
-import type { BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerBlueprintInput, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { PlannerSupplyView } from "./planner-supply";
@@ -25,6 +25,9 @@ export class PlannerItemRules {
   isSolid(itemId: string): boolean { return this.registry.queries.resolveItemDomain(itemId) === ItemDomainFlag.Solid; }
   supply(itemId: string): NonNullable<BlueprintPlannerItemPolicy["supply"]> {
     return this.policies.get(itemId)?.supply ?? (this.isSolid(itemId) ? this.options.solidSupply : this.options.fluidSupply);
+  }
+  requiresWarehouseSupply(itemId: string): boolean {
+    return this.options.warehousePortPlacement === "full-side" && this.isSolid(itemId) && this.supply(itemId) !== "warehouse";
   }
   output(itemId: string): NonNullable<BlueprintPlannerItemPolicy["output"]> {
     return this.policies.get(itemId)?.output ?? this.options.solidOutput;
@@ -79,4 +82,14 @@ export function collectPlannerItemBoundaries(
     }
   }
   return [...rows.values()];
+}
+
+/** 原图保留设备身份；配置为仓库供货不能把传送带入口伪装成仓库取货口。 */
+export function invalidBlueprintWarehouseSupplies(registry: RegistryContract,
+  input: BlueprintPlannerBlueprintInput,
+  options: BlueprintPlannerOptions): string[] {
+  if (options.warehousePortPlacement !== "full-side") return [];
+  return input.boundaries.filter(boundary => boundary.direction === "input" && boundary.itemId
+    && registry.queries.resolveItemDomain(boundary.itemId) === ItemDomainFlag.Solid
+    && input.blueprint.entities[boundary.entityId]?.definitionId !== "unloader_1").map(boundary => boundary.entityId);
 }

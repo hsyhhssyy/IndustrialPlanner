@@ -21,29 +21,43 @@ import { configureConverterStartupInventory, scheduleConverterStartups, converte
 import { createPlannerDiagnostics } from "./search-diagnostics";
 import type { PlannerSearchSessions } from "./search-sessions";
 import type { PlannerSupplyAudit } from "./supply-audit";
+import { PlannerRandom, plannerRandomSeed } from "./search-random";
+import { plannerAttemptStrategy } from "./strategy-schedule";
 
 /** 按原图个体选择删减，不按设备类型预排序；小集合完整轮换，大集合先覆盖所有单减。 */
 // AI-CORRECTION 2026-10-06：全部规模按删减个数枚举组合，先覆盖所有单减，再覆盖二减及更大组合；不截断混合接入类型。
-export function blueprintReductionIds(nodes: readonly PlannerNode[], variant: number): ReadonlySet<string> {
+// AI-CORRECTION 2026-10-11：删减数量按几何权重偏向小改动，具体对象独立随机抽样；不再用分片编号枚举子集。
+export function blueprintReductionIds(nodes: readonly PlannerNode[], random: PlannerRandom): ReadonlySet<string> {
   const choices = nodes.filter(node => ["environment", "supply", "product"].includes(node.purpose))
     .map(node => node.entity.id).sort();
-  if (!choices.length || variant === 0) return new Set();
-  const combinations = (n: number, k: number) => {
-    let result = 1n;
-    for (let at = 1; at <= Math.min(k, n - k); at++) result = result * BigInt(n - at + 1) / BigInt(at);
-    return result;
-  };
-  let rank = BigInt(variant) % (1n << BigInt(choices.length)), count = 0;
-  while (rank >= combinations(choices.length, count)) { rank -= combinations(choices.length, count); count++; }
-  const removed = new Set<string>();
-  for (let index = 0; count > 0 && index < choices.length; index++) {
-    const branch = combinations(choices.length - index - 1, count - 1);
-    if (rank < branch) { removed.add(choices[index]!); count--; } else rank -= branch;
-  }
-  return removed;
+  // AI-REMOVED 2026-10-11:
+  // Reason: 组合编号随分片以 16 递增，固定尺寸只能访问部分删减子集。
+  // Trigger: 用户授权独立 PRNG 策略调度。
+  // Evidence: 灼铜检查点偶数分片长期仅一次准备评估；variant += 32 与 floor(variant / 2) 耦合。
+  // Replacement: 下方小删减优先的随机抽样。
+  // Risk: 搜索轨迹变化；Human Review: Required
+  // Original code:
+  // if (!choices.length || variant === 0) return new Set();
+  // const combinations = (n: number, k: number) => {
+  //   let result = 1n;
+  //   for (let at = 1; at <= Math.min(k, n - k); at++) result = result * BigInt(n - at + 1) / BigInt(at);
+  //   return result;
+  // };
+  // let rank = BigInt(variant) % (1n << BigInt(choices.length)), count = 0;
+  // while (rank >= combinations(choices.length, count)) { rank -= combinations(choices.length, count); count++; }
+  // const removed = new Set<string>();
+  // for (let index = 0; count > 0 && index < choices.length; index++) {
+  //   const branch = combinations(choices.length - index - 1, count - 1);
+  //   if (rank < branch) { removed.add(choices[index]!); count--; } else rank -= branch;
+  // }
+  // return removed;
+  let count = Math.min(1, choices.length);
+  while (count < choices.length && random.integer(4) === 0) count++;
+  return new Set(random.shuffle(choices).slice(0, count));
 }
 
 export function reduceBlueprintNetwork(registry: RegistryContract, network: PlannerNetwork, wires: PlannerWire[], removed: ReadonlySet<string>, variant: number) {
+  const random = new PlannerRandom(plannerRandomSeed(`matching/${variant}`));
   const existing = new Map(network.nodes.map(node => [node.entity.id, node]));
   const remaining = network.nodes.filter(node => !removed.has(node.entity.id));
   if (remaining.some(node => node.recipe?.requiredGasDiffusion && !remaining.some(other =>
@@ -99,8 +113,14 @@ export function reduceBlueprintNetwork(registry: RegistryContract, network: Plan
             && getPlannerPorts(registry, node.entity, node.definition, source ? "output" : "input", item)
               .some(allowed => key(allowed) === key(port))
             && plannerPortAcceptsItem(registry, node.entity, node.definition, port, item))));
-    const offset = ports.length ? variant % ports.length : 0;
-    return [{ index, source, ports: [...ports.slice(offset), ...ports.slice(0, offset)] }];
+    // AI-REMOVED 2026-10-11:
+    // Reason: 端口数与分片步长有公因子时匹配顺序固定。
+    // Trigger: 独立随机策略；Evidence: variant % ports.length。
+    // Replacement: PlannerRandom.shuffle；Risk: 匹配顺序变化；Human Review: Required
+    // Original code:
+    // const offset = ports.length ? variant % ports.length : 0;
+    // return [{ index, source, ports: [...ports.slice(offset), ...ports.slice(0, offset)] }];
+    return [{ index, source, ports: random.shuffle(ports) }];
   }));
   const owners = new Map<string, number>(), assignments = new Map<number, PlannerWire["source"]>();
   const assign = (index: number, visited: Set<string>): boolean => {
@@ -141,27 +161,30 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
   const original = options.originSeed ?? options.seed;
   if (!original || !request.blueprintSource) throw new Error("蓝图任务缺少已识别的原图基线。");
   // 每隔一次回到原图探索减量；续搜失败不会永久失去已删设施。
-  const reduction = variant % 2 === 0;
+  // AI-CORRECTION 2026-10-11：由当前尺寸的独立打乱轮转表决定减量，不读取派发编号奇偶。
+  const strategy = options.attemptStrategy ?? plannerAttemptStrategy(variant);
+  const reduction = strategy.reduce;
   const source = reduction ? original : options.seed ?? original;
   const restored = restorePlannerSeed(registry, request, source);
   let network = restored.network;
   const originalWires = restored.wires;
   const outline = options.targetOutline ?? { width: source.width, height: source.height };
   assertPlannerOutline(outline);
-  let statistics: PlannerSearchStatistics = { strategy: "compact", seed: variant, evaluationLimit: options.maxEvaluations ?? 5000,
+  let statistics: PlannerSearchStatistics = { strategy: "compact", seed: strategy.layoutSeed, attemptStrategy: strategy, evaluationLimit: options.maxEvaluations ?? 5000,
     maximumArea: options.maximumArea, experiments: options.experiments ?? ["constraint-repair", "partial-rebuild"],
     outline, evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 };
   try {
-    const removed = reduction ? blueprintReductionIds(network.nodes, Math.floor(variant / 2)) : new Set<string>();
+    const removed = reduction ? blueprintReductionIds(network.nodes.filter(node => request.options.warehousePortPlacement !== "full-side"
+      || !["loader_1", "unloader_1"].includes(node.entity.definitionId)), new PlannerRandom(strategy.reductionSeed)) : new Set<string>();
     statistics.evaluations++; reportEvaluations(statistics.evaluations);
-    const fingerprint = JSON.stringify([source, outline, [...removed].sort(), options.profile, options.experiments]);
+    const fingerprint = JSON.stringify([source, outline, [...removed].sort(), strategy, options.profile, options.experiments]);
     const resumed = sessions?.get(options.sessionKey, fingerprint);
     const fresh = statistics;
     const reductionKey = [...removed].sort().join("\n"), scope = JSON.stringify(source);
     const rejected = removed.size ? sessions?.reduction(scope, reductionKey) : undefined;
     if (rejected) { statistics.preparationRejected = true; throw new PlannerCandidateError(rejected); }
     let wires: PlannerWire[];
-    try { wires = resumed?.wires ?? (removed.size ? reduceBlueprintNetwork(registry, network, originalWires, removed, variant) : originalWires); }
+    try { wires = resumed?.wires ?? (removed.size ? reduceBlueprintNetwork(registry, network, originalWires, removed, strategy.matchingSeed) : originalWires); }
     catch (error) {
       if (error instanceof PlannerCandidateError) { statistics.preparationRejected = true; sessions?.reduction(scope, reductionKey, error.message); }
       throw error;
@@ -190,7 +213,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       enterPhase("power");
       const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
       if (network.nodes.some(node => node.definition.requiresPower && !powered.has(node.entity.id))) { reject("power", "原图供电覆盖不足"); continue; }
-      let router = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...search.fixtures], wires.flatMap(wire => [wire.source, wire.target]),
+      let router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
         { minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0 }, routing);
       statistics.routingAttempts++;
       update("routing", "正在重建原图物流路径");
@@ -200,7 +223,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       enterPhase("routing");
       try {
         let supplyAudit: PlannerSupplyAudit = { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 };
-        const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, variant, search.fixtures, checkBudget,
+        const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, strategy.converterSeed, [], checkBudget,
           async (alternative, connections, routed) => {
             const scope = converterRebuildScope(registry, alternative, connections);
             if (routed.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId)
@@ -253,7 +276,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           baseId: request.plan.sourceBaseId, initialGridPoint: { x: 0, y: 0 }, entities: Object.fromEntries(entities.map(entity => [entity.id, entity])),
           entityOrder: entities.map(entity => entity.id), slotLinks: network.slotLinks, regions: request.blueprintSource.blueprint.regions });
         let execution = (() => {
-          try { return blueprintRecognitionScene(registry, request.blueprintSource!, blueprint, 600, false, search.drainPorts); }
+          try { return blueprintRecognitionScene(registry, request.blueprintSource!, blueprint, 600, false); }
           catch (error) { throw new PlannerCandidateError(error instanceof Error ? error.message : String(error)); }
         })();
         if (adaptive || scheduledSlots.length) {

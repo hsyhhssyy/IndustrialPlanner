@@ -3,7 +3,7 @@
   "provenance": "系统芽针蓝图相同九台生产设备；显式配平采种/水培循环；固体仓库、流体暗管、直线存取线、成品储存箱、50 个预置启动",
   "request": {
     "options": {
-      "solidSupply": "warehouse",
+      "warehousePortPlacement": "any", "solidSupply": "warehouse",
       "fluidSupply": "conduit",
       "warehouseBus": "straight",
       "solidOutput": "stash",

@@ -3,7 +3,7 @@
   "provenance": "分离芯单机 60/min；两种原料外供，验证同物品多线合箱与分箱",
   "request": {
     "options": {
-      "solidSupply": "warehouse", "fluidSupply": "conduit", "warehouseBus": "straight",
+      "warehousePortPlacement": "any", "solidSupply": "warehouse", "fluidSupply": "conduit", "warehouseBus": "straight",
       "solidOutput": "stash", "byproducts": "output", "plantStartup": "preload", "evaluationsPerRound": 50000
     },
     "plan": {

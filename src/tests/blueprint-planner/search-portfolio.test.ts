@@ -6,6 +6,7 @@ import { createRegistryContract } from "@/registry";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
 import { capturePlannerSeed } from "@/blueprint-planner/search-seed";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { assertPlannerOutline, initialPlannerOutline, breadthOutlines, continuationOutline } from "@/blueprint-planner/search-outline";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
@@ -24,15 +25,16 @@ it("全局最优重调度替换旧主种子，重置续搜机会并保留其他�
   for (let i = 0; i < 20; i++) pool.next(i);
   const best = { ...old, width: 24, height: 12 };
   pool.restart(best);
-  expect(pool.next(0).seed).toBe(best);
-  expect(pool.next(1).seed).toBe(other);
+  // AI-CORRECTION 2026-10-11：明确选择续搜和输出方式；策略已不再由编号奇偶隐式指定。
+  expect(pool.next(0, true, undefined, stash, { ...plannerAttemptStrategy(0), restart: false }).seed).toBe(best);
+  expect(pool.next(1, true, undefined, warehouse, { ...plannerAttemptStrategy(1), restart: false }).seed).toBe(other);
   expect(pool.snapshot().pools.every(entry => entry.attemptsWithoutImprovement <= 1)).toBe(true);
 
   // 同面积、同摆位但线路不同的全局改善不能被旧种子去重吞掉。
   const improved = structuredClone(best);
   pool.restart(improved);
-  expect(pool.next(0).seed).toBe(improved);
-  expect(pool.next(2).continuationStep).toBe(1);
+  expect(pool.next(0, true, undefined, stash, { ...plannerAttemptStrategy(0), restart: false }).seed).toBe(improved);
+  expect(pool.next(2, true, undefined, stash, { ...plannerAttemptStrategy(2), restart: false }).continuationStep).toBe(1);
 });
 
 it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15", () => {
@@ -45,7 +47,7 @@ it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15
     expect(selection.maximumArea).toBe(287);
     expect(breadthOutlines(selection.maximumArea!, { width: 5, height: 5 })).toContainEqual({ width: 19, height: 15 });
   }
-  expect(pool.next(3, true, { area: 288, outputStashCount: 2 }).maximumArea).toBe(288);
+  expect(pool.next(3, true, { area: 288, outputStashCount: 2 }, undefined, { ...plannerAttemptStrategy(3), restart: true }).maximumArea).toBe(288);
 });
 
 it("初排以设备面积两倍为目标，整数取整及各次重启均不超过 70 格", () => {
@@ -142,8 +144,9 @@ it("布局池保留同面积的不同摆位、去重、限制容量并在改善�
   const original = JSON.stringify(seed);
   const pool = new PlannerSearchPortfolio(request, seed);
   pool.remember(structuredClone(seed));
-  expect(pool.next(0).seed).toBe(seed);
-  expect(pool.next(1).continuationStep).toBe(1);
+  // AI-CORRECTION 2026-10-11：明确指定续搜；新随机调度不承诺特定编号必走某个分支。
+  expect(pool.next(0, true, undefined, undefined, { ...plannerAttemptStrategy(0), restart: false }).seed).toBe(seed);
+  expect(pool.next(1, true, undefined, undefined, { ...plannerAttemptStrategy(1), restart: false }).continuationStep).toBe(1);
   for (let i = 1; i < 7; i++) {
     const other = structuredClone(seed);
     other.network.nodes[i]!.entity.position = { ...other.network.nodes[i]!.entity.position, x: i };
@@ -155,11 +158,11 @@ it("布局池保留同面积的不同摆位、去重、限制容量并在改善�
   expect(retained.has(seed)).toBe(true);
   expect(selections.filter(item => item.seed === seed).length).toBeGreaterThan(selections.length / 2);
   expect(selections.some(item => item.continuationStep! >= 2)).toBe(true);
-  expect(pool.next(43).seed).toBeUndefined();
+  expect(pool.next(43, true, undefined, undefined, { ...plannerAttemptStrategy(43), restart: true }).seed).toBeUndefined();
   expect(pool.next(44, false).seed).toBeUndefined();
   const improved = { ...structuredClone(seed), width: 19 };
   pool.remember(improved);
-  expect(pool.next(44)).toMatchObject({ seed: improved, continuationStep: 0 });
+  expect(pool.next(44, true, undefined, undefined, { ...plannerAttemptStrategy(44), restart: false })).toMatchObject({ seed: improved, continuationStep: 0 });
   expect(JSON.stringify(seed)).toBe(original);
 });
 

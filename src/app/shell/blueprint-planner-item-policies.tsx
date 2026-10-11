@@ -34,7 +34,8 @@ export function BlueprintPlannerItemPolicies({ plan, registry, environment, opti
           </div>
           <div className={styles.supplyControls}>
             {row.supply ? <label><span>{t("eda.itemSupply")}</span>
-              <select aria-label={`${name} · ${t("eda.itemSupply")}`} value={rules.supply(row.itemId)}
+              <select aria-label={`${name} · ${t("eda.itemSupply")}`} aria-invalid={rules.requiresWarehouseSupply(row.itemId)}
+                className={rules.requiresWarehouseSupply(row.itemId) ? styles.error : undefined} value={rules.supply(row.itemId)}
                 onChange={event => update({ supply: event.target.value as BlueprintPlannerItemPolicy["supply"] })}>
                 <option value="external">{t(solid ? "eda.externalBelt" : "eda.externalPipe")}</option>
                 <option value={solid ? "warehouse" : "conduit"}>{t(solid ? "eda.warehouseSupply" : "eda.conduitSupply")}</option>

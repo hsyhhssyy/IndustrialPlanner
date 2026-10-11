@@ -18,7 +18,7 @@ import blueprint from "../fixtures/blueprints/migration/plant-cycle.schema6.json
 beforeEach(() => { vi.stubGlobal("indexedDB", createFakeIndexedDbFactory()); });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 const registry = createRegistryContract();
-const options: BlueprintPlannerOptions = { solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
+const options: BlueprintPlannerOptions = { warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
   solidOutput: "stash", byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 20_000 };
 
 it("内嵌蓝图空升级同步更新请求指纹且保留检查点、计数和原件", () => {

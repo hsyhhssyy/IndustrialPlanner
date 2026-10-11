@@ -56,7 +56,7 @@
       "activeActivityIds": []
     },
     "options": {
-      "solidSupply": "warehouse",
+      "warehousePortPlacement": "any", "solidSupply": "warehouse",
       "fluidSupply": "conduit",
       "warehouseBus": "straight",
       "solidOutput": "stash",

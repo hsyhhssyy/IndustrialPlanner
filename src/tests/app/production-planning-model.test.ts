@@ -630,7 +630,7 @@ describe("production planning model", () => {
     const plan = createBlueprintPlannerPlan({ result, targets, supplies, infiniteItemIds: new Set(),
       activeActivityIds: ["activity-limited-formula-2"], sourceBaseId: "wuling_protocol_core", name: "" });
     const network = createProductionNetwork(registry, { plan, options: {
-      solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
+      warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
       byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 1000,
     } });
     const balance = materialBalance(network);

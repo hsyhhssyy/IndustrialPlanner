@@ -47,6 +47,8 @@ export function plannerLayoutBatchSize(nodes: number, cells: number, budget: num
 }
 
 /** CPU 与 WGSL 的数值契约；40～55 为覆盖／固定约束，56～71 为夹具逐格阻挡掩码。 */
+// 订正 2026-10-11：72 为仓库口类别，73 为摆放规则，74 为指定边加一；0 表示未指定。
+// AI-CORRECTION 2026-10-11：删除排空夹具字段；5、8～39、56～71 留空，保持其余数值字段偏移稳定。
 export const PLANNER_LAYOUT_GEOMETRY_STRIDE = 80;
 export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
 

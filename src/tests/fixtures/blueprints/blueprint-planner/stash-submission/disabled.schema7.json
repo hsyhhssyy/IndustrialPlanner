@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "stash-submission-disabled",
+  "version": "fixture-v1",
+  "name": "协议储存箱中心堵口-disabled",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "stash": {
+      "id": "stash",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 3,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {}
+      },
+      "tags": []
+    },
+    "source-0": {
+      "id": "source-0",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 5,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].lock": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialItemType": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "belt-0": {
+      "id": "belt-0",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 5,
+        "y": 2
+      },
+      "config": {},
+      "tags": []
+    },
+    "source-1": {
+      "id": "source-1",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 4,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].lock": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialItemType": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "belt-1": {
+      "id": "belt-1",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 4,
+        "y": 2
+      },
+      "config": {},
+      "tags": []
+    },
+    "source-2": {
+      "id": "source-2",
+      "definitionId": "cheat_infinite_solid",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].lock": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialItemType": "item_filter_core",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "belt-2": {
+      "id": "belt-2",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 3,
+        "y": 2
+      },
+      "config": {},
+      "tags": []
+    },
+    "blocker": {
+      "id": "blocker",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 3,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "left-blocker": {
+      "id": "left-blocker",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 7,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "stash",
+    "source-0",
+    "belt-0",
+    "source-1",
+    "belt-1",
+    "source-2",
+    "belt-2",
+    "blocker",
+    "left-blocker",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-11T00:00:00.000Z",
+  "updatedAt": "2026-10-11T00:00:00.000Z"
+}

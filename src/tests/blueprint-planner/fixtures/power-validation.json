@@ -55,6 +55,7 @@
       "activeActivityIds": []
     },
     "options": {
+      "warehousePortPlacement": "any",
       "solidSupply": "warehouse",
       "fluidSupply": "conduit",
       "warehouseBus": "straight",
@@ -68,30 +69,7 @@
   },
   "execution": {
     "scene": {
-      "externalEntities": [
-        {
-          "id": "eda-validation-drain-0",
-          "definitionId": "belt_straight_1x1",
-          "rotation": 270,
-          "position": {
-            "x": 1,
-            "y": 7
-          },
-          "config": {},
-          "tags": []
-        },
-        {
-          "id": "eda-validation-sink-0",
-          "definitionId": "cheat_infinite_solid",
-          "position": {
-            "x": 1,
-            "y": 6
-          },
-          "rotation": 0,
-          "config": {},
-          "tags": []
-        }
-      ],
+      "externalEntities": [],
       "externalSlotLinks": [],
       "initialSlots": [],
       "scheduledSlots": [],
@@ -105,6 +83,14 @@
         "entityIds": [
           "eda-output-3"
         ]
+      },
+      {
+        "id": "stash-submit:eda-output-3",
+        "entityIds": [
+          "eda-output-3"
+        ],
+        "itemId": "item_plant_moss_3",
+        "direction": "output"
       }
     ],
     "warmupSeconds": 180,
@@ -115,7 +101,8 @@
     "engine": {
       "kind": "dense-v2",
       "ticksPerSecond": 2
-    }
+    },
+    "collectAnalysis": true
   },
   "metrics": {
     "width": 10,

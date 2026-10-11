@@ -17,7 +17,8 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
   let gpuStarted = false, gpuEnded = false, disposed = false, cpuWhileGpu = 0;
   const variants = new Set<number>();
   const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => ({
-    build: async (_request, variant, _ms, budget, signal, update) => {
+    build: async (_request, variant, _ms, budget, signal, update, _seed, _step, _area, _outline, _origin, _session, strategy) => {
+      expect(strategy?.layoutSeed).toBeGreaterThan(0);
       expect(variants.has(variant)).toBe(false); variants.add(variant);
       if (gpuStarted && !gpuEnded) cpuWhileGpu++;
       await new Promise(resolve => setTimeout(resolve, 5));
@@ -31,7 +32,8 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
   });
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, worker: makeWorker(), workerFactory: makeWorker,
     resourceHints: { hardwareConcurrency: 8, deviceMemory: 8 }, gpuWorkerFactory: () => ({ gpuAvailable: true,
-      build: async (_request, variant, _ms, budget, signal, update) => {
+      build: async (_request, variant, _ms, budget, signal, update, _seed, _step, _area, _outline, _origin, _session, strategy) => {
+        expect(strategy?.layoutSeed).toBeGreaterThan(0);
         expect(variants.has(variant)).toBe(false); variants.add(variant); gpuStarted = true;
         await new Promise<void>(resolve => {
           const timer = setTimeout(finish, pause ? 20_000 : 100);

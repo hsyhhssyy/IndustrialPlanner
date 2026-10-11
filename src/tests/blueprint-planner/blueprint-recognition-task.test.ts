@@ -13,7 +13,7 @@ import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 const fixtures = "src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/";
-const options = { solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
+const options = { warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
   byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 10_000, concurrency: 1 } as const;
 
 function setup(records?: Map<string, BlueprintPlannerTaskFile>) {
@@ -28,6 +28,34 @@ function setup(records?: Map<string, BlueprintPlannerTaskFile>) {
 }
 
 describe("持久蓝图识别任务", () => {
+  it("识别前保存摆放选项，恢复保留配置并拦截非仓库固体入口", async () => {
+    const records = new Map<string, BlueprintPlannerTaskFile>(), env = setup(records);
+    const blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema7.json`);
+    let restored: ReturnType<typeof setup> | null = null;
+    try {
+      const id = await env.host.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
+      await vi.waitFor(() => expect(env.host.state.activeTaskId).toBeNull());
+      const before = parseRecognitionTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
+      await env.host.actions.updateBlueprintBoundaries(id, before.request.input.boundaries.map(boundary =>
+        boundary.direction === "input" ? { ...boundary, itemId: "item_iron_ore" } : boundary));
+      const input = parseRecognitionTaskFile(env.host.queries.exportTask(id), env.workspace.registry).request.input;
+      await expect(env.host.actions.updateBlueprintOptions(id, { ...options, warehousePortPlacement: "full-side", warehouseBus: "corner" })).rejects.toThrow("使用一面");
+      await env.host.actions.updateBlueprintOptions(id, { ...options, warehousePortPlacement: "full-side" });
+      const saved = parseRecognitionTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
+      expect(saved.request.input).toEqual(input);
+      expect(saved.request.detectedBoundaries).toEqual(before.request.detectedBoundaries);
+      expect(saved.request.options.warehousePortPlacement).toBe("full-side");
+      expect(saved.checkpoint.step).toBe("inputs");
+      restored = setup(records);
+      await vi.waitFor(() => expect(restored!.host.queries.getTask(id)).not.toBeNull());
+      expect(restored.host.queries.getLastRequest(id)?.options.warehousePortPlacement).toBe("full-side");
+      await expect(restored.host.actions.identifyBlueprint(id)).rejects.toThrow("仓库取货口");
+      await restored.host.actions.updateBlueprintOptions(id, { ...options, warehousePortPlacement: "continuous" });
+      expect(restored.host.queries.getLastRequest(id)?.options.warehousePortPlacement).toBe("continuous");
+      await expect(restored.host.actions.updateBlueprintOptions("missing", options)).rejects.toThrow("不存在");
+    } finally { restored?.dispose(); env.dispose(); }
+  });
+
   it("边界检查运行中即可导出，输入配置、未知出口和原图可导入并继续识别", async () => {
     const env = setup(), blueprint = loadBlueprintFromFile(`${fixtures}unknown-entry.schema7.json`);
     const original = JSON.stringify(blueprint);
@@ -93,6 +121,7 @@ describe("持久蓝图识别任务", () => {
       await expect(env.host.actions.updateBlueprintBoundaries(id, request.input.boundaries.map(boundary =>
         ({ ...boundary, itemId: "item_iron_ore" })))).rejects.toThrow("固定");
       await env.host.actions.identifyBlueprint(id);
+      await expect(env.host.actions.updateBlueprintOptions(id, options)).rejects.toThrow("不存在");
       expect(env.host.queries.listTasks().map(task => task.taskId)).toEqual([id]);
       expect(env.host.queries.getResult(id)?.measuredOutputs).toEqual([{ itemId: "item_plant_moss_3", perMinute: 30 }]);
       const file = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);

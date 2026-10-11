@@ -16,6 +16,7 @@ export function readPlanningInput(registry: RegistryContract, value: unknown): B
     };
     return { ...request, options: {
       ...request.options,
+      warehousePortPlacement: request.options.warehousePortPlacement ?? "any",
       warehouseBus: (request.options.warehouseBus as string) === "free" ? "corner" : request.options.warehouseBus ?? "straight",
       evaluationsPerRound: request.options.evaluationsPerRound ?? 50_000,
     } as BlueprintPlannerOptions };
@@ -30,7 +31,7 @@ export function readPlanningInput(registry: RegistryContract, value: unknown): B
     recipeChoices: new Map(Object.entries(state.recipeChoices)), sourceConfig: state.sourceConfig, useModules: false,
   }, index);
   const options: BlueprintPlannerOptions = {
-    solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
+    warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
     byproducts: "output", plantStartup: "preload", evaluationsPerRound: 50_000,
     ...(typeof input.options === "object" && input.options !== null ? input.options : {}),
   };

@@ -46,6 +46,8 @@ export class PlannerBatchSession {
 }
 
 export interface PlannerBatchOptions {
+  /** 固定已抽样策略进行对照或重放；省略时使用正式随机调度。 */
+  readonly attemptStrategy?: PlannerSearchOptions["attemptStrategy"];
   readonly strategy?: "baseline" | "compact";
   readonly seed?: PlannerSearchSeed;
   readonly attempts?: number;
@@ -123,7 +125,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
     for (let index = 0; index < (options.attempts ?? Infinity) && performance.now() < deadline; index++) {
       if (localEvaluations >= (options.localEvaluations ?? Infinity)) break;
       const variant = (options.startVariant ?? 0) + index;
-      const selection = portfolio.next(variant, options.strategy !== "baseline");
+      const selection = portfolio.next(variant, options.strategy !== "baseline", undefined, undefined, options.attemptStrategy);
       const solidOutput = selection.request.options.solidOutput as "warehouse" | "stash";
       const itemPolicies = selection.request.options.itemPolicies;
       const generationStart = performance.now();
@@ -137,6 +139,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
         const candidate = await planner.build(selection.request, selection.variant,
           Math.min((options.candidateSeconds ?? 30) * 1000, deadline - performance.now()), {
             maxEvaluations: remainingEvaluations,
+            attemptStrategy: selection.attemptStrategy,
             strategy: options.strategy,
             seed: selection.seed,
             continuationStep: selection.continuationStep,

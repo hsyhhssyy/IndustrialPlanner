@@ -10,6 +10,8 @@ export interface BaseOuterRingDefinition {
 
 export interface BaseSubAreaDefinition {
   readonly id: string;
+  /** 配置名牌文字时显示；未配置时不显示名牌。 */
+  readonly nameplate?: string;
   readonly position: GridPoint;
   readonly placeableArea: GridRectSize;
   readonly outerRing: BaseOuterRingDefinition;
@@ -26,6 +28,8 @@ export interface BaseBuiltinEntityDefinition {
 export interface BaseDefinition {
   id: string;
   name: string;
+  /** 主区域的名牌文字，可与基地选择入口名称不同；未配置时不显示。 */
+  readonly nameplate?: string;
   placeableArea: GridRectSize;
   outerRing: BaseOuterRingDefinition;
   readonly subAreas?: readonly BaseSubAreaDefinition[];

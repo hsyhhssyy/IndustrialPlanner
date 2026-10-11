@@ -81,8 +81,8 @@ it("旧自由存取线连同种子指纹统一迁移为直角，保留合格蓝�
 it("旧边界不合格仍保留曲线，真实 Worker 从原累计次数续算", async () => {
   const session = new PlannerBatchSession();
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 20,
-    worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) =>
-      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal),
+    worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
     dispose: () => {} } });
   try {
     const file = structuredClone(invalid.file) as unknown as BlueprintPlannerTaskFile;
@@ -120,8 +120,8 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
   const storage = { load: async () => structuredClone([...records.values()]),
     save: async (value: BlueprintPlannerTaskFile) => { records.set(value.taskId, structuredClone(value)); }, delete: async (id: string) => { records.delete(id); } };
   const host = createBlueprintPlannerHost(session.workspace, { storage, roundLimit: () => 20,
-    worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline) =>
-      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline }, update, signal),
+    worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
     dispose: () => {} } });
   let reloaded: ReturnType<typeof createBlueprintPlannerHost> | undefined;
   try {

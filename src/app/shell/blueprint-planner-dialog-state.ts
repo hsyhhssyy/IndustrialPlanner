@@ -19,7 +19,7 @@ const ENABLED_KEY = "industrial-planner.experimental.eda";
 
 function createDefaultPlannerOptions(): BlueprintPlannerOptions {
   return {
-    solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
+    warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
     solidOutput: "auto", byproducts: "destroy", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
     itemPolicies: [],
   };
@@ -171,6 +171,7 @@ export class BlueprintPlannerDialogController {
 
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
     this.options = { ...this.options, ...options,
+      ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
 // AI-REMOVED 2026-10-06:
 // Reason: 选项归属当前任务，不再持久化为后续新任务的默认值。

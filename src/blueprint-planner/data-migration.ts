@@ -103,7 +103,7 @@ import { createStableJsonHash } from "@/shared/storage/hash-utils";
 // import type { PlannerCandidate } from "./candidate";
 
 
-export const EDA_MIGRATION_VERSION = "eda-store-3:json-1";
+export const EDA_MIGRATION_VERSION = "eda-store-3:warehouse-ports-1";
 const transferLocation = { databaseName: EDA_TASK_LOCATION.databaseName, storeName: DATA_MIGRATION_STORE, key: "eda-store" };
 
 // AI-REMOVED 2026-10-08:

@@ -1,3 +1,5 @@
+import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
+import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES, plannerOutputModeKey, resolvePlannerOutputAttempt } from "./output-policy";
 import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -11,9 +13,11 @@ import { plannerRequestKey } from "./search-seed";
 import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
 import { migratePlannerCandidate } from "./task-migration";
-import { assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 import { withBlueprintConverterStartup } from "./blueprint-startup";
+import { assertPlannerRandomState } from "./search-random";
+import { assertPlannerStrategyStates, type PlannerDimensionRandomState } from "./strategy-schedule";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
@@ -28,9 +32,11 @@ import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_SHA
 // Replacement: compact-breadth-1 与 restorePlannerTaskFile 迁移；Risk: 旧任务无历史尺寸访问记录；Human Review: Required。
 // Original code:
 // export const PLANNER_ALGORITHM_VERSION = "compact-portfolio-2";
-export const PLANNER_ALGORITHM_VERSION = "dimension-shards-1";
+export const PLANNER_ALGORITHM_VERSION = "stash-submit-1";
 
 export interface PlannerShardCheckpoint {
+  /** 每个尺寸拥有自己的随机流和覆盖轮转表，随分片导出、合并和恢复。 */
+  strategyStates?: Record<string, PlannerDimensionRandomState>;
   index: number;
   nextVariant: number;
   attempts: number;
@@ -64,6 +70,8 @@ export interface PlannerParallelCheckpoint {
 }
 
 export interface PlannerCheckpoint {
+  /** 首次搜索从任务身份派生并保存；历史任务在下次搜索时初始化。 */
+  randomSeed?: number;
   readonly blueprintBaseline?: { readonly candidate: PlannerCandidate; readonly report: SimulationBlueprintRunReport };
   attempt: number;
   evaluations: number;
@@ -90,8 +98,23 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
 ): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
   value = migrateTaskBlueprintSchemas(value);
+  const oldSubmissionRules = ["external-boundary-1", "dimension-shards-1", "warehouse-port-shards-1", "seeded-strategies-1"].includes(value.algorithmVersion);
+  if (oldSubmissionRules && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
+    const source = value.request.blueprintSource;
+    if (source.boundaries.some(boundary => boundary.kind === "facility" && boundary.direction === "output"
+      && source.blueprint.entities[boundary.entityId]?.definitionId === "storager_1")) {
+      throw new Error("协议储存箱验收规则已更新，请用保留的原蓝图重新识别；旧任务原件不变。");
+    }
+    value = { ...value, algorithmVersion: PLANNER_ALGORITHM_VERSION };
+  }
   // 仅调度规则升级：保留结果、计数、历史和旧种子池，首次运行时创建尺寸清单。
-  if (value.algorithmVersion === "external-boundary-1") value = { ...value, algorithmVersion: PLANNER_ALGORITHM_VERSION };
+  // AI-CORRECTION 2026-10-11：自动提交改变验收语义，旧版本改走下方重建搜索及重新验收流程。
+  // AI-REMOVED 2026-10-11:
+  // Reason: 旧报告依赖排空夹具，不能直接升级算法标识后复用。
+  // Trigger: 协议储存箱改为周期提交。Evidence: 旧场景 externalEntities 包含排空源汇。
+  // Replacement: 下方旧算法迁移；Risk: 原图任务需要重新识别；Human Review: Required。
+  // Original code:
+  // if (["external-boundary-1", "dimension-shards-1", "warehouse-port-shards-1"].includes(value.algorithmVersion)) value = { ...value, algorithmVersion: PLANNER_ALGORITHM_VERSION };
   if (value?.request && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
     const file = parsePlannerTaskFile(value, registry);
     if (!verify) return file;
@@ -142,7 +165,7 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
 //       startedAt: value.progress?.startedAt, elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
 //       evaluatedProposals: 0, roundEvaluatedProposals: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [],
 //       message: "算法已更新，旧计算进度已重置，请重新开始计算。" } }, registry);
-  if (value?.formatVersion !== 1 || !["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"].includes(value.algorithmVersion)) {
+  if (value?.formatVersion !== 1 || !oldSubmissionRules && !["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"].includes(value.algorithmVersion)) {
     return parsePlannerTaskFile(value, registry);
   }
   const file = structuredClone(value) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
@@ -204,6 +227,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     const outputModes = new Set(Array.from({ length: MAX_PLANNER_OUTPUT_MODES }, (_, variant) =>
       plannerOutputModeKey(resolvePlannerOutputAttempt(request, variant).request.options)));
     if (!point || !progress || progress.taskId !== file.taskId) throw new Error("任务缺少检查点或进度。");
+    if (point.randomSeed !== undefined) assertPlannerRandomState(point.randomSeed);
     for (const count of [point.attempt, point.evaluations, progress.candidateCount, progress.validatedCandidateCount]) {
       if (!Number.isSafeInteger(count) || count < 0) throw new Error("任务计数无效。");
     }
@@ -254,6 +278,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           || !Number.isFinite(entity.position.x) || !Number.isFinite(entity.position.y)) throw new Error("候选蓝图包含无效设备。");
       }
       assertPlannerCandidateBounds(registry, candidate);
+      if (candidate !== point.blueprintBaseline?.candidate) assertPlannerWarehousePorts(registry, request, candidate);
       if (candidate.seed) restorePlannerSeed(registry, restorePlannerOutputRequest(request, candidate.seed.network.request.options), candidate.seed);
       if (request.blueprintSource) assertBlueprintPreserved(registry, request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint, candidate.seed);
     }
@@ -275,6 +300,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     if (point.parallel) {
       const parallel = point.parallel;
       if (parallel.dimensionSchedule !== undefined) {
+        if ((request.options.warehousePortPlacement === "full-side") !== !!parallel.dimensionSchedule.warehousePorts) throw new Error("尺寸调度与取货口规则不一致。");
         assertPlannerDimensionSchedule(parallel.dimensionSchedule, parallel.shards);
         if (parallel.count !== PLANNER_SHARD_COUNT || point.best
           && parallel.dimensionSchedule.targetArea !== point.best.candidate.metrics.area) throw new Error("尺寸调度与最优面积不一致。");
@@ -304,7 +330,9 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           || !shard.shapeVisits || typeof shard.shapeVisits !== "object" || Array.isArray(shard.shapeVisits)
           || (shard.searchTarget !== undefined && (typeof shard.searchTarget !== "string"
             || shard.searchTarget.length === 0 || shard.searchTarget.length > 1024))
-          || Object.entries(shard.shapeVisits).some(([key, visits]) => (!/^.+\/\d+\/\d+$/.test(key) || !outputModes.has(key.split("/").slice(0, -2).join("/")))
+          || Object.entries(shard.shapeVisits).some(([key, visits]) => (request.options.warehousePortPlacement === "full-side"
+            ? !/^warehouse\/\d+\/\d+\/[0-3]$/.test(key)
+            : (!/^.+\/\d+\/\d+$/.test(key) || !outputModes.has(key.split("/").slice(0, -2).join("/"))))
             || !Number.isSafeInteger(visits) || visits < 0)
           || Object.values(shard.shapeVisits).reduce((sum, visits) => sum + visits, 0) > shard.attempts
           || (shard.shapeEvaluations !== undefined && (!shard.shapeEvaluations || typeof shard.shapeEvaluations !== "object"
@@ -319,7 +347,14 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           + parallel.shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0)
         || point.pendingCandidate !== null) throw new Error("分片汇总计数无效。");
       for (const shard of parallel.shards) {
-        if (shard.pendingCandidate) assertPlannerCandidateBounds(registry, shard.pendingCandidate);
+        if (shard.strategyStates !== undefined) {
+          if (point.randomSeed === undefined) throw new Error("策略检查点缺少任务随机种子。");
+          assertPlannerStrategyStates(shard.strategyStates, shard.attempts);
+        }
+        if (shard.pendingCandidate) {
+          assertPlannerCandidateBounds(registry, shard.pendingCandidate);
+          assertPlannerWarehousePorts(registry, request, shard.pendingCandidate);
+        }
         const pool = new PlannerSearchPortfolio(request);
         pool.restore(shard.portfolio);
         if (shard.pendingCandidate !== null && (!shard.pendingCandidate.execution?.blueprint
@@ -338,6 +373,8 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
 /** 识别任务尚无生产计划，参数校验与计划校验分开复用。 */
 export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): void {
   if (!options) throw new Error("计算参数无效。");
+  if (options.warehousePortPlacement !== undefined && !["any", "continuous", "full-side"].includes(options.warehousePortPlacement)) throw new Error("未知取货口摆放规则。");
+  if (options.warehousePortPlacement === "full-side" && options.warehouseBus !== "straight") throw new Error("连续且占据一边要求存取线使用一面。");
   if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)
     || options.concurrency < 1 || options.concurrency > 32)) throw new Error("并发计算数必须介于 1 到 32。");
   if (options.gpu !== undefined && typeof options.gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
@@ -352,6 +389,26 @@ export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): vo
 
 export function validateTaskRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
   const { plan, options } = request;
+  const itemRules = new PlannerItemRules(registry, options);
+  if (options.warehousePortPlacement === "full-side") {
+    if (request.blueprintSource) {
+      // AI-REMOVED 2026-10-11:
+      // Reason: 统一原图固体入口校验，避免与识别及 UI 重复定义规则。
+      // Trigger: 第三档的供料硬约束；Evidence: 相同边界判断出现在识别和任务恢复入口。
+      // Replacement: invalidBlueprintWarehouseSupplies；Risk: Low；Human Review: Required。
+      // Original code:
+      // for (const boundary of request.blueprintSource.boundaries) if (boundary.direction === "input" && boundary.itemId
+      //   && itemRules.isSolid(boundary.itemId) && request.blueprintSource.blueprint.entities[boundary.entityId]?.definitionId !== "unloader_1") {
+      if (invalidBlueprintWarehouseSupplies(registry, request.blueprintSource, options).length) {
+        throw new Error("连续且占据一边要求所有固体入口使用仓库取货口。");
+      }
+    } else {
+      const environment = new PlannerSupplyRules(registry, plan, options.converterStartup).view();
+      if (collectPlannerItemBoundaries(registry, plan, environment).some(row => row.supply && itemRules.requiresWarehouseSupply(row.itemId))) {
+        throw new Error("连续且占据一边要求所有外供固体使用仓库取货口。");
+      }
+    }
+  }
   if (request.blueprintSource) {
     const { blueprint, boundaries, activeActivityIds } = request.blueprintSource;
     if (blueprint.schemaVersion !== BLUEPRINT_SCHEMA_VERSION || !blueprint.entityOrder.length
@@ -401,6 +458,7 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
     if (!parallel || parallel.count !== base.count || parallel.originTaskId !== base.originTaskId
       || parallel.requestKey !== base.requestKey || parallel.baseAttempt !== base.baseAttempt
       || parallel.baseVariant !== base.baseVariant
+      || file.checkpoint.randomSeed !== first.checkpoint.randomSeed
       || parallel.baseEvaluations !== base.baseEvaluations
       || parallel.baseValidatedCandidates !== base.baseValidatedCandidates) throw new Error("分片任务不是同一计算起点。");
     for (const index of parallel.ownedShards) {
@@ -427,7 +485,7 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const schedule = winner?.checkpoint.parallel?.dimensionSchedule
     ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
   if (schedule) {
-    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum);
+    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts);
     for (const shard of shards) {
       const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
       const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea

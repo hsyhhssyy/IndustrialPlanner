@@ -46,6 +46,58 @@ fn endpoint(e:i32,destination:bool,outside:bool)->vec2<i32>{
   let k=o+8+select(0,16,destination)+r*4+select(2,0,outside);
   return pose[n].xy+vec2<i32>(edges[k],edges[k+1]);
 }
+// 2026-10-11：与 warehousePortViolations 使用相同的共边连通与整边覆盖语义。
+fn warehouseViolations()->i32 {
+  let rule=dim(0,73);
+  if(rule==0){ return 0; }
+  var result=array<i32,3>(0,0,0);
+  if(rule==1){
+    for(var kind=0;kind<3;kind++){
+      var labels:array<i32,64>;
+      var count=0;
+      for(var i=0;i<p[0];i++){
+        labels[i]=-1;
+        if(dim(i,72)>0&&(kind==0||dim(i,72)==kind)){ labels[i]=i; count++; }
+      }
+      for(var i=0;i<p[0];i++){ for(var j=0;j<i;j++){
+        if(labels[i]<0||labels[j]<0||labels[i]==labels[j]){ continue; }
+        let a=pose[i].xy; let b=pose[j].xy;
+        let adjacent=((a.x+dim(i,0)==b.x||b.x+dim(j,0)==a.x)&&min(a.y+dim(i,1),b.y+dim(j,1))>max(a.y,b.y))
+          ||((a.y+dim(i,1)==b.y||b.y+dim(j,1)==a.y)&&min(a.x+dim(i,0),b.x+dim(j,0))>max(a.x,b.x));
+        if(adjacent){
+          let old=labels[i]; let next=labels[j];
+          for(var k=0;k<p[0];k++){ if(labels[k]==old){ labels[k]=next; } }
+          count--;
+        }
+      } }
+      result[kind]=max(0,count-1);
+    }
+    return min(result[0],result[1]+result[2]);
+  }
+  var total=0;
+  for(var i=0;i<p[0];i++){ if(dim(i,72)>0){ total++; } }
+  if(total==0){ return 1; }
+  var best=100000;
+  for(var side=0;side<4;side++){
+    if(dim(0,74)>0&&side!=dim(0,74)-1){ continue; }
+    var intervals:array<vec2<i32>,64>; var count=0;
+    for(var i=0;i<p[0];i++){
+      if(dim(i,72)==0||dim(i,2)!=side){ continue; }
+      let start=select(pose[i].x,pose[i].y,side%2==1);
+      intervals[count]=vec2<i32>(start,start+select(dim(i,0),dim(i,1),side%2==1)); count++;
+    }
+    for(var i=1;i<count;i++){
+      let value=intervals[i]; var j=i;
+      loop { if(j==0){ break; } if(intervals[j-1].x<=value.x){ break; } intervals[j]=intervals[j-1]; j--; }
+      intervals[j]=value;
+    }
+    var penalty=total-count; var end=0;
+    for(var i=0;i<count;i++){ penalty+=abs(intervals[i].x-end); end=intervals[i].y; }
+    penalty+=abs(select(p[2],p[3],side%2==1)-end);
+    best=min(best,penalty);
+  }
+  return best;
+}
 fn score(lane:u32)->f32{
   var cost=0.0;
   let n=p[0];
@@ -56,20 +108,28 @@ fn score(lane:u32)->f32{
     let w=dim(i,0);
     let h=dim(i,1);
     cost+=f32(max(0,-a.x)+max(0,-a.y)+max(0,a.x+w-width)+max(0,a.y+h-height))*10000.0;
-    for(var k=0;k<dim(i,5);k++){
-      let point=pose[i].xy+vec2<i32>(dim(i,8+k*2),dim(i,9+k*2));
-      for(var j=0;j<=i;j++){
-        let count=select(dim(j,5),k,j==i);
-        for(var previous=0;previous<count;previous++){
-          if(all(point==pose[j].xy+vec2<i32>(dim(j,8+previous*2),dim(j,9+previous*2)))){ cost+=10000.0; }
-        }
-      }
-      for(var j=0;j<n;j++){
-        if(inside(point,j)&&(dim(i,56+k)==3||(dim(j,4)&1)!=0)){
-          cost+=10000.0;
-        }
-      }
-    }
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement: None
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // for(var k=0;k<dim(i,5);k++){
+    //   let point=pose[i].xy+vec2<i32>(dim(i,8+k*2),dim(i,9+k*2));
+    //   for(var j=0;j<=i;j++){
+    //     let count=select(dim(j,5),k,j==i);
+    //     for(var previous=0;previous<count;previous++){
+    //       if(all(point==pose[j].xy+vec2<i32>(dim(j,8+previous*2),dim(j,9+previous*2)))){ cost+=10000.0; }
+    //     }
+    //   }
+    //   for(var j=0;j<n;j++){
+    //     if(inside(point,j)&&(dim(i,56+k)==3||(dim(j,4)&1)!=0)){
+    //       cost+=10000.0;
+    //     }
+    //   }
+    // }
+
     for(var j=0;j<i;j++) {
       let b=pose[j];
       let overlap=max(0,min(a.x+w,b.x+dim(j,0))-max(a.x,b.x))*max(0,min(a.y+h,b.y+dim(j,1))-max(a.y,b.y));
@@ -168,7 +228,7 @@ fn score(lane:u32)->f32{
       for(var side=0;side<4;side++){ conflicts+=select(warehouse[side],belts[side],(masks[k]&(1<<u32(side)))!=0); }
       bestConflicts=min(bestConflicts,conflicts);
     }
-    cost+=f32(bestConflicts)*10000.0;
+    cost+=f32(bestConflicts+warehouseViolations())*10000.0;
   }
   return cost;
 }
@@ -205,11 +265,19 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
           blocked=true;
           break;
         }
-        for(var k=0;k<dim(i,5);k++){
-          if((dim(i,56+k)&kind)!=0&&all(point==pose[i].xy+vec2<i32>(dim(i,8+k*2),dim(i,9+k*2)))){
-            blocked=true;
-          }
-        }
+        // AI-REMOVED 2026-10-11:
+        // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+        // Trigger: 用户要求允许中心放置且全部出口堵死。
+        // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+        // Replacement: None
+        // Risk: 旧任务必须重新验收；Human Review: Required。
+        // Original code:
+        // for(var k=0;k<dim(i,5);k++){
+        //   if((dim(i,56+k)&kind)!=0&&all(point==pose[i].xy+vec2<i32>(dim(i,8+k*2),dim(i,9+k*2)))){
+        //     blocked=true;
+        //   }
+        // }
+
       }
       for(var e=0;e<edgeCount;e++){
         if(edges[e*40+2]==kind&&(all(point==endpoint(e,false,true))||all(point==endpoint(e,true,true)))){
@@ -427,6 +495,10 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
     if(step>=0&&lane==0u&&dim(chosen,40)==0){
       for(var node=0;node<n;node++){
         if(dim(node,40)!=0){ continue; }
+        if(dim(node,72)>0&&dim(node,74)>0){
+          let required=dim(node,74)-1;
+          for(var turn=0;turn<4;turn++){ if(geometry[(node*4+turn)*80+2]==required){ pose[node].z=turn; break; } }
+        }
         let side=dim(node,2);
         if(side<0){
           continue;

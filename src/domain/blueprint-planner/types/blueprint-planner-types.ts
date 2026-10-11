@@ -47,6 +47,7 @@ export interface BlueprintPlannerOptions {
   readonly itemPolicies?: readonly BlueprintPlannerItemPolicy[];
   readonly solidSupply: "external" | "warehouse";
   readonly fluidSupply: "external" | "conduit";
+  readonly warehousePortPlacement: "any" | "continuous" | "full-side";
   readonly warehouseBus: "straight" | "corner" | "u-shaped";
   readonly solidOutput: "warehouse" | "stash" | "auto";
   readonly byproducts: "destroy" | "output";

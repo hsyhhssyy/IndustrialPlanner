@@ -52,6 +52,9 @@ export function createEditorPlacementActions({
       const targetDefinitionId = workspace.registry.queries.isProtocolCore(deviceDefinitionId)
         ? resolveProtocolCoreDefinitionIdForBase(document.getSnapshot().baseId)
         : deviceDefinitionId;
+      if (targetDefinitionId === null) {
+        return;
+      }
       const definition = workspace.registry.entityDefinitions.find(
         (def) => def.id === targetDefinitionId,
       );
@@ -158,6 +161,9 @@ export function createEditorPlacementActions({
         const targetDefinitionId = workspace.registry.queries.isProtocolCore(entity.definitionId)
           ? resolveProtocolCoreDefinitionIdForBase(currentDocument.baseId)
           : entity.definitionId;
+        if (targetDefinitionId === null) {
+          continue;
+        }
         const draftId = generatePlacementDraftId(
           targetDefinitionId,
           ++placementDraftCounter,
@@ -238,6 +244,7 @@ export function createEditorPlacementActions({
 
       // 2026-05-24: 禁止确认放置 outside-base 的设备。
       // AI-CORRECTION 2026-08-23: 多设备蓝图改为提交合法子集；单设备仍保持原有整次拒绝语义。
+      // AI-CORRECTION 2026-10-10: 提交时再次排除无核心基地的核心，覆盖基地切换或遗留虚影。
       const outsideBaseDraftIds = resolveOutsideBasePlacementEntityIds({
         document: currentDocument,
         entityIds: previewDrafts.map((draft) => draft.id),
@@ -245,7 +252,9 @@ export function createEditorPlacementActions({
         workspace,
       });
       const committedPreviewDrafts = previewDrafts.filter(
-        (draft) => !outsideBaseDraftIds.has(draft.id),
+        (draft) => !outsideBaseDraftIds.has(draft.id)
+          && !(resolveProtocolCoreDefinitionIdForBase(currentDocument.baseId) === null
+            && workspace.registry.queries.isProtocolCore(draft.definitionId)),
       );
       if (
         committedPreviewDrafts.length === 0

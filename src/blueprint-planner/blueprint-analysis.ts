@@ -4,6 +4,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationBlueprintAnalysis, SimulationBlueprintAnalysisPort, SimulationBlueprintRunReport } from "@/domain/simulation";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
+import { meetsStashSubmission } from "./stash-submission";
 
 // AI-REMOVED 2026-10-07:
 // Reason: 边界身份供任务和界面共用。
@@ -129,6 +130,7 @@ export function assertBlueprintRecognition(registry: RegistryContract, input: Bl
     throw new Error(report.diagnostics.find(entry => entry.severity === "error")?.message ?? "蓝图识别未完成，禁止优化。");
   }
   if (report.deviceStatuses.some(entry => ["not-in-power-net", "no-power"].includes(entry.status))) throw new Error("蓝图存在未供电设备，无法建立产率基线。");
+  if (!meetsStashSubmission(report)) throw new Error("协议储存箱未持续运行自动提交，请开启自动提交并接通电力后重新识别。");
   const graph = blueprintMaterialGraph(registry, input.blueprint, report.analysis, input.boundaries, input.activeActivityIds);
   for (const [id, items] of graph.items) if (items.size > 1) {
     const port = graph.ports.get(id)!;

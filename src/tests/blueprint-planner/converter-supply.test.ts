@@ -11,6 +11,7 @@ import type { PlannerWire } from "@/blueprint-planner/model";
 import { capturePlannerSeed, restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { materialBalance } from "@/blueprint-planner/terminals";
 import { createPlannerCandidate } from "@/blueprint-planner/candidate";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { meetsOperatingLimits, meetsProductionTargets } from "@/blueprint-planner/verification";
 import { BlueprintExecutionClient } from "@/simulation/blueprint";
 import { createDenseBlueprintEngine } from "@/simulation/dense/blueprint-engine";
@@ -139,7 +140,10 @@ describe("五机真实启动传播", () => {
     const executor = new BlueprintExecutionClient(registry, "dense-v2", "runtime", options => createDenseBlueprintEngine(registry, options), 2);
     try {
       const candidate = await createPlannerCandidate(registry, request, variant, () => undefined, () => undefined,
-        { strategy: "baseline", outline: { width: 40, height: 44 }, maxEvaluations: 50_000 });
+        { strategy: "baseline", outline: { width: 40, height: 44 }, maxEvaluations: 50_000,
+          // AI-CORRECTION 2026-10-11：显式指定被测供料组合及原固定初排；派发编号不再承载策略。
+          attemptStrategy: { ...plannerAttemptStrategy(variant), converterSeed: variant, placementSeed: variant,
+            boundarySeed: variant, layoutSeed: variant, conduitTopology: variant === 15 ? "trunk" : "shared" } });
       const restored = restorePlannerSeed(registry, request, candidate.seed!);
       expect(converterStartupRoots(registry, restored.network, restored.wires).size).toBe(roots);
       expect(candidate.execution.scene.scheduledSlots).toHaveLength(mode === "manual" ? roots : 0);
@@ -166,7 +170,9 @@ describe("五机真实启动传播", () => {
     const executor = new BlueprintExecutionClient(registry, "dense-v2", "runtime", options => createDenseBlueprintEngine(registry, options), 2);
     try {
       const original = await createPlannerCandidate(registry, request, 15, () => undefined, () => undefined,
-        { strategy: "baseline", outline: { width: 40, height: 44 }, maxEvaluations: 50_000 });
+        { strategy: "baseline", outline: { width: 40, height: 44 }, maxEvaluations: 50_000,
+          attemptStrategy: { ...plannerAttemptStrategy(15), converterSeed: 15, placementSeed: 15,
+            boundarySeed: 15, layoutSeed: 15, conduitTopology: "trunk" } });
       const input: BlueprintPlannerBlueprintInput = { blueprint: original.execution.blueprint, activeActivityIds: [],
         boundaries: original.seed!.network.nodes.filter(node => node.purpose === "supply" || node.purpose === "product").map(node => ({
           entityId: node.entity.id, kind: "facility", direction: node.purpose === "supply" ? "input" : "output",
@@ -176,7 +182,8 @@ describe("五机真实启动传播", () => {
       const baselineReport = await executor.run(execution);
       const identified = identifyBlueprintNetwork(registry, input, request.options, execution, baselineReport);
       const candidate = await createPlannerCandidate(registry, identified.request, 1, () => undefined, () => undefined,
-        { originSeed: identified.candidate.seed, seed: identified.candidate.seed, targetOutline: { width: 40, height: 44 }, maxEvaluations: 15_000 });
+        { originSeed: identified.candidate.seed, seed: identified.candidate.seed, targetOutline: { width: 40, height: 44 }, maxEvaluations: 15_000,
+          attemptStrategy: { ...plannerAttemptStrategy(1), reduce: false, layoutSeed: 1, converterSeed: 1 } });
       expect(candidate.search.supplyTopologyAttempts).toBeGreaterThan(0);
       expect(candidate.supplyAudit.startupProduction).toHaveLength(5);
       const before = identified.candidate.seed!.network.nodes.filter(node => node.recipeId === "liquid_transmuter_2_gas_gas_xiranite_1");

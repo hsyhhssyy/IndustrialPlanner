@@ -19,6 +19,7 @@ import { readForceFlattenBlueprintVersionEnabled } from "@/shared/logging/debug-
 import { normalizeRegionAnnotations } from "@/shared/region-annotations";
 import {
   isProtocolCoreDefinitionId,
+  removeForbiddenProtocolCoreEntities,
   resolveProtocolCoreDefinitionIdForBase,
 } from "@/shared/protocol-core";
 
@@ -576,6 +577,9 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     schemaVersion = spec.toVersion;
   }
 
+  // 基地核心约束独立于格式升级，同版本的基地文档也必须执行。
+  nextState = removeForbiddenProtocolCoreEntities(nextState);
+
   return {
     schemaVersion,
     entities: nextState.entities,
@@ -714,6 +718,10 @@ function replaceBaseProtocolCore<TEntity extends WorldEntity>(
   }
 
   const expectedDefinitionId = resolveProtocolCoreDefinitionIdForBase(baseId);
+  // 无核心基地由世界文档约束清理；历史迁移不将设备 ID 改为 null。
+  if (expectedDefinitionId === null) {
+    return entities;
+  }
   let nextEntities = entities;
 
   for (const [entityId, entity] of Object.entries(entities)) {

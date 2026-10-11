@@ -14,6 +14,9 @@ import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitionBoundaries,
   type BlueprintRecognitionTask } from "./blueprint-recognition-task";
+import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
+import { warehouseMaximumRequest, warehousePortProfile, warehouseCountRequest } from "./warehouse-port-schedule";
+import { PlannerBoundary } from "./boundary";
 import { plannerOutputModeKey } from "./output-policy";
 import { observable, runInAction } from "mobx";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -31,8 +34,10 @@ import { PlannerWorkerClient } from "./worker-client";
 import type { PlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import { comparePlannerRanks } from "./quality";
-import { assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
+import { PlannerRandom, plannerRandomSeed } from "./search-random";
+import { nextPlannerStrategy } from "./strategy-schedule";
 import { breadthOutlineKey, fixedOutlineMinimum, PLANNER_MAX_SIDE } from "./search-outline";
 import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { prepareProductionDevices } from "./production-preparation";
@@ -40,8 +45,8 @@ import { PlannerPlacement } from "./placement";
 import { resolveSearchProfile } from "./search-profile";
 import { resolvePlannerAttempt } from "./search-portfolio";
 import { createProductionNetwork } from "./production-network";
-import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
-import { plannerRequestKey } from "./search-seed";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
+import { plannerRequestKey, restorePlannerSeed } from "./search-seed";
 import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
@@ -357,6 +362,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const prepareParallel = (task: PlannerTask, concurrency: number | "auto"): PlannerParallelCheckpoint => {
     const point = task.file.checkpoint;
     const requested = options.shardSelection;
+    point.randomSeed ??= plannerRandomSeed(task.originTaskId);
     // AI-REMOVED 2026-10-02:
     // Reason: Worker 数曾决定分片数，增减并发会重排同一搜索任务。
     // Trigger: 用户要求多 Worker 唯一批次与暂停后尺寸访问记录连续。
@@ -506,6 +512,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // 旧目标下已完成的候选仅在仍可能改善全局结果时启动验收；已启动的验收正常结算。
       if (!canImprove(candidate)) { shard.pendingCandidate = null; persist(task); return; }
       assertPlannerCandidateBounds(workspace.registry, candidate);
+      assertPlannerWarehousePorts(workspace.registry, task.file.request, candidate);
       check(task);
       const simulation = workspace.simulation;
       if (simulation === null) throw new Error("仿真服务不可用。");
@@ -691,10 +698,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //     //   selection: ReturnType<PlannerSearchPortfolio["next"]>; outline: { readonly width: number; readonly height: number };
 //     //   target: string | undefined; sessionKey: string; slices: number; stagnant: number; cost: number;
 //     // }>();
+    let warehousePorts: ReturnType<typeof warehousePortProfile> | undefined;
     const rebuildDimensions = (targetArea: number, minimum: { width: number; height: number }) => {
-      const dimensions = partitionPlannerDimensions(targetArea, minimum);
+      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts);
       parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
-        targetArea, minimum: { ...minimum }, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
+        targetArea, warehousePorts, minimum: { ...minimum }, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
       for (const shard of parallel.shards) {
         shard.dimensions = dimensions[shard.index]!;
         shard.dimensionCursor = 0;
@@ -711,6 +719,25 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       zeroAttempts = 0;
     };
     const initializeDimensions = async () => {
+      if (task.file.request.options.warehousePortPlacement === "full-side" && !warehousePorts) {
+        const request = warehouseMaximumRequest(task.file.request);
+        if (request.blueprintSource) {
+          const seed = point.blueprintBaseline?.candidate.seed;
+          if (!seed) throw new Error("蓝图任务缺少原图设备清单。");
+          warehousePorts = warehousePortProfile(workspace.registry, task.file.request, restorePlannerSeed(workspace.registry, request, seed).network);
+        } else {
+          const network = createProductionNetwork(workspace.registry, request);
+          const profile = resolveSearchProfile({ areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 });
+          const placement = new PlannerPlacement(workspace.registry, PLANNER_MAX_SIDE - 2, 1, 1, profile.initialClearance, 1);
+          placement.maximumX = PLANNER_MAX_SIDE;
+          await prepareProductionDevices(workspace.registry, network, placement, 0, profile,
+            { strategy: "compact", stashPackingVariant: 0, conduitTopology: "shared" }, () => check(task));
+          warehousePorts = warehousePortProfile(workspace.registry, task.file.request, network);
+        }
+      }
+      if (parallel.dimensionSchedule && JSON.stringify(parallel.dimensionSchedule.warehousePorts) !== JSON.stringify(warehousePorts)) {
+        throw new Error("检查点仓库口数量与当前产物规则不一致。");
+      }
       if (parallel.dimensionSchedule && (!point.best
         || parallel.dimensionSchedule.targetArea === point.best.candidate.metrics.area)) {
         if (point.best) for (const index of owned) {
@@ -958,14 +985,23 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const schedule = parallel.dimensionSchedule!;
       const signal = searchAbort.signal;
       const cursor = shard.dimensionCursor!;
-      const { width, height } = shard.dimensions![cursor]!;
-      const targetOutline = { width, height };
+      const dimension = shard.dimensions![cursor]!;
+      const { width, height } = dimension;
+      const targetOutline = { width, height, warehouseSide: dimension.warehouseSide, storageCount: dimension.storageCount };
       const before = portfolio.snapshot();
+      const strategyKey = `${width}/${height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+      const random = nextPlannerStrategy(point.randomSeed!, strategyKey, shard.strategyStates?.[strategyKey]);
       // 尺寸轮转与拓扑轮转独立；分片编号不能把输出方式永久锁在同一个变体。
-      const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined);
+      // 订正 2026-10-11：整边模式先由分片确定口数，同口数内轮转产物组合，避免组合数量影响调度概率。
+      // AI-CORRECTION 2026-10-11：尺寸内独立抽样组合，冷启动与删减各自随机打乱后轮转；nextVariant 仅为派发身份。
+      const assigned = schedule.warehousePorts && dimension.storageCount !== undefined
+        ? warehouseCountRequest(task.file.request, schedule.warehousePorts, dimension.storageCount,
+          new PlannerRandom(random.strategy.outputSeed)) : undefined;
+      const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy);
       const variant = shard.nextVariant;
       const sessionKey = `${task.file.taskId}/${schedule.generation}/${shard.index}/${variant}`;
-      const shapeKey = breadthOutlineKey(plannerOutputModeKey(selection.request.options), targetOutline);
+      const shapeKey = schedule.warehousePorts ? `warehouse/${schedule.generation}/${dimension.storageCount}/${dimension.warehouseSide}`
+        : breadthOutlineKey(plannerOutputModeKey(selection.request.options), targetOutline);
       let observed = 0, used = 0;
       task.activeShards.add(shard.index);
       live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
@@ -974,6 +1010,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         used = count;
         shard.attempts++;
         shard.nextVariant += parallel.count;
+        (shard.strategyStates ??= {})[strategyKey] = random.state;
         shard.evaluations += used;
         shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
         const charged = shard.shapeEvaluations ??= {};
@@ -1000,7 +1037,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           task.liveEvaluations.set(shard.index, count);
           live(phase, message);
         }, selection.seed, selection.continuationStep, schedule.targetArea - 1, targetOutline,
-        point.blueprintBaseline?.candidate.seed, sessionKey);
+        point.blueprintBaseline?.candidate.seed, sessionKey, random.strategy);
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null);
       } catch (error) {
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
@@ -1075,8 +1112,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         // 队列有界，背压只暂停新批次；不把串行验收误报为整机 CPU 满载。
         // 订正 2026-10-06：验证已可并行；高水位跟随共享上限，两个阶段分别测量吞吐。
         if (searchAbort.signal.aborted || pendingVerifications >= Math.max(2, maximum)) return null;
-        for (let step = 0; step < parallel.count; step++) {
-          const index = (parallel.nextShard + step) % parallel.count;
+        const order = Array.from({ length: parallel.count }, (_, step) => (parallel.nextShard + step) % parallel.count);
+        if (parallel.dimensionSchedule?.warehousePorts) order.sort((a, b) => {
+          const visits = (index: number) => {
+            const shard = parallel.shards[index]!, dimension = shard.dimensions?.[shard.dimensionCursor ?? 0];
+            return dimension ? shard.shapeVisits[`warehouse/${parallel.dimensionSchedule!.generation}/${dimension.storageCount}/${dimension.warehouseSide}`] ?? 0 : Infinity;
+          };
+          return visits(a) - visits(b);
+        });
+        for (const index of order) {
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
           const shard = parallel.shards[index]!;
           if (shard.pendingCandidate === null && (available <= 0 || !shard.dimensions?.length)) continue;
@@ -1442,12 +1486,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         assertPlannerCandidateBounds(workspace.registry, identified.candidate);
         const file = createTaskFile(identified.request, id), baseline = { candidate: identified.candidate, report };
         const requiresTankConstruction = request.options.converterStartup === "tank" && Boolean(execution.scene.scheduledSlots?.length);
-        const best = requiresTankConstruction ? null : structuredClone(baseline);
+        const baselineNetwork = restorePlannerSeed(workspace.registry, identified.request, identified.candidate.seed!).network;
+        const boundary = new PlannerBoundary(workspace.registry, baselineNetwork, identified.candidate.metrics);
+        const invalidPorts = identified.request.options.warehousePortPlacement !== "any" && boundary.resolve(baselineNetwork.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations > 0;
+        const best = requiresTankConstruction || invalidPorts ? null : structuredClone(baseline);
         // 保底结果也作为独立交付副本；保存到自动规划不能改写原蓝图库记录。
         // 订正 2026-10-09：借一次补料识别的携罐任务只有产率参考，先完成实体启动罐再进入最佳结果。
         if (best) best.candidate.execution.blueprint.blueprintId = createUuid();
         const planning = materialize({ ...file, checkpoint: { ...emptyPlannerCheckpoint(), blueprintBaseline: baseline, best,
-          portfolio: new PlannerSearchPortfolio(identified.request, identified.candidate.seed).snapshot(),
+          portfolio: new PlannerSearchPortfolio(identified.request, best?.candidate.seed).snapshot(),
           result: best ? { taskId: id, blueprint: best.candidate.execution.blueprint, folderId: null, metrics: identified.candidate.metrics, connections: [],
             measuredOutputs: identified.request.plan.targets, warmupSeconds: execution.warmupSeconds,
             observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) } : null },
@@ -1792,10 +1839,24 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         task.file = { ...task.file, request: { ...request, input: { ...request.input, boundaries: structuredClone(inputs) } }, checkpoint: { step: "inputs" } };
         publish(task, { status: "waiting", message: "输入配置已保存，可以继续识别。" }); persist(task); await writes;
       },
+      async updateBlueprintOptions(id, inputOptions) {
+        await ready; assertReady();
+        const task = recognitionTasks.get(id);
+        if (!task) throw new Error("蓝图识别任务不存在。");
+        if (state.activeTaskId !== null || importing || task.running) throw new Error("请先暂停当前任务并等待结束。");
+        validatePlannerTaskOptions(inputOptions);
+        const request = task.file.request;
+        task.file = { ...task.file, request: { ...request, options: structuredClone(inputOptions) },
+          checkpoint: { step: request.detectedBoundaries ? "inputs" : "inspection" } };
+        publish(task, { status: "waiting", message: "摆放配置已保存，可以继续识别。" }); persist(task); await writes;
+      },
       async identifyBlueprint(id, signal) {
         await ready; assertReady();
         const task = recognitionTasks.get(id);
         if (!task) throw new Error("蓝图识别任务不存在。");
+        if (invalidBlueprintWarehouseSupplies(workspace.registry, task.file.request.input, task.file.request.options).length) {
+          throw new Error("连续且占据一边要求所有固体入口使用仓库取货口。");
+        }
         await runRecognition(task, false, signal);
       },
       start(request) {

@@ -2,11 +2,27 @@
 import { expect, it } from "vitest";
 import { PlannerCpuLayout, PlannerLayoutKernel } from "@/blueprint-planner/cpu-layout";
 import { PLANNER_LAYOUT_GEOMETRY_STRIDE as G, type PlannerLayoutBatch } from "@/blueprint-planner/layout-backend";
-import { plannerDrainEntities, plannerFixtureConflicts, plannerObstacleMask } from "@/blueprint-planner/fixtures";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { plannerDrainEntities, plannerFixtureConflicts, plannerObstacleMask } from "@/blueprint-planner/fixtures";
+
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import { createPlainNode } from "@/blueprint-planner/placement";
-import { getPlannerPorts, plannerPortAcceptsItem } from "@/blueprint-planner/geometry";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { getPlannerPorts, plannerPortAcceptsItem } from "@/blueprint-planner/geometry";
+
 import { PlannerSearchSessions } from "@/blueprint-planner/search-sessions";
 import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
@@ -37,25 +53,33 @@ it("数值内核跨切片保留随机数、上坡移动与冷却年龄；结果�
   expect(new Set(Array.from({ length: 4 }, (_, chain) => second.states!.slice(chain * stride + 2, (chain + 1) * stride).join(","))).size).toBeGreaterThan(1);
 });
 
-it("排空传送带允许管道穿越，收货夹具仍阻挡管道；碰撞规则使用真实 Registry", () => {
-  const registry = createRegistryContract(), stash = createPlainNode(registry, "storager_1", "stash", "product");
-  const output = getPlannerPorts(registry, stash.entity, stash.definition, "output")[0]!;
-  const [drain, sink] = plannerDrainEntities(registry, output, "fixture");
-  expect(plannerObstacleMask(registry, drain!.definitionId)).toBe(1);
-  expect(plannerObstacleMask(registry, sink!.definitionId)).toBe(3);
-  const pipe = createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("pipe", "straight"), "pipe", "logistics");
-  pipe.entity.position = { ...drain!.position };
-  expect(plannerFixtureConflicts(registry, [drain!], [pipe.entity])).toEqual([]);
-  pipe.entity.position = { ...sink!.position };
-  expect(plannerFixtureConflicts(registry, [sink!], [pipe.entity])).toEqual(["pipe"]);
-  // AI-REMOVED 2026-10-10: getPlannerPorts 只枚举物理端口，不能用它断言配置启用数。
-  // Trigger: 排空配置回归；Evidence: geometry.ts 的物理端口契约；Replacement: 有效过滤查询。
-  // Risk: Low；Human Review: Required。
-  // expect(getPlannerPorts(registry, sink!, registry.queries.findEntityDefinition(sink!.definitionId)!, "input")).toHaveLength(1);
-  const definition = registry.queries.findEntityDefinition(sink!.definitionId)!;
-  expect(getPlannerPorts(registry, sink!, definition, "input").filter(port =>
-    plannerPortAcceptsItem(registry, sink!, definition, port, "item_carbon_enr"))).toHaveLength(1);
-});
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// it("排空传送带允许管道穿越，收货夹具仍阻挡管道；碰撞规则使用真实 Registry", () => {
+//   const registry = createRegistryContract(), stash = createPlainNode(registry, "storager_1", "stash", "product");
+//   const output = getPlannerPorts(registry, stash.entity, stash.definition, "output")[0]!;
+//   const [drain, sink] = plannerDrainEntities(registry, output, "fixture");
+//   expect(plannerObstacleMask(registry, drain!.definitionId)).toBe(1);
+//   expect(plannerObstacleMask(registry, sink!.definitionId)).toBe(3);
+//   const pipe = createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("pipe", "straight"), "pipe", "logistics");
+//   pipe.entity.position = { ...drain!.position };
+//   expect(plannerFixtureConflicts(registry, [drain!], [pipe.entity])).toEqual([]);
+//   pipe.entity.position = { ...sink!.position };
+//   expect(plannerFixtureConflicts(registry, [sink!], [pipe.entity])).toEqual(["pipe"]);
+//   // AI-REMOVED 2026-10-10: getPlannerPorts 只枚举物理端口，不能用它断言配置启用数。
+//   // Trigger: 排空配置回归；Evidence: geometry.ts 的物理端口契约；Replacement: 有效过滤查询。
+//   // Risk: Low；Human Review: Required。
+//   // expect(getPlannerPorts(registry, sink!, registry.queries.findEntityDefinition(sink!.definitionId)!, "input")).toHaveLength(1);
+//   const definition = registry.queries.findEntityDefinition(sink!.definitionId)!;
+//   expect(getPlannerPorts(registry, sink!, definition, "input").filter(port =>
+//     plannerPortAcceptsItem(registry, sink!, definition, port, "item_carbon_enr"))).toHaveLength(1);
+// });
+
 
 it("代理评分包含原图供电、环境覆盖和固定设备约束", () => {
   const input = batch(1), geometry = input.geometry;

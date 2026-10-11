@@ -8,13 +8,22 @@ import { getPlannerPorts, ROTATIONS, allowsPlannerOverlap, type PlannerPort } fr
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { createPlainNode } from "./placement";
 // AI-REMOVED 2026-10-10: 重复排空装配已由 fixtures.ts 接管；原导入 opposite, resolveTransportPose；Risk: Low；Human Review: Required。
-import { plannerDrainEntities } from "./fixtures";
+// AI-REMOVED 2026-10-11:
+// Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// Trigger: 用户要求允许中心放置且全部出口堵死。
+// Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// Replacement: None
+// Risk: 旧任务必须重新验收；Human Review: Required。
+// Original code:
+// import { plannerDrainEntities } from "./fixtures";
+
 import { configureSource } from "./terminals";
+import { stashSubmissionProbe } from "./stash-submission";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 
 /** 夹具只作用于独立场景；供料只补用户声明的边界，绝不补贴内部生产。 */
 export function blueprintRecognitionScene(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
-  blueprint: BlueprintDocument = input.blueprint, seconds = 600, discoverOutputs = false, plannedDrains?: ReadonlyMap<string, readonly PlannerPort[]>): SimulationBlueprintRunRequest {
+  blueprint: BlueprintDocument = input.blueprint, seconds = 600, discoverOutputs = false): SimulationBlueprintRunRequest {
   // 2026-10-08：原图保持在任务中；识别夹具和真实仿真使用排除断连支路后的副本。
   const effective = excludeDisconnectedBlueprintPipes(registry, input).input;
   if (blueprint === input.blueprint) blueprint = effective.blueprint;
@@ -23,7 +32,7 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
     powerMode: "infinite" } = { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" };
   const sinks = new Map<string, string[]>();
   const sources = new Map<string, string[]>();
-  const attach = (port: PlannerPort, itemId: string, direction: "input" | "output", drain = false) => {
+  const attach = (port: PlannerPort, itemId: string, direction: "input" | "output") => {
     const domain = registry.queries.resolveItemDomain(itemId);
     const definitionId = domain === ItemDomainFlag.Solid ? "cheat_infinite_solid"
       : domain === ItemDomainFlag.Gas ? "cheat_infinite_gas" : "cheat_infinite_liquid";
@@ -37,8 +46,8 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
         .find(candidate => candidate.outside.x - candidate.cell.x === port.cell.x - port.outside.x
           && candidate.outside.y - candidate.cell.y === port.cell.y - port.outside.y);
       if (!peer) continue;
-      fixture.entity.position = { x: port.outside.x - peer.cell.x + Number(drain) * (port.outside.x - port.cell.x),
-        y: port.outside.y - peer.cell.y + Number(drain) * (port.outside.y - port.cell.y) };
+      fixture.entity.position = { x: port.outside.x - peer.cell.x,
+        y: port.outside.y - peer.cell.y };
       for (const [groupIndex, group] of fixture.definition.portGroups.entries()) for (const [portIndex] of group.ports.entries()) {
         if (groupIndex !== peer.groupIndex || portIndex !== peer.portIndex) {
           fixture.entity.config[`portGroups[${groupIndex}].ports[${portIndex}].acceptRule.base`] = { kind: "none" };
@@ -52,7 +61,15 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
     // Risk: Low；Human Review: Required。
     //     const additions: WorldEntity[] = drain ? [{ id: `__blueprint_drain_${scene.externalEntities.length}`,
     //       ...resolveTransportPose(registry, port.kind, opposite(port.edge), port.edge), position: port.outside, config: {}, tags: [] }, fixture.entity] : [fixture.entity];
-    const additions = drain ? plannerDrainEntities(registry, port, `__blueprint_drain_${scene.externalEntities.length}`) : [fixture.entity];
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement:     const additions = [fixture.entity];
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // const additions = drain ? plannerDrainEntities(registry, port, `__blueprint_drain_${scene.externalEntities.length}`) : [fixture.entity];
+    const additions = [fixture.entity];
     if (additions.some(fixture => {
       const definition = registry.queries.findEntityDefinition(fixture.definitionId)!;
       const rect = resolveEntityGridRect({ entity: fixture, definition });
@@ -61,7 +78,15 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
         return !allowsPlannerOverlap(registry, definition, other) && areGridRectsIntersecting(rect, resolveEntityGridRect({ entity, definition: other }));
       });
     })) {
-      if (drain) return null;
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // if (drain) return null;
+
       throw new Error(`边界 ${port.entityId} 没有足够空间接入仿真条件。`);
     }
     scene.externalEntities.push(...additions);
@@ -71,6 +96,7 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
     const entity = blueprint.entities[boundary.entityId];
     if (!entity) continue;
     // 发现阶段允许尚未确定的出口；正式验收仍须装配持续收货和物品探针。
+    // AI-CORRECTION 2026-10-11：协议储存箱使用自身周期提交，仅物理边界安装收货夹具。
     if (discoverOutputs && boundary.direction === "output" && boundary.itemId === null) continue;
     const itemId = boundary.itemId;
     if (!itemId || !registry.queries.findItemDefinition(itemId)) throw new Error(`请指定 ${boundary.entityId} 运送的物品。`);
@@ -94,11 +120,19 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
       }
     } else {
       sinks.set(itemId, [...sinks.get(itemId) ?? [], entity.id]);
-      if (entity.definitionId === "storager_1") {
-        const drains = (plannedDrains?.get(entity.id) ?? getPlannerPorts(registry, entity, definition, "output")).map(port => attach(port, itemId, "output", true));
-        if (plannedDrains && drains.some(id => id === null)) throw new Error(`出口 ${entity.id} 的规划排空端口被占用。`);
-        if (drains.every(id => id === null)) throw new Error(`出口 ${entity.id} 没有可用的排空端口。`);
-      }
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // if (entity.definitionId === "storager_1") {
+      //   const drains = (plannedDrains?.get(entity.id) ?? getPlannerPorts(registry, entity, definition, "output")).map(port => attach(port, itemId, "output", true));
+      //   if (plannedDrains && drains.some(id => id === null)) throw new Error(`出口 ${entity.id} 的规划排空端口被占用。`);
+      //   if (drains.every(id => id === null)) throw new Error(`出口 ${entity.id} 没有可用的排空端口。`);
+      // }
+
     }
   }
   const originals = blueprint.entityOrder.map(id => blueprint.entities[id]!);
@@ -113,6 +147,9 @@ export function blueprintRecognitionScene(registry: RegistryContract, input: Blu
   return { blueprint, scene, engine: { kind: "dense-v2", ticksPerSecond: 2 }, probes: [
     ...[...sinks].map(([itemId, entityIds]) => ({ id: itemId, itemId, entityIds, direction: "input" as const })),
     ...[...sources].map(([itemId, entityIds]) => ({ id: `input:${itemId}`, itemId, entityIds, direction: "output" as const })),
+    ...input.boundaries.filter(boundary => boundary.kind === "facility" && boundary.direction === "output"
+      && boundary.itemId && blueprint.entities[boundary.entityId]?.definitionId === "storager_1")
+      .map(boundary => stashSubmissionProbe(boundary.entityId, boundary.itemId!)),
   ],
     // 2026-10-08：用户指定预热 360 仿真秒；seconds 只控制发现或产率验证的观察窗口。
     warmupSeconds: 360, observationSeconds: seconds, inventorySampleCount: 9, maxWallTimeMs: 120_000,

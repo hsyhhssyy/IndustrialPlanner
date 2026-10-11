@@ -8,12 +8,38 @@ interface MockGraphicsSnapshot {
     height: number;
   }>;
   readonly strokeCommands: unknown[];
+  readonly roundRectCommands: Array<{ x: number; y: number; width: number; height: number }>;
+  readonly children: MockTextSnapshot[];
   clearCount: number;
+}
+
+interface MockTextSnapshot {
+  text: string;
+  visible: boolean;
+  x: number;
+  y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 const graphicsInstances = vi.hoisted(() => [] as MockGraphicsSnapshot[])
 
 vi.mock("pixi.js", () => {
+  class MockText implements MockTextSnapshot {
+    public text: string
+    public visible = true
+    public x = 0
+    public y = 0
+    public roundPixels = false
+    public eventMode = "none"
+    public resolution = 1
+    public readonly height = 18
+    public readonly position = { set: (x: number, y: number) => { this.x = x; this.y = y } }
+    public destroy = vi.fn()
+    public constructor(options: { text: string }) { this.text = options.text }
+    public get width() { return this.text.length * 14 }
+  }
+
   class MockGraphics implements MockGraphicsSnapshot {
     public readonly rectCommands: Array<{
       x: number;
@@ -22,6 +48,8 @@ vi.mock("pixi.js", () => {
       height: number;
     }> = []
     public readonly strokeCommands: unknown[] = []
+    public readonly roundRectCommands: Array<{ x: number; y: number; width: number; height: number }> = []
+    public readonly children: MockTextSnapshot[] = []
     public clearCount = 0
     public destroy = vi.fn()
 
@@ -33,6 +61,7 @@ vi.mock("pixi.js", () => {
       this.clearCount += 1
       this.rectCommands.length = 0
       this.strokeCommands.length = 0
+      this.roundRectCommands.length = 0
       return this
     }
 
@@ -50,6 +79,13 @@ vi.mock("pixi.js", () => {
       this.strokeCommands.push(style)
       return this
     }
+
+    public addChild(text: MockTextSnapshot) { this.children.push(text); return text }
+    public roundRect(x: number, y: number, width: number, height: number) {
+      this.roundRectCommands.push({ x, y, width, height })
+      return this
+    }
+    public fill() { return this }
   }
 
   return {
@@ -58,6 +94,7 @@ vi.mock("pixi.js", () => {
       public destroy = vi.fn()
     },
     Graphics: MockGraphics,
+    Text: MockText,
   }
 })
 
@@ -76,6 +113,57 @@ import {
 import type { DecorationSyncContext } from "@/renderer/scene/decorations/DecorationSyncContext"
 
 describe("BaseBoundaryDecoration", () => {
+  it("draws both agricultural nameplates above their outer warning rings and follows viewport changes", () => {
+    graphicsInstances.length = 0
+    const decoration = createBaseBoundaryDecoration()
+    const graphics = graphicsInstances[0]!
+    const ctx = createDecorationContext("wuling_agricultural_land")
+    ctx.viewportBounds.width = 1000
+    ctx.viewportBounds.height = 600
+    ctx.viewportState.centerX = 35
+    ctx.viewportState.centerY = 10
+
+    decoration.sync(ctx)
+    expect(graphics.rectCommands).toHaveLength(2)
+    expect(graphics.children.map((text) => text.text)).toEqual(["武陵农用地", "缘缘庄"])
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([50, 550])
+    for (const plate of graphics.roundRectCommands) {
+      expect(plate.y + plate.height).toBeLessThan(80)
+    }
+    expect(graphics.children.every((text) => text.visible)).toBe(true)
+
+    decoration.sync(ctx)
+    expect(graphics.clearCount).toBe(1)
+    ctx.viewportState.centerX += 2
+    decoration.sync(ctx)
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([30, 530])
+    expect(graphics.children).toHaveLength(2)
+
+    ctx.viewportState.displayRotation = 90
+    decoration.sync(ctx)
+    expect(graphics.roundRectCommands.map((rect) => rect.x)).toEqual([300, 300])
+    expect(graphics.roundRectCommands[1]!.y - graphics.roundRectCommands[0]!.y).toBe(500)
+    decoration.destroy()
+    expect((graphics as unknown as { destroy: ReturnType<typeof vi.fn> }).destroy)
+      .toHaveBeenCalledWith({ children: true })
+  })
+
+  it("hides agricultural nameplates when switching to a base without names or an unknown base", () => {
+    graphicsInstances.length = 0
+    const decoration = createBaseBoundaryDecoration()
+    const graphics = graphicsInstances[0]!
+    decoration.sync(createDecorationContext("wuling_agricultural_land"))
+    decoration.sync(createDecorationContext("wuling_protocol_core"))
+    expect(graphics.roundRectCommands).toEqual([])
+    expect(graphics.children.every((text) => !text.visible)).toBe(true)
+    decoration.sync(createDecorationContext("wuling_agricultural_land"))
+    expect(graphics.children.every((text) => text.visible)).toBe(true)
+    decoration.sync(createDecorationContext("missing_base"))
+    expect(graphics.roundRectCommands).toEqual([])
+    expect(graphics.children.every((text) => !text.visible)).toBe(true)
+    decoration.destroy()
+  })
+
   it("resolves the placeable area boundary without the outer ring", () => {
     const registry = createRegistryContract()
     const wuling = registry.baseDefinitions.find(

@@ -1,3 +1,5 @@
+import { warehousePortViolations } from "./warehouse-ports";
+import { plannerRandomStep } from "./search-random";
 import type { GridRotation } from "@/domain/shared/grid";
 import { PLANNER_LAYOUT_GEOMETRY_STRIDE as G, PLANNER_LAYOUT_COOLING_STEPS, plannerBusConflictCount,
   type PlannerLayoutBatch, type PlannerLayoutBatchResult } from "./layout-backend";
@@ -52,7 +54,12 @@ export class PlannerLayoutKernel {
     this.age = restored ? input.states![offset + 1]! : 0;
   }
   random(): number {
-    let x = this.randomState; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return this.randomState = x >>> 0;
+    // AI-REMOVED 2026-10-11:
+    // Reason: 共用现有 PRNG；Trigger: 用户授权独立策略随机流。
+    // Evidence: 与 WGSL 相同的 xorshift32；Replacement: plannerRandomStep；Risk: Low；Human Review: Required
+    // Original code:
+    // let x = this.randomState; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return this.randomState = x >>> 0;
+    return this.randomState = plannerRandomStep(this.randomState);
   }
   private dim(n: number, field: number): number { return this.input.geometry[(n * 4 + this.poses[n * 3 + 2]!) * G + field]!; }
   private point(n: number): [number, number] { return [this.poses[n * 3]!, this.poses[n * 3 + 1]!]; }
@@ -66,6 +73,11 @@ export class PlannerLayoutKernel {
   }
   private snap(n: number): void {
     if (this.dim(n, 40)) return;
+    if (this.dim(n, 72) && this.dim(n, 74)) {
+      for (let turn = 0; turn < 4; turn++) if (this.input.geometry[(n * 4 + turn) * G + 2] === this.dim(n, 74) - 1) {
+        this.poses[n * 3 + 2] = turn; break;
+      }
+    }
     const side = this.dim(n, 2), k = n * 3;
     if (side < 0) return;
     this.poses[k] = Math.max(0, Math.min(this.width - this.dim(n, 0), this.poses[k]!));
@@ -122,16 +134,32 @@ export class PlannerLayoutKernel {
   score(): number {
     let cost = 0;
     const warehouse = [0, 0, 0, 0], belts = [0, 0, 0, 0];
-    const fixtures: Array<{ x: number; y: number; mask: number }> = [];
+    // AI-REMOVED 2026-10-11:
+    // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+    // Trigger: 用户要求允许中心放置且全部出口堵死。
+    // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+    // Replacement: None
+    // Risk: 旧任务必须重新验收；Human Review: Required。
+    // Original code:
+    // const fixtures: Array<{ x: number; y: number; mask: number }> = [];
+
     for (let i = 0; i < this.n; i++) {
       const [x, y] = this.point(i), w = this.dim(i, 0), h = this.dim(i, 1);
       cost += (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, x + w - this.width) + Math.max(0, y + h - this.height)) * 10000;
-      for (let k = 0; k < this.dim(i, 5); k++) {
-        const qx = x + this.dim(i, 8 + k * 2), qy = y + this.dim(i, 9 + k * 2), mask = this.dim(i, 56 + k);
-        for (const other of fixtures) if (other.x === qx && other.y === qy) cost += 10000;
-        fixtures.push({ x: qx, y: qy, mask });
-        for (let j = 0; j < this.n; j++) if (this.inside(qx, qy, j) && (mask === 3 || (this.dim(j, 4) & 1))) cost += 10000;
-      }
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // for (let k = 0; k < this.dim(i, 5); k++) {
+      //   const qx = x + this.dim(i, 8 + k * 2), qy = y + this.dim(i, 9 + k * 2), mask = this.dim(i, 56 + k);
+      //   for (const other of fixtures) if (other.x === qx && other.y === qy) cost += 10000;
+      //   fixtures.push({ x: qx, y: qy, mask });
+      //   for (let j = 0; j < this.n; j++) if (this.inside(qx, qy, j) && (mask === 3 || (this.dim(j, 4) & 1))) cost += 10000;
+      // }
+
       for (let j = 0; j < i; j++) {
         const [a, b] = this.point(j);
         if (!this.input.overlaps[i * this.n + j]) cost += Math.max(0, Math.min(x + w, a + this.dim(j, 0)) - Math.max(x, a))
@@ -165,6 +193,11 @@ export class PlannerLayoutKernel {
     // const masks = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11];
     // if (!masks.slice(0, this.input.parameters[7] === 1 ? 5 : this.input.parameters[7] === 2 ? 9 : 13).some(mask => (mask & warehouse) === warehouse && !(mask & belts))) cost += 10000;
     cost += plannerBusConflictCount(this.input.parameters[7]!, warehouse, belts) * 10000;
+    if (this.n && this.dim(0, 73)) cost += warehousePortViolations(Array.from({ length: this.n }, (_, i) => {
+      const [x, y] = this.point(i);
+      return { x, y, width: this.dim(i, 0), height: this.dim(i, 1), kind: this.dim(i, 72), side: this.dim(i, 2) };
+    }).filter(rect => rect.kind !== 0), this.dim(0, 73) === 1 ? "continuous" : "full-side", this.width, this.height,
+    this.dim(0, 74) - 1) * 10000;
     const endpoints = Array.from({ length: this.input.parameters[1]! }, (_, e) => {
       const a = this.endpoint(e, false, true), b = this.endpoint(e, true, true), ac = this.endpoint(e, false, false), bc = this.endpoint(e, true, false), o = e * 40;
       return { a, b, kind: this.input.edges[o + 2]!, direct: this.input.edges[o + 3] === 0 && a[0] === bc[0] && a[1] === bc[1] && b[0] === ac[0] && b[1] === ac[1] && this.input.edges[o + 5] !== 0 };
@@ -186,7 +219,15 @@ export class PlannerLayoutKernel {
         const [x, y] = this.point(i);
         for (let cy = Math.max(0, y); cy < Math.min(this.height, y + this.dim(i, 1)); cy++) for (let cx = Math.max(0, x); cx < Math.min(this.width, x + this.dim(i, 0)); cx++) grid[at(cx, cy)] = -1;
       }
-      for (const f of fixtures) if ((f.mask & kind) && at(f.x, f.y) >= 0) grid[at(f.x, f.y)] = -1;
+      // AI-REMOVED 2026-10-11:
+      // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+      // Trigger: 用户要求允许中心放置且全部出口堵死。
+      // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+      // Replacement: None
+      // Risk: 旧任务必须重新验收；Human Review: Required。
+      // Original code:
+      // for (const f of fixtures) if ((f.mask & kind) && at(f.x, f.y) >= 0) grid[at(f.x, f.y)] = -1;
+
       for (const edge of endpoints.filter(edge => edge.kind === kind)) for (const p of [edge.a, edge.b]) if (at(...p) >= 0) grid[at(...p)] = -1;
       let component = 0;
       for (let cell = 0; cell < grid.length; cell++) if (grid[cell] === 0) {

@@ -1,5 +1,6 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import { freezeSnapshot } from "@/shared/snapshot/freeze-snapshot";
+import { removeForbiddenProtocolCoreEntities } from "@/shared/protocol-core";
 import type { SnapshotChangeOrigin, SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import { observable, runInAction } from "mobx";
 
@@ -247,6 +248,7 @@ export class EditorDocumentRepository {
   public async applyRemote(document: WorldDocument): Promise<void> {
     await this.ready();
     if (this.disposed) return;
+    document = removeForbiddenProtocolCoreEntities(document);
     const snapshot = freezeSnapshot(document);
     this.deletedBases.delete(document.baseId);
     // 先入队再通知，保证通知中发生的新编辑一定排在远端版本之后。

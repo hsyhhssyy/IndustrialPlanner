@@ -6030,6 +6030,9 @@
             "item_xiranite_powder",
             "item_gas_acid"
           ]
+        },
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
         }
       },
       "tags": []
