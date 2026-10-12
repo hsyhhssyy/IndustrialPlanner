@@ -98,6 +98,12 @@ export async function publishBuildingPortEffects({
     const directory = building.directory ?? path.posix.dirname(`assets/${building.package}`);
     const spatial = await json(building.spatial ?? `${directory}/spatial.json`);
     const ports = building.ports === null ? null : await json(building.ports ?? `${directory}/ports.json`);
+    if (ports?.portFxApplicable === false && (!Array.isArray(ports.resourceIds) || ports.resourceIds.length
+      || (ports.rings?.length ?? 0) || (ports.variants ?? []).some((variant) =>
+        !Array.isArray(variant.activePorts?.solid) || variant.activePorts.solid.length
+        || !Array.isArray(variant.activePorts?.pipe) || variant.activePorts.pipe.length))) {
+      throw new Error(`No-port delivery contains port or effect bindings: ${directory}`);
+    }
     const occlusionPath = building.occlusion ?? `${directory}/occlusion/occlusion.json`;
     const occlusion = await json(occlusionPath);
     for (const [label, document] of [['spatial', spatial], ['occlusion', occlusion]]) {
@@ -127,10 +133,19 @@ export async function publishBuildingPortEffects({
       && Number.isFinite(value.yawDegrees)
       // 源平面 +Z 朝图像下方；项目平面约定 y=-Z。yaw 保持源值，由运行时以正号组合实体旋转。
       ? { position: [value.position[0], value.position[1], reflectSourcePlane ? -value.position[2] : value.position[2]], yaw: value.yawDegrees } : null;
-    const requestedVariantKeys = new Set(ports?.deliveryVariantKeys ?? []);
+    // 显式无端口交付仍有 renderer 键，但不参与物流端口特效绑定。
+    const requestedVariantKeys = new Set(ports?.portFxApplicable === false ? [] : ports?.deliveryVariantKeys ?? []);
     const availableVariantKeys = new Set((ports?.variants ?? []).map((variant) => variant.rendererTemplateKey));
     const sourcePath = `${building.buildingId}/${building.view}`;
-    for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath)) {
+    const staticPhases = new Set(collection.entries.filter((entry) => entry.sourcePath === sourcePath
+      && entry.staticPhase !== undefined).map((entry) => entry.staticPhase));
+    if (staticPhases.size > 1) throw new Error(`Conflicting static phases for height view: ${sourcePath}`);
+    const staticPhase = [...staticPhases][0];
+    if (staticPhase !== undefined && !fields[staticPhase]) {
+      throw new Error(`Selected static phase has no height field: ${sourcePath}: ${staticPhase}`);
+    }
+    for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath
+      && ports?.portFxApplicable !== false)) {
       // 网站包已明确声明 rendererTemplate 时直接纳入发布；暗管没有 alter-variant 标签，不能靠 Registry 模式反推。
       const deliveredTemplate = entry.sourceMetadata?.package?.rendererTemplate;
       if (typeof deliveredTemplate === 'string' && availableVariantKeys.has(deliveredTemplate)) {
@@ -168,7 +183,8 @@ export async function publishBuildingPortEffects({
         - occlusion.fields[0].worldToPixel.cameraCenterSource.x - spatial.footprintRectCells.left,
       reflectSourcePlane ? spatial.footprintRectCells.height - originalOriginY : originalOriginY],
       coordinateSpace: reflectSourcePlane ? 'project-reflected-source' : 'contract2-canonical',
-      fields, stateMapping: occlusion.stateMapping, epsilon: occlusion.epsilon.value,
+      fields, stateMapping: staticPhase === undefined ? occlusion.stateMapping
+        : { ...occlusion.stateMapping, default: staticPhase }, epsilon: occlusion.epsilon.value,
       variants,
       rings: (ports?.rings ?? []).filter((ring) => ring.resourceId && transform(ring.resolvedTransform))
         .map((ring) => ({ resourceId: ring.resourceId, statusKey: ring.statusKey, ...transform(ring.resolvedTransform) })),

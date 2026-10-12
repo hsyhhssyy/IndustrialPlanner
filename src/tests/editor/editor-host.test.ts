@@ -3074,7 +3074,10 @@ describe("createEditorHost", () => {
       // Original code:
       // [initialDraft]
       // AI-CORRECTION 2026-10-12: 固定旋转场景按稳定设备 ID 匹配，避免 Registry 新字段改变夹具身份。
-      editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definitionId: definition.id }));
+      const blueprint = loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definitionId: definition.id });
+      // AI-CORRECTION 2026-10-12: 新增田块有地图限制，旋转场景使用各自夹具声明的地图。
+      editorHost.internalDocument.setSnapshot({ ...editorHost.document.getSnapshot(), baseId: blueprint.baseId });
+      editorHost.internalState.drafts = getBlueprintDraftArray(blueprint);
       editorHost.internalState.collections.preview.replace([initialDraft.id]);
 
       for (let step = 0; step < 4; step += 1) {

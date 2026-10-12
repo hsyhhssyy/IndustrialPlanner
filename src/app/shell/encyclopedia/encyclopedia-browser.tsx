@@ -24,6 +24,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 export const ENTITY_UI_GROUP_ORDER: ToolboxWikiEntityGroupCategory[] = [
   "basicProduction",
   "advancedManufacturing",
+  "agriculture",
   "beltLogistics",
   "pipeLogistics",
   "resourcePower",

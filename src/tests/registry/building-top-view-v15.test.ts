@@ -164,7 +164,8 @@ describe("v1.5 建筑素材发布", () => {
   it("注册完整且不重复的建筑素材集合", () => {
     const ids = collection.entries.map((entry) => entry.entityId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(collection.entries).toHaveLength(52);
+    // AI-CORRECTION 2026-10-12: 在已有 52 个映射上新增 10 种普通田块静态成株，动画设备仍为 37 个。
+    expect(collection.entries).toHaveLength(62);
     expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(37);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
@@ -197,9 +198,28 @@ describe("v1.5 建筑素材发布", () => {
       operation: "projectY = depth - 1 - sourceZ",
       rasterOperation: "flip-top-bottom per frame cell",
     });
+    expect(collection.entries.some((entry) => entry.sourceMetadata.sourceSite.indexSha256
+      === collection.sourceSite.indexSha256)).toBe(true);
     for (const entry of collection.entries) {
-      expect(entry.sourceMetadata.sourceSite.indexSha256).toBe(collection.sourceSite.indexSha256);
-      expect(entry.sourceMetadata.sourceSite.releaseId).toBe(collection.sourceSite.releaseId);
+      // AI-REMOVED 2026-10-12:
+      // Reason: 局部导入保留未选素材原来源，集合摘要只表示最近发布，不能覆盖每项来源。
+      // Trigger: 用户要求只更新 10 种普通田块成株素材。
+      // Evidence: import-building-assets retainWebsiteEffects 保留未选文件；本批应用后 172 项文件摘要一致。
+      // Replacement: 下方逐项来源格式/包路径校验；上方动画 manifest 继续与各自实体来源严格对账。
+      // Risk: Low；源字节和逐像素对账由导入批次 validate 与独立验收执行。
+      // Human Review: Required
+      // Original code:
+      // expect(entry.sourceMetadata.sourceSite.indexSha256).toBe(collection.sourceSite.indexSha256);
+      // expect(entry.sourceMetadata.sourceSite.releaseId).toBe(collection.sourceSite.releaseId);
+      const source = entry.sourceMetadata.sourceSite;
+      expect(source.indexSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(source.releaseId).toMatch(/^v[\w.-]+-cst$/);
+      expect(source.siteUrl).toBe(collection.sourceSite.siteUrl);
+      if (source.indexSha256 === collection.sourceSite.indexSha256) {
+        expect(source.releaseId).toBe(collection.sourceSite.releaseId);
+      }
+      expect(entry.package).toBe(`buildings/${entry.sourcePath}/package.json`);
+      expect(entry.packageSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(entry.sourceMetadata.publishedTransform.operation)
         .toBe("flip-top-bottom per frame");
     }

@@ -18205,6 +18205,4544 @@
         "sourceArchiveSha256": "2ecb055850ae80ae863a9773cfb79aa6d6a0fade5448f03bb55b2de314b5b4b3"
       },
       "packageSha256": "e46ebd7e7c14caa0f40b5e6655bb511e4e28a9cf18be407b96d06cd1bde44dc5"
+    },
+    {
+      "entityId": "soil_grass_1",
+      "spriteId": "soil_grass_1",
+      "sourcePath": "soil_grass_1/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_grass_1/top/package.json",
+      "packageSha256": "fd223719f3834d6c3b0df1946b55d451695f2ca90ce3e8e57cc2d010ea485a50",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_grass_1",
+          "tableBuildingId": "soil_grass_1",
+          "displayName": "锦草田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_grass_1",
+            "modelTemplateId": "soil_2",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    1800.0
+                  ],
+                  "valueIntList": [
+                    1800
+                  ],
+                  "valueStringList": [
+                    "1800"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 4,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    1800.0
+                  ],
+                  "valueIntList": [
+                    1800
+                  ],
+                  "valueStringList": [
+                    "1800"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 5,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_2_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_grass_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_2_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_grass_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_grass_2",
+      "spriteId": "soil_grass_2",
+      "sourcePath": "soil_grass_2/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_grass_2/top/package.json",
+      "packageSha256": "d136bf527436b052945031ebcd2a9ba4f46c76af4b8f480506b4810cbb84ba44",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_grass_2",
+          "tableBuildingId": "soil_grass_2",
+          "displayName": "芽针田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_grass_2",
+            "modelTemplateId": "soil_2",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    1800.0
+                  ],
+                  "valueIntList": [
+                    1800
+                  ],
+                  "valueStringList": [
+                    "1800"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 4,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    1800.0
+                  ],
+                  "valueIntList": [
+                    1800
+                  ],
+                  "valueStringList": [
+                    "1800"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 5,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_2_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_grass_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_2_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_grass_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_2_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_moss_1",
+      "spriteId": "soil_moss_1",
+      "sourcePath": "soil_moss_1/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_moss_1/top/package.json",
+      "packageSha256": "14aa84d242d17ad06a96a45d82e0b1442b118b136837b3a6c485e384cd0b2f7a",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_moss_1",
+          "tableBuildingId": "soil_moss_1",
+          "displayName": "荞花田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_moss_1",
+            "modelTemplateId": "soil_1",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    3600.0
+                  ],
+                  "valueIntList": [
+                    3600
+                  ],
+                  "valueStringList": [
+                    "3600"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_1_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_moss_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_1_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_moss_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_moss_2",
+      "spriteId": "soil_moss_2",
+      "sourcePath": "soil_moss_2/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_moss_2/top/package.json",
+      "packageSha256": "05eec1f3b962e484627862bbfec54886edb10ec825b0f2bf8d560ffc765868ca",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_moss_2",
+          "tableBuildingId": "soil_moss_2",
+          "displayName": "柑实田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_moss_2",
+            "modelTemplateId": "soil_1",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    3600.0
+                  ],
+                  "valueIntList": [
+                    3600
+                  ],
+                  "valueStringList": [
+                    "3600"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_1_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_moss_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_1_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_moss_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_moss_3",
+      "spriteId": "soil_moss_3",
+      "sourcePath": "soil_moss_3/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_moss_3/top/package.json",
+      "packageSha256": "f7eabc63636f93e64dc780b53057c0fffe9c4adf8d1aacc342e19861850a20a3",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_moss_3",
+          "tableBuildingId": "soil_moss_3",
+          "displayName": "砂叶田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_moss_3",
+            "modelTemplateId": "soil_1",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    300.0
+                  ],
+                  "valueIntList": [
+                    300
+                  ],
+                  "valueStringList": [
+                    "300"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_1_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_moss_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_1_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_moss_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_bbflower_1",
+      "spriteId": "soil_bbflower_1",
+      "sourcePath": "soil_bbflower_1/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_bbflower_1/top/package.json",
+      "packageSha256": "68b8cbe264ea3bade387464b8b6d31412cd3a64fd915a48cf9d1b6f23afec852",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_bbflower_1",
+          "tableBuildingId": "soil_bbflower_1",
+          "displayName": "酮化灌木田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_bbflower_1",
+            "modelTemplateId": "soil_1",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    300.0
+                  ],
+                  "valueIntList": [
+                    300
+                  ],
+                  "valueStringList": [
+                    "300"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_1_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_2_0",
+              "cropModel": "crop_bbflower_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_1_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_2_1",
+              "cropModel": "crop_bbflower_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_1_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_sp_1",
+      "spriteId": "soil_sp_1",
+      "sourcePath": "soil_sp_1/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_sp_1/top/package.json",
+      "packageSha256": "64c9f66de13d2b374cbbf4b6f0e794c2e6f7751332c19da4fcf03c95ad613a45",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_sp_1",
+          "tableBuildingId": "soil_sp_1",
+          "displayName": "灰芦麦田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_sp_1",
+            "modelTemplateId": "soil_3",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    43200.0
+                  ],
+                  "valueIntList": [
+                    43200
+                  ],
+                  "valueStringList": [
+                    "43200"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_3_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_3_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_1_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_sp_2",
+      "spriteId": "soil_sp_2",
+      "sourcePath": "soil_sp_2/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_sp_2/top/package.json",
+      "packageSha256": "9aa4e2c67ab77f707c63eef3ff7d1a6d54e451bb983f52498283daa545728259",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_sp_2",
+          "tableBuildingId": "soil_sp_2",
+          "displayName": "苦叶椒田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_sp_2",
+            "modelTemplateId": "soil_3",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    43200.0
+                  ],
+                  "valueIntList": [
+                    43200
+                  ],
+                  "valueStringList": [
+                    "43200"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_3_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_3_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_2_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_3_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_sp_3",
+      "spriteId": "soil_sp_3",
+      "sourcePath": "soil_sp_3/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_sp_3/top/package.json",
+      "packageSha256": "76b59d1afdf20fe5b82bb65ca0c7eb852192391bf7ae47d46b13633b7bdfe868",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_sp_3",
+          "tableBuildingId": "soil_sp_3",
+          "displayName": "琼叶参田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_sp_3",
+            "modelTemplateId": "soil_4",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 4,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 5,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 6,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 7,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_4_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_4_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_4_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_4_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
+    },
+    {
+      "entityId": "soil_sp_4",
+      "spriteId": "soil_sp_4",
+      "sourcePath": "soil_sp_4/top",
+      "animated": false,
+      "staticPhase": "soil_1_mature",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      },
+      "historicalSource": {
+        "package": null,
+        "sourceArchiveSha256": null
+      },
+      "package": "buildings/soil_sp_4/top/package.json",
+      "packageSha256": "14cdbe0695d486c8160bf55e22d647b4e232a8be4599d6aeab45152958e5a4cb",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 4,
+            "height": 4
+          },
+          "framePixels": {
+            "width": 512,
+            "height": 512
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 4,
+            "height": 4,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              768,
+              768
+            ],
+            "resultFramePixels": [
+              512,
+              512
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261012-soil-formal-release",
+          "version": "v1.5-20260926-gasscope",
+          "building": "soil_sp_4",
+          "tableBuildingId": "soil_sp_4",
+          "displayName": "金石稻田块",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            4,
+            4
+          ],
+          "footprintCells": [
+            4,
+            4
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            512,
+            512
+          ],
+          "fps": 30,
+          "animations": [
+            "soil_0_empty",
+            "soil_0_seedling",
+            "soil_0_mature",
+            "soil_1_empty",
+            "soil_1_seedling",
+            "soil_1_mature"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "none",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
+            "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              142,
+              145,
+              622,
+              622
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261012-soil-rounded-trial",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "one alpha-tested static height field per source model form",
+          "liquidEffectsInBuildingBeauty": false,
+          "planting": {
+            "sourceSnapshotId": "18907a4467eda9153ac2bbd9afb4adbe732148a74c95a40b25efcbece17e5400",
+            "tableId": "soil_sp_4",
+            "modelTemplateId": "soil_4",
+            "stages": [
+              {
+                "index": 0,
+                "type": 1,
+                "label": "育苗",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 1,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 2,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 3,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 4,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 5,
+                "type": 2,
+                "label": "浇水",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0,
+                    30.0
+                  ],
+                  "valueIntList": [
+                    2,
+                    30
+                  ],
+                  "valueStringList": [
+                    "2",
+                    "30"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 6,
+                "type": 3,
+                "label": "生长",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    14400.0
+                  ],
+                  "valueIntList": [
+                    14400
+                  ],
+                  "valueStringList": [
+                    "14400"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              },
+              {
+                "index": 7,
+                "type": 4,
+                "label": "收获",
+                "parameters": {
+                  "realType": 0,
+                  "valueBoolList": null,
+                  "valueFloatList": [
+                    2.0
+                  ],
+                  "valueIntList": [
+                    2
+                  ],
+                  "valueStringList": [
+                    "2"
+                  ],
+                  "valueType": 0,
+                  "valueVector3": null
+                }
+              }
+            ]
+          },
+          "modelForms": [
+            {
+              "name": "soil_0_empty",
+              "label": "形态 0 · 空田",
+              "groundModel": "soil_4_0",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_0_seedling",
+              "label": "形态 0 · 幼苗模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_0_mature",
+              "label": "形态 0 · 成株模型",
+              "groundModel": "soil_4_0",
+              "cropModel": "crop_sp_4_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_0"
+            },
+            {
+              "name": "soil_1_empty",
+              "label": "形态 1 · 空田",
+              "groundModel": "soil_4_1",
+              "cropModel": null,
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_1_seedling",
+              "label": "形态 1 · 幼苗模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_3_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_1_mature",
+              "label": "形态 1 · 成株模型",
+              "groundModel": "soil_4_1",
+              "cropModel": "crop_sp_4_postmodel",
+              "stageBinding": "unresolved",
+              "tableGroundModel": "soil_4_1"
+            }
+          ],
+          "stageBinding": {
+            "status": "unresolved",
+            "policy": "Source suffixes are model identities; no gameplay stage names assigned",
+            "unresolved": [
+              "stage-to-soil variant",
+              "stage-to-crop model",
+              "runtime growth scale",
+              "foliage wind driver"
+            ]
+          },
+          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "assetKind": "factory-soil-building",
+          "variantDisplayName": "圆角凹面",
+          "appearanceApproximation": {
+            "status": "user-approved-approximation",
+            "outlineRadiusSourceUnits": 0.7,
+            "terrainSourceY": 0.0,
+            "geometryPolicy": "preserve native interior heights; trim outer corners with 32 UV-preserving tangent plane cuts",
+            "plantedGroundPolicy": "candidate depressed counterpart for convex templates; no proved gameplay stage binding",
+            "groundCounterparts": {
+              "soil_1": "soil_2",
+              "soil_3": "soil_4"
+            },
+            "cropPlacement": "original table-selected prefab mount transforms unchanged",
+            "waterPlayback": "unresolved; no added water effect",
+            "profile": "rounded-basin-v1"
+          },
+          "preferredPreviewVariant": "top",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
     }
   ],
   "sourceCoordinateTransform": {
@@ -18240,9 +22778,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20260926-134224-cst",
+    "releaseId": "v1.5-20260924-20261012-174534-cst",
     "sourceVersion": "v1.5-20260924",
-    "indexSha256": "4169796e8720e6a93fc0c473c45e3a0a1cc3df5d66272f67415cddb3b99c6f9d",
+    "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
     "sourceResolution": 0.5
   }
 }

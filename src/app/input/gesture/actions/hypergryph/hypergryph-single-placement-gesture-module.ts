@@ -96,7 +96,7 @@ const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT = [
   { operationId: "continuous-placement", presentation: "shortcut" },
 ] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
-const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>> = {
+const PLACEMENT_GROUP_SHORTCUTS = {
   beltLogistics: SHORTCUT_KEY.PLACE_CONVEYOR,
   pipeLogistics: SHORTCUT_KEY.PLACE_PIPE,
   resourcePower: SHORTCUT_KEY.RESOURCES_POWER,
@@ -104,7 +104,7 @@ const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>>
   basicProduction: SHORTCUT_KEY.BASIC_PRODUCTION,
   advancedManufacturing: SHORTCUT_KEY.SYNTHESIS,
   cheat: SHORTCUT_KEY.CHEAT,
-};
+} as const satisfies Partial<Record<PlacementGroup, ShortcutKeyId>>;
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastMousePosition: GesturePosition | null = null;

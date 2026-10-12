@@ -95,7 +95,7 @@ function resolveDeviceIconPath(definition: EntityDefinition): string {
 // ─── uiGroup → 分组配置映射 ───
 const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
   titleKey: string;
-  shortcutKeyId: ShortcutKeyId;
+  shortcutKeyId?: ShortcutKeyId;
 }> = {
   beltLogistics: {
     titleKey: "workbench.section.beltLogistics",
@@ -121,6 +121,9 @@ const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
     titleKey: "workbench.section.advancedManufacturing",
     shortcutKeyId: SHORTCUT_KEY.SYNTHESIS,
   },
+  agriculture: {
+    titleKey: "workbench.section.agriculture",
+  },
   cheat: {
     titleKey: "workbench.section.cheat",
     shortcutKeyId: SHORTCUT_KEY.CHEAT,
@@ -135,6 +138,7 @@ const DEVICE_SECTION_ORDER: readonly PlacementGroup[] = [
   "warehouse",
   "basicProduction",
   "advancedManufacturing",
+  "agriculture",
   "cheat",
 ];
 
@@ -190,7 +194,9 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
     .map((uiGroup) => {
       const config = UI_GROUP_SECTION_CONFIG[uiGroup];
       const entities = groupedByUiGroup.get(uiGroup) ?? [];
-      const shortcutKey = appHost.internalActions.getKeyboardShortcutFor(config.shortcutKeyId);
+      const shortcutKey = config.shortcutKeyId === undefined
+        ? null
+        : appHost.internalActions.getKeyboardShortcutFor(config.shortcutKeyId);
 
       const visibleEntities = appHost.state.settings.collapseDeviceModes
         ? collapseEntityVariantDefinitions({

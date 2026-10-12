@@ -881,6 +881,7 @@ const FLUID_PIPE_PORT = {
 //   6. resourcePower          — 资源与电力
 //   7. hidden                 — 隐藏设备（不显示在放置面板）
 // AI-CORRECTION 2026-08-14: 新增第 8 类 cheat，仅允许在放置面板显示，不进入百科等发现入口。
+// AI-CORRECTION 2026-10-12: 新增第 9 类 agriculture，承载普通田块等农业建筑。
 //
 // 每个设备的注释标注了：
 //   - 对应的游戏设备名称
@@ -5454,6 +5455,138 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //     },
     //   ],
     // }),
+  }),
+
+  // 普通田块的 raw renderer 共用 soil_1；蓝图使用无端口方框，3D 素材待提供。
+  // AI-CORRECTION 2026-10-12: 已接入各田块独立的 soil_1_mature 首帧；蓝图仍为方框，列表使用各自物品图标。
+  /** 锦草田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_grass_1",
+    nameKey: "registry.entity.soil_grass_1.name",
+    spriteId: "soil_grass_1",
+    iconPath: "device-icons/item_port_soil_grass_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 801,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 芽针田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_grass_2",
+    nameKey: "registry.entity.soil_grass_2.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_grass_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 802,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 荞花田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_moss_1",
+    nameKey: "registry.entity.soil_moss_1.name",
+    spriteId: "soil_moss_1",
+    iconPath: "device-icons/item_port_soil_moss_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 803,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 柑实田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_moss_2",
+    nameKey: "registry.entity.soil_moss_2.name",
+    spriteId: "soil_moss_2",
+    iconPath: "device-icons/item_port_soil_moss_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 804,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 砂叶田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_moss_3",
+    nameKey: "registry.entity.soil_moss_3.name",
+    spriteId: "soil_moss_3",
+    iconPath: "device-icons/item_port_soil_moss_3.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 805,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 酮化灌木田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_bbflower_1",
+    nameKey: "registry.entity.soil_bbflower_1.name",
+    spriteId: "soil_bbflower_1",
+    iconPath: "device-icons/item_port_soil_bbflower_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 806,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 灰芦麦田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_sp_1",
+    nameKey: "registry.entity.soil_sp_1.name",
+    spriteId: "soil_sp_1",
+    iconPath: "device-icons/item_port_soil_sp_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 807,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 苦叶椒田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_sp_2",
+    nameKey: "registry.entity.soil_sp_2.name",
+    spriteId: "soil_sp_2",
+    iconPath: "device-icons/item_port_soil_sp_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 808,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 琼叶参田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_sp_3",
+    nameKey: "registry.entity.soil_sp_3.name",
+    spriteId: "soil_sp_3",
+    iconPath: "device-icons/item_port_soil_sp_3.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 809,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+  }),
+
+  /** 金石稻田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
+  createEmptyEntityDefinition({
+    id: "soil_sp_4",
+    nameKey: "registry.entity.soil_sp_4.name",
+    spriteId: "soil_sp_4",
+    iconPath: "device-icons/item_port_soil_sp_4.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 810,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /**

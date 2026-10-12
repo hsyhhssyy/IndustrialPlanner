@@ -36,6 +36,7 @@ export type UiGroup =
   | "warehouse"               // 仓库存取
   | "basicProduction"         // 基础生产
   | "advancedManufacturing"   // 合成制造
+  | "agriculture"             // 农业建筑
   | "cheat"                   // 作弊设备（仅在放置面板显示）
   | "hidden";                 // 隐藏设备（不在面板中显示，由绘制工具生成）
 

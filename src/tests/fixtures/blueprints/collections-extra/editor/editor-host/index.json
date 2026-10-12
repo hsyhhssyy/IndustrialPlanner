@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 8,
+  "fixtureRevision": 9,
   "schemaVersion": 7,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -515,6 +515,76 @@
           "definitionId": "sp_sub_hub_1"
         },
         "file": "scene-08-variant-66.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_grass_1"
+        },
+        "file": "scene-08-variant-67.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_grass_2"
+        },
+        "file": "scene-08-variant-68.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_moss_1"
+        },
+        "file": "scene-08-variant-69.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_moss_2"
+        },
+        "file": "scene-08-variant-70.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_moss_3"
+        },
+        "file": "scene-08-variant-71.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_bbflower_1"
+        },
+        "file": "scene-08-variant-72.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_sp_1"
+        },
+        "file": "scene-08-variant-73.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_sp_2"
+        },
+        "file": "scene-08-variant-74.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_sp_3"
+        },
+        "file": "scene-08-variant-75.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_sp_4"
+        },
+        "file": "scene-08-variant-76.schema7.json",
         "version": "fixture-v1"
       }
     ]

@@ -474,7 +474,7 @@ def prepare_metadata(batch):
         rect = spatial["footprintRectCells"]
         canvas = spatial["canvasCells"]
         entry["spriteOffset"] = {"x": -rect["left"], "y": rect["top"] + rect["height"] - canvas["height"], **canvas}
-        entry["historicalSource"] = entry.get("historicalSource") or {"package": entry.get("package"), "sourceArchiveSha256": entry["sourceMetadata"].get("sourceArchiveSha256")}
+        entry["historicalSource"] = entry.get("historicalSource") or {"package": entry.get("package"), "sourceArchiveSha256": entry.get("sourceMetadata", {}).get("sourceArchiveSha256")}
         entry["package"] = f"{directory}/package.json"
         entry["packageSha256"] = indexed[entry["package"]]["sha256"]
         entry["sourceMetadata"] = {
@@ -539,7 +539,11 @@ def prepare_metadata(batch):
                                  "sourcePath": source_path, "sha256": source_hash}
                 ranges.append({"source": name, "startFrame": 0, "frameCount": page["frameCount"]})
             source_phases[phase] = ranges
-        entry["animated"] = delivery_is_animated(package, phase_static_flags)
+        static_phase = entry.get("staticPhase")
+        if static_phase is not None and (not isinstance(static_phase, str) or static_phase not in source_phases):
+            raise ValueError(f"Selected static phase is not delivered: {directory}: {static_phase!r}")
+        # 用户指定静态阶段时只发布该阶段首帧，不将源动画能力带入运行时。
+        entry["animated"] = static_phase is None and delivery_is_animated(package, phase_static_flags)
         if entry["animated"]:
             entry["closeIdleMode"] = entry.get("closeIdleMode") or (
                 "hold-last" if "close_idle" in source_phases else "loop"
@@ -566,13 +570,13 @@ def prepare_metadata(batch):
                 shutil.copyfile(previous_path, previous_animation)
             animations.append(entry["spriteId"])
         else:
-            phase = next((p for p in ("static", "bind_pose", "close_idle") if p in source_phases), None)
+            phase = static_phase or next((p for p in ("static", "bind_pose", "close_idle") if p in source_phases), None)
             if phase is None and len(declared_static_phases) == 1:
                 phase = declared_static_phases[0]
             if phase is None:
                 raise ValueError(f"No declared static frame: {directory}")
             page = sources[source_phases[phase][0]["source"]]
-            statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"],
+            statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"], "phase": phase,
                             "width": width, "height": height, "physicalWidth": physical_width,
                             "physicalHeight": physical_height, "sourceResolution": source_resolution})
     if receipt["logistics"]:

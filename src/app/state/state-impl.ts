@@ -335,6 +335,7 @@ export function clampTimelineBottomDockHeight(height: number): number {
 export const TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS = [
   "basicProduction",
   "advancedManufacturing",
+  "agriculture",
   "beltLogistics",
   "pipeLogistics",
   "resourcePower",

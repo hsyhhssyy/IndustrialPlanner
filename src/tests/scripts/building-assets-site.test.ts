@@ -13,7 +13,7 @@ import { publishDeviceSprite } from "../../scripts/sync-device-sprites.mjs";
 // @ts-expect-error Node 批次入口由真实文件测试验证。
 import { applyWebsiteBatch, deferWebsiteLogistics, retainWebsitePortEffects, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
 // @ts-expect-error Node 端口发布器直接复用。
-import { resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
+import { publishBuildingPortEffects, resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
 // @ts-expect-error Node 物流发布器直接复用。
 import { publishLogisticsBaked } from "../../scripts/publish-logistics-baked.mjs";
 
@@ -31,6 +31,100 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
+  it("显式静态阶段从多阶段交付选择成株首帧，拒绝不存在的阶段", async () => {
+    await fixture(async (directory) => {
+      const result = execFileSync("python3", ["-B", "-c", `
+import runpy,sys,json,hashlib
+from pathlib import Path
+m=runpy.run_path(sys.argv[1])
+profile={'pixelsPerCell':64,'logicalPixelsPerCell':128,'resolution':.5}
+root=Path('batch/site');root.mkdir(parents=True)
+view='buildings/fixture/top'
+documents={
+  view+'/package.json':{'schemaVersion':1,'textureProfile':profile,'animations':['soil_0_empty','soil_1_mature'],'portMetadata':'ports.json','occlusionMetadata':'occlusion/occlusion.json','effectResources':'effects/resources.json'},
+  view+'/spatial.json':{'schemaVersion':1,'textureProfile':profile,'imageAxes':{'x':'+sourceX','y':'+sourceZ'},'framePixels':{'width':512,'height':512},'footprintRectCells':{'left':0,'top':0,'width':4,'height':4},'canvasCells':{'width':4,'height':4},'pathId':9223372036854775807},
+}
+for phase in ['soil_0_empty','soil_1_mature']:
+  prefix=view+'/animations/'+phase+'/'
+  documents[prefix+'animation.json']={'textureProfile':profile,'static':False,'fps':30,'frames':[{'durationMs':33},{'durationMs':67}]}
+  documents[prefix+'spritesheet.json']={'textureProfile':profile,'cellWidth':512,'cellHeight':512,'frameCount':2,'pages':[{'index':0,'frameStart':0,'frameCount':2,'rows':1,'columns':2,'width':512,'height':256,'resolution':.5,'image':'page.webp'}],'frames':[{'page':0,'localIndex':i,'physicalRect':[i*256,0,256,256]} for i in range(2)]}
+  documents[prefix+'page.webp']=b'fixture source bytes'
+files=[]
+for name,value in documents.items():
+  raw=value if isinstance(value,bytes) else json.dumps(value).encode()
+  file=root/name;file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(raw)
+  files.append({'path':name,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()})
+index=json.dumps({'files':files}).encode();(root/'integrity.json').write_bytes(index)
+receipt={'scope':'entities','siteUrl':'https://example.invalid/','releaseId':'fixture','sourceVersion':'v1.5','sourceResolution':.5,'indexSha256':hashlib.sha256(index).hexdigest(),'files':files,'entries':[{'entityId':'fixture','spriteId':'fixture','sourcePath':'fixture/top','animated':False}],'logistics':False}
+Path('batch/source-receipt.json').write_text(json.dumps(receipt))
+Path('resources').mkdir()
+entry={'entityId':'fixture','spriteId':'fixture','sourcePath':'fixture/top','animated':False,'staticPhase':'soil_1_mature'}
+Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+m['prepare_metadata']('batch')
+plan=json.loads(Path('batch/import-plan.json').read_text())
+assert plan['animations']==[] and len(plan['statics'])==1
+assert plan['statics'][0]['phase']=='soil_1_mature'
+assert plan['statics'][0]['sourcePath']==view+'/animations/soil_1_mature/page.webp'
+assert plan['statics'][0]['physicalWidth']==256 and plan['statics'][0]['physicalHeight']==256
+staged=json.loads(Path('batch/stage/resources/building-top-view-v15.json').read_text())
+assert staged['entries'][0]['animated'] is False
+assert staged['entries'][0]['sourceMetadata']['spatial']['pathId']==9223372036854775807
+assert not Path('batch/stage/resources/device-sprite-animation').exists()
+entry['staticPhase']='missing'
+Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+try:m['prepare_metadata']('batch')
+except ValueError as error:assert 'Selected static phase is not delivered' in str(error)
+else:raise AssertionError('Missing static phase accepted')
+print('explicit static phase verified')
+`, path.resolve("src/scripts/building-assets-site-source.py")], { cwd: directory, encoding: "utf8" });
+      expect(result.trim().endsWith("explicit static phase verified")).toBe(true);
+    });
+  });
+
+  it("静态阶段的默认高度与成株精灵一致，拒绝缺失或冲突的高度选择", async () => {
+    await fixture(async (directory) => {
+      const view = "buildings/soil_grass_1/top";
+      const root = path.join(directory, "site");
+      const put = async (name: string, value: unknown) => {
+        const file = path.join(root, view, name);
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, JSON.stringify(value));
+      };
+      const profile = { resolution: 0.5 };
+      await put("spatial.json", { textureProfile: profile, footprintRectCells: { left: 0, top: 0, width: 4, height: 4 },
+        pixelsPerCell: { x: 128, y: 128 } });
+      const ports = { portFxApplicable: false, resourceIds: [], rings: [], deliveryVariantKeys: ["normal__0"],
+        variants: [{ key: "normal__0", activePorts: { solid: [], pipe: [] } }] };
+      await put("ports.json", ports);
+      await put("effects/resources.json", { textureProfile: profile, resources: [] });
+      const fields = ["soil_0_empty", "soil_1_mature"].map((name) => ({ name, file: `${name}.webp`,
+        heightMin: 0, heightMax: 1, worldToPixel: { pivotPixels: { x: 256, y: 256 },
+          cameraCenterSource: { x: 2, z: 2 }, pixelsPerCell: { x: 128, y: 128 } } }));
+      await put("occlusion/occlusion.json", { textureProfile: profile, fields,
+        stateMapping: { default: "soil_0_empty" }, epsilon: { value: 0.01 } });
+      for (const field of fields) {
+        await sharp({ create: { width: 256, height: 256, channels: 4,
+          background: { r: 0, g: 64, b: 0, alpha: 1 } } }).webp({ lossless: true })
+          .toFile(path.join(root, view, "occlusion", field.file));
+      }
+      const options = { sourceDirectory: root, outputDirectory: path.join(directory, "published"),
+        viewSources: [{ buildingId: "soil_grass_1", view: "top", directory: view }], sourceResolution: 0.5, resolution: 0.5 };
+      const entry = { entityId: "soil_grass_1", sourcePath: "soil_grass_1/top", staticPhase: "soil_1_mature" };
+      await publishBuildingPortEffects({ ...options, collection: { entries: [entry] } });
+      const manifest = JSON.parse(await readFile(path.join(options.outputDirectory, "manifest.json"), "utf8"));
+      expect(manifest.views["soil_grass_1/top"].stateMapping.default).toBe("soil_1_mature");
+      expect(manifest.views["soil_grass_1/top"].variants).toEqual({});
+      expect(manifest.issues).toEqual([]);
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [{ ...entry, staticPhase: "missing" }] } }))
+        .rejects.toThrow("Selected static phase has no height field");
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [entry, { ...entry, staticPhase: "soil_0_empty" }] } }))
+        .rejects.toThrow("Conflicting static phases");
+      await put("ports.json", { ...ports, resourceIds: ["unexpected-effect"] });
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [entry] } }))
+        .rejects.toThrow("No-port delivery contains port or effect bindings");
+    });
+  });
+
   it("外观批次保留当前端口特效的原字节及来源身份", async () => {
     await fixture(async (directory) => {
       const batch = path.join(directory, "batch");

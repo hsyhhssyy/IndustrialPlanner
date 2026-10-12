@@ -934,7 +934,8 @@ describe("blueprint device id migration version chain", () => {
     const registeredIds = new Set(ENTITY_DEFINITIONS.map((definition) => definition.id));
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
-    expect(ENTITY_DEFINITIONS).toHaveLength(66);
+    // AI-CORRECTION 2026-10-12: 原 66 种设备新增 10 种普通田块；存量设备迁移规则保持原断言。
+    expect(ENTITY_DEFINITIONS).toHaveLength(76);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
     expect(version3Spec?.deviceRules.every((rule) => {
       const currentId = migrateOneEntity(rule.toDeviceId, 3, BLUEPRINT_DEVICE_ID_SCHEMA_VERSION)
