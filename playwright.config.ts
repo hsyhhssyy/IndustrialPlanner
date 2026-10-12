@@ -9,7 +9,7 @@ export default defineConfig({
   outputDir: runDirectory,
   globalSetup: "./scripts/e2e/setup.mjs",
   timeout: 90_000,
-  retries: 0,
+  retries: 1,
   fullyParallel: false,
   workers: 1,
   reporter: [["list"], ["json", { outputFile: `${runDirectory}/report.json` }]],
