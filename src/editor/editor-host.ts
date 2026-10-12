@@ -35,6 +35,7 @@ import { hookLocalstorage } from "./storage-hook";
 
 import { hookDarkPipeLinkLifecycle, normalizeEditedDarkPipeLinks } from "./dark-pipe-link-lifecycle";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
+import type { ViewportBounds } from "./viewport-settings";
 
 // state 和 document 都是外部使用的，editor组件内部使用internal来获取可写的state和document
 export interface EditorHost extends EditorContract {
@@ -49,7 +50,7 @@ export interface EditorHost extends EditorContract {
 
 export function createEditorHost(
   workspace: WorkspaceContract,
-  options: { persistence?: "browser" | "memory"; initialDocument?: WorldDocument; viewportBounds?: "base" | "unbounded" } = {},
+  options: { persistence?: "browser" | "memory"; initialDocument?: WorldDocument; viewportBounds?: ViewportBounds; placementBounds?: "base" | "unbounded" } = {},
 ): EditorHost {
   const persistence = options.persistence ?? "browser";
   const disposers: Array<() => void> = [];
@@ -62,6 +63,7 @@ export function createEditorHost(
     return publishedDocument;
   });
   const editorState = createEditorStateReadWrite();
+  runInAction(() => { editorState.internalTransientState.placementBounds = options.placementBounds ?? "base"; });
   const internalDocuments = createEditorDocumentRepository({
     document: internalDocument, state: editorState, workspace,
     persistence,
@@ -200,7 +202,7 @@ function hookDocumentHistory(editorHost: EditorHost): () => void {
   });
 }
 
-function hookDocumentViewport(editorHost: EditorHost, viewportBounds: "base" | "unbounded" = "base"): () => void {
+function hookDocumentViewport(editorHost: EditorHost, viewportBounds: ViewportBounds = "base"): () => void {
   let documentKey: string | null = null;
 
   return editorHost.internalDocument.subscribe((document) => {

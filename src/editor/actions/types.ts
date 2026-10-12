@@ -8,9 +8,10 @@ import type {
 } from "../history";
 import type { EditorStateReadWrite } from "../state-impl";
 import type { EditorDocumentRepository } from "../document-repository";
+import type { ViewportBounds } from "../viewport-settings";
 
 export interface EditorActionsContext {
-  readonly viewportBounds?: "base" | "unbounded";
+  readonly viewportBounds?: ViewportBounds;
   document: SnapshotStoreReadWrite<WorldDocument>;
   documentWriter: EditorDocumentWriter;
   documents: EditorDocumentRepository;

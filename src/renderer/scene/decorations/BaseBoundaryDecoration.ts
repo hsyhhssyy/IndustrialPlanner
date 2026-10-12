@@ -32,6 +32,7 @@ function isValidGridRect(gridRect: GridRect): boolean {
 export function resolveCurrentBaseDefinition(
   ctx: Pick<DecorationSyncContext, "renderHost">,
 ): BaseDefinition | null {
+  if (ctx.renderHost.showBaseBoundary === false) return null;
   const editor = ctx.renderHost.workspace.editor;
   if (editor === null) {
     return null;

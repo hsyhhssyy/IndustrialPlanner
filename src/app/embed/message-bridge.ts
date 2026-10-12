@@ -8,6 +8,8 @@ export function applyBlueprintEmbedSettings(app: AppHost, options: Pick<Blueprin
   runInAction(() => {
     app.internalState.settings.gameUseBlueprintStyleDeviceImages = options.view === "blueprint";
     app.internalState.settings.gamePlayDeviceAnimations = options.animations;
+    app.internalState.settings.showGrassBackground = options.view === "3d-top";
+    app.internalState.settings.gameAlwaysShowGridLines = options.view === "blueprint";
   });
 }
 

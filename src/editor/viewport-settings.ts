@@ -3,12 +3,54 @@ import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
 export const DEFAULT_VIEWPORT_GRID_SIZE = 1;
 
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 
 const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
 const BASE_WARNING_PADDING_CELLS = 2;
 const MIN_VIEWPORT_GRID_SIZE = 0.5;
 const MAX_VIEWPORT_GRID_SIZE = 8;
+
+export type ViewportBounds = "base" | "unbounded" | {
+  readonly content: GridRect;
+  readonly padding: number;
+  readonly maxAutoZoom: number;
+};
+
+/** 按可见世界范围约束视口；达到自动放大阈值后，无法容纳的方向锁定内容中心。 */
+export function resolveContentBoundedViewport(options: {
+  center: { x: number; y: number };
+  gridSize: number;
+  clientRect: { width: number; height: number };
+  displayRotation: GridRotation;
+  bounds: Exclude<ViewportBounds, string>;
+}): { center: { x: number; y: number }; gridSize: number } {
+  const { content, padding, maxAutoZoom } = options.bounds;
+  const rotated = options.displayRotation === 90 || options.displayRotation === 270;
+  const pixelWidth = rotated ? options.clientRect.height : options.clientRect.width;
+  const pixelHeight = rotated ? options.clientRect.width : options.clientRect.height;
+  const width = content.width + 2 * padding;
+  const height = content.height + 2 * padding;
+  const minimumZoom = Math.min(maxAutoZoom, Math.max(
+    pixelWidth / (width * EDITOR_GRID_CELL_PIXEL_SIZE),
+    pixelHeight / (height * EDITOR_GRID_CELL_PIXEL_SIZE),
+  ));
+  const gridSize = clampViewportGridSize(Math.max(options.gridSize, minimumZoom));
+  const cellSize = resolveViewportGridCellPixelSize(gridSize);
+  const axis = (center: number, start: number, span: number, pixels: number): number => {
+    const halfVisible = pixels / cellSize / 2;
+    const min = start - padding + halfVisible;
+    const max = start + span + padding - halfVisible;
+    return min >= max ? start + span / 2 : Math.min(max, Math.max(min, center));
+  };
+  return {
+    gridSize,
+    center: {
+      x: axis(options.center.x, content.x, content.width, pixelWidth),
+      y: axis(options.center.y, content.y, content.height, pixelHeight),
+    },
+  };
+}
 
 export function resolveViewportGridSizeAfterZoom(options: {
   currentGridSize: number;

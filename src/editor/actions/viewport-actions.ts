@@ -24,6 +24,7 @@ import {
   clampViewportCenterToBaseWarningBounds,
   resolveViewportGridCellPixelSize,
   resolveViewportGridSizeAfterZoom,
+  resolveContentBoundedViewport,
 } from "../viewport-settings";
 import { resolveEntityById } from "../entity-resolvers";
 import type { EditorActionsContext } from "./types";
@@ -61,8 +62,16 @@ export function createEditorViewportActions({
 //     });
 //   };
 
-  const clampViewportCenter = (): void => {
+  const clampViewportCenter = (clientRect = state.viewport.clientRect): void => {
     if (viewportBounds === "unbounded") return;
+    if (typeof viewportBounds === "object") {
+      const next = resolveContentBoundedViewport({ ...state.viewport, clientRect, bounds: viewportBounds });
+      state.viewport.center.x = next.center.x;
+      state.viewport.center.y = next.center.y;
+      state.viewport.gridSize = next.gridSize;
+      state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(next.gridSize);
+      return;
+    }
     const baseDefinition = workspace.registry.baseDefinitions.find(
       (definition) => definition.id === document.getSnapshot().baseId,
     ) ?? null;
@@ -114,7 +123,7 @@ export function createEditorViewportActions({
         state.internalTransientState.hasMeasuredViewportClientRect = true;
       }
 
-      clampViewportCenter();
+      clampViewportCenter(nextClientRect);
 
       state.viewport.clientRect.left = nextClientRect.left;
       state.viewport.clientRect.top = nextClientRect.top;
@@ -175,6 +184,8 @@ export function createEditorViewportActions({
         nextGridSize,
       );
 
+      if (typeof viewportBounds === "object") clampViewportCenter();
+
       persistViewportSettings();
     }),
     setViewportDisplayRotation: action((displayRotation) => {
@@ -187,6 +198,8 @@ export function createEditorViewportActions({
       }
 
       state.viewport.displayRotation = nextDisplayRotation;
+
+      if (typeof viewportBounds === "object") clampViewportCenter();
 
       persistViewportSettings();
     }),
@@ -255,6 +268,12 @@ export function createEditorViewportActions({
         });
 
         clampViewportCenter();
+
+        if (typeof viewportBounds === "object") {
+          lastWrittenCenterX = state.viewport.center.x;
+          lastWrittenCenterY = state.viewport.center.y;
+          lastWrittenGridSize = state.viewport.gridSize;
+        }
 
         if (rawProgress < 1) {
           requestAnimationFrame(tick);

@@ -171,56 +171,58 @@ export function resolvePlacementValidations(options: {
     entries.map((entry) => [entry.entity.id, []]),
   );
 
-  applyOuterRingEdgeSnapReasons({
-    entries,
-    document: options.document,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
-  applyOutsideBaseReasons({
-    entries,
-    document: options.document,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
-  applyOutsideOuterRingReasons({
-    entries,
-    document: options.document,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
-  applyInsideBaseForbiddenReasons({
-    entries,
-    document: options.document,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
-// AI-REMOVED 2026-10-12:
-// Reason: 两种标签校验收敛为一次白名单校验。
-// Trigger: 用户确认设备地图与区域白名单重构。
-// Evidence: 支持多个地图与区域任选。
-// Replacement: applyPlacementWhitelistReasons
-// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
-// Human Review: Required
-//
-// Original code:
-//   applyBaseAreaOnlyReasons({
-//     entries,
-//     document: options.document,
-//     registry: options.workspace.registry,
-//     reasonsByEntityId: mutableReasonsByEntityId,
-//   });
-//   applyBaseOnlyReasons({
-//     entries,
-//     document: options.document,
-//     reasonsByEntityId: mutableReasonsByEntityId,
-//   });
-  applyPlacementWhitelistReasons({
-    entries,
-    document: options.document,
-    registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
+  if (options.state.internalTransientState.placementBounds !== "unbounded") {
+    applyOuterRingEdgeSnapReasons({
+      entries,
+      document: options.document,
+      registry: options.workspace.registry,
+      reasonsByEntityId: mutableReasonsByEntityId,
+    });
+    applyOutsideBaseReasons({
+      entries,
+      document: options.document,
+      registry: options.workspace.registry,
+      reasonsByEntityId: mutableReasonsByEntityId,
+    });
+    applyOutsideOuterRingReasons({
+      entries,
+      document: options.document,
+      registry: options.workspace.registry,
+      reasonsByEntityId: mutableReasonsByEntityId,
+    });
+    applyInsideBaseForbiddenReasons({
+      entries,
+      document: options.document,
+      registry: options.workspace.registry,
+      reasonsByEntityId: mutableReasonsByEntityId,
+    });
+  // AI-REMOVED 2026-10-12:
+  // Reason: 两种标签校验收敛为一次白名单校验。
+  // Trigger: 用户确认设备地图与区域白名单重构。
+  // Evidence: 支持多个地图与区域任选。
+  // Replacement: applyPlacementWhitelistReasons
+  // Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+  // Human Review: Required
+  //
+  // Original code:
+  //   applyBaseAreaOnlyReasons({
+  //     entries,
+  //     document: options.document,
+  //     registry: options.workspace.registry,
+  //     reasonsByEntityId: mutableReasonsByEntityId,
+  //   });
+  //   applyBaseOnlyReasons({
+  //     entries,
+  //     document: options.document,
+  //     reasonsByEntityId: mutableReasonsByEntityId,
+  //   });
+    applyPlacementWhitelistReasons({
+      entries,
+      document: options.document,
+      registry: options.workspace.registry,
+      reasonsByEntityId: mutableReasonsByEntityId,
+    });
+  }
   // AI-REMOVED 2026-09-16:
   // Reason: 正式基地的碰撞结果不应随虚影移动重复计算。
   // Trigger: 用户要求同时优化视口与虚影移动。

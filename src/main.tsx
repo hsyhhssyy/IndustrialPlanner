@@ -60,7 +60,7 @@ import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embed";
-import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions } from "./app/embed";
+import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds } from "./app/embed";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
 // AI-REMOVED 2026-09-20:
@@ -426,12 +426,16 @@ async function startBlueprintEmbed(): Promise<void> {
     const app = createAppHost(workspace, { mode: "embed" });
     releases.push(() => app.dispose());
     applyBlueprintEmbedSettings(app, options);
-    const editor = createEditorHost(workspace, { persistence: "memory", initialDocument, viewportBounds: "unbounded" });
+    const editor = createEditorHost(workspace, {
+      persistence: "memory", initialDocument,
+      viewportBounds: { content: resolveEmbedBlueprintBounds(blueprint, registry), padding: 3, maxAutoZoom: 2 },
+      placementBounds: options.showBase ? "base" : "unbounded",
+    });
     releases.push(() => editor.dispose());
     await editor.internalDocuments.ready();
     abort.signal.throwIfAborted();
     editor.actions.setViewportClientRect({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight });
-    const render = await createRenderHost(workspace);
+    const render = await createRenderHost(workspace, { showBaseBoundary: options.showBase });
     if (disposed) { render.destroy(); return; }
     releases.push(() => render.destroy());
     simulation = createSimulationHost(workspace, {

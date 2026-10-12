@@ -60,6 +60,7 @@ export interface EditorInternalPersistStateReadWrite {
 }
 
 export interface EditorInternalTransientStateReadWrite {
+  placementBounds: "base" | "unbounded";
   hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
   logisticsDeviceRouteCycleSignature: string | null;
@@ -95,6 +96,7 @@ class EditorInternalPersistStateReadWriteImpl
 class EditorInternalTransientStateReadWriteImpl
   implements EditorInternalTransientStateReadWrite
 {
+  placementBounds: "base" | "unbounded" = "base";
   hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
   logisticsDeviceRouteCycleSignature: string | null = null;

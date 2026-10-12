@@ -95,7 +95,8 @@ function createRendererContainer(app: Application): {
 
 
 export async function createRenderHost(
-  workspace: WorkspaceContract
+  workspace: WorkspaceContract,
+  options: { showBaseBoundary?: boolean } = {},
 ): Promise<RenderHost> {
   const editor = workspace.editor;
   if (editor === null) {
@@ -145,6 +146,7 @@ export async function createRenderHost(
   let destroyed = false;
 
   const host: RenderHost = {
+    showBaseBoundary: options.showBaseBoundary,
     workspace,
     app,
     container: rendererDom.container,

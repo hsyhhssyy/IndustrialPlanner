@@ -19,6 +19,8 @@ import {
   DEFAULT_VIEWPORT_GRID_SIZE,
   clampViewportGridSize,
   resolveViewportGridCellPixelSize,
+  resolveContentBoundedViewport,
+  type ViewportBounds,
 } from "./viewport-settings";
 
 export function createDefaultWorldDocumentViewportSettings(): WorldDocumentViewportSettings {
@@ -36,9 +38,9 @@ export function applyWorldDocumentViewportSettings(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
-  viewportBounds?: "base" | "unbounded";
+  viewportBounds?: ViewportBounds;
 }): void {
-  const viewportSettings = normalizeWorldDocumentViewportSettings(
+  let viewportSettings = normalizeWorldDocumentViewportSettings(
     options.document.documentSettings.viewport,
   );
 
@@ -46,10 +48,16 @@ export function applyWorldDocumentViewportSettings(options: {
     return;
   }
 
+  if (typeof options.viewportBounds === "object" && options.state.internalTransientState.hasMeasuredViewportClientRect) {
+    viewportSettings = { ...viewportSettings, ...resolveContentBoundedViewport({
+      ...viewportSettings, clientRect: options.state.viewport.clientRect, bounds: options.viewportBounds,
+    }) };
+  }
+
   const baseDefinition = options.workspace.registry.baseDefinitions.find(
     (definition) => definition.id === options.document.baseId,
   ) ?? null;
-  const nextViewportCenter = options.viewportBounds === "unbounded" ? viewportSettings.center : clampViewportCenterToBaseWarningBounds({
+  const nextViewportCenter = options.viewportBounds === "unbounded" || typeof options.viewportBounds === "object" ? viewportSettings.center : clampViewportCenterToBaseWarningBounds({
     center: viewportSettings.center,
     baseDefinition,
   });

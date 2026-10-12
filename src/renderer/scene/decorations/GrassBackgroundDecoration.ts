@@ -213,6 +213,9 @@ export function createGrassBackgroundDecoration(
       }
 
       const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      const unbounded = ctx.renderHost.showBaseBoundary === false;
+      // 无边场景按当前视口加载地面块；世界坐标相位固定，不创建巨型虚构基地。
+      const visibleGround = unbounded ? resolveUnboundedGroundRect(ctx) : null;
       // AI-REMOVED 2026-09-26:
       // Reason: 单个外扩矩形无法保留分离区域间的空地。
       // Trigger: 草稿箱新增独立分区。
@@ -234,12 +237,12 @@ export function createGrassBackgroundDecoration(
       //   hideBackgroundLayers();
       //   return;
       // }
-      const outerGridRects = baseDefinition === null
+      const outerGridRects = visibleGround !== null ? [visibleGround] : baseDefinition === null
         ? []
         : resolveBaseOuterGridRects(baseDefinition);
-      const outerGridRect = baseDefinition === null
+      const outerGridRect = visibleGround ?? (baseDefinition === null
         ? null
-        : resolveBaseOuterBounds(baseDefinition);
+        : resolveBaseOuterBounds(baseDefinition));
       const warningGridRects = outerGridRects.map((rect) =>
         resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS)
       );
@@ -364,7 +367,7 @@ export function createGrassBackgroundDecoration(
       //   .cut();
       warningFill.clear();
       warningMask.clear();
-      for (const layout of layouts) {
+      for (const layout of unbounded ? [] : layouts) {
         const outer = layout.outer!;
         const warning = layout.warning!;
         warningFill
@@ -430,7 +433,7 @@ export function createGrassBackgroundDecoration(
         }
       }
 
-      warningScanlineSprite.visible = isWarningTextureReady;
+      warningScanlineSprite.visible = !unbounded && isWarningTextureReady;
       if (warningScanlineSprite.visible) {
         const warningTilePixelSize = warningScanlineSprite.texture.width || 64;
 
@@ -449,5 +452,19 @@ export function createGrassBackgroundDecoration(
       textures.clear();
       requestedTextures.clear();
     },
+  };
+}
+
+function resolveUnboundedGroundRect(ctx: DecorationSyncContext): GridRect {
+  const rotated = ctx.viewportState.displayRotation === 90 || ctx.viewportState.displayRotation === 270;
+  const width = (rotated ? ctx.viewportBounds.height : ctx.viewportBounds.width) / ctx.viewportState.gridCellPixelSize;
+  const height = (rotated ? ctx.viewportBounds.width : ctx.viewportBounds.height) / ctx.viewportState.gridCellPixelSize;
+  const block = GRASS_GROUND_TILE_GRID_CELLS;
+  const x = (Math.floor((ctx.viewportState.centerX - width / 2) / block) - 1) * block;
+  const y = (Math.floor((ctx.viewportState.centerY - height / 2) / block) - 1) * block;
+  return {
+    x, y,
+    width: (Math.ceil((ctx.viewportState.centerX + width / 2) / block) + 1) * block - x,
+    height: (Math.ceil((ctx.viewportState.centerY + height / 2) / block) + 1) * block - y,
   };
 }

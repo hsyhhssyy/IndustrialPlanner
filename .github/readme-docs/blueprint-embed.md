@@ -11,7 +11,7 @@
 ```html
 <iframe
   title="蓝图查看器"
-  src="https://endfield.amiyabot.com/?embed=blueprint&amp;blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&amp;view=3d-top&amp;animations=0&amp;autoplay=0"
+  src="https://endfield.amiyabot.com/?embed=blueprint&amp;blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&amp;showBase=0&amp;view=3d-top&amp;animations=0&amp;autoplay=0"
   style="width: 100%; height: 480px; border: 0"
 ></iframe>
 ```
@@ -27,10 +27,21 @@
 | `view` | `3d-top` 或 `blueprint` | `3d-top` |
 | `animations` | `1` 播放设备动画，`0` 关闭 | `0` |
 | `autoplay` | `1` 就绪后开始仿真，`0` 等待外部命令 | `0` |
+| `showBase` | `1` 显示基地，`0` 隐藏基地并使用无边场景 | `1` |
 
 使用 `URLSearchParams.set()` 传入原始文件地址，由浏览器完成外层编码，不要先手动转义再传入。相对地址以嵌入页为基准；例如 `/blueprints/getting-started-tutorial.json` 指向 `https://endfield.amiyabot.com/blueprints/getting-started-tutorial.json`。
 
 外部蓝图应使用可直接 GET 的 HTTPS 地址，且服务器须通过 CORS 允许 `https://endfield.amiyabot.com` 读取。请求不携带登录凭据。设备动画开关独立于仿真运行；蓝图外观沿用静态设备图像，关闭设备动画也不会暂停仿真。
+
+## 基地与画面范围
+
+`showBase=0` 时，画布不显示基地边框、内外区域区别或外围警告区，草地铺满可见范围。蓝图元素保留原始坐标，原基地内外、边缘及区域范围不再造成放置拒绝；其他实体冲突与连接规则仍保留。`showBase=1` 则显示基地并沿用基地放置规则。
+
+画面以蓝图全部实体的包围盒为基准，正常情况下四边最多留白三格。初始加载、平移、缩小和 iframe 尺寸变化都会重新约束可见范围。必要时自动放大，最高要求到 200%；若在 200% 或更大缩放下某个方向仍露出三格以外的区域，就将蓝图包围盒在该方向强制居中并锁住平移，另一个方向独立判断。
+
+200% 不是放大上限。继续放大后，若原先锁定的方向已经满足三格限制，便恢复该方向范围内的平移。普通缩放保留 50%～800% 的绝对上下限，实际可缩小到的比例取决于蓝图与画布尺寸。
+
+3Dtop 始终开启草地背景、关闭网格，初始进入和切换回来都生效；蓝图外观使用静态网格。这些显示规则只作用于当前嵌入实例。
 
 ## 父页面控制
 
@@ -59,6 +70,7 @@
   const viewer = new URL("https://endfield.amiyabot.com/");
   viewer.searchParams.set("embed", "blueprint");
   viewer.searchParams.set("blueprintUrl", "/blueprints/getting-started-tutorial.json");
+  viewer.searchParams.set("showBase", "0");
   const channel = "industrial-planner:blueprint";
   let requestNumber = 0;
 

@@ -9,6 +9,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { createEmbedWorldDocument, decodeEmbedBlueprint, parseBlueprintEmbedOptions, loadEmbedBlueprint, EMBED_BLUEPRINT_MAX_BYTES } from "@/app/embed/blueprint-source";
 import { BLUEPRINT_EMBED_CHANNEL, createBlueprintEmbedBridge, applyBlueprintEmbedSettings } from "@/app/embed/message-bridge";
+import { prepareCurrentSimulationDocument } from "@/simulation/topology/document-preparation";
 
 const source = readFileSync("public/blueprints/getting-started-tutorial.json", "utf8");
 const cleanups: Array<() => void> = [];
@@ -19,15 +20,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function session(viewportBounds: "base" | "unbounded" = "base") {
+async function session(
+  viewportBounds: NonNullable<Parameters<typeof createEditorHost>[1]>["viewportBounds"] = "base",
+  placementBounds: "base" | "unbounded" = "base",
+  blueprint = decodeEmbedBlueprint(JSON.parse(source)),
+) {
   const workspace: WorkspaceContract = {
     state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null,
     render: null, simulation: null, audio: null, sync: null, blueprintPlanner: null,
   };
-  const initialDocument = createEmbedWorldDocument(decodeEmbedBlueprint(JSON.parse(source)), workspace.registry);
+  const initialDocument = createEmbedWorldDocument(blueprint, workspace.registry);
   const app = createAppHost(workspace, { mode: "embed" });
   cleanups.push(() => app.dispose());
-  const editor = createEditorHost(workspace, { persistence: "memory", initialDocument, viewportBounds });
+  const editor = createEditorHost(workspace, { persistence: "memory", initialDocument, viewportBounds, placementBounds });
   cleanups.push(() => editor.dispose());
   await editor.internalDocuments.ready();
   await editor.internalHistory.flush();
@@ -41,16 +46,18 @@ describe("蓝图嵌入输入", () => {
     const url = new URL("https://planner.example/?embed=blueprint");
     url.searchParams.set("blueprintUrl", original);
     expect(parseBlueprintEmbedOptions(url.href)).toEqual({
-      blueprintUrl: new URL(original).href, view: "3d-top", animations: false, autoplay: false,
+      blueprintUrl: new URL(original).href, view: "3d-top", animations: false, autoplay: false, showBase: true,
     });
     expect(parseBlueprintEmbedOptions("https://planner.example/path/?embed=blueprint&blueprintUrl=assets%2Fa.json").blueprintUrl)
       .toBe("https://planner.example/path/assets/a.json");
+    expect(parseBlueprintEmbedOptions("https://planner.example/?embed=blueprint&blueprintUrl=%2Fa.json&showBase=0").showBase).toBe(false);
   });
 
   it.each([
     "blueprintUrl=javascript%3Aalert(1)", "blueprintUrl=https%3A%2F%2Fu%3Ap%40example.org%2Fa.json",
     "blueprintUrl=%2Fa.json&animations=true", "blueprintUrl=%2Fa.json&view=other",
     "blueprintUrl=%2Fa.json&blueprintUrl=%2Fb.json", "autoplay=1",
+    "blueprintUrl=%2Fa.json&showBase=false", "blueprintUrl=%2Fa.json&showBase=0&showBase=1",
   ])("拒绝无效参数 %s", query => {
     expect(() => parseBlueprintEmbedOptions(`https://planner.example/?embed=blueprint&${query}`))
       .toThrow();
@@ -81,6 +88,95 @@ describe("蓝图嵌入输入", () => {
 });
 
 describe("真实 Host 的嵌入会话", () => {
+  it("三格边距约束覆盖缩小、平移、尺寸变化及视口旋转", async () => {
+    const { editor } = await session({ content: { x: 0, y: 0, width: 94, height: 44 }, padding: 3, maxAutoZoom: 2 });
+    editor.actions.zoom(-12);
+    expect(editor.state.viewport.gridSize).toBeCloseTo(0.75);
+    expect(editor.state.viewport.center.y).toBeCloseTo(22);
+    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: -10000, y: -10000 } });
+    expect(editor.state.viewport.center.x + 800 / editor.state.viewport.gridCellPixelSize / 2).toBeCloseTo(97);
+    expect(editor.state.viewport.center.y).toBeCloseTo(22);
+    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 3200, height: 1600 });
+    expect(editor.state.viewport.gridSize).toBe(2);
+    expect({ ...editor.state.viewport.center }).toEqual({ x: 47, y: 22 });
+    editor.actions.setViewportDisplayRotation(90);
+    expect(editor.state.viewport.center.y).toBe(22);
+    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 10000, y: 10000 } });
+    expect(editor.state.viewport.center.y).toBe(22);
+    expect(editor.state.viewport.center.x).toBeGreaterThanOrEqual(22);
+    expect(editor.state.viewport.center.x).toBeLessThanOrEqual(72);
+  });
+
+  it("200% 后仅锁住违规方向，进一步放大满足边距后可重新平移", async () => {
+    const { editor } = await session({ content: { x: -20, y: -30, width: 4, height: 100 }, padding: 3, maxAutoZoom: 2 });
+    expect(editor.state.viewport.gridSize).toBe(2);
+    expect(editor.state.viewport.center.x).toBe(-18);
+    const y = editor.state.viewport.center.y;
+    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 100 } });
+    expect(editor.state.viewport.center.x).toBe(-18);
+    expect(editor.state.viewport.center.y).toBeLessThan(y);
+    editor.actions.zoom(6);
+    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
+    expect(editor.state.viewport.gridSize).toBe(4);
+    expect(editor.state.viewport.center.x).toBe(-18);
+    editor.actions.zoom(6);
+    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
+    expect(editor.state.viewport.gridSize).toBe(8);
+    expect(editor.state.viewport.center.x).toBeLessThan(-18);
+    editor.actions.zoom(-12);
+    expect(editor.state.viewport.gridSize).toBe(2);
+    expect(editor.state.viewport.center.x).toBe(-18);
+  });
+
+  it("空蓝图和极窄容器仍有有限视口，尺寸恢复后重新约束", async () => {
+    const { editor } = await session({ content: { x: 0, y: 0, width: 0, height: 0 }, padding: 3, maxAutoZoom: 2 });
+    expect(editor.state.viewport.gridSize).toBe(2);
+    expect({ ...editor.state.viewport.center }).toEqual({ x: 0, y: 0 });
+    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 0, height: 0 });
+    editor.actions.zoom(-12);
+    expect(Number.isFinite(editor.state.viewport.gridSize)).toBe(true);
+    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 764, height: 345 });
+    expect(editor.state.viewport.gridSize).toBe(2);
+    expect({ ...editor.state.viewport.center }).toEqual({ x: 0, y: 0 });
+  });
+
+  it("无边基地保留原坐标，解除基地拒绝后原实体进入仿真文档", async () => {
+    // 公共蓝图本身合法；按用户授权整体平移副本，明确构造超出基地的场景。
+    const blueprint = decodeEmbedBlueprint(JSON.parse(source));
+    const shifted = {
+      ...blueprint,
+      initialGridPoint: { x: blueprint.initialGridPoint.x + 100, y: blueprint.initialGridPoint.y + 100 },
+      entities: Object.fromEntries(Object.entries(blueprint.entities).map(([id, entity]) => [id, {
+        ...entity, position: { x: entity.position.x + 100, y: entity.position.y + 100 },
+      }])),
+    };
+    const bounded = await session("base", "base", shifted);
+    const unlimited = await session("unbounded", "unbounded", shifted);
+    const outside = bounded.initialDocument.entityOrder.filter(id =>
+      bounded.editor.queries.getEntityPlacementValidation(id).reasons.some(reason => reason.code === "outside-base"));
+    expect(outside.length).toBeGreaterThan(0);
+    expect(unlimited.editor.document.getSnapshot().entities).toEqual(unlimited.initialDocument.entities);
+    const prepared = prepareCurrentSimulationDocument({ document: unlimited.editor.document.getSnapshot(), workspace: unlimited.app.workspace });
+    for (const id of outside) {
+      const validation = unlimited.editor.queries.getEntityPlacementValidation(id);
+      expect(validation.reasons.some(reason => reason.code === "outside-base")).toBe(false);
+      if (validation.canPlace) expect(prepared.entities[id]).toEqual(unlimited.initialDocument.entities[id]);
+    }
+  });
+
+  it("每次进入 3Dtop 都开启草地、关闭网格，蓝图外观恢复静态网格", async () => {
+    const { app } = await session();
+    applyBlueprintEmbedSettings(app, { view: "3d-top", animations: true });
+    expect(app.state.settings.showGrassBackground).toBe(true);
+    expect(app.state.settings.gameAlwaysShowGridLines).toBe(false);
+    applyBlueprintEmbedSettings(app, { view: "blueprint", animations: true });
+    expect(app.state.settings.showGrassBackground).toBe(false);
+    expect(app.state.settings.gameAlwaysShowGridLines).toBe(true);
+    applyBlueprintEmbedSettings(app, { view: "3d-top", animations: false });
+    expect(app.state.settings.showGrassBackground).toBe(true);
+    expect(app.state.settings.gameAlwaysShowGridLines).toBe(false);
+  });
+
   it("无边界浏览保留蓝图中心，允许查看超出基地边界的内容", async () => {
     const { editor, initialDocument } = await session("unbounded");
     expect({ ...editor.state.viewport.center }).toEqual(initialDocument.documentSettings.viewport.center);

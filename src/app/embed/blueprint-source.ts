@@ -1,6 +1,7 @@
 import { BLUEPRINT_SCHEMA_VERSION, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { GridRect } from "@/domain/shared/grid";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
 
@@ -9,6 +10,7 @@ export interface BlueprintEmbedOptions {
   view: "3d-top" | "blueprint";
   animations: boolean;
   autoplay: boolean;
+  showBase: boolean;
 }
 
 // 公共样本最大约 182 KiB；限制解压后的响应，避免外部输入无限占用内存。
@@ -21,7 +23,7 @@ export function embedError(code: string, message: string): Error & { code: strin
 export function parseBlueprintEmbedOptions(href: string): BlueprintEmbedOptions {
   const page = new URL(href);
   const params = page.searchParams;
-  for (const key of ["embed", "blueprintUrl", "view", "animations", "autoplay"]) {
+  for (const key of ["embed", "blueprintUrl", "view", "animations", "autoplay", "showBase"]) {
     if (params.getAll(key).length > 1) throw embedError("INVALID_PARAMETER", `参数 ${key} 不可重复。`);
   }
   const source = params.get("blueprintUrl");
@@ -39,12 +41,12 @@ export function parseBlueprintEmbedOptions(href: string): BlueprintEmbedOptions 
   }
   const view = params.get("view") ?? "3d-top";
   if (view !== "3d-top" && view !== "blueprint") throw embedError("INVALID_PARAMETER", "未知的蓝图显示模式。");
-  const flag = (key: string) => {
-    const value = params.get(key) ?? "0";
+  const flag = (key: string, fallback = "0") => {
+    const value = params.get(key) ?? fallback;
     if (value !== "0" && value !== "1") throw embedError("INVALID_PARAMETER", `参数 ${key} 必须为 0 或 1。`);
     return value === "1";
   };
-  return { blueprintUrl: url.href, view, animations: flag("animations"), autoplay: flag("autoplay") };
+  return { blueprintUrl: url.href, view, animations: flag("animations"), autoplay: flag("autoplay"), showBase: flag("showBase", "1") };
 }
 
 export async function loadEmbedBlueprint(url: string, signal: AbortSignal): Promise<BlueprintDocument> {
@@ -130,10 +132,7 @@ export function createEmbedWorldDocument(
     }
   }
   const document = createWorldDocument({ baseId: blueprint.baseId });
-  const bounds = resolveEntityGridGeometry({
-    entities: Object.values(blueprint.entities),
-    entityDefinitionMap: new Map(registry.entityDefinitions.map(definition => [definition.id, definition])),
-  })?.boundingBox;
+  const bounds = resolveEmbedBlueprintBounds(blueprint, registry);
   return {
     ...document,
     meta: { ...document.meta, name: blueprint.name },
@@ -145,14 +144,23 @@ export function createEmbedWorldDocument(
       ...document.documentSettings,
       viewport: {
         ...document.documentSettings.viewport,
-        gridSize: bounds && viewport ? Math.min(1,
+        gridSize: viewport ? Math.min(1,
           viewport.width / ((bounds.width + 2) * viewport.gridCellPixelSize),
           viewport.height / ((bounds.height + 2) * viewport.gridCellPixelSize),
         ) : 1,
-        center: bounds ? { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 } : { x: 0, y: 0 },
+        center: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
       },
     },
   };
+}
+
+export function resolveEmbedBlueprintBounds(blueprint: BlueprintDocument, registry: RegistryContract): GridRect {
+  const bounds = resolveEntityGridGeometry({
+    entities: Object.values(blueprint.entities),
+    entityDefinitionMap: new Map(registry.entityDefinitions.map(definition => [definition.id, definition])),
+  })?.boundingBox;
+  return bounds ? { x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height }
+    : { x: 0, y: 0, width: 0, height: 0 };
 }
 
 function record(value: unknown): value is Record<string, unknown> {
