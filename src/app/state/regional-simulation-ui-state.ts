@@ -11,7 +11,8 @@ import {
 /** AI-CORRECTION 2026-09-25: 单基地可启动 Dense 区域模式，展示计数已移除；此对象只保留实验门控。 */
 class RegionalSimulationUiState {
   /** “允许多个基地同时运行”实验性设置；持久化到本地设置。 */
-  public experimentalEnabled = readRegionalMultiBaseExperimentalEnabled();
+  // AI-CORRECTION 2026-10-12: 个人配置由工作台创建时恢复，导入模块不访问存储。
+  public experimentalEnabled = false;
   // AI-REMOVED 2026-08-19:
   // Reason: “同时运行所有基地”不能在 App UI state 与 SimulationState 中保存两份可变状态。
   // Trigger: 用户要求 SimulationMode 在未启动仿真时也可观察，并成为唯一事实来源。
@@ -36,6 +37,10 @@ class RegionalSimulationUiState {
 
   public constructor() {
     makeAutoObservable(this);
+  }
+
+  public loadPersisted(): void {
+    this.experimentalEnabled = readRegionalMultiBaseExperimentalEnabled();
   }
 
   public reset(): void {

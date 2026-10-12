@@ -102,8 +102,11 @@ export interface AppHost extends AppContract {
 
 
 export function createAppHost(
-  workspace: WorkspaceContract
+  workspace: WorkspaceContract,
+  options: { mode?: "workbench" | "embed" } = {},
 ): AppHost {
+  const embedded = options.mode === "embed";
+  if (!embedded) regionalSimulationUiState.loadPersisted();
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
   const portPriorityDefaults = new DefaultPortPriorityController(workspace.registry);
@@ -124,7 +127,7 @@ export function createAppHost(
   const publicSettings = new Proxy(internalState.settings, {
     get(target, property, receiver) {
       if (property === "regionalMultiBaseEnabled") {
-        return regionalSimulationUiState.experimentalEnabled
+        return !embedded && regionalSimulationUiState.experimentalEnabled
           && regionalSettings.multiBaseEnabled;
       }
       return Reflect.get(target, property, receiver);
@@ -140,7 +143,7 @@ export function createAppHost(
         return {
           configurable: true,
           enumerable: true,
-          value: regionalSimulationUiState.experimentalEnabled
+          value: !embedded && regionalSimulationUiState.experimentalEnabled
             && regionalSettings.multiBaseEnabled,
           writable: false,
         };
@@ -174,7 +177,7 @@ export function createAppHost(
   const gestureAdapter = createGestureAdapter(host);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
-  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner);
+  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner, embedded ? "memory" : "browser");
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],
@@ -192,6 +195,7 @@ export function createAppHost(
   // const regionalSettings = new RegionalSettingsController(workspace.registry);
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
+    embedded ? "memory" : "browser",
   );
   const recipePicker = new WorkbenchRecipePickerController();
   // AI-REMOVED 2026-07-29:
@@ -246,8 +250,8 @@ export function createAppHost(
     recipePicker,
   });
 
-  const shortcutManager = new KeyboardShortcutManager(host);
-  disposers.push(shortcutManager.hookPersistence());
+  const shortcutManager = new KeyboardShortcutManager(host, { persistence: embedded ? "memory" : "browser" });
+  if (!embedded) disposers.push(shortcutManager.hookPersistence());
   disposers.push(() => shortcutManager.dispose());
 
   const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager);
@@ -331,6 +335,7 @@ export function createAppHost(
   workspace.app = host;
   const gestureModuleRegistrar = new AppGestureModuleRegistrar({
     appHost: host,
+    readOnly: embedded,
     router: gestureActionRouter,
     gestureDiagnostics,
   });
@@ -340,8 +345,10 @@ export function createAppHost(
   disposers.push(gestureAdapter.subscribeKeyboardSnapshot((snapshot) => {
     gestureDiagnostics.setKeyboardSnapshot(snapshot);
   }));
-  cleanupDiscardableV2LocalStorageBeforeV3Boot();
-  disposers.push(hookLocalstorage(host));
+  if (!embedded) {
+    cleanupDiscardableV2LocalStorageBeforeV3Boot();
+    disposers.push(hookLocalstorage(host));
+  }
   // AI-REMOVED 2026-09-23:
   // Reason: 正式启动顺序中 Editor 尚未赋值，订阅在此不会创建。
   // Trigger: 停用的跨基地链接应在本地链接或端点配置编辑后被覆盖。

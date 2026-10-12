@@ -50,6 +50,12 @@ EDA 可根据生产方案自动计算设备摆位与物流连接，也支持继�
 
 算法流程、分片机制、P-R-C 搜索与 GPU 分工详见 [EDA 算法简述](.github/readme-docs/eda-algorithm.md)。
 
+### 蓝图嵌入
+
+第三方网站可以通过 iframe 嵌入只读蓝图画布，用 URL 指定蓝图 JSON 文件，支持拖动、缩放和运行仿真，也可以切换 3Dtop／蓝图外观及设备动画。运行、暂停等控件由接入方在自己的页面布局，通过消息接口控制画布。
+
+以 `endfield.amiyabot.com` 为例，可打开[公共蓝图嵌入示例](https://endfield.amiyabot.com/?embed=blueprint&blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&view=3d-top&animations=0&autoplay=0)。URL 参数、iframe 用法和外部控制协议详见[蓝图嵌入接入指南](.github/readme-docs/blueprint-embed.md)。
+
 ### 蓝图工作流
 
 - 支持正式蓝图、本地蓝图、公共蓝图和临时蓝图。

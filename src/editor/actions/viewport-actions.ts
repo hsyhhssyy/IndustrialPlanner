@@ -42,6 +42,7 @@ export function createEditorViewportActions({
   persistViewportSettings,
   state,
   workspace,
+  viewportBounds = "base",
 }: EditorActionsContext): EditorViewportActions {
 // AI-REMOVED 2026-09-15:
 // Reason: 视口写回改为发布前每 1000ms 合并。
@@ -61,6 +62,7 @@ export function createEditorViewportActions({
 //   };
 
   const clampViewportCenter = (): void => {
+    if (viewportBounds === "unbounded") return;
     const baseDefinition = workspace.registry.baseDefinitions.find(
       (definition) => definition.id === document.getSnapshot().baseId,
     ) ?? null;

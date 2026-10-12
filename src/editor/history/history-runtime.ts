@@ -43,6 +43,7 @@ export class EditorHistoryRuntime {
 
   public constructor(
     private readonly state: EditorHistoryStateReadWrite,
+    private readonly options: { persistence?: "browser" | "memory" } = {},
   ) {}
 
   public loadDocumentHistory(documentKey: string): void {
@@ -255,6 +256,7 @@ export class EditorHistoryRuntime {
   private enqueuePersistSnapshot(snapshot: PersistedEditorHistoryState): void {
     if (this.loadErrors.has(snapshot.documentKey)) throw this.loadErrors.get(snapshot.documentKey);
     this.documents.set(snapshot.documentKey, snapshot);
+    if (this.options.persistence === "memory") return;
     this.writeQueue = this.writeQueue
       .catch(() => undefined)
       .then(() => writeEditorHistoryState(snapshot));
@@ -268,7 +270,7 @@ export class EditorHistoryRuntime {
     if (pending !== undefined) return pending;
     const load = (async () => {
       await this.writeQueue;
-      const persisted = await readEditorHistoryState(documentKey);
+      const persisted = this.options.persistence === "memory" ? null : await readEditorHistoryState(documentKey);
       const latest = this.documents.get(documentKey);
       if (latest !== undefined) return latest;
       const records = normalizeRecordList(persisted?.records ?? [], documentKey);

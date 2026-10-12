@@ -50,6 +50,7 @@ import { createSimulationControlGestureModule } from "./simulation-control-gestu
 import { createToolboxOpenGestureModule } from "./toolbox-open-gesture-module";
 
 export interface AppGestureModuleRegistrarOptions {
+  readonly readOnly?: boolean;
   readonly appHost: AppHost;
   readonly router: GestureActionRouter<AppHost>;
   readonly gestureDiagnostics: GestureDiagnosticsStore;
@@ -60,6 +61,14 @@ export class AppGestureModuleRegistrar {
   private disposed = false;
 
   public constructor(options: AppGestureModuleRegistrarOptions) {
+    if (options.readOnly) {
+      this.unregisterModules.push(
+        options.router.registerModule(createHypergryphMouseViewportPanModule()),
+        options.router.registerModule(createHypergryphKeyboardViewportPanModule()),
+        options.router.registerModule(createHypergryphViewportZoomModule()),
+      );
+      return;
+    }
     this.unregisterModules.push(
       bindLogisticsPlacementAlert(options.appHost),
       options.router.registerModule(createHypergryphOverlapEntityMenuGuardModule()),

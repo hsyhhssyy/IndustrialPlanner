@@ -10,6 +10,7 @@ export interface EditorDocumentChange {
 }
 
 export interface EditorDocumentRepositoryOptions {
+  readonly persistence?: "browser" | "memory";
   readonly activeDocument: SnapshotStoreReadWrite<WorldDocument>;
   readonly read: (baseId: string) => Promise<WorldDocument>;
   readonly write: (document: WorldDocument, origin?: "local" | "remote-sync") => Promise<boolean>;
@@ -114,6 +115,7 @@ export class EditorDocumentRepository {
     if (this.disposed) throw new Error("Editor document repository is disposed.");
     const cached = this.documents.get(baseId);
     if (cached !== undefined) return cached;
+    if (this.options.persistence === "memory") throw new Error("Base is not part of this memory session.");
     const pending = this.loads.get(baseId);
     if (pending !== undefined) return pending;
     const generation = this.generations.get(baseId) ?? 0;
@@ -204,6 +206,7 @@ export class EditorDocumentRepository {
     isCurrent: () => boolean = () => true,
     signal?: AbortSignal,
   ): Promise<boolean> {
+    if (this.options.persistence === "memory") throw new Error("Persistent transactions are unavailable in a memory session.");
     await this.ready();
     const generations = new Map(changes.map(({ before }) => [before.baseId, this.generations.get(before.baseId) ?? 0]));
     return this.enqueue(async () => {
@@ -246,6 +249,7 @@ export class EditorDocumentRepository {
 
   /** 远端应用与已有自动保存排队；排队后发生的新编辑保留优先级。 */
   public async applyRemote(document: WorldDocument): Promise<void> {
+    if (this.options.persistence === "memory") throw new Error("Synchronization is unavailable in a memory session.");
     await this.ready();
     if (this.disposed) return;
     document = removeForbiddenProtocolCoreEntities(document);
@@ -278,6 +282,7 @@ export class EditorDocumentRepository {
     remove: () => Promise<boolean>,
     emptyActiveDocument: () => WorldDocument,
   ): Promise<void> {
+    if (this.options.persistence === "memory") throw new Error("Synchronization is unavailable in a memory session.");
     await this.ready();
     // 立即作废旧加载和旧写；删除本身排在已经发出的写入之后。
     // 订正（2026-09-25）：先作废旧加载；删除成功后再发布，期间发生的新编辑排在删除之后保存并保留。
@@ -336,6 +341,7 @@ export class EditorDocumentRepository {
   }
 
   private markDirty(document: WorldDocument): void {
+    if (this.options.persistence === "memory") return;
     this.dirty.set(document.documentKey, document);
     void this.enqueue(async () => {
       if (this.dirty.get(document.documentKey) !== document) return;

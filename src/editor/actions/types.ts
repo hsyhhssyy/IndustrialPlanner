@@ -10,6 +10,7 @@ import type { EditorStateReadWrite } from "../state-impl";
 import type { EditorDocumentRepository } from "../document-repository";
 
 export interface EditorActionsContext {
+  readonly viewportBounds?: "base" | "unbounded";
   document: SnapshotStoreReadWrite<WorldDocument>;
   documentWriter: EditorDocumentWriter;
   documents: EditorDocumentRepository;

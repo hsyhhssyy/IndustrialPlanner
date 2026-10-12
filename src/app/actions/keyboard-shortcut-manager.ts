@@ -250,12 +250,13 @@ export class KeyboardShortcutManager {
   private readonly appHost: AppHost;
   private disposeReaction: (() => void) | null = null;
 
-  public constructor(appHost: AppHost) {
+  public constructor(appHost: AppHost, options: { persistence?: "browser" | "memory" } = {}) {
     this.appHost = appHost;
 
     // 初始化：先取默认值，再用 localStorage 覆盖
+    // AI-CORRECTION 2026-10-12: 内存会话仅使用默认快捷键，不恢复个人配置。
     const initial = { ...SHORTCUT_DEFAULTS };
-    const persisted = readPersistedShortcutState();
+    const persisted = options.persistence === "memory" ? null : readPersistedShortcutState();
     if (persisted !== null) {
       for (const [k, v] of Object.entries(persisted)) {
         if (isShortcutKey(k) && typeof v === "string") {

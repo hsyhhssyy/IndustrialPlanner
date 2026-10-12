@@ -48,11 +48,13 @@ export const WORLD_DOCUMENT_DATABASE_LOCATION = {
 };
 
 export function createEditorDocumentRepository(options: {
+  readonly persistence?: "browser" | "memory";
   readonly document: SnapshotStoreReadWrite<WorldDocument>;
   readonly state: EditorStateReadWrite;
   readonly workspace: WorkspaceContract;
 }): EditorDocumentRepository {
   return new EditorDocumentRepository({
+    persistence: options.persistence,
     activeDocument: options.document,
     read: async (baseId) => {
       const storedDocument = await resolveLatestWorldDocumentForBase({
@@ -80,8 +82,21 @@ export function createEditorDocumentRepository(options: {
   });
 }
 
-export function hookDocumentStorage(editorHost: EditorHost): () => void {
+export function hookDocumentStorage(
+  editorHost: EditorHost,
+  options: { persistence?: "browser" | "memory"; initialDocument?: WorldDocument } = {},
+): () => void {
   const repository = editorHost.internalDocuments;
+  if (options.persistence === "memory") {
+    const unsubscribe = editorHost.internalDocument.subscribe((document, context) => {
+      repository.observeActive(document, context.origin);
+    });
+    void repository.initialize(async () => options.initialDocument ?? editorHost.internalDocument.getSnapshot());
+    return () => {
+      unsubscribe();
+      repository.dispose();
+    };
+  }
   let disposed = false;
   let scopeSerial = 0;
   let scopeKey = "";
@@ -130,7 +145,8 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
       reconcileScope();
     }
   });
-  void repository.initialize(() => resolveInitialDocument(editorHost));
+  void repository.initialize(() => options.initialDocument !== undefined
+    ? Promise.resolve(options.initialDocument) : resolveInitialDocument(editorHost));
   const stopModeReaction = reaction(
     () => editorHost.workspace.app?.state.settings.regionalMultiBaseEnabled === true,
     reconcileScope,

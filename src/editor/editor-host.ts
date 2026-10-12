@@ -49,10 +49,12 @@ export interface EditorHost extends EditorContract {
 
 export function createEditorHost(
   workspace: WorkspaceContract,
+  options: { persistence?: "browser" | "memory"; initialDocument?: WorldDocument; viewportBounds?: "base" | "unbounded" } = {},
 ): EditorHost {
+  const persistence = options.persistence ?? "browser";
   const disposers: Array<() => void> = [];
   let publishedDocument: WorldDocument | null = null;
-  const internalDocument = createSnapshotStore(createWorldDocument(), (nextDocument) => {
+  const internalDocument = createSnapshotStore(options.initialDocument ?? createWorldDocument(), (nextDocument) => {
     if (publishedDocument !== null && publishedDocument.documentKey !== nextDocument.documentKey) {
       viewportPersistence?.flush();
     }
@@ -62,8 +64,9 @@ export function createEditorHost(
   const editorState = createEditorStateReadWrite();
   const internalDocuments = createEditorDocumentRepository({
     document: internalDocument, state: editorState, workspace,
+    persistence,
   });
-  const internalHistory = new EditorHistoryRuntime(editorState.history);
+  const internalHistory = new EditorHistoryRuntime(editorState.history, { persistence });
   const internalDocumentWriter = createEditorDocumentWriter({
     document: internalDocument,
     history: internalHistory,
@@ -76,6 +79,7 @@ export function createEditorHost(
     state: editorState,
   });
   const actions: EditorContract["actions"] = createEditorActions({
+    viewportBounds: options.viewportBounds,
     document: internalDocument,
     documentWriter: internalDocumentWriter,
     documents: internalDocuments,
@@ -137,11 +141,11 @@ export function createEditorHost(
 
   workspace.editor = host;
   disposers.push(hookDocumentHistory(host));
-  disposers.push(hookDocumentViewport(host));
+  disposers.push(hookDocumentViewport(host, options.viewportBounds));
   disposers.push(hookPlacementValidation(host));
   disposers.push(hookPoweredCollection(host));
-  disposers.push(hookLocalstorage(host));
-  disposers.push(hookDocumentStorage(host));
+  if (persistence === "browser") disposers.push(hookLocalstorage(host));
+  disposers.push(hookDocumentStorage(host, { persistence, initialDocument: options.initialDocument }));
 // AI-REMOVED 2026-10-08:
 // Reason: 迁移必须在业务初始化前统一执行。
 // Trigger: REQ-041 全局迁移。
@@ -152,7 +156,7 @@ export function createEditorHost(
 // Original code:
 //   disposers.push(hookLegacyDarkPipeMigration(host));
 
-  disposers.push(hookDarkPipeLinkLifecycle(host));
+  if (persistence === "browser") disposers.push(hookDarkPipeLinkLifecycle(host));
 
   return host;
 }
@@ -196,7 +200,7 @@ function hookDocumentHistory(editorHost: EditorHost): () => void {
   });
 }
 
-function hookDocumentViewport(editorHost: EditorHost): () => void {
+function hookDocumentViewport(editorHost: EditorHost, viewportBounds: "base" | "unbounded" = "base"): () => void {
   let documentKey: string | null = null;
 
   return editorHost.internalDocument.subscribe((document) => {
@@ -207,6 +211,7 @@ function hookDocumentViewport(editorHost: EditorHost): () => void {
     documentKey = document.documentKey;
     runInAction(() => {
       applyWorldDocumentViewportSettings({
+        viewportBounds,
         document,
         state: editorHost.internalState,
         workspace: editorHost.workspace,

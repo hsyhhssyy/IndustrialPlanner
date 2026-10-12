@@ -27,7 +27,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
-  enabled = readFromLocalStorage<boolean>(ENABLED_KEY) === true;
+  enabled = false;
   plan: BlueprintPlannerProductionPlan | null = null;
   blueprintDraft: BlueprintDocument | null = null;
   blueprintRequest: BlueprintPlannerRequest | null = null;
@@ -35,7 +35,11 @@ export class BlueprintPlannerDialogController {
   options: BlueprintPlannerOptions = createDefaultPlannerOptions();
   blueprintCreationError: string | null = null;
 
-  constructor(private readonly getPlanner: () => BlueprintPlannerContract | null) {
+  constructor(
+    private readonly getPlanner: () => BlueprintPlannerContract | null,
+    private readonly persistence: "browser" | "memory" = "browser",
+  ) {
+    this.enabled = persistence === "browser" && readFromLocalStorage<boolean>(ENABLED_KEY) === true;
 // AI-REMOVED 2026-10-06:
 // Reason: 新任务必须使用统一默认值，取消全局选项恢复。
 // Trigger: 用户要求新任务恢复默认选项。
@@ -80,7 +84,8 @@ export class BlueprintPlannerDialogController {
 //       // AI-CORRECTION 2026-10-03：复选框关闭保存为 1；旧多 Worker 数字仍迁移为自动。
 //       if (saved.concurrency === 1) this.options = { ...this.options, concurrency: 1 };
 //     }
-    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner">(this, {
+    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "persistence">(this, {
+      persistence: false,
       plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false,
     }, { autoBind: true });
   }
@@ -90,7 +95,7 @@ export class BlueprintPlannerDialogController {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    runStorageEffect("planner-enabled", () => saveToLocalStorage(ENABLED_KEY, enabled));
+    if (this.persistence === "browser") runStorageEffect("planner-enabled", () => saveToLocalStorage(ENABLED_KEY, enabled));
     if (!enabled) this.close();
   }
 

@@ -81,11 +81,14 @@ export class WorkbenchEncyclopediaPickerController {
   _entityFilter: ((entity: EntityDefinition) => boolean) | undefined;
   _resolver: ((selection: EncyclopediaPickerSelection | null) => void) | null = null;
 
-  public constructor(resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState) {
+  public constructor(
+    resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState,
+    private readonly persistence: "browser" | "memory" = "browser",
+  ) {
     this._resolveSharedFilterState = resolveSharedFilterState;
 
     try {
-      const raw = localStorage.getItem("v3-planner-recent-picker-items");
+      const raw = persistence === "memory" ? null : localStorage.getItem("v3-planner-recent-picker-items");
       if (raw !== null) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -99,7 +102,7 @@ export class WorkbenchEncyclopediaPickerController {
     }
 
     try {
-      const raw = localStorage.getItem("v3-planner-last-picker-query");
+      const raw = persistence === "memory" ? null : localStorage.getItem("v3-planner-last-picker-query");
       if (raw !== null) {
         this.query = raw;
       }
@@ -107,7 +110,8 @@ export class WorkbenchEncyclopediaPickerController {
       // Storage 不可用时保持空字符串
     }
 
-    makeAutoObservable(this, {
+    makeAutoObservable<this, "persistence">(this, {
+      persistence: false,
       _resolveSharedFilterState: false,
       _entityFilter: false,
       _itemFilter: false,
@@ -241,7 +245,7 @@ export class WorkbenchEncyclopediaPickerController {
     this.recentItemIds = next.slice(0, 20);
 
     try {
-      localStorage.setItem("v3-planner-recent-picker-items", JSON.stringify(this.recentItemIds));
+      if (this.persistence === "browser") localStorage.setItem("v3-planner-recent-picker-items", JSON.stringify(this.recentItemIds));
     } catch {
       // Storage 不可用时静默失败
     }
@@ -258,7 +262,7 @@ export class WorkbenchEncyclopediaPickerController {
     this.includeInactiveActivityItems = false;
 
     try {
-      localStorage.setItem("v3-planner-last-picker-query", this.query);
+      if (this.persistence === "browser") localStorage.setItem("v3-planner-last-picker-query", this.query);
     } catch {
       // Storage 不可用时静默失败
     }

@@ -59,6 +59,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
+import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embed";
+import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions } from "./app/embed";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
 // AI-REMOVED 2026-09-20:
@@ -79,6 +81,7 @@ import { createRegistryContract } from "./registry";
 import { WorkspaceContract } from "./domain/document/workspace-contract";
 import { createWorkspaceState } from "./domain/document/workspace-state";
 import { createEditorHost } from "./editor/editor-host";
+import { resolveViewportGridCellPixelSize } from "./editor/viewport-settings";
 import { createRenderHost } from "./renderer/renderer-host";
 import { createSimulationHost } from "./simulation/simulation-host";
 import { initializeDebugLogging } from "@/shared/logging/debug-logging-runtime";
@@ -374,7 +377,97 @@ async function startWorkbench(): Promise<void> {
 
 }
 
-void startWorkbench().catch((error: unknown) => {
+async function startBlueprintEmbed(): Promise<void> {
+  const root = ReactDOM.createRoot(document.getElementById("root")!);
+  const abort = new AbortController();
+  const bridge = createBlueprintEmbedBridge();
+  const releases: Array<() => void> = [];
+  let disposed = false;
+  let loading = true;
+  let simulation: ReturnType<typeof createSimulationHost> | null = null;
+  const timeout = setTimeout(() => abort.abort(new Error("蓝图加载超时，请重试。")), 30_000);
+  const releaseHosts = () => {
+    while (releases.length) {
+      try { releases.pop()?.(); }
+      catch (error) { console.error("Blueprint embed cleanup failed", error); }
+    }
+  };
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    clearTimeout(timeout);
+    abort.abort();
+    bridge.dispose();
+    window.removeEventListener("pagehide", pageHide);
+    root.unmount();
+    releaseHosts();
+  };
+  const pageHide = (event: PageTransitionEvent) => {
+    if (!event.persisted) dispose();
+    else simulation?.actions.pause();
+  };
+  window.addEventListener("pagehide", pageHide);
+  if (import.meta.hot) import.meta.hot.dispose(dispose);
+  root.render(<BlueprintEmbedStatus />);
+  try {
+    const options = parseBlueprintEmbedOptions(window.location.href);
+    const blueprint = await loadEmbedBlueprint(options.blueprintUrl, abort.signal);
+    clearTimeout(timeout);
+    abort.signal.throwIfAborted();
+    const registry = createRegistryContract();
+    const workspace: WorkspaceContract = {
+      state: createWorkspaceState(), registry,
+      app: null, editor: null, render: null, simulation: null,
+      audio: null, sync: null, blueprintPlanner: null,
+    };
+    const initialDocument = createEmbedWorldDocument(blueprint, registry, {
+      width: window.innerWidth, height: window.innerHeight, gridCellPixelSize: resolveViewportGridCellPixelSize(1),
+    });
+    const app = createAppHost(workspace, { mode: "embed" });
+    releases.push(() => app.dispose());
+    applyBlueprintEmbedSettings(app, options);
+    const editor = createEditorHost(workspace, { persistence: "memory", initialDocument, viewportBounds: "unbounded" });
+    releases.push(() => editor.dispose());
+    await editor.internalDocuments.ready();
+    abort.signal.throwIfAborted();
+    editor.actions.setViewportClientRect({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight });
+    const render = await createRenderHost(workspace);
+    if (disposed) { render.destroy(); return; }
+    releases.push(() => render.destroy());
+    simulation = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      getRegionalResourceSettings: region => app.regionalSettings.getRegionResources(region),
+      getActiveActivityIds: () => resolveEffectiveActivityIds({ selectedActivityIds: [] }),
+    });
+    const simulationHost = simulation;
+    releases.push(() => simulationHost.dispose());
+    // 被动跟随已存在 SW 的版本切换，不注册、激活或更新 SW。
+    try {
+      const worker = navigator.serviceWorker;
+      const reload = () => window.location.reload();
+      worker?.addEventListener("controllerchange", reload);
+      releases.push(() => worker?.removeEventListener("controllerchange", reload));
+    } catch { /* 当前 iframe 禁用 Service Worker 时继续在线运行。 */ }
+    const onReady = () => {
+      if (disposed || !loading) return;
+      loading = false;
+      bridge.attach(app);
+      if (options.autoplay) void bridge.play().catch(error => bridge.reportError(error));
+    };
+    root.render(<BlueprintEmbed appHost={app} onReady={onReady} />);
+  } catch (error) {
+    clearTimeout(timeout);
+    releaseHosts();
+    if (disposed) return;
+    const failure = abort.signal.aborted && abort.signal.reason instanceof Error ? abort.signal.reason : error;
+    bridge.reportError(failure);
+    root.render(<BlueprintEmbedStatus error={failure instanceof Error ? failure.message : "蓝图加载失败。"} />);
+  }
+}
+
+// URL 分流早于工作台的数据恢复；两种模式共享同一份 Host 实现和静态资源。
+void (new URLSearchParams(window.location.search).has("embed")
+  ? startBlueprintEmbed() : startWorkbench()).catch((error: unknown) => {
   const root = document.getElementById("root");
   if (root !== null && !isDataMigrationFrozen()) {
     const message = document.createElement("p");

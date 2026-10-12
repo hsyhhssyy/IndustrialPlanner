@@ -36,6 +36,7 @@ export function applyWorldDocumentViewportSettings(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
+  viewportBounds?: "base" | "unbounded";
 }): void {
   const viewportSettings = normalizeWorldDocumentViewportSettings(
     options.document.documentSettings.viewport,
@@ -48,7 +49,7 @@ export function applyWorldDocumentViewportSettings(options: {
   const baseDefinition = options.workspace.registry.baseDefinitions.find(
     (definition) => definition.id === options.document.baseId,
   ) ?? null;
-  const nextViewportCenter = clampViewportCenterToBaseWarningBounds({
+  const nextViewportCenter = options.viewportBounds === "unbounded" ? viewportSettings.center : clampViewportCenterToBaseWarningBounds({
     center: viewportSettings.center,
     baseDefinition,
   });
