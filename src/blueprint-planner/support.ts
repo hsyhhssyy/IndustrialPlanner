@@ -4,7 +4,7 @@ import type { SimulationBlueprintScene } from "@/domain/simulation";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
-import { resolveEntityGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting } from "@/shared/geometry/power-range";
+import { resolveEntityGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting, collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { buildLayoutGraph } from "./layout-graph";
 import { filterPort, findLogisticsDevice, getPlannerPorts } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
@@ -224,7 +224,8 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
   const rects = [...network.nodes.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })),
     ...fixtures.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }))];
   const ports = wires.flatMap(wire => [wire.source.outside, wire.target.outside]);
-  const pending = network.nodes.filter(node => node.definition.requiresPower).map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
+  const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
+  const pending = network.nodes.filter(node => node.definition.requiresPower && !powered.has(node.entity.id)).map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
   const result: PlannerNode[] = [];
   const minimumX = 0;
   const minimumY = 0;

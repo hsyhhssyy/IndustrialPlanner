@@ -1,7 +1,18 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import { ALL_REGION_ENTITIES_BASE_TAG, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
+// AI-REMOVED 2026-10-12:
+// Reason: 放置资格不再读取标签。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 统一地图与区域资格。
+// Replacement: 下方结构化白名单导入
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+// import { ALL_REGION_ENTITIES_BASE_TAG, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
+import { resolveBaseAreas } from "@/shared/geometry/base-areas";
+import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { allowsFreeProtocolCorePlacement, isProtocolCoreDefinitionId } from "@/shared/protocol-core";
 
 // AI-REMOVED 2026-09-25:
@@ -51,21 +62,42 @@ export function canPlaceEntityDefinitionInBase(
   baseId: string | null,
   placementKind: "manual" | "blueprint" = "manual",
 ): boolean {
-  if (!matchesEntityBaseOnlyTag(definition.tags, baseId)) return false;
+// AI-REMOVED 2026-10-12:
+// Reason: 白名单同时覆盖地图和区域。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 空白名单与不存在区域均拒绝。
+// Replacement: canPlaceEntityDefinitionInBase 下方允许区域判断
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+//   if (!matchesEntityBaseOnlyTag(definition.tags, baseId)) return false;
 
   const baseDefinitions = appHost.workspace.registry.baseDefinitions;
   if (placementKind === "manual" && isProtocolCoreDefinitionId(definition.id)
     && !allowsFreeProtocolCorePlacement(baseId ?? "", baseDefinitions)) {
     return false;
   }
+// AI-REMOVED 2026-10-12:
+// Reason: 地区标签与草稿箱豁免退出设备资格判定。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 先过滤设备及变体，再构建设备菜单。
+// Replacement: 紧随审计记录的白名单允许区域判断
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+//   const baseDefinition = baseDefinitions.find((candidate) => candidate.id === baseId);
+//   if (baseDefinition === undefined || baseDefinition.tags.includes(ALL_REGION_ENTITIES_BASE_TAG)) {
+//     return true;
+//   }
+//
+//   const regionTags = new Set(baseDefinitions.map((candidate) => candidate.tag));
+//   const entityRegions = definition.tags.filter((tag) => regionTags.has(tag));
+//   return entityRegions.length === 0 || entityRegions.includes(baseDefinition.tag);
   const baseDefinition = baseDefinitions.find((candidate) => candidate.id === baseId);
-  if (baseDefinition === undefined || baseDefinition.tags.includes(ALL_REGION_ENTITIES_BASE_TAG)) {
-    return true;
-  }
-
-  const regionTags = new Set(baseDefinitions.map((candidate) => candidate.tag));
-  const entityRegions = definition.tags.filter((tag) => regionTags.has(tag));
-  return entityRegions.length === 0 || entityRegions.includes(baseDefinition.tag);
+  return baseDefinition !== undefined
+    && resolveEntityPlacementAreas(definition, baseDefinition, resolveBaseAreas(baseDefinition)).length > 0;
 }
 
 export function hasPlaceableEntityDefinitionInCurrentBase(

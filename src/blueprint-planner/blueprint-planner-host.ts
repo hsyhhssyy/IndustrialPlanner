@@ -11,7 +11,7 @@ import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 import { EDA_MIGRATION_VERSION } from "./data-migration";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
-import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitionBoundaries,
   type BlueprintRecognitionTask } from "./blueprint-recognition-task";
 import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
@@ -1855,7 +1855,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       async createBlueprintTask(input, inputOptions) {
         await ready; assertReady();
         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
-        const id = createUuid(), task = recognitionRuntime(createRecognitionTaskFile(workspace.registry, id, input, inputOptions));
+        const id = createUuid(), task = recognitionRuntime(createRecognitionTaskFile(workspace.registry, id, input,
+          { ...inputOptions, blueprintOptimizations: inputOptions.blueprintOptimizations ?? { ...DEFAULT_BLUEPRINT_OPTIMIZATIONS } }));
         recognitionTasks.set(id, task); latestId = id; persist(task); await writes; notify();
         // 后台边界检查的异常已进入任务进度；任务编号不依赖检查成功。
         void runRecognition(task, true).catch(() => {});
@@ -1890,6 +1891,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           if (!request.blueprintSource) throw new Error("蓝图识别任务不存在。");
           if (hasPlannerStarted(task.file.progress)) throw new Error("首次开始规划后不能修改摆放规则。");
           const next = { ...request, options: { ...request.options,
+            blueprintOptimizations: inputOptions.blueprintOptimizations,
             warehousePortPlacement: inputOptions.warehousePortPlacement, warehouseBus: inputOptions.warehouseBus,
             evaluationsPerRound: inputOptions.evaluationsPerRound, concurrency: inputOptions.concurrency, gpu: inputOptions.gpu } };
           if (plannerRequestKey(next) !== plannerRequestKey({ ...request, options: inputOptions })) {

@@ -1,6 +1,16 @@
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BaseBuiltinEntityDefinition } from "@/domain/registry/types/base-definition";
-import { ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG } from "@/shared/base-tags";
+// AI-REMOVED 2026-10-12:
+// Reason: 跨地区设备权限由设备白名单承担。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: allRegionEntities 已退出资格计算。
+// Replacement: DRAFT_BOX_BASE_TAG 保留协议核心生命周期用途
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+// import { ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG } from "@/shared/base-tags";
+import { DRAFT_BOX_BASE_TAG } from "@/shared/base-tags";
 
 const VALLEY4_BUILTIN_BUS_SOURCE_ID = "valley4_bus_source";
 const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
@@ -231,6 +241,16 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     //   outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
     // }],
     tag: "草稿箱",
-    tags: [ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG],
+// AI-REMOVED 2026-10-12:
+// Reason: 草稿箱不再通过标签放宽设备地理资格。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 保留原有地区设备的草稿箱资格。
+// Replacement: 设备 placementWhitelist 中的 draft_box 条目
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+//     tags: [ALL_REGION_ENTITIES_BASE_TAG, DRAFT_BOX_BASE_TAG],
+    tags: [DRAFT_BOX_BASE_TAG],
   },
 ];

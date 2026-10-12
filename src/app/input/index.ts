@@ -1,1 +1,1 @@
-export { enterBlueprintPlacement } from "./gesture/actions";
+export { enterBlueprintPlacement, cleanupPlacementDraft } from "./gesture/actions";

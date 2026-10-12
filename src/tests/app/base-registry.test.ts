@@ -116,7 +116,17 @@ describe("createRegistryContract", () => {
       name: "草稿箱",
       placeableArea: { width: 320, height: 320 },
       outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      tags: ["allRegionEntities", "草稿箱"],
+// AI-REMOVED 2026-10-12:
+// Reason: 标签资格测试迁为结构化白名单测试。
+// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
+// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
+// Replacement: 草稿箱地区设备资格由白名单提供；只保留核心生命周期标记
+// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
+// Human Review: Required
+//
+// Original code:
+//       tags: ["allRegionEntities", "草稿箱"],
+      tags: ["草稿箱"],
       // AI-REMOVED 2026-09-28:
       // Reason: 草稿箱取消左上角独立外环区。
       // Trigger: 用户要求删除该区域并更新对应测试。

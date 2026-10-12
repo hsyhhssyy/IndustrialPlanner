@@ -1,4 +1,8 @@
-import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerBlueprintRecognitionRequest, BlueprintPlannerProgress, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerBlueprintOptimizations, BlueprintPlannerBlueprintRecognitionRequest, BlueprintPlannerProgress, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
+
+export const DEFAULT_BLUEPRINT_OPTIMIZATIONS: BlueprintPlannerBlueprintOptimizations = Object.freeze({
+  reassignPorts: false, reassignConnections: false, rebuildLogistics: false, mergeBoundaryFacilities: false,
+});
 
 /** 识别请求没有产率计划；调用方须先区分任务阶段再读取 plan。 */
 export function isBlueprintRecognitionRequest(request: BlueprintPlannerTaskRequest): request is BlueprintPlannerBlueprintRecognitionRequest {

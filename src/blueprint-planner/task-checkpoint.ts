@@ -374,6 +374,12 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
 /** 识别任务尚无生产计划，参数校验与计划校验分开复用。 */
 export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): void {
   if (!options) throw new Error("计算参数无效。");
+  if (options.blueprintOptimizations !== undefined) {
+    const value = options.blueprintOptimizations;
+    const keys = ["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const;
+    if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== keys.length
+      || keys.some(key => typeof value[key] !== "boolean")) throw new Error("蓝图优化项目必须是四个明确的开关。");
+  }
   if (options.warehousePortPlacement !== undefined && !["any", "continuous", "full-side"].includes(options.warehousePortPlacement)) throw new Error("未知取货口摆放规则。");
   if (options.warehousePortPlacement === "full-side" && options.warehouseBus !== "straight") throw new Error("连续且占据一边要求存取线使用一面。");
   if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)

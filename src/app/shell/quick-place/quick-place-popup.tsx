@@ -16,7 +16,7 @@ import { runInAction } from "mobx";
 
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
-import { resolveEntityVariantName } from "@/shared/entity-variants";
+import { resolveEntityVariantName, resolveEntityCraftGroupKey } from "@/shared/entity-variants";
 import {
   QUICK_PLACE_FAVORITE_LIMIT,
   QUICK_PLACE_SLOT_SHORTCUTS,
@@ -99,23 +99,35 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     () => new Set(entries.map((entry) => entry.id)),
     [entries],
   );
+  const registeredEntityIds = useMemo(
+    () => new Set(appHost.workspace.registry.entityDefinitions.map((definition) => definition.id)),
+    [appHost],
+  );
   const favorites = normalizeQuickPlaceFavorites(
     appHost.internalState.workbench.quickPlaceFavoriteEntityIds,
-    availableEntityIds,
+    registeredEntityIds,
   );
   const entryById = useMemo(
     () => new Map(entries.map((entry) => [entry.id, entry])),
     [entries],
   );
-  const variantById = useMemo(() => new Map(entries.map((entry) => {
-    const variantName = resolveEntityVariantName(entry.definition);
-    return [
-      entry.id,
-      variantName === null
-        ? undefined
-        : appHost.workspace.registry.entityVariantDefinitions[variantName],
-    ] as const;
-  })), [appHost, entries]);
+  const variantById = useMemo(() => {
+    const countsByGroup = new Map<string, number>();
+    for (const entry of entries) {
+      const group = resolveEntityCraftGroupKey(entry.definition);
+      if (group !== null) countsByGroup.set(group, (countsByGroup.get(group) ?? 0) + 1);
+    }
+    return new Map(entries.map((entry) => {
+      const variantName = resolveEntityVariantName(entry.definition);
+      const group = resolveEntityCraftGroupKey(entry.definition);
+      return [
+        entry.id,
+        variantName === null || group === null || (countsByGroup.get(group) ?? 0) <= 1
+          ? undefined
+          : appHost.workspace.registry.entityVariantDefinitions[variantName],
+      ] as const;
+    }));
+  }, [appHost, entries]);
   const filteredEntries = useMemo(
     () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery),
     [entries, runtime.searchQuery],
@@ -214,9 +226,10 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   }
 
   const popupStyle = resolvePopupStyle(anchor.x, anchor.y);
-  const favoriteSlots = Array.from({ length: QUICK_PLACE_FAVORITE_LIMIT }, (_, index) =>
-    favorites[index] ?? null
-  );
+  const favoriteSlots = Array.from({ length: QUICK_PLACE_FAVORITE_LIMIT }, (_, index) => {
+    const id = favorites[index];
+    return id !== null && id !== undefined && availableEntityIds.has(id) ? id : null;
+  });
 
   // AI-REMOVED 2026-08-30:
   // Reason: 快速放置固定按键必须通过 GestureActionRouter 执行，避免组件内形成独立输入层和触发规则。
@@ -415,7 +428,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   function commitFavorites(nextFavorites: readonly (string | null)[]): void {
     runInAction(() => {
       appHost.internalState.workbench.quickPlaceFavoriteEntityIds =
-        normalizeQuickPlaceFavorites(nextFavorites, availableEntityIds);
+        normalizeQuickPlaceFavorites(nextFavorites, registeredEntityIds);
     });
   }
 

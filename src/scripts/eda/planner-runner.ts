@@ -23,7 +23,7 @@ import { createLayoutPreview, saveSuccessfulPlanning } from "./artifacts";
 // Human Review: Required
 // Original code:
 // import { createWorldDocument } from "@/domain/document/world-document";
-import { createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
+import { createPlannerPlacementRegistry, createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
 import { createEditorStateReadWrite } from "@/editor/state-impl";
 import { resolvePlacementValidations } from "@/editor/placement-validation";
 import { edaOutputPath } from "./artifact-paths";
@@ -157,9 +157,20 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
         generationMs = performance.now() - generationStart;
         if (performance.now() >= deadline) throw new PlanningBudgetExhausted();
         const verificationStart = performance.now();
-        workspace.registry.baseDefinitions = [...workspace.registry.baseDefinitions.filter(base => base.id !== "eda-batch-land"),
-          { id: "eda-batch-land", name: "空地", tag: "武陵", tags: ["武陵"], placeableArea: { width: 10000, height: 10000 },
-            outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+        // AI-REMOVED 2026-10-12:
+        // Reason: 虚构地图身份使结构化白名单验收失真，且不应修改原 Registry。
+        // Trigger: 用户授权修正 EDA 验收上下文，保留验收目标、断言和真实设备规则。
+        // Evidence: 新增白名单回归通过；旧场景使用未注册于设备白名单的临时地图 ID。
+        // Replacement: @/scripts/eda/placement-scene#createPlannerPlacementRegistry
+        // Risk: 临时几何只验收模板，实际地图落位仍须按真实几何检查。
+        // Human Review: Required
+        //
+        // Original code:
+        //         workspace.registry.baseDefinitions = [...workspace.registry.baseDefinitions.filter(base => base.id !== "eda-batch-land"),
+        //           { id: "eda-batch-land", name: "空地", tag: "武陵", tags: ["武陵"], placeableArea: { width: 10000, height: 10000 },
+        //             outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+        const validationRegistry = createPlannerPlacementRegistry(workspace.registry, candidate.execution.blueprint.baseId,
+          { width: 10000, height: 10000 });
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
 // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -175,8 +186,8 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
 //         const buses = candidate.execution.scene.externalEntities.filter(entity => entity.definitionId === "log_hongs_bus" || entity.definitionId === "log_hongs_bus_source");
 //         document.entities = { ...document.entities, ...Object.fromEntries(buses.map(entity => [entity.id, entity])) };
 //         document.entityOrder = [...document.entityOrder, ...buses.map(entity => entity.id)];
-        const document = createPlannerPlacementScene(workspace.registry, candidate.execution, "eda-batch-land");
-        const placements = resolvePlacementValidations({ document, workspace, state: createEditorStateReadWrite() });
+        const document = createPlannerPlacementScene(validationRegistry, candidate.execution);
+        const placements = resolvePlacementValidations({ document, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() });
         const placementErrors = Object.entries(placements).filter(([, value]) => !value.canPlace).map(([id]) => id);
         const report = await simulation.actions.runBlueprint({ ...candidate.execution,
           maxWallTimeMs: Math.min((options.verificationSeconds ?? 180) * 1000, deadline - performance.now()),

@@ -127,6 +127,29 @@ for (const profile of SCREEN_PROFILES) {
       await dialog.locator('[class*="boundaryMarker"]').first().click();
       assert(await dialog.locator('[class*="boundaryRow"]').first().getAttribute('data-selected') === 'true', '优化页标记未联动列表');
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "optimization-preview.png"))}});
+      // 2026-10-12：开发验证完成后补充回归，实际滚动与点击确认弹窗，验证短屏可操作区域。
+      await dialog.getByRole('button', {name:'开始规划',exact:true}).click();
+      const optimizations = page.getByRole('dialog', {name:'除了重新调整设备位置尝试紧凑布局外，是否可以尝试：',exact:true});
+      await optimizations.waitFor();
+      assert(await optimizations.getByRole('switch').count() === 4, '必须只有四个优化项目');
+      assert(!(await optimizations.innerText()).includes('供电'), '供电不能作为用户开关');
+      for (const control of await optimizations.getByRole('switch').all()) assert(!await control.isChecked(), '新任务优化项目默认关闭');
+      const merge = optimizations.getByRole('switch', {name:'合并输入、输出设施',exact:true});
+      await merge.scrollIntoViewIfNeeded();
+      await merge.check();
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.blueprintOptimizations.mergeBoundaryFacilities);
+      const frame = await optimizations.boundingBox(), toggle = await merge.boundingBox();
+      const confirm = await optimizations.getByRole('button', {name:'开始规划',exact:true}).boundingBox();
+      assert(frame && toggle && confirm && toggle.y >= frame.y && toggle.y + toggle.height <= frame.y + frame.height
+        && confirm.y >= frame.y && confirm.y + confirm.height <= frame.y + frame.height, '开关或确认按钮被短屏裁切');
+      await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "optimization-options.png"))}});
+      await optimizations.getByRole('button', {name:'取消',exact:true}).click();
+      const notStarted = await page.evaluate(() => { const h=window.__industrialPlannerAppHost;
+        return !h.workspace.blueprintPlanner.queries.getTask(h.blueprintPlannerDialog.viewTaskId).planningStarted; });
+      assert(notStarted, '取消确认不能启动规划');
+      await dialog.getByRole('button', {name:'开始规划',exact:true}).click();
+      assert(await merge.isChecked(), '重新打开应保留已保存的选择');
+      await optimizations.getByRole('button', {name:'取消',exact:true}).click();
       return {passed:true,taskId:restored.taskId};
     }`);
     expect(result).toMatchObject({ passed: true });

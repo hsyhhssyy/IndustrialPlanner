@@ -146,7 +146,7 @@ type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput,
-  "requiresPower" | "powerDemand" | "powerRange" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset"
+  "requiresPower" | "powerDemand" | "powerRange" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset" | "placementWhitelist"
 >>;
 
 const RECIPE_MACHINE_IDS = new Set(
@@ -178,6 +178,15 @@ function createLiquidPurifierOutputAcceptRule(
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const PRODUCER_TAG = "Producer";
+/** 显式地图资格；地区 tag 仅作为可搜索元数据保留。 */
+const WULING_PLACEMENT_WHITELIST = [
+  { baseId: "wuling_protocol_core" },
+  { baseId: "wuling_tianwangping_aid" },
+  { baseId: "wuling_heart_repair_station" },
+  { baseId: "stm_hongs_3" },
+  { baseId: "wuling_agricultural_land" },
+  { baseId: "draft_box" },
+] as const satisfies NonNullable<EntityDefinition["placementWhitelist"]>;
 const VAPORIZER_CONSUMPTION_ITEM_IDS = [
   "item_gas_acid",
   "item_gas_inert",
@@ -1148,6 +1157,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 8 } },
     uiGroup: "warehouse",
     displayOrder: 405,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "bus"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
@@ -1176,6 +1186,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 4 } },
     uiGroup: "warehouse",
     displayOrder: 406,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "bus"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
@@ -1279,6 +1290,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     },
     uiGroup: "advancedManufacturing",
     displayOrder: 606,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
@@ -2108,6 +2120,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/pipe_straight_1x1.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -2151,6 +2164,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/pipe_turn_cw_1x1.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -2194,6 +2208,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/pipe_turn_ccw_1x1.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -2238,6 +2253,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 202,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
@@ -2299,6 +2315,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 203,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
@@ -2369,6 +2386,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 201,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
@@ -2478,6 +2496,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //
     // Original code:
     // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -2615,6 +2634,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //
     // Original code:
     // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -2765,6 +2785,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 502,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "alter:furnance_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 5,
@@ -3040,6 +3061,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 509,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "alter:planter_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
@@ -3217,6 +3239,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 607,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 100,
@@ -3316,6 +3339,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 609,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [
       PRODUCER_TAG,
       "武陵",
@@ -3400,6 +3424,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 610,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [
       PRODUCER_TAG,
       "武陵",
@@ -3476,6 +3501,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 608,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
@@ -3528,6 +3554,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 611,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 20,
@@ -3617,6 +3644,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [
       PRODUCER_TAG,
       "武陵",
@@ -3742,6 +3770,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
     requiresPower: true,
     powerDemand: 50,
@@ -3851,6 +3880,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 614,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
@@ -3928,6 +3958,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 615,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [
       PRODUCER_TAG,
       "武陵",
@@ -4051,6 +4082,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 616,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
     requiresPower: true,
     powerDemand: 50,
@@ -4404,6 +4436,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     },
     uiGroup: "resourcePower",
     displayOrder: 301,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
@@ -4499,6 +4532,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 409,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -4610,6 +4644,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 410,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -4686,6 +4721,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 510,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
     powerDemand: 50,
@@ -4724,6 +4760,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     },
     uiGroup: "resourcePower",
     displayOrder: 305,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
@@ -4873,6 +4910,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "warehouse",
     displayOrder: 404,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -4928,6 +4966,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 411,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
@@ -5189,6 +5228,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: 0, y: -1, width: 1, height: 3 } },
     uiGroup: "pipeLogistics",
     displayOrder: 204,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -5332,6 +5372,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     displayOrder: 300,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },

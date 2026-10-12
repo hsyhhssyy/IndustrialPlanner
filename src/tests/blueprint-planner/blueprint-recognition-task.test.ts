@@ -9,6 +9,7 @@ import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planne
 import { blueprintRecognitionScene } from "@/blueprint-planner/blueprint-scene";
 import { parseRecognitionTaskFile, type BlueprintRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
 import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { DEFAULT_BLUEPRINT_OPTIMIZATIONS } from "@/shared/planner-task";
 import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
@@ -38,11 +39,14 @@ describe("持久蓝图识别任务", () => {
       await env.host.actions.identifyBlueprint(id);
       const initial = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
       expect(initial.progress.planningStarted).toBe(false);
+      expect(initial.request.options.blueprintOptimizations).toEqual(DEFAULT_BLUEPRINT_OPTIMIZATIONS);
       const request = initial.request;
       await expect(env.host.actions.updateBlueprintOptions(id, { ...request.options, converterStartup: "manual" })).rejects.toThrow("启动条件");
-      await env.host.actions.updateBlueprintOptions(id, { ...request.options, warehouseBus: "corner", warehousePortPlacement: "continuous" });
+      const blueprintOptimizations = { ...DEFAULT_BLUEPRINT_OPTIMIZATIONS, reassignPorts: true, rebuildLogistics: true };
+      await env.host.actions.updateBlueprintOptions(id, { ...request.options, warehouseBus: "corner", warehousePortPlacement: "continuous", blueprintOptimizations });
       const changed = parsePlannerTaskFile(env.host.queries.exportTask(id), env.workspace.registry);
       expect(changed.request.options).toMatchObject({ warehouseBus: "corner", warehousePortPlacement: "continuous" });
+      expect(changed.request.options.blueprintOptimizations).toEqual(blueprintOptimizations);
       expect(changed.checkpoint.blueprintBaseline!.report).toEqual(initial.checkpoint.blueprintBaseline!.report);
       expect(changed.request.blueprintSource).toEqual(request.blueprintSource);
       expect(changed.request.plan).toEqual(request.plan);
@@ -50,6 +54,7 @@ describe("持久蓝图识别任务", () => {
       expect(env.host.queries.getResult(id)?.metrics.area).toBe(150);
       const imported = await env.host.actions.importTask(env.host.queries.exportTask(id));
       expect(env.host.queries.getTask(imported)?.planningStarted).toBe(false);
+      expect(env.host.queries.getLastRequest(imported)?.options.blueprintOptimizations).toEqual(blueprintOptimizations);
       await env.host.actions.updateBlueprintOptions(imported, { ...env.host.queries.getLastRequest(imported)!.options, warehouseBus: "u-shaped" });
       expect(env.host.queries.getLastRequest(imported)?.options.warehouseBus).toBe("u-shaped");
       expect(() => env.host.actions.continuePlanning(imported, 1, 1, false)).toThrow("尝试次数");
@@ -58,6 +63,8 @@ describe("持久蓝图识别任务", () => {
       expect(env.host.queries.getTask(imported)?.planningStarted).toBe(true);
       env.host.actions.cancel(imported);
       await env.host.whenSettled();
+      await expect(env.host.actions.updateBlueprintOptions(imported, { ...env.host.queries.getLastRequest(imported)!.options,
+        blueprintOptimizations: DEFAULT_BLUEPRINT_OPTIMIZATIONS })).rejects.toThrow("首次开始规划");
       expect(env.host.queries.getTask(imported)).toMatchObject({ planningStarted: true, evaluatedProposals: 0 });
       const lockedOptions = env.host.queries.getLastRequest(imported)!.options;
       await expect(env.host.actions.updateBlueprintOptions(imported, { ...lockedOptions, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");

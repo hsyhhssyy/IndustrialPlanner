@@ -13,6 +13,7 @@ import { createPlainNode } from "@/blueprint-planner/placement";
 import { getPlannerPorts } from "@/blueprint-planner/geometry";
 import type { PlannerNetwork } from "@/blueprint-planner/model";
 import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION, restorePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { createPlannerPlacementRegistry } from "@/scripts/eda/placement-scene";
 import { runPlannerBatch } from "@/scripts/eda/planner-runner";
 import separator from "./fixtures/separator-core.json";
 
@@ -75,18 +76,28 @@ it("所有朝向与非整段边长的盒外存取线可施工、连续接源桩�
   const request = structuredClone(separator.request) as BlueprintPlannerRequest;
   const workspace: WorkspaceContract = { state: createWorkspaceState(), registry,
     app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
-  registry.baseDefinitions = [...registry.baseDefinitions, { id: "boundary-land", name: "空地", tag: "武陵", tags: ["武陵"],
-    placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+  // AI-REMOVED 2026-10-12:
+  // Reason: 虚构地图身份使结构化白名单验收失真，且不应修改原 Registry。
+  // Trigger: 用户授权修正 EDA 验收上下文，保留验收目标、断言和真实设备规则。
+  // Evidence: 新增白名单回归通过；旧场景使用未注册于设备白名单的临时地图 ID。
+  // Replacement: @/scripts/eda/placement-scene#createPlannerPlacementRegistry
+  // Risk: 临时几何只验收模板，实际地图落位仍须按真实几何检查。
+  // Human Review: Required
+  //
+  // Original code:
+  //   registry.baseDefinitions = [...registry.baseDefinitions, { id: "boundary-land", name: "空地", tag: "武陵", tags: ["武陵"],
+  //     placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+  const validationRegistry = createPlannerPlacementRegistry(registry, request.plan.sourceBaseId, { width: 1000, height: 1000 });
   for (const width of [3, 8, 11, 16]) for (const height of [3, 8, 13]) for (const mask of [1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11]) {
     const network: PlannerNetwork = { request, nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
     const boundary = new PlannerBoundary(registry, network, { width, height });
     const fixtures = boundary.fixtures(mask);
     const rects = fixtures.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
     for (const rect of rects) expect(areGridRectsIntersecting(rect, { x: 0, y: 0, width, height })).toBe(false);
-    const document = createWorldDocument({ baseId: "boundary-land" });
+    const document = createWorldDocument({ baseId: request.plan.sourceBaseId });
     const entities = fixtures.map(entity => ({ ...entity, position: { x: entity.position.x + 20, y: entity.position.y + 20 } }));
     document.entities = Object.fromEntries(entities.map(entity => [entity.id, entity])); document.entityOrder = entities.map(entity => entity.id);
-    const invalid = Object.entries(resolvePlacementValidations({ document, workspace, state: createEditorStateReadWrite() }))
+    const invalid = Object.entries(resolvePlacementValidations({ document, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() }))
       .filter(([, result]) => !result.canPlace);
     expect(invalid, `${width}×${height} mask=${mask}`).toEqual([]);
   }

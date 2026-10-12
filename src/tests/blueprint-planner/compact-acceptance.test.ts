@@ -13,7 +13,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 // Human Review: Required
 // Original code:
 // import { createWorldDocument } from "@/domain/document/world-document";
-import { createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
+import { createPlannerPlacementRegistry, createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { resolvePlacementValidations } from "@/editor/placement-validation";
@@ -62,8 +62,18 @@ it.each([
 //     expect([candidate.metrics.width, candidate.metrics.height]).toEqual([actualWidth, actualHeight]);
     expect([candidate.metrics.width, candidate.metrics.height]).toEqual([width, height]);
     expect(candidate.metrics.area).toBe(width * height);
-    registry.baseDefinitions = [...registry.baseDefinitions, { id: "compact-validation-land", name: "空地", tag: "武陵", tags: ["武陵"],
-      placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+    // AI-REMOVED 2026-10-12:
+    // Reason: 虚构地图身份使结构化白名单验收失真，且不应修改原 Registry。
+    // Trigger: 用户授权修正 EDA 验收上下文，保留验收目标、断言和真实设备规则。
+    // Evidence: 新增白名单回归通过；旧场景使用未注册于设备白名单的临时地图 ID。
+    // Replacement: @/scripts/eda/placement-scene#createPlannerPlacementRegistry
+    // Risk: 临时几何只验收模板，实际地图落位仍须按真实几何检查。
+    // Human Review: Required
+    //
+    // Original code:
+    //     registry.baseDefinitions = [...registry.baseDefinitions, { id: "compact-validation-land", name: "空地", tag: "武陵", tags: ["武陵"],
+    //       placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [] }];
+    const validationRegistry = createPlannerPlacementRegistry(registry, blueprint.baseId, { width: 1000, height: 1000 });
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
 // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -74,8 +84,8 @@ it.each([
 // Original code:
 //     const document = createWorldDocument({ baseId: "compact-validation-land" });
 //     Object.assign(document, { entities: blueprint.entities, entityOrder: blueprint.entityOrder, slotLinks: blueprint.slotLinks });
-    const document = createPlannerPlacementScene(registry, candidate.execution, "compact-validation-land");
-    const validations = resolvePlacementValidations({ document, workspace, state: createEditorStateReadWrite() });
+    const document = createPlannerPlacementScene(validationRegistry, candidate.execution);
+    const validations = resolvePlacementValidations({ document, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() });
     expect(Object.entries(validations).filter(([, result]) => !result.canPlace)).toEqual([]);
     expect(report.status).toBe("completed");
     expect(report.engineKind).toBe("dense-v2");

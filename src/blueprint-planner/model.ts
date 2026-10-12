@@ -29,6 +29,8 @@ export interface PlannerNode {
 }
 
 export interface PlannerNetwork {
+  /** 仅中间布局可延后补电；完整交付种子清除此标记。 */
+  readonly deferPowerPlacement?: boolean;
   readonly request: BlueprintPlannerRequest;
   readonly nodes: PlannerNode[];
   readonly slotLinks: SlotLinkDefinition[];

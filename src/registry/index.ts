@@ -4,6 +4,7 @@ import { RegistryContract } from "@/domain/registry/registry-contract"
 import type { ItemDefinition } from "@/domain/registry/types/item-definition"
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition"
 import { WIKI_DEFAULT_CRAFT_RECIPE_TAG } from "@/shared/registry/recipe-visibility"
+import { validateEntityPlacementWhitelists } from "@/shared/entity-placement-whitelist"
 
 import { BASE_DEFINITIONS } from "./base-definition"
 import { ENTITY_DEFINITIONS } from "./entity-definition"
@@ -70,6 +71,7 @@ function validateWikiDefaultCraftDefinitions(
 export const createRegistryContract = (): RegistryContract => {
     const baseDefinitions = [...BASE_DEFINITIONS]
     const entityDefinitions = [...ENTITY_DEFINITIONS]
+    validateEntityPlacementWhitelists(entityDefinitions, baseDefinitions)
     const entityVariantDefinitions = { ...ENTITY_VARIANT_DEFINITIONS }
     const itemDefinitions = [...ITEM_DEFINITIONS]
     validateItemFluidColors(itemDefinitions)

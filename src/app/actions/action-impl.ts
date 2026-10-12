@@ -547,6 +547,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.activePanel = panel;
 
     if (panel !== null) {
+      this.setLeftDockSuppressed(false);
       this.setLeftDockOpen(true);
     }
   });

@@ -10,7 +10,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 // Human Review: Required
 // Original code:
 // import { createWorldDocument } from "@/domain/document/world-document";
-import { createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
+import { createPlannerPlacementRegistry, createPlannerPlacementScene } from "@/scripts/eda/placement-scene";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
@@ -59,10 +59,21 @@ describe("EDA 固定生产方案", () => {
       const deadline = performance.now() + 90_000;
       const candidate = await createPlannerCandidate(workspace.registry, request, variant,
         () => { if (performance.now() >= deadline) throw new Error("布局验证超时"); }, () => {});
-      workspace.registry.baseDefinitions = [...workspace.registry.baseDefinitions, {
-        id: "eda-validation-land", name: "空地校验", tag: "武陵", tags: ["武陵"],
-        placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [],
-      }];
+      // AI-REMOVED 2026-10-12:
+      // Reason: 虚构地图身份使结构化白名单验收失真，且不应修改原 Registry。
+      // Trigger: 用户授权修正 EDA 验收上下文，保留验收目标、断言和真实设备规则。
+      // Evidence: 新增白名单回归通过；旧场景使用未注册于设备白名单的临时地图 ID。
+      // Replacement: @/scripts/eda/placement-scene#createPlannerPlacementRegistry
+      // Risk: 临时几何只验收模板，实际地图落位仍须按真实几何检查。
+      // Human Review: Required
+      //
+      // Original code:
+      //       workspace.registry.baseDefinitions = [...workspace.registry.baseDefinitions, {
+      //         id: "eda-validation-land", name: "空地校验", tag: "武陵", tags: ["武陵"],
+      //         placeableArea: { width: 1000, height: 1000 }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 }, builtinEntities: [],
+      //       }];
+      const validationRegistry = createPlannerPlacementRegistry(workspace.registry, candidate.execution.blueprint.baseId,
+        { width: 1000, height: 1000 });
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
 // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -79,8 +90,8 @@ describe("EDA 固定生产方案", () => {
 //       const buses = candidate.execution.scene.externalEntities.filter(entity => entity.definitionId === "log_hongs_bus" || entity.definitionId === "log_hongs_bus_source");
 //       document.entities = { ...document.entities, ...Object.fromEntries(buses.map(entity => [entity.id, entity])) };
 //       document.entityOrder = [...document.entityOrder, ...buses.map(entity => entity.id)];
-      const document = createPlannerPlacementScene(workspace.registry, candidate.execution, "eda-validation-land");
-      const placement = resolvePlacementValidations({ document, workspace, state: createEditorStateReadWrite() });
+      const document = createPlannerPlacementScene(validationRegistry, candidate.execution);
+      const placement = resolvePlacementValidations({ document, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() });
       expect(Object.entries(placement).filter(([, result]) => !result.canPlace)).toEqual([]);
       // 取货口必须只凭交付蓝图配置持续供料，不能依赖验证场景覆盖库存来掩盖导出缺失。
       const report = await host.actions.runBlueprint({ ...candidate.execution, maxWallTimeMs: 240_000,

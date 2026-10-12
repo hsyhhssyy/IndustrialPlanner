@@ -3073,7 +3073,8 @@ describe("createEditorHost", () => {
       // Human Review: Required
       // Original code:
       // [initialDraft]
-      editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definition }));
+      // AI-CORRECTION 2026-10-12: 固定旋转场景按稳定设备 ID 匹配，避免 Registry 新字段改变夹具身份。
+      editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definitionId: definition.id }));
       editorHost.internalState.collections.preview.replace([initialDraft.id]);
 
       for (let step = 0; step < 4; step += 1) {

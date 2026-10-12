@@ -379,6 +379,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   // } | null>(null);
   // const openedByLongPressRef = useRef(false);
   const t = appHost.actions.translate;
+  const baseId = useEditorDocumentSnapshot(appHost.workspace.editor, selectDocumentBaseId, Object.is);
   const entityVariant = button.entityVariant;
   const craftGroupKey = button.craftGroupKey;
   const variantDefinitions = button.variantDefinitions ?? [];
@@ -388,6 +389,9 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     && craftGroupKey !== undefined
     && variantDefinitions.length > 1;
   const isMenuOpen = canOpenVariantMenu && menuAnchor !== null;
+  useEffect(() => {
+    setMenuAnchor(null);
+  }, [baseId]);
   const variantLongName = entityVariant === undefined
     ? null
     : t(entityVariant.longNameKey);

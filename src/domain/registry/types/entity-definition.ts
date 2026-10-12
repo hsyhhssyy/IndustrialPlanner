@@ -5,6 +5,7 @@ import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 import type { EntitySimulationBehaviorDeclaration } from "./entity-simulation-behavior";
 import type { DeviceSpriteAnimationDefinition } from "./device-sprite-animation";
+import type { EntityPlacementWhitelistEntry } from "./entity-placement-whitelist";
 // AI-REMOVED 2026-08-19:
 // Reason: EntityDefinition 不再持有按 SimulationMode 覆盖的 Registry 配置类型。
 // Trigger: 用户要求删除 simulationModeConfigs 及其基础设施。
@@ -91,7 +92,10 @@ export interface EntityDefinition {
   displayOrder: number;
   /** 语义标签，如 "BeltFamily"（传送带族）、"武陵"（场景限定） */
   /** AI-CORRECTION 2026-07-27: 物流族分类统一通过 RegistryQuery，不再使用 BeltFamily / PipeFamily tag。 */
+  /** AI-CORRECTION 2026-10-12: 地区标签仅保留搜索等元数据用途；地图与区域资格只由 placementWhitelist 决定。 */
   tags: string[];
+  /** 未声明时不限制地图和区域；空数组禁止所有地图。 */
+  readonly placementWhitelist?: readonly EntityPlacementWhitelistEntry[];
 
   // ---- 电力 ----
   /**

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "38c2188c-8727-4e08-a4bf-e34fa256413b",
+  "version": "1",
+  "name": "设备地图白名单界面回归",
+  "description": "空场景用于设备面板与变体菜单；基地内置实体由正式装载规则管理。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": { "x": 0, "y": 0 },
+  "entities": {},
+  "entityOrder": [],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-12T00:00:00.000Z",
+  "updatedAt": "2026-10-12T00:00:00.000Z"
+}

@@ -43,7 +43,16 @@ export interface BlueprintPlannerItemPolicy {
   readonly byproducts?: "destroy" | "output";
 }
 
+/** 原图优化的额外授权；主体设备、配方和产率基线始终保留。 */
+export interface BlueprintPlannerBlueprintOptimizations {
+  readonly reassignPorts: boolean;
+  readonly reassignConnections: boolean;
+  readonly rebuildLogistics: boolean;
+  readonly mergeBoundaryFacilities: boolean;
+}
+
 export interface BlueprintPlannerOptions {
+  readonly blueprintOptimizations?: BlueprintPlannerBlueprintOptimizations;
   readonly itemPolicies?: readonly BlueprintPlannerItemPolicy[];
   readonly solidSupply: "external" | "warehouse";
   readonly fluidSupply: "external" | "conduit";

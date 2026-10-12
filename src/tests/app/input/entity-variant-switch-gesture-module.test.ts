@@ -9,7 +9,7 @@ import {
 } from "@/app/input/gesture/actions";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { WorldEntity } from "@/domain/document/world-document";
+import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createRegistryContract } from "@/registry";
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
@@ -110,6 +110,8 @@ function createContext(options: {
   };
   const registry = createRegistryContract();
   const editor: MockEditor = {
+    // AI-CORRECTION 2026-10-12: 地图资格不再允许未知文档；旧路由布景显式提供已加载地图的完整快照。
+    document: { getSnapshot: () => createWorldDocument({ baseId: "wuling_protocol_core" }) },
     state: {
       collections: {
         [EntityCollectionType.selection]: selection,
@@ -194,6 +196,7 @@ type MockCollection = string[] & {
 };
 
 type MockEditor = {
+  document: Pick<EditorContract["document"], "getSnapshot">;
   state: Pick<EditorContract["state"], "collections">;
   actions: Pick<EditorContract["actions"], "replaceEntityDefinition">;
   queries: Pick<EditorContract["queries"], "getEntityById">;

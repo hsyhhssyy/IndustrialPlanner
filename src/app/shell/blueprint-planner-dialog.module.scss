@@ -145,3 +145,17 @@ Original code:
 .compact .identificationBody { grid-template-columns: minmax(0, 1.2fr) minmax(170px, 1fr); gap: 8px; }
 
 .compact .previewFrame { height: min(220px, calc(100dvh - 190px)); min-height: max(140px, var(--boundary-label-min-height, 0px)); }
+.optimizationBody { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.optimizationChoices { overflow: auto; min-height: 0; padding: 4px 18px; }
+.optimizationChoice { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.optimizationChoice strong { display: block; font-size: 14px; }
+.optimizationChoice small { display: block; margin-top: 5px; color: var(--text-1); line-height: 1.5; }
+.optimizationChoice input { appearance: none; flex: 0 0 40px; width: 40px; height: 24px; margin: 0; padding: 3px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); cursor: pointer; }
+.optimizationChoice input::before { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-1); transition: transform 120ms; }
+.optimizationChoice input:checked { background: var(--accent-strong); }
+.optimizationChoice input:checked::before { transform: translateX(16px); background: white; }
+.optimizationChoice input:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+.optimizationChoice input:disabled { opacity: .5; cursor: wait; }
+.optimizationActions { display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; padding: 12px 18px; }
+.optimizationActions button { padding: 7px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); color: var(--text-0); cursor: pointer; }
+.optimizationActions button:last-child { background: var(--accent-strong); color: white; }

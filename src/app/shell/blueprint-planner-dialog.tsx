@@ -1,4 +1,4 @@
-import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 // AI-REMOVED 2026-10-03: Reason: 全局选项字段收敛后无须 BlueprintPlannerOptions。Trigger: 逐物品配置。
 // Evidence: OPTION_FIELDS 仅保留两项。Replacement: 字段字面量。Risk: Low。Human Review: Required
 // Original code: import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
@@ -166,6 +166,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
+  const [optimizationTaskId, setOptimizationTaskId] = useState<string | null>(null);
+  const optimizationDialogState = useMemo(() => createDefaultDialogStateForKey("eda-blueprint-optimizations"), []);
   const [recentRate, setRecentRate] = useState<ReturnType<typeof samplePlannerProposalRate>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedId = controller.viewTaskId;
@@ -322,6 +324,56 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     onOffsetChange={controller.setOffset} onResize={compact ? undefined : controller.setSize}
     compactMobileLayout={compact} immersiveMaximized={controller.dialogState.maximized && appHost.state.screenProfile.deviceClass !== "desktop"}
     shellStyle={controller.dialogState.width === null ? { width: "min(1080px, 100%)", height: "min(760px, 100%)" } : undefined}>
+    <DialogShell dialogKey="eda-blueprint-optimizations"
+      dialogState={{ ...optimizationDialogState, visible: optimizationTaskId !== null && optimizationTaskId === selectedId && !planningStarted }}
+      title={t("eda.optimizationsTitle")} titleId="eda-optimizations-title" closeTitle={t("action.close")}
+      maximizeTitle="" restoreTitle="" showMaximizeButton={false}
+      shellStyle={{ width: "min(680px, 100%)", height: "auto", minHeight: 0, maxHeight: "100%" }}
+      bodyClassName={styles.optimizationBody} onClose={() => setOptimizationTaskId(null)} onToggleMaximized={() => {}}>
+      <div className={styles.optimizationChoices}>
+        {(["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const).map(key => <label key={key} className={styles.optimizationChoice}>
+          <span><strong>{t(`eda.optimization.${key}`)}</strong><small id={`eda-${key}-description`}>{t(`eda.optimization.${key}.description`)}</small></span>
+          <input type="checkbox" role="switch" aria-label={t(`eda.optimization.${key}`)} aria-describedby={`eda-${key}-description`}
+            checked={(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS)[key]} disabled={busy}
+            onChange={event => {
+              const checked = event.currentTarget.checked;
+              act(async () => {
+                if (!planner || !selectedId || planningStarted || busy) return;
+                setFileBusy(true);
+                const previous = toJS(controller.options);
+                try {
+                  const options = { ...toJS(controller.options), blueprintOptimizations: {
+                    ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS), [key]: checked,
+                  } };
+                  controller.updateOptions(options);
+                  await planner.actions.updateBlueprintOptions(selectedId, options);
+                  if (controller.viewTaskId === selectedId) controller.updateOptions(options);
+                } catch (failure) {
+                  if (controller.viewTaskId === selectedId) controller.updateOptions(previous);
+                  throw failure;
+                } finally { setFileBusy(false); }
+              });
+            }} />
+        </label>)}
+      </div>
+      {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
+      <div className={styles.optimizationActions}>
+        <button type="button" onClick={() => setOptimizationTaskId(null)}>{t("action.cancel")}</button>
+        <button type="button" disabled={busy || !validRoundSettings || invalidWarehouseSupply} onClick={() => act(async () => {
+          if (!planner || !selectedId || selectedId !== optimizationTaskId || busy || planningStarted) return;
+          setFileBusy(true);
+          try {
+            const options = { ...toJS(controller.options), blueprintOptimizations: {
+              ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS),
+            } };
+            await planner.actions.updateBlueprintOptions(selectedId, options);
+            controller.updateOptions(options);
+            setOptimizationTaskId(null);
+            await planner.actions.continuePlanning(selectedId, options.evaluationsPerRound, options.concurrency, options.gpu);
+          } finally { setFileBusy(false); }
+        })}>{t("eda.start")}</button>
+      </div>
+    </DialogShell>
     <div className={`${styles.content} ${compact ? styles.compact : ""}`}>
       <aside className={styles.history} aria-label={t("eda.history")}>
         <strong>{t("eda.history")}</strong>
@@ -538,8 +590,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               onClick={() => act(controller.duplicateTask)}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
-              onClick={() => act(() => planner?.actions.continuePlanning(progress.taskId,
-                controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu))}>{t(planningStarted ? "eda.continue" : "eda.start")}</button> : null}
+              onClick={() => {
+                if (controller.blueprintRequest && !planningStarted) setOptimizationTaskId(progress.taskId);
+                else act(() => planner?.actions.continuePlanning(progress.taskId,
+                  controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu));
+              }}>{t(planningStarted ? "eda.continue" : "eda.start")}</button> : null}
             {result !== null ? <>
               <button type="button" onClick={() => {
                 appHost.blueprintPreview.open({ ...result.blueprint, parentFolderId: result.folderId }, { canDelete: false });

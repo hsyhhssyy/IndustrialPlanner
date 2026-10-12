@@ -22,7 +22,17 @@ import {
 import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
-import { BASE_AREA_ONLY_TAG_PREFIX, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
+// AI-REMOVED 2026-10-12:
+// Reason: 地图和区域标签规则退役。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 统一结构化资格与完整占地。
+// Replacement: resolveEntityPlacementAreas 导入
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+// import { BASE_AREA_ONLY_TAG_PREFIX, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
+import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
@@ -185,15 +195,30 @@ export function resolvePlacementValidations(options: {
     registry: options.workspace.registry,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
-  applyBaseAreaOnlyReasons({
+// AI-REMOVED 2026-10-12:
+// Reason: 两种标签校验收敛为一次白名单校验。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 支持多个地图与区域任选。
+// Replacement: applyPlacementWhitelistReasons
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+//   applyBaseAreaOnlyReasons({
+//     entries,
+//     document: options.document,
+//     registry: options.workspace.registry,
+//     reasonsByEntityId: mutableReasonsByEntityId,
+//   });
+//   applyBaseOnlyReasons({
+//     entries,
+//     document: options.document,
+//     reasonsByEntityId: mutableReasonsByEntityId,
+//   });
+  applyPlacementWhitelistReasons({
     entries,
     document: options.document,
     registry: options.workspace.registry,
-    reasonsByEntityId: mutableReasonsByEntityId,
-  });
-  applyBaseOnlyReasons({
-    entries,
-    document: options.document,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
   // AI-REMOVED 2026-09-16:
@@ -489,42 +514,74 @@ function applyInsideBaseForbiddenReasons(options: {
   }
 }
 
-function applyBaseOnlyReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) continue;
-    if (!matchesEntityBaseOnlyTag(entry.definition.tags, options.document.baseId)) {
-      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
-    }
-  }
-}
+// AI-REMOVED 2026-10-12:
+// Reason: 地图与区域限制改用设备白名单，并在同一允许区域内检查完整占地。
+// Trigger: 用户确认设备地图与区域白名单重构。
+// Evidence: 复用 resolveBaseAreas；核心限定仍依据 cannot-be-placed-outside-base。
+// Replacement: applyPlacementWhitelistReasons
+// Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+// Human Review: Required
+//
+// Original code:
+// function applyBaseOnlyReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+//     if (!matchesEntityBaseOnlyTag(entry.definition.tags, options.document.baseId)) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
+//
+// function applyBaseAreaOnlyReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: WorkspaceContract["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const baseDefinition = resolveCurrentBaseDefinition({
+//     baseId: options.document.baseId,
+//     registry: options.registry,
+//   });
+//   if (baseDefinition === null) return;
+//
+//   const areas = resolveBaseAreas(baseDefinition);
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+//     const areaTag = entry.definition.tags.find((tag) =>
+//       tag.startsWith(BASE_AREA_ONLY_TAG_PREFIX)
+//     );
+//     if (areaTag === undefined) continue;
+//     const requiredAreaId = areaTag.slice(BASE_AREA_ONLY_TAG_PREFIX.length);
+//     const requiredArea = areas.find((area) => area.id === requiredAreaId);
+//     if (requiredArea === undefined
+//       || !isGridRectContainedBy(requiredArea.outerRect, entry.gridRect)) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
+//
 
-function applyBaseAreaOnlyReasons(options: {
+function applyPlacementWhitelistReasons(options: {
   entries: readonly PlacementValidationEntry[];
   document: WorldDocument;
   registry: WorkspaceContract["registry"];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
 }): void {
-  const baseDefinition = resolveCurrentBaseDefinition({
-    baseId: options.document.baseId,
-    registry: options.registry,
-  });
-  if (baseDefinition === null) return;
-
-  const areas = resolveBaseAreas(baseDefinition);
+  const base = resolveCurrentBaseDefinition({ baseId: options.document.baseId, registry: options.registry });
+  const areas = base === null ? [] : resolveBaseAreas(base);
   for (const entry of options.entries) {
     if (isBaseBuiltinEntityId(entry.entity.id)) continue;
-    const areaTag = entry.definition.tags.find((tag) =>
-      tag.startsWith(BASE_AREA_ONLY_TAG_PREFIX)
+    const allowedAreas = base === null ? [] : resolveEntityPlacementAreas(entry.definition, base, areas);
+    const coreOnly = entry.definition.placementBehaviors.some((behavior) =>
+      behavior.type === PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
     );
-    if (areaTag === undefined) continue;
-    const requiredAreaId = areaTag.slice(BASE_AREA_ONLY_TAG_PREFIX.length);
-    const requiredArea = areas.find((area) => area.id === requiredAreaId);
-    if (requiredArea === undefined
-      || !isGridRectContainedBy(requiredArea.outerRect, entry.gridRect)) {
+    if (!allowedAreas.some((area) =>
+      isGridRectContainedBy(coreOnly ? area.placeableRect : area.outerRect, entry.gridRect),
+    )) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }

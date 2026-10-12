@@ -4,6 +4,7 @@ import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placemen
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
+import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { rotateGridEdge } from "@/shared/geometry/port";
 
 export type OuterRingEdgeSnapEdge = "top" | "right" | "bottom" | "left";
@@ -105,7 +106,8 @@ export function resolveOuterRingEdgeSnap(options: {
   const edges = options.preferredEdge === undefined || options.preferredEdge === null
     ? OUTER_RING_EDGE_SNAP_EDGES
     : [options.preferredEdge];
-  const candidates = resolveBaseAreas(options.baseDefinition).flatMap((area) =>
+  const allowedAreas = resolveEntityPlacementAreas(options.definition, options.baseDefinition, resolveBaseAreas(options.baseDefinition));
+  const candidates = allowedAreas.flatMap((area) =>
     edges.flatMap((edge) => {
       const candidate = resolveOuterRingEdgeSnapCandidate({
         definition: options.definition,
@@ -150,7 +152,8 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     options.definition.footprint,
     options.rotation,
   );
-  const currentArea = resolveBaseAreas(options.baseDefinition).map((area) => {
+  const allowedAreas = resolveEntityPlacementAreas(options.definition, options.baseDefinition, resolveBaseAreas(options.baseDefinition));
+  const currentArea = allowedAreas.map((area) => {
     const geometry: OuterRingSnapGeometry = {
       outerRect: area.outerRect,
       edgeDepths: area.outerRing,

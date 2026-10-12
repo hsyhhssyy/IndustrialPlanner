@@ -169,6 +169,7 @@ export class CompactLayoutSearch {
       lanes.set(key, [...(lanes.get(key) ?? []), index]);
     });
     this.parallelLanes = [...lanes.values()].filter(group => group.length > 1
+      && (!network.request.blueprintSource || !network.request.options.blueprintOptimizations || network.request.options.blueprintOptimizations.reassignPorts)
       && !group.some(index => fixedNodeIds.has(wires[index]!.target.entityId)));
     this.localTerminals = network.nodes.flatMap((node, terminal) => {
       const parent = indices.get(node.supplyTarget?.entityId ?? node.outputSource?.entityId ?? "");
@@ -470,7 +471,7 @@ export class CompactLayoutSearch {
       geometry[start + 40] = Number(this.fixedNodeIds.has(node.entity.id));
       geometry[start + 41] = noNear?.type === "no-near-same-entity" ? noNear.range : 0;
       geometry[start + 42] = definitions.indexOf(node.definition.id);
-      geometry[start + 43] = Number(!!this.network.request.blueprintSource && node.definition.requiresPower);
+      geometry[start + 43] = Number(!!this.network.request.blueprintSource && !this.network.deferPowerPlacement && node.definition.requiresPower);
       const power = resolvePowerRangeGridRect({ entity, definition: node.definition });
       if (power) [Math.floor(power.x), Math.floor(power.y), Math.ceil(power.x + power.width) - Math.floor(power.x), Math.ceil(power.y + power.height) - Math.floor(power.y)].forEach((value, at) => geometry[start + 44 + at] = value);
       const gas = node.recipe?.gasDiffusionOutput;
@@ -1158,24 +1159,47 @@ export class CompactLayoutSearch {
     // const unpowered = powered.length === 0 ? 0 : this.network.nodes.filter((node, index) => node.definition.requiresPower && !powered.some(range => areGridRectsIntersecting(range, rects[index]!))).length;
     // 2026-10-10：原图已有供电设施参与摆位，覆盖缺口必须进入搜索，而不能只在布线前拒绝。
     // 生成模式继续由 placePower 在布线后创建供电；这里不把尚未生成的设施当成缺电。
-    let power = 0;
-    if (this.network.request.blueprintSource) {
-      const ranges = this.network.nodes.flatMap((node, index) => {
-        const range = resolvePowerRangeGridRect({ entity: { ...node.entity, position: this.poses[index]!, rotation: this.poses[index]!.rotation }, definition: node.definition });
-        return range ? [{ index, range }] : [];
-      });
-      for (const [index, node] of this.network.nodes.entries()) {
-        if (!node.definition.requiresPower || ranges.some(({ range }) => areGridRectsIntersecting(range, rects[index]!))) continue;
-        const box = rects[index]!;
-        const distances = ranges.map(({ index: provider, range }) => ({ provider, distance:
-          Math.max(0, range.x - box.x - box.width + 1, box.x - range.x - range.width + 1)
-          + Math.max(0, range.y - box.y - box.height + 1, box.y - range.y - range.height + 1) }));
-        distances.sort((a, b) => a.distance - b.distance);
-        const nearest = distances[0];
-        power += nearest?.distance ?? 1;
-        record?.("power-coverage", nearest?.distance ?? 1, nearest ? [index, nearest.provider] : [index], box);
-      }
-    }
+    // AI-REMOVED 2026-10-12:
+    // Reason: 供电是最终布局的派生设施，原图供电数量不再限制布局。
+    // Trigger: 用户要求供电默认重建，无需开关。
+    // Evidence: 原图供电覆盖惩罚会提前排除合法的新桩位组合。
+    // Replacement: blueprint-candidate.ts 的 support.placePower。
+    // Risk: 无合法桩位的候选仍被拒绝。Human Review: Required
+    // Original code:
+    //     let power = 0;
+    //     if (this.network.request.blueprintSource) {
+    //       const ranges = this.network.nodes.flatMap((node, index) => {
+    //         const range = resolvePowerRangeGridRect({ entity: { ...node.entity, position: this.poses[index]!, rotation: this.poses[index]!.rotation }, definition: node.definition });
+    //         return range ? [{ index, range }] : [];
+    //       });
+    //       for (const [index, node] of this.network.nodes.entries()) {
+    //         if (!node.definition.requiresPower || ranges.some(({ range }) => areGridRectsIntersecting(range, rects[index]!))) continue;
+    //         const box = rects[index]!;
+    //         const distances = ranges.map(({ index: provider, range }) => ({ provider, distance:
+    //           Math.max(0, range.x - box.x - box.width + 1, box.x - range.x - range.width + 1)
+    //           + Math.max(0, range.y - box.y - box.height + 1, box.y - range.y - range.height + 1) }));
+    //         distances.sort((a, b) => a.distance - b.distance);
+    //         const nearest = distances[0];
+    //         power += nearest?.distance ?? 1;
+    //         record?.("power-coverage", nearest?.distance ?? 1, nearest ? [index, nearest.provider] : [index], box);
+    //       }
+    //     }
+    // AI-CORRECTION 2026-10-12：只有明确等待补电的中间布局延后检查；完整网表必须继续验证覆盖。
+    const checkPower = this.network.request.blueprintSource && !this.network.deferPowerPlacement;
+    const powerRanges = checkPower ? this.network.nodes.flatMap((node, index) => {
+      const range = resolvePowerRangeGridRect({ entity: { ...node.entity, position: this.poses[index]!, rotation: this.poses[index]!.rotation }, definition: node.definition });
+      return range ? [{ provider: index, range }] : [];
+    }) : [];
+    const power = checkPower ? this.network.nodes.reduce((total, node, index) => {
+      const box = rects[index]!;
+      if (!node.definition.requiresPower || powerRanges.some(({ range }) => areGridRectsIntersecting(range, box))) return total;
+      const nearest = powerRanges.map(({ provider, range }) => ({ provider, distance:
+        Math.max(0, range.x - box.x - box.width + 1, box.x - range.x - range.width + 1)
+        + Math.max(0, range.y - box.y - box.height + 1, box.y - range.y - range.height + 1) }))
+        .sort((left, right) => left.distance - right.distance)[0];
+      record?.("power-coverage", nearest?.distance ?? 1, nearest ? [index, nearest.provider] : [index], box);
+      return total + (nearest?.distance ?? 1);
+    }, 0) : 0;
     return { cost: wireCost + congestion * this.profile.congestionWeight + overflow * this.profile.overflowWeight + maxX * maxY * this.profile.areaWeight + violations * 100 + disconnected * 100 + power * 100,
       wireLength, feasible: overflow === 0 && violations === 0 && disconnected === 0 && power === 0,
       conflicts: { geometry: violations, power, boundary: overflow, connections: disconnected } };

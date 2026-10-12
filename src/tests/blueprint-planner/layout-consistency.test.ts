@@ -150,4 +150,6 @@ it("原图完整布局检查拒绝失去供电覆盖，生成模式仍允许布�
   const stats = statistics();
   expect(await new CompactLayoutSearch(registry, { ...network, request: imported }, [], stats).advance(0, () => {})).toBe(false);
   expect(stats.remainingConflicts?.power).toBeGreaterThan(0);
+  expect(await new CompactLayoutSearch(registry, { ...network, request: imported, deferPowerPlacement: true }, [], statistics())
+    .advance(0, () => {})).toBe(true);
 });

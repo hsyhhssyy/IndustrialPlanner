@@ -1,4 +1,4 @@
-import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { makeAutoObservable, observable, toJS } from "mobx";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
@@ -21,7 +21,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
   return {
     warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
     solidOutput: "auto", byproducts: "destroy", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
-    itemPolicies: [],
+    itemPolicies: [], blueprintOptimizations: { ...DEFAULT_BLUEPRINT_OPTIMIZATIONS },
   };
 }
 

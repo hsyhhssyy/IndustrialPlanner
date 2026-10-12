@@ -13,6 +13,8 @@ import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-c
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
+import { cleanupPlacementDraft } from "@/app/input";
+import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
 // AI-REMOVED 2026-08-23:
 // Reason: 手机旋转不再自动请求全屏，Workbench 只负责把用户点击失败转交给 PWA 引导。
@@ -961,6 +963,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     return editor.document.subscribe((document) => {
       if (document.baseId === currentBaseId) return;
       currentBaseId = document.baseId;
+      if (appHost.internalState.activeTool === "single-placement") {
+        const deviceId = appHost.internalState.runtime.singlePlacementDeviceId;
+        const definition = appHost.workspace.registry.entityDefinitions.find((entry) => entry.id === deviceId);
+        if (definition === undefined || !canPlaceEntityDefinitionInCurrentBase(appHost, definition)) {
+          cleanupPlacementDraft(appHost);
+          appHost.internalActions.setActiveTool("select");
+        }
+      }
       const selection = appHost.internalState.toolInfo.darkPipeLink;
       if (selection === null) return;
 

@@ -44,6 +44,18 @@ import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
+import { createWorldDocument } from "@/domain/document/world-document";
+
+const placementEditors = new Set<ReturnType<typeof createEditorHost>>();
+
+async function createPlacementWorkspace(): Promise<WorkspaceContract> {
+  const workspace = createWorkspace();
+  const editor = createEditorHost(workspace);
+  placementEditors.add(editor);
+  await editor.internalDocuments.ready();
+  editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
+  return workspace;
+}
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -482,6 +494,7 @@ describe("WorkbenchApp", () => {
 
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -554,10 +567,22 @@ describe("WorkbenchApp", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     act(() => {
       root.unmount();
     });
+
+    vi.useRealTimers();
+    try {
+      for (const editor of placementEditors) {
+        await editor.internalHistory.flush();
+        await editor.internalDocuments.flush();
+        await editor.internalDocuments.settleMaintenance();
+      }
+    } finally {
+      for (const editor of placementEditors) editor.dispose();
+      placementEditors.clear();
+    }
 
     container.remove();
     localStorage.clear();
@@ -1530,7 +1555,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 
-  it("uses the same touch left dock width and floating operation toolbar on tablets", () => {
+  it("uses the same touch left dock width and floating operation toolbar on tablets", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1552,7 +1577,7 @@ describe("WorkbenchApp", () => {
       }),
     );
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -1593,7 +1618,7 @@ describe("WorkbenchApp", () => {
     ).toBe(false);
   });
 
-  it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", () => {
+  it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", async () => {
     setViewport({
       width: 1234,
       height: 899,
@@ -1613,7 +1638,7 @@ describe("WorkbenchApp", () => {
       }),
     );
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     act(() => {

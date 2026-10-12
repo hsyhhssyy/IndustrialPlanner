@@ -29,10 +29,11 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
   return `${prefix}-${sequence}`;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>): Promise<PlannerWire[]> {
-  const outputs = allocatePorts(registry, network.nodes, "output");
-  const inputs = allocatePorts(registry, network.nodes, "input");
-  const connections: Connection[] = [];
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[]): Promise<PlannerWire[]> {
+  const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output");
+  const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input");
+  const connections: Connection[] = assignedWires?.map(wire => ({ source: wire.source, target: wire.target,
+    amounts: new Map(wire.itemIds.map(item => [item, wire.perMinute])) })) ?? [];
   const suppliers = new Map<string, Array<{ allocation: Allocation; remaining: number }>>();
   for (const allocation of outputs) {
     for (const [itemId, amount] of allocation.amounts) {
@@ -44,7 +45,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   // 先满足生产和回流，再接目标与副产物出口；不会把循环的回流量当成净产出。
   const consumerOrder = [...inputs].sort((left, right) => Number(isSink(left.node)) - Number(isSink(right.node))
     || Number(Boolean(right.sourceEntityIds)) - Number(Boolean(left.sourceEntityIds)));
-  for (const consumer of consumerOrder) {
+  for (const consumer of assignedWires ? [] : consumerOrder) {
     for (const [itemId, amount] of consumer.amounts) {
       let remaining = amount;
       const providers = [...(suppliers.get(itemId) ?? [])].sort((left, right) =>
@@ -99,7 +100,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     }
   }
   // 启动根的回填优先独占同库存组空闲出口，避免分流树尚未蓄满时耗尽一次性启动库存。
-  for (const group of groupConnections(connections, "source").values()) {
+  for (const group of assignedWires ? [] : groupConnections(connections, "source").values()) {
     if (group.length < 2) continue;
     const source = group[0]!.source;
     const node = network.nodes.find(entry => entry.entity.id === source.entityId)!;
@@ -268,6 +269,28 @@ function minimumAdmissionSpacing(network: PlannerNetwork, connection: Connection
   const rule = target.entity.config[`portGroups[${connection.target.groupIndex}].ports[${connection.target.portIndex}].admissionRule`];
   return rule && typeof rule === "object" && "perMinuteLimit" in rule && typeof rule.perMinuteLimit === "number"
     ? Math.ceil(rule.perMinuteLimit / 6) : 0;
+}
+
+/** 已授权的原图逻辑连接只展开物流树，不再隐式重分配端口或供料关系。 */
+function assignedAllocations(network: PlannerNetwork, wires: readonly PlannerWire[], side: "source" | "target"): Allocation[] {
+  const result = new Map<string, Allocation>();
+  for (const wire of wires) {
+    if (wire.itemIds.length !== 1) throw new PlannerCandidateError("混合物料线路暂不参与物流重建。");
+    const port = wire[side], node = network.nodes.find(node => node.entity.id === port.entityId)!;
+    let allocation = result.get(portKey(port));
+    if (!allocation) {
+      const groups = node.definition.portStorageBindings.filter(binding => binding.portGroupId === node.definition.portGroups[port.groupIndex]!.id)
+        .map(binding => binding.storageSlotGroupId);
+      allocation = { port, node, amounts: new Map(), remaining: transportCapacity(port.kind), consumption: side === "target"
+        && node.definition.recipeChannels.some(channel => channel.type === "consumption-channel" && channel.ingredientStorageGroupIds.some(id => groups.includes(id))) };
+      result.set(portKey(port), allocation);
+    }
+    const item = wire.itemIds[0]!;
+    allocation.amounts.set(item, (allocation.amounts.get(item) ?? 0) + wire.perMinute);
+    allocation.remaining -= wire.perMinute;
+    if (allocation.remaining < -1e-6) throw new PlannerCandidateError("原图重建端口运力不足。");
+  }
+  return [...result.values()];
 }
 
 function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[], direction: "input" | "output"): Allocation[] {

@@ -12,6 +12,9 @@ import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { createWorldDocument } from "@/domain/document/world-document";
+import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -108,13 +111,18 @@ describe("QuickPlacePopup", () => {
   let container: HTMLDivElement;
   let root: Root;
   let appHost: AppHost;
+  let editor: EditorHost;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
     appHost = createAppHost(createWorkspace());
+    editor = createEditorHost(appHost.workspace);
+    await editor.internalDocuments.ready();
+    editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
 
     runInAction(() => {
       appHost.internalState.runtime.quickPlace.visible = true;
@@ -123,10 +131,14 @@ describe("QuickPlacePopup", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     act(() => {
       root.unmount();
     });
+    await editor.internalHistory.flush();
+    await editor.internalDocuments.flush();
+    await editor.internalDocuments.settleMaintenance();
+    editor.dispose();
     appHost.dispose();
     container.remove();
     localStorage.clear();
@@ -305,7 +317,7 @@ describe("QuickPlacePopup", () => {
     const firstEntry = buildQuickPlaceDeviceEntries({
       definitions: appHost.workspace.registry.entityDefinitions,
       translate: appHost.actions.translate,
-      canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, null),
+      canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, appHost.workspace.editor!.document.getSnapshot().baseId),
     })[0];
     runInAction(() => {
       appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
@@ -331,7 +343,7 @@ describe("QuickPlacePopup", () => {
     const firstEntry = buildQuickPlaceDeviceEntries({
       definitions: appHost.workspace.registry.entityDefinitions,
       translate: appHost.actions.translate,
-      canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, null),
+      canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, appHost.workspace.editor!.document.getSnapshot().baseId),
     })[0];
     expect(firstEntry).toBeDefined();
     runInAction(() => {

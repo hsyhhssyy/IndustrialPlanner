@@ -28,6 +28,18 @@ import {
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
+import { createWorldDocument } from "@/domain/document/world-document";
+
+const placementEditors = new Set<ReturnType<typeof createEditorHost>>();
+
+async function createPlacementWorkspace(): Promise<WorkspaceContract> {
+  const workspace = createWorkspace();
+  const editor = createEditorHost(workspace);
+  placementEditors.add(editor);
+  await editor.internalDocuments.ready();
+  editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
+  return workspace;
+}
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -195,6 +207,7 @@ describe("Left dock panel switching", () => {
 
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -237,19 +250,29 @@ describe("Left dock panel switching", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     act(() => {
       root.unmount();
     });
 
     vi.useRealTimers();
+    try {
+      for (const editor of placementEditors) {
+        await editor.internalHistory.flush();
+        await editor.internalDocuments.flush();
+        await editor.internalDocuments.settleMaintenance();
+      }
+    } finally {
+      for (const editor of placementEditors) editor.dispose();
+      placementEditors.clear();
+    }
     container.remove();
     localStorage.clear();
     vi.unstubAllGlobals();
   });
 
-  it("renders four primary tabs with regions hidden by default when debug mode is off and defaults to the placement panel", () => {
-    const workspace = createWorkspace();
+  it("renders four primary tabs with regions hidden by default when debug mode is off and defaults to the placement panel", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
@@ -359,8 +382,8 @@ describe("Left dock panel switching", () => {
     expect(appHost.internalState.activeTool).toBe("select");
   });
 
-  it("opens the variant menu from the trailing trigger and left-aligns it", () => {
-    const workspace = createWorkspace();
+  it("opens the variant menu from the trailing trigger and left-aligns it", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
     const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap")
       .mockImplementation(() => undefined);
@@ -490,8 +513,8 @@ describe("Left dock panel switching", () => {
     }));
   });
 
-  it("opens the variant menu from the touch trigger while preserving main-button placement", () => {
-    const workspace = createWorkspace();
+  it("opens the variant menu from the touch trigger while preserving main-button placement", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
     const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonTouchTap")
       .mockImplementation(() => undefined);
@@ -552,8 +575,8 @@ describe("Left dock panel switching", () => {
     }));
   });
 
-  it("renders every variant as an independent button when device mode collapsing is disabled", () => {
-    const workspace = createWorkspace();
+  it("renders every variant as an independent button when device mode collapsing is disabled", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
@@ -610,8 +633,8 @@ describe("Left dock panel switching", () => {
     expect(utilityTitlesAfter).toEqual(["调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
   });
 
-  it("frames the selected placement group and shows number shortcuts only inside it", () => {
-    const workspace = createWorkspace();
+  it("frames the selected placement group and shows number shortcuts only inside it", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
@@ -684,8 +707,8 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).not.toBeNull();
   });
 
-  it("marks the active single-placement device button", () => {
-    const workspace = createWorkspace();
+  it("marks the active single-placement device button", async () => {
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
@@ -1104,7 +1127,7 @@ describe("Left dock panel switching", () => {
     expect(queryVisibleLeftDockPanel(container)?.getAttribute("data-panel-id")).toBe("placement");
   });
 
-  it("preserves placement panel scroll position while tablet placement suppresses the left dock", () => {
+  it("preserves placement panel scroll position while tablet placement suppresses the left dock", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1115,7 +1138,7 @@ describe("Left dock panel switching", () => {
       maxTouchPoints: 5,
     });
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppHost(workspace);
@@ -1176,7 +1199,7 @@ describe("Left dock panel switching", () => {
     expect(dockBeforeSuppression?.scrollTop).toBe(480);
   });
 
-  it("hides placement shortcut hints in mobile mode", () => {
+  it("hides placement shortcut hints in mobile mode", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1187,7 +1210,7 @@ describe("Left dock panel switching", () => {
       maxTouchPoints: 5,
     });
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -1217,7 +1240,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 
-  it("uses the same touch placement layout on tablets", () => {
+  it("uses the same touch placement layout on tablets", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1228,7 +1251,7 @@ describe("Left dock panel switching", () => {
       maxTouchPoints: 5,
     });
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -1267,7 +1290,7 @@ describe("Left dock panel switching", () => {
     });
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
-    const workspace = createWorkspace();
+    const workspace = await createPlacementWorkspace();
     const appHost = createAppHost(workspace);
 
     runInAction(() => {

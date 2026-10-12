@@ -16,10 +16,21 @@ import {
 } from "@/domain/registry/types/base-definition";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import { createRegistryContract } from "@/registry";
-import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
+// AI-REMOVED 2026-10-12:
+// Reason: 标签资格测试迁为结构化白名单测试。
+// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
+// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
+// Replacement: 设备 placementWhitelist 声明
+// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
+// Human Review: Required
+//
+// Original code:
+// import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
 
-const TEST_BUILTIN_BASE_ID = "test_builtin_base";
-const TEST_OUTER_RING_BASE_ID = "test_outer_ring_base";
+
+// AI-CORRECTION 2026-10-12: 几何布景保留真实地图身份，避免绕过设备白名单；面积与内置设施仍按原断言配置。
+const TEST_BUILTIN_BASE_ID = "wuling_protocol_core";
+const TEST_OUTER_RING_BASE_ID = "wuling_protocol_core";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -68,7 +79,7 @@ function registerBuiltinBase(
   builtinEntities: readonly BaseBuiltinEntityDefinition[],
 ): void {
   workspace.registry.baseDefinitions = [
-    ...workspace.registry.baseDefinitions,
+    ...workspace.registry.baseDefinitions.filter(definition => definition.id !== TEST_BUILTIN_BASE_ID),
     {
       id: TEST_BUILTIN_BASE_ID,
       name: "测试内置设备基地",
@@ -83,7 +94,7 @@ function registerBuiltinBase(
 
 function registerOuterRingBase(workspace: WorkspaceContract): void {
   workspace.registry.baseDefinitions = [
-    ...workspace.registry.baseDefinitions,
+    ...workspace.registry.baseDefinitions.filter(definition => definition.id !== TEST_OUTER_RING_BASE_ID),
     {
       id: TEST_OUTER_RING_BASE_ID,
       name: "测试扩展范围基地",
@@ -234,7 +245,7 @@ describe("placement validation", () => {
     )).toContain("outside-base");
   });
 
-  it("restricts a tagged building to its named subarea", () => {
+  it("restricts a building whitelist to its named subarea", () => {
     const workspace = createWorkspace();
     workspace.registry.baseDefinitions = workspace.registry.baseDefinitions.map((definition) =>
       definition.id === "draft_box"
@@ -253,7 +264,17 @@ describe("placement validation", () => {
       definition.id === "pipe_straight_1x1"
         ? {
           ...definition,
-          tags: [...definition.tags, `${BASE_AREA_ONLY_TAG_PREFIX}test_upper_left`],
+// AI-REMOVED 2026-10-12:
+// Reason: 标签资格测试迁为结构化白名单测试。
+// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
+// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
+// Replacement: 下方 placementWhitelist 属性
+// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
+// Human Review: Required
+//
+// Original code:
+//           tags: [...definition.tags, `${BASE_AREA_ONLY_TAG_PREFIX}test_upper_left`],
+          placementWhitelist: [{ baseId: "draft_box", areaIds: ["test_upper_left"] }],
         }
         : definition
     );
