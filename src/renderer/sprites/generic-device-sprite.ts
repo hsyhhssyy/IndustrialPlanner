@@ -57,7 +57,16 @@ import {
   RenderSpriteSyncContext,
 } from "./render-sprite"
 import { BaseRenderSprite } from "./base-render-sprite"
-import { shouldShowPowerDisconnectedIcon } from "./device-power-status"
+// AI-REMOVED 2026-10-13:
+// Reason: 设备断电提示的启用规则统一归 Registry Query。
+// Trigger: 用户要求 Renderer 不再持有储存箱 ID 与定时上传特例。
+// Evidence: RegistryQuery.isPowerWarningEnabled 已覆盖原设备和配置判断。
+// Replacement: 下方 shouldShowPowerDisconnectedIcon 调用 workspace.registry.queries。
+// Risk: Low - 供电覆盖和图标渲染保持原有行为。
+// Human Review: Required
+//
+// Original code:
+// import { shouldShowPowerDisconnectedIcon } from "./device-power-status"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 const POWER_DISCONNECTED_TEXTURE_KEY = "texture-power-disconnected"
@@ -1658,11 +1667,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return false;
     }
 
-    if (!shouldShowPowerDisconnectedIcon({
-      definition: this.definition,
-      config: entity.config,
-      isInPowerRange: false,
-    })) {
+    if (!this.renderHost.workspace.registry.queries.isPowerWarningEnabled(
+      entity.definitionId,
+      entity.config,
+    )) {
       return false;
     }
 

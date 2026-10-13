@@ -126,6 +126,21 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         findEntityDefinition(definitionId) {
             return entityDefinitionById.get(definitionId) ?? null
         },
+        isPowerWarningEnabled(definitionId, config) {
+            const definition = entityDefinitionById.get(definitionId)
+            if (definition === undefined || !(definition.powerDemand > 0)) return false
+
+            // 协议储存箱仅在定时上传开启时提示断电；普通收发与储存不触发提示。
+            if (definitionId === "storager_1") {
+                const channelRecipes = config.channelRecipes
+                return channelRecipes !== null
+                    && typeof channelRecipes === "object"
+                    && "warehouse_submit" in channelRecipes
+                    && channelRecipes.warehouse_submit === "r_warehouse_submit"
+            }
+
+            return true
+        },
         findItemDefinition(itemId) {
             return itemDefinitionById.get(itemId) ?? null
         },

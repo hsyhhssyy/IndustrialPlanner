@@ -4,6 +4,7 @@ import type {
 	LogisticsRole,
 } from "../shared/logistics";
 import type { SlotLinkDefinition } from "../shared/slot-link";
+import type { WorldEntity } from "../document/world-document";
 import type { ItemDomain } from "./types/entity-definition";
 import type { EntityDefinition } from "./types/entity-definition";
 import type { ItemDefinition } from "./types/item-definition";
@@ -26,6 +27,8 @@ export interface RegistryQuery {
 	resolveDefaultPortPriorityGroups(context: DefaultPortPriorityContext): readonly DefaultPortPriority[] | null;
 	/** 按 ID 精确查找实体定义；未注册时返回 null。 */
 	findEntityDefinition(definitionId: string): EntityDefinition | null;
+	/** 按设备定义与当前配置判断是否启用断电提示；供电覆盖由调用方判断，不依赖仿真状态。 */
+	isPowerWarningEnabled(definitionId: string, config: WorldEntity["config"]): boolean;
 	/** 按 ID 精确查找物品定义；未注册时返回 null。 */
 	findItemDefinition(itemId: string): ItemDefinition | null;
 	/** 按 ID 精确查找配方定义；未注册时返回 null。 */
