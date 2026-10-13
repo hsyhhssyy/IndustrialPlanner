@@ -1,15 +1,26 @@
-import { useMemo } from "react";
+// AI-REMOVED 2026-10-13:
+// Reason: observer 隔离不变任务输入的重复渲染，翻译读取也需要参与观察。
+// Trigger: EDA 进度刷新引起整张流程图重复分配。
+// Evidence: round-06-fixed4-mainprofile 的 FlowNode / FlowEdge 分配热点。
+// Replacement: 下方 observer；Risk: 语言切换必须继续更新；Human Review: Required
+// Original code: import { useMemo } from "react";
+import { observer } from "mobx-react-lite";
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { ProductionFlowGraph, type ProductionFlowGraphInput } from "./flow";
 
 /** 任务输入使用已归一化的配方流量；连接表示物料依赖，不冒充已求解的物理端口。 */
-export function PlannerTaskFlow({ plan, registry, t }: { plan: BlueprintPlannerProductionPlan;
+export const PlannerTaskFlow = observer(function PlannerTaskFlow({ plan, registry, t }: { plan: BlueprintPlannerProductionPlan;
   registry: RegistryContract; t: (key: string) => string }) {
-  const input = useMemo(() => buildPlannerTaskFlow(plan, registry, t), [plan, registry, t]);
+  // AI-REMOVED 2026-10-13:
+  // Reason: 固定翻译函数引用不能表达 locale 的可观察变化。
+  // Trigger: 隔离进度刷新后仍须保留语言切换；Evidence: translate 读取设置中的 locale。
+  // Replacement: observer 内直接构建；Risk: Low；Human Review: Required
+  // Original code: const input = useMemo(() => buildPlannerTaskFlow(plan, registry, t), [plan, registry, t]);
+  const input = buildPlannerTaskFlow(plan, registry, t);
   return <ProductionFlowGraph input={input} displayMode="device" fitToView interactionMode="browse" t={t} />;
-}
+});
 
 export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, registry: RegistryContract,
   t: (key: string) => string): ProductionFlowGraphInput {

@@ -1,5 +1,5 @@
 import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
-import { applyRawIndexedDbTransactionMutations, listFromIndexedDb, saveToIndexedDb } from "./browser-storage";
+import { applyRawIndexedDbTransactionMutations } from "./browser-storage";
 import { readMigrationRecords } from "./migration-records";
 
 // 计算检查点独立存储，不发布 storage-change 事件，不加入任何同步集合。
@@ -20,11 +20,14 @@ export interface QuarantinedEdaTask {
 const location = EDA_TASK_LOCATION;
 
 export const edaTaskStorage = {
-  load: () => listFromIndexedDb<BlueprintPlannerTaskFile>(location, { strict: true }),
+  // 2026-10-13：沿用迁移读取器解码旧 JSON；新检查点直接保留 structured-clone 的共享种子图。
+  load: async (): Promise<BlueprintPlannerTaskFile[]> => (await readMigrationRecords(location))
+    .map(record => record.value as BlueprintPlannerTaskFile),
   loadQuarantined: async (): Promise<QuarantinedEdaTask[]> => (await readMigrationRecords(EDA_TASK_QUARANTINE_LOCATION, { raw: true }))
     .map(record => record.value as QuarantinedEdaTask),
   save: async (file: BlueprintPlannerTaskFile): Promise<void> => {
-    await saveToIndexedDb({ ...location, key: file.taskId }, file);
+    if (!await applyRawIndexedDbTransactionMutations(location, [{ storeName: location.storeName,
+      operations: [{ type: "put", key: file.taskId, value: file }] }])) throw new Error("无法保存计算任务。");
   },
   saveQuarantined: async (record: QuarantinedEdaTask): Promise<void> => {
     if (!await applyRawIndexedDbTransactionMutations(location, [

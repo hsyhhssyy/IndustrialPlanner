@@ -28,6 +28,23 @@ import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import fixture from "./fixtures/yazhen-syringe.json";
+import memoryReference from "./fixtures/cpu-layout-memory-reference.json";
+
+it("复用评分工作区保持优化前的评分、随机轨迹和多链结果", async () => {
+  // 2026-10-13：参考数据来自修改前的真实 CPU 内核，覆盖三种存取面规则和连通评分开关。
+  for (const reference of memoryReference) {
+    const input: PlannerLayoutBatch = { chains: reference.input.chains,
+      parameters: new Int32Array(reference.input.parameters), geometry: new Int32Array(reference.input.geometry),
+      edges: new Int32Array(reference.input.edges), overlaps: new Int32Array(reference.input.overlaps),
+      poses: new Int32Array(reference.input.poses) };
+    const kernel = new PlannerLayoutKernel(input);
+    for (const score of reference.scores) { expect(kernel.score()).toBe(score); kernel.propose(); }
+    expect(Array.from(kernel.poses)).toEqual(reference.finalPoses);
+    expect(kernel.randomState).toBe(reference.randomState);
+    const result = await new PlannerCpuLayout().search(input);
+    expect({ ...result, states: Array.from(result.states!) }).toEqual(reference.result);
+  }
+});
 
 function batch(steps: number): PlannerLayoutBatch {
   const geometry = new Int32Array(3 * 4 * G);

@@ -18,10 +18,13 @@ export interface PlannerConcurrencySample {
 // 订正 2026-10-06：这是搜索与验证共用的资源安全阀；实际并发由在线吞吐决定。
 // 按每通道 256 MiB、半数粗略内存留给本任务预算，取代每 GiB 只允许一个 Worker。
 // 该预留是保护性估计，浏览器不能据此保证整机剩余内存；仍需响应延迟与压力退让。
+// AI-CORRECTION 2026-10-13：CPU 搜索与验收通道共用最多 512MiB 的预算；
+// 硬件内存再大也不扩张网页预算，其余内存留给主线程、GPU 与浏览器基础开销。
+// 每通道仍按 256MiB 保护性估计；Windows 故障任务以两通道验证内存及吞吐。
 export function plannerConcurrencyLimit(hints: PlannerResourceHints): number {
   const cores = Number.isSafeInteger(hints.hardwareConcurrency) && hints.hardwareConcurrency! > 0 ? hints.hardwareConcurrency! : 2;
   const memory = Number.isFinite(hints.deviceMemory) && hints.deviceMemory! > 0 ? hints.deviceMemory! : 4;
-  return Math.max(1, Math.min(32, Math.floor(cores * 0.8) - 1, Math.floor(memory * 1024 * 0.5 / 256)));
+  return Math.max(1, Math.min(32, Math.floor(cores * 0.8) - 1, Math.floor(Math.min(512, memory * 1024 * 0.5) / 256)));
 }
 
 // AI-REMOVED 2026-10-06:

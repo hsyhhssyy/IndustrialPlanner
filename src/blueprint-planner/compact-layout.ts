@@ -1,3 +1,4 @@
+import { yieldPlannerTask } from "./yield-task";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import { resolveEntityGridRect, resolveGasDiffusionRangeGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting } from "@/shared/geometry/power-range";
@@ -63,6 +64,8 @@ export class CompactLayoutSearch {
   private readonly environmentPairs: Array<{ device: number; environment: number }>;
   private readonly localTerminals: Array<{ parent: number; terminal: number }>;
   private readonly blockedKinds: number[];
+  private readonly overlaps: Uint8Array;
+  private readonly logistics: boolean[];
   // AI-REMOVED 2026-10-11:
   // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
   // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -80,6 +83,16 @@ export class CompactLayoutSearch {
   private readonly cpuLayout = new PlannerCpuLayout();
   private randomState: number;
   private readonly penalties = new Map<string, number>();
+  private readonly placedPorts = new Map<number, Map<string, { x: number; y: number; rotation: number; port: PlannerPort }>>();
+  private readonly assignmentCosts = new Map<object, { costs: Float64Array; chosen: string[]; bestKeys: string[] }>();
+  private readonly previousPoses: Pose[] = [];
+  private readonly portOwners = new Map<number, number>();
+  private readonly demands = new Map<number, { x: number; y: number; kind: LogisticsKind; density: number }>();
+  private readonly demandEntries: Array<{ x: number; y: number; kind: LogisticsKind; density: number }> = [];
+  private readonly evaluationRects: Array<{ x: number; y: number; width: number; height: number; blockedKinds: number }> = [];
+  private occupancy = new Uint8Array(0);
+  private readonly connectivity = { grid: new Int32Array(0), queue: new Int32Array(0) };
+  private readonly endpoints: Array<{ source: PlannerPort; target: PlannerPort; direct: boolean }> = [];
   private focus: number[] = [];
   private repairIssues: PlannerLayoutIssue[] = [];
   private repairFocus: number[] = [];
@@ -121,6 +134,8 @@ export class CompactLayoutSearch {
         .flatMap(direction => getPlannerPorts(registry, entity, node.definition, direction))
         .map(port => [portKey(port), port])) };
     }));
+    this.overlaps = Uint8Array.from(network.nodes.flatMap(a => network.nodes.map(b => Number(allowsPlannerOverlap(registry, a.definition, b.definition)))));
+    this.logistics = network.nodes.map(node => registry.queries.isGeneralLogisticsDevice(node.definition.id));
     this.blockedKinds = network.nodes.map(node => (["belt", "pipe"] as const).reduce((mask, kind, bit) => mask
       | (allowsPlannerOverlap(registry, node.definition, registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId(kind, "straight"))!) ? 0 : 1 << bit), 0));
   // AI-REMOVED 2026-09-16:
@@ -333,7 +348,7 @@ export class CompactLayoutSearch {
       const focus = repairEnabled && this.repairFocus.length ? this.repairFocus : this.focus;
       const pool = focus.length && this.random() < 0.65 ? focus : this.movable;
       const index = pool[Math.floor(this.random() * pool.length)]!;
-      const previous = this.snapshot();
+      const previous = this.snapshot(this.previousPoses);
       const repair = repairEnabled && this.repairIssues.length > 0 && this.random() < 0.35
         ? this.repairIssues[Math.floor(this.random() * this.repairIssues.length)] : undefined;
       if (!repair || !this.proposeRepair(repair)) this.propose(index, progress);
@@ -392,7 +407,12 @@ export class CompactLayoutSearch {
         //   this.best = this.snapshot(); this.bestEvaluation = candidate;
         // }
       } else this.restore(previous);
-      if (this.statistics.evaluations % 128 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
+      // AI-REMOVED 2026-10-13:
+      // Reason: 嵌套计时器等待限制单 Worker 吞吐，迫使创建更多堆。
+      // Trigger: 1GiB 内存与吞吐要求；Evidence: 浏览器调度契约，逐链/128 提案的计时器。
+      // Replacement: yieldPlannerTask；Risk: 必须验证协作取消；Human Review: Required
+      // Original code: if (this.statistics.evaluations % 128 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
+      if (this.statistics.evaluations % 128 === 0) await yieldPlannerTask();
     }
     this.statistics.layoutBestCost = this.bestEvaluation.cost;
     this.statistics.remainingConflicts = this.bestEvaluation.conflicts;
@@ -496,8 +516,7 @@ export class CompactLayoutSearch {
     for (const edge of this.edges) {
       const kind = this.geometry[edge.source]![0]!.ports.get(edge.sourceKey)!.kind === "belt" ? 1 : 2;
       edges.push(edge.source, edge.target, kind, edge.minimumCells, Math.ceil(edge.weight + (this.penalties.get(`${this.network.nodes[edge.source]!.entity.id}/${this.network.nodes[edge.target]!.entity.id}`) ?? 0)),
-        Number(this.registry.queries.isGeneralLogisticsDevice(this.network.nodes[edge.source]!.definition.id)
-          || this.registry.queries.isGeneralLogisticsDevice(this.network.nodes[edge.target]!.definition.id)), 0, 0);
+        Number(this.logistics[edge.source]! || this.logistics[edge.target]!), 0, 0);
       for (const [node, key] of [[edge.source, edge.sourceKey], [edge.target, edge.targetKey]] as const) {
         for (let turn = 0; turn < 4; turn++) {
           const port = this.geometry[node]![turn]!.ports.get(key)!;
@@ -927,26 +946,72 @@ export class CompactLayoutSearch {
     const access = this.boundary.resolve(this.poses);
     let violations = access.violations;
     if (violations) record?.("boundary-access", violations, this.boundary.entries.map(entry => entry.index));
-    const rects = this.poses.map((pose, index) => ({ x: pose.x, y: pose.y, ...this.dimensions(index) }));
+    const rects = this.evaluationRects;
+    for (let index = 0; index < this.poses.length; index++) {
+      const pose = this.poses[index]!, geometry = this.dimensions(index);
+      const rect = rects[index] ??= { x: 0, y: 0, width: 0, height: 0, blockedKinds: this.blockedKinds[index]! };
+      rect.x = pose.x; rect.y = pose.y; rect.width = geometry.width; rect.height = geometry.height;
+    }
+    const obstacles = rects;
+    // 一次建立格子占用，供端口检查与拥塞估计复用，避免每个格子重复扫描所有建筑。
+    const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
+    const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
+    const gridHeight = Math.max(...obstacles.map(rect => rect.y + rect.height)) - gridTop;
+    if (this.occupancy.length < gridWidth * gridHeight) this.occupancy = new Uint8Array(gridWidth * gridHeight);
+    const occupied = this.occupancy; occupied.fill(0, 0, gridWidth * gridHeight);
+    for (const rect of obstacles) for (let y = rect.y; y < rect.y + rect.height; y++) {
+      const start = (y - gridTop) * gridWidth + rect.x - gridLeft;
+      for (let x = start; x < start + rect.width; x++) occupied[x] = occupied[x]! | rect.blockedKinds;
+    }
+    const isOccupied = (x: number, y: number, kind: LogisticsKind) => x >= gridLeft && x < gridLeft + gridWidth
+      && y >= gridTop && y < gridTop + gridHeight && (occupied[(y - gridTop) * gridWidth + x - gridLeft]! & (kind === "belt" ? 1 : 2)) !== 0;
     // 分/汇流端口来自同一库存组，可交换出口/入口和未启用口；每次确定性枚举至多 3! 种分配。
     // 订正 2026-09-30：compact 还处理普通设备的等价端口组，最多六个候选口；保持同组库存与物品接受规则。
     for (let pass = 0; pass < 2; pass++) for (const junction of this.junctionPorts) {
-      let bestCost = Infinity, bestKeys: string[] = [];
-      const chosen: string[] = [];
-      const assign = (offset: number, cost: number): void => {
-        if (cost >= bestCost) return;
-        if (offset === junction.edges.length) { bestCost = cost; bestKeys = [...chosen]; return; }
+      // 同一评分内每个“边×端口”的代价不变；排列回溯只读取小矩阵。
+      let workspace = this.assignmentCosts.get(junction);
+      if (!workspace) { workspace = { costs: new Float64Array(junction.edges.length * junction.keys.length), chosen: [], bestKeys: [] }; this.assignmentCosts.set(junction, workspace); }
+      const { costs, chosen, bestKeys } = workspace; chosen.length = 0; bestKeys.length = 0;
+      for (let offset = 0; offset < junction.edges.length; offset++) {
         const edge = this.edges[junction.edges[offset]!]!;
-        for (const key of junction.keys) {
-          if (chosen.includes(key)) continue;
-          const own = this.port(junction.node, key);
-          const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+        const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+        for (let index = 0; index < junction.keys.length; index++) {
+          const own = this.port(junction.node, junction.keys[index]!);
           const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
             && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
-          const blocked = !direct && rects.some((rect, index) => (this.blockedKinds[index]! & (own.kind === "belt" ? 1 : 2)) !== 0 && contains(rect, own.outside));
+          const blocked = !direct && isOccupied(own.outside.x, own.outside.y, own.kind);
           const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
-          const penalty = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
+          costs[offset * junction.keys.length + index] = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
             + Math.max(0, edge.minimumCells - length - 1) * 50;
+        }
+      }
+      let bestCost = Infinity;
+      const assign = (offset: number, cost: number): void => {
+        if (cost >= bestCost) return;
+        if (offset === junction.edges.length) {
+          bestCost = cost;
+          for (let i = 0; i < chosen.length; i++) bestKeys[i] = chosen[i]!;
+          return;
+        }
+        for (let index = 0; index < junction.keys.length; index++) {
+          const key = junction.keys[index]!;
+          if (chosen.includes(key)) continue;
+          // AI-REMOVED 2026-10-13:
+          // Reason: 排列树每条路径重复构造相同端口和代价。
+          // Trigger: 1GiB 内存目标；Evidence: 单 Worker 分配采样中 assign 占数十 GB。
+          // Replacement: 上方每次评分的代价矩阵；Risk: 必须保留枚举顺序及平局规则。
+          // Human Review: Required
+          // Original code:
+          // const edge = this.edges[junction.edges[offset]!]!;
+          // const own = this.port(junction.node, key);
+          // const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+          // const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
+          //   && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
+          // const blocked = !direct && rects.some((rect, index) => (this.blockedKinds[index]! & (own.kind === "belt" ? 1 : 2)) !== 0 && contains(rect, own.outside));
+          // const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
+          // const penalty = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
+          //   + Math.max(0, edge.minimumCells - length - 1) * 50;
+          const penalty = costs[offset * junction.keys.length + index]!;
           chosen.push(key); assign(offset + 1, cost + penalty); chosen.pop();
         }
       };
@@ -966,7 +1031,7 @@ export class CompactLayoutSearch {
       record?.("minimum-coordinate", Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y), [i], rect);
       for (let j = 0; j < i; j++) {
         const other = rects[j]!;
-        if (allowsPlannerOverlap(this.registry, this.network.nodes[i]!.definition, this.network.nodes[j]!.definition)) continue;
+        if (this.overlaps[i * this.poses.length + j]) continue;
         violations += Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
           * Math.max(0, Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y));
         record?.("body-overlap", Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
@@ -1075,37 +1140,55 @@ export class CompactLayoutSearch {
     //     blockedKinds: plannerObstacleMask(this.registry, entity.definitionId) }));
     // });
     // const obstacles = [...rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! })), ...fixtureRects];
-    const obstacles = rects.map((rect, index) => ({ ...rect, blockedKinds: this.blockedKinds[index]! }));
-    // 一次建立格子占用，供端口检查与拥塞估计复用，避免每个格子重复扫描所有建筑。
-    const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
-    const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
-    const gridHeight = Math.max(...obstacles.map(rect => rect.y + rect.height)) - gridTop;
-    const occupied = new Uint8Array(gridWidth * gridHeight);
-    for (const rect of obstacles) for (let y = rect.y; y < rect.y + rect.height; y++) {
-      const start = (y - gridTop) * gridWidth + rect.x - gridLeft;
-      for (let x = start; x < start + rect.width; x++) occupied[x] = occupied[x]! | rect.blockedKinds;
-    }
-    const isOccupied = (point: { x: number; y: number }, kind: LogisticsKind) => point.x >= gridLeft && point.x < gridLeft + gridWidth
-      && point.y >= gridTop && point.y < gridTop + gridHeight && (occupied[(point.y - gridTop) * gridWidth + point.x - gridLeft]! & (kind === "belt" ? 1 : 2)) !== 0;
+    // AI-REMOVED 2026-10-13:
+    // Reason: 端口分配可复用同一占用网格，避免每个端口扫描全部设备。
+    // Trigger: 减少 Worker 而保持吞吐；Evidence: evaluate 中 junction.edges×keys×rects 嵌套。
+    // Replacement: 上方 rects 更新后提前构建；Risk: Low；Human Review: Required
+    // Original code:
+    // const obstacles = rects;
+    // // 一次建立格子占用，供端口检查与拥塞估计复用，避免每个格子重复扫描所有建筑。
+    // const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
+    // const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
+    // const gridHeight = Math.max(...obstacles.map(rect => rect.y + rect.height)) - gridTop;
+    // if (this.occupancy.length < gridWidth * gridHeight) this.occupancy = new Uint8Array(gridWidth * gridHeight);
+    // const occupied = this.occupancy; occupied.fill(0, 0, gridWidth * gridHeight);
+    // for (const rect of obstacles) for (let y = rect.y; y < rect.y + rect.height; y++) {
+    // const start = (y - gridTop) * gridWidth + rect.x - gridLeft;
+    // for (let x = start; x < start + rect.width; x++) occupied[x] = occupied[x]! | rect.blockedKinds;
+    // }
+    // const isOccupied = (x: number, y: number, kind: LogisticsKind) => x >= gridLeft && x < gridLeft + gridWidth
+    // && y >= gridTop && y < gridTop + gridHeight && (occupied[(y - gridTop) * gridWidth + x - gridLeft]! & (kind === "belt" ? 1 : 2)) !== 0;
     let wireLength = 0, wireCost = 0, congestion = 0;
-    const used = new Map<string, string>();
-    const endpoints: Array<{ source: PlannerPort; target: PlannerPort; direct: boolean }> = [];
-    const demand = new Map<string, number>();
-    for (const [edgeIndex, edge] of this.edges.entries()) {
+    const used = this.portOwners; used.clear();
+    const endpoints = this.endpoints;
+    const demand = this.demands; demand.clear();
+    // 端点的精确范围编码坐标；负坐标、越界提案也不会碰撞。
+    let portLeft = Infinity, portTop = Infinity, portRight = -Infinity;
+    for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
+      const edge = this.edges[edgeIndex]!;
       const source = this.port(edge.source, edge.sourceKey), target = this.port(edge.target, edge.targetKey);
       const direct = edge.minimumCells === 0 && source.outside.x === target.cell.x && source.outside.y === target.cell.y
         && target.outside.x === source.cell.x && target.outside.y === source.cell.y
-        && (this.registry.queries.isGeneralLogisticsDevice(this.network.nodes[edge.source]!.definition.id)
-          || this.registry.queries.isGeneralLogisticsDevice(this.network.nodes[edge.target]!.definition.id));
-      endpoints.push({ source, target, direct });
-      for (const [port, index] of [[source, edge.source], [target, edge.target]] as const) {
+        && (this.logistics[edge.source]! || this.logistics[edge.target]!);
+      const endpoint = endpoints[edgeIndex] ??= { source, target, direct };
+      endpoint.source = source; endpoint.target = target; endpoint.direct = direct;
+      portLeft = Math.min(portLeft, source.outside.x, target.outside.x);
+      portTop = Math.min(portTop, source.outside.y, target.outside.y);
+      portRight = Math.max(portRight, source.outside.x, target.outside.x);
+    }
+    const portWidth = portRight - portLeft + 1, demandLeft = Math.floor(portLeft / 4), demandTop = Math.floor(portTop / 4);
+    const demandWidth = Math.floor(portRight / 4) - demandLeft + 1;
+    for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
+      const edge = this.edges[edgeIndex]!, { source, target, direct } = endpoints[edgeIndex]!;
+      for (let side = 0; side < 2; side++) {
+        const port = side === 0 ? source : target, index = side === 0 ? edge.source : edge.target;
         if (direct) continue;
         violations += Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y);
         record?.("port-minimum-coordinate", Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y), [index], port.outside);
-        if (isOccupied(port.outside, port.kind)) violations++;
-        if (record && isOccupied(port.outside, port.kind)) record("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, port.outside) ? [i] : [])], port.outside);
-        const key = `${port.outside.x},${port.outside.y}/${port.kind}`;
-        const owner = String(edgeIndex);
+        if (isOccupied(port.outside.x, port.outside.y, port.kind)) violations++;
+        if (record && isOccupied(port.outside.x, port.outside.y, port.kind)) record("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, port.outside) ? [i] : [])], port.outside);
+        const key = ((port.outside.y - portTop) * portWidth + port.outside.x - portLeft) * 2 + (port.kind === "belt" ? 0 : 1);
+        const owner = edgeIndex;
         if (used.has(key) && used.get(key) !== owner) violations++;
         if (record && used.has(key) && used.get(key) !== owner) {
           const other = this.edges[Number(used.get(key))]!;
@@ -1119,7 +1202,7 @@ export class CompactLayoutSearch {
         const oppositePort = index === edge.source ? target : source;
         if (!contains(rects[index === edge.source ? edge.target : edge.source]!, next)
           && !(next.x === oppositePort.outside.x && next.y === oppositePort.outside.y)
-          && isOccupied(next, port.kind)) congestion += 12;
+          && isOccupied(next.x, next.y, port.kind)) congestion += 12;
       }
       const length = Math.abs(source.outside.x - target.outside.x) + Math.abs(source.outside.y - target.outside.y);
       const extra = this.penalties.get(`${source.entityId}/${target.entityId}`) ?? 0;
@@ -1132,18 +1215,24 @@ export class CompactLayoutSearch {
       const y0 = Math.floor(Math.min(source.outside.y, target.outside.y) / 4), y1 = Math.floor(Math.max(source.outside.y, target.outside.y) / 4);
       const density = Math.max(1, length) / ((x1 - x0 + 1) * (y1 - y0 + 1) * 16);
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-        const key = `${x},${y}/${source.kind}`; demand.set(key, (demand.get(key) ?? 0) + density);
+        const key = ((y - demandTop) * demandWidth + x - demandLeft) * 2 + (source.kind === "belt" ? 0 : 1);
+        let entry = demand.get(key);
+        if (!entry) {
+          entry = this.demandEntries[demand.size] ??= { x, y, kind: source.kind, density: 0 };
+          entry.x = x; entry.y = y; entry.kind = source.kind; entry.density = 0;
+          demand.set(key, entry);
+        }
+        entry.density += density;
       }
     }
-    for (const [key, density] of demand) {
-      const [x, y] = key.split("/")[0]!.split(",").map(Number);
+    for (const { x, y, kind, density } of demand.values()) {
       let free = 0;
       for (let cy = y! * 4; cy < y! * 4 + 4; cy++) for (let cx = x! * 4; cx < x! * 4 + 4; cx++) {
-        if (!isOccupied({ x: cx, y: cy }, key.endsWith("/belt") ? "belt" : "pipe")) free++;
+        if (!isOccupied(cx, cy, kind)) free++;
       }
       congestion += Math.max(0, density / Math.max(0.125, free / 16) - 0.65) ** 2 * 16;
     }
-    const disconnected = countDisconnectedPorts(obstacles, endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY), issues);
+    const disconnected = countDisconnectedPorts(obstacles, endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY), this.connectivity, issues);
     // AI-REMOVED 2026-09-16:
     // Reason: 供电桩改为布线后从合法空位生成，不再参与退火。
     // Trigger: 初排桩数与位置锁死布局并阻挡物流。
@@ -1209,9 +1298,21 @@ export class CompactLayoutSearch {
   private port(index: number, key: string): PlannerPort {
     const port = this.dimensions(index).ports.get(key)!;
     const pose = this.poses[index]!;
-    return { ...port, cell: { x: port.cell.x + pose.x, y: port.cell.y + pose.y }, outside: { x: port.outside.x + pose.x, y: port.outside.y + pose.y } };
+    let ports = this.placedPorts.get(index);
+    if (!ports) { ports = new Map(); this.placedPorts.set(index, ports); }
+    const cached = ports.get(key);
+    if (cached && cached.x === pose.x && cached.y === pose.y && cached.rotation === pose.rotation) return cached.port;
+    const placed = { ...port, cell: { x: port.cell.x + pose.x, y: port.cell.y + pose.y }, outside: { x: port.outside.x + pose.x, y: port.outside.y + pose.y } };
+    ports.set(key, { x: pose.x, y: pose.y, rotation: pose.rotation, port: placed });
+    return placed;
   }
-  private snapshot(): Pose[] { return this.poses.map(pose => ({ ...pose })); }
+  private snapshot(target: Pose[] = []): Pose[] {
+    for (let i = 0; i < this.poses.length; i++) {
+      const source = this.poses[i]!, pose = target[i] ??= { x: 0, y: 0, rotation: 0 };
+      pose.x = source.x; pose.y = source.y; pose.rotation = source.rotation;
+    }
+    return target;
+  }
   private restore(poses: readonly Pose[]): void { poses.forEach((pose, index) => Object.assign(this.poses[index]!, pose)); }
   // AI-REMOVED 2026-10-11:
   // Reason: 提取现有 xorshift 供调度和布局共用，避免重复维护算法。
@@ -1227,23 +1328,85 @@ function contains(rect: { x: number; y: number; width: number; height: number },
   return point.x >= rect.x && point.y >= rect.y && point.x < rect.x + rect.width && point.y < rect.y + rect.height;
 }
 
+// AI-REMOVED 2026-10-13:
+// Reason: 逐提案重复分配连通网格、队列和相邻坐标数组。
+// Trigger: OOM 任务内存目标；Evidence: round-07-fixed4-workerdiag 连通检查累计分配数 GB。
+// Replacement: 下方 countDisconnectedPorts / countDisconnectedKind 复用工作区。
+// Risk: 必须保留屏蔽端口、边界和直连规则；确定性轨迹对照验证。
+// Human Review: Required
+// Original code:
+// /** 端口只空出一格仍可能被相邻端口围死；先用自由空间连通分量排除这种假可布线布局。 */
+// function countDisconnectedPorts(rects: readonly { x: number; y: number; width: number; height: number; blockedKinds: number }[],
+//   edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
+//   return ["belt", "pipe"].reduce((sum, kind, bit) => sum + countDisconnectedKind(rects.filter(rect => (rect.blockedKinds & (1 << bit)) !== 0), edges.filter(edge => edge.source.kind === kind), minimumX, minimumY, width, height, issues), 0);
+// }
+//
+// function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number }[],
+//   edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
+//   const grid = new Int32Array(width * height);
+//   const at = (x: number, y: number) => x < minimumX || x >= width || y < minimumY || y >= height ? -1 : y * width + x;
+//   for (const rect of rects) for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++) {
+//     for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x++) grid[y * width + x] = -1;
+//   }
+//   for (const edge of edges) for (const port of [edge.source, edge.target]) {
+//     const key = at(port.outside.x, port.outside.y); if (key >= 0) grid[key] = -1;
+//   }
+//   const queue = new Int32Array(grid.length);
+//   let component = 0;
+//   for (let y = minimumY; y < height; y++) for (let x = Math.max(0, minimumX); x < width; x++) {
+//     const start = at(x, y);
+//     if (grid[start] !== 0) continue;
+//     grid[start] = ++component; queue[0] = start;
+//     for (let head = 0, tail = 1; head < tail; head++) {
+//       const cell = queue[head]!, cx = cell % width, cy = Math.floor(cell / width);
+//       for (const neighbor of [at(cx - 1, cy), at(cx + 1, cy), at(cx, cy - 1), at(cx, cy + 1)]) {
+//         if (neighbor < 0 || grid[neighbor] !== 0) continue;
+//         grid[neighbor] = component; queue[tail++] = neighbor;
+//       }
+//     }
+//   }
+//   const accessible = (port: PlannerPort) => {
+//     const { x, y } = port.outside;
+//     return [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].filter(key => key >= 0).map(key => grid[key]!).filter(value => value > 0);
+//   };
+//   return edges.filter(edge => {
+//     const disconnected = !edge.direct && Math.abs(edge.source.outside.x - edge.target.outside.x) + Math.abs(edge.source.outside.y - edge.target.outside.y) > 1
+//       && !accessible(edge.source).some(component => accessible(edge.target).includes(component));
+//     if (disconnected) issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
+//     return disconnected;
+//   }).length;
+// }
+
 /** 端口只空出一格仍可能被相邻端口围死；先用自由空间连通分量排除这种假可布线布局。 */
 function countDisconnectedPorts(rects: readonly { x: number; y: number; width: number; height: number; blockedKinds: number }[],
-  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
-  return ["belt", "pipe"].reduce((sum, kind, bit) => sum + countDisconnectedKind(rects.filter(rect => (rect.blockedKinds & (1 << bit)) !== 0), edges.filter(edge => edge.source.kind === kind), minimumX, minimumY, width, height, issues), 0);
+  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number,
+  workspace: { grid: Int32Array; queue: Int32Array }, issues?: PlannerLayoutIssue[]): number {
+  if (workspace.grid.length < width * height) {
+    workspace.grid = new Int32Array(width * height); workspace.queue = new Int32Array(width * height);
+  }
+  let count = 0;
+  for (let bit = 0; bit < 2; bit++) count += countDisconnectedKind(rects, edges, minimumX, minimumY, width, height, bit, workspace, issues);
+  return count;
 }
 
-function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number }[],
-  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number, issues?: PlannerLayoutIssue[]): number {
-  const grid = new Int32Array(width * height);
+function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number; blockedKinds: number }[],
+  edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number,
+  bit: number, workspace: { grid: Int32Array; queue: Int32Array }, issues?: PlannerLayoutIssue[]): number {
+  const kind = bit === 0 ? "belt" : "pipe", mask = 1 << bit;
+  if (!edges.some(edge => edge.source.kind === kind)) return 0;
+  const { grid, queue } = workspace;
+  grid.fill(0, 0, width * height);
   const at = (x: number, y: number) => x < minimumX || x >= width || y < minimumY || y >= height ? -1 : y * width + x;
-  for (const rect of rects) for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++) {
-    for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x++) grid[y * width + x] = -1;
+  const neighbor = (x: number, y: number, direction: number) => at(
+    x + (direction === 0 ? -1 : direction === 1 ? 1 : 0), y + (direction === 2 ? -1 : direction === 3 ? 1 : 0));
+  for (const rect of rects) if (rect.blockedKinds & mask) {
+    for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++)
+      for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x++) grid[y * width + x] = -1;
   }
-  for (const edge of edges) for (const port of [edge.source, edge.target]) {
+  for (const edge of edges) if (edge.source.kind === kind) for (let side = 0; side < 2; side++) {
+    const port = side === 0 ? edge.source : edge.target;
     const key = at(port.outside.x, port.outside.y); if (key >= 0) grid[key] = -1;
   }
-  const queue = new Int32Array(grid.length);
   let component = 0;
   for (let y = minimumY; y < height; y++) for (let x = Math.max(0, minimumX); x < width; x++) {
     const start = at(x, y);
@@ -1251,20 +1414,31 @@ function countDisconnectedKind(rects: readonly { x: number; y: number; width: nu
     grid[start] = ++component; queue[0] = start;
     for (let head = 0, tail = 1; head < tail; head++) {
       const cell = queue[head]!, cx = cell % width, cy = Math.floor(cell / width);
-      for (const neighbor of [at(cx - 1, cy), at(cx + 1, cy), at(cx, cy - 1), at(cx, cy + 1)]) {
-        if (neighbor < 0 || grid[neighbor] !== 0) continue;
-        grid[neighbor] = component; queue[tail++] = neighbor;
+      for (let direction = 0; direction < 4; direction++) {
+        const next = neighbor(cx, cy, direction);
+        if (next < 0 || grid[next] !== 0) continue;
+        grid[next] = component; queue[tail++] = next;
       }
     }
   }
-  const accessible = (port: PlannerPort) => {
-    const { x, y } = port.outside;
-    return [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].filter(key => key >= 0).map(key => grid[key]!).filter(value => value > 0);
-  };
-  return edges.filter(edge => {
-    const disconnected = !edge.direct && Math.abs(edge.source.outside.x - edge.target.outside.x) + Math.abs(edge.source.outside.y - edge.target.outside.y) > 1
-      && !accessible(edge.source).some(component => accessible(edge.target).includes(component));
-    if (disconnected) issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
-    return disconnected;
-  }).length;
+  let count = 0;
+  for (const edge of edges) {
+    if (edge.source.kind !== kind || edge.direct) continue;
+    const a = edge.source.outside, b = edge.target.outside;
+    if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 1) continue;
+    let connected = false;
+    for (let side = 0; side < 4 && !connected; side++) {
+      const source = neighbor(a.x, a.y, side), label = source < 0 ? 0 : grid[source]!;
+      if (label <= 0) continue;
+      for (let other = 0; other < 4; other++) {
+        const target = neighbor(b.x, b.y, other);
+        if (target >= 0 && grid[target] === label) { connected = true; break; }
+      }
+    }
+    if (!connected) {
+      count++;
+      issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
+    }
+  }
+  return count;
 }

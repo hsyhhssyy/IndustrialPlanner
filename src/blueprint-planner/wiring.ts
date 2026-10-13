@@ -433,10 +433,10 @@ function expandConvergers(
 
 export function restrictPort(registry: RegistryContract, node: PlannerNode, port: PlannerPort, items: readonly string[]): void {
   const original = node.definition.portGroups[port.groupIndex]!.ports[port.portIndex]!.acceptRule;
-  const base: EntityAcceptRuleDefinition["base"] = items.length === 1
+  const base: EntityAcceptRuleDefinition["base"] = items.length === 0 ? { kind: "none" } : items.length === 1
     ? { kind: "item", itemId: items[0]! } : { kind: "domain", flags: ItemDomainFlag.Solid };
   node.entity.config[`portGroups[${port.groupIndex}].ports[${port.portIndex}].acceptRule`] = {
-    base, exclude: items.length === 1 ? original.exclude : registry.itemDefinitions.filter((item) => !items.includes(item.id)).map((item) => item.id),
+    base, exclude: items.length === 0 ? [] : items.length === 1 ? original.exclude : registry.itemDefinitions.filter((item) => !items.includes(item.id)).map((item) => item.id),
   } satisfies EntityAcceptRuleDefinition;
 }
 

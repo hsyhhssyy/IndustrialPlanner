@@ -9,6 +9,7 @@
 // import { BLUEPRINT_RECOGNITION_VERSION } from "./blueprint-recognition-task";
 import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
+import { clonePlannerTask } from "./task-memory";
 import { EDA_MIGRATION_VERSION } from "./data-migration";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
@@ -1732,7 +1733,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     importing = true;
     try {
       const id = createUuid();
-      let file: BlueprintPlannerTaskFile = { ...structuredClone(source), taskId: id,
+      let file: BlueprintPlannerTaskFile = { ...clonePlannerTask(source, workspace.registry), taskId: id,
         progress: { ...source.progress, taskId: id, status: "waiting" as const, activeWorkerCount: 0 } };
       const point = file.checkpoint as PlannerCheckpoint;
       if (point?.result) point.result = { ...point.result, taskId: id, folderId: null };

@@ -1,3 +1,4 @@
+import { readPlannerTaskFile } from "./planner-task-file";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 // AI-REMOVED 2026-10-03: Reason: 全局选项字段收敛后无须 BlueprintPlannerOptions。Trigger: 逐物品配置。
 // Evidence: OPTION_FIELDS 仅保留两项。Replacement: 字段字面量。Risk: Low。Human Review: Required
@@ -7,7 +8,10 @@ import { BlueprintPlannerItemPolicies } from "./blueprint-planner-item-policies"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toJS } from "mobx";
 import { observer } from "mobx-react-lite";
-import type { BlueprintPlannerAreaPoint, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
+// AI-REMOVED 2026-10-13: 文件类型移入 readPlannerTaskFile，主界面不再解析。
+// Trigger: 一次性 Worker 导入；Replacement: planner-task-file.ts；Risk: Low；Human Review: Required
+// Original code: import type { BlueprintPlannerAreaPoint, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerAreaPoint } from "@/domain/blueprint-planner";
 import type { UiKey } from "@/shared/i18n";
 import type { AppHost } from "../host";
 import { enterBlueprintPlacement } from "../input";
@@ -215,11 +219,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     const request = selectedId === null ? null : planner?.queries.getLastRequest(selectedId);
     return request && isBlueprintRecognitionRequest(request) ? request : null;
   }, [planner, revision, selectedId]);
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(appHost.state.settings.locale, {
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+  }), [appHost.state.settings.locale]);
   const history = useMemo(() => {
     void revision;
-    const timeFormatter = new Intl.DateTimeFormat(appHost.state.settings.locale, {
-      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
-    });
     return planner?.queries.listTasks().map(task => {
       const request = planner.queries.getLastRequest(task.taskId);
       // AI-REMOVED 2026-10-09:
@@ -234,7 +238,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       return { ...task, ...describePlannerHistoryTask(request, appHost.workspace.registry, t),
         timeLabel: timeFormatter.format(task.startedAt) };
     }) ?? [];
-  }, [planner, revision, appHost.state.settings.locale, appHost.workspace.registry, t]);
+  }, [planner, revision, timeFormatter, appHost.workspace.registry, t]);
   const supply = useMemo(() => {
     if (!controller.plan) return { view: null, error: null };
     try { return { view: new PlannerSupplyRules(appHost.workspace.registry, controller.plan, controller.options.converterStartup).view(), error: null }; }
@@ -502,7 +506,12 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             setFileBusy(true);
             try {
               if (file.size > 100 * 1024 * 1024) throw new Error(t("eda.fileTooLarge"));
-              const id = await planner.actions.importTask(JSON.parse(await file.text()) as BlueprintPlannerTaskFile);
+              // AI-REMOVED 2026-10-13:
+              // Reason: 81MB 文本和重复解析树在主线程制造导入高峰，并与搜索堆重叠。
+              // Trigger: 1GiB 内存要求；Evidence: Windows 导入峰值与主线程堆采样。
+              // Replacement: readPlannerTaskFile 一次性 Worker；Risk: 保留原图配置与解析错误；Human Review: Required
+              // Original code: const id = await planner.actions.importTask(JSON.parse(await file.text()) as BlueprintPlannerTaskFile);
+              const id = await planner.actions.importTask(await readPlannerTaskFile(file, appHost.workspace.registry));
               controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
             } finally { setFileBusy(false); }
           });

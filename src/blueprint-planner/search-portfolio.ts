@@ -1,6 +1,6 @@
 import { resolvePlannerOutputAttempt, restorePlannerOutputRequest, plannerUsesOutputStash, MAX_PLANNER_OUTPUT_MODES } from "./output-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
-import { plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
+import { plannerRequestKey, retainPlannerSeed, type PlannerSearchSeed } from "./search-seed";
 import { countPlannerOutputStashes } from "./quality";
 import { plannerAttemptStrategy, type PlannerAttemptStrategy } from "./strategy-schedule";
 import { PlannerRandom } from "./search-random";
@@ -59,9 +59,9 @@ export class PlannerSearchPortfolio {
   }
 
   snapshot(): PlannerPortfolioSnapshot {
-    return structuredClone({ pools: [...this.seeds].map(([key, pool]) => ({ key,
+    return { pools: [...this.seeds].map(([key, pool]) => ({ key,
       attemptsWithoutImprovement: pool.attemptsWithoutImprovement,
-      entries: pool.entries.map(({ seed, visits }: PlannerPortfolioSnapshot["pools"][number]["entries"][number]) => ({ seed, visits })) })) });
+      entries: pool.entries.map(({ seed, visits }: PlannerPortfolioSnapshot["pools"][number]["entries"][number]) => ({ seed, visits })) })) };
   }
 
   restore(snapshot: PlannerPortfolioSnapshot): void {
@@ -85,7 +85,7 @@ export class PlannerSearchPortfolio {
         const request = restorePlannerOutputRequest(this.request, seed.network.request.options);
         if (seed.requestKey !== pool.key || seed.requestKey !== plannerRequestKey(request)
           || !Number.isSafeInteger(visits) || visits < 0) throw new Error("检查点与当前生产方案不匹配。");
-        const copy = structuredClone(seed);
+        const copy = retainPlannerSeed(seed, true);
         return { seed: copy, visits, features: seedFeatures(copy) };
       });
       pools.set(pool.key, { entries, attemptsWithoutImprovement: pool.attemptsWithoutImprovement });
@@ -98,6 +98,7 @@ export class PlannerSearchPortfolio {
   restart(seed: PlannerSearchSeed | undefined): void {
     this.remember(seed);
     if (seed) {
+      seed = retainPlannerSeed(seed);
       const pool = this.seeds.get(seed.requestKey)!;
       const entry: SeedEntry = { seed, features: seedFeatures(seed), visits: 0 };
       // 同面积的施工成本改善也必须成为主种子；仅线路变化时替换原有相同摆位。
@@ -143,6 +144,7 @@ export class PlannerSearchPortfolio {
 
   remember(seed: PlannerSearchSeed | undefined): void {
     if (!seed) return;
+    seed = retainPlannerSeed(seed);
 // AI-REMOVED 2026-10-03:
 // Reason: 自动去向改为逐物品组合，检查点需要保留每种组合。
 // Trigger: 用户要求精确配置物品。

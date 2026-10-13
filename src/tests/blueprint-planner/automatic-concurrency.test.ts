@@ -4,10 +4,11 @@ import { PlannerAutomaticConcurrency, PlannerConcurrencyMemory, plannerConcurren
 it("容量提示保留 CPU 余量，缺失提示时不会盲目启满 32 Worker", () => {
   expect(plannerConcurrencyLimit({})).toBe(1);
   // 2026-10-06：用户要求放宽经验上限；每通道预留 256 MiB，实际档位交给在线测量。
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32 })).toBe(8);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 8 })).toBe(16);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 64 })).toBe(24);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 8, deviceMemory: 2 })).toBe(4);
+  // AI-CORRECTION 2026-10-13：用户要求整页内存收敛；CPU 池改为固定 512MiB 上限，仍保留低内存保护。
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32 })).toBe(2);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 8 })).toBe(2);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 64 })).toBe(2);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 8, deviceMemory: 2 })).toBe(2);
   expect(plannerConcurrencyLimit({ hardwareConcurrency: 1, deviceMemory: 0.5 })).toBe(1);
 });
 

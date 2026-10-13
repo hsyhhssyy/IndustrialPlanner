@@ -248,7 +248,7 @@ export async function prepareEdaDataMigration(version = EDA_MIGRATION_VERSION): 
     // AI-CORRECTION 2026-10-09：逐条迁移成功或原件已安全隔离才算处理完成；活动移除、原文隔离与迁入标记同事务提交。
     if (!await applyRawIndexedDbTransactionMutations<unknown>(EDA_TASK_LOCATION, [
       { storeName: EDA_TASK_LOCATION.storeName, operations: [
-        ...converted.map(file => ({ type: "put" as const, key: file.taskId, value: JSON.stringify(file) })),
+        ...converted.map(file => ({ type: "put" as const, key: file.taskId, value: file })),
         ...(imported ? quarantined.map(record => ({ type: "delete" as const, key: record.sourceKey })) : []),
       ] },
       { storeName: EDA_TASK_QUARANTINE_LOCATION.storeName, operations: [

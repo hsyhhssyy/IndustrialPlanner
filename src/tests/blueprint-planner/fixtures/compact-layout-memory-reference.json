@@ -1,0 +1,4737 @@
+{
+  "provenance": "2026-10-13 原始故障任务的最优种子；参考轨迹在连通区、坐标键及姿态缓冲复用前记录。",
+  "seed": {
+    "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"perMinute\":6}],\"externalSupplies\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":240}],\"infiniteItemIds\":[],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[\"activity-limited-formula-2\"],\"recipes\":[{\"recipeId\":\"r_component_copper_cmpt_from_copper_nugget_basic\",\"cyclesPerMinute\":60,\"deviceCount\":2,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60}],\"runningInputs\":[]},{\"recipeId\":\"r_liquid_filling_copper_bottle_grass_2_hidden\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30},{\"itemId\":\"item_liquid_plant_grass_2\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_crusher_grass_powder_2_from_grass_2_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_powder_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_plant_grass_powder_2\",\"perMinute\":30},{\"itemId\":\"item_liquid_water\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_liquid_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_hydro_planter_grass_2_from_seed_2_and_water_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_seed_2\",\"perMinute\":15},{\"itemId\":\"item_liquid_water\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_seedcol_grass_seed_2_from_grass_2_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_seed_2\",\"perMinute\":15}],\"runningInputs\":[]},{\"recipeId\":\"r_shaper_copper_bottle_from_copper_nugget_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_packaging_bottled_rec_hp_5_from_copper_cmpt_and_copper_bottle_filled_grass_2_basic\",\"cyclesPerMinute\":6,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60},{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_2\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"perMinute\":6}],\"runningInputs\":[]},{\"recipeId\":\"r_pump_water_basic\",\"cyclesPerMinute\":45,\"deviceCount\":0.75,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_liquid_water\",\"perMinute\":45}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"warehouse\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"output\":\"warehouse\"},{\"itemId\":\"item_copper_nugget\",\"supply\":\"warehouse\"},{\"itemId\":\"item_liquid_water\",\"supply\":\"conduit\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
+    "width": 14,
+    "height": 23,
+    "routes": [
+      {
+        "source": "eda-split-15",
+        "target": "eda-device-5",
+        "sourcePort": "eda-split-15/1/2",
+        "targetPort": "eda-device-5/1/0",
+        "sourceEdge": "SOUTH",
+        "targetEdge": "NORTH",
+        "cells": [
+          {
+            "x": 7,
+            "y": 17
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-source-11",
+        "target": "eda-device-7",
+        "sourcePort": "eda-source-11/0/0",
+        "targetPort": "eda-device-7/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 7
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-1",
+        "target": "eda-device-8",
+        "sourcePort": "eda-device-1/1/2",
+        "targetPort": "eda-device-8/0/2",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 7,
+            "y": 2
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-2",
+        "target": "eda-device-8",
+        "sourcePort": "eda-device-2/2/0",
+        "targetPort": "eda-device-8/0/5",
+        "sourceEdge": "NORTH",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 7,
+            "y": 5
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-source-9",
+        "target": "eda-device-0",
+        "sourcePort": "eda-source-9/0/0",
+        "targetPort": "eda-device-0/0/1",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 4
+          },
+          {
+            "x": 2,
+            "y": 4
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-6",
+        "target": "eda-device-5",
+        "sourcePort": "eda-device-6/1/3",
+        "targetPort": "eda-device-5/0/4",
+        "sourceEdge": "SOUTH",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 10,
+            "y": 17
+          },
+          {
+            "x": 10,
+            "y": 18
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-source-12",
+        "target": "eda-device-7",
+        "sourcePort": "eda-source-12/0/0",
+        "targetPort": "eda-device-7/0/2",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 10
+          },
+          {
+            "x": 1,
+            "y": 9
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-device-0",
+        "target": "eda-device-8",
+        "sourcePort": "eda-device-0/1/1",
+        "targetPort": "eda-device-8/0/4",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 6,
+            "y": 4
+          },
+          {
+            "x": 7,
+            "y": 4
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-source-10",
+        "target": "eda-device-1",
+        "sourcePort": "eda-source-10/0/0",
+        "targetPort": "eda-device-1/0/1",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 1
+          },
+          {
+            "x": 2,
+            "y": 1
+          },
+          {
+            "x": 3,
+            "y": 1
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-5",
+        "target": "eda-device-3",
+        "sourcePort": "eda-device-5/2/0",
+        "targetPort": "eda-device-3/0/2",
+        "sourceEdge": "WEST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 4,
+            "y": 22
+          },
+          {
+            "x": 3,
+            "y": 22
+          },
+          {
+            "x": 2,
+            "y": 22
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-3",
+        "target": "eda-device-4",
+        "sourcePort": "eda-device-3/1/2",
+        "targetPort": "eda-device-4/1/0",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 2,
+            "y": 18
+          },
+          {
+            "x": 2,
+            "y": 17
+          },
+          {
+            "x": 2,
+            "y": 16
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-15",
+        "target": "eda-device-4",
+        "sourcePort": "eda-split-15/1/1",
+        "targetPort": "eda-device-4/4/1",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 6,
+            "y": 16
+          },
+          {
+            "x": 6,
+            "y": 15
+          },
+          {
+            "x": 6,
+            "y": 14
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-device-7",
+        "target": "eda-device-2",
+        "sourcePort": "eda-device-7/1/2",
+        "targetPort": "eda-device-2/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 5,
+            "y": 9
+          },
+          {
+            "x": 6,
+            "y": 9
+          },
+          {
+            "x": 6,
+            "y": 10
+          },
+          {
+            "x": 7,
+            "y": 10
+          }
+        ],
+        "turns": 3
+      },
+      {
+        "source": "eda-source-13",
+        "target": "eda-split-15",
+        "sourcePort": "eda-source-13/0/0",
+        "targetPort": "eda-split-15/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "NORTH",
+        "cells": [
+          {
+            "x": 13,
+            "y": 20
+          },
+          {
+            "x": 13,
+            "y": 19
+          },
+          {
+            "x": 13,
+            "y": 18
+          },
+          {
+            "x": 13,
+            "y": 17
+          },
+          {
+            "x": 12,
+            "y": 17
+          },
+          {
+            "x": 11,
+            "y": 17
+          },
+          {
+            "x": 10,
+            "y": 17
+          },
+          {
+            "x": 9,
+            "y": 17
+          },
+          {
+            "x": 8,
+            "y": 17
+          },
+          {
+            "x": 8,
+            "y": 16
+          },
+          {
+            "x": 8,
+            "y": 15
+          },
+          {
+            "x": 7,
+            "y": 15
+          }
+        ],
+        "turns": 5
+      },
+      {
+        "source": "eda-device-5",
+        "target": "eda-device-6",
+        "sourcePort": "eda-device-5/2/4",
+        "targetPort": "eda-device-6/0/4",
+        "sourceEdge": "WEST",
+        "targetEdge": "NORTH",
+        "cells": [
+          {
+            "x": 4,
+            "y": 18
+          },
+          {
+            "x": 4,
+            "y": 17
+          },
+          {
+            "x": 4,
+            "y": 16
+          },
+          {
+            "x": 5,
+            "y": 16
+          },
+          {
+            "x": 6,
+            "y": 16
+          },
+          {
+            "x": 6,
+            "y": 15
+          },
+          {
+            "x": 6,
+            "y": 14
+          },
+          {
+            "x": 6,
+            "y": 13
+          },
+          {
+            "x": 6,
+            "y": 12
+          },
+          {
+            "x": 6,
+            "y": 11
+          },
+          {
+            "x": 7,
+            "y": 11
+          },
+          {
+            "x": 8,
+            "y": 11
+          },
+          {
+            "x": 9,
+            "y": 11
+          }
+        ],
+        "turns": 5
+      },
+      {
+        "source": "eda-device-4",
+        "target": "eda-device-2",
+        "sourcePort": "eda-device-4/2/0",
+        "targetPort": "eda-device-2/1/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 0,
+            "y": 12
+          },
+          {
+            "x": 0,
+            "y": 11
+          },
+          {
+            "x": 0,
+            "y": 10
+          },
+          {
+            "x": 1,
+            "y": 10
+          },
+          {
+            "x": 2,
+            "y": 10
+          },
+          {
+            "x": 3,
+            "y": 10
+          },
+          {
+            "x": 4,
+            "y": 10
+          },
+          {
+            "x": 5,
+            "y": 10
+          },
+          {
+            "x": 6,
+            "y": 10
+          },
+          {
+            "x": 7,
+            "y": 10
+          },
+          {
+            "x": 8,
+            "y": 10
+          },
+          {
+            "x": 9,
+            "y": 10
+          },
+          {
+            "x": 10,
+            "y": 10
+          },
+          {
+            "x": 11,
+            "y": 10
+          },
+          {
+            "x": 12,
+            "y": 10
+          },
+          {
+            "x": 13,
+            "y": 10
+          },
+          {
+            "x": 13,
+            "y": 9
+          },
+          {
+            "x": 13,
+            "y": 8
+          }
+        ],
+        "turns": 4
+      },
+      {
+        "source": "eda-device-8",
+        "target": "eda-output-14",
+        "sourcePort": "eda-device-8/1/5",
+        "targetPort": "eda-output-14/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 12,
+            "y": 5
+          },
+          {
+            "x": 13,
+            "y": 5
+          },
+          {
+            "x": 13,
+            "y": 6
+          },
+          {
+            "x": 13,
+            "y": 7
+          },
+          {
+            "x": 13,
+            "y": 8
+          },
+          {
+            "x": 13,
+            "y": 9
+          },
+          {
+            "x": 13,
+            "y": 10
+          },
+          {
+            "x": 12,
+            "y": 10
+          },
+          {
+            "x": 11,
+            "y": 10
+          },
+          {
+            "x": 10,
+            "y": 10
+          },
+          {
+            "x": 9,
+            "y": 10
+          },
+          {
+            "x": 8,
+            "y": 10
+          },
+          {
+            "x": 8,
+            "y": 11
+          },
+          {
+            "x": 8,
+            "y": 12
+          },
+          {
+            "x": 8,
+            "y": 13
+          },
+          {
+            "x": 8,
+            "y": 14
+          },
+          {
+            "x": 8,
+            "y": 15
+          },
+          {
+            "x": 8,
+            "y": 16
+          },
+          {
+            "x": 8,
+            "y": 17
+          },
+          {
+            "x": 7,
+            "y": 17
+          },
+          {
+            "x": 6,
+            "y": 17
+          },
+          {
+            "x": 5,
+            "y": 17
+          },
+          {
+            "x": 4,
+            "y": 17
+          },
+          {
+            "x": 3,
+            "y": 17
+          },
+          {
+            "x": 2,
+            "y": 17
+          },
+          {
+            "x": 1,
+            "y": 17
+          },
+          {
+            "x": 1,
+            "y": 16
+          }
+        ],
+        "turns": 6
+      }
+    ],
+    "wires": [
+      {
+        "source": {
+          "entityId": "eda-source-9",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 4
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 4
+          }
+        },
+        "target": {
+          "entityId": "eda-device-0",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 3,
+            "y": 4
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 2,
+            "y": 4
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-10",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 1
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 1
+          }
+        },
+        "target": {
+          "entityId": "eda-device-1",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 4,
+            "y": 1
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 3,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-6",
+          "groupIndex": 1,
+          "portIndex": 3,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 10,
+            "y": 16
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 10,
+            "y": 17
+          }
+        },
+        "target": {
+          "entityId": "eda-device-5",
+          "groupIndex": 0,
+          "portIndex": 4,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 9,
+            "y": 18
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 10,
+            "y": 18
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_seed_2"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-15",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 16
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 7,
+            "y": 17
+          }
+        },
+        "target": {
+          "entityId": "eda-device-5",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 18
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 7,
+            "y": 17
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-5",
+          "groupIndex": 2,
+          "portIndex": 4,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 18
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 4,
+            "y": 18
+          }
+        },
+        "target": {
+          "entityId": "eda-device-6",
+          "groupIndex": 0,
+          "portIndex": 4,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 9,
+            "y": 12
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 9,
+            "y": 11
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_2"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-12",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 10
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 10
+          }
+        },
+        "target": {
+          "entityId": "eda-device-7",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 9
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 1,
+            "y": 9
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-11",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 7
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-device-7",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 7
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 1,
+            "y": 7
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-5",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 22
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 4,
+            "y": 22
+          }
+        },
+        "target": {
+          "entityId": "eda-device-3",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 21
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 2,
+            "y": 22
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_2"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-3",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 19
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 2,
+            "y": 18
+          }
+        },
+        "target": {
+          "entityId": "eda-device-4",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 15
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 2,
+            "y": 16
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_powder_2"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-15",
+          "groupIndex": 1,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 16
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 6,
+            "y": 16
+          }
+        },
+        "target": {
+          "entityId": "eda-device-4",
+          "groupIndex": 4,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 5,
+            "y": 14
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 6,
+            "y": 14
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-7",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 4,
+            "y": 9
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 5,
+            "y": 9
+          }
+        },
+        "target": {
+          "entityId": "eda-device-2",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 7,
+            "y": 9
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 7,
+            "y": 10
+          }
+        },
+        "itemIds": [
+          "item_copper_bottle"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-4",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 1,
+            "y": 12
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 0,
+            "y": 12
+          }
+        },
+        "target": {
+          "entityId": "eda-device-2",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 12,
+            "y": 8
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 13,
+            "y": 8
+          }
+        },
+        "itemIds": [
+          "item_liquid_plant_grass_2"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-1",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 6,
+            "y": 2
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 7,
+            "y": 2
+          }
+        },
+        "target": {
+          "entityId": "eda-device-8",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 8,
+            "y": 2
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 7,
+            "y": 2
+          }
+        },
+        "itemIds": [
+          "item_copper_cmpt"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-0",
+          "groupIndex": 1,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 4
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 6,
+            "y": 4
+          }
+        },
+        "target": {
+          "entityId": "eda-device-8",
+          "groupIndex": 0,
+          "portIndex": 4,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 8,
+            "y": 4
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 7,
+            "y": 4
+          }
+        },
+        "itemIds": [
+          "item_copper_cmpt"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-2",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 7,
+            "y": 6
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 7,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "eda-device-8",
+          "groupIndex": 0,
+          "portIndex": 5,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 8,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 7,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_copper_bottle_filled_liquid_plant_grass_2"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-8",
+          "groupIndex": 1,
+          "portIndex": 5,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 11,
+            "y": 5
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 12,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "eda-output-14",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 16
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 16
+          }
+        },
+        "itemIds": [
+          "item_bottled_rec_hp_5"
+        ],
+        "perMinute": 6,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-13",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 12,
+            "y": 20
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 13,
+            "y": 20
+          }
+        },
+        "target": {
+          "entityId": "eda-split-15",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 16
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 7,
+            "y": 15
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 45,
+        "minimumCells": 0
+      }
+    ],
+    "network": {
+      "request": {
+        "plan": {
+          "name": "",
+          "sourceBaseId": "wuling_protocol_core",
+          "targets": [
+            {
+              "itemId": "item_bottled_rec_hp_5",
+              "perMinute": 6
+            }
+          ],
+          "externalSupplies": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 240
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 45
+            }
+          ],
+          "infiniteItemIds": [
+            "item_copper_ore",
+            "item_liquid_acid",
+            "item_iron_ore",
+            "item_liquid_water",
+            "item_gas_inert",
+            "item_gas_xiranite",
+            "item_originium_ore",
+            "item_quartz_sand"
+          ],
+          "byproductItemIds": [],
+          "containsModules": false,
+          "unresolvedPerMinute": 0,
+          "activeActivityIds": [
+            "activity-limited-formula-2"
+          ],
+          "recipes": [
+            {
+              "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+              "cyclesPerMinute": 60,
+              "deviceCount": 2,
+              "inputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 60
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_cmpt",
+                  "perMinute": 60
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_liquid_filling_copper_bottle_grass_2_hidden",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_bottle",
+                  "perMinute": 30
+                },
+                {
+                  "itemId": "item_liquid_plant_grass_2",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_2",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_crusher_grass_powder_2_from_grass_2_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_2",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_powder_2",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_powder_2",
+                  "perMinute": 30
+                },
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_liquid_plant_grass_2",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_hydro_planter_grass_2_from_seed_2_and_water_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_seed_2",
+                  "perMinute": 15
+                },
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_2",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_seedcol_grass_seed_2_from_grass_2_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_2",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_seed_2",
+                  "perMinute": 15
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_shaper_copper_bottle_from_copper_nugget_basic",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 60
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_bottle",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_packaging_bottled_rec_hp_5_from_copper_cmpt_and_copper_bottle_filled_grass_2_basic",
+              "cyclesPerMinute": 6,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_cmpt",
+                  "perMinute": 60
+                },
+                {
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_2",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_bottled_rec_hp_5",
+                  "perMinute": 6
+                }
+              ],
+              "runningInputs": []
+            }
+          ],
+          "supplyPolicies": []
+        },
+        "options": {
+          "warehousePortPlacement": "continuous",
+          "solidSupply": "warehouse",
+          "fluidSupply": "conduit",
+          "warehouseBus": "straight",
+          "solidOutput": "warehouse",
+          "byproducts": "destroy",
+          "plantStartup": "preload",
+          "converterStartup": "reject",
+          "evaluationsPerRound": 5000000,
+          "concurrency": "auto",
+          "gpu": true,
+          "itemPolicies": [
+            {
+              "itemId": "item_bottled_rec_hp_5",
+              "output": "warehouse"
+            },
+            {
+              "itemId": "item_copper_nugget",
+              "supply": "warehouse"
+            },
+            {
+              "itemId": "item_liquid_water",
+              "supply": "conduit"
+            }
+          ],
+          "blueprintOptimizations": {
+            "reassignPorts": false,
+            "reassignConnections": false,
+            "rebuildLogistics": false,
+            "mergeBoundaryFacilities": false
+          }
+        }
+      },
+      "nodes": [
+        {
+          "entity": {
+            "id": "eda-source-9",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-10",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-11",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 6
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-12",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-13",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 10,
+              "y": 19
+            },
+            "rotation": 0,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 45
+            }
+          ],
+          "supplyTargets": [
+            {
+              "entityId": "eda-device-5",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-4",
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-split-15",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 7,
+              "y": 16
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-device-0",
+            "definitionId": "cmpt_mc_1",
+            "position": {
+              "x": 3,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_component_copper_cmpt_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-1",
+            "definitionId": "cmpt_mc_1",
+            "position": {
+              "x": 4,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_component_copper_cmpt_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-5",
+            "definitionId": "planter_1_liquid",
+            "position": {
+              "x": 5,
+              "y": 18
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_hydro_planter_grass_2_from_seed_2_and_water_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_seed_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 5,
+              "portGroups[2].ports[1].priorityGroup": 5,
+              "portGroups[2].ports[4].priorityGroup": 1,
+              "portGroups[2].ports[2].priorityGroup": 5
+            },
+            "tags": []
+          },
+          "recipeId": "r_hydro_planter_grass_2_from_seed_2_and_water_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_seed_2",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-6",
+            "definitionId": "seedcol_1",
+            "position": {
+              "x": 9,
+              "y": 12
+            },
+            "rotation": 0,
+            "config": {
+              "channelRecipes": {
+                "default": "r_seedcol_grass_seed_2_from_grass_2_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+              "storageSlotGroups[0].slots[0].initialCount": 50,
+              "storageSlotGroups[0].slots[0].lock": "item_plant_grass_2",
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[3].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_seed_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[4].priorityGroup": 1,
+              "portGroups[1].ports[3].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_seedcol_grass_seed_2_from_grass_2_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_2",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_seed_2",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-7",
+            "definitionId": "shaper_1",
+            "position": {
+              "x": 2,
+              "y": 7
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_shaper_copper_bottle_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_shaper_copper_bottle_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_bottle",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-3",
+            "definitionId": "grinder_1",
+            "position": {
+              "x": 0,
+              "y": 19
+            },
+            "rotation": 180,
+            "config": {
+              "channelRecipes": {
+                "default": "r_crusher_grass_powder_2_from_grass_2_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_powder_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1,
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_crusher_grass_powder_2_from_grass_2_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_2",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_powder_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-4",
+            "definitionId": "mix_pool_1",
+            "position": {
+              "x": 1,
+              "y": 11
+            },
+            "rotation": 180,
+            "config": {
+              "channelRecipes": {
+                "ch1": "r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic"
+              },
+              "recipeChannelAutomaticModeEnabled": false,
+              "recipeChannels[0].manualRecipeOnly": true,
+              "recipeChannels[1].manualRecipeOnly": true,
+              "recipeChannels[2].manualRecipeOnly": true,
+              "recipeChannels[3].manualRecipeOnly": true,
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_powder_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[4].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[4].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_powder_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_liquid_plant_grass_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-2",
+            "definitionId": "filling_pd_mc_1_liquid",
+            "position": {
+              "x": 7,
+              "y": 6
+            },
+            "rotation": 180,
+            "config": {
+              "channelRecipes": {
+                "default": "r_liquid_filling_copper_bottle_grass_2_hidden"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_liquid_filling_copper_bottle_grass_2_hidden",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_bottle",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_plant_grass_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_bottle_filled_liquid_plant_grass_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-8",
+            "definitionId": "tools_asm_mc_1",
+            "position": {
+              "x": 8,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_packaging_bottled_rec_hp_5_from_copper_cmpt_and_copper_bottle_filled_grass_2_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_2"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[5].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_bottled_rec_hp_5"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[5].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_packaging_bottled_rec_hp_5_from_copper_cmpt_and_copper_bottle_filled_grass_2_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 60,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_copper_bottle_filled_liquid_plant_grass_2",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_bottled_rec_hp_5",
+              "perMinute": 6,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-output-14",
+            "definitionId": "loader_1",
+            "position": {
+              "x": 0,
+              "y": 15
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_bottled_rec_hp_5"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_bottled_rec_hp_5",
+              "perMinute": 6
+            }
+          ],
+          "outputs": []
+        }
+      ],
+      "slotLinks": [
+        {
+          "id": "eda-warehouse-0",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-9",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_nugget"
+          }
+        },
+        {
+          "id": "eda-warehouse-1",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-10",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_nugget"
+          }
+        },
+        {
+          "id": "eda-warehouse-2",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-11",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_nugget"
+          }
+        },
+        {
+          "id": "eda-warehouse-3",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-12",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_nugget"
+          }
+        },
+        {
+          "id": "eda-warehouse-4",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-13",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_liquid_water"
+          }
+        }
+      ],
+      "initialSlots": [
+        {
+          "entityId": "eda-source-9",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_nugget",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-10",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_nugget",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-11",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_nugget",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-12",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_nugget",
+          "count": 1,
+          "ignoreStock": true
+        }
+      ],
+      "preferredGasCount": 0
+    }
+  },
+  "cases": [
+    {
+      "strategy": "baseline",
+      "size": [
+        14,
+        23
+      ],
+      "trajectory": [
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 9,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 17,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 26,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 30,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 38,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 52,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 58,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 62,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 76,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.98765046296296,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "2fe6057d0cb730f3cacb54dcbb0019aad568716d741b5269ea56014550e9b4f0"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 9
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 19
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 16
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 18
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 9,
+            "y": 12
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 7
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 19
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 90
+        }
+      ]
+    },
+    {
+      "strategy": "baseline",
+      "size": [
+        12,
+        20
+      ],
+      "trajectory": [
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 10,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 72,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 4169.803588435374,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 47,
+              "connections": 2
+            }
+          },
+          "wiresHash": "f17f2e632fac382c701f862d7c8f1aed7d863813e6e1646d8fa53748d0188d0e"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 16,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3957.8358333333335,
+            "remainingConflicts": {
+              "geometry": 5,
+              "power": 0,
+              "boundary": 38,
+              "connections": 3
+            }
+          },
+          "wiresHash": "090879b75658bbe79267da2908c8cd02fb124d82e1f601bddd1bb10fc4271377"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 30,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3957.8358333333335,
+            "remainingConflicts": {
+              "geometry": 5,
+              "power": 0,
+              "boundary": 38,
+              "connections": 3
+            }
+          },
+          "wiresHash": "090879b75658bbe79267da2908c8cd02fb124d82e1f601bddd1bb10fc4271377"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 32,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3957.8358333333335,
+            "remainingConflicts": {
+              "geometry": 5,
+              "power": 0,
+              "boundary": 38,
+              "connections": 3
+            }
+          },
+          "wiresHash": "090879b75658bbe79267da2908c8cd02fb124d82e1f601bddd1bb10fc4271377"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 40,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3957.8358333333335,
+            "remainingConflicts": {
+              "geometry": 5,
+              "power": 0,
+              "boundary": 38,
+              "connections": 3
+            }
+          },
+          "wiresHash": "090879b75658bbe79267da2908c8cd02fb124d82e1f601bddd1bb10fc4271377"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 52,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3957.8358333333335,
+            "remainingConflicts": {
+              "geometry": 5,
+              "power": 0,
+              "boundary": 38,
+              "connections": 3
+            }
+          },
+          "wiresHash": "090879b75658bbe79267da2908c8cd02fb124d82e1f601bddd1bb10fc4271377"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 65,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 65,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3480.925428240741,
+            "remainingConflicts": {
+              "geometry": 9,
+              "power": 0,
+              "boundary": 25,
+              "connections": 3
+            }
+          },
+          "wiresHash": "df7d2658d7e85d0aae358395685bdd5986b306c51570ec2691e782f779900cd8"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 73,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 62,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 2694.520601851852,
+            "remainingConflicts": {
+              "geometry": 7,
+              "power": 0,
+              "boundary": 20,
+              "connections": 2
+            }
+          },
+          "wiresHash": "2de970e862d7f0fc6dd236da2857b5f155ec92b54e874af83f5800e0d380d729"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 9
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 14
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 15
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 17
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 12
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 7
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 17
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 90
+        }
+      ]
+    },
+    {
+      "strategy": "baseline",
+      "size": [
+        25,
+        25
+      ],
+      "trajectory": [
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 10,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 21,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 30,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 32,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 42,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 52,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 60,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 128.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "11ca12ac71563e5f3ef290348d874c9fb3ad80dc5a0e61b3cd6a472b5842971d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "baseline",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 64,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 73,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 125.40208333333334,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "c2c8ebe2f0a7c4e6827786c15c765eb88c78694092473b2ccf7f0fc072d28fb9"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 9
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 19
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 16
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 17
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 9,
+            "y": 12
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 7
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 19
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 90
+        }
+      ]
+    },
+    {
+      "strategy": "compact",
+      "size": [
+        14,
+        23
+      ],
+      "trajectory": [
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 11,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 18,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 30,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 35,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 43,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 48,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 53,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 62,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 75,
+            "outline": {
+              "width": 14,
+              "height": 23
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "298f2f57a33182ad38fc4dc67fb6720e548341f08cb7780c1e64cf4bdc23ddff"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 9
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 19
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 16
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 18
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 9,
+            "y": 12
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 7
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 19
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 90
+        }
+      ]
+    },
+    {
+      "strategy": "compact",
+      "size": [
+        12,
+        20
+      ],
+      "trajectory": [
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 16,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 66,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3773.7657407407405,
+            "remainingConflicts": {
+              "geometry": 9,
+              "power": 0,
+              "boundary": 19,
+              "connections": 5
+            }
+          },
+          "wiresHash": "6893e2b0ef1660a3118aca86e89d7170ccca0bdac4addf508f63294278e2b38b"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 25,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 62,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3345.2275925925924,
+            "remainingConflicts": {
+              "geometry": 7,
+              "power": 0,
+              "boundary": 19,
+              "connections": 5
+            }
+          },
+          "wiresHash": "bd273fdc9b43ed7d3253219d2c846f904cab413de54378588a9c845f6398ed9a"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 31,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 62,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3345.2275925925924,
+            "remainingConflicts": {
+              "geometry": 7,
+              "power": 0,
+              "boundary": 19,
+              "connections": 5
+            }
+          },
+          "wiresHash": "bd273fdc9b43ed7d3253219d2c846f904cab413de54378588a9c845f6398ed9a"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 37,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 66,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3298.8466666666664,
+            "remainingConflicts": {
+              "geometry": 6,
+              "power": 0,
+              "boundary": 19,
+              "connections": 5
+            }
+          },
+          "wiresHash": "d213367816e4695fb6f0e694d2adffa48048edc3b4b66527594c4fbfda0ea062"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 47,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 58,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3191.4883333333332,
+            "remainingConflicts": {
+              "geometry": 10,
+              "power": 0,
+              "boundary": 11,
+              "connections": 5
+            }
+          },
+          "wiresHash": "2d5eb8a25a2a62fda5c945a1da0039ecc81389acb3b4899d5e4829b13b4c8b90"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 56,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 63,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 3085.6221768707483,
+            "remainingConflicts": {
+              "geometry": 13,
+              "power": 0,
+              "boundary": 11,
+              "connections": 5
+            }
+          },
+          "wiresHash": "75967a23dd1558ff8ae22072a1d5a1f8f5714899ac3fe3f4ca2d687717caacc2"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 61,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 60,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 2609.575,
+            "remainingConflicts": {
+              "geometry": 9,
+              "power": 0,
+              "boundary": 12,
+              "connections": 3
+            }
+          },
+          "wiresHash": "ee3831d2e9c70bf30640d1f5e160d665f6d409c5f988648e609a16c1ddf1586a"
+        },
+        {
+          "feasible": false,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 69,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 60,
+            "outline": {
+              "width": 12,
+              "height": 20
+            },
+            "layoutInitialCost": 4615.968796296296,
+            "layoutBestCost": 2609.575,
+            "remainingConflicts": {
+              "geometry": 9,
+              "power": 0,
+              "boundary": 12,
+              "connections": 3
+            }
+          },
+          "wiresHash": "ee3831d2e9c70bf30640d1f5e160d665f6d409c5f988648e609a16c1ddf1586a"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 2
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 8
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 5
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 10
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 13
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": -1
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 15
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 9,
+            "y": 10
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 10
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 5
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 11,
+            "y": 16
+          },
+          "rotation": 270
+        }
+      ]
+    },
+    {
+      "strategy": "compact",
+      "size": [
+        25,
+        25
+      ],
+      "trajectory": [
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 64,
+            "acceptedMoves": 16,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 77,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 135.9687962962963,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 128,
+            "acceptedMoves": 24,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 79,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 134.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "6f7bfce3cb34c0ca4ff9a5a83fa76b40403c1248d4f2b8bbf071889f57db359d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 192,
+            "acceptedMoves": 35,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 79,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 134.61875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "6f7bfce3cb34c0ca4ff9a5a83fa76b40403c1248d4f2b8bbf071889f57db359d"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 256,
+            "acceptedMoves": 41,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 78,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.6646875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "b6e235ce0dc396af64959ea843cdeff098ae0e5b838d5127b3cbddc94dc18246"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 320,
+            "acceptedMoves": 52,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 78,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.6646875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "b6e235ce0dc396af64959ea843cdeff098ae0e5b838d5127b3cbddc94dc18246"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 384,
+            "acceptedMoves": 58,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 78,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.6646875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "b6e235ce0dc396af64959ea843cdeff098ae0e5b838d5127b3cbddc94dc18246"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 448,
+            "acceptedMoves": 64,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 78,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.6646875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "b6e235ce0dc396af64959ea843cdeff098ae0e5b838d5127b3cbddc94dc18246"
+        },
+        {
+          "feasible": true,
+          "statistics": {
+            "strategy": "compact",
+            "seed": 294883,
+            "evaluationLimit": 512,
+            "evaluations": 512,
+            "acceptedMoves": 76,
+            "routingAttempts": 0,
+            "initialWireLength": 77,
+            "finalWireLength": 78,
+            "outline": {
+              "width": 25,
+              "height": 25
+            },
+            "layoutInitialCost": 135.9687962962963,
+            "layoutBestCost": 133.6646875,
+            "remainingConflicts": {
+              "geometry": 0,
+              "power": 0,
+              "boundary": 0,
+              "connections": 0
+            }
+          },
+          "wiresHash": "b6e235ce0dc396af64959ea843cdeff098ae0e5b838d5127b3cbddc94dc18246"
+        }
+      ],
+      "finalPoses": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 9
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 10,
+            "y": 19
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 17
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 3
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 18
+          },
+          "rotation": 90
+        },
+        {
+          "position": {
+            "x": 9,
+            "y": 12
+          },
+          "rotation": 0
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 7
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 19
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 7,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 15
+          },
+          "rotation": 90
+        }
+      ]
+    }
+  ]
+}

@@ -4,8 +4,9 @@ import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner-item-policy";
 import type { PlannerSupplyView } from "@/shared/planner-supply";
 import styles from "./blueprint-planner-dialog.module.scss";
+import { observer } from "mobx-react-lite";
 
-export function BlueprintPlannerItemPolicies({ plan, registry, environment, options, disabled, onChange, t }: {
+export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerItemPolicies({ plan, registry, environment, options, disabled, onChange, t }: {
   readonly plan: BlueprintPlannerProductionPlan;
   readonly registry: RegistryContract;
   readonly environment: PlannerSupplyView;
@@ -56,4 +57,4 @@ export function BlueprintPlannerItemPolicies({ plan, registry, environment, opti
       })}
     </fieldset>
   </section>;
-}
+});

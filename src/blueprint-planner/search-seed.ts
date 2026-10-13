@@ -16,6 +16,26 @@ export interface PlannerSearchSeed {
   readonly height: number;
 }
 
+const restoredSeeds = new WeakMap<PlannerSearchSeed, PlannerSearchSeed>();
+const immutableSeeds = new WeakSet<PlannerSearchSeed>();
+
+/** 已发布种子不可变；分片快照只复制访问计数，共享种子内容。 */
+export function retainPlannerSeed(seed: PlannerSearchSeed, copy = false): PlannerSearchSeed {
+  if (immutableSeeds.has(seed)) return seed;
+  const restored = restoredSeeds.get(seed);
+  if (copy && restored) return restored;
+  const result = copy ? structuredClone(seed) : seed;
+  const freeze = (value: unknown): void => {
+    if (!value || typeof value !== "object" || Object.isFrozen(value)) return;
+    Object.freeze(value);
+    for (const entry of Object.values(value)) freeze(entry);
+  };
+  freeze(result);
+  immutableSeeds.add(result);
+  if (copy) restoredSeeds.set(seed, result);
+  return result;
+}
+
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,

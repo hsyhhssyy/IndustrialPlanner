@@ -1,5 +1,6 @@
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
+import { clonePlannerTask } from "./task-memory";
 import { restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES, plannerOutputModeKey, resolvePlannerOutputAttempt } from "./output-policy";
 import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -97,7 +98,7 @@ import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, registry: RegistryContract,
   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
 ): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
-  value = migrateTaskBlueprintSchemas(value);
+  value = migrateTaskBlueprintSchemas(clonePlannerTask(value, registry));
   const oldSubmissionRules = ["external-boundary-1", "dimension-shards-1", "warehouse-port-shards-1", "seeded-strategies-1"].includes(value.algorithmVersion);
   if (oldSubmissionRules && !isBlueprintRecognitionRequest(value.request) && value.request.blueprintSource) {
     const source = value.request.blueprintSource;
@@ -218,7 +219,7 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
 /** JSON 边界验证失败时拒绝导入，不能悄悄丢弃检查点后从头计算。 */
 export function parsePlannerTaskFile(value: unknown, registry: RegistryContract): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint } {
   try {
-    const file = structuredClone(value) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
+    const file = clonePlannerTask(value, registry) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
     if (file?.formatVersion !== 1 || file.algorithmVersion !== PLANNER_ALGORITHM_VERSION) throw new Error("任务格式或算法版本不兼容。");
     if (typeof file.taskId !== "string" || !file.taskId || file.taskId.length > 200) throw new Error("任务编号无效。");
     assertJson(file);
