@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 7,
+  "source": "src/tests/renderer/device-power-status.test.ts",
+  "createdAt": "2026-10-13",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-variant-1.schema7.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

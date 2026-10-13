@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 24,
-  "updatedAt": "2026-10-12",
+  "fixtureRevision": 25,
+  "updatedAt": "2026-10-13",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -3852,6 +3852,13 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-76.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/device-power-status/scene-01-variant-1.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
       "version": "fixture-v1",

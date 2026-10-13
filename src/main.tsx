@@ -408,7 +408,7 @@ async function startBlueprintEmbed(): Promise<void> {
   };
   window.addEventListener("pagehide", pageHide);
   if (import.meta.hot) import.meta.hot.dispose(dispose);
-  root.render(<BlueprintEmbedStatus />);
+  root.render(<BlueprintEmbedStatus blank />);
   try {
     const options = parseBlueprintEmbedOptions(window.location.href);
     const blueprint = await loadEmbedBlueprint(options.blueprintUrl, abort.signal);
@@ -435,16 +435,44 @@ async function startBlueprintEmbed(): Promise<void> {
     await editor.internalDocuments.ready();
     abort.signal.throwIfAborted();
     editor.actions.setViewportClientRect({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight });
-    const render = await createRenderHost(workspace, { showBaseBoundary: options.showBase });
-    if (disposed) { render.destroy(); return; }
-    releases.push(() => render.destroy());
+    // AI-REMOVED 2026-10-12:
+    // Reason: 预热期间不能创建会按渲染帧推进仿真的 Renderer。
+    // Trigger: 用户要求按秒预热，完成前画面保持空白。
+    // Evidence: RenderHost 的 scheduler 每帧调用 advancePlaybackByDeltaMs。
+    // Replacement: 下方预热完成后创建 RenderHost。
+    // Risk: Low；销毁顺序随创建顺序调整，Renderer 先于 Simulation 回收。
+    // Human Review: Required
+    // Original code:
+    // const render = await createRenderHost(workspace, { showBaseBoundary: options.showBase });
+    // if (disposed) { render.destroy(); return; }
+    // releases.push(() => render.destroy());
     simulation = createSimulationHost(workspace, {
       engineKind: "dense-v2",
+      initialDenseTickRate: options.warmupSeconds > 0 ? 2 : 4,
       getRegionalResourceSettings: region => app.regionalSettings.getRegionResources(region),
       getActiveActivityIds: () => resolveEffectiveActivityIds({ selectedActivityIds: [] }),
     });
     const simulationHost = simulation;
     releases.push(() => simulationHost.dispose());
+    if (options.warmupSeconds > 0) {
+      await simulation.actions.start();
+      abort.signal.throwIfAborted();
+      simulation.actions.pause();
+      const rate = simulation.queries.getDocumentRuntimeStatus()?.standardTickRate;
+      const warmupTicks = Math.ceil(options.warmupSeconds * (rate ?? NaN));
+      if (!Number.isSafeInteger(warmupTicks) || warmupTicks <= 0) {
+        throw Object.assign(new Error("预热秒数无法换算为有效的 dense tick 数。"), { code: "INVALID_PARAMETER" });
+      }
+      // 复用当前 Dense 会话，只发布目标 tick；暂停态避免额外的播放时间进入预热。
+      const result = await simulation.internalActions.syncToTick(warmupTicks);
+      abort.signal.throwIfAborted();
+      if (result.status !== "ready" || simulation.queries.getDocumentRuntimeStatus()?.tickNumber !== warmupTicks) {
+        throw Object.assign(new Error("蓝图预热未能完成。"), { code: "SIMULATION_FAILED" });
+      }
+    }
+    const render = await createRenderHost(workspace, { showBaseBoundary: options.showBase });
+    if (disposed) { render.destroy(); return; }
+    releases.push(() => render.destroy());
     // 被动跟随已存在 SW 的版本切换，不注册、激活或更新 SW。
     try {
       const worker = navigator.serviceWorker;

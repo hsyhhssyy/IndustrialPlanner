@@ -11,7 +11,7 @@
 ```html
 <iframe
   title="蓝图查看器"
-  src="https://endfield.amiyabot.com/?embed=blueprint&amp;blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&amp;showBase=0&amp;view=3d-top&amp;animations=0&amp;autoplay=0"
+  src="https://endfield.amiyabot.com/?embed=blueprint&amp;blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&amp;showBase=0&amp;view=3d-top&amp;animations=0&amp;autoplay=0&amp;warmupSeconds=0"
   style="width: 100%; height: 480px; border: 0"
 ></iframe>
 ```
@@ -27,11 +27,20 @@
 | `view` | `3d-top` 或 `blueprint` | `3d-top` |
 | `animations` | `1` 播放设备动画，`0` 关闭 | `0` |
 | `autoplay` | `1` 就绪后开始仿真，`0` 等待外部命令 | `0` |
+| `warmupSeconds` | 预热的仿真秒数，非负十进制数，可含小数 | `0` |
 | `showBase` | `1` 显示基地，`0` 隐藏基地并使用无边场景 | `1` |
 
 使用 `URLSearchParams.set()` 传入原始文件地址，由浏览器完成外层编码，不要先手动转义再传入。相对地址以嵌入页为基准；例如 `/blueprints/getting-started-tutorial.json` 指向 `https://endfield.amiyabot.com/blueprints/getting-started-tutorial.json`。
 
 外部蓝图应使用可直接 GET 的 HTTPS 地址，且服务器须通过 CORS 允许 `https://endfield.amiyabot.com` 读取。请求不携带登录凭据。设备动画开关独立于仿真运行；蓝图外观沿用静态设备图像，关闭设备动画也不会暂停仿真。
+
+## 加载预热
+
+`warmupSeconds=60` 表示加载时先快速计算 60 个仿真秒，并非等待 60 秒。查看器按当前 dense 标准频率换算为 tick，小数不足一个 tick 时向上取整；预热固定从 2 tick/秒启动，因此 60 秒为 120 tick。默认 `0` 跳过预热。
+
+加载及预热期间画面保持空白，预热完成后才创建并显示画布、发送 `ready`。`autoplay=0` 时显示预热后的暂停状态，父页发送 `start` 从该状态继续；`autoplay=1` 自动继续运行。播放阶段交回现有动态调频逻辑，在合法边界恢复通常的 4 tick/秒，状态和进度原位保留。`tickNumber` 属于当前频率的时间坐标，切换频率后编号也会换算，不表示进度重置或额外快进。预热不会向用户个人存档写入数据。
+
+无效、负数、非有限、重复参数或换算后超出安全整数范围的 tick 会返回错误。预热失败仍显示错误，不显示未完成的蓝图。秒数越大，首次显示前的计算等待越长；单次推进沿用现有 Worker 的 30 秒活跃时间超时，超时会返回加载错误。移除 iframe 会销毁正在预热的 Worker。
 
 ## 基地与画面范围
 
@@ -71,6 +80,7 @@
   viewer.searchParams.set("embed", "blueprint");
   viewer.searchParams.set("blueprintUrl", "/blueprints/getting-started-tutorial.json");
   viewer.searchParams.set("showBase", "0");
+  viewer.searchParams.set("warmupSeconds", "0");
   const channel = "industrial-planner:blueprint";
   let requestNumber = 0;
 

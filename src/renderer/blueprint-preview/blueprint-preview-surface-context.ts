@@ -11,6 +11,7 @@ import {
   type EntityCollections,
 } from "@/domain/editor/types/editor-types"
 import type { GridBounds } from "@/domain/shared/grid"
+import { collectPoweredEntityIds } from "@/shared/geometry/power-range"
 
 import type { RenderSurfaceContext } from "../render-surface-context"
 
@@ -48,7 +49,14 @@ export function createBlueprintPreviewSurfaceProjection(options: {
     .map((entityId) => options.blueprint.entities[entityId])
     .filter((entity): entity is WorldEntity => entity !== undefined)
   const entityById = new Map(entities.map((entity) => [entity.id, entity]))
-  const collections = createPreviewCollections(options.highlightedEntityId)
+  // 属性邻域预览继承完整文档的供电覆盖，避免遗漏画面外的供电桩；独立蓝图按自身设备计算。
+  const sourcePoweredEntities = options.highlightedEntityId === null
+    ? null
+    : options.workspace.editor?.state.collections.powered ?? null
+  const collections = createPreviewCollections(
+    options.highlightedEntityId,
+    sourcePoweredEntities ?? [...collectPoweredEntityIds(entities, options.workspace.registry.entityDefinitions)],
+  )
   const viewport: MutableEditorViewportState = {
     center: { x: 0, y: 0 },
     clientRect: { left: 0, top: 0, width: 1, height: 1 },
@@ -200,6 +208,7 @@ function createPreviewAppProjection(
 
 function createPreviewCollections(
   highlightedEntityId: string | null,
+  poweredEntityIds: readonly string[],
 ): EntityCollections {
   return {
     [EntityCollectionType.selection]: createEntityCollection(
@@ -210,7 +219,7 @@ function createPreviewCollections(
     [EntityCollectionType.preview]: createEntityCollection([]),
     [EntityCollectionType.ghost]: createEntityCollection([]),
     [EntityCollectionType.logisticsHead]: createEntityCollection([]),
-    [EntityCollectionType.powered]: createEntityCollection([]),
+    [EntityCollectionType.powered]: createEntityCollection(poweredEntityIds),
     [EntityCollectionType.invalidPlacement]: createEntityCollection([]),
   }
 }

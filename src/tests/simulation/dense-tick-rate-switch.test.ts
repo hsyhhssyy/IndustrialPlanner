@@ -133,6 +133,48 @@ describe("Dense 整秒原地调速", () => {
     expect(request({ type: "switch-tick-rate", tickNumber: 5, standardTickRate: 4 }).type).toBe("presentation-checkpoint");
   });
 
+  it.each([undefined, 2, 4] as const)("真实 Host 初始频率 %s 正确传入内核与公开状态", async initialDenseTickRate => {
+    const { registry, document } = createScenario();
+    const rate = initialDenseTickRate ?? 4;
+    const host = createSimulationHost(createHeadlessWorkspace(document, registry), {
+      engineKind: "dense-v2", workerMode: "runtime", initialDenseTickRate,
+    });
+    try {
+      await host.actions.start();
+      host.actions.pause();
+      await host.internalActions.syncToTick(60 * rate);
+      expect(host.queries.getDocumentRuntimeStatus()).toMatchObject({ tickNumber: 60 * rate, standardTickRate: rate, tickRate: rate });
+      expect(host.topology.getSnapshot()?.standardTickRate).toBe(rate);
+      expect(host.state.runningState).toBe("pause");
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("2 TPS 预热到 120 tick 后续跑，在整秒恢复 4 TPS 且不重建会话", async () => {
+    const { registry, document } = createScenario();
+    const requests = vi.spyOn(DenseWorkerRuntime.prototype, "handleRequest");
+    const host = createSimulationHost(createHeadlessWorkspace(document, registry), {
+      engineKind: "dense-v2", workerMode: "runtime", initialDenseTickRate: 2,
+    });
+    try {
+      await host.actions.start();
+      host.actions.pause();
+      await host.internalActions.syncToTick(120);
+      const topology = host.topology.getSnapshot()!;
+      host.actions.resume();
+      await host.actions.advancePlaybackByDeltaMs(500);
+      expect(host.queries.getDocumentRuntimeStatus()).toMatchObject({ tickNumber: 241, standardTickRate: 4, tickRate: 4 });
+      expect(host.topology.getSnapshot()!.devices).toBe(topology.devices);
+      expect(requests.mock.calls.filter(([request]) => request.type === "initialize-session")).toHaveLength(1);
+      expect(requests.mock.calls.filter(([request]) => request.type === "switch-tick-rate").map(([request]) => request))
+        .toEqual([expect.objectContaining({ tickNumber: 121, standardTickRate: 4 })]);
+    } finally {
+      host.dispose();
+      requests.mockRestore();
+    }
+  });
+
   it("真实 Host 在整秒调速且复用拓扑，五秒内不自动反向切换", async () => {
     const { registry, document } = createScenario();
     let now = 100;

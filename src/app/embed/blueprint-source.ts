@@ -11,6 +11,7 @@ export interface BlueprintEmbedOptions {
   animations: boolean;
   autoplay: boolean;
   showBase: boolean;
+  warmupSeconds: number;
 }
 
 // 公共样本最大约 182 KiB；限制解压后的响应，避免外部输入无限占用内存。
@@ -23,7 +24,7 @@ export function embedError(code: string, message: string): Error & { code: strin
 export function parseBlueprintEmbedOptions(href: string): BlueprintEmbedOptions {
   const page = new URL(href);
   const params = page.searchParams;
-  for (const key of ["embed", "blueprintUrl", "view", "animations", "autoplay", "showBase"]) {
+  for (const key of ["embed", "blueprintUrl", "view", "animations", "autoplay", "showBase", "warmupSeconds"]) {
     if (params.getAll(key).length > 1) throw embedError("INVALID_PARAMETER", `参数 ${key} 不可重复。`);
   }
   const source = params.get("blueprintUrl");
@@ -46,7 +47,12 @@ export function parseBlueprintEmbedOptions(href: string): BlueprintEmbedOptions 
     if (value !== "0" && value !== "1") throw embedError("INVALID_PARAMETER", `参数 ${key} 必须为 0 或 1。`);
     return value === "1";
   };
-  return { blueprintUrl: url.href, view, animations: flag("animations"), autoplay: flag("autoplay"), showBase: flag("showBase", "1") };
+  const warmup = params.get("warmupSeconds") ?? "0";
+  const warmupSeconds = Number(warmup);
+  if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(warmup) || !Number.isFinite(warmupSeconds)) {
+    throw embedError("INVALID_PARAMETER", "参数 warmupSeconds 必须为非负有限秒数。");
+  }
+  return { blueprintUrl: url.href, view, animations: flag("animations"), autoplay: flag("autoplay"), showBase: flag("showBase", "1"), warmupSeconds };
 }
 
 export async function loadEmbedBlueprint(url: string, signal: AbortSignal): Promise<BlueprintDocument> {

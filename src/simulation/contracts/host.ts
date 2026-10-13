@@ -28,6 +28,8 @@ export type SimulationHostWorkerMode = "auto" | "runtime";
 export interface CreateSimulationHostOptions {
   readonly engineKind?: SimulationEngineKind;
   readonly workerMode?: SimulationHostWorkerMode;
+  /** 实时 Dense 会话的初始 tick 频率；默认 4，后续仍使用既有动态调频。 */
+  readonly initialDenseTickRate?: 2 | 4;
   /** 独立 Dense 蓝图验证的真实 tick 频率；默认沿用 Dense 引擎频率。 */
   readonly blueprintDenseTickRate?: 2 | 4;
   /** 调试模式下的轻量性能统计开关。 */

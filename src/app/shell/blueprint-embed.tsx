@@ -48,8 +48,8 @@ export function BlueprintEmbed({ appHost, onReady }: { appHost: AppHost; onReady
   />;
 }
 
-export function BlueprintEmbedStatus({ error }: { error?: string }) {
+export function BlueprintEmbedStatus({ error, blank = false }: { error?: string; blank?: boolean }) {
   return <div className="blueprint-embed-status" role={error ? "alert" : "status"}>
-    {error ?? "正在加载蓝图…"}
+    {error ?? (blank ? null : "正在加载蓝图…")}
   </div>;
 }

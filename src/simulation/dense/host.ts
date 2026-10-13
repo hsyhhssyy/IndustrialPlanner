@@ -768,6 +768,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
             this.options.getRegionalResourceSettings(currentBase.tag),
           );
       const standardTickRate = this.topologyStore.getSnapshot()?.standardTickRate
+        ?? this.options.initialDenseTickRate
         ?? DENSE_STANDARD_TICK_RATE_PER_SECOND;
       const compile = (document: WorldDocument) => compileSimulationTopology({
         document,
@@ -1182,6 +1183,7 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         this.options.getRegionalResourceSettings?.(currentBase.tag) ?? [],
       );
       const standardTickRate = this.topologyStore.getSnapshot()?.standardTickRate
+        ?? this.options.initialDenseTickRate
         ?? DENSE_STANDARD_TICK_RATE_PER_SECOND;
       startStage = "compile-topologies";
       const topologies = admissions.map((admission, regionBaseOrderIndex) => ({

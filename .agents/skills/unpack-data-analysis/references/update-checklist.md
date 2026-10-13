@@ -49,7 +49,8 @@
 
 - [ ] 逻辑端口或默认朝向变更后，核对 `public/3d-top-view/`。
 - [ ] 核对 `public/blueprint-view/` 的 sprite 与 mask。
-- [ ] 核对 `public/device-icons/` 与 `public/device-avatar/`。
+- [ ] 核对 `public/device-icons/`、`public/blueprint-view/avatar/` 与 `public/3d-top-view/avatar/`；`public/device-avatar/` 已退役，不再作为发布目标。
+- [ ] 新建筑缺少蓝图 avatar 时，按 [AKEData 建筑蓝图 avatar](blueprint-avatars.md) 查询 `buildingpanelicon`，核对原图内容、项目 `spriteId` 与资产索引记录；不能以文件存在或尺寸正确代替图案验收。
 - [ ] 核对 renderer 输出、sprite 预处理方向和 `spriteOffset`。
 - [ ] 需要从美术网站同步建筑资源时使用 `import-building-assets` skill；`src/scripts/sync-device-sprites.mjs` 只保留通用发布函数及动画/蓝图遮罩重发，不能再执行旧静态批量导入。
 - [ ] 视觉结果只能验收逻辑修改，不能反向否定已经唯一确定的 raw 端口对账。

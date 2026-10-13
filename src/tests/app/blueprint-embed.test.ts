@@ -10,6 +10,9 @@ import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { createEmbedWorldDocument, decodeEmbedBlueprint, parseBlueprintEmbedOptions, loadEmbedBlueprint, EMBED_BLUEPRINT_MAX_BYTES } from "@/app/embed/blueprint-source";
 import { BLUEPRINT_EMBED_CHANNEL, createBlueprintEmbedBridge, applyBlueprintEmbedSettings } from "@/app/embed/message-bridge";
 import { prepareCurrentSimulationDocument } from "@/simulation/topology/document-preparation";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { BlueprintEmbedStatus } from "@/app/shell/blueprint-embed";
 
 const source = readFileSync("public/blueprints/getting-started-tutorial.json", "utf8");
 const cleanups: Array<() => void> = [];
@@ -46,11 +49,30 @@ describe("蓝图嵌入输入", () => {
     const url = new URL("https://planner.example/?embed=blueprint");
     url.searchParams.set("blueprintUrl", original);
     expect(parseBlueprintEmbedOptions(url.href)).toEqual({
-      blueprintUrl: new URL(original).href, view: "3d-top", animations: false, autoplay: false, showBase: true,
+      blueprintUrl: new URL(original).href, view: "3d-top", animations: false, autoplay: false, showBase: true, warmupSeconds: 0,
     });
     expect(parseBlueprintEmbedOptions("https://planner.example/path/?embed=blueprint&blueprintUrl=assets%2Fa.json").blueprintUrl)
       .toBe("https://planner.example/path/assets/a.json");
     expect(parseBlueprintEmbedOptions("https://planner.example/?embed=blueprint&blueprintUrl=%2Fa.json&showBase=0").showBase).toBe(false);
+  });
+
+  it.each([0, 60, 0.125])("接受预热秒数 %s，保持输入精度供 Dense 换算", seconds => {
+    expect(parseBlueprintEmbedOptions(`https://planner.example/?embed=blueprint&blueprintUrl=%2Fa.json&warmupSeconds=${seconds}`).warmupSeconds)
+      .toBe(seconds);
+  });
+
+  it.each(["-1", "NaN", "Infinity", "", "0x10", "abc", "1&warmupSeconds=2", "9".repeat(310)])("拒绝无效预热秒数 %s", seconds => {
+    expect(() => parseBlueprintEmbedOptions(`https://planner.example/?embed=blueprint&blueprintUrl=%2Fa.json&warmupSeconds=${seconds}`))
+      .toThrow();
+  });
+
+  it("空白加载不显示文字或画布，加载错误仍可见", () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderToStaticMarkup(createElement(BlueprintEmbedStatus, { blank: true }));
+    expect(container.textContent).toBe("");
+    expect(container.querySelector("canvas")).toBeNull();
+    container.innerHTML = renderToStaticMarkup(createElement(BlueprintEmbedStatus, { blank: true, error: "蓝图预热失败" }));
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("蓝图预热失败");
   });
 
   it.each([

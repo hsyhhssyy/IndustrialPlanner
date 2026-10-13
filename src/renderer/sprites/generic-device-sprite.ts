@@ -36,6 +36,7 @@ import {
 } from "@/renderer/move-visual-policy";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveLogisticsEquipmentSuppressionKind } from "@/shared/logistics-suppression"
+import { resolveEntityGridRect } from "@/shared/geometry/power-range"
 import {
   readSimplifiedDeviceIconPreference,
   resolveDeviceBodyPresentation,
@@ -56,8 +57,11 @@ import {
   RenderSpriteSyncContext,
 } from "./render-sprite"
 import { BaseRenderSprite } from "./base-render-sprite"
+import { shouldShowPowerDisconnectedIcon } from "./device-power-status"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
+const POWER_DISCONNECTED_TEXTURE_KEY = "texture-power-disconnected"
+const POWER_DISCONNECTED_ICON_TINT = 0xff656c
 
 // AI-REMOVED 2026-09-05:
 // Reason: 本体素材前缀收敛至统一展示解析入口。
@@ -1567,11 +1571,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 仿真正运行中：尝试获取主要产物
     const primaryOutputIds = this.resolvePrimaryOutputItemIds();
+    const showPowerDisconnected = this.shouldShowPowerDisconnectedIcon();
 
     // 主要产物存在 → 始终显示（不受 showDeviceIcon 设置控制）
+    // AI-CORRECTION 2026-10-13: 主要产物仍不受显示设置控制；供电覆盖缺失时由断电图标优先替代。
     const hasPrimaryOutput = primaryOutputIds !== null && primaryOutputIds.length > 0;
 
-    if (!this.isTextureReady || (!showDeviceName && !showDeviceIconSetting && !hasPrimaryOutput)) {
+    if (!this.isTextureReady || (!showDeviceName && !showDeviceIconSetting && !hasPrimaryOutput && !showPowerDisconnected)) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
       this.deviceNameText.visible = false;
@@ -1579,7 +1585,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
+    const effectiveShowIcon = showPowerDisconnected || hasPrimaryOutput || showDeviceIconSetting;
     const labelAnchorLayout = this.currentFootprintLayout ?? layout;
     const deviceName = showDeviceName ? resolveDeviceDisplayName(this.definition, app) : null;
     const labelLayout = resolveDeviceLabelLayout({
@@ -1588,20 +1594,22 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       showDeviceName,
       deviceName,
       useBlueprintStyle,
-      allowInlineDeviceIcon: showDeviceIconSetting && !hasPrimaryOutput,
+      allowInlineDeviceIcon: showDeviceIconSetting && !hasPrimaryOutput && !showPowerDisconnected,
       gridCellPixelSize: this.currentGridCellPixelSize,
     });
 
     this.deviceLabelRoot.visible = true;
 
     // 处理图标区域：主要产物 或 普通设备图标
-    if (hasPrimaryOutput) {
+    // AI-CORRECTION 2026-10-13: 供电范围外的耗电设备优先显示红色断开插头，位置与主要产物一致，且不受仿真开关限制。
+    this.deviceIcon.tint = showPowerDisconnected ? POWER_DISCONNECTED_ICON_TINT : 0xffffff;
+    if (hasPrimaryOutput && !showPowerDisconnected) {
       this.deviceIcon.visible = false;
       this.syncPrimaryOutputSprites(primaryOutputIds, labelLayout);
-    } else if (showDeviceIconSetting) {
+    } else if (showDeviceIconSetting || showPowerDisconnected) {
       this.primaryOutputRoot.visible = false;
       this.hidePrimaryOutputSprites();
-      this.syncDeviceIconTexture();
+      this.syncDeviceIconTexture(showPowerDisconnected ? POWER_DISCONNECTED_TEXTURE_KEY : undefined);
       this.deviceIcon.x = labelLayout.icon.x;
       this.deviceIcon.y = labelLayout.icon.y;
       this.deviceIcon.width = labelLayout.icon.size;
@@ -1643,8 +1651,34 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
   }
 
-  private syncDeviceIconTexture(): void {
-    const nextTextureKey = resolveDeviceLabelIconTextureKey(
+  private shouldShowPowerDisconnectedIcon(): boolean {
+    const editor = this.renderHost.workspace.editor;
+    const entity = editor?.queries.getEntityById(this.entityId);
+    if (editor === null || editor === undefined || entity === null || entity === undefined) {
+      return false;
+    }
+
+    if (!shouldShowPowerDisconnectedIcon({
+      definition: this.definition,
+      config: entity.config,
+      isInPowerRange: false,
+    })) {
+      return false;
+    }
+
+    // 正式设备复用编辑器供电集合；放置和移动草稿按当前位置查询供电范围。
+    if (!editor.state.collections.preview.contains(this.entityId)) {
+      return !editor.state.collections.powered.contains(this.entityId);
+    }
+
+    return editor.queries.listPowerRangeProvidersCoveringGridRect(resolveEntityGridRect({
+      entity,
+      definition: this.definition,
+    })).length === 0;
+  }
+
+  private syncDeviceIconTexture(resourceKey?: string): void {
+    const nextTextureKey = resourceKey ?? resolveDeviceLabelIconTextureKey(
       this.definition.spriteId,
       this.renderHost.workspace.app,
     );

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:renderer-device-power-status:scene-01",
+  "version": "fixture-v1",
+  "name": "设备断电图标",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 13,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "reactor-powered": {
+      "id": "reactor-powered",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 15,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "reactor-unpowered": {
+      "id": "reactor-unpowered",
+      "definitionId": "mix_pool_1",
+      "position": {
+        "x": 25,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "storage-disabled": {
+      "id": "storage-disabled",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 25,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "storage-enabled": {
+      "id": "storage-enabled",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 30,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "storage-powered": {
+      "id": "storage-powered",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 19,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "belt": {
+      "id": "belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "power",
+    "reactor-powered",
+    "reactor-unpowered",
+    "storage-disabled",
+    "storage-enabled",
+    "storage-powered",
+    "belt"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-13T00:00:00.000Z",
+  "updatedAt": "2026-10-13T00:00:00.000Z"
+}
