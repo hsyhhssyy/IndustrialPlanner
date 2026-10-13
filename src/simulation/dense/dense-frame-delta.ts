@@ -1,3 +1,4 @@
+import type { GridRotation } from "@/domain/shared/grid";
 import type {
   RuntimeDeviceSnapshot,
   RuntimeDiagnosticSnapshot,
@@ -80,6 +81,8 @@ export interface DenseFrameDelta {
   readonly gasSourceDeviceIndexes: Uint32Array;
   readonly gasItemIndexes: Uint32Array;
   readonly gasGridRects: Float64Array;
+  readonly gasRangeIds: readonly string[];
+  readonly gasRotations: Uint16Array;
   readonly warehouseMode:
     | typeof WAREHOUSE_UNCHANGED
     | typeof WAREHOUSE_CLEARED
@@ -233,7 +236,11 @@ export class DenseFrameDeltaEncoder {
     const gasSourceDeviceIndexes: number[] = [];
     const gasItemIndexes: number[] = [];
     const gasGridRects: number[] = [];
+    const gasRangeIds: string[] = [];
+    const gasRotations: number[] = [];
     for (const diffusion of snapshot.gasDiffusions) {
+      gasRangeIds.push(diffusion.rangeId);
+      gasRotations.push(diffusion.rotation);
       gasSourceDeviceIndexes.push(
         this.requireIndex(this.lookup.deviceIndexById, diffusion.sourceDeviceId, "device"),
       );
@@ -291,6 +298,8 @@ export class DenseFrameDeltaEncoder {
       gasSourceDeviceIndexes: Uint32Array.from(gasSourceDeviceIndexes),
       gasItemIndexes: Uint32Array.from(gasItemIndexes),
       gasGridRects: Float64Array.from(gasGridRects),
+      gasRangeIds,
+      gasRotations: Uint16Array.from(gasRotations),
       ...warehouseDelta,
     };
 
@@ -836,6 +845,8 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       delta.gasItemIndexes.length,
       "gas items",
     );
+    assertParallelLengths(delta.gasSourceDeviceIndexes.length, delta.gasRangeIds.length, "gas range IDs");
+    assertParallelLengths(delta.gasSourceDeviceIndexes.length, delta.gasRotations.length, "gas rotations");
     assertParallelLengths(
       delta.gasSourceDeviceIndexes.length * 4,
       delta.gasGridRects.length,
@@ -1080,6 +1091,7 @@ export function collectDenseFrameTransferables(delta: DenseFrameDelta): readonly
     delta.gasSourceDeviceIndexes,
     delta.gasItemIndexes,
     delta.gasGridRects,
+    delta.gasRotations,
     delta.changedWarehouseItemIndexes,
     delta.changedWarehouseItemNumbers,
     delta.changedWarehouseItemFlags,
@@ -1208,6 +1220,8 @@ function decodeGasDiffusions(
       "device",
     ),
     gasItemId: requireArrayEntry(dictionary.itemIds, delta.gasItemIndexes[offset]!, "item"),
+    rangeId: delta.gasRangeIds[offset]!,
+    rotation: delta.gasRotations[offset]! as GridRotation,
     gridRect: {
       x: delta.gasGridRects[offset * 4]!,
       y: delta.gasGridRects[offset * 4 + 1]!,
@@ -1484,6 +1498,9 @@ function assertGasDelta(
       "gas source device",
     );
     requireArrayEntry(dictionary.itemIds, delta.gasItemIndexes[offset]!, "gas item");
+    if (!delta.gasRangeIds[offset] || ![0, 90, 180, 270].includes(delta.gasRotations[offset]!)) {
+      throw new Error("Dense frame contains invalid gas range identity or rotation.");
+    }
     for (let rectOffset = 0; rectOffset < 4; rectOffset += 1) {
       const value = delta.gasGridRects[offset * 4 + rectOffset]!;
       if (!Number.isFinite(value)) {

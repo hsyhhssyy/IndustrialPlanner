@@ -1,3 +1,4 @@
+import { validateEntityRanges } from "./entity-range-validation"
 // registry 是全局可用的纯静态对象，在程序生命周期中，他的内容永远不会更改。
 
 import { RegistryContract } from "@/domain/registry/registry-contract"
@@ -96,6 +97,7 @@ export const createRegistryContract = (): RegistryContract => {
             : [],
     }))
     validateWikiDefaultCraftDefinitions(recipeDefinitions)
+    validateEntityRanges(entityDefinitions, recipeDefinitions)
 
     return {
         queries: createRegistryQuery({

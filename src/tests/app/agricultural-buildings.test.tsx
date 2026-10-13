@@ -48,24 +48,27 @@ describe("农业建筑分类与普通田块摆放", () => {
     }
   });
 
-  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示十种田块", () => {
+  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示十种田块与洒水机", () => {
     expect(ENTITY_UI_GROUP_ORDER).toContain("agriculture");
     expect(TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS).toContain("agriculture");
     act(() => { root.render(<PlacementPanel appHost={session.app} />); });
     const section = [...container.querySelectorAll("section")]
       .find((candidate) => candidate.querySelector("h3")?.textContent === "农业建筑")!;
     expect(section).toBeDefined();
-    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(10);
+    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(11);
+    expect(section.querySelector("[data-ui-button-id='placement-squirter_1']")).not.toBeNull();
     expect(section.querySelector(".placement-panel-group-shortcut")).toBeNull();
     for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {
       act(() => { editor.internalDocument.setSnapshot(createWorldDocument({ baseId: base.id })); });
       expect(container.textContent).not.toContain("农业建筑");
       expect(container.querySelector("[data-ui-button-id='placement-soil_grass_1']")).toBeNull();
+      expect(container.querySelector("[data-ui-button-id='placement-squirter_1']")).toBeNull();
     }
   });
 
   it("十种田块均能实际放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {
-    const plots = session.workspace.registry.entityDefinitions.filter((definition) => definition.uiGroup === "agriculture");
+    // AI-CORRECTION 2026-10-13: 分类新增洒水机，保留十种田块原有摆放断言。
+    const plots = session.workspace.registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_"));
     expect(plots).toHaveLength(10);
     for (const [index, definition] of plots.entries()) {
       for (const originX of [0, 104]) {
@@ -84,6 +87,25 @@ describe("农业建筑分类与普通田块摆放", () => {
         expect(editor.actions.applyPlacementDraft(), `${definition.id} in ${base.id}`).toBe(false);
         editor.actions.cancelPlacementDraft();
       }
+    }
+  });
+
+  it("洒水机能放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {
+    const definition = session.workspace.registry.queries.findEntityDefinition("squirter_1")!;
+    expect(canPlaceEntityDefinitionInCurrentBase(session.app, definition)).toBe(true);
+    for (const x of [10, 114]) {
+      editor.actions.createSinglePlacementDraft(definition.id, { x, y: 10 });
+      const id = editor.state.collections[EntityCollectionType.preview][0]!;
+      expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
+      expect(editor.actions.applyPlacementDraft()).toBe(true);
+    }
+    expect(editor.document.getSnapshot().entityOrder).toHaveLength(2);
+    for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {
+      editor.internalDocument.setSnapshot(createWorldDocument({ baseId: base.id }));
+      expect(canPlaceEntityDefinitionInCurrentBase(session.app, definition)).toBe(false);
+      editor.actions.createSinglePlacementDraft(definition.id, { x: 10, y: 10 });
+      expect(editor.actions.applyPlacementDraft(), `${definition.id} in ${base.id}`).toBe(false);
+      editor.actions.cancelPlacementDraft();
     }
   });
 

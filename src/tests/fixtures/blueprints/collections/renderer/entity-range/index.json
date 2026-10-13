@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 7,
+  "source": "src/tests/renderer/entity-range-interaction.test.ts",
+  "createdAt": "2026-10-13",
+  "scenes": {
+    "scene": [{ "parameters": {}, "file": "scene.schema7.json", "version": "fixture-v1" }]
+  }
+}

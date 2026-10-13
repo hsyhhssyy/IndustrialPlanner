@@ -1,4 +1,5 @@
 const REGISTRY: Record<string, string> = {
+  "registry.entity.squirter_1.name": "洒水机",
   "registry.entityVariant.normal.shortName": "基础",
   "registry.entityVariant.normal.longName": "基础模式",
   "registry.entityVariant.solid.shortName": "固体",

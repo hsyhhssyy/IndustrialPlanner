@@ -99,7 +99,7 @@ describe("PortOutputConfigInspector", () => {
       tags: [], displayOrder: 1, portGroups: [], storageSlotGroups: [],
       recipeChannels: [], portStorageBindings: [],
       placementBehaviors: [], inspectors: [],
-      requiresPower: false, powerDemand: 0, powerRange: 0,
+      requiresPower: false, powerDemand: 0, ranges: [],
     };
     const entity = createEmptyEntity("empty-1", "test-no-output");
     const currentAppHost = buildAppHost(workspace, entity);

@@ -19,7 +19,8 @@ describe("power range geometry", () => {
       definition: createDefinition({
         id: "power_diffuser_1",
         footprint: { width: 2, height: 2 },
-        powerRange: 12,
+        ranges: [{ id: "power", interactionKind: "power", coverage: "intersects", visualId: "power",
+          localRect: { x: -5, y: -5, width: 12, height: 12 } }],
       }),
     })).toEqual({
       x: 5,
@@ -80,7 +81,7 @@ function createEntity(options: {
 function createDefinition(options: {
   id: string;
   footprint: EntityDefinition["footprint"];
-  powerRange?: number;
+  ranges?: EntityDefinition["ranges"];
 }): EntityDefinition {
   return {
     id: options.id,
@@ -93,7 +94,7 @@ function createDefinition(options: {
     tags: [],
     requiresPower: false,
     powerDemand: 0,
-    powerRange: options.powerRange,
+    ranges: options.ranges,
     inspectors: [],
     placementBehaviors: [],
     portGroups: [],

@@ -478,7 +478,7 @@ export class CompactLayoutSearch {
       geometry[start + 48] = gas ? gases.indexOf(gas.gasItemId) + 1 : 0;
       geometry[start + 49] = node.recipe?.requiredGasDiffusion ? gases.indexOf(node.recipe.requiredGasDiffusion) + 1 : 0;
       if (gas) {
-        const range = resolveGasDiffusionRangeGridRect({ entity, definition: node.definition, gasDiffusionRange: gas.range })!;
+        const range = resolveGasDiffusionRangeGridRect({ entity, definition: node.definition, rangeId: gas.rangeId })!;
         [Math.ceil(range.x), Math.ceil(range.y), Math.floor(range.x + range.width) - Math.ceil(range.x), Math.floor(range.y + range.height) - Math.ceil(range.y)].forEach((value, at) => geometry[start + 50 + at] = value);
       }
       // AI-REMOVED 2026-10-11:
@@ -693,7 +693,7 @@ export class CompactLayoutSearch {
       if (!pair) return false;
       const environment = this.network.nodes[pair.environment]!, environmentPose = this.poses[pair.environment]!;
       const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: environmentPose, rotation: environmentPose.rotation },
-        definition: environment.definition, gasDiffusionRange: environment.recipe!.gasDiffusionOutput!.range })!;
+        definition: environment.definition, rangeId: environment.recipe!.gasDiffusionOutput!.rangeId })!;
       const device = this.poses[pair.device]!, dimensions = this.dimensions(pair.device);
       dx = Math.max(0, range.x - device.x) - Math.max(0, device.x + dimensions.width - range.x - range.width);
       dy = Math.max(0, range.y - device.y) - Math.max(0, device.y + dimensions.height - range.y - range.height);
@@ -1012,7 +1012,7 @@ export class CompactLayoutSearch {
         if (!gas || gas.gasItemId !== requiredGas) continue;
         const pose = this.poses[index]!;
         const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: pose, rotation: pose.rotation },
-          definition: environment.definition, gasDiffusionRange: gas.range })!;
+          definition: environment.definition, rangeId: gas.rangeId })!;
         const gap = Math.max(0, range.x - device.x) + Math.max(0, range.y - device.y)
           + Math.max(0, device.x + device.width - range.x - range.width) + Math.max(0, device.y + device.height - range.y - range.height);
         if (gap < distance) { closest = index; distance = gap; }

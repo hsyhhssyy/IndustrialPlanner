@@ -1,15 +1,25 @@
 .content { display: flex; flex-direction: row; height: 100%; min-width: 0; min-height: 0; color: var(--text-0); }
-.scroll { overflow: auto; min-height: 0; flex: 1; padding: 18px; }
+.scroll { overflow: auto; min-width: 0; min-height: 0; flex: 1; padding: 18px; }
 .target { margin: 0 0 18px; font-weight: 600; }
-.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border: 0; padding: 0; margin: 0; }
-.options label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.optionGroup { min-width: 0; margin: 0 0 18px; padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--line); }
+.optionGroup legend { padding: 0 0 12px; font-size: 14px; font-weight: 600; }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.options label { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; }
 .options select, .options input { width: 100%; min-height: 34px; box-sizing: border-box; padding: 6px 9px; color: var(--text-0); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; }
 .options output { min-height: 34px; box-sizing: border-box; display: flex; align-items: center; color: var(--text-0); }
 .options input:not(:disabled) { background: var(--surface-1); border-color: var(--accent-strong); }
 .options input:disabled, .options select:disabled { opacity: 0.5; }
-.options label.parallel { flex-direction: row; align-items: center; align-self: end; min-height: 34px; gap: 8px; }
-.acceleration { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 16px; }
+.parallel { display: flex; justify-content: space-between; align-items: center; min-width: 0; min-height: 34px; gap: 14px; font-size: 13px; cursor: pointer; }
+.acceleration { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; min-width: 0; margin-top: 12px; }
+/* AI-REMOVED 2026-10-13:
+Reason: CPU/GPU 复选框改为与优化选项相同的 switch。
+Trigger: 用户批准计算开关统一视觉。
+Evidence: 两个 input 已设置 role="switch"，移出数值输入网格。
+Replacement: 下方 .parallel input 与 .optimizationChoice input 共用样式。
+Risk: Low。Human Review: Required
+Original code:
 .options .parallel input { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; accent-color: var(--accent-strong); }
+*/
 .content button:not(.environmentTree button) { min-height: 34px; padding: 7px 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--text-0); background: var(--surface-2); cursor: pointer; }
 .content button:disabled { opacity: 0.5; cursor: default; }
 .content .primary { color: var(--surface-1); background: var(--accent-strong); border-color: var(--accent-strong); }
@@ -60,16 +70,20 @@ Original code:
 .flow { height: 250px; min-height: 180px; display: flex; margin: 8px 0 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .flow > * { flex: 1; min-width: 0; min-height: 0; }
 .compact .history { width: 145px; padding: 8px; }
+.tablet .history { width: 170px; padding: 12px; }
 .compact .flow { height: 180px; }
 .compact .footer { gap: 6px; }
 .compact .planningActions { gap: 6px; }
 .areaCurve { margin: 16px 0 0; padding: 10px 12px 4px; border: 1px solid var(--line); border-radius: 8px; }
 .areaCurve figcaption { font-size: 12px; color: var(--text-1); }
+.areaLegend { display: inline-block; margin-left: 14px; }
 .areaCurve svg { display: block; width: 100%; min-width: 520px; max-width: 900px; height: auto; overflow: visible; }
 .areaCurve text { fill: var(--text-1); font-size: 11px; }
 .areaAxis { fill: none; stroke: var(--line); stroke-width: 1; }
 .areaLine { fill: none; stroke: var(--accent-strong); stroke-width: 2; stroke-linejoin: round; }
 .areaPoint { fill: var(--accent-strong); }
+.areaReferenceLine { fill: none; stroke: var(--text-1); stroke-width: 2; stroke-dasharray: 5 4; }
+.areaReferencePoint { fill: var(--surface-1); stroke: var(--text-1); stroke-width: 1.5; }
 .areaPlot { overflow-x: auto; }
 .areaTick { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 2; }
 .proposalRate { display: inline-block; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -145,17 +159,31 @@ Original code:
 .compact .identificationBody { grid-template-columns: minmax(0, 1.2fr) minmax(170px, 1fr); gap: 8px; }
 
 .compact .previewFrame { height: min(220px, calc(100dvh - 190px)); min-height: max(140px, var(--boundary-label-min-height, 0px)); }
-.optimizationBody { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.optimizationChoices { overflow: auto; min-height: 0; padding: 4px 18px; }
-.optimizationChoice { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.blueprintPlacement { min-width: 0; }
+.options.placementRules { padding: 0; }
+.optimizationHeading { padding: 0 0 2px; font-size: 14px; }
+.optimizationChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; min-width: 0; padding: 0; }
+.optimizationChoice { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; padding: 14px 0; cursor: pointer; }
 .optimizationChoice strong { display: block; font-size: 14px; }
 .optimizationChoice small { display: block; margin-top: 5px; color: var(--text-1); line-height: 1.5; }
-.optimizationChoice input { appearance: none; flex: 0 0 40px; width: 40px; height: 24px; margin: 0; padding: 3px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); cursor: pointer; }
-.optimizationChoice input::before { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-1); transition: transform 120ms; }
-.optimizationChoice input:checked { background: var(--accent-strong); }
-.optimizationChoice input:checked::before { transform: translateX(16px); background: white; }
-.optimizationChoice input:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
-.optimizationChoice input:disabled { opacity: .5; cursor: wait; }
+.optimizationChoice input, .parallel input { appearance: none; box-sizing: border-box; flex: 0 0 40px; width: 40px; height: 24px; margin: 0; padding: 3px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); cursor: pointer; }
+.optimizationChoice input::before, .parallel input::before { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-1); transition: transform 120ms; }
+.optimizationChoice input:checked, .parallel input:checked { background: var(--accent-strong); }
+.optimizationChoice input:checked::before, .parallel input:checked::before { transform: translateX(16px); background: white; }
+.optimizationChoice input:focus-visible, .parallel input:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+.optimizationChoice input:disabled, .parallel input:disabled { opacity: .5; cursor: default; }
+.compact .optimizationChoices, .tablet .optimizationChoices,
+.compact .acceleration, .tablet .acceleration { grid-template-columns: minmax(0, 1fr); }
+/* AI-REMOVED 2026-10-13:
+Reason: 页面内优化权限区不再使用弹窗 body 和确认按钮样式。
+Trigger: 用户确认一体布局 A，取消首次开始时的弹窗。
+Evidence: optimizationBody / optimizationActions 已无活动代码引用。
+Replacement: blueprintPlacement / optimizationHeading 和原规划页 footer。
+Risk: Low；手机使用现有 compact 环境分类，不添加响应式阈值。
+Human Review: Required
+Original code:
+.optimizationBody { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .optimizationActions { display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; padding: 12px 18px; }
 .optimizationActions button { padding: 7px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); color: var(--text-0); cursor: pointer; }
 .optimizationActions button:last-child { background: var(--accent-strong); color: white; }
+*/

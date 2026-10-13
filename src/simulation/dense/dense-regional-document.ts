@@ -293,25 +293,44 @@ function resolvePartitionStride(
       maxX = Math.max(maxX, entity.position.x);
     }
   }
-  const maxFootprint = registry.entityDefinitions.reduce(
-    (maximum, definition) => Math.max(
-      maximum,
-      definition.footprint.width,
-      definition.footprint.height,
-      definition.powerRange ?? 0,
-    ),
-    0,
-  );
-  const maxGasRange = registry.recipeDefinitions.reduce(
-    (maximum, definition) => Math.max(
-      maximum,
-      definition.gasDiffusionOutput?.range ?? 0,
-    ),
-    0,
-  );
-  const gap = Math.max(
-    MINIMUM_BASE_PARTITION_GAP,
-    Math.ceil(maxFootprint + maxGasRange + 2),
-  );
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: 按所有 localRect 外沿计算基地间距。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   const maxFootprint = registry.entityDefinitions.reduce(
+//     (maximum, definition) => Math.max(
+//       maximum,
+//       definition.footprint.width,
+//       definition.footprint.height,
+//       definition.powerRange ?? 0,
+//     ),
+//     0,
+//   );
+//   const maxGasRange = registry.recipeDefinitions.reduce(
+//     (maximum, definition) => Math.max(
+//       maximum,
+//       definition.gasDiffusionOutput?.range ?? 0,
+//     ),
+//     0,
+//   );
+//   const gap = Math.max(
+//     MINIMUM_BASE_PARTITION_GAP,
+//     Math.ceil(maxFootprint + maxGasRange + 2),
+//   );
+  let reach = 0;
+  for (const definition of registry.entityDefinitions) {
+    const footprintReach = Math.max(definition.footprint.width, definition.footprint.height);
+    reach = Math.max(reach, footprintReach);
+    for (const range of definition.ranges ?? []) {
+      const rect = range.localRect;
+      reach = Math.max(reach, footprintReach + Math.max(Math.abs(rect.x), Math.abs(rect.y),
+        Math.abs(rect.x + rect.width), Math.abs(rect.y + rect.height)));
+    }
+  }
+  const gap = Math.max(MINIMUM_BASE_PARTITION_GAP, Math.ceil(reach * 2 + 2));
   return Math.max(1, Math.ceil(maxX - minX + 1 + gap));
 }

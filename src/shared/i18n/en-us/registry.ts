@@ -1,4 +1,5 @@
 const REGISTRY: Record<string, string> = {
+  "registry.entity.squirter_1.name": "Sprinkler",
   "registry.entity.soil_grass_1.name": "Jincao Plot",
   "registry.entity.soil_grass_2.name": "Yazhen Plot",
   "registry.entity.soil_moss_1.name": "Buckflower Plot",

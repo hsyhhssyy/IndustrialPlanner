@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:entity-range",
+  "version": "fixture-v1",
+  "name": "洒水范围编辑交互",
+  "description": "洒水与供电双重交互、部分相交、贴边和背面排除。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "sprinkler": {
+      "id": "sprinkler",
+      "definitionId": "squirter_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "intersecting": {
+      "id": "intersecting",
+      "definitionId": "soil_grass_1",
+      "position": {
+        "x": 6,
+        "y": -4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "touching": {
+      "id": "touching",
+      "definitionId": "soil_grass_2",
+      "position": {
+        "x": 7,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "behind": {
+      "id": "behind",
+      "definitionId": "soil_moss_1",
+      "position": {
+        "x": -5,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pole": {
+      "id": "pole",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 0,
+        "y": -4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "unrelated": {
+      "id": "unrelated",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "sprinkler",
+    "intersecting",
+    "touching",
+    "behind",
+    "pole",
+    "unrelated"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

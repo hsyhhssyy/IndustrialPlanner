@@ -43,7 +43,7 @@ function createMockDefinition(overrides: Partial<EntityDefinition> = {}): Entity
     inspectors: [],
     requiresPower: true,
     powerDemand: 0,
-    powerRange: 0,
+    ranges: [],
     ...overrides,
   };
 }

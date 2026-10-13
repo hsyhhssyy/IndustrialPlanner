@@ -1,558 +1,566 @@
-import { Container, Graphics } from "pixi.js";
-
-import type { WorldEntity } from "@/domain/document/world-document";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { GridRect } from "@/domain/shared/grid";
-import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
-import { resolveBatchMoveHiddenRangeEntityIds } from "@/renderer/move-visual-policy";
-import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color";
-import {
-  areGridRectsIntersecting,
-  resolveGasDiffusionRangeGridRect,
-} from "@/shared/geometry/power-range";
-
-import type { DecorationLayer } from "./DecorationLayer";
-import type { DecorationSyncContext } from "./DecorationSyncContext";
-import {
-  resolveVisibleWorldRect,
-  type VisibleWorldRect,
-} from "./BeltVisualGeometry";
-import {
-  resolveMarqueeGridRectLayout,
-  resolveWorldAuxiliaryStrokeWidth,
-} from "./MarqueeRectDecoration";
-import { GasEnvironmentAnimation } from "./GasEnvironmentAnimation";
-
-const GAS_RANGE_STROKE_ALPHA = 0.86;
-const GAS_RANGE_FILL_ALPHA = 0.07;
-const GAS_RANGE_STROKE_WIDTH_SCALE = 1.1;
-/** 预览模式（无活跃气体环境）描边透明度 */
-const GAS_RANGE_PREVIEW_STROKE_ALPHA = 0.55;
-/** 预览模式线条宽度倍率，与供电桩范围线同级 */
-const GAS_RANGE_PREVIEW_STROKE_WIDTH_SCALE = 1.0;
-/** 预览模式（无活跃气体环境）范围框颜色 */
-const GAS_RANGE_PREVIEW_COLOR = 0x66cc66;
-
-// AI-REMOVED 2026-09-14:
-// Reason: 活跃气体颜色不再使用独立默认色或解析 Registry 颜色 tag。
-// Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源，未知流体统一回退 #808080。
-// Evidence: 旧前缀只能承载单色，且已有值与美术 body 色不一致。
-// Replacement: shared/fluid-color.ts。
-// Risk: Low
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
 // Human Review: Required
 // Original code:
-// const DEFAULT_GAS_RANGE_COLOR = 0xa8e6ff;
-// const GAS_COLOR_TAG_PREFIX = "gas_color:";
-// const FLUID_COLOR_TAG_PREFIX = "fluid_color:";
-// const LIQUID_COLOR_TAG_PREFIX = "liquid_color:";
-
-export function createGasDiffusionRangeDecoration(): DecorationLayer {
-  const container = new Container();
-  container.label = "gas-diffusion-range";
-  const previewGraphics = new Graphics({ roundPixels: true });
-  const graphics = new Graphics({ roundPixels: true });
-  const animation = new GasEnvironmentAnimation();
-  container.addChild(previewGraphics, graphics, animation.container);
-  // AI-REMOVED 2026-09-14:
-  // Reason: Registry 已提供按 ID 精确查询，无需为颜色 tag 另建物品索引。
-  // Trigger: 气体范围改为读取 ItemDefinition.fluidColors。
-  // Evidence: Registry 在会话内稳定，findItemDefinition 已是公共查询入口。
-  // Replacement: syncActiveGasRanges 中的 registry.queries.findItemDefinition。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // let cachedItemDefinitions: readonly ItemDefinition[] | null = null;
-  // let cachedItemById: ReadonlyMap<string, ItemDefinition> = new Map();
-  let cachedGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[] | null = null;
-  let cachedViewportLayoutState: GasDiffusionViewportLayoutState | null = null;
-  let cachedPreviewStamp: GasDiffusionPreviewStamp | null = null;
-  let graphicsHasContent = false;
-  let previewGraphicsHasContent = false;
-
-  // ---- 活跃气体范围渲染（实色，仿真中） ----
-  // AI-CORRECTION 2026-09-26：工作中的范围仅在动画素材尚未就绪或不支持 WebGL2 时使用实色矩形兜底。
-  // AI-CORRECTION 2026-10-01：蓝图外观下始终使用同一 body 色实色矩形，不加载或播放气体环境动画。
-
-  function syncActiveGasRanges(
-    ctx: DecorationSyncContext,
-    activeGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[],
-  ): void {
-    const gasDiffusionsChanged = !haveSameGasDiffusionRanges(
-      cachedGasDiffusions,
-      activeGasDiffusions,
-    );
-    const viewportChanged = !hasSameGasDiffusionViewportLayout(
-      cachedViewportLayoutState,
-      ctx,
-    );
-    if (!gasDiffusionsChanged && !viewportChanged) {
-      return;
-    }
-
-    // AI-REMOVED 2026-09-14:
-    // Reason: 颜色查询不再维护局部物品索引。
-    // Trigger: ItemDefinition.fluidColors 通过 Registry 公共查询直接读取。
-    // Evidence: 原缓存只服务颜色 tag 解析，且 Registry 自身已持有 itemDefinitionById。
-    // Replacement: 下方 findItemDefinition(range.gasItemId)。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const itemDefinitions = ctx.renderHost.workspace.registry.itemDefinitions ?? [];
-    // const itemDefinitionsChanged = cachedItemDefinitions !== itemDefinitions;
-    // if (!itemDefinitionsChanged && !gasDiffusionsChanged && !viewportChanged) {
-    //   return;
-    // }
-    // // AI-CORRECTION 2026-07-17：物品定义在会话内稳定，仅在引用变化时重建颜色查询索引。
-    // if (itemDefinitionsChanged) {
-    //   cachedItemDefinitions = itemDefinitions;
-    //   cachedItemById = new Map(itemDefinitions.map((item) => [item.id, item]));
-    // }
-
-    if (graphicsHasContent) {
-      graphics.clear();
-      graphicsHasContent = false;
-    }
-
-    const visibleGridRect = visibleWorldRectToGridRect(
-      resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds, 0),
-    );
-    const strokeWidth =
-      resolveWorldAuxiliaryStrokeWidth(ctx.viewportState.gridCellPixelSize)
-      * GAS_RANGE_STROKE_WIDTH_SCALE;
-
-    for (const range of activeGasDiffusions) {
-      if (!areGridRectsIntersecting(range.gridRect, visibleGridRect)) {
-        continue;
-      }
-
-      const layout = resolveMarqueeGridRectLayout({
-        gridRect: range.gridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        displayRotation: ctx.viewportState.displayRotation,
-      });
-
-      if (layout === null) {
-        continue;
-      }
-
-      const definition = ctx.renderHost.workspace.registry.queries.findItemDefinition(range.gasItemId);
-      const color = fluidColorToNumber(resolveFluidColor(definition?.fluidColors));
-      graphics
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .fill({
-          color,
-          alpha: GAS_RANGE_FILL_ALPHA,
-        })
-        .stroke({
-          width: strokeWidth,
-          color,
-          alpha: GAS_RANGE_STROKE_ALPHA,
-        });
-      graphicsHasContent = true;
-    }
-
-    cachedGasDiffusions = activeGasDiffusions;
-    cachedViewportLayoutState = captureGasDiffusionViewportLayoutState(ctx);
-  }
-
-  // ---- 预览气体范围渲染（半透明，无仿真/无活跃气体时） ----
-  // AI-CORRECTION 2026-09-26：预览矩形按设备绘制；即使其他设备正在工作，未工作设备与摆放虚影仍保留矩形。
-
-  function syncPreviewGasRanges(
-    ctx: DecorationSyncContext,
-    hiddenEntityIds: ReadonlySet<string>,
-    activeDeviceIds: ReadonlySet<string>,
-  ): void {
-    const editor = ctx.renderHost.workspace.editor;
-    if (!editor) {
-      if (previewGraphicsHasContent) {
-        previewGraphics.clear();
-        previewGraphicsHasContent = false;
-      }
-      cachedPreviewStamp = null;
-      return;
-    }
-
-    const entityDefinitionMap = buildEditorEntityDefinitionMap(
-      ctx.renderHost.workspace.registry.entityDefinitions,
-    );
-    const gasDiffusionRangeByMachineId = buildGasDiffusionRangeByMachineId(
-      ctx.renderHost.workspace.registry.recipeDefinitions,
-    );
-
-    const entities = editor.queries.listEntities().filter(
-      (entity) => !hiddenEntityIds.has(entity.id),
-    );
-    const previewRanges = resolveEditorGasPreviewRanges(
-      entities,
-      entityDefinitionMap,
-      gasDiffusionRangeByMachineId,
-    );
-    if (previewRanges.length > 0
-      && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
-      && ctx.renderHost.textureManager.supportsLogisticsAnimation()) {
-      animation.prepare(ctx);
-    }
-
-    if (previewRanges.length === 0) {
-      if (previewGraphicsHasContent) {
-        previewGraphics.clear();
-        previewGraphicsHasContent = false;
-      }
-      cachedPreviewStamp = null;
-      return;
-    }
-
-    const nextStamp = captureGasDiffusionPreviewStamp(entities, ctx, activeDeviceIds);
-    if (
-      cachedPreviewStamp !== null
-      && haveSamePreviewStamp(cachedPreviewStamp, nextStamp)
-    ) {
-      return;
-    }
-
-    if (previewGraphicsHasContent) {
-      previewGraphics.clear();
-      previewGraphicsHasContent = false;
-    }
-
-    const visibleGridRect = visibleWorldRectToGridRect(
-      resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds, 0),
-    );
-    const strokeWidth =
-      resolveWorldAuxiliaryStrokeWidth(ctx.viewportState.gridCellPixelSize)
-      * GAS_RANGE_PREVIEW_STROKE_WIDTH_SCALE;
-
-    for (const range of previewRanges) {
-      if (activeDeviceIds.has(`device:${range.entityId}`)) {
-        continue;
-      }
-      if (!areGridRectsIntersecting(range.gridRect, visibleGridRect)) {
-        continue;
-      }
-
-      const layout = resolveMarqueeGridRectLayout({
-        gridRect: range.gridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        displayRotation: ctx.viewportState.displayRotation,
-      });
-
-      if (layout === null) {
-        continue;
-      }
-
-      previewGraphics
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .stroke({
-          width: strokeWidth,
-          color: GAS_RANGE_PREVIEW_COLOR,
-          alpha: GAS_RANGE_PREVIEW_STROKE_ALPHA,
-        });
-      previewGraphicsHasContent = true;
-    }
-
-    cachedPreviewStamp = nextStamp;
-  }
-
-  return {
-    container,
-
-    sync(ctx: DecorationSyncContext): void {
-      // AI-REMOVED 2026-08-22:
-      // Reason: 批量移动不应关闭整个气体范围图层，只应隐藏被移动设备自身的范围。
-      // Trigger: 未被多选选中的气体设备范围也被一并清除。
-      // Evidence: move draft 已通过 ghost 与 preview collection 精确记录原实体和移动草稿 ID。
-      // Replacement: 当前 sync 中按 hiddenEntityIds 过滤活跃范围与编辑器预览实体。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
-      //   if (graphicsHasContent) {
-      //     graphics.clear();
-      //     graphicsHasContent = false;
-      //   }
-      //   cachedGasDiffusions = null;
-      //   cachedViewportLayoutState = null;
-      //   cachedPreviewStamp = null;
-      //   return;
-      // }
-
-      const workspace = ctx.renderHost.workspace;
-      const collections = workspace.editor?.state.collections;
-      const hiddenEntityIds = resolveBatchMoveHiddenRangeEntityIds(
-        workspace.app?.state.moveKind ?? null,
-        collections?.[EntityCollectionType.preview] ?? [],
-        collections?.[EntityCollectionType.ghost] ?? [],
-      );
-
-      const simulation = workspace.simulation;
-      const hiddenDeviceIds = new Set([...hiddenEntityIds].map((id) => `device:${id}`));
-      const activeGasDiffusions = simulation?.state.runningState === "start"
-        ? simulation.queries.getActiveGasDiffusionRanges().filter(
-          (range) => !hiddenDeviceIds.has(range.sourceDeviceId),
-        )
-        : [];
-      const supportsAnimation = workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
-        && ctx.renderHost.textureManager.supportsLogisticsAnimation();
-      const animatedRanges = supportsAnimation ? activeGasDiffusions : [];
-      const activeDeviceIds = new Set(activeGasDiffusions.map((range) => range.sourceDeviceId));
-
-      syncPreviewGasRanges(ctx, hiddenEntityIds, activeDeviceIds);
-      animation.sync(ctx, animatedRanges);
-      syncActiveGasRanges(ctx, supportsAnimation && animation.isReady ? [] : activeGasDiffusions);
-
-    },
-
-    destroy(): void {
-      animation.destroy();
-      previewGraphics.destroy();
-      graphics.destroy();
-      container.destroy();
-    },
-  };
-}
-
-interface GasDiffusionPreviewStamp {
-  readonly entityCount: number;
-  readonly entityVersion: number;
-  readonly activeDeviceIds: string;
-  readonly centerX: number;
-  readonly centerY: number;
-  readonly gridCellPixelSize: number;
-  readonly displayRotation: DecorationSyncContext["viewportState"]["displayRotation"];
-}
-
-interface EditorGasPreviewRange {
-  readonly entityId: string;
-  readonly gridRect: GridRect;
-}
-
-interface GasDiffusionViewportLayoutState {
-  readonly centerX: number;
-  readonly centerY: number;
-  readonly gridCellPixelSize: number;
-  readonly displayRotation: DecorationSyncContext["viewportState"]["displayRotation"];
-  readonly viewportLeft: number;
-  readonly viewportTop: number;
-  readonly viewportWidth: number;
-  readonly viewportHeight: number;
-}
-
-function buildEditorEntityDefinitionMap(
-  definitions: readonly EntityDefinition[],
-): ReadonlyMap<string, EntityDefinition> {
-  return new Map(definitions.map((d) => [d.id, d]));
-}
-
-function resolveEditorGasPreviewRanges(
-  entities: readonly WorldEntity[],
-  definitionMap: ReadonlyMap<string, EntityDefinition>,
-  gasDiffusionRangeByMachineId: ReadonlyMap<string, number>,
-): EditorGasPreviewRange[] {
-  const ranges: EditorGasPreviewRange[] = [];
-
-  for (const entity of entities) {
-    const definition = definitionMap.get(entity.definitionId);
-    if (!definition) {
-      continue;
-    }
-    const gasDiffusionRange = gasDiffusionRangeByMachineId.get(definition.id);
-    if (gasDiffusionRange === undefined) {
-      continue;
-    }
-
-    const gridRect = resolveGasDiffusionRangeGridRect({
-      entity,
-      definition,
-      gasDiffusionRange,
-    });
-    if (gridRect === null) {
-      continue;
-    }
-
-    ranges.push({ entityId: entity.id, gridRect });
-  }
-
-  return ranges;
-}
-
-function buildGasDiffusionRangeByMachineId(
-  recipes:
-    | DecorationSyncContext["renderHost"]["workspace"]["registry"]["recipeDefinitions"]
-    | undefined,
-): ReadonlyMap<string, number> {
-  const ranges = new Map<string, number>();
-  for (const recipe of recipes ?? []) {
-    const output = recipe.gasDiffusionOutput;
-    if (output === undefined || output.range <= 0) {
-      continue;
-    }
-    ranges.set(recipe.machineId, Math.max(ranges.get(recipe.machineId) ?? 0, output.range));
-  }
-  return ranges;
-}
-
-function captureGasDiffusionPreviewStamp(
-  entities: readonly WorldEntity[],
-  ctx: DecorationSyncContext,
-  activeDeviceIds: ReadonlySet<string>,
-): GasDiffusionPreviewStamp {
-  let entityVersion = 0;
-  for (const entity of entities) {
-    // 基于位置与定义 ID 的简单哈希，用于检测实体变更
-    entityVersion += entity.position.x * 31
-      + entity.position.y * 37
-      + hashString(entity.definitionId)
-      + entity.rotation * 41;
-  }
-
-  return {
-    entityCount: entities.length,
-    entityVersion,
-    activeDeviceIds: [...activeDeviceIds].sort().join("\u0000"),
-    centerX: ctx.viewportState.centerX,
-    centerY: ctx.viewportState.centerY,
-    gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-    displayRotation: ctx.viewportState.displayRotation,
-  };
-}
-
-function haveSamePreviewStamp(
-  left: GasDiffusionPreviewStamp,
-  right: GasDiffusionPreviewStamp,
-): boolean {
-  return left.entityCount === right.entityCount
-    && left.entityVersion === right.entityVersion
-    && left.activeDeviceIds === right.activeDeviceIds
-    && left.centerX === right.centerX
-    && left.centerY === right.centerY
-    && left.gridCellPixelSize === right.gridCellPixelSize
-    && left.displayRotation === right.displayRotation;
-}
-
-function hashString(value: string): number {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
-    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
-  }
-  return hash;
-}
-
-export function haveSameGasDiffusionRanges(
-  left: readonly SimulationGasDiffusionRangeReadModel[] | null,
-  right: readonly SimulationGasDiffusionRangeReadModel[],
-): boolean {
-  if (left === null || left.length !== right.length) {
-    return false;
-  }
-
-  return left.every((leftRange, index) => {
-    const rightRange = right[index];
-    return rightRange !== undefined
-      && leftRange.sourceDeviceId === rightRange.sourceDeviceId
-      && leftRange.gasItemId === rightRange.gasItemId
-      && leftRange.gridRect.x === rightRange.gridRect.x
-      && leftRange.gridRect.y === rightRange.gridRect.y
-      && leftRange.gridRect.width === rightRange.gridRect.width
-      && leftRange.gridRect.height === rightRange.gridRect.height;
-  });
-}
-
-function hasSameGasDiffusionViewportLayout(
-  cached: GasDiffusionViewportLayoutState | null,
-  ctx: DecorationSyncContext,
-): boolean {
-  return cached !== null
-    && cached.centerX === ctx.viewportState.centerX
-    && cached.centerY === ctx.viewportState.centerY
-    && cached.gridCellPixelSize === ctx.viewportState.gridCellPixelSize
-    && cached.displayRotation === ctx.viewportState.displayRotation
-    && cached.viewportLeft === ctx.viewportBounds.left
-    && cached.viewportTop === ctx.viewportBounds.top
-    && cached.viewportWidth === ctx.viewportBounds.width
-    && cached.viewportHeight === ctx.viewportBounds.height;
-}
-
-function captureGasDiffusionViewportLayoutState(
-  ctx: DecorationSyncContext,
-): GasDiffusionViewportLayoutState {
-  return {
-    centerX: ctx.viewportState.centerX,
-    centerY: ctx.viewportState.centerY,
-    gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-    displayRotation: ctx.viewportState.displayRotation,
-    viewportLeft: ctx.viewportBounds.left,
-    viewportTop: ctx.viewportBounds.top,
-    viewportWidth: ctx.viewportBounds.width,
-    viewportHeight: ctx.viewportBounds.height,
-  };
-}
-
-// AI-REMOVED 2026-09-14:
-// Reason: 气体范围不再维护第二套颜色 tag 协议与默认色。
-// Trigger: 所有流体颜色统一读取 ItemDefinition.fluidColors。
-// Evidence: shared/fluid-color.ts 已统一 body 与未知流体灰色语义。
-// Replacement: syncActiveGasRanges 中的 resolveFluidColor。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// function resolveGasRangeColor(item: ItemDefinition | null): number {
-//   const colorTag = item?.tags.find((tag) =>
-//     tag.startsWith(GAS_COLOR_TAG_PREFIX)
-//     || tag.startsWith(FLUID_COLOR_TAG_PREFIX)
-//     || tag.startsWith(LIQUID_COLOR_TAG_PREFIX)
-//   );
-//   if (colorTag === undefined) {
-//     return DEFAULT_GAS_RANGE_COLOR;
+// import { Container, Graphics } from "pixi.js";
+//
+// import type { WorldEntity } from "@/domain/document/world-document";
+// import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+// import type { GridRect } from "@/domain/shared/grid";
+// import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+// import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
+// import { resolveBatchMoveHiddenRangeEntityIds } from "@/renderer/move-visual-policy";
+// import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color";
+// import {
+//   areGridRectsIntersecting,
+//   resolveGasDiffusionRangeGridRect,
+// } from "@/shared/geometry/power-range";
+//
+// import type { DecorationLayer } from "./DecorationLayer";
+// import type { DecorationSyncContext } from "./DecorationSyncContext";
+// import {
+//   resolveVisibleWorldRect,
+//   type VisibleWorldRect,
+// } from "./BeltVisualGeometry";
+// import {
+//   resolveMarqueeGridRectLayout,
+//   resolveWorldAuxiliaryStrokeWidth,
+// } from "./MarqueeRectDecoration";
+// import { GasEnvironmentAnimation } from "./GasEnvironmentAnimation";
+//
+// const GAS_RANGE_STROKE_ALPHA = 0.86;
+// const GAS_RANGE_FILL_ALPHA = 0.07;
+// const GAS_RANGE_STROKE_WIDTH_SCALE = 1.1;
+// /** 预览模式（无活跃气体环境）描边透明度 */
+// const GAS_RANGE_PREVIEW_STROKE_ALPHA = 0.55;
+// /** 预览模式线条宽度倍率，与供电桩范围线同级 */
+// const GAS_RANGE_PREVIEW_STROKE_WIDTH_SCALE = 1.0;
+// /** 预览模式（无活跃气体环境）范围框颜色 */
+// const GAS_RANGE_PREVIEW_COLOR = 0x66cc66;
+//
+// // AI-REMOVED 2026-09-14:
+// // Reason: 活跃气体颜色不再使用独立默认色或解析 Registry 颜色 tag。
+// // Trigger: ItemDefinition.fluidColors 成为唯一运行时颜色来源，未知流体统一回退 #808080。
+// // Evidence: 旧前缀只能承载单色，且已有值与美术 body 色不一致。
+// // Replacement: shared/fluid-color.ts。
+// // Risk: Low
+// // Human Review: Required
+// // Original code:
+// // const DEFAULT_GAS_RANGE_COLOR = 0xa8e6ff;
+// // const GAS_COLOR_TAG_PREFIX = "gas_color:";
+// // const FLUID_COLOR_TAG_PREFIX = "fluid_color:";
+// // const LIQUID_COLOR_TAG_PREFIX = "liquid_color:";
+//
+// export function createGasDiffusionRangeDecoration(): DecorationLayer {
+//   const container = new Container();
+//   container.label = "gas-diffusion-range";
+//   const previewGraphics = new Graphics({ roundPixels: true });
+//   const graphics = new Graphics({ roundPixels: true });
+//   const animation = new GasEnvironmentAnimation();
+//   container.addChild(previewGraphics, graphics, animation.container);
+//   // AI-REMOVED 2026-09-14:
+//   // Reason: Registry 已提供按 ID 精确查询，无需为颜色 tag 另建物品索引。
+//   // Trigger: 气体范围改为读取 ItemDefinition.fluidColors。
+//   // Evidence: Registry 在会话内稳定，findItemDefinition 已是公共查询入口。
+//   // Replacement: syncActiveGasRanges 中的 registry.queries.findItemDefinition。
+//   // Risk: Low
+//   // Human Review: Required
+//   // Original code:
+//   // let cachedItemDefinitions: readonly ItemDefinition[] | null = null;
+//   // let cachedItemById: ReadonlyMap<string, ItemDefinition> = new Map();
+//   let cachedGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[] | null = null;
+//   let cachedViewportLayoutState: GasDiffusionViewportLayoutState | null = null;
+//   let cachedPreviewStamp: GasDiffusionPreviewStamp | null = null;
+//   let graphicsHasContent = false;
+//   let previewGraphicsHasContent = false;
+//
+//   // ---- 活跃气体范围渲染（实色，仿真中） ----
+//   // AI-CORRECTION 2026-09-26：工作中的范围仅在动画素材尚未就绪或不支持 WebGL2 时使用实色矩形兜底。
+//   // AI-CORRECTION 2026-10-01：蓝图外观下始终使用同一 body 色实色矩形，不加载或播放气体环境动画。
+//
+//   function syncActiveGasRanges(
+//     ctx: DecorationSyncContext,
+//     activeGasDiffusions: readonly SimulationGasDiffusionRangeReadModel[],
+//   ): void {
+//     const gasDiffusionsChanged = !haveSameGasDiffusionRanges(
+//       cachedGasDiffusions,
+//       activeGasDiffusions,
+//     );
+//     const viewportChanged = !hasSameGasDiffusionViewportLayout(
+//       cachedViewportLayoutState,
+//       ctx,
+//     );
+//     if (!gasDiffusionsChanged && !viewportChanged) {
+//       return;
+//     }
+//
+//     // AI-REMOVED 2026-09-14:
+//     // Reason: 颜色查询不再维护局部物品索引。
+//     // Trigger: ItemDefinition.fluidColors 通过 Registry 公共查询直接读取。
+//     // Evidence: 原缓存只服务颜色 tag 解析，且 Registry 自身已持有 itemDefinitionById。
+//     // Replacement: 下方 findItemDefinition(range.gasItemId)。
+//     // Risk: Low
+//     // Human Review: Required
+//     // Original code:
+//     // const itemDefinitions = ctx.renderHost.workspace.registry.itemDefinitions ?? [];
+//     // const itemDefinitionsChanged = cachedItemDefinitions !== itemDefinitions;
+//     // if (!itemDefinitionsChanged && !gasDiffusionsChanged && !viewportChanged) {
+//     //   return;
+//     // }
+//     // // AI-CORRECTION 2026-07-17：物品定义在会话内稳定，仅在引用变化时重建颜色查询索引。
+//     // if (itemDefinitionsChanged) {
+//     //   cachedItemDefinitions = itemDefinitions;
+//     //   cachedItemById = new Map(itemDefinitions.map((item) => [item.id, item]));
+//     // }
+//
+//     if (graphicsHasContent) {
+//       graphics.clear();
+//       graphicsHasContent = false;
+//     }
+//
+//     const visibleGridRect = visibleWorldRectToGridRect(
+//       resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds, 0),
+//     );
+//     const strokeWidth =
+//       resolveWorldAuxiliaryStrokeWidth(ctx.viewportState.gridCellPixelSize)
+//       * GAS_RANGE_STROKE_WIDTH_SCALE;
+//
+//     for (const range of activeGasDiffusions) {
+//       if (!areGridRectsIntersecting(range.gridRect, visibleGridRect)) {
+//         continue;
+//       }
+//
+//       const layout = resolveMarqueeGridRectLayout({
+//         gridRect: range.gridRect,
+//         viewportBounds: ctx.viewportBounds,
+//         viewportCenter: {
+//           x: ctx.viewportState.centerX,
+//           y: ctx.viewportState.centerY,
+//         },
+//         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+//         displayRotation: ctx.viewportState.displayRotation,
+//       });
+//
+//       if (layout === null) {
+//         continue;
+//       }
+//
+//       const definition = ctx.renderHost.workspace.registry.queries.findItemDefinition(range.gasItemId);
+//       const color = fluidColorToNumber(resolveFluidColor(definition?.fluidColors));
+//       graphics
+//         .rect(layout.x, layout.y, layout.width, layout.height)
+//         .fill({
+//           color,
+//           alpha: GAS_RANGE_FILL_ALPHA,
+//         })
+//         .stroke({
+//           width: strokeWidth,
+//           color,
+//           alpha: GAS_RANGE_STROKE_ALPHA,
+//         });
+//       graphicsHasContent = true;
+//     }
+//
+//     cachedGasDiffusions = activeGasDiffusions;
+//     cachedViewportLayoutState = captureGasDiffusionViewportLayoutState(ctx);
 //   }
 //
-//   const prefix = resolveColorTagPrefix(colorTag);
-//   if (prefix === null) {
-//     return DEFAULT_GAS_RANGE_COLOR;
+//   // ---- 预览气体范围渲染（半透明，无仿真/无活跃气体时） ----
+//   // AI-CORRECTION 2026-09-26：预览矩形按设备绘制；即使其他设备正在工作，未工作设备与摆放虚影仍保留矩形。
+//
+//   function syncPreviewGasRanges(
+//     ctx: DecorationSyncContext,
+//     hiddenEntityIds: ReadonlySet<string>,
+//     activeDeviceIds: ReadonlySet<string>,
+//   ): void {
+//     const editor = ctx.renderHost.workspace.editor;
+//     if (!editor) {
+//       if (previewGraphicsHasContent) {
+//         previewGraphics.clear();
+//         previewGraphicsHasContent = false;
+//       }
+//       cachedPreviewStamp = null;
+//       return;
+//     }
+//
+//     const entityDefinitionMap = buildEditorEntityDefinitionMap(
+//       ctx.renderHost.workspace.registry.entityDefinitions,
+//     );
+//     const gasDiffusionRangeByMachineId = buildGasDiffusionRangeByMachineId(
+//       ctx.renderHost.workspace.registry.recipeDefinitions,
+//     );
+//
+//     const entities = editor.queries.listEntities().filter(
+//       (entity) => !hiddenEntityIds.has(entity.id),
+//     );
+//     const previewRanges = resolveEditorGasPreviewRanges(
+//       entities,
+//       entityDefinitionMap,
+//       gasDiffusionRangeByMachineId,
+//     );
+//     if (previewRanges.length > 0
+//       && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+//       && ctx.renderHost.textureManager.supportsLogisticsAnimation()) {
+//       animation.prepare(ctx);
+//     }
+//
+//     if (previewRanges.length === 0) {
+//       if (previewGraphicsHasContent) {
+//         previewGraphics.clear();
+//         previewGraphicsHasContent = false;
+//       }
+//       cachedPreviewStamp = null;
+//       return;
+//     }
+//
+//     const nextStamp = captureGasDiffusionPreviewStamp(entities, ctx, activeDeviceIds);
+//     if (
+//       cachedPreviewStamp !== null
+//       && haveSamePreviewStamp(cachedPreviewStamp, nextStamp)
+//     ) {
+//       return;
+//     }
+//
+//     if (previewGraphicsHasContent) {
+//       previewGraphics.clear();
+//       previewGraphicsHasContent = false;
+//     }
+//
+//     const visibleGridRect = visibleWorldRectToGridRect(
+//       resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds, 0),
+//     );
+//     const strokeWidth =
+//       resolveWorldAuxiliaryStrokeWidth(ctx.viewportState.gridCellPixelSize)
+//       * GAS_RANGE_PREVIEW_STROKE_WIDTH_SCALE;
+//
+//     for (const range of previewRanges) {
+//       if (activeDeviceIds.has(`device:${range.entityId}`)) {
+//         continue;
+//       }
+//       if (!areGridRectsIntersecting(range.gridRect, visibleGridRect)) {
+//         continue;
+//       }
+//
+//       const layout = resolveMarqueeGridRectLayout({
+//         gridRect: range.gridRect,
+//         viewportBounds: ctx.viewportBounds,
+//         viewportCenter: {
+//           x: ctx.viewportState.centerX,
+//           y: ctx.viewportState.centerY,
+//         },
+//         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+//         displayRotation: ctx.viewportState.displayRotation,
+//       });
+//
+//       if (layout === null) {
+//         continue;
+//       }
+//
+//       previewGraphics
+//         .rect(layout.x, layout.y, layout.width, layout.height)
+//         .stroke({
+//           width: strokeWidth,
+//           color: GAS_RANGE_PREVIEW_COLOR,
+//           alpha: GAS_RANGE_PREVIEW_STROKE_ALPHA,
+//         });
+//       previewGraphicsHasContent = true;
+//     }
+//
+//     cachedPreviewStamp = nextStamp;
 //   }
 //
-//   const normalizedHex = colorTag
-//     .slice(prefix.length)
-//     .trim()
-//     .replace(/^#/, "");
+//   return {
+//     container,
 //
-//   if (!/^[0-9a-fA-F]{6}$/.test(normalizedHex)) {
-//     return DEFAULT_GAS_RANGE_COLOR;
-//   }
+//     sync(ctx: DecorationSyncContext): void {
+//       // AI-REMOVED 2026-08-22:
+//       // Reason: 批量移动不应关闭整个气体范围图层，只应隐藏被移动设备自身的范围。
+//       // Trigger: 未被多选选中的气体设备范围也被一并清除。
+//       // Evidence: move draft 已通过 ghost 与 preview collection 精确记录原实体和移动草稿 ID。
+//       // Replacement: 当前 sync 中按 hiddenEntityIds 过滤活跃范围与编辑器预览实体。
+//       // Risk: Low
+//       // Human Review: Required
+//       //
+//       // Original code:
+//       // if (isBatchMove(ctx.renderHost.workspace.app?.state.moveKind ?? null)) {
+//       //   if (graphicsHasContent) {
+//       //     graphics.clear();
+//       //     graphicsHasContent = false;
+//       //   }
+//       //   cachedGasDiffusions = null;
+//       //   cachedViewportLayoutState = null;
+//       //   cachedPreviewStamp = null;
+//       //   return;
+//       // }
 //
-//   return Number.parseInt(normalizedHex, 16);
+//       const workspace = ctx.renderHost.workspace;
+//       const collections = workspace.editor?.state.collections;
+//       const hiddenEntityIds = resolveBatchMoveHiddenRangeEntityIds(
+//         workspace.app?.state.moveKind ?? null,
+//         collections?.[EntityCollectionType.preview] ?? [],
+//         collections?.[EntityCollectionType.ghost] ?? [],
+//       );
+//
+//       const simulation = workspace.simulation;
+//       const hiddenDeviceIds = new Set([...hiddenEntityIds].map((id) => `device:${id}`));
+//       const activeGasDiffusions = simulation?.state.runningState === "start"
+//         ? simulation.queries.getActiveGasDiffusionRanges().filter(
+//           (range) => !hiddenDeviceIds.has(range.sourceDeviceId),
+//         )
+//         : [];
+//       const supportsAnimation = workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+//         && ctx.renderHost.textureManager.supportsLogisticsAnimation();
+//       const animatedRanges = supportsAnimation ? activeGasDiffusions : [];
+//       const activeDeviceIds = new Set(activeGasDiffusions.map((range) => range.sourceDeviceId));
+//
+//       syncPreviewGasRanges(ctx, hiddenEntityIds, activeDeviceIds);
+//       animation.sync(ctx, animatedRanges);
+//       syncActiveGasRanges(ctx, supportsAnimation && animation.isReady ? [] : activeGasDiffusions);
+//
+//     },
+//
+//     destroy(): void {
+//       animation.destroy();
+//       previewGraphics.destroy();
+//       graphics.destroy();
+//       container.destroy();
+//     },
+//   };
 // }
 //
-// function resolveColorTagPrefix(tag: string): string | null {
-//   if (tag.startsWith(GAS_COLOR_TAG_PREFIX)) {
-//     return GAS_COLOR_TAG_PREFIX;
-//   }
-//   if (tag.startsWith(FLUID_COLOR_TAG_PREFIX)) {
-//     return FLUID_COLOR_TAG_PREFIX;
-//   }
-//   if (tag.startsWith(LIQUID_COLOR_TAG_PREFIX)) {
-//     return LIQUID_COLOR_TAG_PREFIX;
-//   }
-//   return null;
+// interface GasDiffusionPreviewStamp {
+//   readonly entityCount: number;
+//   readonly entityVersion: number;
+//   readonly activeDeviceIds: string;
+//   readonly centerX: number;
+//   readonly centerY: number;
+//   readonly gridCellPixelSize: number;
+//   readonly displayRotation: DecorationSyncContext["viewportState"]["displayRotation"];
 // }
-
-function visibleWorldRectToGridRect(visibleWorldRect: VisibleWorldRect): GridRect {
-  return {
-    x: visibleWorldRect.left,
-    y: visibleWorldRect.top,
-    width: visibleWorldRect.right - visibleWorldRect.left,
-    height: visibleWorldRect.bottom - visibleWorldRect.top,
-  };
-}
+//
+// interface EditorGasPreviewRange {
+//   readonly entityId: string;
+//   readonly gridRect: GridRect;
+// }
+//
+// interface GasDiffusionViewportLayoutState {
+//   readonly centerX: number;
+//   readonly centerY: number;
+//   readonly gridCellPixelSize: number;
+//   readonly displayRotation: DecorationSyncContext["viewportState"]["displayRotation"];
+//   readonly viewportLeft: number;
+//   readonly viewportTop: number;
+//   readonly viewportWidth: number;
+//   readonly viewportHeight: number;
+// }
+//
+// function buildEditorEntityDefinitionMap(
+//   definitions: readonly EntityDefinition[],
+// ): ReadonlyMap<string, EntityDefinition> {
+//   return new Map(definitions.map((d) => [d.id, d]));
+// }
+//
+// function resolveEditorGasPreviewRanges(
+//   entities: readonly WorldEntity[],
+//   definitionMap: ReadonlyMap<string, EntityDefinition>,
+//   gasDiffusionRangeByMachineId: ReadonlyMap<string, number>,
+// ): EditorGasPreviewRange[] {
+//   const ranges: EditorGasPreviewRange[] = [];
+//
+//   for (const entity of entities) {
+//     const definition = definitionMap.get(entity.definitionId);
+//     if (!definition) {
+//       continue;
+//     }
+//     const gasDiffusionRange = gasDiffusionRangeByMachineId.get(definition.id);
+//     if (gasDiffusionRange === undefined) {
+//       continue;
+//     }
+//
+//     const gridRect = resolveGasDiffusionRangeGridRect({
+//       entity,
+//       definition,
+//       gasDiffusionRange,
+//     });
+//     if (gridRect === null) {
+//       continue;
+//     }
+//
+//     ranges.push({ entityId: entity.id, gridRect });
+//   }
+//
+//   return ranges;
+// }
+//
+// function buildGasDiffusionRangeByMachineId(
+//   recipes:
+//     | DecorationSyncContext["renderHost"]["workspace"]["registry"]["recipeDefinitions"]
+//     | undefined,
+// ): ReadonlyMap<string, number> {
+//   const ranges = new Map<string, number>();
+//   for (const recipe of recipes ?? []) {
+//     const output = recipe.gasDiffusionOutput;
+//     if (output === undefined || output.range <= 0) {
+//       continue;
+//     }
+//     ranges.set(recipe.machineId, Math.max(ranges.get(recipe.machineId) ?? 0, output.range));
+//   }
+//   return ranges;
+// }
+//
+// function captureGasDiffusionPreviewStamp(
+//   entities: readonly WorldEntity[],
+//   ctx: DecorationSyncContext,
+//   activeDeviceIds: ReadonlySet<string>,
+// ): GasDiffusionPreviewStamp {
+//   let entityVersion = 0;
+//   for (const entity of entities) {
+//     // 基于位置与定义 ID 的简单哈希，用于检测实体变更
+//     entityVersion += entity.position.x * 31
+//       + entity.position.y * 37
+//       + hashString(entity.definitionId)
+//       + entity.rotation * 41;
+//   }
+//
+//   return {
+//     entityCount: entities.length,
+//     entityVersion,
+//     activeDeviceIds: [...activeDeviceIds].sort().join("\u0000"),
+//     centerX: ctx.viewportState.centerX,
+//     centerY: ctx.viewportState.centerY,
+//     gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+//     displayRotation: ctx.viewportState.displayRotation,
+//   };
+// }
+//
+// function haveSamePreviewStamp(
+//   left: GasDiffusionPreviewStamp,
+//   right: GasDiffusionPreviewStamp,
+// ): boolean {
+//   return left.entityCount === right.entityCount
+//     && left.entityVersion === right.entityVersion
+//     && left.activeDeviceIds === right.activeDeviceIds
+//     && left.centerX === right.centerX
+//     && left.centerY === right.centerY
+//     && left.gridCellPixelSize === right.gridCellPixelSize
+//     && left.displayRotation === right.displayRotation;
+// }
+//
+// function hashString(value: string): number {
+//   let hash = 0;
+//   for (let i = 0; i < value.length; i++) {
+//     hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+//   }
+//   return hash;
+// }
+//
+// export function haveSameGasDiffusionRanges(
+//   left: readonly SimulationGasDiffusionRangeReadModel[] | null,
+//   right: readonly SimulationGasDiffusionRangeReadModel[],
+// ): boolean {
+//   if (left === null || left.length !== right.length) {
+//     return false;
+//   }
+//
+//   return left.every((leftRange, index) => {
+//     const rightRange = right[index];
+//     return rightRange !== undefined
+//       && leftRange.sourceDeviceId === rightRange.sourceDeviceId
+//       && leftRange.gasItemId === rightRange.gasItemId
+//       && leftRange.gridRect.x === rightRange.gridRect.x
+//       && leftRange.gridRect.y === rightRange.gridRect.y
+//       && leftRange.gridRect.width === rightRange.gridRect.width
+//       && leftRange.gridRect.height === rightRange.gridRect.height;
+//   });
+// }
+//
+// function hasSameGasDiffusionViewportLayout(
+//   cached: GasDiffusionViewportLayoutState | null,
+//   ctx: DecorationSyncContext,
+// ): boolean {
+//   return cached !== null
+//     && cached.centerX === ctx.viewportState.centerX
+//     && cached.centerY === ctx.viewportState.centerY
+//     && cached.gridCellPixelSize === ctx.viewportState.gridCellPixelSize
+//     && cached.displayRotation === ctx.viewportState.displayRotation
+//     && cached.viewportLeft === ctx.viewportBounds.left
+//     && cached.viewportTop === ctx.viewportBounds.top
+//     && cached.viewportWidth === ctx.viewportBounds.width
+//     && cached.viewportHeight === ctx.viewportBounds.height;
+// }
+//
+// function captureGasDiffusionViewportLayoutState(
+//   ctx: DecorationSyncContext,
+// ): GasDiffusionViewportLayoutState {
+//   return {
+//     centerX: ctx.viewportState.centerX,
+//     centerY: ctx.viewportState.centerY,
+//     gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+//     displayRotation: ctx.viewportState.displayRotation,
+//     viewportLeft: ctx.viewportBounds.left,
+//     viewportTop: ctx.viewportBounds.top,
+//     viewportWidth: ctx.viewportBounds.width,
+//     viewportHeight: ctx.viewportBounds.height,
+//   };
+// }
+//
+// // AI-REMOVED 2026-09-14:
+// // Reason: 气体范围不再维护第二套颜色 tag 协议与默认色。
+// // Trigger: 所有流体颜色统一读取 ItemDefinition.fluidColors。
+// // Evidence: shared/fluid-color.ts 已统一 body 与未知流体灰色语义。
+// // Replacement: syncActiveGasRanges 中的 resolveFluidColor。
+// // Risk: Low
+// // Human Review: Required
+// // Original code:
+// // function resolveGasRangeColor(item: ItemDefinition | null): number {
+// //   const colorTag = item?.tags.find((tag) =>
+// //     tag.startsWith(GAS_COLOR_TAG_PREFIX)
+// //     || tag.startsWith(FLUID_COLOR_TAG_PREFIX)
+// //     || tag.startsWith(LIQUID_COLOR_TAG_PREFIX)
+// //   );
+// //   if (colorTag === undefined) {
+// //     return DEFAULT_GAS_RANGE_COLOR;
+// //   }
+// //
+// //   const prefix = resolveColorTagPrefix(colorTag);
+// //   if (prefix === null) {
+// //     return DEFAULT_GAS_RANGE_COLOR;
+// //   }
+// //
+// //   const normalizedHex = colorTag
+// //     .slice(prefix.length)
+// //     .trim()
+// //     .replace(/^#/, "");
+// //
+// //   if (!/^[0-9a-fA-F]{6}$/.test(normalizedHex)) {
+// //     return DEFAULT_GAS_RANGE_COLOR;
+// //   }
+// //
+// //   return Number.parseInt(normalizedHex, 16);
+// // }
+// //
+// // function resolveColorTagPrefix(tag: string): string | null {
+// //   if (tag.startsWith(GAS_COLOR_TAG_PREFIX)) {
+// //     return GAS_COLOR_TAG_PREFIX;
+// //   }
+// //   if (tag.startsWith(FLUID_COLOR_TAG_PREFIX)) {
+// //     return FLUID_COLOR_TAG_PREFIX;
+// //   }
+// //   if (tag.startsWith(LIQUID_COLOR_TAG_PREFIX)) {
+// //     return LIQUID_COLOR_TAG_PREFIX;
+// //   }
+// //   return null;
+// // }
+//
+// function visibleWorldRectToGridRect(visibleWorldRect: VisibleWorldRect): GridRect {
+//   return {
+//     x: visibleWorldRect.left,
+//     y: visibleWorldRect.top,
+//     width: visibleWorldRect.right - visibleWorldRect.left,
+//     height: visibleWorldRect.bottom - visibleWorldRect.top,
+//   };
+// }

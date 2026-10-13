@@ -218,6 +218,8 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
         .filter((diffusion) => topology.devices[diffusion.sourceDeviceId] !== undefined)
         .map((diffusion) => ({
           sourceDeviceId: diffusion.sourceDeviceId,
+          rangeId: diffusion.rangeId,
+          rotation: diffusion.rotation,
           gasItemId: diffusion.gasItemId,
           gridRect: { ...diffusion.gridRect },
         }));

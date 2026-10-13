@@ -38,7 +38,7 @@ import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperati
 import { PlannerSearchPortfolio } from "./search-portfolio";
 import { PlannerRandom, plannerRandomSeed } from "./search-random";
 import { nextPlannerStrategy } from "./strategy-schedule";
-import { breadthOutlineKey, fixedOutlineMinimum, PLANNER_MAX_SIDE } from "./search-outline";
+import { breadthOutlineKey, fixedOutlineMinimum, plannerDeviceArea, PLANNER_MAX_SIDE } from "./search-outline";
 import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { prepareProductionDevices } from "./production-preparation";
 import { PlannerPlacement } from "./placement";
@@ -139,12 +139,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const count = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : 0;
     const evaluatedProposals = count(file?.progress?.evaluatedProposals);
     const history = file?.progress?.areaHistory;
+    const schedule = (file?.checkpoint as PlannerCheckpoint | undefined)?.parallel?.dimensionSchedule;
+    const initialArea = file?.progress?.initialArea ?? (schedule?.generation === 0 ? schedule.targetArea : undefined);
     return { ...file?.progress, taskId: id, status: "failed", phase: "preparing",
       startedAt: Number.isFinite(file?.progress?.startedAt) ? file.progress.startedAt : 0,
       elapsedMs: Number.isFinite(file?.progress?.elapsedMs) && file.progress.elapsedMs >= 0 ? file.progress.elapsedMs : 0,
       estimatedProgress: null, candidateCount: count(file?.progress?.candidateCount), evaluatedProposals,
       roundEvaluatedProposals: count(file?.progress?.roundEvaluatedProposals),
       validatedCandidateCount: count(file?.progress?.validatedCandidateCount), activeWorkerCount: 0, bestArea: null,
+      initialArea: Number.isSafeInteger(initialArea) && initialArea! > 0 ? initialArea : undefined,
       // 原文可包含损坏字段；展示历史必须能被图表安全读取，导出仍保留完整原文。
       areaHistory: Array.isArray(history) && history.every(point => point && Number.isSafeInteger(point.evaluatedProposals)
         && point.evaluatedProposals >= 0 && point.evaluatedProposals <= evaluatedProposals
@@ -303,6 +306,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         message: withBlueprintDisconnectionWarning(workspace.registry, request.blueprintSource!, requiresTankConstruction
           ? "蓝图产率已识别，开始优化后将构建自启动供气。" : "蓝图识别完成，可以开始优化。"),
         bestArea: best ? candidate.metrics.area : null,
+        initialArea: best ? candidate.metrics.area : plannerDeviceArea(workspace.registry, candidate.seed!.network.nodes) * 2,
         areaHistory: best ? [{ evaluatedProposals: 0, bestArea: candidate.metrics.area }] : [] } }, workspace.registry);
   };
   const requireTask = (id: string) => {
@@ -747,6 +751,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       task.portfolio.restart(point.best?.candidate.seed);
       parallel.nextShard = 0;
       zeroAttempts = 0;
+      if (task.file.progress.initialArea === undefined && point.evaluations === 0) publish(task, { initialArea: targetArea });
     };
     const initializeDimensions = async () => {
       if (task.file.request.options.warehousePortPlacement === "full-side" && !warehousePorts) {
@@ -787,10 +792,18 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       } else {
         if (task.file.request.blueprintSource && point.blueprintBaseline?.candidate.seed) {
           const nodes = point.blueprintBaseline.candidate.seed.network.nodes;
-          const bodyArea = nodes.reduce((sum, node) => {
-            const definition = workspace.registry.queries.findEntityDefinition(node.entity.definitionId)!;
-            return sum + definition.footprint.width * definition.footprint.height;
-          }, 0);
+          // AI-REMOVED 2026-10-13:
+          // Reason: 首次曲线基准与尺寸调度必须共用设备占地求和，避免两处口径漂移。
+          // Trigger: 用户授权新增 initialArea 并修复无合规结果时的曲线起点。
+          // Evidence: 原求和仅在调度初始化内部，无法复用于蓝图识别后的进度。
+          // Replacement: search-outline.ts plannerDeviceArea。
+          // Risk: Low；仍使用同一设备清单及 Registry footprint。Human Review: Required
+          // Original code:
+          // const bodyArea = nodes.reduce((sum, node) => {
+          //   const definition = workspace.registry.queries.findEntityDefinition(node.entity.definitionId)!;
+          //   return sum + definition.footprint.width * definition.footprint.height;
+          // }, 0);
+          const bodyArea = plannerDeviceArea(workspace.registry, nodes);
           rebuildDimensions(bodyArea * 2, fixedOutlineMinimum(workspace.registry, nodes));
           persist(task);
           return;
@@ -803,7 +816,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         // 先复用设备准备阶段补齐已确定的辅助设施；未知线路和按最终布局补放的桩不虚构数量。
         await prepareProductionDevices(workspace.registry, network, placement, variant, profile,
           { strategy: "compact", stashPackingVariant: 0, conduitTopology: "shared" }, () => check(task));
-        const bodyArea = network.nodes.reduce((sum, node) => sum + node.definition.footprint.width * node.definition.footprint.height, 0);
+        // AI-REMOVED 2026-10-13:
+        // Reason: 产线与蓝图共用面积基准的设备占地求和。
+        // Trigger: initialArea 与实际尺寸调度保持一致。
+        // Evidence: 此处与蓝图初始化采用同一 footprint 求和公式。
+        // Replacement: search-outline.ts plannerDeviceArea。
+        // Risk: Low；设备准备仍在求和之前完成。Human Review: Required
+        // Original code:
+        // const bodyArea = network.nodes.reduce((sum, node) => sum + node.definition.footprint.width * node.definition.footprint.height, 0);
+        const bodyArea = plannerDeviceArea(workspace.registry, network.nodes);
         rebuildDimensions(bodyArea * 2, fixedOutlineMinimum(workspace.registry, network.nodes));
       }
       persist(task);

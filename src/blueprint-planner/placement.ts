@@ -1,3 +1,4 @@
+import { findEntityRange } from "@/shared/geometry/entity-range";
 import { PlannerItemRules } from "@/shared/planner-item-policy";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -153,7 +154,7 @@ export class PlannerPlacement {
   placeInEnvironment(node: PlannerNode, diffuser: PlannerNode, rotationOffset: number): boolean {
     const gas = diffuser.recipe?.gasDiffusionOutput;
     if (gas === undefined) return false;
-    const range = resolveGasDiffusionRangeGridRect({ entity: diffuser.entity, definition: diffuser.definition, gasDiffusionRange: gas.range });
+    const range = resolveGasDiffusionRangeGridRect({ entity: diffuser.entity, definition: diffuser.definition, rangeId: gas.rangeId });
     if (range === null) return false;
     for (let y = Math.ceil(range.y); y < range.y + range.height; y++) {
       for (let x = Math.max(this.minimumX, Math.ceil(range.x)); x < range.x + range.width; x++) {
@@ -237,7 +238,7 @@ export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNo
     const covered = consumers.filter(node => node.recipe!.requiredGasDiffusion === gasItemId).every(node => alternatives.some(other => {
       const gas = other.recipe!.gasDiffusionOutput!;
       if (gas.gasItemId !== gasItemId) return false;
-      const range = resolveGasDiffusionRangeGridRect({ entity: other.entity, definition: other.definition, gasDiffusionRange: gas.range });
+      const range = resolveGasDiffusionRangeGridRect({ entity: other.entity, definition: other.definition, rangeId: gas.rangeId });
       return range !== null && areGridRectsContaining(range, resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
     }));
     if (covered) { retained.splice(retained.indexOf(station), 1); removed.push(station); }
@@ -246,7 +247,8 @@ export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNo
 }
 
 function placeEnvironmentStation(node: PlannerNode, placement: PlannerPlacement): void {
-  const range = node.recipe!.gasDiffusionOutput!.range;
+  const localRect = findEntityRange(node.definition, node.recipe!.gasDiffusionOutput!.rangeId).localRect;
+  const range = Math.max(localRect.width, localRect.height);
   const inset = Math.floor((range - node.definition.footprint.width) / 2);
   const bounds = placement.bounds();
   // AI-REMOVED 2026-10-03:

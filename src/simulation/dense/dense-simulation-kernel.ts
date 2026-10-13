@@ -1,3 +1,4 @@
+import { resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
@@ -6,7 +7,6 @@ import type {
 } from "@/domain/simulation/types/simulation-types";
 import { areGridRectsContaining } from "@/shared/geometry/power-range";
 import {
-  getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
 
@@ -3017,17 +3017,19 @@ export class DenseSimulationKernel {
         continue;
       }
       const device = this.requireDevice(channel.deviceIndex);
-      const gridRect = resolveDeviceCenteredRangeRect(device, output.range);
+      const gridRect = resolveDeviceRangeRect(device, output.localRect);
       if (gridRect === null) {
         continue;
       }
-      const key = `${channel.deviceIndex}:${output.itemIndex}:${output.range}`;
+      const key = `${channel.deviceIndex}:${output.itemIndex}:${output.rangeId}`;
       if (seen.has(key)) {
         continue;
       }
       seen.add(key);
       result.push({
         sourceDeviceId: device.id,
+        rangeId: output.rangeId,
+        rotation: device.rotation!,
         gasItemId: this.layout.dictionary.itemIds[output.itemIndex]!,
         gridRect,
       });
@@ -3181,22 +3183,37 @@ function resolveDeviceGridRect(
   };
 }
 
-function resolveDeviceCenteredRangeRect(
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: resolveDeviceRangeRect。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// function resolveDeviceCenteredRangeRect(
+//   device: CompiledSimulationDevice,
+//   range: number,
+// ): RuntimeGasDiffusionSnapshot["gridRect"] | null {
+//   if (device.position === null || device.rotation === null || device.footprint === null) {
+//     return null;
+//   }
+//   const footprint = getRotatedGridFootprint(device.footprint, device.rotation);
+//   const center = getGridFootprintCenterCells(device.position, footprint);
+//   const halfRange = range / 2;
+//   return {
+//     x: center.x - halfRange,
+//     y: center.y - halfRange,
+//     width: range,
+//     height: range,
+//   };
+// }
+function resolveDeviceRangeRect(
   device: CompiledSimulationDevice,
-  range: number,
+  localRect: RuntimeGasDiffusionSnapshot["gridRect"],
 ): RuntimeGasDiffusionSnapshot["gridRect"] | null {
-  if (device.position === null || device.rotation === null || device.footprint === null) {
-    return null;
-  }
-  const footprint = getRotatedGridFootprint(device.footprint, device.rotation);
-  const center = getGridFootprintCenterCells(device.position, footprint);
-  const halfRange = range / 2;
-  return {
-    x: center.x - halfRange,
-    y: center.y - halfRange,
-    width: range,
-    height: range,
-  };
+  if (device.position === null || device.rotation === null || device.footprint === null) return null;
+  return resolveLocalRangeGridRect(device.position, device.footprint, device.rotation, localRect);
 }
 
 function mapDenseItemIndex(

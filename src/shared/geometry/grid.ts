@@ -166,7 +166,8 @@ export function resolveCenteredRotatedGridPoint(options: {
  * @param rotation 目标旋转角度
  * @returns 旋转后的偏移
  */
-export function rotateSpriteOffset(
+// AI-CORRECTION 2026-10-13: 将原 rotateSpriteOffset 提升为通用局部矩形变换，精灵与作用范围共用。
+export function rotateLocalGridRect(
   offset: { x: number; y: number; width: number; height: number },
   footprint: GridRectSize,
   rotation: GridRotation,
@@ -209,7 +210,7 @@ export function resolveSpriteGridRect(
     }
   }
 
-  const rotatedOffset = rotateSpriteOffset(spriteOffset, footprint, rotation)
+  const rotatedOffset = rotateLocalGridRect(spriteOffset, footprint, rotation)
   return {
     x: position.x + rotatedOffset.x,
     y: position.y + rotatedOffset.y,

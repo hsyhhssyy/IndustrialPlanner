@@ -1870,8 +1870,8 @@ describe("GenericDeviceSprite", () => {
       app: createRenderContextAppStub(renderHost),
     })
     Object.assign(relatedContext, {
-      powerInteractionVisualState: {
-        visiblePowerRangeEntityIds: new Set<string>(),
+      rangeInteractionVisualState: {
+        visibleRangeKeys: new Set<string>(),
         highlightedEntityIds: new Set(["dummy-blueprint-preview"]),
       },
     })

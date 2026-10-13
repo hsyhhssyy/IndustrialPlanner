@@ -1,3 +1,5 @@
+import { findEntityRange } from "@/shared/geometry/entity-range";
+import type { GridRect } from "@/domain/shared/grid";
 import {
   BELT_TRANSPORT_DURATION_SECONDS,
   PIPE_TRANSPORT_DURATION_SECONDS,
@@ -48,7 +50,8 @@ export interface DenseRecipeProgram {
   readonly requiredGasItemIndex: number;
   readonly gasDiffusionOutput: {
     readonly itemIndex: number;
-    readonly range: number;
+    readonly rangeId: string;
+    readonly localRect: GridRect;
   } | null;
   readonly warehouseSubmit: boolean;
   readonly powerOutput: number;
@@ -188,7 +191,7 @@ function compileChannelCandidates(options: {
 
   const recipes = resolveRegistryRecipes(options);
   return recipes
-    .map((recipe) => compileRecipeProgram(recipe, options.itemIndexById, options.topology))
+    .map((recipe) => compileRecipeProgram(recipe, options.itemIndexById, options.topology, options.registry))
     .sort(compareRecipeEfficiency);
 }
 
@@ -237,6 +240,7 @@ function compileRecipeProgram(
   recipe: RecipeDefinition,
   itemIndexById: ReadonlyMap<string, number>,
   topology: CompiledSimulationTopology,
+  registry: RegistryContract,
 ): DenseRecipeProgram {
   return {
     recipeId: recipe.id,
@@ -255,7 +259,10 @@ function compileRecipeProgram(
       ? null
       : {
           itemIndex: requireItemIndex(itemIndexById, recipe.gasDiffusionOutput.gasItemId),
-          range: recipe.gasDiffusionOutput.range,
+          rangeId: recipe.gasDiffusionOutput.rangeId,
+          localRect: findEntityRange(
+            registry.queries.findEntityDefinition(recipe.machineId)!, recipe.gasDiffusionOutput.rangeId,
+          ).localRect,
         },
     warehouseSubmit: recipe.id === "r_warehouse_submit",
     powerOutput: recipe.powerOutput ?? 0,

@@ -165,7 +165,8 @@ describe("v1.5 建筑素材发布", () => {
     const ids = collection.entries.map((entry) => entry.entityId);
     expect(new Set(ids).size).toBe(ids.length);
     // AI-CORRECTION 2026-10-12: 在已有 52 个映射上新增 10 种普通田块静态成株，动画设备仍为 37 个。
-    expect(collection.entries).toHaveLength(62);
+    // AI-CORRECTION 2026-10-13: 新增洒水机静态首帧，总映射为 63，动画设备仍为 37 个。
+    expect(collection.entries).toHaveLength(63);
     expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(37);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
@@ -188,6 +189,7 @@ describe("v1.5 建筑素材发布", () => {
       "pipe_converger",
       "pipe_splitter",
       "sp_sub_hub_1",
+      "squirter_1",
     ]));
   });
 

@@ -25,6 +25,22 @@ function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerReque
       elapsedMs: 0, estimatedProgress: null, evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
 
+it("初始面积独立于最优结果持久化，缺省保持未知，非法面积被拒绝", () => {
+  const registry = createRegistryContract(), file = taskFile();
+  const configured = { ...file, progress: { ...file.progress, initialArea: 176 } };
+  const original = structuredClone(configured);
+  expect(parsePlannerTaskFile(JSON.parse(JSON.stringify(configured)), registry).progress)
+    .toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
+  expect(configured).toEqual(original);
+  expect(parsePlannerTaskFile(file, registry).progress.initialArea).toBeUndefined();
+  for (const initialArea of [0, -1, 1.5, NaN, Infinity, null, "176"]) {
+    // 2026-10-13：用户授权按校验层断言错误；非有限值先由 JSON 边界拒绝，其他非法值由初始面积校验拒绝。
+    const expectedMessage = typeof initialArea === "number" && !Number.isFinite(initialArea)
+      ? "任务包含非有限数值" : "初始面积基准";
+    expect(() => parsePlannerTaskFile({ ...file, progress: { ...file.progress, initialArea } }, registry)).toThrow(expectedMessage);
+  }
+});
+
 it("启动标记与历史零提案任务恢复，保存基线不会被当成已开始规划", () => {
   const registry = createRegistryContract();
   for (const [patch, started] of [
@@ -231,6 +247,7 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
     expect(paused.progress.evaluatedProposals).toBeLessThan(100_000);
     expect(paused.progress.roundEvaluatedProposals).toBe(paused.checkpoint.evaluations);
     expect(paused.progress.elapsedMs).toBeGreaterThan(1);
+    expect(paused.progress.initialArea).toBeGreaterThan(0);
     const imported = await host.actions.importTask(JSON.parse(JSON.stringify(paused)));
     expect(host.queries.getTask(imported)?.evaluatedProposals).toBe(paused.checkpoint.evaluations);
     host.actions.continuePlanning(imported, 10_000);
@@ -238,6 +255,7 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
     expect(host.queries.getTask(imported)?.evaluatedProposals).toBe(paused.checkpoint.evaluations);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const continued = host.queries.getTask(imported)!;
+    expect(continued.initialArea).toBe(paused.progress.initialArea);
     expect(continued.roundEvaluatedProposals).toBe(10_000);
     expect(continued.evaluatedProposals).toBe(paused.checkpoint.evaluations + 10_000);
   } finally { host.dispose(); await session.dispose(); }
@@ -340,9 +358,9 @@ it("隔离损坏的历史时只展示可读取的曲线和计数，导出保留�
   try {
     for (const areaHistory of ["invalid", [null], [{ evaluatedProposals: -1, bestArea: 1 }]]) {
       const file = { ...taskFile(), algorithmVersion: "future", progress: { ...taskFile().progress,
-        evaluatedProposals: -1, elapsedMs: -1, areaHistory } } as unknown as BlueprintPlannerTaskFile;
+        evaluatedProposals: -1, elapsedMs: -1, initialArea: -1, areaHistory } } as unknown as BlueprintPlannerTaskFile;
       const id = await host.actions.importTask(file);
-      expect(host.queries.getTask(id)).toMatchObject({ status: "waiting", evaluatedProposals: 0, elapsedMs: 0, areaHistory: [] });
+      expect(host.queries.getTask(id)).toMatchObject({ status: "waiting", evaluatedProposals: 0, elapsedMs: 0, areaHistory: [], initialArea: undefined });
       expect(host.queries.exportTask(id)).toEqual({ ...file, taskId: id, progress: { ...file.progress, taskId: id, status: "waiting", activeWorkerCount: 0 } });
     }
   } finally { host.dispose(); }

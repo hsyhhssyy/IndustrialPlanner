@@ -19,12 +19,14 @@ const EXPECTED_PLOTS = [
 
 describe("普通田块建筑定义", () => {
   const registry = createRegistryContract();
-  const plots = registry.entityDefinitions.filter((definition) => definition.uiGroup === "agriculture");
+  // AI-CORRECTION 2026-10-13: 农业分类新增洒水机，田块专项断言按 soil_ 设备族筛选。
+  const plots = registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_"));
 
   it("收录全部十种普通田块并提供原始中英文名称，排除模拟及无名田块", () => {
     expect(plots.map((definition) => definition.id)).toEqual(EXPECTED_PLOTS.map(([id]) => id));
     for (const [id, zh, en] of EXPECTED_PLOTS) {
       const definition = registry.queries.findEntityDefinition(id)!;
+      expect(definition.uiGroup).toBe("agriculture");
       expect(lookupText("zh-CN", definition.nameKey)).toBe(zh);
       expect(lookupText("en-US", definition.nameKey)).toBe(en);
       expect(definition.footprint).toEqual({ width: 4, height: 4 });

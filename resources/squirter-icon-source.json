@@ -1,0 +1,19 @@
+{
+  "revision": "2026-10-12T17:49:18.192150+00:00",
+  "files": [
+    {
+      "path": "assets/beyond/dynamicassets/gameplay/ui/sprites/itemicon/item_port_squirter_1.png",
+      "size": 65766,
+      "md5": "8d203ba3f8829552cc6232dc52555685",
+      "version": "1.4.4@9433094-12",
+      "sha256": "cff20bd822602e8cd66fbfb316e85247e97ce2b41e99a48e8ca11ff0ca4a70b3"
+    },
+    {
+      "path": "assets/beyond/dynamicassets/gameplay/ui/sprites/factory/buildingpanelicon/icon_port_squirter_1.png",
+      "size": 23248,
+      "md5": "83fd6eb8d4f1296c05973d456fcdf951",
+      "version": "1.4.4@9433094-12",
+      "sha256": "7a3fb181cee27fb2f5a3e4cebb2b389adb537d5129998b37a4a448aee7211c4c"
+    }
+  ]
+}

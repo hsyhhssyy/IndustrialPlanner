@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 25,
+  "fixtureRevision": 27,
   "updatedAt": "2026-10-13",
   "entries": [
     {
@@ -3863,6 +3863,20 @@
       "schemaVersion": 7,
       "version": "fixture-v1",
       "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-08-variant-77.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/collections/renderer/entity-range/scene.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
     }
   ],
   "catalogs": [
@@ -3952,6 +3966,7 @@
     "src/tests/fixtures/blueprints/simulation/topology-migration/index.json",
     "src/tests/fixtures/blueprints/simulation/warehouse-submit/index.json",
     "src/tests/fixtures/blueprints/simulation/water-purifier-node/index.json",
-    "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json"
+    "src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json",
+    "src/tests/fixtures/blueprints/collections/renderer/entity-range/index.json"
   ]
 }

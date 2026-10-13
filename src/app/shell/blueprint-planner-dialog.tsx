@@ -14,7 +14,7 @@ import { enterBlueprintPlacement } from "../input";
 import { createDefaultDialogStateForKey } from "../state";
 import { DialogShell } from "./shared/dialog-shell";
 import { PlannerTaskFlow } from "./production-planning";
-import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate } from "./blueprint-planner-statistics";
+import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaCurvePoints, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate } from "./blueprint-planner-statistics";
 import styles from "./blueprint-planner-dialog.module.scss";
 import { BlueprintPlannerEnvironment } from "./blueprint-planner-environment";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
@@ -51,13 +51,17 @@ const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup" | "warehous
   { key: "plantStartup", label: "eda.plantStartup", choices: [["preload", "eda.preload"], ["warehouse", "eda.warehouseStartup"]] },
 ];
 
-function AreaCurve({ points, proposals, label, xLabel, yLabel }: {
-  points: readonly BlueprintPlannerAreaPoint[]; proposals: number; label: string; xLabel: string; yLabel: string;
+function AreaCurve({ points, initialArea, proposals, label, xLabel, yLabel, initialLabel, verifiedLabel }: {
+  points: readonly BlueprintPlannerAreaPoint[]; initialArea?: number; proposals: number; label: string; xLabel: string; yLabel: string;
+  initialLabel: string; verifiedLabel: string;
 }) {
+  const curve = plannerAreaCurvePoints(points, initialArea);
+  const reference = curve.find(point => !point.verified);
+  const last = curve.at(-1)!;
   const width = 600, left = 58, right = 588, top = 34, bottom = 160;
-  const ticks = plannerAreaTicks(points, proposals, left, right);
+  const ticks = plannerAreaTicks(curve.map(point => ({ evaluatedProposals: point.evaluatedProposals, bestArea: point.area })), proposals, left, right);
   const height = bottom + 46;
-  const minX = points[0]!.evaluatedProposals;
+  const minX = curve[0]!.evaluatedProposals;
   const maxX = Math.max(minX, proposals);
   // AI-REMOVED 2026-10-03:
   // Reason: Y 轴改为从零开始的 log(1+x)，不再用极值差拉伸。
@@ -69,8 +73,8 @@ function AreaCurve({ points, proposals, label, xLabel, yLabel }: {
   // const minArea = Math.min(...points.map(point => point.bestArea));
   // const span = Math.max(1, maxArea - minArea);
   // AI-CORRECTION 2026-10-03: 用户取消 Y 轴对数与零起点，恢复实际极值范围；单点与留白统一由 plannerAreaCoordinate 处理。
-  const minArea = Math.min(...points.map(point => point.bestArea));
-  const maxArea = Math.max(...points.map(point => point.bestArea));
+  const minArea = Math.min(...curve.map(point => point.area));
+  const maxArea = Math.max(...curve.map(point => point.area));
   const x = (value: number) => plannerLogCoordinate(value, minX, maxX, left, right);
   const y = (value: number) => plannerAreaCoordinate(value, minArea, maxArea, top, bottom);
   // AI-REMOVED 2026-10-03:
@@ -86,21 +90,27 @@ function AreaCurve({ points, proposals, label, xLabel, yLabel }: {
   // }
   // if (maxArea > 0) areaTicks.push(maxArea);
   const areaTicks = [...new Set(Array.from({ length: 5 }, (_, index) => Math.round(minArea + (maxArea - minArea) * index / 4)))];
-  const first = points[0]!;
-  const path = [`M ${x(first.evaluatedProposals)} ${y(first.bestArea)}`];
+  const first = points[0];
+  const path = first ? [`M ${x(first.evaluatedProposals)} ${y(first.bestArea)}`] : [];
   for (let index = 1; index < points.length; index++) {
     const point = points[index]!;
     path.push(`H ${x(point.evaluatedProposals)} V ${y(point.bestArea)}`);
   }
-  path.push(`H ${x(maxX)}`);
+  if (first) path.push(`H ${x(maxX)}`);
+  const referencePath = reference ? [`M ${x(reference.evaluatedProposals)} ${y(reference.area)} H ${x(first?.evaluatedProposals ?? maxX)}`] : [];
+  if (reference && first) referencePath.push(`V ${y(first.bestArea)}`);
   return <figure className={styles.areaCurve}>
-    <figcaption>{label}</figcaption>
-    <div className={styles.areaPlot}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label}: ${maxX.toLocaleString()}, ${points.at(-1)!.bestArea}`}>
+    <figcaption>{label}{reference ? <span className={styles.areaLegend}>○ {initialLabel}{first ? ` · ● ${verifiedLabel}` : ""}</span> : null}</figcaption>
+    <div className={styles.areaPlot}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label}: ${maxX.toLocaleString()}, ${last.area} · ${last.verified ? verifiedLabel : initialLabel}`}>
       <path className={styles.areaAxis} d={`M ${left} ${top} V ${bottom} H ${right}`} />
-      <path className={styles.areaLine} d={path.join(" ")} />
+      {reference ? <path className={styles.areaReferenceLine} d={referencePath.join(" ")} /> : null}
+      {first ? <path className={styles.areaLine} d={path.join(" ")} /> : null}
+      {reference ? <circle className={styles.areaReferencePoint} cx={x(reference.evaluatedProposals)} cy={y(reference.area)} r="3.5">
+        <title>{`0 · ${reference.area} · ${initialLabel}`}</title>
+      </circle> : null}
       {points.map(point => <circle key={`${point.evaluatedProposals}-${point.bestArea}`}
         className={styles.areaPoint} cx={x(point.evaluatedProposals)} cy={y(point.bestArea)} r="3.5">
-        <title>{`${point.evaluatedProposals.toLocaleString()} · ${point.bestArea}`}</title>
+        <title>{`${point.evaluatedProposals.toLocaleString()} · ${point.bestArea} · ${verifiedLabel}`}</title>
       </circle>)}
       {/* AI-REMOVED 2026-10-03:
         Reason: 仅首尾刻度不能标注每次面积下降。Trigger: 用户要求 X 轴记录下降时的提案次数。
@@ -166,8 +176,16 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
-  const [optimizationTaskId, setOptimizationTaskId] = useState<string | null>(null);
-  const optimizationDialogState = useMemo(() => createDefaultDialogStateForKey("eda-blueprint-optimizations"), []);
+  // AI-REMOVED 2026-10-13:
+  // Reason: 四项优化作为页面内配置，取消首次开始时的额外弹窗状态。
+  // Trigger: 用户确认 A 方案，要求与摆放规则组成一体。
+  // Evidence: 这两个状态只用于 eda-blueprint-optimizations 弹窗。
+  // Replacement: 下方 blueprintPlacementOptions 与底部直接开始规划入口。
+  // Risk: Low；权限仍逐任务持久化并在首次规划后锁定。
+  // Human Review: Required
+  // Original code:
+  // const [optimizationTaskId, setOptimizationTaskId] = useState<string | null>(null);
+  // const optimizationDialogState = useMemo(() => createDefaultDialogStateForKey("eda-blueprint-optimizations"), []);
   const [recentRate, setRecentRate] = useState<ReturnType<typeof samplePlannerProposalRate>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedId = controller.viewTaskId;
@@ -262,6 +280,154 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       if (controller.viewTaskId === selectedId) controller.updateOptions(options);
     } finally { setFileBusy(false); }
   });
+  // AI-REMOVED 2026-10-13:
+  // Reason: 布局字段重复渲染；抽出两种任务共用的布局分组。
+  // Trigger: 用户批准 EDA 选项分组与 CPU/GPU switch，并要求平板视觉验证。
+  // Evidence: 原蓝图分组与下方通用网格分别渲染 OPTION_FIELDS。
+  // Replacement: 本文件 layoutOptions / blueprintPlacementOptions。
+  // Risk: Low；保持原有参数、任务锁定和下一轮执行语义。
+  // Human Review: Required
+  // Original code:
+  //   const blueprintPlacementOptions = blueprintInput ? <div className={styles.blueprintPlacement}>
+  //     <fieldset className={`${styles.options} ${styles.placementRules}`} disabled={busy}>
+  //       {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+  //         <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+  //           value={controller.options[field.key]} onChange={event => updatePlacementOption(field.key, event.target.value)}>
+  //           {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+  //         </select></label>)}
+  //     </fieldset>
+  //     <section aria-labelledby="eda-optimization-options-title">
+  //       <div className={styles.optimizationHeading}><strong id="eda-optimization-options-title">{t("eda.optimizationOptions")}</strong></div>
+  //       <div className={styles.optimizationChoices}>
+  //         {(["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const).map(key => <label key={key} className={styles.optimizationChoice}>
+  //           <span><strong>{t(`eda.optimization.${key}`)}</strong><small id={`eda-${key}-description`}>{t(`eda.optimization.${key}.description`)}</small></span>
+  //           <input type="checkbox" role="switch" aria-label={t(`eda.optimization.${key}`)} aria-describedby={`eda-${key}-description`}
+  //             checked={(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS)[key]} disabled={busy || placementLocked}
+  //             onChange={event => {
+  //               const checked = event.currentTarget.checked;
+  //               act(async () => {
+  //                 if (!planner || !selectedId || planningStarted || busy) return;
+  //                 setFileBusy(true);
+  //                 const previous = toJS(controller.options);
+  //                 try {
+  //                   const options = { ...previous, blueprintOptimizations: {
+  //                     ...(previous.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS), [key]: checked,
+  //                   } };
+  //                   controller.updateOptions(options);
+  //                   await planner.actions.updateBlueprintOptions(selectedId, options);
+  //                   if (controller.viewTaskId === selectedId) controller.updateOptions(options);
+  //                 } catch (failure) {
+  //                   if (controller.viewTaskId === selectedId) controller.updateOptions(previous);
+  //                   throw failure;
+  //                 } finally { setFileBusy(false); }
+  //               });
+  //             }} />
+  //         </label>)}
+  //       </div>
+  //     </section>
+  //   </div> : null;
+  // AI-REMOVED 2026-10-13:
+  // Reason: 混合网格按用途拆分，CPU/GPU 复选框改为现有 switch 视觉。
+  // Trigger: 用户批准 EDA 选项分组与 CPU/GPU switch，并要求平板视觉验证。
+  // Evidence: 布局、启动、预算、计算资源同处一个 fieldset。
+  // Replacement: 本文件布局规则、启动方式、计算设置 fieldset。
+  // Risk: Low；保持原有参数、任务锁定和下一轮执行语义。
+  // Human Review: Required
+  // Original code:
+  //             <fieldset className={styles.options} disabled={busy}>
+  //               {OPTION_FIELDS.filter(() => !controller.blueprintRequest).map(field => <label key={field.key}><span>{t(field.label)}</span>
+  //                 <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"} value={controller.options[field.key]}
+  //                   onChange={event => updatePlacementOption(field.key, event.target.value)}>
+  //                   {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+  //                 </select></label>)}
+  //               {/* AI-REMOVED 2026-09-30: 用户批准删除时间预算；替代：下方提案预算。Risk: Low。Human Review: Required
+  //               <label><span>{t("eda.budget")}</span><input type="number" min="10" step="10" value={controller.options.budgetMs / 1000}
+  //                 onChange={event => controller.updateOptions({ budgetMs: Number(event.target.value) * 1000 })} /></label>
+  //               */}
+  //               <label><span>{t("eda.evaluationsPerRound")}</span><input type="number" min="1" step="1"
+  //                 value={controller.options.evaluationsPerRound === 0 ? "" : controller.options.evaluationsPerRound / 10_000}
+  //                 onChange={event => controller.updateOptions({ evaluationsPerRound: Number(event.target.value) * 10_000 })} /></label>
+  //               {/* AI-REMOVED 2026-10-03:
+  //                 Reason: 并发数不再由用户手填。Trigger: 用户确认自动并发。
+  //                 Evidence: Planner 自动调度与 activeWorkerCount 契约。
+  //                 Replacement: 下方自动状态输出。Risk: Low。Human Review: Required
+  //                 Original code:
+  //               <label><span>{t("eda.concurrency")}</span><input type="number" min="1" max="32" step="1"
+  //                 value={controller.options.concurrency ?? 1}
+  //                 aria-describedby={warnConcurrency ? "eda-concurrency-warning" : undefined}
+  //                 onChange={event => controller.updateOptions({ concurrency: Number(event.target.value) })} />
+  //                 {warnConcurrency ? <span id="eda-concurrency-warning" role="status" className={styles.error}>
+  //                   {t("eda.concurrencyWarning").replace("{cores}", String(hardwareConcurrency))}
+  //                 </span> : null}</label>
+  //               */}
+  //               {/* AI-REMOVED 2026-10-03:
+  //                 Reason: 只读并发数不能切换单 Worker，而且搜索与验证交替会显示 0/1。
+  //                 Trigger: 用户要求 CPU+GPU 复选框。Evidence: Windows 真机决策记录。
+  //                 Replacement: 下方复选框。Risk: Low。Human Review: Required
+  //                 Original code:
+  //               <label><span>{t("eda.concurrency")}</span><output>
+  //                 {progress?.status === "running" ? t("eda.activeConcurrency").replace("{count}", String(progress.activeWorkerCount ?? 0))
+  //                   : t("eda.autoConcurrency")}
+  //               </output></label>
+  //               */}
+  //               <div className={styles.acceleration}>
+  //                 <label className={styles.parallel}><input type="checkbox" checked={controller.options.concurrency === "auto"}
+  //                   onChange={event => controller.updateOptions({ concurrency: event.target.checked ? "auto" : 1 })} />
+  //                   <span>{t("eda.concurrency")}</span></label>
+  //                 <label className={styles.parallel}><input type="checkbox" checked={controller.options.gpu === true}
+  //                   onChange={event => controller.updateOptions({ gpu: event.target.checked })} />
+  //                   <span>{t("eda.gpu")}</span></label>
+  //               </div>
+  //               {!controller.blueprintRequest ? <label><span>{t("eda.converterStartup")}</span>
+  //                 <select disabled={progress !== null} value={controller.options.converterStartup ?? "reject"}
+  //                   onChange={event => controller.updateOptions({ converterStartup: event.target.value as "manual" | "tank" | "reject" })}>
+  //                   <option value="manual">{t("eda.converterStartupManual")}</option>
+  //                   <option value="tank">{t("eda.converterStartupTank")}</option>
+  //                   <option value="reject">{t("eda.converterStartupReject")}</option>
+  //                 </select></label> : null}
+  //             </fieldset>
+  const layoutOptions = <fieldset className={styles.optionGroup} disabled={busy}>
+    <legend>{t("eda.layoutRules")}</legend>
+    <div className={`${styles.options} ${styles.placementRules}`}>
+      {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+        <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+          value={controller.options[field.key]} onChange={event => updatePlacementOption(field.key, event.target.value)}>
+          {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+        </select></label>)}
+    </div>
+  </fieldset>;
+  const blueprintPlacementOptions = blueprintInput ? <div className={styles.blueprintPlacement}>
+    {layoutOptions}
+    <section className={styles.optionGroup} aria-labelledby="eda-optimization-options-title">
+      <div className={styles.optimizationHeading}><strong id="eda-optimization-options-title">{t("eda.optimizationOptions")}</strong></div>
+      <div className={styles.optimizationChoices}>
+        {(["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const).map(key => <label key={key} className={styles.optimizationChoice}>
+          <span><strong>{t(`eda.optimization.${key}`)}</strong><small id={`eda-${key}-description`}>{t(`eda.optimization.${key}.description`)}</small></span>
+          <input type="checkbox" role="switch" aria-label={t(`eda.optimization.${key}`)} aria-describedby={`eda-${key}-description`}
+            checked={(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS)[key]} disabled={busy || placementLocked}
+            onChange={event => {
+              const checked = event.currentTarget.checked;
+              act(async () => {
+                if (!planner || !selectedId || planningStarted || busy) return;
+                setFileBusy(true);
+                const previous = toJS(controller.options);
+                try {
+                  const options = { ...previous, blueprintOptimizations: {
+                    ...(previous.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS), [key]: checked,
+                  } };
+                  controller.updateOptions(options);
+                  await planner.actions.updateBlueprintOptions(selectedId, options);
+                  if (controller.viewTaskId === selectedId) controller.updateOptions(options);
+                } catch (failure) {
+                  if (controller.viewTaskId === selectedId) controller.updateOptions(previous);
+                  throw failure;
+                } finally { setFileBusy(false); }
+              });
+            }} />
+        </label>)}
+      </div>
+    </section>
+  </div> : null;
   const select = (id: string) => {
     if (controller.taskLocked && id !== controller.activeTaskId) return;
     const request = planner?.queries.getLastRequest(id);
@@ -324,57 +490,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     onOffsetChange={controller.setOffset} onResize={compact ? undefined : controller.setSize}
     compactMobileLayout={compact} immersiveMaximized={controller.dialogState.maximized && appHost.state.screenProfile.deviceClass !== "desktop"}
     shellStyle={controller.dialogState.width === null ? { width: "min(1080px, 100%)", height: "min(760px, 100%)" } : undefined}>
-    <DialogShell dialogKey="eda-blueprint-optimizations"
-      dialogState={{ ...optimizationDialogState, visible: optimizationTaskId !== null && optimizationTaskId === selectedId && !planningStarted }}
-      title={t("eda.optimizationsTitle")} titleId="eda-optimizations-title" closeTitle={t("action.close")}
-      maximizeTitle="" restoreTitle="" showMaximizeButton={false}
-      shellStyle={{ width: "min(680px, 100%)", height: "auto", minHeight: 0, maxHeight: "100%" }}
-      bodyClassName={styles.optimizationBody} onClose={() => setOptimizationTaskId(null)} onToggleMaximized={() => {}}>
-      <div className={styles.optimizationChoices}>
-        {(["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const).map(key => <label key={key} className={styles.optimizationChoice}>
-          <span><strong>{t(`eda.optimization.${key}`)}</strong><small id={`eda-${key}-description`}>{t(`eda.optimization.${key}.description`)}</small></span>
-          <input type="checkbox" role="switch" aria-label={t(`eda.optimization.${key}`)} aria-describedby={`eda-${key}-description`}
-            checked={(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS)[key]} disabled={busy}
-            onChange={event => {
-              const checked = event.currentTarget.checked;
-              act(async () => {
-                if (!planner || !selectedId || planningStarted || busy) return;
-                setFileBusy(true);
-                const previous = toJS(controller.options);
-                try {
-                  const options = { ...toJS(controller.options), blueprintOptimizations: {
-                    ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS), [key]: checked,
-                  } };
-                  controller.updateOptions(options);
-                  await planner.actions.updateBlueprintOptions(selectedId, options);
-                  if (controller.viewTaskId === selectedId) controller.updateOptions(options);
-                } catch (failure) {
-                  if (controller.viewTaskId === selectedId) controller.updateOptions(previous);
-                  throw failure;
-                } finally { setFileBusy(false); }
-              });
-            }} />
-        </label>)}
-      </div>
-      {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
-      <div className={styles.optimizationActions}>
-        <button type="button" onClick={() => setOptimizationTaskId(null)}>{t("action.cancel")}</button>
-        <button type="button" disabled={busy || !validRoundSettings || invalidWarehouseSupply} onClick={() => act(async () => {
-          if (!planner || !selectedId || selectedId !== optimizationTaskId || busy || planningStarted) return;
-          setFileBusy(true);
-          try {
-            const options = { ...toJS(controller.options), blueprintOptimizations: {
-              ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS),
-            } };
-            await planner.actions.updateBlueprintOptions(selectedId, options);
-            controller.updateOptions(options);
-            setOptimizationTaskId(null);
-            await planner.actions.continuePlanning(selectedId, options.evaluationsPerRound, options.concurrency, options.gpu);
-          } finally { setFileBusy(false); }
-        })}>{t("eda.start")}</button>
-      </div>
-    </DialogShell>
-    <div className={`${styles.content} ${compact ? styles.compact : ""}`}>
+    <div className={`${styles.content} ${compact ? styles.compact : ""} ${appHost.state.screenProfile.deviceClass === "tablet" ? styles.tablet : ""}`}>
       <aside className={styles.history} aria-label={t("eda.history")}>
         <strong>{t("eda.history")}</strong>
         <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.newTask")}</button>
@@ -416,35 +532,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       </aside>
       <div className={styles.main}>
         <div className={styles.scroll}>
-          {controller.blueprintDraft ? <><fieldset className={styles.options} disabled={busy}>
-            {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-              {/* AI-REMOVED 2026-10-11:
-                Reason: 识别阶段和识别后的摆放配置共用保存入口。
-                Trigger: 用户要求首次开始规划时才锁定摆放规则。
-                Evidence: 原 onChange 只在识别页保存，优化页只修改控制器草稿。
-                Replacement: updatePlacementOption。
-                Risk: 保存期间临时禁用操作；保存失败保留原配置。Human Review: Required
-                Original code:
-                onChange={event => {
-                  const value = event.target.value;
-                  act(async () => {
-                    if (!planner || selectedId === null || busy) return;
-                    setFileBusy(true);
-                    try {
-                      const options = { ...toJS(controller.options), [field.key]: value };
-                      if (options.warehousePortPlacement === "full-side") options.warehouseBus = "straight";
-                      await planner.actions.updateBlueprintOptions(selectedId, options);
-                      controller.updateOptions(options);
-                    } finally { setFileBusy(false); }
-                  });
-                }}
-              */}
-              <select value={controller.options[field.key]}
-                disabled={field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
-                onChange={event => updatePlacementOption(field.key, event.target.value)}>
-                {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
-              </select></label>)}
-          </fieldset><BlueprintIdentification key={controller.blueprintDraft.blueprintId}
+          {controller.blueprintDraft ? <>{blueprintPlacementOptions}<BlueprintIdentification key={controller.blueprintDraft.blueprintId}
             appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} /></> : plan === null && progress === null ? <div className={styles.empty}><p>{t("eda.noPlan")}</p>
             <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.openProductionPlanning")}</button></div> : plan !== null ? <>
             <div className={styles.heading}><div><span>{t(controller.blueprintRequest ? "eda.blueprintMode" : "eda.productionMode")}</span><p className={styles.target}>{plan.name}</p></div>
@@ -469,12 +557,30 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               options={controller.options} disabled={busy || progress !== null} onChange={controller.updateItemPolicy} t={t} /> : null}
             {invalidWarehouseSupply ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
             {supply.error && !controller.blueprintRequest ? <p role="alert" className={styles.error}>{supply.error}</p> : null}
-            <fieldset className={styles.options} disabled={busy}>
-              {OPTION_FIELDS.filter(field => !controller.blueprintRequest || field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-                <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"} value={controller.options[field.key]}
-                  onChange={event => updatePlacementOption(field.key, event.target.value)}>
-                  {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
-                </select></label>)}
+            {blueprintPlacementOptions}
+            {!controller.blueprintRequest ? <>
+              {layoutOptions}
+              <fieldset className={styles.optionGroup} disabled={busy}>
+                <legend>{t("eda.startupOptions")}</legend>
+                <div className={styles.options}>
+                  {OPTION_FIELDS.filter(field => field.key === "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+                    <select disabled={placementLocked} value={controller.options[field.key]}
+                      onChange={event => updatePlacementOption(field.key, event.target.value)}>
+                      {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+                    </select></label>)}
+                  <label><span>{t("eda.converterStartup")}</span>
+                    <select disabled={progress !== null} value={controller.options.converterStartup ?? "reject"}
+                      onChange={event => controller.updateOptions({ converterStartup: event.target.value as "manual" | "tank" | "reject" })}>
+                      <option value="manual">{t("eda.converterStartupManual")}</option>
+                      <option value="tank">{t("eda.converterStartupTank")}</option>
+                      <option value="reject">{t("eda.converterStartupReject")}</option>
+                    </select></label>
+                </div>
+              </fieldset>
+            </> : null}
+            <fieldset className={styles.optionGroup} disabled={busy}>
+              <legend>{t("eda.computationOptions")}</legend>
+              <div className={styles.options}>
               {/* AI-REMOVED 2026-09-30: 用户批准删除时间预算；替代：下方提案预算。Risk: Low。Human Review: Required
               <label><span>{t("eda.budget")}</span><input type="number" min="10" step="10" value={controller.options.budgetMs / 1000}
                 onChange={event => controller.updateOptions({ budgetMs: Number(event.target.value) * 1000 })} /></label>
@@ -505,21 +611,13 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                   : t("eda.autoConcurrency")}
               </output></label>
               */}
-              <div className={styles.acceleration}>
-                <label className={styles.parallel}><input type="checkbox" checked={controller.options.concurrency === "auto"}
-                  onChange={event => controller.updateOptions({ concurrency: event.target.checked ? "auto" : 1 })} />
-                  <span>{t("eda.concurrency")}</span></label>
-                <label className={styles.parallel}><input type="checkbox" checked={controller.options.gpu === true}
-                  onChange={event => controller.updateOptions({ gpu: event.target.checked })} />
-                  <span>{t("eda.gpu")}</span></label>
               </div>
-              {!controller.blueprintRequest ? <label><span>{t("eda.converterStartup")}</span>
-                <select disabled={progress !== null} value={controller.options.converterStartup ?? "reject"}
-                  onChange={event => controller.updateOptions({ converterStartup: event.target.value as "manual" | "tank" | "reject" })}>
-                  <option value="manual">{t("eda.converterStartupManual")}</option>
-                  <option value="tank">{t("eda.converterStartupTank")}</option>
-                  <option value="reject">{t("eda.converterStartupReject")}</option>
-                </select></label> : null}
+              <div className={styles.acceleration}>
+                <label className={styles.parallel}><span>{t("eda.concurrency")}</span><input type="checkbox" role="switch" checked={controller.options.concurrency === "auto"}
+                  onChange={event => controller.updateOptions({ concurrency: event.target.checked ? "auto" : 1 })} /></label>
+                <label className={styles.parallel}><span>{t("eda.gpu")}</span><input type="checkbox" role="switch" checked={controller.options.gpu === true}
+                  onChange={event => controller.updateOptions({ gpu: event.target.checked })} /></label>
+              </div>
             </fieldset>
             {plan.containsModules ? <p role="alert" className={styles.error}>{t("eda.modulesUnsupported")}</p> : null}
           </> : null}
@@ -529,6 +627,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <span>{t("eda.elapsed")} <strong>{elapsed}</strong></span>
               {progress.phase !== "identification" ? <span>{t("eda.candidates")} <strong>{progress.candidateCount}</strong></span> : null}
               {progress.bestArea !== null ? <span>{t("eda.bestArea")} <strong>{progress.bestArea}</strong></span> : null}
+              {progress.bestArea === null && progress.initialArea !== undefined ? <span>{t("eda.initialArea")} <strong>{progress.initialArea}</strong></span> : null}
             </div>
             {busy ? <progress aria-label={t("eda.progress")} max={1} value={progress.estimatedProgress ?? undefined} /> : null}
             {progress.phase !== "identification" ? <div className={styles.statistics}>
@@ -538,9 +637,10 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 <span className={styles.proposalRate} title={t("eda.averageRate")}>({plannerProposalRate(progress.evaluatedProposals, progress.elapsedMs).toLocaleString()} {t("eda.proposalsPerSecond")})</span></span>
             </div> : null}
             <p>{progress.message}</p>
-            {progress.areaHistory?.length ? <AreaCurve points={progress.areaHistory}
+            {progress.initialArea !== undefined || progress.areaHistory?.length ? <AreaCurve points={progress.areaHistory ?? []} initialArea={progress.initialArea}
               proposals={progress.evaluatedProposals} label={t("eda.areaCurve")}
-              xLabel={`${t("eda.totalProposals")}${t("eda.logScale")}`} yLabel={t("eda.bestArea")} /> : null}
+              xLabel={`${t("eda.totalProposals")}${t("eda.logScale")}`} yLabel={t("eda.area")}
+              initialLabel={t("eda.initialArea")} verifiedLabel={t("eda.bestArea")} /> : null}
             {result !== null ? <p>{result.metrics.width} × {result.metrics.height} · {result.metrics.productionDeviceCount} {t("eda.devices")}
               {result.metrics.gasDiffuserCount > 0 ? ` · ${t("eda.environmentCount").replace("{count}", String(result.metrics.gasDiffuserCount))}` : ""}</p> : null}
           </section> : null}
@@ -590,11 +690,23 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               onClick={() => act(controller.duplicateTask)}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
-              onClick={() => {
-                if (controller.blueprintRequest && !planningStarted) setOptimizationTaskId(progress.taskId);
-                else act(() => planner?.actions.continuePlanning(progress.taskId,
-                  controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu));
-              }}>{t(planningStarted ? "eda.continue" : "eda.start")}</button> : null}
+              onClick={() => act(async () => {
+                if (!planner || busy || anyBusy) return;
+                const options = toJS(controller.options);
+                if (controller.blueprintRequest && !planningStarted) {
+                  setFileBusy(true);
+                  try {
+                    const configured = { ...options, blueprintOptimizations: {
+                      ...(options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS),
+                    } };
+                    await planner.actions.updateBlueprintOptions(progress.taskId, configured);
+                    controller.updateOptions(configured);
+                    await planner.actions.continuePlanning(progress.taskId,
+                      configured.evaluationsPerRound, configured.concurrency, configured.gpu);
+                  } finally { setFileBusy(false); }
+                } else await planner.actions.continuePlanning(progress.taskId,
+                  options.evaluationsPerRound, options.concurrency, options.gpu);
+              })}>{t(planningStarted ? "eda.continue" : "eda.start")}</button> : null}
             {result !== null ? <>
               <button type="button" onClick={() => {
                 appHost.blueprintPreview.open({ ...result.blueprint, parentFolderId: result.folderId }, { canDelete: false });
@@ -795,3 +907,118 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
 //     </DialogShell>
 //   );
 // });
+
+
+// AI-REMOVED 2026-10-13:
+// Reason: 首次启动不再通过额外弹窗配置权限。
+// Trigger: 用户确认页面内一体布局 A。
+// Evidence: 原 DialogShell、取消和确认按钮只服务于优化权限弹窗。
+// Replacement: blueprintPlacementOptions 与底部开始规划入口。
+// Risk: Low；保留原有持久化、默认关闭和首次规划锁定语义。
+// Human Review: Required
+//
+// Original code:
+//     <DialogShell dialogKey="eda-blueprint-optimizations"
+//       dialogState={{ ...optimizationDialogState, visible: optimizationTaskId !== null && optimizationTaskId === selectedId && !planningStarted }}
+//       title={t("eda.optimizationsTitle")} titleId="eda-optimizations-title" closeTitle={t("action.close")}
+//       maximizeTitle="" restoreTitle="" showMaximizeButton={false}
+//       shellStyle={{ width: "min(680px, 100%)", height: "auto", minHeight: 0, maxHeight: "100%" }}
+//       bodyClassName={styles.optimizationBody} onClose={() => setOptimizationTaskId(null)} onToggleMaximized={() => {}}>
+//       <div className={styles.optimizationChoices}>
+//         {(["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const).map(key => <label key={key} className={styles.optimizationChoice}>
+//           <span><strong>{t(`eda.optimization.${key}`)}</strong><small id={`eda-${key}-description`}>{t(`eda.optimization.${key}.description`)}</small></span>
+//           <input type="checkbox" role="switch" aria-label={t(`eda.optimization.${key}`)} aria-describedby={`eda-${key}-description`}
+//             checked={(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS)[key]} disabled={busy}
+//             onChange={event => {
+//               const checked = event.currentTarget.checked;
+//               act(async () => {
+//                 if (!planner || !selectedId || planningStarted || busy) return;
+//                 setFileBusy(true);
+//                 const previous = toJS(controller.options);
+//                 try {
+//                   const options = { ...toJS(controller.options), blueprintOptimizations: {
+//                     ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS), [key]: checked,
+//                   } };
+//                   controller.updateOptions(options);
+//                   await planner.actions.updateBlueprintOptions(selectedId, options);
+//                   if (controller.viewTaskId === selectedId) controller.updateOptions(options);
+//                 } catch (failure) {
+//                   if (controller.viewTaskId === selectedId) controller.updateOptions(previous);
+//                   throw failure;
+//                 } finally { setFileBusy(false); }
+//               });
+//             }} />
+//         </label>)}
+//       </div>
+//       {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
+//       <div className={styles.optimizationActions}>
+//         <button type="button" onClick={() => setOptimizationTaskId(null)}>{t("action.cancel")}</button>
+//         <button type="button" disabled={busy || !validRoundSettings || invalidWarehouseSupply} onClick={() => act(async () => {
+//           if (!planner || !selectedId || selectedId !== optimizationTaskId || busy || planningStarted) return;
+//           setFileBusy(true);
+//           try {
+//             const options = { ...toJS(controller.options), blueprintOptimizations: {
+//               ...(controller.options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS),
+//             } };
+//             await planner.actions.updateBlueprintOptions(selectedId, options);
+//             controller.updateOptions(options);
+//             setOptimizationTaskId(null);
+//             await planner.actions.continuePlanning(selectedId, options.evaluationsPerRound, options.concurrency, options.gpu);
+//           } finally { setFileBusy(false); }
+//         })}>{t("eda.start")}</button>
+//       </div>
+//     </DialogShell>
+
+// AI-REMOVED 2026-10-13:
+// Reason: 识别页与优化页统一复用摆放规则及四项权限区。
+// Trigger: 用户要求四项优化与两项摆放规则组成一体。
+// Evidence: 原识别页只包含两项规则，重复渲染且没有优化权限区。
+// Replacement: blueprintPlacementOptions。
+// Risk: Low；保留原有持久化、默认关闭和首次规划锁定语义。
+// Human Review: Required
+//
+// Original code:
+//           {controller.blueprintDraft ? <><fieldset className={styles.options} disabled={busy}>
+//             {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+//               {/* AI-REMOVED 2026-10-11:
+//                 Reason: 识别阶段和识别后的摆放配置共用保存入口。
+//                 Trigger: 用户要求首次开始规划时才锁定摆放规则。
+//                 Evidence: 原 onChange 只在识别页保存，优化页只修改控制器草稿。
+//                 Replacement: updatePlacementOption。
+//                 Risk: 保存期间临时禁用操作；保存失败保留原配置。Human Review: Required
+//                 Original code:
+//                 onChange={event => {
+//                   const value = event.target.value;
+//                   act(async () => {
+//                     if (!planner || selectedId === null || busy) return;
+//                     setFileBusy(true);
+//                     try {
+//                       const options = { ...toJS(controller.options), [field.key]: value };
+//                       if (options.warehousePortPlacement === "full-side") options.warehouseBus = "straight";
+//                       await planner.actions.updateBlueprintOptions(selectedId, options);
+//                       controller.updateOptions(options);
+//                     } finally { setFileBusy(false); }
+//                   });
+//                 }}
+//               */}
+//               <select value={controller.options[field.key]}
+//                 disabled={field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+//                 onChange={event => updatePlacementOption(field.key, event.target.value)}>
+//                 {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+//               </select></label>)}
+//           </fieldset>
+
+// AI-REMOVED 2026-10-13:
+// Reason: 开始按钮直接持久化默认权限后启动规划。
+// Trigger: 用户要求取消开始后的确认弹窗。
+// Evidence: 原分支仅设置 optimizationTaskId，需再次确认才执行。
+// Replacement: 下方按钮的异步启动处理。
+// Risk: Low；保留原有持久化、默认关闭和首次规划锁定语义。
+// Human Review: Required
+//
+// Original code:
+//               onClick={() => {
+//                 if (controller.blueprintRequest && !planningStarted) setOptimizationTaskId(progress.taskId);
+//                 else act(() => planner?.actions.continuePlanning(progress.taskId,
+//                   controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu));
+//               }

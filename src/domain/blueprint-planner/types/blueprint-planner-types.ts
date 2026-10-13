@@ -147,6 +147,8 @@ export interface BlueprintPlannerProgress {
   readonly roundEvaluatedProposals: number;
   readonly candidateCount: number;
   readonly validatedCandidateCount: number;
+  /** 首次搜索的面积基准；独立于验收结果，缺省表示历史任务未记录。 */
+  readonly initialArea?: number;
   readonly bestArea: number | null;
   readonly areaHistory?: readonly BlueprintPlannerAreaPoint[];
   readonly message: string | null;

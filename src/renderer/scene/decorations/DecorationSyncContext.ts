@@ -2,7 +2,15 @@ import type { Container } from "pixi.js";
 import type { LogisticsMaterialEntityState, LogisticsMaterialFrameState } from "@/shared/logistics-material";
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/domain/shared/grid";
-import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
 import type { RenderSurfaceContext } from "@/renderer/render-surface-context";
 
 export interface RenderViewportState {
@@ -45,7 +53,16 @@ export interface DecorationSyncContext {
     sync(state: LogisticsMaterialEntityState, frame: LogisticsMaterialFrameState): void;
     destroy(): void;
   } | null>;
-  powerInteractionVisualState?: PowerInteractionVisualState;
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   powerInteractionVisualState?: PowerInteractionVisualState;
+
   profiler?: DecorationProfiler;
   /** renderer 内部维护的分层失效版本。 */
   versions?: {

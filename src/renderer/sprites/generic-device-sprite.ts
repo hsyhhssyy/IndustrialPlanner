@@ -14,7 +14,7 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   getRotatedGridFootprint,
-  rotateSpriteOffset,
+  rotateLocalGridRect,
   resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
 import { WORLD_GRID_CELL_PIXEL_SIZE, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
@@ -2960,7 +2960,7 @@ function resolvePortOverlayLayout(options: {
     return options.layout;
   }
 
-  const rotatedOffset = rotateSpriteOffset(
+  const rotatedOffset = rotateLocalGridRect(
     spriteOffset,
     options.definition.footprint,
     options.layout.rotation,

@@ -1,3 +1,4 @@
+import { findEntityRange, resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
 import { buildDeviceGasCoverage } from "@/simulation/projection";
 import type {
   CompiledSimulationDevice,
@@ -8,10 +9,19 @@ import type { SimulationMutableRuntimeState } from "./runtime-state";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 
-import {
-  getGridFootprintCenterCells,
-  getRotatedGridFootprint,
-} from "@/shared/geometry/grid";
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/shared/geometry/entity-range.ts。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import {
+//   getGridFootprintCenterCells,
+//   getRotatedGridFootprint,
+// } from "@/shared/geometry/grid";
+
 
 interface GasDiffusionTopologyIndex {
   readonly sourceDeviceIds: readonly string[];
@@ -50,7 +60,7 @@ export function computeActiveGasDiffusions(
   const topologyIndex = ensureGasDiffusionTopologyIndex(registry, topology);
   return topologyIndex.sourceDeviceIds.length === 0
     ? EMPTY_GAS_DIFFUSIONS
-    : collectActiveGasDiffusions(topology, state, topologyIndex.sourceDeviceIds);
+    : collectActiveGasDiffusions(registry, topology, state, topologyIndex.sourceDeviceIds);
 }
 
 /** 气体配方的首轮启动只需要访问这些设备，普通设备不应为此被重复扫描。 */
@@ -147,6 +157,7 @@ function ensureGasDiffusionTopologyIndex(
 }
 
 function collectActiveGasDiffusions(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   sourceDeviceIds: readonly string[],
@@ -168,18 +179,20 @@ function collectActiveGasDiffusions(
       if (output === null) {
         continue;
       }
-      const sourceGasKey = `${device.id}\u0000${output.gasItemId}\u0000${output.range}`;
+      const sourceGasKey = `${device.id}\u0000${output.gasItemId}\u0000${output.rangeId}`;
       if (seenSourceGasPairs.has(sourceGasKey)) {
         continue;
       }
 
-      const gridRect = resolveDeviceCenteredRangeRect(device, output.range);
+      const gridRect = resolveDeviceRangeRect(device, registry, output.rangeId);
       if (gridRect === null) {
         continue;
       }
 
       result.push({
         sourceDeviceId: device.id,
+        rangeId: output.rangeId,
+        rotation: device.rotation!,
         gasItemId: output.gasItemId,
         gridRect,
       });
@@ -190,22 +203,38 @@ function collectActiveGasDiffusions(
   return result;
 }
 
-function resolveDeviceCenteredRangeRect(
-  device: CompiledSimulationDevice,
-  range: number,
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: resolveDeviceRangeRect。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// function resolveDeviceCenteredRangeRect(
+//   device: CompiledSimulationDevice,
+//   range: number,
+// ): RuntimeGasDiffusionSnapshot["gridRect"] | null {
+//   if (device.position === null || device.rotation === null || device.footprint === null) {
+//     return null;
+//   }
+//
+//   const rotatedFootprint = getRotatedGridFootprint(device.footprint, device.rotation);
+//   const center = getGridFootprintCenterCells(device.position, rotatedFootprint);
+//   const halfRange = range / 2;
+//
+//   return {
+//     x: center.x - halfRange,
+//     y: center.y - halfRange,
+//     width: range,
+//     height: range,
+//   };
+// }
+function resolveDeviceRangeRect(
+  device: CompiledSimulationDevice, registry: RegistryContract, rangeId: string,
 ): RuntimeGasDiffusionSnapshot["gridRect"] | null {
-  if (device.position === null || device.rotation === null || device.footprint === null) {
-    return null;
-  }
-
-  const rotatedFootprint = getRotatedGridFootprint(device.footprint, device.rotation);
-  const center = getGridFootprintCenterCells(device.position, rotatedFootprint);
-  const halfRange = range / 2;
-
-  return {
-    x: center.x - halfRange,
-    y: center.y - halfRange,
-    width: range,
-    height: range,
-  };
+  if (device.position === null || device.rotation === null || device.footprint === null) return null;
+  const definition = registry.queries.findEntityDefinition(device.definitionId);
+  if (!definition) throw new Error(`Unknown range provider: ${device.definitionId}`);
+  return resolveLocalRangeGridRect(device.position, device.footprint, device.rotation, findEntityRange(definition, rangeId).localRect);
 }

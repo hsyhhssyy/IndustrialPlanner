@@ -1,6 +1,29 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate, shouldWarnPlannerConcurrency } from "@/app/shell/blueprint-planner-statistics";
+import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaCurvePoints, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate, shouldWarnPlannerConcurrency } from "@/app/shell/blueprint-planner-statistics";
+
+describe("EDA 初始面积与验收曲线", () => {
+  it("无合规结果仍有零提案参考点，不伪造已验证面积", () => {
+    expect(plannerAreaCurvePoints([], 176)).toEqual([{ evaluatedProposals: 0, area: 176, verified: false }]);
+    expect(plannerAreaCurvePoints([], undefined)).toEqual([]);
+  });
+  it("合规原图的零点保持已验证，初始基准不重复绘制", () => {
+    expect(plannerAreaCurvePoints([{ evaluatedProposals: 0, bestArea: 150 }], 150))
+      .toEqual([{ evaluatedProposals: 0, area: 150, verified: true }]);
+  });
+  it("参考点接续真实验收记录，不修改历史，也不为缺少起点的旧任务补造零点", () => {
+    const history = [{ evaluatedProposals: 10_000, bestArea: 150 }, { evaluatedProposals: 20_000, bestArea: 130 }];
+    const original = structuredClone(history);
+    expect(plannerAreaCurvePoints(history, 176)).toEqual([
+      { evaluatedProposals: 0, area: 176, verified: false },
+      { evaluatedProposals: 10_000, area: 150, verified: true },
+      { evaluatedProposals: 20_000, area: 130, verified: true },
+    ]);
+    expect(plannerAreaCurvePoints(history, undefined)[0])
+      .toEqual({ evaluatedProposals: 10_000, area: 150, verified: true });
+    expect(history).toEqual(original);
+  });
+});
 
 describe("EDA 已用时间", () => {
   it.each([

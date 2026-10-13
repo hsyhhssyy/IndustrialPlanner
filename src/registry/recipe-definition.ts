@@ -3541,7 +3541,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_inert",
-      range: 13,
+      rangeId: "gas",
     },
   },
   {
@@ -3555,7 +3555,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_water",
-      range: 13,
+      rangeId: "gas",
     },
   },
   {
@@ -3569,7 +3569,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_acid",
-      range: 13,
+      rangeId: "gas",
     },
   },
   {
@@ -3583,7 +3583,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_xiranite",
-      range: 13,
+      rangeId: "gas",
     },
   },
   {

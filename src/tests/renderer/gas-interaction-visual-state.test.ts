@@ -3,16 +3,25 @@ import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import {
-  createGasInteractionDefinitionIndex,
-  resolveGasInteractionVisualState,
-} from "@/renderer/gas-interaction-visual-state";
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: 统一范围交互测试入口。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import {
+//   createGasInteractionDefinitionIndex,
+//   resolveGasInteractionVisualState,
+// } from "@/renderer/gas-interaction-visual-state";
+import { collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState } from "@/renderer/ranges";
 
 const registry = createRegistryContract();
 const entityDefinitionMap = new Map(
   registry.entityDefinitions.map((definition) => [definition.id, definition]),
 );
-const definitionIndex = createGasInteractionDefinitionIndex(
+const rules = createRangeInteractionRules(
   registry.recipeDefinitions,
 );
 
@@ -152,14 +161,16 @@ function resolveState(options: {
   previewEntityIds: readonly string[];
   ghostEntityIds?: readonly string[];
 }) {
-  return resolveGasInteractionVisualState({
+  return resolveRangeInteractionVisualState({
+    alwaysShowPowerRange: false,
+    ranges: collectRangeInstances(options.entities, entityDefinitionMap),
     activeTool: options.activeTool,
     moveKind: options.moveKind,
     entities: options.entities,
     previewEntityIds: options.previewEntityIds,
     ghostEntityIds: options.ghostEntityIds ?? [],
     entityDefinitionMap,
-    definitionIndex,
+    rules,
   });
 }
 

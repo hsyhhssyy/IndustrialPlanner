@@ -16,7 +16,16 @@ export interface RecipeDefinition {
   /** 配方运行期间提供的气体扩散范围。仅供气体扩散设备配方使用。 */
   gasDiffusionOutput?: {
     readonly gasItemId: string;
-    readonly range: number;
+    // AI-REMOVED 2026-10-13:
+    // Reason: 几何声明归属设备，配方只引用范围。
+    // Trigger: 统一设备范围机制。
+    // Evidence: 四种气体配方重复声明同一边长。
+    // Replacement: rangeId 对应 EntityDefinition.ranges[].id。
+    // Risk: 所有范围读取点同步迁移。
+    // Human Review: Required
+    // Original code:
+    // readonly range: number;
+    readonly rangeId: string;
   };
   /** 主要产物物品 ID 列表。与 outputs 可以不同，用于仿真运行时的设备图标替换。 */
   primaryOutputs?: string[];

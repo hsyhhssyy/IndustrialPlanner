@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 9,
+  "fixtureRevision": 10,
   "schemaVersion": 7,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -585,6 +585,13 @@
           "definitionId": "soil_sp_4"
         },
         "file": "scene-08-variant-76.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "squirter_1"
+        },
+        "file": "scene-08-variant-77.schema7.json",
         "version": "fixture-v1"
       }
     ]

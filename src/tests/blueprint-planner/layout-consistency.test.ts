@@ -137,7 +137,7 @@ it("Worker 会话续接保留搜索链，切片计数从零开始；尺寸指纹
 
 it("原图完整布局检查拒绝失去供电覆盖，生成模式仍允许布线后补电", async () => {
   const registry = createRegistryContract();
-  const machine = registry.entityDefinitions.find(definition => definition.requiresPower && !definition.powerRange)!;
+  const machine = registry.entityDefinitions.find(definition => definition.requiresPower && !definition.ranges?.some(range => range.interactionKind === "power"))!;
   const node = createPlainNode(registry, machine.id, "requires-power", "production");
   node.entity.position = { x: 10, y: 10 };
   const request = fixture.request as BlueprintPlannerRequest;

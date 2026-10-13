@@ -22,6 +22,23 @@ for (const profile of SCREEN_PROFILES) {
       const dialog = page.getByRole('dialog').filter({has:page.locator('#blueprint-planner-title')});
       const attempts = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});
       const initial = await attempts.inputValue();
+      // 2026-10-13：三屏开发验证完成后独立补充真实 CSS 边界回归，防止平板选项撑宽。
+      const settingsLayout = await dialog.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        const scroll = element.querySelector('[class*="scroll"]');
+        const groups = [...element.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
+        const controls = groups.flatMap(group => [...group.querySelectorAll('select,input')]);
+        const scrollBounds = scroll.getBoundingClientRect();
+        return {
+          groups: groups.map(group => group.querySelector('legend').textContent),
+          contained: bounds.left >= -1 && bounds.right <= innerWidth + 1,
+          overflow: scroll.scrollWidth > scroll.clientWidth + 1 || groups.some(group => group.scrollWidth > group.clientWidth + 1),
+          controlsContained: controls.every(control => {
+            const rect = control.getBoundingClientRect();
+            return rect.width > 0 && rect.left >= scrollBounds.left - 1 && rect.right <= scrollBounds.right + 1;
+          }),
+        };
+      });
       const defaults = await page.evaluate(() => JSON.parse(JSON.stringify(window.__industrialPlannerAppHost.blueprintPlannerDialog.options)));
       await attempts.focus();
       await attempts.press('End');
@@ -42,9 +59,9 @@ for (const profile of SCREEN_PROFILES) {
         attempts:await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.getRequest().options.evaluationsPerRound),
         startDisabled:await dialog.getByRole('button',{name:'开始规划',exact:true}).isDisabled()};
       await attempts.fill('7'); await attempts.blur();
-      await dialog.getByRole('checkbox',{name:'CPU 并行计算'}).uncheck();
-      if (!await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).isChecked()) throw Error('CPU 开关影响了 GPU');
-      await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).uncheck();
+      await dialog.getByRole('switch',{name:'CPU 并行计算'}).uncheck();
+      if (!await dialog.getByRole('switch',{name:'GPU 辅助计算'}).isChecked()) throw Error('CPU 开关影响了 GPU');
+      await dialog.getByRole('switch',{name:'GPU 辅助计算'}).uncheck();
       await dialog.getByRole('combobox',{name:'存取线形态'}).selectOption('corner');
       await page.evaluate(async () => {
         const host = window.__industrialPlannerAppHost, controller = host.blueprintPlannerDialog;
@@ -53,8 +70,8 @@ for (const profile of SCREEN_PROFILES) {
         const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
         controller.selectTask(id, planner.queries.getLastRequest(id));
       });
-      const retained = {attempts:await attempts.inputValue(),parallel:await dialog.getByRole('checkbox',{name:'CPU 并行计算'}).isChecked(),
-        gpu:await dialog.getByRole('checkbox',{name:'GPU 辅助计算'}).isChecked()};
+      const retained = {attempts:await attempts.inputValue(),parallel:await dialog.getByRole('switch',{name:'CPU 并行计算'}).isChecked(),
+        gpu:await dialog.getByRole('switch',{name:'GPU 辅助计算'}).isChecked()};
       await attempts.fill('');
       const clearedContinuation = {value:await attempts.inputValue(),
         disabled:await dialog.getByRole('button',{name:'开始规划',exact:true}).isDisabled()};
@@ -109,10 +126,11 @@ for (const profile of SCREEN_PROFILES) {
       await canvas.getByRole('button',{name:'+',exact:true}).click();
       const zoomChanged = await surface.getAttribute('style') !== before;
       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
-      return {initial,defaults,retained,reset,resetInput,bounds,scrollTop,graphUnchanged,zoomChanged,copyPreservedHistory,footerLayout,
+      return {initial,settingsLayout,defaults,retained,reset,resetInput,bounds,scrollTop,graphUnchanged,zoomChanged,copyPreservedHistory,footerLayout,
         clearedAttempts,clearedAfterBlur,typedAttempts,enteredAttempts,clearedContinuation,continuationEnabled,
         resetView:await surface.getAttribute('style')===before};
-    }`) as { initial: string; defaults: unknown; retained: { attempts: string; parallel: boolean; gpu: boolean }; reset: unknown;
+    }`) as { initial: string; settingsLayout: { groups: string[]; contained: boolean; overflow: boolean; controlsContained: boolean };
+      defaults: unknown; retained: { attempts: string; parallel: boolean; gpu: boolean }; reset: unknown;
       resetInput: string; bounds: { height: number; parentHeight: number; touchAction: string }; scrollTop: number;
       graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean; copyPreservedHistory: boolean;
       footerLayout: { leftAligned: boolean; visible: boolean };
@@ -120,6 +138,9 @@ for (const profile of SCREEN_PROFILES) {
       typedAttempts: string[]; enteredAttempts: { value: string; attempts: number; startDisabled: boolean };
       clearedContinuation: { value: string; disabled: boolean }; continuationEnabled: boolean };
     expect(result.initial).toBe("500");
+    expect(result.settingsLayout).toEqual({
+      groups: ["布局规则", "启动方式", "计算设置"], contained: true, overflow: false, controlsContained: true,
+    });
     expect(result.clearedAttempts).toEqual({ value: "", attempts: 0, startDisabled: true });
     expect(result.clearedAfterBlur).toBe("");
     expect(result.typedAttempts).toEqual(["1", "10", "100", "1000"]);

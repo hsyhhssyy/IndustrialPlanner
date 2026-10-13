@@ -3,7 +3,7 @@ import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
-import { buttonWithText, changeTestValue, mountTestComponent, selectWithLabel, settleTestDom } from "../helpers/react-test-dom";
+import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, selectWithLabel, settleTestDom } from "../helpers/react-test-dom";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import separator from "../blueprint-planner/fixtures/separator-core.json";
 import converter from "../blueprint-planner/fixtures/converter-startup-liquid.json";
@@ -88,5 +88,40 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
     expect(selectWithLabel(view.container, "固液气转换器启动").value).toBe("tank");
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
+
+it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随任务恢复", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace);
+  const controller = app.blueprintPlannerDialog;
+  controller.open((separator.request as BlueprintPlannerRequest).plan);
+  const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+  try {
+    const groups = [...view.container.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
+    expect(groups.map(group => group.querySelector('legend')?.textContent)).toEqual(["布局规则", "启动方式", "计算设置"]);
+    expect([...groups[0]!.querySelectorAll('label > span')].map(label => label.textContent)).toEqual(["取货口摆放规则", "存取线形态"]);
+    expect([...groups[1]!.querySelectorAll('label > span')].map(label => label.textContent)).toEqual(["植物循环启动", "固液气转换器启动"]);
+    const computation = groups[2]!;
+    const [cpu, gpu] = [...computation.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
+    expect(cpu!.checked && gpu!.checked).toBe(true);
+    await clickTestElement(cpu!);
+    expect(controller.options).toMatchObject({ concurrency: 1, gpu: true });
+    expect(gpu!.checked).toBe(true);
+    await clickTestElement(gpu!);
+    expect(controller.options).toMatchObject({ concurrency: 1, gpu: false });
+    await clickTestElement(cpu!);
+    expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
+    expect(gpu!.checked).toBe(false);
+    const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
+    controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await settleTestDom();
+    expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
+    expect(cpu!.checked).toBe(true);
+    expect(gpu!.checked).toBe(false);
+    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(true);
+    expect(cpu!.disabled || gpu!.disabled).toBe(false);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });

@@ -6,6 +6,7 @@ import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-beha
 import type { EntitySimulationBehaviorDeclaration } from "./entity-simulation-behavior";
 import type { DeviceSpriteAnimationDefinition } from "./device-sprite-animation";
 import type { EntityPlacementWhitelistEntry } from "./entity-placement-whitelist";
+import type { EntityRangeDefinition } from "./entity-range";
 // AI-REMOVED 2026-08-19:
 // Reason: EntityDefinition 不再持有按 SimulationMode 覆盖的 Registry 配置类型。
 // Trigger: 用户要求删除 simulationModeConfigs 及其基础设施。
@@ -107,8 +108,17 @@ export interface EntityDefinition {
   requiresPower: boolean;
   /** 在电网中每 tick 消耗的电量 */
   powerDemand: number;
-  /** 供电范围边长，单位：格。仅供电源类设备声明。 */
-  powerRange?: number;
+  // AI-REMOVED 2026-10-13:
+  // Reason: 统一范围支持偏移、非正方形和设备方向。
+  // Trigger: 洒水机及后续定向区域设备接入。
+  // Evidence: 原字段只能表达以设备为中心的正方形。
+  // Replacement: EntityDefinition.ranges。
+  // Risk: 原电力范围消费者必须同步迁移。
+  // Human Review: Required
+  // Original code:
+  // /** 供电范围边长，单位：格。仅供电源类设备声明。 */
+  // powerRange?: number;
+  readonly ranges?: readonly EntityRangeDefinition[];
   /** 基地未停电时，将设备的 idle 展示状态规一化为 normal。 */
   readonly isIdleAsRunning?: boolean;
 

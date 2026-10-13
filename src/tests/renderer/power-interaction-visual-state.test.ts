@@ -2,13 +2,24 @@ import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulati
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
-import type { GridRect } from "@/domain/shared/grid";
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: 统一范围交互测试入口。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import type { GridRect } from "@/domain/shared/grid";
+// import { createRegistryContract } from "@/registry";
+// import { resolvePowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
+// import {
+//   areGridRectsIntersecting,
+//   resolvePowerRangeGridRect,
+// } from "@/shared/geometry/power-range";
+//
 import { createRegistryContract } from "@/registry";
-import { resolvePowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
-import {
-  areGridRectsIntersecting,
-  resolvePowerRangeGridRect,
-} from "@/shared/geometry/power-range";
+import { collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState } from "@/renderer/ranges";
 
 const registry = createRegistryContract();
 const entityDefinitionMap = new Map(
@@ -39,7 +50,8 @@ describe("resolvePowerInteractionVisualState", () => {
       previewEntityIds: ["storage-preview"],
     });
 
-    expect(state.visiblePowerRangeEntityIds).toBeNull();
+    // AI-CORRECTION 2026-10-13: 新接口返回明确范围 key 集合，常显仍展示全部供电范围。
+    expect(state.visiblePowerRangeEntityIds).toEqual(new Set(["power"]));
     expect(state.highlightedEntityIds).toEqual(new Set());
   });
 
@@ -148,33 +160,50 @@ function resolveState(options: {
   previewEntityIds: readonly string[];
   ghostEntityIds?: readonly string[];
 }) {
-  return resolvePowerInteractionVisualState({
-    alwaysShowPowerRange: options.alwaysShowPowerRange ?? false,
-    activeTool: options.activeTool,
-    moveKind: options.moveKind,
-    entities: options.entities,
-    previewEntityIds: options.previewEntityIds,
-    ghostEntityIds: options.ghostEntityIds ?? [],
-    entityDefinitionMap,
-    listPowerRangeProvidersCoveringGridRect: (gridRect) =>
-      listPowerRangeProvidersCoveringGridRect(options.entities, gridRect),
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: resolveRangeInteractionVisualState。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   return resolvePowerInteractionVisualState({
+//     alwaysShowPowerRange: options.alwaysShowPowerRange ?? false,
+//     activeTool: options.activeTool,
+//     moveKind: options.moveKind,
+//     entities: options.entities,
+//     previewEntityIds: options.previewEntityIds,
+//     ghostEntityIds: options.ghostEntityIds ?? [],
+//     entityDefinitionMap,
+//     listPowerRangeProvidersCoveringGridRect: (gridRect) =>
+//       listPowerRangeProvidersCoveringGridRect(options.entities, gridRect),
+//   });
+// }
+//
+// function listPowerRangeProvidersCoveringGridRect(
+//   entities: readonly WorldEntity[],
+//   gridRect: GridRect,
+// ): readonly WorldEntity[] {
+//   return entities.filter((entity) => {
+//     const definition = entityDefinitionMap.get(entity.definitionId);
+//     if (definition === undefined) {
+//       return false;
+//     }
+//
+//     const powerRangeGridRect = resolvePowerRangeGridRect({ entity, definition });
+//     return powerRangeGridRect !== null
+//       && areGridRectsIntersecting(powerRangeGridRect, gridRect);
+//   });
+// }
+  const ranges = collectRangeInstances(options.entities, entityDefinitionMap);
+  const state = resolveRangeInteractionVisualState({
+    ...options, alwaysShowPowerRange: options.alwaysShowPowerRange ?? false,
+    ghostEntityIds: options.ghostEntityIds ?? [], entityDefinitionMap, ranges,
+    rules: createRangeInteractionRules(registry.recipeDefinitions),
   });
-}
-
-function listPowerRangeProvidersCoveringGridRect(
-  entities: readonly WorldEntity[],
-  gridRect: GridRect,
-): readonly WorldEntity[] {
-  return entities.filter((entity) => {
-    const definition = entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      return false;
-    }
-
-    const powerRangeGridRect = resolvePowerRangeGridRect({ entity, definition });
-    return powerRangeGridRect !== null
-      && areGridRectsIntersecting(powerRangeGridRect, gridRect);
-  });
+  return { ...state, visiblePowerRangeEntityIds: new Set(ranges.filter((range) =>
+    state.visibleRangeKeys.has(range.key)).map((range) => range.entityId)) };
 }
 
 // AI-REMOVED 2026-09-14:

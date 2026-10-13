@@ -165,7 +165,7 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
     const covered = network.nodes.some((environment, at) => {
       if (environment.recipe?.gasDiffusionOutput?.gasItemId !== node.recipe!.requiredGasDiffusion) return false;
       const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: poses[at]!, rotation: poses[at]!.rotation },
-        definition: environment.definition, gasDiffusionRange: environment.recipe!.gasDiffusionOutput!.range });
+        definition: environment.definition, rangeId: environment.recipe!.gasDiffusionOutput!.rangeId });
       return range !== null && areGridRectsContaining(range, rect(index));
     });
     if (!covered) return null;

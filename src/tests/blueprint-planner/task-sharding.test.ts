@@ -7,6 +7,7 @@ import { emptyPlannerCheckpoint, mergePlannerTaskFiles, parsePlannerTaskFile, re
   type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
+import { createRegistryContract } from "@/registry";
 import yazhen from "./fixtures/yazhen-syringe.json";
 
 function originalTask(concurrency: number | "auto" = 1): BlueprintPlannerTaskFile {
@@ -87,6 +88,9 @@ it("真实 Node Worker 在分片内执行有界批次，并保存可恢复计数
   expect(point.parallel?.shards.some(shard => shard.attempts > 0)).toBe(true);
   expect(point.evaluations).toBe(40);
   expect(file.progress.evaluatedProposals).toBe(point.evaluations);
+  expect(file.progress.initialArea).toBe(point.parallel!.dimensionSchedule!.targetArea);
+  const historyWithoutInitial = { ...file, progress: { ...file.progress, initialArea: undefined } };
+  expect(parsePlannerTaskFile(historyWithoutInitial, createRegistryContract()).progress.initialArea).toBe(file.progress.initialArea);
 }, 90_000);
 
 it("自动模式通过真实 Worker 运行，导出不携带上次机器的活动并发", async () => {
@@ -110,6 +114,10 @@ it("独立分片能从同一旧任务出发并合并，重叠和缺失均拒绝"
   }
   expect(merged.checkpoint.attempt).toBe(first.file.checkpoint.attempt + second.file.checkpoint.attempt);
   expect(merged.checkpoint.evaluations).toBe(first.file.checkpoint.evaluations + second.file.checkpoint.evaluations);
+  expect(first.file.progress.initialArea).toBeGreaterThan(0);
+  expect(merged.progress.initialArea).toBe(first.file.progress.initialArea);
+  const conflicting = { ...second.file, progress: { ...second.file.progress, initialArea: second.file.progress.initialArea! + 1 } };
+  await expect(mergePlannerTaskFiles([first.file, conflicting], first.registry)).rejects.toThrow("初始面积基准不一致");
   await expect(mergePlannerTaskFiles([first.file, first.file], first.registry)).rejects.toThrow("重复");
   await expect(mergePlannerTaskFiles([first.file], first.registry)).rejects.toThrow("不完整");
 }, 90_000);

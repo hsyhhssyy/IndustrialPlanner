@@ -146,7 +146,7 @@ type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput,
-  "requiresPower" | "powerDemand" | "powerRange" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset" | "placementWhitelist"
+  "requiresPower" | "powerDemand" | "ranges" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset" | "placementWhitelist"
 >>;
 
 const RECIPE_MACHINE_IDS = new Set(
@@ -5023,7 +5023,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: { topView: { x: -1, y: -1, width: 4, height: 4 } },
     uiGroup: "resourcePower",
     displayOrder: 302,
-    powerRange: 12,
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: 本设备 ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//     powerRange: 12,
+    ranges: [{
+      id: "power", localRect: { x: -5, y: -5, width: 12, height: 12 },
+      coverage: "intersects", interactionKind: "power", visualId: "power",
+    }],
     isIdleAsRunning: true,
     tags: [],
   }),
@@ -5032,6 +5044,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "vaporizer_1",
     nameKey: "registry.entity.vaporizer_1.name",
     spriteId: "vaporizer_1",
+    ranges: [{
+      id: "gas", localRect: { x: -5, y: -5, width: 13, height: 13 },
+      coverage: "contains", interactionKind: "gas", visualId: "gas",
+    }],
     iconPath: "device-icons/vaporizer_1.webp",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
@@ -5457,6 +5473,41 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // }),
   }),
 
+  // AKEData 1.5.3@10731330-8：3×3、西侧中央液体输入；当前仅接入编辑与范围展示。
+  createEntityDefinition({
+    id: "squirter_1",
+    nameKey: "registry.entity.squirter_1.name",
+    spriteId: "item_port_squirter_1",
+    iconPath: "device-icons/item_port_squirter_1.webp",
+    footprint: { width: 3, height: 3 },
+    // AI-REMOVED 2026-10-13:
+    // Reason: 本次经用户确认仅发布 close_idle 首帧。
+    // AI-CORRECTION 2026-10-13: 原建议 close_idle 缺少配套高度图，遵循网站 staticPose 使用 open_idle 首帧。
+    // Trigger: 网站动画 statusControl 缺少必需字段，导入器拒绝。
+    // Evidence: create_status_playback 报 Invalid statusControl entry。
+    // Replacement: resources/building-top-view-v15.json 的 staticPhase。
+    // Risk: 暂无设备本体状态动画；范围交互不受影响。
+    // Human Review: Required
+    // Original code:
+    // spriteAnimation: { closeIdleMode: "hold-last" },
+    uiGroup: "agriculture",
+    displayOrder: 800,
+    tags: [],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+    requiresPower: true,
+    powerDemand: 10,
+    ranges: [{
+      id: "irrigation", localRect: { x: 3, y: -1, width: 4, height: 5 },
+      coverage: "intersects", interactionKind: "irrigation", visualId: "irrigation",
+    }],
+    portGroups: [createPortGroup("fluid_input", FLUID_PIPE_PORT, "input", [
+      createPort("in_w_1", 0, 1, "W"),
+    ])],
+    // 不声明缓存、配方和耗水周期，避免编辑能力被误当成浇水仿真。
+    storageSlotGroups: [],
+    portStorageBindings: [],
+  }),
+
   // 普通田块的 raw renderer 共用 soil_1；蓝图使用无端口方框，3D 素材待提供。
   // AI-CORRECTION 2026-10-12: 已接入各田块独立的 soil_1_mature 首帧；蓝图仍为方框，列表使用各自物品图标。
   /** 锦草田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
@@ -5468,7 +5519,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 801,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5481,7 +5532,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 802,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5494,7 +5545,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 803,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5507,7 +5558,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 804,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5520,7 +5571,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 805,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5533,7 +5584,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 806,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5546,7 +5597,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 807,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5559,7 +5610,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 808,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5572,7 +5623,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 809,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
@@ -5585,7 +5636,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 810,
-    tags: [],
+    tags: ["AcceptsIrrigation"],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 

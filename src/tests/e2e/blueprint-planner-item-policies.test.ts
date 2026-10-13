@@ -201,8 +201,8 @@ const scenario = resolve(directory, "scenario.js");
       await page.screenshot({path:${JSON.stringify(resolve(directory, "configured.png"))}});
       const before = await dialog.ariaSnapshot();
       await dialog.getByRole('spinbutton', {name:'单轮最大尝试次数（万次）'}).fill('1');
-      await dialog.getByRole('checkbox', {name:'CPU 并行计算'}).uncheck();
-      await dialog.getByRole('checkbox', {name:'GPU 辅助计算'}).uncheck();
+      await dialog.getByRole('switch', {name:'CPU 并行计算'}).uncheck();
+      await dialog.getByRole('switch', {name:'GPU 辅助计算'}).uncheck();
       // 2026-10-04：三档草稿下载开发验证完成后独立补充正式回归，下载不得偷偷启动计算。
       const draftDownload = dialog.getByRole('button', {name:'下载任务',exact:true});
       assert(await draftDownload.isEnabled(), '未启动草稿不可下载');

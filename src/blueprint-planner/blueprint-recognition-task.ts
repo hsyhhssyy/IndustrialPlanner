@@ -100,7 +100,8 @@ export function parseRecognitionTaskFile(value: BlueprintPlannerTaskFile, regist
     || !["waiting", "running", "cancelled", "failed"].includes(progress.status)
     || !Number.isFinite(progress.startedAt) || !Number.isFinite(progress.elapsedMs) || progress.elapsedMs < 0
     || [progress.evaluatedProposals, progress.roundEvaluatedProposals, progress.candidateCount, progress.validatedCandidateCount].some(value => value !== 0)
-    || progress.bestArea !== null || progress.areaHistory?.length || progress.estimatedProgress !== null) throw new Error("识别任务进度无效。");
+    || progress.initialArea !== undefined || progress.bestArea !== null || progress.areaHistory?.length
+    || progress.estimatedProgress !== null) throw new Error("识别任务进度无效。");
   if (request.detectedBoundaries !== null) {
     validateRecognitionBoundaries(registry, request.input, request.detectedBoundaries);
     const detected = new Map(request.detectedBoundaries.map(entry => [blueprintBoundaryKey(entry), entry]));

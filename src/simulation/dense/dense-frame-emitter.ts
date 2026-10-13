@@ -328,8 +328,10 @@ export class DenseFrameEmitter {
 
   private createGasDiffusionDelta(kernel: DenseSimulationKernel): Pick<
     DenseFrameDelta,
-    "gasSourceDeviceIndexes" | "gasItemIndexes" | "gasGridRects"
+    "gasSourceDeviceIndexes" | "gasItemIndexes" | "gasGridRects" | "gasRangeIds" | "gasRotations"
   > {
+    const rangeIds: string[] = [];
+    const rotations: number[] = [];
     const sourceDeviceIndexes: number[] = [];
     const itemIndexes: number[] = [];
     const gridRects: number[] = [];
@@ -345,6 +347,8 @@ export class DenseFrameEmitter {
       ) {
         continue;
       }
+      rangeIds.push(diffusion.rangeId);
+      rotations.push(diffusion.rotation);
       sourceDeviceIndexes.push(deviceIndex);
       itemIndexes.push(itemIndex);
       gridRects.push(
@@ -358,6 +362,8 @@ export class DenseFrameEmitter {
       gasSourceDeviceIndexes: Uint32Array.from(sourceDeviceIndexes),
       gasItemIndexes: Uint32Array.from(itemIndexes),
       gasGridRects: Float64Array.from(gridRects),
+      gasRangeIds: rangeIds,
+      gasRotations: Uint16Array.from(rotations),
     };
   }
 

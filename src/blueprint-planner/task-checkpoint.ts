@@ -228,6 +228,9 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
       plannerOutputModeKey(resolvePlannerOutputAttempt(request, variant).request.options)));
     if (!point || !progress || progress.taskId !== file.taskId) throw new Error("任务缺少检查点或进度。");
     if (progress.planningStarted !== undefined && typeof progress.planningStarted !== "boolean") throw new Error("规划启动状态无效。");
+    if (progress.initialArea !== undefined && (!Number.isSafeInteger(progress.initialArea) || progress.initialArea <= 0)) {
+      throw new Error("初始面积基准无效。");
+    }
     if (point.randomSeed !== undefined) assertPlannerRandomState(point.randomSeed);
     for (const count of [point.attempt, point.evaluations, progress.candidateCount, progress.validatedCandidateCount]) {
       if (!Number.isSafeInteger(count) || count < 0) throw new Error("任务计数无效。");
@@ -364,7 +367,12 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     }
     if (progress.activeWorkerCount !== undefined && (!Number.isSafeInteger(progress.activeWorkerCount)
       || progress.activeWorkerCount < 0 || progress.activeWorkerCount > 32)) throw new Error("并行状态无效。");
+    // 只从零提案记录或尚未缩框的第一代调度恢复确定的起点，不以当前最优面积猜测历史起点。
+    // AI-CORRECTION 2026-10-13：零提案成功也可能是直接复验，无法证明首次搜索基准；只从第一代调度恢复。
+    const initialArea = progress.initialArea ?? (point.parallel?.dimensionSchedule?.generation === 0
+      ? point.parallel.dimensionSchedule.targetArea : undefined);
     return { ...file, progress: { ...progress, evaluatedProposals, roundEvaluatedProposals, areaHistory: history,
+      ...(initialArea === undefined ? {} : { initialArea }),
       ...(progress.activeWorkerCount === undefined ? {} : { activeWorkerCount: 0 }) } };
   } catch (error) {
     throw new Error(`无法读取计算任务：${error instanceof Error ? error.message : String(error)}`);
@@ -507,6 +515,8 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
     Reflect.deleteProperty(shard, "dimensionCursor");
   }
   const taskId = base.originTaskId;
+  const initialAreas = new Set(files.flatMap(file => file.progress.initialArea === undefined ? [] : [file.progress.initialArea]));
+  if (initialAreas.size > 1) throw new Error("分片的初始面积基准不一致。");
   const merged: BlueprintPlannerTaskFile = {
     ...first, taskId,
     checkpoint: { ...first.checkpoint, attempt, evaluations, best,
@@ -515,6 +525,7 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
       parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
     progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
       planningStarted: files.some(file => hasPlannerStarted(file.progress)),
+      initialArea: initialAreas.values().next().value,
       elapsedMs: Math.max(...files.map(file => file.progress.elapsedMs)),
       evaluatedProposals: evaluations, roundEvaluatedProposals: 0, candidateCount: attempt,
       validatedCandidateCount: base.baseValidatedCandidates + shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0),

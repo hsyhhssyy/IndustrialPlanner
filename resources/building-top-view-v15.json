@@ -22743,6 +22743,364 @@
           "coordinateRule": "projectY = depth - 1 - sourceZ"
         }
       }
+    },
+    {
+      "entityId": "squirter_1",
+      "spriteId": "item_port_squirter_1",
+      "package": "buildings/squirter_1/top/package.json",
+      "sourcePath": "squirter_1/top",
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "animated": false,
+      "staticPhase": "open_idle",
+      "historicalSource": {
+        "package": "buildings/squirter_1/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "2f89dea4183aa5c7142605ad88695bd19d4da8e9f0c59ee466c3bc6657a9205c",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261013-020500-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "90b289f32a731f2fd09a5306c2bd0131a1b88164e570798ea7248ebabf6da282",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              256,
+              256,
+              640,
+              640
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              273,
+              308,
+              632,
+              588
+            ],
+            "sourceFootprintRectPixels": [
+              256,
+              256,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261013-squirter-assets",
+          "version": "v1.5-20260924",
+          "building": "squirter_1",
+          "tableBuildingId": "squirter_1",
+          "displayName": "洒水机",
+          "view": "top",
+          "mode": "liquid",
+          "rendererTemplate": "liquid__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "close",
+            "close_idle",
+            "open",
+            "open_idle",
+            "port_disconnect",
+            "power_off"
+          ],
+          "animationCount": 6,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "nonLogisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Custom shaders use the approved source-material PBR / Neutral / Bloom reconstruction.",
+            "Production water-spray geometry and particle emitters are retained as separate source assets; these building tracks contain the device and its status lights."
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              273,
+              308,
+              632,
+              588
+            ],
+            "sourceFootprintRectPixels": [
+              256,
+              256,
+              640,
+              640
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261013-squirter-assets",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "sourceModel": {
+            "name": "A_squirter+1_001_01_variant_dynamic_lod0",
+            "cab": "CAB-549a03120beb4abfb58b45adb26637f3",
+            "pathId": "4998905868350144587"
+          },
+          "glassValidation": {
+            "status": "not-applicable",
+            "detectedGlassMaterials": [],
+            "evidence": "both authored slots have _EnableGlass = 0"
+          },
+          "statusControl": {
+            "defaultCode": "RUNNING",
+            "variant": "top",
+            "codes": [
+              {
+                "code": "CLOSE",
+                "label": "关闭动画",
+                "sourceStatusKey": 3,
+                "animation": {
+                  "clip": "close",
+                  "playing": true
+                },
+                "portState": "off",
+                "ringStatusKey": 3
+              },
+              {
+                "code": "CLOSED",
+                "label": "关闭",
+                "sourceStatusKey": 3,
+                "animation": {
+                  "clip": "close_idle",
+                  "playing": true
+                },
+                "portState": "off",
+                "ringStatusKey": 3
+              },
+              {
+                "code": "OPEN",
+                "label": "开启动画",
+                "sourceStatusKey": 4,
+                "animation": {
+                  "clip": "open",
+                  "playing": true
+                },
+                "portState": "on",
+                "ringStatusKey": 4
+              },
+              {
+                "code": "RUNNING",
+                "label": "运行",
+                "sourceStatusKey": 4,
+                "animation": {
+                  "clip": "open_idle",
+                  "playing": true
+                },
+                "portState": "on",
+                "ringStatusKey": 4
+              },
+              {
+                "code": "PORT_DISCONNECT",
+                "label": "端口断开",
+                "sourceStatusKey": 5,
+                "animation": {
+                  "clip": "port_disconnect",
+                  "playing": true
+                },
+                "portState": "off",
+                "ringStatusKey": 5
+              },
+              {
+                "code": "POWER_OFF",
+                "label": "未供电",
+                "sourceStatusKey": 1,
+                "animation": {
+                  "clip": "power_off",
+                  "playing": true
+                },
+                "portState": "off",
+                "ringStatusKey": 1
+              }
+            ],
+            "rendering": "baked body/pedestal status lights; independent shared liquid-port sprites"
+          },
+          "rendererTemplateCount": 1,
+          "selectedBaseField": "nonLogisticBaseUnit",
+          "selectedBaseValue": "pedestal+1_001_03x03_04",
+          "activeSolidInputIndices": [],
+          "activeSolidOutputIndices": [],
+          "baseMatchStatus": "source-config-and-material-identity-verified",
+          "staticPose": {
+            "animation": "open_idle",
+            "retainedFrame": 1,
+            "vatRow": 63
+          },
+          "sourceCacheRequests": {
+            "models": "2434b38419d56c8b7ba8454d08f7defb4ced552d2e6d4ea8e98898d9cbbd522e",
+            "effects": "4aef81d3ed733fe8ccadbc63847b48f233ec82fb236a26aaead3b004fc652923"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
     }
   ],
   "sourceCoordinateTransform": {
@@ -22778,9 +23136,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20261012-174534-cst",
+    "releaseId": "v1.5-20260924-20261013-020500-cst",
     "sourceVersion": "v1.5-20260924",
-    "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+    "indexSha256": "90b289f32a731f2fd09a5306c2bd0131a1b88164e570798ea7248ebabf6da282",
     "sourceResolution": 0.5
   }
 }

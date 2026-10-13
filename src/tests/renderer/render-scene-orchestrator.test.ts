@@ -42,7 +42,11 @@ import {
   createInvalidPlacementDecoration,
   resolveInvalidPlacementToastReasonText,
 } from "@/renderer/scene/decorations/InvalidPlacementDecoration"
-import { resolvePowerRangeOutlineLayouts } from "@/renderer/scene/decorations/PowerRangeDecoration"
+import { collectRangeInstances } from "@/renderer/ranges";
+import { resolveRangeOutlineLayouts } from "@/renderer/ranges/range-layout";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { ViewportProjectionLike } from "@/shared/geometry/viewport-transform";
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
 
@@ -1374,3 +1378,21 @@ describe("resolveWorldEntitySelectionStrokeStyle", () => {
     ).toBe(0xffa500)
   })
 })
+
+// 原专用 API 已退出执行；测试输入在此组合为公共几何输入，不复制覆盖或投影算法。
+function resolvePowerRangeOutlineLayouts(options: ViewportProjectionLike & {
+  entities: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  hiddenEntityIds?: ReadonlySet<string>;
+  visibleEntityIds?: ReadonlySet<string>;
+  visibleWorldRect: { left: number; top: number; right: number; bottom: number };
+}) {
+  const visible = options.visibleWorldRect;
+  const outlines = collectRangeInstances(options.entities, options.entityDefinitionMap)
+    .filter((range) => !options.hiddenEntityIds?.has(range.entityId)
+      && (!options.visibleEntityIds || options.visibleEntityIds.has(range.entityId)))
+    .map((range) => ({ gridRect: range.gridRect, color: 0x87ceeb, strokeAlpha: 0.8, strokeScale: 1.15, fillAlpha: 0 }));
+  return resolveRangeOutlineLayouts({ ...options, visibleGridRect: {
+    x: visible.left, y: visible.top, width: visible.right - visible.left, height: visible.bottom - visible.top,
+  } }, outlines).map((layout) => layout.rect);
+}

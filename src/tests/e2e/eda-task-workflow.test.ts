@@ -189,8 +189,8 @@ for (const profile of profiles) {
       // Risk: Low。Human Review: Required
       // Original code:
       // assert(await dialog.locator('output').textContent() === '自动', '默认自动调节并发');
-      const parallel = dialog.getByRole('checkbox', {name:'CPU 并行计算'});
-      const gpu = dialog.getByRole('checkbox', {name:'GPU 辅助计算'});
+      const parallel = dialog.getByRole('switch', {name:'CPU 并行计算'});
+      const gpu = dialog.getByRole('switch', {name:'GPU 辅助计算'});
       assert(await parallel.isChecked() && await gpu.isChecked(), '默认启用 CPU 并行与 GPU 辅助');
       await parallel.uncheck();
       assert(await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.options.concurrency) === 1,

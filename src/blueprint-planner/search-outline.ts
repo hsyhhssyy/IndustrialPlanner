@@ -7,6 +7,16 @@ export interface PlannerOutline { readonly width: number; readonly height: numbe
 
 export const PLANNER_MAX_SIDE = 70;
 
+/** 已确定设备的 footprint 总和；初始面积基准与尺寸调度共用同一口径。 */
+export function plannerDeviceArea(registry: RegistryContract,
+  nodes: readonly { readonly entity: Pick<WorldEntity, "definitionId"> }[]): number {
+  return nodes.reduce((sum, node) => {
+    const definition = registry.queries.findEntityDefinition(node.entity.definitionId);
+    if (!definition) throw new Error(`面积基准引用了不存在的设备：${node.entity.definitionId}`);
+    return sum + definition.footprint.width * definition.footprint.height;
+  }, 0);
+}
+
 /** 所有生成与恢复入口共用边长限制；面积合法不能替代逐边校验。 */
 export function assertPlannerOutline(outline: PlannerOutline): void {
   if (![outline.width, outline.height].every(value => Number.isSafeInteger(value) && value > 0 && value <= PLANNER_MAX_SIDE)) {

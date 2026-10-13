@@ -38,15 +38,28 @@ import {
 } from "../pixi-render-diagnostics"
 import type { RenderHost } from "../renderer-host"
 import type { RenderSurfaceContext } from "../render-surface-context"
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import {
+//   resolvePowerInteractionVisualState,
+//   type PowerInteractionVisualState,
+// } from "../power-interaction-visual-state"
+// import {
+//   createGasInteractionDefinitionIndex,
+//   resolveGasInteractionVisualState,
+//   type GasInteractionVisualState,
+// } from "../gas-interaction-visual-state"
 import {
-  resolvePowerInteractionVisualState,
-  type PowerInteractionVisualState,
-} from "../power-interaction-visual-state"
-import {
-  createGasInteractionDefinitionIndex,
-  resolveGasInteractionVisualState,
-  type GasInteractionVisualState,
-} from "../gas-interaction-visual-state"
+  collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState,
+  resolveRangePresentation, RangeLayer, type RangeInstance, type RangeInteractionVisualState,
+} from "../ranges"
+import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color"
 
 import { BeltSprite } from "../sprites/belt-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -104,8 +117,24 @@ import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInserti
 //
 // Original code:
 // import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
-import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
-import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
 import { createRegionalDarkPipeLinkDecoration } from "./decorations/RegionalDarkPipeLinkDecoration"
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
@@ -286,8 +315,17 @@ export function createRenderSceneOrchestrator(
   const pipeSubEntity = new Container()
   const gridDecoration = createGridLineDecoration()
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
-  const powerRangeDecoration = createPowerRangeDecoration()
-  const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges/RangeLayer。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   const powerRangeDecoration = createPowerRangeDecoration()
+//   const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
+  const rangeLayer = new RangeLayer()
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
@@ -350,9 +388,21 @@ export function createRenderSceneOrchestrator(
   const invalidPlacementOverlayLayer = new Container()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
-  const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
-    renderHost.workspace.registry.recipeDefinitions,
-  )
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
+//     renderHost.workspace.registry.recipeDefinitions,
+//   )
+  const rangeRules = createRangeInteractionRules(renderHost.workspace.registry.recipeDefinitions)
+  let rangeInstances: readonly RangeInstance[] = []
+  let rangeInteractionVisualState: RangeInteractionVisualState = { highlightedEntityIds: new Set(), visibleRangeKeys: new Set() }
+  let rangeStamp = ""
   const logisticsMaterialState = new LogisticsMaterialSceneState()
   const logisticsBakedFlow = new LogisticsBakedFlowScene()
   const pipeReflection = new LogisticsPipeReflectionScene()
@@ -388,7 +438,7 @@ export function createRenderSceneOrchestrator(
   // 稳定标签用于诊断来源归属；不改变显示树、可见性或渲染顺序。
   for (const [name, decoration] of Object.entries({
     grid: gridDecoration, baseBoundary: baseBoundaryDecoration,
-    powerRange: powerRangeDecoration, gasDiffusionRange: gasDiffusionRangeDecoration,
+    ranges: rangeLayer,
     previewRect: previewRectDecoration, invalidPlacement: invalidPlacementDecoration,
     marquee: marqueeDecoration, regionBackground: regionBackgroundDecoration,
     regionOverlay: regionOverlayDecoration, marqueeCanvas: marqueeCanvasDecoration,
@@ -646,35 +696,78 @@ export function createRenderSceneOrchestrator(
       listedEntitiesForFrame ??= renderHost.workspace.editor!.queries.listEntities()
       return listedEntitiesForFrame
     }
+    const entities = measureRenderStage(
+      frameProfiler,
+      "editor.listEntities",
+      () => listEntitiesForFrame(),
+    )
+    if (refreshEntityGeometryStamps(
+      entities,
+      entityGeometryStamps,
+      renderHost.workspace.registry.queries,
+    )) {
+      documentVersion += 1
+      frameVersions = {
+        ...frameVersions,
+        document: documentVersion,
+      }
+      // AI-REMOVED 2026-10-13: 几何失效检查前移至范围计算之前，ctx 在下方按最新版本创建。
+      // Trigger: 定向范围移动不得滞后一帧；Evidence: 原检查晚于范围缓存读取。
+      // Replacement: 下方 DecorationSyncContext 初始化；Risk: Low；Human Review: Required
+      // ctx.versions = frameVersions
+    }
     const editorCollections = renderHost.workspace.editor!.state.collections
-    const powerInteractionVisualState = measureRenderStage(
-      frameProfiler,
-      "powerInteraction.resolve",
-      () => resolvePowerInteractionVisualState({
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges/range-interaction.ts。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//     const powerInteractionVisualState = measureRenderStage(
+//       frameProfiler,
+//       "powerInteraction.resolve",
+//       () => resolvePowerInteractionVisualState({
+//         alwaysShowPowerRange: workspaceApp.state.settings.gameAlwaysShowPowerRange,
+//         activeTool: workspaceApp.state.activeTool,
+//         moveKind: workspaceApp.state.moveKind,
+//         entities: listEntitiesForFrame(),
+//         previewEntityIds: editorCollections[EntityCollectionType.preview],
+//         ghostEntityIds: editorCollections[EntityCollectionType.ghost],
+//         entityDefinitionMap,
+//         listPowerRangeProvidersCoveringGridRect: (gridRect) =>
+//           renderHost.workspace.editor!.queries.listPowerRangeProvidersCoveringGridRect(gridRect),
+//       }),
+//     )
+//     const gasInteractionVisualState = measureRenderStage(
+//       frameProfiler,
+//       "gasInteraction.resolve",
+//       () => resolveGasInteractionVisualState({
+//         activeTool: workspaceApp.state.activeTool,
+//         moveKind: workspaceApp.state.moveKind,
+//         entities: listEntitiesForFrame(),
+//         previewEntityIds: editorCollections[EntityCollectionType.preview],
+//         ghostEntityIds: editorCollections[EntityCollectionType.ghost],
+//         entityDefinitionMap,
+//         definitionIndex: gasInteractionDefinitionIndex,
+//       }),
+//     )
+    const nextRangeStamp = JSON.stringify([documentVersion, collectionVersion,
+      workspaceApp.state.activeTool, workspaceApp.state.moveKind,
+      workspaceApp.state.settings.gameAlwaysShowPowerRange])
+    if (rangeStamp !== nextRangeStamp) {
+      rangeInstances = collectRangeInstances(listEntitiesForFrame(), entityDefinitionMap)
+      rangeInteractionVisualState = resolveRangeInteractionVisualState({
+        activeTool: workspaceApp.state.activeTool, moveKind: workspaceApp.state.moveKind,
         alwaysShowPowerRange: workspaceApp.state.settings.gameAlwaysShowPowerRange,
-        activeTool: workspaceApp.state.activeTool,
-        moveKind: workspaceApp.state.moveKind,
-        entities: listEntitiesForFrame(),
+        entities: listEntitiesForFrame(), ranges: rangeInstances,
         previewEntityIds: editorCollections[EntityCollectionType.preview],
         ghostEntityIds: editorCollections[EntityCollectionType.ghost],
-        entityDefinitionMap,
-        listPowerRangeProvidersCoveringGridRect: (gridRect) =>
-          renderHost.workspace.editor!.queries.listPowerRangeProvidersCoveringGridRect(gridRect),
-      }),
-    )
-    const gasInteractionVisualState = measureRenderStage(
-      frameProfiler,
-      "gasInteraction.resolve",
-      () => resolveGasInteractionVisualState({
-        activeTool: workspaceApp.state.activeTool,
-        moveKind: workspaceApp.state.moveKind,
-        entities: listEntitiesForFrame(),
-        previewEntityIds: editorCollections[EntityCollectionType.preview],
-        ghostEntityIds: editorCollections[EntityCollectionType.ghost],
-        entityDefinitionMap,
-        definitionIndex: gasInteractionDefinitionIndex,
-      }),
-    )
+        entityDefinitionMap, rules: rangeRules,
+      })
+      rangeStamp = nextRangeStamp
+    }
 
     const ctx: DecorationSyncContext = {
       viewportState,
@@ -691,7 +784,6 @@ export function createRenderSceneOrchestrator(
         const { LogisticsDynamicView } = await import("../sprites")
         return isCurrent() ? new LogisticsDynamicView(assets, state) : null
       },
-      powerInteractionVisualState,
       profiler: frameProfiler ?? undefined,
       versions: frameVersions,
     }
@@ -704,12 +796,41 @@ export function createRenderSceneOrchestrator(
       baseBoundaryDecoration.sync(ctx)
     })
 
-    measureRenderStage(frameProfiler, "decoration.powerRange", () => {
-      powerRangeDecoration.sync(ctx)
-    })
-
-    measureRenderStage(frameProfiler, "decoration.gasDiffusionRange", () => {
-      gasDiffusionRangeDecoration.sync(ctx)
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//     measureRenderStage(frameProfiler, "decoration.powerRange", () => {
+//       powerRangeDecoration.sync(ctx)
+//     })
+//
+//     measureRenderStage(frameProfiler, "decoration.gasDiffusionRange", () => {
+//       gasDiffusionRangeDecoration.sync(ctx)
+//     })
+//
+    measureRenderStage(frameProfiler, "decoration.ranges", () => {
+      const visible = resolveVisibleWorldRect(viewportState, ctx.viewportBounds, 0)
+      rangeLayer.sync({
+        viewportBounds: ctx.viewportBounds,
+        viewportCenter: { x: viewportState.centerX, y: viewportState.centerY },
+        gridCellPixelSize: viewportState.gridCellPixelSize,
+        displayRotation: viewportState.displayRotation,
+        nowMs: frameTime.nowMs,
+        visibleGridRect: { x: visible.left, y: visible.top, width: visible.right - visible.left, height: visible.bottom - visible.top },
+        initializeTexture: (texture) => app.renderer.texture.initSource(texture.source),
+      }, resolveRangePresentation({
+        ranges: rangeInstances, interaction: rangeInteractionVisualState,
+        activeGasRanges: renderHost.workspace.simulation?.state.runningState === "start"
+          ? renderHost.workspace.simulation.queries.getActiveGasDiffusionRanges() : [],
+        resolveGasColor: (id) => fluidColorToNumber(resolveFluidColor(renderHost.workspace.registry.queries.findItemDefinition(id)?.fluidColors)),
+        supportsAnimation: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
+          && renderHost.textureManager.supportsLogisticsAnimation(),
+        isAnimationReady: (root) => rangeLayer.isAnimationReady(root),
+      }))
     })
 
     measureRenderStage(frameProfiler, "decoration.previewRect", () => {
@@ -720,23 +841,6 @@ export function createRenderSceneOrchestrator(
       regionBackgroundDecoration.sync(ctx)
     })
 
-    const entities = measureRenderStage(
-      frameProfiler,
-      "editor.listEntities",
-      () => listEntitiesForFrame(),
-    )
-    if (refreshEntityGeometryStamps(
-      entities,
-      entityGeometryStamps,
-      renderHost.workspace.registry.queries,
-    )) {
-      documentVersion += 1
-      frameVersions = {
-        ...frameVersions,
-        document: documentVersion,
-      }
-      ctx.versions = frameVersions
-    }
     logisticsMaterialState.setTiming(logisticsBakedFlow.timing)
     const logisticsMaterials = logisticsMaterialState.sync({
       workspace: renderHost.workspace,
@@ -770,9 +874,8 @@ export function createRenderSceneOrchestrator(
         profiler: frameProfiler,
         logisticsPortOccupancy: null,
         logisticsMaterials,
-        gasInteractionVisualState,
-        powerInteractionVisualState,
-        versions: frameVersions,
+        rangeInteractionVisualState,
+          versions: frameVersions,
         committedDocumentVersion,
         cache: entitySpriteSyncCache,
       }),
@@ -1027,8 +1130,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(regionBackgroundDecoration.container)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
-  layers.background.addChild(powerRangeDecoration.container)
-  layers.background.addChild(gasDiffusionRangeDecoration.container)
+  layers.background.addChild(rangeLayer.container)
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
 // AI-REMOVED 2026-09-10:
@@ -1114,8 +1216,7 @@ export function createRenderSceneOrchestrator(
       entitySpriteSyncCache.visibility.clear()
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
-      powerRangeDecoration.destroy()
-      gasDiffusionRangeDecoration.destroy()
+      rangeLayer.destroy()
       previewRectDecoration.destroy()
       invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()
@@ -1612,8 +1713,7 @@ export interface EntitySpriteSceneSyncOptions {
   readonly logisticsMaterials: LogisticsMaterialFrameState;
   readonly versions: RenderSpriteSyncVersions;
   readonly committedDocumentVersion: number;
-  readonly gasInteractionVisualState?: GasInteractionVisualState;
-  readonly powerInteractionVisualState?: PowerInteractionVisualState;
+  readonly rangeInteractionVisualState?: RangeInteractionVisualState;
 }
 
 export interface EntitySpriteScene {
@@ -1703,12 +1803,23 @@ export function createEntitySpriteScene(
         profiler: null,
         logisticsPortOccupancy: null,
         logisticsMaterials: options.logisticsMaterials,
-        gasInteractionVisualState: options.gasInteractionVisualState ?? {
-          highlightedEntityIds: new Set(),
-        },
-        powerInteractionVisualState: options.powerInteractionVisualState ?? {
-          visiblePowerRangeEntityIds: new Set(),
-          highlightedEntityIds: new Set(),
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: rangeInteractionVisualState。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//         gasInteractionVisualState: options.gasInteractionVisualState ?? {
+//           highlightedEntityIds: new Set(),
+//         },
+//         powerInteractionVisualState: options.powerInteractionVisualState ?? {
+//           visiblePowerRangeEntityIds: new Set(),
+//           highlightedEntityIds: new Set(),
+//         },
+        rangeInteractionVisualState: options.rangeInteractionVisualState ?? {
+          highlightedEntityIds: new Set(), visibleRangeKeys: new Set(),
         },
         versions: options.versions,
         committedDocumentVersion: options.committedDocumentVersion,
@@ -1759,8 +1870,7 @@ function syncWorldEntitySprites(options: {
   theme: AppTheme;
   logisticsMaterials: LogisticsMaterialFrameState;
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
-  gasInteractionVisualState: GasInteractionVisualState;
-  powerInteractionVisualState: PowerInteractionVisualState;
+  rangeInteractionVisualState: RangeInteractionVisualState;
   profiler: DecorationProfiler | null;
   versions: RenderSpriteSyncVersions;
   committedDocumentVersion: number;
@@ -1786,8 +1896,7 @@ function syncWorldEntitySprites(options: {
     time: options.frameTime,
     suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
     suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
-    gasInteractionVisualState: options.gasInteractionVisualState,
-    powerInteractionVisualState: options.powerInteractionVisualState,
+    rangeInteractionVisualState: options.rangeInteractionVisualState,
     logisticsPortOccupancy: options.logisticsPortOccupancy,
     logisticsMaterials: options.logisticsMaterials,
     portOverlayManagedGlobally: true,
@@ -1858,8 +1967,7 @@ function syncWorldEntitySprites(options: {
     }
 
     let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
-    const highlighted = options.gasInteractionVisualState.highlightedEntityIds.has(entity.id)
-      || options.powerInteractionVisualState.highlightedEntityIds.has(entity.id)
+    const highlighted = options.rangeInteractionVisualState.highlightedEntityIds.has(entity.id)
     const material = options.logisticsMaterials.entities.get(entity.id)
     const previous = options.cache.inputs.get(entity.id)
     const previousLayout = options.cache.layouts.get(entity.id)

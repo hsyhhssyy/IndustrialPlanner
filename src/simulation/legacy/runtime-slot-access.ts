@@ -1287,19 +1287,32 @@ function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
   return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
 }
 
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: rangeId 引用经 Registry 校验的几何。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// function normalizeRecipeGasDiffusionOutput(
+//   output: RecipeDefinition["gasDiffusionOutput"],
+// ): CompiledSimulationRecipePlan["gasDiffusionOutput"] {
+//   if (
+//     output === undefined
+//     || typeof output.gasItemId !== "string"
+//     || output.gasItemId.length === 0
+//     || !Number.isFinite(output.range)
+//     || output.range <= 0
+//   ) {
+//     return null;
+//   }
+//   return { gasItemId: output.gasItemId, range: output.range };
+// }
 function normalizeRecipeGasDiffusionOutput(
   output: RecipeDefinition["gasDiffusionOutput"],
 ): CompiledSimulationRecipePlan["gasDiffusionOutput"] {
-  if (
-    output === undefined
-    || typeof output.gasItemId !== "string"
-    || output.gasItemId.length === 0
-    || !Number.isFinite(output.range)
-    || output.range <= 0
-  ) {
-    return null;
-  }
-  return { gasItemId: output.gasItemId, range: output.range };
+  return output ? { gasItemId: output.gasItemId, rangeId: output.rangeId } : null;
 }
 
 function resolveWaterPurifierAllowedRecipeId(channelId: string): string | null {

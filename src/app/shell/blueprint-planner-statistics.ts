@@ -1,5 +1,14 @@
 import type { BlueprintPlannerAreaPoint, BlueprintPlannerProgress } from "@/domain/blueprint-planner";
 
+/** 初始基准仅为绘图参考；不写入已验证面积历史，也不把旧任务的当前最优补成零点。 */
+export function plannerAreaCurvePoints(history: readonly BlueprintPlannerAreaPoint[], initialArea: number | undefined) {
+  const points = history.map(point => ({ evaluatedProposals: point.evaluatedProposals, area: point.bestArea, verified: true }));
+  if (initialArea !== undefined && (points[0]?.evaluatedProposals !== 0 || points[0].area !== initialArea)) {
+    points.unshift({ evaluatedProposals: 0, area: initialArea, verified: false });
+  }
+  return points;
+}
+
 interface ProposalRateSample {
   readonly taskId: string;
   readonly roundStart: number;

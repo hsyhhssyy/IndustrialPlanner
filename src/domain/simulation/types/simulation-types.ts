@@ -1,4 +1,5 @@
 import type { SimulationMode } from "../../shared/simulation-mode";
+import type { GridRotation } from "../../shared/grid";
 
 export type SimulationEngineKind = "legacy" | "dense-v2";
 export type SimulationRunState = "stop" | "starting" | "start" | "pause";
@@ -157,6 +158,8 @@ export interface SimulationDeviceRuntimeStatusReadModel {
 
 export interface SimulationGasDiffusionRangeReadModel {
   readonly sourceDeviceId: string;
+  readonly rangeId: string;
+  readonly rotation: GridRotation;
   readonly gasItemId: string;
   readonly gridRect: {
     readonly x: number;

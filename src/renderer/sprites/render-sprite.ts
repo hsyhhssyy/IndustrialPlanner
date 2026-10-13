@@ -2,8 +2,17 @@ import { Container } from "pixi.js";
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { AppTheme } from "@/domain/app/types/theme";
-import type { GasInteractionVisualState } from "@/renderer/gas-interaction-visual-state";
-import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: src/renderer/ranges。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+// import type { GasInteractionVisualState } from "@/renderer/gas-interaction-visual-state";
+// import type { PowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
+import type { RangeInteractionVisualState } from "../ranges";
 import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entityLow" | "entity" | "entityHigh" | "logisticsBelt" | "logisticsPipe" | "draft" | "overlay";
@@ -56,8 +65,17 @@ export interface RenderSpriteSyncContext {
   time: RenderSpriteTimeContext;
   suppressBelts: boolean;
   suppressPipes: boolean;
-  gasInteractionVisualState?: GasInteractionVisualState;
-  powerInteractionVisualState?: PowerInteractionVisualState;
+// AI-REMOVED 2026-10-13:
+// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
+// Trigger: 洒水机和定向离体区域支持。
+// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
+// Replacement: rangeInteractionVisualState。
+// Risk: 保持既有供电与气体规则，需范围回归验证。
+// Human Review: Required
+// Original code:
+//   gasInteractionVisualState?: GasInteractionVisualState;
+//   powerInteractionVisualState?: PowerInteractionVisualState;
+  rangeInteractionVisualState?: RangeInteractionVisualState;
   /**
    * entityId → 该设备已连接的端口键集合("portGroupId:portId")。
    * 仅物流布设模式(activeTool="logistics-placement")下由 orchestrator 构建，其余模式为 null。

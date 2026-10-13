@@ -1,3 +1,4 @@
+import { findPowerRange } from "@/shared/geometry/entity-range";
 import type { BlueprintPlannerBlueprintInput, BlueprintPlannerOptions, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
@@ -44,7 +45,7 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
     const boundary = boundaries.get(id);
     const purpose: PlannerNode["purpose"] = boundary ? boundary.direction === "input" ? "supply" : "product"
       : recipe?.gasDiffusionOutput ? "environment" : registry.queries.isGeneralLogisticsDevice(definition.id) ? "logistics"
-        : definition.powerRange ? "power" : "production";
+        : findPowerRange(definition) ? "power" : "production";
     const port = boundary?.kind === "port" ? getPlannerPorts(registry, entity, definition, boundary.direction)
       .find(port => definition.portGroups[port.groupIndex]!.id === boundary.portGroupId
         && definition.portGroups[port.groupIndex]!.ports[port.portIndex]!.id === boundary.portId) : undefined;
