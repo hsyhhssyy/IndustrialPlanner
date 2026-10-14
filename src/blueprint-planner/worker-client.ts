@@ -4,6 +4,7 @@ import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import type { PlannerWorkerRequest, PlannerWorkerResponse } from "./worker-protocol";
 import type { PlannerSearchSeed } from "./search-seed";
 import type { PlannerGpuLayoutMetrics } from "./layout-backend";
+import type { PlannerGpuLayoutPool } from "./gpu-layout-pool";
 import type { PlannerAttemptStrategy } from "./strategy-schedule";
 
 /** 一个 Host 复用一个布局 Worker；取消和超时直接终止计算，不回退主线程。 */
@@ -16,7 +17,10 @@ export class PlannerWorkerClient {
   gpuAvailable = true;
   gpuMetrics?: PlannerGpuLayoutMetrics;
 
-  constructor(private readonly allowGpu = false) {}
+  private connectedPool: PlannerGpuLayoutPool | null = null;
+  private releaseLayoutPort: (() => void) | null = null;
+
+  constructor(private readonly allowGpu = false, private readonly layoutPool?: () => PlannerGpuLayoutPool | null) {}
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
@@ -26,7 +30,16 @@ export class PlannerWorkerClient {
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
     if (typeof Worker === "undefined") return Promise.reject(new Error("当前环境不支持 Worker，无法自动规划产线。"));
+    const freshWorker = this.worker === null;
     const worker = this.worker ??= new Worker(new URL("../blueprint-planner-worker.ts", import.meta.url), { type: "module" });
+    const pool = this.layoutPool?.() ?? null;
+    let layoutPort: MessagePort | undefined;
+    if (pool !== this.connectedPool || freshWorker) {
+      this.releaseLayoutPort?.(); this.releaseLayoutPort = null; this.connectedPool = pool;
+      const connection = pool?.connect();
+      layoutPort = connection?.port; this.releaseLayoutPort = connection?.release ?? null;
+    }
+    const gpu = pool ? this.releaseLayoutPort !== null : this.allowGpu;
     const id = ++this.sequence;
     return new Promise((resolve, reject) => {
       const cleanup = () => {
@@ -49,10 +62,10 @@ export class PlannerWorkerClient {
         const response = event.data;
         if (response.id !== id) return;
         try {
-          if (this.allowGpu && response.type !== "progress") {
+          if (gpu && response.type !== "progress") {
             this.gpuMetrics = response.layout;
-            this.gpuAvailable = !response.layout?.fallbackReason && ((response.layout?.batches ?? 0) > 0
-              || (response.type === "completed" ? response.candidate.search.evaluations : response.evaluations) === 0);
+            // 2026-10-14：未触发数值批次不等于硬件失败；只有明确回退原因才停止专用通道。
+            this.gpuAvailable = !response.layout?.fallbackReason;
           }
           if (response.type === "progress") update(response.phase, response.message, response.evaluations);
           else if (response.type === "completed") { cleanup(); resolve(response.candidate); }
@@ -67,8 +80,9 @@ export class PlannerWorkerClient {
       signal.addEventListener("abort", abort, { once: true });
       const timer = budgetMs === null ? undefined : setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
       // GPU 能力由 Host 为本轮创建的专用通道决定；种子池中的 request 可能保留旧的执行选项。
-      try { worker.postMessage({ id, request, variant, budgetMs, gpu: this.allowGpu,
-        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy } } satisfies PlannerWorkerRequest); }
+      // AI-CORRECTION 2026-10-14：Host 的共享 GPU 池也向普通通道提供能力，仍不读取种子中的执行开关。
+      try { worker.postMessage({ id, request, variant, budgetMs, gpu, layoutPort,
+        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy } } satisfies PlannerWorkerRequest, layoutPort ? [layoutPort] : []); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }
@@ -76,6 +90,7 @@ export class PlannerWorkerClient {
   dispose(): void {
     this.disposed = true;
     this.pending?.(new DOMException("规划器已关闭", "AbortError"));
+    this.releaseLayoutPort?.(); this.releaseLayoutPort = null; this.connectedPool = null;
     this.worker?.terminate();
     this.worker = null;
   }

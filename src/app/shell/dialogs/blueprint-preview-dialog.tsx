@@ -1226,10 +1226,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                                               className={cm(styles, "save-blueprint-secondary-button")}
                                               data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
                       */}
-                      <button type="button" disabled={!record}
+                      {appHost.blueprintPlannerDialog.blueprintPlanningEnabled ? <button type="button" disabled={!record}
                         onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
                         className={cm(styles, "save-blueprint-secondary-button")}
-                        data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button>
+                        data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
                       {showMoveAction ? (
                         <button
                           className={cm(styles, "save-blueprint-secondary-button")}

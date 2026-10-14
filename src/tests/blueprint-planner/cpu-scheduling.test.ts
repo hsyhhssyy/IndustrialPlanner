@@ -138,17 +138,18 @@ it("快速存储合并运行中检查点，结束后补写最终完整计数", a
 
 it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续后不重复扣除搜索预算", async mode => {
   // 2026-10-13：自动 CPU 池 512MiB 上限允许两个候选；暂停/故障后必须全部保留，续跑只增加新领取的 10,000 次。
+  // AI-CORRECTION 2026-10-14：8 核资源恢复五路上限，背压允许五个待验候选；暂停必须完整保留它们。
   const test = schedulingCase("auto", 100_000);
   try {
-    await vi.waitFor(() => expect(test.stats.built).toBe(2));
+    await vi.waitFor(() => expect(test.stats.built).toBe(5));
     expect(test.stats.verified).toBe(1);
     if (mode === "pause") test.host.actions.cancel(test.id);
     else test.stats.fail = true;
     test.release(); await test.idle();
     const before = test.host.queries.exportTask(test.id);
     expect(before.progress.status).toBe(mode === "pause" ? "waiting" : "failed");
-    expect(before.progress.evaluatedProposals).toBe(10_000);
-    expect((before.checkpoint as PlannerCheckpoint).parallel!.shards.filter(shard => shard.pendingCandidate !== null)).toHaveLength(2);
+    expect(before.progress.evaluatedProposals).toBe(25_000);
+    expect((before.checkpoint as PlannerCheckpoint).parallel!.shards.filter(shard => shard.pendingCandidate !== null)).toHaveLength(5);
     expect(test.stats.verified).toBe(1);
     expect(test.stats.searches + test.stats.verifiers).toBe(0);
     test.stats.fail = false;
@@ -156,7 +157,7 @@ it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续�
     await test.idle();
     const resumed = test.host.queries.exportTask(test.id);
     expect(resumed.progress.status).toBe("waiting");
-    expect(resumed.progress.evaluatedProposals).toBe(20_000);
+    expect(resumed.progress.evaluatedProposals).toBe(35_000);
     // AI-REMOVED 2026-10-07:
     // Reason: 首个通过验收后，其余同排名排队候选已不可能改善，不再重复启动仿真。
     // Trigger: 用户要求全局改进立即重调度并淘汰旧候选。

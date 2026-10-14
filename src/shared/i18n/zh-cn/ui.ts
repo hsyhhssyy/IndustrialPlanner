@@ -599,6 +599,8 @@ const UI: Record<string, string> = {
     "settingsField.other-debug-mode": "调试模式",
     "settingsField.other-debug-modeDescription": "打开调试模式",
     "settingsField.other-experimental-features": "开启实验性功能",
+    "settingsField.experimental-blueprint-production-planning": "基于蓝图的产线自动规划",
+    "settingsField.experimental-blueprint-production-planningDescription": "显示蓝图预览中的优化入口和规划界面中的蓝图任务。关闭后保留已有任务数据。",
     "settingsField.other-experimental-featuresDescription": "开启不稳定的实验性功能；关闭时会将实验性功能分组内的设置项恢复为默认值。",
     "settingsField.other-experimental-features-warning-confirm": "开启实验性功能",
     "settingsField.other-experimental-features-warning-message": "实验性功能极度不稳定，开启这些功能可能会损坏您的数据或者导致数据丢失，最严重的情况下，您可能必须重置网站才能继续使用本网站的功能。请确认是否开启实验性功能。",

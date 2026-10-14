@@ -21,10 +21,12 @@ export interface PlannerConcurrencySample {
 // AI-CORRECTION 2026-10-13：CPU 搜索与验收通道共用最多 512MiB 的预算；
 // 硬件内存再大也不扩张网页预算，其余内存留给主线程、GPU 与浏览器基础开销。
 // 每通道仍按 256MiB 保护性估计；Windows 故障任务以两通道验证内存及吞吐。
+// AI-CORRECTION 2026-10-14：用户改为优先稳定高负载，不再要求 1GB；取消固定 512MiB 封顶。
+// 保留核心余量与每通道 256MiB 的容量估算；真实吞吐决定档位，内存优化独立控制对象生命周期。
 export function plannerConcurrencyLimit(hints: PlannerResourceHints): number {
   const cores = Number.isSafeInteger(hints.hardwareConcurrency) && hints.hardwareConcurrency! > 0 ? hints.hardwareConcurrency! : 2;
   const memory = Number.isFinite(hints.deviceMemory) && hints.deviceMemory! > 0 ? hints.deviceMemory! : 4;
-  return Math.max(1, Math.min(32, Math.floor(cores * 0.8) - 1, Math.floor(Math.min(512, memory * 1024 * 0.5) / 256)));
+  return Math.max(1, Math.min(32, Math.floor(cores * 0.8) - 1, Math.floor(memory * 1024 * 0.5 / 256)));
 }
 
 // AI-REMOVED 2026-10-06:
@@ -183,6 +185,8 @@ export function plannerConcurrencyLimit(hints: PlannerResourceHints): number {
 
 /** 在线测量单个阶段的吞吐；搜索与验证各自测量，由 Host 共用一个资源上限。 */
 // 订正 2026-10-07：冷启动加压、平台附近减容复测、稳定保持；不再周期性重复上探。
+// AI-CORRECTION 2026-10-14：瞬时 serious 不立即砍并发；持续压力退让后，恢复期按单通道重新探测。
+// AI-CORRECTION 2026-10-14：Compute Pressure 的 serious 是可持续高负载，应保持并发；critical 或持续卡顿才退让。
 export class PlannerAutomaticConcurrency {
   target: number;
   /** 只记录已观测的档位，不缓存尚未验证的增容。 */
@@ -193,6 +197,16 @@ export class PlannerAutomaticConcurrency {
   private busySamples = 0;
   private samples = 0;
   private slowSamples = 0;
+  // AI-REMOVED 2026-10-14:
+  // Reason: serious 是可持续状态，累计次数后缩容仍会压制用户要求的高负载。
+  // Trigger: Windows 高负载验收及 W3C compute-pressure 状态语义核对。
+  // Evidence: final-auto 反复 19→17；https://github.com/w3c/compute-pressure#design-considerations
+  // Replacement: observe 中 serious 保持当前档位，critical 或持续卡顿才退让。
+  // Risk: 高负载保持时间增加；仍保留紧急退让。Human Review: Required
+  // Original code:
+  // private seriousSamples = 0;
+  // this.seriousSamples = sample.pressure === "serious" ? this.seriousSamples + 1 : 0;
+  private recovering = false;
   private settleUntil: number;
   private settling = true;
   private retreatAfter = 0;
@@ -223,8 +237,9 @@ export class PlannerAutomaticConcurrency {
     return this.target;
   }
 
-  private hold(sample: PlannerConcurrencySample): number {
+  private hold(sample: PlannerConcurrencySample, recovering = false): number {
     this.mode = "hold"; this.holdUntil = sample.at + 30_000;
+    this.recovering = recovering;
     this.lowWindows = 0;
     return this.target;
   }
@@ -240,12 +255,22 @@ export class PlannerAutomaticConcurrency {
     // 普通界面延迟不否决吞吐窗口；持续明显卡顿和系统压力仍是独立保护信号。
     this.slowSamples = sample.lagMs >= 500 ? this.slowSamples + 1 : 0;
     const pressure = sample.pressure === "serious" || sample.pressure === "critical";
-    if ((this.slowSamples >= 3 || pressure) && sample.at >= this.retreatAfter) {
+    const emergency = this.slowSamples >= 3 || sample.pressure === "critical";
+    if (emergency && sample.at >= this.retreatAfter) {
       this.retreatAfter = sample.at + 10_000;
       this.best = null;
-      this.change(this.target - Math.max(1, Math.floor(this.target / 4)), sample);
+      // Windows 18 路启动期间两秒 serious 曾将并发永久锁在 14 路；一般压力小步退让，紧急情况仍快速收缩。
+      // AI-CORRECTION 2026-10-14：此处仅处理 critical 或持续卡顿；serious 改由下方稳定保持。
+      // AI-CORRECTION 2026-10-14：仅 CPU critical 时退约八分之一，避免 21→16 的剧烈下跳；持续界面卡顿仍退四分之一。
+      this.change(this.target - Math.max(1, Math.floor(this.target / (this.slowSamples >= 3 ? 4 : 8))), sample);
       this.confirmedTarget = Math.min(this.confirmedTarget, this.target);
-      return this.hold(sample);
+      return this.hold(sample, true);
+    }
+    if (sample.pressure === "serious") {
+      // 可持续的高负载只停止上探；压力回到 nominal/fair 并稳定三十秒后才恢复探测。
+      // AI-CORRECTION 2026-10-14：三十秒从本次保持开始计算；持续 serious 仍禁止加压，不让偶发信号反复刷新冷却。
+      if (this.mode !== "hold") { this.best = null; this.hold(sample, true); }
+      else this.recovering = true;
     }
     if (this.settling) {
       // 等上档冷启动或下档在途批次结束；过渡计数不参与新档位比较。
@@ -274,11 +299,13 @@ export class PlannerAutomaticConcurrency {
         return this.target;
       }
       this.lowWindows = rate < this.best.rate * 0.8 ? this.lowWindows + 1 : 0;
-      if (sample.at < this.holdUntil || this.lowWindows < 2) return this.target;
+      const recover = this.recovering && !pressure && this.slowSamples === 0;
+      if (sample.at < this.holdUntil || pressure || !recover && this.lowWindows < 2) return this.target;
       // 持续退化后只在邻档有限复测；不会把偶发消息峰谷当作重新启动的理由。
+      // AI-CORRECTION 2026-10-14：压力退让后也允许恢复；低档吞吐稳定不代表机器仍然繁忙。
       this.best = { target: this.target, rate }; this.mode = "ramp";
       if (this.target === this.maximum) return this.trim(sample);
-      return this.change(this.target + (this.target > 8 ? 2 : 1), sample);
+      return this.change(this.target + (this.recovering ? 1 : this.target > 8 ? 2 : 1), sample);
     }
     if (this.mode === "trim") {
       // 会话缓存仍需测量：先获得当前基线，再试少一至两个通道。
@@ -290,10 +317,18 @@ export class PlannerAutomaticConcurrency {
       }
       return this.hold(sample);
     }
-    if (this.best !== null && rate < this.best.rate * 1.05) return this.trim(sample);
+    // 恢复期每次只增一路，高并发时一路的理论增益本就小于 5%，不能沿用大步加压门槛。
+    if (this.best !== null && rate < this.best.rate * (this.recovering ? 1.01 : 1.05)) {
+      // 优先稳定负载：恢复后的相邻上档若仍在既有 3% 容差内，直接保持，避免无收益的降两档再升回。
+      if (this.recovering && rate >= this.best.rate * 0.97) {
+        this.best = { target: this.target, rate }; this.confirmedTarget = this.target;
+        return this.hold(sample);
+      }
+      return this.trim(sample);
+    }
     this.best = { target: this.target, rate }; this.confirmedTarget = this.target;
     if (this.target === this.maximum) return this.trim(sample);
-    return this.change(this.target < 8 ? this.target * 2 : this.target + Math.ceil(this.target / 2), sample);
+    return this.change(this.recovering ? this.target + 1 : this.target < 8 ? this.target * 2 : this.target + Math.ceil(this.target / 2), sample);
   }
 }
 

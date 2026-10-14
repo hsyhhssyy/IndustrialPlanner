@@ -47,6 +47,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
+  blueprintPlanningEnabled = false;
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
   // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -153,6 +154,21 @@ export class BlueprintPlannerDialogController {
   get activeTaskId(): string | null { return this.getPlanner()?.state.activeTaskId ?? null; }
   get taskLocked(): boolean { return this.activeTaskId !== null; }
 
+  /** 设置控制器负责持久化与实验总开关归零；此处只管理运行时入口和当前视图。 */
+  setBlueprintPlanningEnabled(enabled: boolean): void {
+    this.blueprintPlanningEnabled = enabled;
+    if (!enabled && (this.blueprintDraft !== null || this.blueprintRequest !== null)) {
+      this.viewTaskId = null; this.blueprintDraft = null; this.blueprintRequest = null;
+      this.plan = null; this.blueprintCreationError = null;
+      this.options = createDefaultPlannerOptions();
+    }
+  }
+
+  isTaskVisible(request: BlueprintPlannerTaskRequest | null | undefined): boolean {
+    return this.blueprintPlanningEnabled || !request
+      || !isBlueprintRecognitionRequest(request) && !request.blueprintSource;
+  }
+
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
   // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -213,6 +229,7 @@ export class BlueprintPlannerDialogController {
 //
   openBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[] = [],
     boundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): void {
+    if (!this.blueprintPlanningEnabled) return;
     if (this.taskLocked) { this.open(); return; }
     this.options = createDefaultPlannerOptions();
     const draft = structuredClone(toJS(blueprint));
@@ -243,6 +260,7 @@ export class BlueprintPlannerDialogController {
   }
 
   selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {
+    if (!this.isTaskVisible(request ?? (taskId === null ? null : this.getPlanner()?.queries.getLastRequest(taskId)))) return;
     if (this.taskLocked && taskId !== this.activeTaskId) return;
     this.viewTaskId = taskId; this.blueprintCreationError = null;
     const recognizing = request && isBlueprintRecognitionRequest(request);

@@ -911,6 +911,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
       {
+        id: "experimental-blueprint-production-planning",
+        kind: "switch",
+        labelKey: "settingsField.experimental-blueprint-production-planning",
+        descriptionKey: "settingsField.experimental-blueprint-production-planningDescription",
+        defaultValue: false,
+      },
+      {
         id: "game-show-region-annotations",
         kind: "switch",
         labelKey: "settingsField.game-show-region-annotations",

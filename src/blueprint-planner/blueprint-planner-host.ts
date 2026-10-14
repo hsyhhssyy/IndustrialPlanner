@@ -54,6 +54,7 @@ import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
+import { PlannerGpuLayoutPool } from "./gpu-layout-pool";
 import { browserPlannerResources, observePlannerPressure, plannerConcurrencyLimit, PlannerAutomaticConcurrency, PlannerConcurrencyMemory,
   type PlannerResourceHints, type PlannerConcurrencySample } from "./automatic-concurrency";
 
@@ -164,13 +165,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       message: "任务已读取，继续计算时恢复。" } });
   };
   const concurrencyMemory = new PlannerConcurrencyMemory();
-  const worker = options.worker ?? new PlannerWorkerClient();
+  let gpuPool: PlannerGpuLayoutPool | null = null;
+  const worker = options.worker ?? new PlannerWorkerClient(false, () => gpuPool);
   const workers = new Map<number, Pick<PlannerWorkerClient, "build" | "dispose">>();
   const workerFor = (index: number) => {
     const existing = workers.get(index);
     if (existing) return existing;
     // 2026-10-07：普通通道全部保留 CPU；GPU 通道独立领取同一队列的分片。
-    const created = index === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient();
+    // AI-CORRECTION 2026-10-14：普通通道也可把已有数值批次交给共享 GPU；完整规则与布线仍由本通道执行。
+    const created = index === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient(false, () => gpuPool);
     workers.set(index, created);
     return created;
   };
@@ -1051,7 +1054,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           new PlannerRandom(random.strategy.outputSeed)) : undefined;
       const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy);
       const variant = shard.nextVariant;
-      const sessionKey = `${task.file.taskId}/${schedule.generation}/${shard.index}/${variant}`;
+      // AI-REMOVED 2026-10-14:
+      // Reason: 单批结束后 variant 递增，旧会话身份永不再次领取，缓存四份完整搜索只能增加驻留。
+      // Trigger: Windows 高并发内存优化。
+      // Evidence: lane.commit 更新 nextVariant；本调度不发同身份的后续切片。
+      // Replacement: 下方 build 不请求跨批会话；显式切片调用者继续使用 PlannerSearchSessions。
+      // Risk: Low；搜索日程与本批计数不变。
+      // Human Review: Required
+      // Original code:
+      // const sessionKey = `${task.file.taskId}/${schedule.generation}/${shard.index}/${variant}`;
       const shapeKey = schedule.warehousePorts ? `warehouse/${schedule.generation}/${dimension.storageCount}/${dimension.warehouseSide}`
         : breadthOutlineKey(plannerOutputModeKey(selection.request.options), targetOutline);
       let observed = 0, used = 0;
@@ -1089,7 +1100,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           task.liveEvaluations.set(shard.index, count);
           live(phase, message);
         }, selection.seed, selection.continuationStep, schedule.targetArea - 1, targetOutline,
-        point.blueprintBaseline?.candidate.seed, sessionKey, random.strategy);
+        point.blueprintBaseline?.candidate.seed, undefined, random.strategy);
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null);
       } catch (error) {
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
@@ -1117,7 +1128,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const concurrency = task.file.request.options.concurrency ?? 1;
       if (task.file.request.options.gpu === true && owned.length > 1 && options.gpuLayout !== false && (options.gpuWorkerFactory
         || (!options.worker && !options.workerFactory && typeof navigator !== "undefined" && "gpu" in navigator))) {
-        gpuWorker = options.gpuWorkerFactory?.() ?? new PlannerWorkerClient(true);
+        if (!options.gpuWorkerFactory) gpuPool = new PlannerGpuLayoutPool();
+        gpuWorker = options.gpuWorkerFactory?.() ?? new PlannerWorkerClient(true, () => gpuPool);
       }
       maximum = Math.min(owned.length, concurrency === "auto"
         ? plannerConcurrencyLimit(options.resourceHints ?? browserPlannerResources()) : concurrency);
@@ -1150,6 +1162,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           target = controller.observe({ at, lagMs, pressure, pendingVerifications,
             activeWorkers: task.activeShards.size - Number(gpuShard !== null && task.activeShards.has(gpuShard)),
             // GPU 代理次数不得诱导 CPU 缩容；只测 CPU 分片自己的评价与忙碌时间。
+            // AI-CORRECTION 2026-10-14：普通分片数值步骤可共享 GPU；以本池端到端进展选档，仍排除独立通道的进展。
             evaluations: point.evaluations - gpuLaneEvaluations + [...task.liveEvaluations.values()].reduce((sum, value) => sum + value, 0)
               - (gpuShard === null ? 0 : task.liveEvaluations.get(gpuShard) ?? 0),
             busyMs: searchBusyMs + [...searchStarted.values()].reduce((sum, value) => sum + at - value, 0) });
@@ -1297,6 +1310,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       await Promise.allSettled(active.values());
       await settleVerifications();
       gpuWorker?.dispose();
+      gpuPool?.dispose(); gpuPool = null;
       for (const [index, current] of workers) if (index > 0) { current.dispose(); workers.delete(index); }
       task.abort.signal.removeEventListener("abort", cancelSearch);
       await settle(task);

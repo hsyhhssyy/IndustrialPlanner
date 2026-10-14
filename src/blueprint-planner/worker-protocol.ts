@@ -11,6 +11,8 @@ export interface PlannerWorkerRequest {
   readonly budgetMs: number | null;
   readonly search?: PlannerSearchOptions;
   readonly gpu?: boolean;
+  /** 每轮连接首次传入；数值 GPU 批次走独立端口，搜索协议和计数保持原样。 */
+  readonly layoutPort?: MessagePort;
 }
 
 export type PlannerWorkerResponse =

@@ -606,6 +606,8 @@ const UI: Record<string, string> = {
     "settingsField.other-debug-mode": "Debug Mode",
     "settingsField.other-debug-modeDescription": "Enable debug mode",
     "settingsField.other-experimental-features": "Enable Experimental Features",
+    "settingsField.experimental-blueprint-production-planning": "Blueprint-based Automatic Production Planning",
+    "settingsField.experimental-blueprint-production-planningDescription": "Show the optimization entry in blueprint previews and blueprint tasks in the planner. Turning this off preserves existing task data.",
     "settingsField.other-experimental-featuresDescription": "Enable unstable experimental features. Turning this off resets every setting in the Experimental Features group to its default.",
     "settingsField.other-experimental-features-warning-confirm": "Enable Experimental Features",
     "settingsField.other-experimental-features-warning-message": "Experimental features are extremely unstable. Enabling them may corrupt your data or cause data loss. In the worst case, you may need to reset the website to continue using its features. Are you sure you want to enable experimental features?",

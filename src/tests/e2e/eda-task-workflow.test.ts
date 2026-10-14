@@ -155,7 +155,7 @@ for (const profile of profiles) {
       await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.blueprintPlanner != null);
       await page.evaluate(() => {
         const settings = JSON.parse(localStorage.getItem('v3-user-settings-dialog') || '{}');
-        settings.values = {...settings.values, 'other-experimental-features': true};
+        settings.values = {...settings.values, 'other-experimental-features': true, 'experimental-blueprint-production-planning': true};
         localStorage.setItem('v3-user-settings-dialog', JSON.stringify(settings));
       });
       await page.reload();

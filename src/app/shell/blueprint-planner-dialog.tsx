@@ -175,6 +175,7 @@ function PlannerTaskDeleteButton({ disabled, onConfirm, t }: {
 
 export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({ appHost }: { appHost: AppHost }) {
   const controller = appHost.blueprintPlannerDialog;
+  const blueprintPlanningEnabled = controller.blueprintPlanningEnabled;
   const planner = appHost.workspace.blueprintPlanner;
   const t = appHost.actions.translate;
   const [, refresh] = useState(0);
@@ -224,8 +225,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   }), [appHost.state.settings.locale]);
   const history = useMemo(() => {
     void revision;
-    return planner?.queries.listTasks().map(task => {
+    return planner?.queries.listTasks().flatMap(task => {
       const request = planner.queries.getLastRequest(task.taskId);
+      if (!blueprintPlanningEnabled && !controller.isTaskVisible(request)) return [];
       // AI-REMOVED 2026-10-09:
       // Reason: 空名称缺少兜底，蓝图优化被识别阶段二分法误标为产线计算。
       // Trigger: 用户要求统一左侧任务标题、类别和布局。
@@ -235,10 +237,10 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       // Original code:
       // return { ...task, recognizing: !!request && isBlueprintRecognitionRequest(request),
       //   name: request ? isBlueprintRecognitionRequest(request) ? request.input.blueprint.name : request.plan.name : task.taskId };
-      return { ...task, ...describePlannerHistoryTask(request, appHost.workspace.registry, t),
-        timeLabel: timeFormatter.format(task.startedAt) };
+      return [{ ...task, ...describePlannerHistoryTask(request, appHost.workspace.registry, t),
+        timeLabel: timeFormatter.format(task.startedAt) }];
     }) ?? [];
-  }, [planner, revision, timeFormatter, appHost.workspace.registry, t]);
+  }, [planner, revision, timeFormatter, appHost.workspace.registry, t, controller, blueprintPlanningEnabled]);
   const supply = useMemo(() => {
     if (!controller.plan) return { view: null, error: null };
     try { return { view: new PlannerSupplyRules(appHost.workspace.registry, controller.plan, controller.options.converterStartup).view(), error: null }; }

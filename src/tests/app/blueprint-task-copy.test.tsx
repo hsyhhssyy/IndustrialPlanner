@@ -18,6 +18,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 async function setup() {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
+  app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
   const planner = createBlueprintPlannerHost(session.workspace, { gpuLayout: false, worker: {
     build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
       session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),

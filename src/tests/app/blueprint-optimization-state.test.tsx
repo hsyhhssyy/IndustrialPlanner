@@ -22,6 +22,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 it("原图识别成为只读基线，保存副本不覆盖原图，重建主机恢复基线和边界", async () => {
   const session = new PlannerBatchSession();
   let app = createAppHost(session.workspace);
+  app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
   let planner = createBlueprintPlannerHost(session.workspace);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   const readonlyBoundary = (planningStarted = false) => {
@@ -74,6 +75,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     await planner.whenSettled();
     planner.dispose(); app.dispose();
     app = createAppHost(session.workspace);
+    app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
     const restored = planner.queries.getResult(id)!;
@@ -99,6 +101,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     await planner.whenSettled();
     planner.dispose(); app.dispose();
     app = createAppHost(session.workspace);
+    app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
@@ -115,6 +118,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
   const app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
+  controller.setBlueprintPlanningEnabled(true);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   const markup = () => {
     const container = document.createElement("div");
@@ -160,6 +164,7 @@ it("四项权限与摆放规则常驻同一区域，保存选择后直接开始�
   const app = createAppHost(session.workspace);
   const planner = createBlueprintPlannerHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
+  controller.setBlueprintPlanningEnabled(true);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   let view: Awaited<ReturnType<typeof mountTestComponent>> | null = null;
   try {

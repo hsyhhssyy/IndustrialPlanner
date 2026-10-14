@@ -4,6 +4,7 @@ import type { PlannerGpuLayoutMetrics, PlannerLayoutBackend, PlannerLayoutBatch,
 import shader from "./layout-search.wgsl?raw";
 
 /** 仅专用布局 Worker 拥有设备；CPU Worker 从同一调度器领取其他分片。 */
+// AI-CORRECTION 2026-10-14：生产路径由独立数值 Worker 统一拥有设备，所有搜索通道经有界端口队列使用。
 export class PlannerGpuLayout implements PlannerLayoutBackend {
   readonly metrics: PlannerGpuLayoutMetrics = { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0 };
   private device: GPUDevice | null = null;

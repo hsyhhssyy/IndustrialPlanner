@@ -1,7 +1,7 @@
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
 import { BlueprintPlannerDialog } from "./blueprint-planner-dialog";
-import { action, runInAction } from "mobx";
+import { action, reaction, runInAction } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
@@ -848,6 +848,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     //   appHost.internalActions.resetAllShortcutsToDefaults();
     // },
   }));
+  useEffect(() => reaction(
+    () => settingsDialog.getValue("experimental-blueprint-production-planning") === true,
+    enabled => appHost.blueprintPlannerDialog.setBlueprintPlanningEnabled(enabled),
+    { fireImmediately: true },
+  ), [appHost, settingsDialog]);
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const leftDockSuppressed = appHost.internalState.workbench.leftDockSuppressed;
   const effectiveLeftDockOpen = leftDockOpen && !leftDockSuppressed;

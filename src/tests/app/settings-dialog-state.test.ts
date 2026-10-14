@@ -10,6 +10,27 @@ import {
 import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
+  it("基于蓝图的产线自动规划默认关闭，持久化独立选择并随实验总开关重置", () => {
+    const key = "experimental-blueprint-production-planning";
+    const controller = new WorkbenchSettingsDialogController();
+    expect(resolveGroupSettingIds("experimental")).toContain(key);
+    expect(controller.getValue(key)).toBe(false);
+    expect(controller.isSettingEditable(key)).toBe(false);
+    controller.updateSwitchValue(key, true);
+    expect(controller.getValue(key)).toBe(false);
+    controller.updateSwitchValue("other-experimental-features", true);
+    expect(controller.isSettingEditable(key)).toBe(true);
+    expect(controller.getValue(key)).toBe(false);
+    controller.updateSwitchValue(key, true);
+    const restored = new WorkbenchSettingsDialogController();
+    expect(restored.getValue(key)).toBe(true);
+    restored.updateSwitchValue("other-experimental-features", false);
+    expect(restored.getValue(key)).toBe(false);
+    expect(new WorkbenchSettingsDialogController().getValue(key)).toBe(false);
+    restored.updateSwitchValue("other-experimental-features", true);
+    expect(restored.getValue(key)).toBe(false);
+  });
+
   it.each([false, true])("移除 EDA 实验性设置，恢复旧开关值 %s 后不再持久化", (legacyEnabled) => {
     localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
       selectedGroupId: "experimental",
@@ -19,6 +40,7 @@ describe("WorkbenchSettingsDialogController", () => {
       },
     }));
     const controller = new WorkbenchSettingsDialogController();
+    expect(controller.getValue("experimental-blueprint-production-planning")).toBe(false);
     expect(WORKBENCH_SETTINGS_GROUPS.flatMap(group => group.items).map(setting => setting.id))
       .not.toContain("experimental-blueprint-planner");
     expect(controller.isSettingEditable("experimental-blueprint-planner")).toBe(false);
@@ -228,6 +250,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
+        "experimental-blueprint-production-planning": false,
         "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": true,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
@@ -754,6 +777,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
+        "experimental-blueprint-production-planning": false,
         "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": false,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED

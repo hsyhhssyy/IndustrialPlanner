@@ -757,6 +757,8 @@ export type UiKey =
   | "settingsField.other-debug-mode"
   | "settingsField.other-debug-modeDescription"
   | "settingsField.other-experimental-features"
+  | "settingsField.experimental-blueprint-production-planning"
+  | "settingsField.experimental-blueprint-production-planningDescription"
   | "settingsField.other-experimental-featuresDescription"
   | "settingsField.other-experimental-features-warning-confirm"
   | "settingsField.other-experimental-features-warning-message"

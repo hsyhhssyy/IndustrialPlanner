@@ -5,10 +5,11 @@ it("容量提示保留 CPU 余量，缺失提示时不会盲目启满 32 Worker"
   expect(plannerConcurrencyLimit({})).toBe(1);
   // 2026-10-06：用户要求放宽经验上限；每通道预留 256 MiB，实际档位交给在线测量。
   // AI-CORRECTION 2026-10-13：用户要求整页内存收敛；CPU 池改为固定 512MiB 上限，仍保留低内存保护。
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32 })).toBe(2);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 8 })).toBe(2);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 64 })).toBe(2);
-  expect(plannerConcurrencyLimit({ hardwareConcurrency: 8, deviceMemory: 2 })).toBe(2);
+  // AI-CORRECTION 2026-10-14：取消固定两路封顶，按内存提示和核心余量确定可探测容量。
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32 })).toBe(8);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 8 })).toBe(16);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 32, deviceMemory: 64 })).toBe(24);
+  expect(plannerConcurrencyLimit({ hardwareConcurrency: 8, deviceMemory: 2 })).toBe(4);
   expect(plannerConcurrencyLimit({ hardwareConcurrency: 1, deviceMemory: 0.5 })).toBe(1);
 });
 
@@ -127,7 +128,7 @@ function drive(initial = 1, maximum = 24) {
   let at = 0, evaluations = 0, busyMs = 0;
   const changes: Array<{ at: number; from: number; to: number }> = [];
   const run = (seconds: number, rate: (workers: number) => number,
-    options: { lagMs?: number; pressure?: "critical"; activeWorkers?: number; busy?: boolean } = {}) => {
+    options: { lagMs?: number; pressure?: "nominal" | "fair" | "serious" | "critical"; activeWorkers?: number; busy?: boolean } = {}) => {
     for (let second = 0; second < seconds; second++) {
       const from = control.target;
       at += 1000; evaluations += rate(from);
@@ -186,9 +187,45 @@ it("普通响应延迟不否决吞吐观测，严重压力仍独立保护", () =
   test.run(100, workers => Math.min(workers, 8) * 100, { lagMs: 200 });
   expect(test.control.target).toBe(8);
   test.run(1, workers => workers * 100, { pressure: "critical" });
-  expect(test.control.target).toBe(6);
+  // 2026-10-14：CPU 压力采用较小步幅；持续界面卡顿的快速退让由上例单独覆盖。
+  expect(test.control.target).toBe(7);
   test.run(60, workers => workers * 100, { pressure: "critical" });
   expect(test.control.target).toBe(1);
+});
+
+it("serious 表示可持续高负载：保持现有并发，压力恢复后才继续上探", () => {
+  // 2026-10-14：按 W3C 状态语义修正本轮新增行为；serious 持续多久都不应被当成 critical。
+  for (const seconds of [2, 90]) {
+    const test = drive(20);
+    test.run(seconds, workers => workers * 100, { pressure: "serious" });
+    expect(test.control.target).toBe(20);
+    test.run(120, workers => workers * 100, { pressure: "fair" });
+    expect(test.control.target).toBe(24);
+  }
+});
+
+it("系统压力恢复后重新探测，低档吞吐稳定不能永久阻止加压", () => {
+  const test = drive(20);
+  test.run(1, workers => workers * 100, { pressure: "critical" });
+  expect(test.control.target).toBe(18);
+  test.run(29, workers => workers * 100, { pressure: "nominal" });
+  expect(test.control.target).toBe(18);
+  const changes = test.changes.length;
+  test.run(180, workers => workers * 100, { pressure: "nominal" });
+  expect(test.control.target).toBe(24);
+  for (const change of test.changes.slice(changes).filter(change => change.to > change.from)) {
+    expect(change.to - change.from).toBeLessThanOrEqual(2);
+  }
+});
+
+it("恢复后的相邻上档达到吞吐平台时保持，避免再次降两档造成负载波动", () => {
+  const test = drive(20);
+  test.run(1, workers => workers * 100, { pressure: "critical" });
+  test.run(180, workers => Math.min(workers, 18) * 100, { pressure: "nominal" });
+  expect(test.control.target).toBe(19);
+  const changes = test.changes.length;
+  test.run(180, workers => Math.min(workers, 18) * 100, { pressure: "nominal" });
+  expect(test.changes).toHaveLength(changes);
 });
 
 it("工作量不足与无进展不被误判为机器吞吐平台", () => {
@@ -204,11 +241,11 @@ it("工作量不足与无进展不被误判为机器吞吐平台", () => {
 it("缩容时旧批次尚未退出，不把过渡期产出当成新档位的测量", () => {
   const test = drive(16);
   test.run(1, () => 1000, { pressure: "critical" });
-  expect(test.control.target).toBe(12);
+  expect(test.control.target).toBe(14);
   test.run(8, () => 50_000, { activeWorkers: 16 });
   expect(test.control.confirmedTarget).toBe(1);
   test.run(30, () => 1000);
-  expect(test.control.confirmedTarget).toBe(12);
+  expect(test.control.confirmedTarget).toBe(14);
 });
 
 it("长期吞吐持续恶化才重新测量，随后仍收敛到新的平台", () => {

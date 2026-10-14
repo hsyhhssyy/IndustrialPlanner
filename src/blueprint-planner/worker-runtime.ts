@@ -3,6 +3,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createPlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import type { PlannerWorkerRequest, PlannerWorkerResponse } from "./worker-protocol";
+import { PlannerGpuLayoutPort } from "./gpu-layout-channel";
 import { PlannerSearchSessions } from "./search-sessions";
 import type { PlannerGpuLayout } from "./gpu-layout";
 // AI-REMOVED 2026-10-07: 单路 GPU 布线被独立布局批次替代。
@@ -15,6 +16,7 @@ const cancellations = new Set<number>();
 // Original code: let gpuRouting: PlannerGpuRouting | undefined;
 let gpuLayout: PlannerGpuLayout | undefined;
 let gpuLoadError: string | undefined;
+let sharedLayout: PlannerGpuLayoutPort | undefined;
 const searchSessions = new PlannerSearchSessions();
 export function cancelPlannerWorkerRequest(id: number): void { cancellations.add(id); }
 
@@ -46,20 +48,21 @@ export async function runPlannerWorkerRequest(
     //         gpuLoadError = error instanceof Error ? error.message : String(error);
     //       }
     //     }
-    if (input.gpu && !gpuLayout && !gpuLoadError) {
+    if (input.layoutPort) { sharedLayout?.dispose(); sharedLayout = new PlannerGpuLayoutPort(input.layoutPort); }
+    if (input.gpu && !sharedLayout && !gpuLayout && !gpuLoadError) {
       try {
         const { PlannerGpuLayout } = await import("./gpu-layout");
         gpuLayout = new PlannerGpuLayout();
       } catch (error) { gpuLoadError = error instanceof Error ? error.message : String(error); }
     }
-    const layoutMetrics = () => gpuLayout?.metrics ?? (gpuLoadError ? { batches: 0, evaluations: 0,
+    const layoutMetrics = () => sharedLayout?.metrics ?? gpuLayout?.metrics ?? (gpuLoadError ? { batches: 0, evaluations: 0,
       kernelMs: 0, wallMs: 0, uploadedBytes: 0, fallbackReason: gpuLoadError } : undefined);
     const candidate = await createPlannerCandidate(registry, input.request, input.variant, () => {
       if (cancellations.has(input.id)) throw new DOMException("计算已暂停", "AbortError");
       if (performance.now() >= deadline) throw new PlanningBudgetExhausted();
     }, (phase, message) => {
       currentPhase = phase; currentMessage = message; progress();
-    }, input.search, count => { evaluations = count; progress(); }, undefined, input.gpu ? gpuLayout : undefined, searchSessions);
+    }, input.search, count => { evaluations = count; progress(); }, undefined, input.gpu ? sharedLayout ?? gpuLayout : undefined, searchSessions);
     send({ id: input.id, type: "completed", candidate, layout: input.gpu ? layoutMetrics() : undefined });
   } catch (error) {
     send({ id: input.id, type: "failed",
@@ -67,7 +70,7 @@ export async function runPlannerWorkerRequest(
       message: error instanceof Error ? error.message : String(error),
       search: error instanceof PlannerCandidateError ? error.search : undefined,
       evaluations: error instanceof PlannerCandidateError ? error.search?.evaluations ?? evaluations : evaluations,
-      layout: input.gpu ? gpuLayout?.metrics ?? { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0, fallbackReason: gpuLoadError ?? "GPU 未初始化" } : undefined,
+      layout: input.gpu ? sharedLayout?.metrics ?? gpuLayout?.metrics ?? { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0, fallbackReason: gpuLoadError ?? "GPU 未初始化" } : undefined,
     });
   } finally { cancellations.delete(input.id); }
 }
