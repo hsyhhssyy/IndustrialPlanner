@@ -226,5 +226,11 @@
     "title": "增量更新-v1.5.1.6",
     "version": "1.5.1.6",
     "kind": "incremental"
+  },
+  {
+    "file": "1.6.0.md",
+    "title": "【浏览器里的集成工业】版本更新 v1.6.0",
+    "version": "1.6.0",
+    "kind": "main"
   }
 ]

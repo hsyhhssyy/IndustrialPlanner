@@ -1,4 +1,8 @@
 const REGISTRY: Record<string, string> = {
+  "registry.recipe.crop_seedling.name": "育苗",
+  "registry.recipe.crop_watering.name": "浇水",
+  "registry.recipe.crop_harvest.name": "收获",
+
   "registry.entity.squirter_1.name": "洒水机",
   "registry.entityVariant.normal.shortName": "基础",
   "registry.entityVariant.normal.longName": "基础模式",

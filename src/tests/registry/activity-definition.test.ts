@@ -111,7 +111,7 @@ const BUBBLE_STRIKE_RECIPES = [
     ],
     outputs: [{ itemId: "item_activity_copper_poly_gas", amount: 1 }],
     machineId: "gas_reactor_1",
-    requiredGasDiffusion: "item_gas_inert",
+    requiredEnvironmentAnyOf: ["item_gas_inert"],
   },
   {
     id: "liquid_transmuter_2_activity_copper_poly_1",

@@ -869,8 +869,18 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   };
   const showDeleteAction = controller.canDelete;
   const showMoveAction = controller.canDelete;
-  const defaultActionCount = 3 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0)
-    + (appHost.blueprintPlannerDialog.enabled ? 1 : 0);
+  // AI-REMOVED 2026-10-14:
+  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+  // Replacement: 下方固定包含优化入口的操作数量计算。
+  // Risk: Low；规划任务与业务可用性校验保持原行为。
+  // Human Review: Required
+  //
+  // Original code:
+  //   const defaultActionCount = 3 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0)
+  //     + (appHost.blueprintPlannerDialog.enabled ? 1 : 0);
+  const defaultActionCount = 4 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0);
   const actionsClassName = isDeleteConfirming
     ? "blueprint-preview-actions is-dual-action"
     : defaultActionCount >= 3
@@ -1201,10 +1211,25 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       >
                         {t("workbench.button.copyBlueprintToClipboard")}
                       </button>
-                      {appHost.blueprintPlannerDialog.enabled ? <button type="button" disabled={!record}
+                      {/*
+                      AI-REMOVED 2026-10-14:
+                      Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+                      Trigger: 用户要求 EDA 默认可用且不再需要开启。
+                      Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+                      Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+                      Risk: Low；规划任务与业务可用性校验保持原行为。
+                      Human Review: Required
+
+                      Original code:
+                                            {appHost.blueprintPlannerDialog.enabled ? <button type="button" disabled={!record}
+                                              onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
+                                              className={cm(styles, "save-blueprint-secondary-button")}
+                                              data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
+                      */}
+                      <button type="button" disabled={!record}
                         onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
                         className={cm(styles, "save-blueprint-secondary-button")}
-                        data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
+                        data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button>
                       {showMoveAction ? (
                         <button
                           className={cm(styles, "save-blueprint-secondary-button")}

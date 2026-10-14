@@ -174,7 +174,17 @@ const scenario = resolve(directory, "scenario.js");
         const host = window.__industrialPlannerAppHost;
         const { createSimulationHost } = await import('/src/simulation/simulation-host.ts');
         host.workspace.simulation.dispose(); createSimulationHost(host.workspace, {engineKind:'dense-v2',blueprintDenseTickRate:2});
-        host.blueprintPlannerDialog.setEnabled(true); host.blueprintPlannerDialog.open(plan);
+        // AI-REMOVED 2026-10-14:
+        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+        // Replacement: 测试直接打开正式 EDA 入口，不再调用已移除的 setEnabled。
+        // Risk: Low；规划任务与业务可用性校验保持原行为。
+        // Human Review: Required
+        //
+        // Original code:
+        //         host.blueprintPlannerDialog.setEnabled(true); host.blueprintPlannerDialog.open(plan);
+        host.blueprintPlannerDialog.open(plan);
         // 新草稿使用默认供料；测试所需的路线通过当前草稿显式配置。
         if (host.blueprintPlannerDialog.plan.supplyPolicies.length !== 0) throw Error('新草稿保留了输入方案的供料策略');
         for (const policy of plan.supplyPolicies ?? []) host.blueprintPlannerDialog.updateSupplyPolicy(policy);

@@ -1,3 +1,4 @@
+import { CROP_RECIPES } from "./crop-definitions";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
   // AI-REMOVED 2026-08-19:
@@ -28,6 +29,8 @@ import {
 // AI-CORRECTION 2026-07-19: 历史注释中的 item_/item_port_ 设备 ID 保留作来源审计；
 // 当前 RecipeDefinition.machineId 必须引用已移除前缀的 EntityDefinition.id。
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
+  ...CROP_RECIPES,
+  { id: "r_squirter_water_environment", nameKey: "registry.entity.squirter_1.name", durationSeconds: 1, inputs: [{ itemId: "item_liquid_water", amount: 1 }], outputs: [], machineId: "squirter_1", recipeType: "immediate-consume", tags: [TOOLBOX_HIDDEN_RECIPE_TAG], environmentOutput: { itemId: "item_liquid_water", rangeId: "irrigation" } },
   {
     id: "r_crusher_originium_powder_basic",
     nameKey: "registry.recipe.r_crusher_originium_powder_basic.name",
@@ -3088,7 +3091,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "xiranite_oven_1",
     recipeType: "immediate-consume",
     tags: [],
-    requiredGasDiffusion: "item_gas_inert",
+    requiredEnvironmentAnyOf: ["item_gas_inert"],
   },
   {
     id: "xiranite_oven_xiranite_enr_powder_1",
@@ -3539,8 +3542,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "vaporizer_1",
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    gasDiffusionOutput: {
-      gasItemId: "item_gas_inert",
+    environmentOutput: {
+      itemId: "item_gas_inert",
       rangeId: "gas",
     },
   },
@@ -3553,8 +3556,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "vaporizer_1",
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    gasDiffusionOutput: {
-      gasItemId: "item_gas_water",
+    environmentOutput: {
+      itemId: "item_gas_water",
       rangeId: "gas",
     },
   },
@@ -3567,8 +3570,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "vaporizer_1",
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    gasDiffusionOutput: {
-      gasItemId: "item_gas_acid",
+    environmentOutput: {
+      itemId: "item_gas_acid",
       rangeId: "gas",
     },
   },
@@ -3581,8 +3584,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "vaporizer_1",
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    gasDiffusionOutput: {
-      gasItemId: "item_gas_xiranite",
+    environmentOutput: {
+      itemId: "item_gas_xiranite",
       rangeId: "gas",
     },
   },
@@ -3903,7 +3906,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "gas_reactor_1",
     recipeType: "immediate-consume",
     tags: ["introduced:1.4"],
-    requiredGasDiffusion: "item_gas_acid",
+    requiredEnvironmentAnyOf: ["item_gas_acid"],
   },
   {
     id: "gas_reactor_activity_copper_poly_gas_1",
@@ -3917,7 +3920,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "gas_reactor_1",
     recipeType: "immediate-consume",
     tags: [ACTIVITY_LIMITED_FORMULA_2_TAG],
-    requiredGasDiffusion: "item_gas_inert",
+    requiredEnvironmentAnyOf: ["item_gas_inert"],
   },
   {
     id: "liquid_purifier_gas_copper_enr_1",
@@ -3938,7 +3941,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "liquid_purifier_1_gas",
     recipeType: "immediate-consume",
     tags: ["introduced:1.4"],
-    requiredGasDiffusion: "item_gas_inert",
+    requiredEnvironmentAnyOf: ["item_gas_inert"],
   },
   {
     id: "liquid_purifier_gas_xiranite_enr_1",
@@ -3959,7 +3962,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "liquid_purifier_1_gas",
     recipeType: "immediate-consume",
     tags: ["introduced:1.4"],
-    requiredGasDiffusion: "item_gas_inert",
+    requiredEnvironmentAnyOf: ["item_gas_inert"],
   },
   {
     id: "seedcollector_plant_sp_1",

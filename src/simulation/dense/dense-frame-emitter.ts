@@ -335,9 +335,9 @@ export class DenseFrameEmitter {
     const sourceDeviceIndexes: number[] = [];
     const itemIndexes: number[] = [];
     const gridRects: number[] = [];
-    for (const diffusion of kernel.gasDiffusions) {
+    for (const diffusion of kernel.environments) {
       const deviceIndex = this.lookup.deviceIndexById.get(diffusion.sourceDeviceId);
-      const itemIndex = this.lookup.itemIndexById.get(diffusion.gasItemId);
+      const itemIndex = this.lookup.itemIndexById.get(diffusion.itemId);
       if (deviceIndex === undefined || itemIndex === undefined) {
         throw new Error("Dense gas diffusion references an unknown dictionary entry.");
       }

@@ -825,7 +825,7 @@ export function createRenderSceneOrchestrator(
       }, resolveRangePresentation({
         ranges: rangeInstances, interaction: rangeInteractionVisualState,
         activeGasRanges: renderHost.workspace.simulation?.state.runningState === "start"
-          ? renderHost.workspace.simulation.queries.getActiveGasDiffusionRanges() : [],
+          ? renderHost.workspace.simulation.queries.getActiveEnvironmentRanges() : [],
         resolveGasColor: (id) => fluidColorToNumber(resolveFluidColor(renderHost.workspace.registry.queries.findItemDefinition(id)?.fluidColors)),
         supportsAnimation: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
           && renderHost.textureManager.supportsLogisticsAnimation(),

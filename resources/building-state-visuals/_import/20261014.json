@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+  "releaseId": "v1.5-20260924-20261013-162431-cst",
+  "sourceVersion": "v1.5-20260924",
+  "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
+  "sourceResolution": 0.5,
+  "fetchedAt": "2026-10-14T04:21:02Z",
+  "scope": "crop-irrigated-visuals",
+  "targetResolution": 0.5,
+  "verifiedSourceFiles": 452,
+  "verifiedAppliedFiles": 197,
+  "visuals": [
+    {
+      "entityId": "soil_grass_1",
+      "spriteId": "soil_grass_1--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_grass_1/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "8091fd91e48b1c2a9dd5e4ea98747b4839f5738a53309d44e776368a4fdc72d4"
+    },
+    {
+      "entityId": "soil_grass_2",
+      "spriteId": "soil_grass_2--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_grass_2/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "99a21c46ff0c8683f2c52087fc17d33dd2f33025e3a01b4e8f96d38615d4950f"
+    },
+    {
+      "entityId": "soil_moss_1",
+      "spriteId": "soil_moss_1--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_moss_1/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "7b4d8c4265319a33a56e097e87bb4159a0b8f6daf908ea21e60f2069b5f1038c"
+    },
+    {
+      "entityId": "soil_moss_2",
+      "spriteId": "soil_moss_2--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_moss_2/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "96821b4272d4a5376811db7070fc0aea31e51e83df48646dd488f533ffdcb367"
+    },
+    {
+      "entityId": "soil_moss_3",
+      "spriteId": "soil_moss_3--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_moss_3/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "d1041ec83053718dbfffc7b44d269141eac3ae957733a748d92dc6128991cbe8"
+    },
+    {
+      "entityId": "soil_bbflower_1",
+      "spriteId": "soil_bbflower_1--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_bbflower_1/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "5b561382d2ca71cb8d504b0a3dae4952b639c4379716823ad175ea22c76d001a"
+    },
+    {
+      "entityId": "soil_sp_1",
+      "spriteId": "soil_sp_1--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_sp_1/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "474415406dd09be56976fce79d86c7a385b9c131154398c9bdf9ba0bc12eacf9"
+    },
+    {
+      "entityId": "soil_sp_2",
+      "spriteId": "soil_sp_2--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_sp_2/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "b9cb13844ff9f521b02793b105cf227e26f02017584184cfb5458cf85697b6d5"
+    },
+    {
+      "entityId": "soil_sp_3",
+      "spriteId": "soil_sp_3--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_sp_3/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "18df8271e19f0b07df9ab13ac3a55ee1896914b7ff22d54c3ee3202b4614e806"
+    },
+    {
+      "entityId": "soil_sp_4",
+      "spriteId": "soil_sp_4--irrigated",
+      "stateVisualKey": "irrigated",
+      "phase": "soil_1_mature_water",
+      "sourcePath": "buildings/soil_sp_4/top/animations/soil_1_mature_water/spritesheet_000.webp",
+      "sourceSha256": "ac0cbae62186914d91be0345ba8e49da4e668eeb999c22ce97649668ac5a9f87"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "public/3d-top-view/port-effects/manifest.json",
+      "sha256": "4f27246ba00a9584360733d53d7b8ecee812beb87b2f998171de67f0db65c455"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_bbflower_1--irrigated.webp",
+      "sha256": "36c5acd685f71f04c05dc921c77231420fcc17adca07fe2901c16d07db7042ad"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_grass_1--irrigated.webp",
+      "sha256": "050d19d1374a036d527688d4e89c10b70e340b3a19c1ca3989410b97fdc70b6f"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_grass_2--irrigated.webp",
+      "sha256": "10fc667385c9628592435243a939431e4a52d3dd9a65cfa6d9cfb1941e626a15"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_moss_1--irrigated.webp",
+      "sha256": "afef5d368d83fe773abf2f3f7c8c4d2b39ff4858b4af640fe0fae8e9cb489c68"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_moss_2--irrigated.webp",
+      "sha256": "b170d7d434f5f367e779d2ad3b138533887e00d4a2bdaebf723d108bc94263ee"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_moss_3--irrigated.webp",
+      "sha256": "c41d7c9390fa25bb48fd78a92bf3253de41a3716937a1e097e99eba166b429ab"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_sp_1--irrigated.webp",
+      "sha256": "736c8a3307a3cc620202390c82b4c0e0503dd8b30d642af44ea182a308539c37"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_sp_2--irrigated.webp",
+      "sha256": "219fced14ea01fef9d70a933046780ae22a865743da13ac9ab66911b17e91bb9"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_sp_3--irrigated.webp",
+      "sha256": "b4dc5bb0ef1deddc4f449989eb4613af2878a7f7883218b199b2b348dd86ecb7"
+    },
+    {
+      "path": "public/3d-top-view/sprite-masks/soil_sp_4--irrigated.webp",
+      "sha256": "b64634d5e5cf9767038147bd81775a70fdf6a1fa74826c24ecd8634c2dacac55"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_bbflower_1--irrigated.webp",
+      "sha256": "b64b96591f37bf069338dd52e07e39ade7234485027bf7177f406e46d38783a4"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_grass_1--irrigated.webp",
+      "sha256": "f90f495a853f008eddb4cd3ce925e3ac3743ecf2928335c00151aba0a7851c83"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_grass_2--irrigated.webp",
+      "sha256": "646e07c8958f8d6bc1cb2b3cc90ae9f95fbbe44deee533ca56f4bb42e9e812a5"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_moss_1--irrigated.webp",
+      "sha256": "9b411443b7b280d079a89f637319a9faa92c8a2257c399ae9d35d117431c96db"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_moss_2--irrigated.webp",
+      "sha256": "9a0f15cc79bb0933411544a43e6417c527db1eef9a310416571ab94b6f6e5818"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_moss_3--irrigated.webp",
+      "sha256": "ae484e9f1983040246f231af22e9888ce4744e69b33bdef3872a563bfa0ad9cd"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_sp_1--irrigated.webp",
+      "sha256": "1d1eafe9173009734c87e20f9c1d0d1c5d5aeb354721253aadd1f4a05b43708b"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_sp_2--irrigated.webp",
+      "sha256": "bc830f195ee64aaaabf612fdc9a7dfd0a0205faa38327e37d0eb67f3d41b3fdd"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_sp_3--irrigated.webp",
+      "sha256": "85ae5e23d81f0bf42be0eca101cb77cf5a1b11bf5a0c6cbc277159d528be28ce"
+    },
+    {
+      "path": "public/3d-top-view/sprites/soil_sp_4--irrigated.webp",
+      "sha256": "380393bcaef0d3a3f9ae34c9139fcbf3e441c1a8722ea51454f602b281dc2aa9"
+    },
+    {
+      "path": "resources/building-top-view-v15.json",
+      "sha256": "63ddb9e17b6906f0a1dcb9ac42d79002ea2c8823c6b4669c459617c3efef6818"
+    }
+  ]
+}

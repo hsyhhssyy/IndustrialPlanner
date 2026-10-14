@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "dense-irrigation-two-plots",
+  "version": "fixture-v1",
+  "name": "田块灌溉-two-plots",
+  "description": "仅洒水机和田块；有限 50 滴水，无补水来源。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "sprinkler": {
+      "id": "sprinkler",
+      "definitionId": "squirter_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "plot": {
+      "id": "plot",
+      "definitionId": "soil_grass_1",
+      "position": {
+        "x": 3,
+        "y": -1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "plot-two": {
+      "id": "plot-two",
+      "definitionId": "soil_grass_1",
+      "position": {
+        "x": 3,
+        "y": 3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "sprinkler",
+    "plot",
+    "plot-two"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

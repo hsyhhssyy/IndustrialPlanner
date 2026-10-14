@@ -350,7 +350,7 @@ function createTickSnapshot(tickNumber: number): RuntimeTickSnapshot {
     routingCursors: {},
     transportComponentDomain: {},
     diagnostics: [],
-    gasDiffusions: [],
+    environments: [],
     warehouseStats: null,
   };
 }

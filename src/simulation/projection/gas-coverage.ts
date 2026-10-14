@@ -1,7 +1,8 @@
+import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationTopology,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
 } from "../contracts";
 
 
@@ -14,9 +15,10 @@ const EMPTY_DEVICE_GAS_COVERAGE: ReadonlyMap<string, ReadonlySet<string>> = new 
 
 export function buildDeviceGasCoverage(
   topology: CompiledSimulationTopology,
-  activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[],
+  activeEnvironments: readonly RuntimeEnvironmentSnapshot[],
+  registryQueries: RegistryQuery | undefined,
 ): ReadonlyMap<string, ReadonlySet<string>> {
-  if (activeGasDiffusions.length === 0) {
+  if (activeEnvironments.length === 0) {
     return EMPTY_DEVICE_GAS_COVERAGE;
   }
 
@@ -32,12 +34,18 @@ export function buildDeviceGasCoverage(
     }
 
     let coveredGasItemIds: Set<string> | null = null;
-    for (const diffusion of activeGasDiffusions) {
-      if (!areGridRectsContaining(diffusion.gridRect, deviceGridRect)) {
+    for (const diffusion of activeEnvironments) {
+      const source = topology.devices[diffusion.sourceDeviceId];
+      const range = source && registryQueries?.findEntityDefinition(source.definitionId)?.ranges?.find(entry => entry.id === diffusion.rangeId);
+      if (!range) throw new Error("Environment range definition is missing.");
+      const covers = range.coverage === "contains" ? areGridRectsContaining(diffusion.gridRect, deviceGridRect)
+        : diffusion.gridRect.x < deviceGridRect.x + deviceGridRect.width && diffusion.gridRect.x + diffusion.gridRect.width > deviceGridRect.x
+          && diffusion.gridRect.y < deviceGridRect.y + deviceGridRect.height && diffusion.gridRect.y + diffusion.gridRect.height > deviceGridRect.y;
+      if (!covers) {
         continue;
       }
       coveredGasItemIds ??= new Set<string>();
-      coveredGasItemIds.add(diffusion.gasItemId);
+      coveredGasItemIds.add(diffusion.itemId);
     }
     if (coveredGasItemIds !== null) {
       coveredGasItemIdsByDeviceId.set(deviceId, coveredGasItemIds);
@@ -57,7 +65,7 @@ export function buildDeviceGasCoverage(
 // Original code:
 // function areGasDiffusionSnapshotsEqual(...) { ... }
 
-function resolveDeviceGridRect(device: CompiledSimulationDevice): RuntimeGasDiffusionSnapshot["gridRect"] | null {
+function resolveDeviceGridRect(device: CompiledSimulationDevice): RuntimeEnvironmentSnapshot["gridRect"] | null {
   if (device.position === null || device.rotation === null || device.footprint === null) {
     return null;
   }

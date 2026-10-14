@@ -152,7 +152,7 @@ export class PlannerPlacement {
   }
 
   placeInEnvironment(node: PlannerNode, diffuser: PlannerNode, rotationOffset: number): boolean {
-    const gas = diffuser.recipe?.gasDiffusionOutput;
+    const gas = diffuser.recipe?.environmentOutput;
     if (gas === undefined) return false;
     const range = resolveGasDiffusionRangeGridRect({ entity: diffuser.entity, definition: diffuser.definition, rangeId: gas.rangeId });
     if (range === null) return false;
@@ -183,7 +183,7 @@ export async function placeProduction(
     .filter(input => !producedItems.has(input.itemId) && itemRules.supply(input.itemId) === "warehouse" && itemLogisticsKind(registry, input.itemId) === "belt")
     .reduce((sum, input) => sum + input.perMinute, 0);
   let warehouseLane = 0;
-  for (const node of [...network.nodes].sort((left, right) => Number(right.recipe?.requiredGasDiffusion !== undefined) - Number(left.recipe?.requiredGasDiffusion !== undefined)
+  for (const node of [...network.nodes].sort((left, right) => Number(right.recipe?.requiredEnvironmentAnyOf?.[0] !== undefined) - Number(left.recipe?.requiredEnvironmentAnyOf?.[0] !== undefined)
     || Number(warehouseRate(right) > 0) - Number(warehouseRate(left) > 0)
     || Number(right.definition.id === "seedcol_1") - Number(left.definition.id === "seedcol_1"))) {
     const rawRate = warehouseRate(node);
@@ -192,7 +192,7 @@ export async function placeProduction(
     if (placement.placed.includes(node)) continue;
     checkBudget();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    const requiredGas = node.recipe?.requiredGasDiffusion;
+    const requiredGas = node.recipe?.requiredEnvironmentAnyOf?.[0];
     if (requiredGas === undefined) {
       const picker = (node.definition.id === "planter_1" || node.definition.id === "planter_1_liquid")
         ? placement.placed.find((entry) => entry.definition.id === "seedcol_1" && entry.outputs.some((output) => node.inputs.some((input) => input.itemId === output.itemId))) : undefined;
@@ -208,14 +208,14 @@ export async function placeProduction(
       placement.placeAnywhere(node, rotation, warehousePosition ?? preferred);
       continue;
     }
-    const supplied = environments.some((diffuser) => diffuser.recipe?.gasDiffusionOutput?.gasItemId === requiredGas
+    const supplied = environments.some((diffuser) => diffuser.recipe?.environmentOutput?.itemId === requiredGas
       && placement.placeInEnvironment(node, diffuser, flowRotation(registry, node, variant) / 90));
     if (supplied) continue;
-    const recipe = environments.find((entry) => entry.recipe?.gasDiffusionOutput?.gasItemId === requiredGas)?.recipe
-      ?? registry.recipeDefinitions.find((entry) => entry.gasDiffusionOutput?.gasItemId === requiredGas);
+    const recipe = environments.find((entry) => entry.recipe?.environmentOutput?.itemId === requiredGas)?.recipe
+      ?? registry.recipeDefinitions.find((entry) => entry.environmentOutput?.itemId === requiredGas);
     if (recipe === undefined) throw new PlannerCandidateError(`气体环境缺少配方：${requiredGas}`);
     const limit = environmentLimits?.get(requiredGas);
-    if (limit !== undefined && environments.filter(entry => entry.recipe?.gasDiffusionOutput?.gasItemId === requiredGas).length >= limit) {
+    if (limit !== undefined && environments.filter(entry => entry.recipe?.environmentOutput?.itemId === requiredGas).length >= limit) {
       throw new PlannerCandidateError(`本轮减少环境设施后暂未找到共用覆盖：${requiredGas}`);
     }
     let sequence = network.nodes.length;
@@ -230,14 +230,14 @@ export async function placeProduction(
 /** 只裁撤其覆盖可由其他设施完整接替的实体；随后由调用方重建供料与物流。 */
 export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNode[] {
   const retained = network.nodes.filter(node => node.purpose === "environment");
-  const consumers = network.nodes.filter(node => node.recipe?.requiredGasDiffusion);
+  const consumers = network.nodes.filter(node => node.recipe?.requiredEnvironmentAnyOf?.[0]);
   const removed: PlannerNode[] = [];
   for (const station of [...retained].reverse()) {
     const alternatives = retained.filter(node => node !== station);
-    const gasItemId = station.recipe!.gasDiffusionOutput!.gasItemId;
-    const covered = consumers.filter(node => node.recipe!.requiredGasDiffusion === gasItemId).every(node => alternatives.some(other => {
-      const gas = other.recipe!.gasDiffusionOutput!;
-      if (gas.gasItemId !== gasItemId) return false;
+    const itemId = station.recipe!.environmentOutput!.itemId;
+    const covered = consumers.filter(node => node.recipe!.requiredEnvironmentAnyOf?.[0] === itemId).every(node => alternatives.some(other => {
+      const gas = other.recipe!.environmentOutput!;
+      if (gas.itemId !== itemId) return false;
       const range = resolveGasDiffusionRangeGridRect({ entity: other.entity, definition: other.definition, rangeId: gas.rangeId });
       return range !== null && areGridRectsContaining(range, resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
     }));
@@ -247,7 +247,7 @@ export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNo
 }
 
 function placeEnvironmentStation(node: PlannerNode, placement: PlannerPlacement): void {
-  const localRect = findEntityRange(node.definition, node.recipe!.gasDiffusionOutput!.rangeId).localRect;
+  const localRect = findEntityRange(node.definition, node.recipe!.environmentOutput!.rangeId).localRect;
   const range = Math.max(localRect.width, localRect.height);
   const inset = Math.floor((range - node.definition.footprint.width) / 2);
   const bounds = placement.bounds();

@@ -85,6 +85,19 @@ function isRepositorySourcePayload(relative) {
 
 async function verifyOriginals(batch, plan) {
   const receipt = await json(path.join(batch, 'source-receipt.json'));
+  // AI-REMOVED 2026-10-14:
+  // Reason: 原件完整性校验不拥有 Registry，且保留类别的计划不包含 statics。
+  // Trigger: building-assets-site 两个既有用例报 undefined.filter。
+  // Evidence: verifyOriginals 被 retain/defer 与发布入口共享。
+  // Replacement: publishWebsiteBatch / validateWebsiteBatch 获取 Registry 后校验状态外观。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  //   for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
+  //     const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
+  //     if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
+  //       || visual.spriteId !== definition.spriteId + "--" + visual.stateVisualKey) throw new Error("State visual does not match Registry: " + visual.spriteId);
+  //   }
   const root = sourceRootFor(batch, plan);
   const indexBytes = await readFile(path.join(root, 'integrity.json'));
   if (hash(indexBytes) !== receipt.indexSha256 || plan.sourceSite.indexSha256 !== receipt.indexSha256
@@ -120,6 +133,11 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   }
   await verifyOriginals(batch, plan);
   const definitions = await registry();
+  for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
+    const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
+    if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
+      || visual.spriteId !== definition.spriteId + "--" + visual.stateVisualKey) throw new Error("State visual does not match Registry: " + visual.spriteId);
+  }
   for (const entry of plan.entries) {
     const definition = definitions.entityDefinitions.find((candidate) => candidate.id === entry.entityId);
     if (definition?.spriteId !== entry.spriteId || Boolean(definition.spriteAnimation) !== entry.animated) {
@@ -359,6 +377,11 @@ export async function validateWebsiteBatch(batch) {
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') });
   const definitions = await registry();
+  for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
+    const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
+    if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
+      || visual.spriteId !== definition.spriteId + "--" + visual.stateVisualKey) throw new Error("State visual does not match Registry: " + visual.spriteId);
+  }
   let registryFluidColors = null;
   if (plan.logistics) {
     if (!plan.registryFluidColors || await fileHash(path.join(projectRoot, 'src/registry/item-definition.ts')) !== plan.registryFluidColors.sourceSha256) {
@@ -373,6 +396,9 @@ export async function validateWebsiteBatch(batch) {
   for (const { outputDirectory: root, resolution } of targets) {
     const aliases = await fileHash(path.join(root, 'body-aliases.json'))
       ? await json(path.join(root, 'body-aliases.json')) : {};
+    for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
+      for (const folder of ['sprites', 'sprite-masks']) await verifyImage(root, folder + '/' + visual.spriteId + '.webp', visual.width * resolution, visual.height * resolution);
+    }
     for (const selected of plan.entries) {
       const entry = collection.entries.find((candidate) => candidate.entityId === selected.entityId);
       const { width, height } = entry.sourceMetadata.spatial.framePixels;
@@ -458,7 +484,7 @@ export async function validateWebsiteBatch(batch) {
       continue;
     }
     const target = [...targets].reverse().find((item) => within(stage, relative).startsWith(`${item.outputDirectory}/`));
-    const spriteId = plan.entries.find((entry) => file.includes(`/${entry.spriteId}.`) || file.includes(`/${entry.spriteId}/`));
+    const spriteId = plan.entries.find((entry) => file.includes(`/${entry.spriteId}.`) || file.includes(`/${entry.spriteId}--`) || file.includes(`/${entry.spriteId}/`));
     const sourcePrefix = spriteId ? `buildings/${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
     products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
   }

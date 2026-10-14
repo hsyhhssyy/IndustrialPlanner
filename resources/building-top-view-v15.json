@@ -18223,13 +18223,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_grass_1/top/package.json",
-      "packageSha256": "fd223719f3834d6c3b0df1946b55d451695f2ca90ce3e8e57cc2d010ea485a50",
+      "packageSha256": "85ffd68e8815af3857d3f8fb6f4ac9fc4dcff60ffd45455c6561bf3f6ee5fa6b",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -18351,7 +18351,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_grass_1",
           "tableBuildingId": "soil_grass_1",
@@ -18383,10 +18383,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -18400,7 +18404,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -18439,7 +18444,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -18627,6 +18632,46 @@
               "cropModel": "crop_grass_1_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_2_0",
+              "cropModel": "crop_grass_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_2_1",
+              "cropModel": "crop_grass_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -18639,7 +18684,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -18653,10 +18698,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -18694,13 +18749,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_grass_2/top/package.json",
-      "packageSha256": "d136bf527436b052945031ebcd2a9ba4f46c76af4b8f480506b4810cbb84ba44",
+      "packageSha256": "64b4e8f3d14118ba65770fe96d716e87db8df105dc91bfad3563d5d945d05bea",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -18822,7 +18877,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_grass_2",
           "tableBuildingId": "soil_grass_2",
@@ -18854,10 +18909,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -18871,7 +18930,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -18910,7 +18970,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -19098,6 +19158,46 @@
               "cropModel": "crop_grass_2_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_2_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_2_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_2_0",
+              "cropModel": "crop_grass_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_2_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_2_1",
+              "cropModel": "crop_grass_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -19110,7 +19210,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -19124,10 +19224,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -19165,13 +19275,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_moss_1/top/package.json",
-      "packageSha256": "14aa84d242d17ad06a96a45d82e0b1442b118b136837b3a6c485e384cd0b2f7a",
+      "packageSha256": "66db60f784c287780f84addaf9ee80ce950ab4b9284b8507035abd4907303753",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -19293,7 +19403,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_moss_1",
           "tableBuildingId": "soil_moss_1",
@@ -19325,10 +19435,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -19342,7 +19456,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -19381,7 +19496,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -19526,6 +19641,46 @@
               "cropModel": "crop_moss_1_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_moss_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_moss_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -19538,7 +19693,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -19552,10 +19707,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -19593,13 +19758,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_moss_2/top/package.json",
-      "packageSha256": "05eec1f3b962e484627862bbfec54886edb10ec825b0f2bf8d560ffc765868ca",
+      "packageSha256": "2a6171a069374cf1da7cb084057b4395a1fc0acb9a88a42a80612feb0dbb55e4",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -19721,7 +19886,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_moss_2",
           "tableBuildingId": "soil_moss_2",
@@ -19753,10 +19918,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -19770,7 +19939,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -19809,7 +19979,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -19954,6 +20124,46 @@
               "cropModel": "crop_moss_2_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_moss_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_moss_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -19966,7 +20176,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -19980,10 +20190,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -20021,13 +20241,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_moss_3/top/package.json",
-      "packageSha256": "f7eabc63636f93e64dc780b53057c0fffe9c4adf8d1aacc342e19861850a20a3",
+      "packageSha256": "a0414f1484a45b93cb9c97dba353ed446ad09b481f81ce4332798ba29a5f8272",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -20149,7 +20369,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_moss_3",
           "tableBuildingId": "soil_moss_3",
@@ -20181,10 +20401,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -20198,7 +20422,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -20237,7 +20462,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -20382,6 +20607,46 @@
               "cropModel": "crop_moss_3_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_moss_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_moss_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -20394,7 +20659,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -20408,10 +20673,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -20449,13 +20724,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_bbflower_1/top/package.json",
-      "packageSha256": "68b8cbe264ea3bade387464b8b6d31412cd3a64fd915a48cf9d1b6f23afec852",
+      "packageSha256": "c9bc08caa1f4b56b7e64b304d5e01245a52d558f853adf89c86b15656383831f",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -20577,7 +20852,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_bbflower_1",
           "tableBuildingId": "soil_bbflower_1",
@@ -20609,10 +20884,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -20626,7 +20905,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -20665,7 +20945,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -20810,6 +21090,46 @@
               "cropModel": "crop_bbflower_1_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_1_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_0",
+              "tableGroundModel": "soil_1_0",
+              "cropModel": "crop_bbflower_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_sprouts_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_2_1",
+              "tableGroundModel": "soil_1_1",
+              "cropModel": "crop_bbflower_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -20822,7 +21142,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -20836,10 +21156,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -20877,13 +21207,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_sp_1/top/package.json",
-      "packageSha256": "64c9f66de13d2b374cbbf4b6f0e794c2e6f7751332c19da4fcf03c95ad613a45",
+      "packageSha256": "19806a21d87b65673f2f1cf8e26d725f5ca97611367e0898cfc51dc2cd851097",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -21005,7 +21335,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_sp_1",
           "tableBuildingId": "soil_sp_1",
@@ -21037,10 +21367,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -21054,7 +21388,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -21093,7 +21428,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -21238,6 +21573,46 @@
               "cropModel": "crop_sp_1_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_3_0",
+              "cropModel": "crop_sp_sprouts_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_3_0",
+              "cropModel": "crop_sp_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_3_1",
+              "cropModel": "crop_sp_sprouts_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_3_1",
+              "cropModel": "crop_sp_1_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -21250,7 +21625,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -21264,10 +21639,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -21305,13 +21690,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_sp_2/top/package.json",
-      "packageSha256": "9aa4e2c67ab77f707c63eef3ff7d1a6d54e451bb983f52498283daa545728259",
+      "packageSha256": "ac0a4366e00c285f098d8ad74e47574f270cefb98405acb1b14a21509f389bb9",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -21433,7 +21818,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_sp_2",
           "tableBuildingId": "soil_sp_2",
@@ -21465,10 +21850,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -21482,7 +21871,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -21521,7 +21911,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -21666,6 +22056,46 @@
               "cropModel": "crop_sp_2_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_3_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_3_0",
+              "cropModel": "crop_sp_sprouts_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_3_0",
+              "cropModel": "crop_sp_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_3_1",
+              "cropModel": "crop_sp_sprouts_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_3_1",
+              "cropModel": "crop_sp_2_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -21678,7 +22108,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -21692,10 +22122,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -21733,13 +22173,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_sp_3/top/package.json",
-      "packageSha256": "76b59d1afdf20fe5b82bb65ca0c7eb852192391bf7ae47d46b13633b7bdfe868",
+      "packageSha256": "0018e90db3f991efe003974abda1cd51452533cc6a043328845016d858dd9ca6",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -21861,7 +22301,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_sp_3",
           "tableBuildingId": "soil_sp_3",
@@ -21893,10 +22333,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -21910,7 +22354,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -21949,7 +22394,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -22180,6 +22625,46 @@
               "cropModel": "crop_sp_3_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_4_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_4_0",
+              "cropModel": "crop_sp_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_4_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_4_1",
+              "cropModel": "crop_sp_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -22192,7 +22677,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -22206,10 +22691,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -22247,13 +22742,13 @@
         "sourceArchiveSha256": null
       },
       "package": "buildings/soil_sp_4/top/package.json",
-      "packageSha256": "14cdbe0695d486c8160bf55e22d647b4e232a8be4599d6aeab45152958e5a4cb",
+      "packageSha256": "8b610757d682de7914a8158dd018ba99526bc232a534cb8442a05c32f7ed127c",
       "sourceMetadata": {
         "sourceSite": {
           "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-          "releaseId": "v1.5-20260924-20261012-174534-cst",
+          "releaseId": "v1.5-20260924-20261013-162431-cst",
           "sourceVersion": "v1.5-20260924",
-          "indexSha256": "2fe3ea4116bb10009117b9ef0ca257d7308ca28188f7a530ded00ce2faf95bc3",
+          "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
           "sourceResolution": 0.5
         },
         "spatial": {
@@ -22375,7 +22870,7 @@
         },
         "package": {
           "schemaVersion": 1,
-          "taskId": "20261012-soil-formal-release",
+          "taskId": "20261013-soil-water-release",
           "version": "v1.5-20260926-gasscope",
           "building": "soil_sp_4",
           "tableBuildingId": "soil_sp_4",
@@ -22407,10 +22902,14 @@
             "soil_0_mature",
             "soil_1_empty",
             "soil_1_seedling",
-            "soil_1_mature"
+            "soil_1_mature",
+            "soil_0_seedling_water",
+            "soil_0_mature_water",
+            "soil_1_seedling_water",
+            "soil_1_mature_water"
           ],
-          "animationCount": 6,
-          "webpPageCount": 6,
+          "animationCount": 10,
+          "webpPageCount": 10,
           "webpPageLimit": [
             4096,
             4096
@@ -22424,7 +22923,8 @@
           "materialLimitations": [
             "Foliage wind, growth scaling and runtime stage switching are unresolved; these are source model form snapshots",
             "Blender PBR translation of source materials; game terrain blending and foliage lighting are approximations",
-            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states"
+            "Rounded outline and planted basin choice are explicit appearance trials, not validated in-game states",
+            "Standing water uses a selected shallow-water reconstruction; native gameplay binding remains unresolved"
           ],
           "edgeOverflowPolicy": {
             "mode": "subtract-before-whole-cell-ceiling",
@@ -22463,7 +22963,7 @@
             "minimumCanvasConstraint": null,
             "evaluatedOn": "source PNG union alpha before WebP encoding"
           },
-          "beautyTaskId": "20261012-soil-rounded-trial",
+          "beautyTaskId": "20261013-soil-water-release",
           "portEffectsProfile": "top-sprite-height-v1",
           "portMetadata": "ports.json",
           "occlusionMetadata": "occlusion/occlusion.json",
@@ -22694,6 +23194,46 @@
               "cropModel": "crop_sp_4_postmodel",
               "stageBinding": "unresolved",
               "tableGroundModel": "soil_4_1"
+            },
+            {
+              "name": "soil_0_seedling_water",
+              "label": "形态 0 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_4_0",
+              "cropModel": "crop_sp_sprouts_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_seedling"
+            },
+            {
+              "name": "soil_0_mature_water",
+              "label": "形态 0 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_0",
+              "tableGroundModel": "soil_4_0",
+              "cropModel": "crop_sp_4_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_0_mature"
+            },
+            {
+              "name": "soil_1_seedling_water",
+              "label": "形态 1 · 幼苗模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_4_1",
+              "cropModel": "crop_sp_sprouts_3_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_seedling"
+            },
+            {
+              "name": "soil_1_mature_water",
+              "label": "形态 1 · 成株模型 · 积水（重建）",
+              "groundModel": "soil_4_1",
+              "tableGroundModel": "soil_4_1",
+              "cropModel": "crop_sp_4_postmodel",
+              "stageBinding": "unresolved",
+              "animationType": "standing-water",
+              "sourceModelForm": "soil_1_mature"
             }
           ],
           "stageBinding": {
@@ -22706,7 +23246,7 @@
               "foliage wind driver"
             ]
           },
-          "animationStatus": "source-model-form-snapshots; runtime stage binding and wind unresolved",
+          "animationStatus": "source model form snapshots plus selected standing-water loops; native stage and foliage wind unresolved",
           "assetKind": "factory-soil-building",
           "variantDisplayName": "圆角凹面",
           "appearanceApproximation": {
@@ -22720,10 +23260,20 @@
               "soil_3": "soil_4"
             },
             "cropPlacement": "original table-selected prefab mount transforms unchanged",
-            "waterPlayback": "unresolved; no added water effect",
+            "waterPlayback": "baked standing-water reconstruction; native field binding unresolved",
             "profile": "rounded-basin-v1"
           },
           "preferredPreviewVariant": "top",
+          "preferredPreviewClip": "soil_1_mature_water",
+          "waterAnimation": {
+            "type": "standing-water",
+            "status": "user-selected-reconstruction",
+            "nativeStageBinding": "unresolved",
+            "profile": "shallow-standing-water-v2",
+            "loopDurationMs": 1000,
+            "fps": 30,
+            "sourceFrameCount": 30
+          },
           "containsIndividualFrames": false,
           "individualFramesIncludedInZip": false,
           "textureProfile": {
@@ -23136,9 +23686,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20261013-020500-cst",
+    "releaseId": "v1.5-20260924-20261013-162431-cst",
     "sourceVersion": "v1.5-20260924",
-    "indexSha256": "90b289f32a731f2fd09a5306c2bd0131a1b88164e570798ea7248ebabf6da282",
+    "indexSha256": "285f2cc1c20e580a4de6578f6b1ea325a2c5727858574ee661b4341e5e3803fd",
     "sourceResolution": 0.5
   }
 }

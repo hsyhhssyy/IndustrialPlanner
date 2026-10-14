@@ -41,10 +41,10 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
       ? [channel.configuredRecipeId] : channel.consumption ? [...graph.possibleRecipes.get(`${id}/${channel.channelId}`) ?? []] : [])
       .map(id => registry.queries.findRecipeDefinition(id)!)
       .filter(recipe => recipe && !["transport", "warehouse"].includes(recipe.recipeType));
-    const recipe = recipes.find(recipe => recipe.gasDiffusionOutput) ?? recipes.find(recipe => !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) ?? null;
+    const recipe = recipes.find(recipe => recipe.environmentOutput) ?? recipes.find(recipe => !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) ?? null;
     const boundary = boundaries.get(id);
     const purpose: PlannerNode["purpose"] = boundary ? boundary.direction === "input" ? "supply" : "product"
-      : recipe?.gasDiffusionOutput ? "environment" : registry.queries.isGeneralLogisticsDevice(definition.id) ? "logistics"
+      : recipe?.environmentOutput ? "environment" : registry.queries.isGeneralLogisticsDevice(definition.id) ? "logistics"
         : findPowerRange(definition) ? "power" : "production";
     const port = boundary?.kind === "port" ? getPlannerPorts(registry, entity, definition, boundary.direction)
       .find(port => definition.portGroups[port.groupIndex]!.id === boundary.portGroupId

@@ -549,7 +549,7 @@ export function SelectionInspectorSlot({
       }
 
       const needsGasEnvironment = appHost.workspace.registry.recipeDefinitions.some((recipe) =>
-        recipe.machineId === selectedDefinition.id && recipe.requiredGasDiffusion,
+        recipe.machineId === selectedDefinition.id && recipe.requiredEnvironmentAnyOf,
       );
       const runtimeSample: InspectorRuntimeSample | null = showSimulationRuntimeInspector && simulation !== null
         ? {

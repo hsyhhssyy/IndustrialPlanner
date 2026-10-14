@@ -4,6 +4,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 
 import { advanceDevices } from "@/simulation/legacy/stage-1-advance-devices";
 import { settleRecipes } from "@/simulation/legacy/stage-5-settle-recipes";
+import { startRecipes } from "@/simulation/legacy/stage-7-start-recipes";
 import {
   createRecipeStatsState,
   createSimulationMutableRuntimeState,
@@ -437,14 +438,8 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
 
-    settleRecipes(
-      registry,
-      topology,
-      state,
-      "infinite",
-      Infinity,
-      topology.totalPowerDemand,
-    );
+    settleRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, "infinite", Infinity, topology.totalPowerDemand);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -475,14 +470,8 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       state: "waiting-output",
     });
 
-    settleRecipes(
-      registry,
-      topology,
-      state,
-      "infinite",
-      Infinity,
-      topology.totalPowerDemand,
-    );
+    settleRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, "infinite", Infinity, topology.totalPowerDemand);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -886,8 +875,8 @@ function createRunningRecipe(
     outputs: [{ itemId: "item_test", amount: outputAmount }],
     ingredientNodeIds: [],
     productNodeIds: ["node:out"],
-    requiredGasDiffusion: null,
-    gasDiffusionOutput: null,
+    requiredEnvironmentAnyOf: null,
+    environmentOutput: null,
   };
 
   return {

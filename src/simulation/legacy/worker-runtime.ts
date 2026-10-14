@@ -1,3 +1,4 @@
+import { processDeviceStates } from "./stage-6-process-device-states";
 import type {
   CompiledSimulationSlot,
   CompiledSimulationTopology,
@@ -37,6 +38,7 @@ import { buildSolveGraph } from "./stage-2-build-solve-graph";
 import { solveTransferGraph, type SolveTransferGraphPerf } from "./stage-3-layered-reverse-solve";
 import { rotateRoutingCursors } from "./stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./stage-5-settle-recipes";
+import { startRecipes } from "./stage-7-start-recipes";
 import { applyBlockageAutoClearance } from "./blockage-auto-clearance";
 import {
   maintainTransportComponentDomains,
@@ -937,7 +939,7 @@ export class SimulationWorkerRuntime {
     state.transient.isPowerOutage = isPowerOutage;
     state.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(this.topology, state);
-    state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.registry, this.topology, state);
+    state.transient.activeEnvironments = computeActiveGasDiffusions(this.registry, this.topology, state);
     return createTickSnapshot(
       this.topology,
       state,
@@ -1784,15 +1786,9 @@ export class SimulationWorkerRuntime {
       this.runtimeState,
       this.regionalGate.createStage3Options().excludedEdgeIds,
     );
-    settleRecipes(
-      this.registry,
-      this.topology,
-      this.runtimeState,
-      this.powerMode,
-      this.regionalGateCurrentPowerGeneration,
-      this.effectiveTotalPowerDemand,
-      this.regionalGate.writeContext,
-    );
+    settleRecipes(this.registry, this.topology, this.runtimeState, this.regionalGate.writeContext);
+    processDeviceStates(this.registry, this.topology, this.runtimeState);
+    startRecipes(this.registry, this.topology, this.runtimeState, this.powerMode, this.regionalGateCurrentPowerGeneration, this.effectiveTotalPowerDemand);
     applyBlockageAutoClearance(this.topology, this.runtimeState);
     maintainTransportComponentDomains(this.topology, this.runtimeState);
     this.runtimeState.lastAdvancedTickNumber = tickNumber;
@@ -1995,7 +1991,7 @@ export class SimulationWorkerRuntime {
     state.transient.reservedAmountByStorageSlotId = null;
     state.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(topology, state);
-    state.transient.activeGasDiffusions = computeActiveGasDiffusions(
+    state.transient.activeEnvironments = computeActiveGasDiffusions(
       this.registry,
       topology,
       state,
@@ -2252,7 +2248,7 @@ export class SimulationWorkerRuntime {
       this.runtimeState.transient.reservedAmountByStorageSlotId = null;
       this.runtimeState.transient.activeConsumptionDeviceIds =
         computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+      this.runtimeState.transient.activeEnvironments = computeActiveGasDiffusions(
         this.registry,
         this.topology,
         this.runtimeState,
@@ -2352,14 +2348,9 @@ export class SimulationWorkerRuntime {
       if (this.perfEnabled) { perfTiming!.stages["rotateRoutingCursors"] = performance.now() - t3; }
 
       const t4 = this.perfEnabled ? performance.now() : 0;
-      settleRecipes(
-        this.registry,
-        this.topology,
-        this.runtimeState,
-        this.powerMode,
-        effectiveGeneration,
-        this.effectiveTotalPowerDemand,
-      );
+      settleRecipes(this.registry, this.topology, this.runtimeState);
+      processDeviceStates(this.registry, this.topology, this.runtimeState);
+      startRecipes(this.registry, this.topology, this.runtimeState, this.powerMode, effectiveGeneration, this.effectiveTotalPowerDemand);
       applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
         perfTiming!.stages["settleRecipes"] = performance.now() - t4;
@@ -2423,7 +2414,7 @@ export class SimulationWorkerRuntime {
     this.runtimeState.transient.isPowerOutage = isPowerOutageForSnapshot;
     this.runtimeState.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-    this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+    this.runtimeState.transient.activeEnvironments = computeActiveGasDiffusions(
       this.registry,
       this.topology,
       this.runtimeState,

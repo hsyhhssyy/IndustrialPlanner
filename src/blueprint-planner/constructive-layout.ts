@@ -161,11 +161,11 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
   }
   // 初排不能丢失环境约束：只有完整覆盖仍成立，才替换已经建立覆盖关系的工序摆位。
   for (const [index, node] of network.nodes.entries()) {
-    if (!node.recipe?.requiredGasDiffusion) continue;
+    if (!node.recipe?.requiredEnvironmentAnyOf?.[0]) continue;
     const covered = network.nodes.some((environment, at) => {
-      if (environment.recipe?.gasDiffusionOutput?.gasItemId !== node.recipe!.requiredGasDiffusion) return false;
+      if (environment.recipe?.environmentOutput?.itemId !== node.recipe!.requiredEnvironmentAnyOf?.[0]) return false;
       const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: poses[at]!, rotation: poses[at]!.rotation },
-        definition: environment.definition, rangeId: environment.recipe!.gasDiffusionOutput!.rangeId });
+        definition: environment.definition, rangeId: environment.recipe!.environmentOutput!.rangeId });
       return range !== null && areGridRectsContaining(range, rect(index));
     });
     if (!covered) return null;

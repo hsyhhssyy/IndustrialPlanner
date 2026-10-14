@@ -4,7 +4,7 @@ import type {
   RuntimeNodeSnapshot,
   RuntimeTransferSnapshot,
   RuntimeDiagnosticSnapshot,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
   WarehouseStats,
 } from "@/simulation/contracts";
 
@@ -27,7 +27,7 @@ export interface SimulationPresentationProjection {
   getTransportComponentItemType(componentId: string): string | null;
   getTransfers(): readonly RuntimeTransferSnapshot[];
   getDiagnostics(): readonly RuntimeDiagnosticSnapshot[];
-  getGasDiffusions(): readonly RuntimeGasDiffusionSnapshot[];
+  getGasDiffusions(): readonly RuntimeEnvironmentSnapshot[];
   getWarehouseStats(): WarehouseStats | null;
 }
 

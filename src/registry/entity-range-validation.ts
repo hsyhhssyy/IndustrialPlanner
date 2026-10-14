@@ -23,10 +23,10 @@ export function validateEntityRanges(
     if (powerCount > 1) throw new Error(`Multiple power ranges: ${definition.id}`);
   }
   for (const recipe of recipes) {
-    if (!recipe.gasDiffusionOutput) continue;
-    const range = byId.get(recipe.machineId)?.ranges?.find((entry) => entry.id === recipe.gasDiffusionOutput!.rangeId);
-    if (!range || range.interactionKind !== "gas" || range.coverage !== "contains") {
-      throw new Error(`Invalid gas range reference: ${recipe.id}:${recipe.gasDiffusionOutput.rangeId}`);
+    if (!recipe.environmentOutput) continue;
+    const range = byId.get(recipe.machineId)?.ranges?.find((entry) => entry.id === recipe.environmentOutput!.rangeId);
+    if (!range || (range.interactionKind !== "gas" && range.interactionKind !== "irrigation")) {
+      throw new Error(`Invalid gas range reference: ${recipe.id}:${recipe.environmentOutput.rangeId}`);
     }
   }
 }

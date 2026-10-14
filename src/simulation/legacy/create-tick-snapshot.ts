@@ -40,7 +40,7 @@ export function createTickSnapshot(
     routingCursors: { ...state.persistent.routingCursors },
     transportComponentDomain: { ...state.persistent.transportComponentDomain },
     diagnostics: state.transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
-    gasDiffusions: state.transient.activeGasDiffusions.map((diffusion) => ({
+    environments: state.transient.activeEnvironments.map((diffusion) => ({
       ...diffusion,
       gridRect: { ...diffusion.gridRect },
     })),
@@ -160,6 +160,7 @@ function createDeviceSnapshots(
     devices[deviceId] = {
       deviceId,
       block: runtimeDevice.block,
+      ...(runtimeDevice.deviceState ? { deviceState: { ...runtimeDevice.deviceState } } : {}),
       recipe: firstRecipe === null
         ? null
         : {
@@ -223,7 +224,7 @@ function isLegacyRecipeProgressing(options: {
     topology: options.topology,
     state: options.state,
     device,
-    requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+    requiredEnvironmentAnyOf: recipe.plan.requiredEnvironmentAnyOf,
   });
 }
 

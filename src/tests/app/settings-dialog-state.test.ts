@@ -10,6 +10,24 @@ import {
 import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
+  it.each([false, true])("移除 EDA 实验性设置，恢复旧开关值 %s 后不再持久化", (legacyEnabled) => {
+    localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
+      selectedGroupId: "experimental",
+      values: {
+        "other-experimental-features": true,
+        "experimental-blueprint-planner": legacyEnabled,
+      },
+    }));
+    const controller = new WorkbenchSettingsDialogController();
+    expect(WORKBENCH_SETTINGS_GROUPS.flatMap(group => group.items).map(setting => setting.id))
+      .not.toContain("experimental-blueprint-planner");
+    expect(controller.isSettingEditable("experimental-blueprint-planner")).toBe(false);
+    controller.updateSwitchValue("other-experimental-features", false);
+    const saved = JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)!);
+    expect(saved.values).not.toHaveProperty("experimental-blueprint-planner");
+    expect(new WorkbenchSettingsDialogController().isSettingEditable("experimental-blueprint-planner")).toBe(false);
+  });
+
   it("defaults wheel zoom inversion to off and persists the user's choice", () => {
     const controller = new WorkbenchSettingsDialogController();
     expect(controller.getValue("game-invert-wheel-zoom")).toBe(false);
@@ -219,7 +237,16 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-disable-cargo-entry-animation": false,
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
-        "experimental-blueprint-planner": false,
+        // AI-REMOVED 2026-10-14:
+        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+        // Replacement: 设置快照不再包含已移除的 EDA 开关。
+        // Risk: Low；规划任务与业务可用性校验保持原行为。
+        // Human Review: Required
+        //
+        // Original code:
+        //         "experimental-blueprint-planner": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
@@ -736,7 +763,16 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-disable-cargo-entry-animation": false,
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
-        "experimental-blueprint-planner": false,
+        // AI-REMOVED 2026-10-14:
+        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+        // Replacement: 设置快照不再包含已移除的 EDA 开关。
+        // Risk: Low；规划任务与业务可用性校验保持原行为。
+        // Human Review: Required
+        //
+        // Original code:
+        //         "experimental-blueprint-planner": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",

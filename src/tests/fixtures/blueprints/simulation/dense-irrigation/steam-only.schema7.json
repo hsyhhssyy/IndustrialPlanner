@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "dense-irrigation-steam-only",
+  "version": "fixture-v2",
+  "name": "田块灌溉-steam-only",
+  "description": "气体扩散机持续供应水蒸气，验证独立浇水及无需求时继续消耗。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "plot": {
+      "id": "plot",
+      "definitionId": "soil_grass_1",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "steam": {
+      "id": "steam",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 0,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_water",
+        "storageSlotGroups[0].slots[0].initialCount": 5,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "steam",
+    "plot"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -161,14 +161,33 @@ export const LeftToolbar = observer(function LeftToolbar({
         })}
       </div>
       <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
-        {appHost.blueprintPlannerDialog.enabled ? <button
+        {/*
+        AI-REMOVED 2026-10-14:
+        Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+        Trigger: 用户要求 EDA 默认可用且不再需要开启。
+        Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+        Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+        Risk: Low；规划任务与业务可用性校验保持原行为。
+        Human Review: Required
+
+        Original code:
+                {appHost.blueprintPlannerDialog.enabled ? <button
+                  type="button" aria-label={plannerLabel} title={plannerBusy ? plannerLabel : t("eda.title")}
+                  aria-pressed={plannerVisible}
+                  className={cm(styles, `rail-button rail-button-utility${plannerVisible ? " is-active" : ""}${plannerIndicator ? " eda-task-indicator" : ""}`)}
+                  onClick={() => appHost.blueprintPlannerDialog.open()}>
+                  <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="toolbox" /></span>
+                  <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
+                </button> : null}
+        */}
+        <button
           type="button" aria-label={plannerLabel} title={plannerBusy ? plannerLabel : t("eda.title")}
           aria-pressed={plannerVisible}
           className={cm(styles, `rail-button rail-button-utility${plannerVisible ? " is-active" : ""}${plannerIndicator ? " eda-task-indicator" : ""}`)}
           onClick={() => appHost.blueprintPlannerDialog.open()}>
           <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="toolbox" /></span>
           <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
-        </button> : null}
+        </button>
         {utilityToolbarItems.map((item) => {
           const label = t(item.labelKey);
           const isDebugLogButton = item.id === "utility-debug-log";

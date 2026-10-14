@@ -744,10 +744,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
         }),
       },
-      "experimental-blueprint-planner": {
-        readValue: () => appHost.blueprintPlannerDialog.enabled,
-        writeValue: (value) => { if (typeof value === "boolean") appHost.blueprintPlannerDialog.setEnabled(value); },
-      },
+      // AI-REMOVED 2026-10-14:
+      // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+      // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+      // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+      // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+      // Risk: Low；规划任务与业务可用性校验保持原行为。
+      // Human Review: Required
+      //
+      // Original code:
+      //       "experimental-blueprint-planner": {
+      //         readValue: () => appHost.blueprintPlannerDialog.enabled,
+      //         writeValue: (value) => { if (typeof value === "boolean") appHost.blueprintPlannerDialog.setEnabled(value); },
+      //       },
+
       "experimental-regional-multi-base": {
         readValue: () => regionalSimulationUiState.experimentalEnabled,
         writeValue: action((value) => {

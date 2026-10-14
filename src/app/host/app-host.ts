@@ -177,7 +177,7 @@ export function createAppHost(
   const gestureAdapter = createGestureAdapter(host);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
-  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner, embedded ? "memory" : "browser");
+  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner);
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],

@@ -475,15 +475,15 @@ import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState, resolveRangePresentation } from "@/renderer/ranges";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
-import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
+import type { SimulationEnvironmentRangeReadModel } from "@/domain/simulation/types/simulation-types";
 
 const registry = createRegistryContract();
 const definitions = new Map(registry.entityDefinitions.map((definition) => [definition.id, definition]));
 const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/gas-interaction-visual-state/scene-02-variant-1.schema7.json"));
 const ranges = collectRangeInstances(entities, definitions);
-const active: SimulationGasDiffusionRangeReadModel = {
+const active: SimulationEnvironmentRangeReadModel = {
   sourceDeviceId: "device:vaporizer-a", rangeId: "gas", rotation: 0,
-  gasItemId: "item_gas_inert", gridRect: { x: -5, y: -5, width: 13, height: 13 },
+  itemId: "item_gas_inert", gridRect: { x: -5, y: -5, width: 13, height: 13 },
 };
 function presentation(options: { active?: boolean; ready?: boolean; supportsAnimation?: boolean; batch?: boolean } = {}) {
   return resolveRangePresentation({

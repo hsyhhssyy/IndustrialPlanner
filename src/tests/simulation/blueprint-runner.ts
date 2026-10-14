@@ -392,6 +392,7 @@ function createTickReport(options: {
     devices[deviceId] = {
       slotItems: status.slotItems.map((slotItem) => ({ ...slotItem })),
       channelRecipes: { ...status.channelRecipes },
+      ...(status.deviceState === undefined ? {} : { deviceState: { ...status.deviceState } }),
       admissionCounters: Object.fromEntries(
         Object.entries(status.admissionCounters ?? {}).map(([key, counter]) => [
           key,

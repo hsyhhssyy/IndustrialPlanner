@@ -97,18 +97,19 @@ export function resolveDeviceLabelIconTextureKey(
 export function resolveDeviceBodyPresentation(
   definition: EntityDefinition,
   app: AppContract | null,
-  options: { forceBlueprint: boolean; allowAnimation: boolean },
+  options: { forceBlueprint: boolean; allowAnimation: boolean; visualKey?: string | null },
 ) {
   const blueprint = options.forceBlueprint || readSimplifiedDeviceIconPreference(app)
+  const stateSpriteId = options.visualKey ? `${definition.spriteId}--${options.visualKey}` : definition.spriteId
   return {
     blueprint,
     spriteOffset: blueprint ? definition.spriteOffset?.blueprint : definition.spriteOffset?.topView,
     bodyTextureKey: blueprint
       ? `${BLUEPRINT_SPRITE_PREFIX}${definition.spriteId}`
-      : `${DEVICE_SPRITE_PREFIX}${definition.spriteId}`,
+      : `${DEVICE_SPRITE_PREFIX}${stateSpriteId}`,
     maskTextureKey: blueprint
       ? `${BLUEPRINT_MASK_PREFIX}${definition.spriteId}`
-      : `${DEVICE_MASK_PREFIX}${definition.spriteId}`,
+      : `${DEVICE_MASK_PREFIX}${stateSpriteId}`,
     animation: !blueprint && options.allowAnimation && app?.state.settings.gamePlayDeviceAnimations
       ? definition.spriteAnimation ?? null
       : null,

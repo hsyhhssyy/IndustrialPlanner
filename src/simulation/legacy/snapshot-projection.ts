@@ -3,7 +3,7 @@ import type {
   RuntimeDeviceSnapshot,
   RuntimeNodeSnapshot,
   RuntimeTransferSnapshot,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
   WarehouseStats,
 } from "@/simulation/contracts";
 import type { SimulationPresentationProjection } from "@/simulation/projection";
@@ -79,8 +79,8 @@ export class LegacySnapshotPresentationProjection implements SimulationPresentat
     return this.readSnapshot()?.diagnostics ?? [];
   }
 
-  public getGasDiffusions(): readonly RuntimeGasDiffusionSnapshot[] {
-    return this.readSnapshot()?.gasDiffusions ?? [];
+  public getGasDiffusions(): readonly RuntimeEnvironmentSnapshot[] {
+    return this.readSnapshot()?.environments ?? [];
   }
 
   public getWarehouseStats(): WarehouseStats | null {

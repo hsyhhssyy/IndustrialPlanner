@@ -579,6 +579,18 @@ def prepare_metadata(batch):
             statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"], "phase": phase,
                             "width": width, "height": height, "physicalWidth": physical_width,
                             "physicalHeight": physical_height, "sourceResolution": source_resolution})
+        # 状态外观显式映射，不从网站 phase 名推断生长阶段；每个状态发布独立首帧及遮罩。
+        state_visual_file = Path("resources/building-state-visuals.json")
+        state_visuals = json.loads(state_visual_file.read_text()) if state_visual_file.exists() else {}
+        for visual_key, visual_phase in state_visuals.get(entry["entityId"], {}).items():
+            if (not isinstance(visual_key, str) or not visual_key or
+                    any(not (c.isalnum() or c in "_-") for c in visual_key) or visual_phase not in source_phases):
+                raise ValueError(f"Invalid state visual: {entry['entityId']}/{visual_key}")
+            page = sources[source_phases[visual_phase][0]["source"]]
+            statics.append({"spriteId": f"{entry['spriteId']}--{visual_key}", "stateVisualKey": visual_key,
+                            "entityId": entry["entityId"], "sourcePath": page["sourcePath"], "phase": visual_phase,
+                            "width": width, "height": height, "physicalWidth": physical_width,
+                            "physicalHeight": physical_height, "sourceResolution": source_resolution})
     if receipt["logistics"]:
         directory = "buildings/logistics"
         collection = json.loads((root / directory / "collection.json").read_text())

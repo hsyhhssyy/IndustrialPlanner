@@ -1,4 +1,4 @@
-import type { SimulationGasDiffusionRangeReadModel } from "@/domain/simulation/types/simulation-types";
+import type { SimulationEnvironmentRangeReadModel } from "@/domain/simulation/types/simulation-types";
 import type { RangeInstance, RangeInteractionVisualState, RangePresentation, RangeOutlineInstance, RangeAnimationInstance } from "./types";
 
 /** 视觉预设与接收资格互不依赖；后续区域动画沿用同一资源协议。 */
@@ -11,14 +11,14 @@ const RANGE_VISUALS: Readonly<Record<string, { color: number; strokeAlpha: numbe
 export function resolveRangePresentation(options: {
   readonly ranges: readonly RangeInstance[];
   readonly interaction: RangeInteractionVisualState;
-  readonly activeGasRanges: readonly SimulationGasDiffusionRangeReadModel[];
-  readonly resolveGasColor: (gasItemId: string) => number;
+  readonly activeGasRanges: readonly SimulationEnvironmentRangeReadModel[];
+  readonly resolveGasColor: (itemId: string) => number;
   readonly supportsAnimation: boolean;
   readonly isAnimationReady: (assetRoot: string) => boolean;
 }): RangePresentation {
   const outlines: RangeOutlineInstance[] = [];
   const animations: RangeAnimationInstance[] = [];
-  const activeByRange = new Map<string, SimulationGasDiffusionRangeReadModel[]>();
+  const activeByRange = new Map<string, SimulationEnvironmentRangeReadModel[]>();
   for (const active of options.activeGasRanges) {
     const key = JSON.stringify([active.sourceDeviceId, active.rangeId]);
     const entries = activeByRange.get(key) ?? [];
@@ -34,9 +34,9 @@ export function resolveRangePresentation(options: {
       continue;
     }
     for (const active of activeRanges) {
-      const color = options.resolveGasColor(active.gasItemId);
+      const color = options.resolveGasColor(active.itemId);
       if (options.supportsAnimation && visual.assetRoot) {
-        animations.push({ key: JSON.stringify([active.sourceDeviceId, active.rangeId, active.gasItemId]),
+        animations.push({ key: JSON.stringify([active.sourceDeviceId, active.rangeId, active.itemId]),
           gridRect: active.gridRect, rotation: active.rotation, color, assetRoot: visual.assetRoot });
         if (options.isAnimationReady(visual.assetRoot)) continue;
       }

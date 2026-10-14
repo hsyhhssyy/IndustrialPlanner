@@ -214,10 +214,10 @@ export class CompactLayoutSearch {
     this.movable = network.nodes.flatMap((node, index) => fixedNodeIds.has(node.entity.id) ? [] : [index]);
     this.neighbors = network.nodes.map((_, index) => this.edges.flatMap(edge => edge.source === index ? [edge.target] : edge.target === index ? [edge.source] : []));
     this.environmentPairs = network.nodes.flatMap((node, device) => {
-      if (!node.recipe?.requiredGasDiffusion) return [];
+      if (!node.recipe?.requiredEnvironmentAnyOf?.[0]) return [];
       // 不要求初始姿态已覆盖；修复和重建中的暂时失配同样必须参与约束评分。
-      const environment = network.nodes.findIndex(other => other.recipe?.gasDiffusionOutput?.gasItemId === node.recipe!.requiredGasDiffusion);
-      if (environment < 0) throw new Error(`缺少气体环境设施：${node.recipe.requiredGasDiffusion}`);
+      const environment = network.nodes.findIndex(other => other.recipe?.environmentOutput?.itemId === node.recipe!.requiredEnvironmentAnyOf?.[0]);
+      if (environment < 0) throw new Error(`缺少气体环境设施：${node.recipe.requiredEnvironmentAnyOf?.[0]}`);
       return [{ device, environment }];
     });
     this.current = this.evaluate();
@@ -461,7 +461,7 @@ export class CompactLayoutSearch {
     const geometry: number[] = [], edges: number[] = [], overlaps: number[] = [];
     const entries = new Map(this.boundary.entries.map(entry => [entry.index, entry]));
     const directions = ["NORTH", "EAST", "SOUTH", "WEST"];
-    const gases = [...new Set(this.network.nodes.flatMap(node => [node.recipe?.requiredGasDiffusion, node.recipe?.gasDiffusionOutput?.gasItemId].filter((id): id is string => !!id)))];
+    const gases = [...new Set(this.network.nodes.flatMap(node => [node.recipe?.requiredEnvironmentAnyOf?.[0], node.recipe?.environmentOutput?.itemId].filter((id): id is string => !!id)))];
     const definitions = [...new Set(this.network.nodes.map(node => node.definition.id))];
     for (let i = 0; i < n; i++) for (let turn = 0; turn < 4; turn++) {
       const dimension = this.geometry[i]![turn]!, entry = entries.get(i);
@@ -494,9 +494,9 @@ export class CompactLayoutSearch {
       geometry[start + 43] = Number(!!this.network.request.blueprintSource && !this.network.deferPowerPlacement && node.definition.requiresPower);
       const power = resolvePowerRangeGridRect({ entity, definition: node.definition });
       if (power) [Math.floor(power.x), Math.floor(power.y), Math.ceil(power.x + power.width) - Math.floor(power.x), Math.ceil(power.y + power.height) - Math.floor(power.y)].forEach((value, at) => geometry[start + 44 + at] = value);
-      const gas = node.recipe?.gasDiffusionOutput;
-      geometry[start + 48] = gas ? gases.indexOf(gas.gasItemId) + 1 : 0;
-      geometry[start + 49] = node.recipe?.requiredGasDiffusion ? gases.indexOf(node.recipe.requiredGasDiffusion) + 1 : 0;
+      const gas = node.recipe?.environmentOutput;
+      geometry[start + 48] = gas ? gases.indexOf(gas.itemId) + 1 : 0;
+      geometry[start + 49] = node.recipe?.requiredEnvironmentAnyOf?.[0] ? gases.indexOf(node.recipe.requiredEnvironmentAnyOf?.[0]) + 1 : 0;
       if (gas) {
         const range = resolveGasDiffusionRangeGridRect({ entity, definition: node.definition, rangeId: gas.rangeId })!;
         [Math.ceil(range.x), Math.ceil(range.y), Math.floor(range.x + range.width) - Math.ceil(range.x), Math.floor(range.y + range.height) - Math.ceil(range.y)].forEach((value, at) => geometry[start + 50 + at] = value);
@@ -712,7 +712,7 @@ export class CompactLayoutSearch {
       if (!pair) return false;
       const environment = this.network.nodes[pair.environment]!, environmentPose = this.poses[pair.environment]!;
       const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: environmentPose, rotation: environmentPose.rotation },
-        definition: environment.definition, rangeId: environment.recipe!.gasDiffusionOutput!.rangeId })!;
+        definition: environment.definition, rangeId: environment.recipe!.environmentOutput!.rangeId })!;
       const device = this.poses[pair.device]!, dimensions = this.dimensions(pair.device);
       dx = Math.max(0, range.x - device.x) - Math.max(0, device.x + dimensions.width - range.x - range.width);
       dy = Math.max(0, range.y - device.y) - Math.max(0, device.y + dimensions.height - range.y - range.height);
@@ -1068,13 +1068,13 @@ export class CompactLayoutSearch {
     //         + Math.max(0, device.x + device.width - range.x - range.width) + Math.max(0, device.y + device.height - range.y - range.height), [pair.device, pair.environment], device);
     //     }
     for (const pair of this.environmentPairs) {
-      const requiredGas = this.network.nodes[pair.device]!.recipe!.requiredGasDiffusion;
+      const requiredGas = this.network.nodes[pair.device]!.recipe!.requiredEnvironmentAnyOf?.[0];
       const device = rects[pair.device]!;
       let closest = pair.environment, distance = Infinity;
       for (let index = 0; index < this.network.nodes.length; index++) {
         const environment = this.network.nodes[index]!;
-        const gas = environment.recipe?.gasDiffusionOutput;
-        if (!gas || gas.gasItemId !== requiredGas) continue;
+        const gas = environment.recipe?.environmentOutput;
+        if (!gas || gas.itemId !== requiredGas) continue;
         const pose = this.poses[index]!;
         const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: pose, rotation: pose.rotation },
           definition: environment.definition, rangeId: gas.rangeId })!;

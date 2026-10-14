@@ -1705,6 +1705,7 @@ function compileRecipeChannels(
       productNodeIds: [...new Set(ch.productStorageGroupIds.flatMap(
         (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
       ))],
+      startPolicy: ch.startPolicy ?? "automatic",
       manualRecipeOnly: modeSwitchable ? !automaticMode : ch.manualRecipeOnly ?? false,
       defaultRecipeId: selectedRecipeId !== null && activeRecipeIds.has(selectedRecipeId)
         ? selectedRecipeId

@@ -36,8 +36,8 @@ export class PlannerSupplyRules {
     this.external = new Set([...plan.infiniteItemIds, ...plan.externalSupplies.map(flow => flow.itemId)]);
     this.consumption = buildDeviceRunningConsumptionRecipesByMachine(registry.recipeDefinitions);
     const available = sortRecipesByDefaultPriority(registry.recipeDefinitions.filter(recipe =>
-      !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.tags.includes("自然资源采集")
-      && !recipe.gasDiffusionOutput && isRecipeAvailableByActivity(recipe, plan.activeActivityIds)
+      !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.tags.includes("StateControlled") && !recipe.tags.includes("自然资源采集")
+      && !recipe.environmentOutput && isRecipeAvailableByActivity(recipe, plan.activeActivityIds)
       && !recipe.machineId.startsWith("cheat_")
       && !registry.queries.findEntityDefinition(recipe.machineId)?.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")));
     for (const recipe of available) for (const output of recipe.outputs) if (output.amount > 0) {
@@ -46,7 +46,7 @@ export class PlannerSupplyRules {
     }
     for (const entry of plan.recipes) {
       const recipe = registry.queries.findRecipeDefinition(entry.recipeId);
-      if (!recipe || recipe.gasDiffusionOutput) continue;
+      if (!recipe || recipe.environmentOutput || recipe.tags.includes("StateControlled")) continue;
       if (recipe.tags.includes("自然资源采集")) {
         for (const output of recipe.outputs) this.external.add(output.itemId);
       } else for (const output of recipe.outputs) {
@@ -114,7 +114,7 @@ export class PlannerSupplyRules {
     return [
       ...recipe.inputs.map(input => ({ itemId: input.itemId, operating: false })),
       ...(consumption?.inputs ?? []).map(input => ({ itemId: input.itemId, operating: true })),
-      ...(recipe.requiredGasDiffusion ? [{ itemId: recipe.requiredGasDiffusion, operating: true }] : []),
+      ...(recipe.requiredEnvironmentAnyOf?.[0] ? [{ itemId: recipe.requiredEnvironmentAnyOf?.[0], operating: true }] : []),
     ];
   }
 
@@ -124,7 +124,7 @@ export class PlannerSupplyRules {
     if (consumption?.inputs.length !== 1) return null;
     const input = consumption.inputs[0]!;
     const output = recipe.outputs.find(flow => flow.itemId === input.itemId);
-    if (!output || recipe.inputs.some(flow => flow.itemId === input.itemId) || recipe.requiredGasDiffusion === input.itemId) return null;
+    if (!output || recipe.inputs.some(flow => flow.itemId === input.itemId) || recipe.requiredEnvironmentAnyOf?.[0] === input.itemId) return null;
     const perMinute = input.amount * 60 / consumption.durationSeconds;
     return { itemId: input.itemId, perMinute,
       netCapacityPerMinute: output.amount * 60 / recipe.durationSeconds - perMinute };
@@ -134,9 +134,9 @@ export class PlannerSupplyRules {
     const environments = new Map<string, number>();
     for (const entry of this.plan.recipes) {
       const recipe = this.registry.queries.findRecipeDefinition(entry.recipeId);
-      if (recipe?.requiredGasDiffusion) environments.set(recipe.requiredGasDiffusion,
-        (environments.get(recipe.requiredGasDiffusion) ?? 0) + Math.ceil(entry.deviceCount - 1e-6));
-      if (recipe?.gasDiffusionOutput && !environments.has(recipe.gasDiffusionOutput.gasItemId)) environments.set(recipe.gasDiffusionOutput.gasItemId, 0);
+      if (recipe?.requiredEnvironmentAnyOf?.[0]) environments.set(recipe.requiredEnvironmentAnyOf?.[0],
+        (environments.get(recipe.requiredEnvironmentAnyOf?.[0]) ?? 0) + Math.ceil(entry.deviceCount - 1e-6));
+      if (recipe?.environmentOutput && !environments.has(recipe.environmentOutput.itemId)) environments.set(recipe.environmentOutput.itemId, 0);
     }
     const rows = new Map<string, PlannerSupplyRow>();
     const issues: PlannerSupplyView["issues"][number][] = [];
@@ -163,7 +163,7 @@ export class PlannerSupplyRules {
       if (resolved.policy.source === "external") return;
       const recipe = this.registry.queries.findRecipeDefinition(resolved.policy.recipeId)!;
       if (resolved.inherited && !this.selfConsumption(recipe)) return;
-      if (recipe.requiredGasDiffusion && !environments.has(recipe.requiredGasDiffusion)) environments.set(recipe.requiredGasDiffusion, 0);
+      if (recipe.requiredEnvironmentAnyOf?.[0] && !environments.has(recipe.requiredEnvironmentAnyOf?.[0])) environments.set(recipe.requiredEnvironmentAnyOf?.[0], 0);
       for (const input of this.dependencies(recipe)) visit(input.itemId, [...path, itemId], input.operating);
     };
     for (const itemId of environments.keys()) visit(itemId, [], false);

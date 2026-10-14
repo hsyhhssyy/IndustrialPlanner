@@ -114,7 +114,7 @@ export function advanceDevices(
           topology,
           state,
           device,
-          requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+          requiredEnvironmentAnyOf: recipe.plan.requiredEnvironmentAnyOf,
         })) {
           continue;
         }

@@ -235,12 +235,12 @@ function RecipePickerCard({
             <img alt="" src={resolveEntityIcon(recipe.machineId, index)} />
             <span className={cm(styles, "recipe-picker-machine-name")}>
               <span>{machineName}</span>
-              {recipe.requiredGasDiffusion && (
-                <span className={cm(styles, "recipe-picker-gas-environment")}>
-                  <img alt="" src={resolveItemIcon(recipe.requiredGasDiffusion, index)} />
-                  <span>{resolveItemName(recipe.requiredGasDiffusion, index, t)}{t("encyclopedia.recipe.gasEnvironmentSuffix")}</span>
+              {recipe.requiredEnvironmentAnyOf?.map(itemId => (
+                <span key={itemId} className={cm(styles, "recipe-picker-gas-environment")}>
+                  <img alt="" src={resolveItemIcon(itemId, index)} />
+                  <span>{resolveItemName(itemId, index, t)}{t("encyclopedia.recipe.gasEnvironmentSuffix")}</span>
                 </span>
-              )}
+              ))}
             </span>
           </span>
           <span className={cm(styles, "recipe-picker-duration")} title={copy.duration}>

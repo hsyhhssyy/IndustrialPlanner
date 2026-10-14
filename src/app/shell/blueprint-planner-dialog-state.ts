@@ -1,12 +1,32 @@
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { makeAutoObservable, observable, toJS } from "mobx";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
-import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
-import { runStorageEffect } from "@/shared/storage/storage-failure";
+// AI-REMOVED 2026-10-14:
+// Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+// Trigger: 用户要求 EDA 默认可用且不再需要开启。
+// Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+// Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+// Risk: Low；规划任务与业务可用性校验保持原行为。
+// Human Review: Required
+//
+// Original code:
+// import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+// import { runStorageEffect } from "@/shared/storage/storage-failure";
+
 import { createDefaultDialogStateForKey } from "../state";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 
-const ENABLED_KEY = "industrial-planner.experimental.eda";
+// AI-REMOVED 2026-10-14:
+// Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+// Trigger: 用户要求 EDA 默认可用且不再需要开启。
+// Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+// Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+// Risk: Low；规划任务与业务可用性校验保持原行为。
+// Human Review: Required
+//
+// Original code:
+// const ENABLED_KEY = "industrial-planner.experimental.eda";
+
 // AI-REMOVED 2026-10-06:
 // Reason: 新任务不再持久化或继承全局规划选项。
 // Trigger: 用户要求新任务恢复默认选项。
@@ -27,7 +47,17 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
-  enabled = false;
+  // AI-REMOVED 2026-10-14:
+  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+  // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+  // Risk: Low；规划任务与业务可用性校验保持原行为。
+  // Human Review: Required
+  //
+  // Original code:
+  //   enabled = false;
+
   plan: BlueprintPlannerProductionPlan | null = null;
   blueprintDraft: BlueprintDocument | null = null;
   blueprintRequest: BlueprintPlannerRequest | null = null;
@@ -37,9 +67,29 @@ export class BlueprintPlannerDialogController {
 
   constructor(
     private readonly getPlanner: () => BlueprintPlannerContract | null,
-    private readonly persistence: "browser" | "memory" = "browser",
+    // AI-REMOVED 2026-10-14:
+    // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+    // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+    // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+    // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+    // Risk: Low；规划任务与业务可用性校验保持原行为。
+    // Human Review: Required
+    //
+    // Original code:
+    //     private readonly persistence: "browser" | "memory" = "browser",
+
   ) {
-    this.enabled = persistence === "browser" && readFromLocalStorage<boolean>(ENABLED_KEY) === true;
+    // AI-REMOVED 2026-10-14:
+    // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+    // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+    // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+    // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+    // Risk: Low；规划任务与业务可用性校验保持原行为。
+    // Human Review: Required
+    //
+    // Original code:
+    //     this.enabled = persistence === "browser" && readFromLocalStorage<boolean>(ENABLED_KEY) === true;
+
 // AI-REMOVED 2026-10-06:
 // Reason: 新任务必须使用统一默认值，取消全局选项恢复。
 // Trigger: 用户要求新任务恢复默认选项。
@@ -84,8 +134,18 @@ export class BlueprintPlannerDialogController {
 //       // AI-CORRECTION 2026-10-03：复选框关闭保存为 1；旧多 Worker 数字仍迁移为自动。
 //       if (saved.concurrency === 1) this.options = { ...this.options, concurrency: 1 };
 //     }
-    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "persistence">(this, {
-      persistence: false,
+    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner">(this, {
+      // AI-REMOVED 2026-10-14:
+      // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+      // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+      // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+      // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+      // Risk: Low；规划任务与业务可用性校验保持原行为。
+      // Human Review: Required
+      //
+      // Original code:
+      //       persistence: false,
+
       plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false,
     }, { autoBind: true });
   }
@@ -93,11 +153,21 @@ export class BlueprintPlannerDialogController {
   get activeTaskId(): string | null { return this.getPlanner()?.state.activeTaskId ?? null; }
   get taskLocked(): boolean { return this.activeTaskId !== null; }
 
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-    if (this.persistence === "browser") runStorageEffect("planner-enabled", () => saveToLocalStorage(ENABLED_KEY, enabled));
-    if (!enabled) this.close();
-  }
+  // AI-REMOVED 2026-10-14:
+  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+  // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+  // Risk: Low；规划任务与业务可用性校验保持原行为。
+  // Human Review: Required
+  //
+  // Original code:
+  //   setEnabled(enabled: boolean): void {
+  //     this.enabled = enabled;
+  //     if (this.persistence === "browser") runStorageEffect("planner-enabled", () => saveToLocalStorage(ENABLED_KEY, enabled));
+  //     if (!enabled) this.close();
+  //   }
+
 
   open(plan?: BlueprintPlannerProductionPlan): void {
     const activeTaskId = this.activeTaskId;

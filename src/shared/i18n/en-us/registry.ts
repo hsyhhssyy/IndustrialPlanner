@@ -1,4 +1,8 @@
 const REGISTRY: Record<string, string> = {
+  "registry.recipe.crop_seedling.name": "Seedling",
+  "registry.recipe.crop_watering.name": "Watering",
+  "registry.recipe.crop_harvest.name": "Harvest",
+
   "registry.entity.squirter_1.name": "Sprinkler",
   "registry.entity.soil_grass_1.name": "Jincao Plot",
   "registry.entity.soil_grass_2.name": "Yazhen Plot",

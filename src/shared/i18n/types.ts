@@ -152,8 +152,18 @@ export type UiKey =
   | "eda.unavailable"
   | "eda.placeFailed"
   | "eda.modulesUnsupported"
-  | "settingsField.experimental-blueprint-planner"
-  | "settingsField.experimental-blueprint-plannerDescription"
+  // AI-REMOVED 2026-10-14:
+  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+  // Replacement: None；正式功能继续使用 eda.* 文案。
+  // Risk: Low；规划任务与业务可用性校验保持原行为。
+  // Human Review: Required
+  //
+  // Original code:
+  //   | "settingsField.experimental-blueprint-planner"
+  //   | "settingsField.experimental-blueprint-plannerDescription"
+
   | "action.applyValue"
   | "action.cancel"
   | "action.cancelContinuousPlacement"

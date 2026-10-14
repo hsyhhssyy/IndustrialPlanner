@@ -163,8 +163,18 @@ const UI: Record<string, string> = {
     "eda.unavailable": "规划服务尚未就绪。",
     "eda.placeFailed": "当前基地无法放置此蓝图。",
     "eda.modulesUnsupported": "包含模块的生产方案不能自动规划。",
-    "settingsField.experimental-blueprint-planner": "自动规划产线（EDA）",
-    "settingsField.experimental-blueprint-plannerDescription": "根据产线规划生成并保存可放置的蓝图。",
+    // AI-REMOVED 2026-10-14:
+    // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+    // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+    // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+    // Replacement: None；正式功能继续使用 eda.* 文案。
+    // Risk: Low；规划任务与业务可用性校验保持原行为。
+    // Human Review: Required
+    //
+    // Original code:
+    //     "settingsField.experimental-blueprint-planner": "自动规划产线（EDA）",
+    //     "settingsField.experimental-blueprint-plannerDescription": "根据产线规划生成并保存可放置的蓝图。",
+
     "action.applyValue": "应用",
     "action.cancel": "取消",
     "action.cancelContinuousPlacement": "取消连续放置",

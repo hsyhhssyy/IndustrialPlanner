@@ -3,7 +3,7 @@ import { buildDeviceGasCoverage } from "@/simulation/projection";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationTopology,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
 } from "../contracts";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -24,17 +24,18 @@ import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availabi
 
 
 interface GasDiffusionTopologyIndex {
+  readonly registryQueries: RegistryContract["queries"];
   readonly sourceDeviceIds: readonly string[];
   readonly recipeSourceDeviceIds: readonly string[];
 }
 
 interface GasDiffusionRuntimeIndex {
   readonly topology: CompiledSimulationTopology;
-  activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
+  activeEnvironments: readonly RuntimeEnvironmentSnapshot[];
   coveredGasItemIdsByDeviceId: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
-const EMPTY_GAS_DIFFUSIONS: readonly RuntimeGasDiffusionSnapshot[] = [];
+const EMPTY_GAS_DIFFUSIONS: readonly RuntimeEnvironmentSnapshot[] = [];
 // AI-REMOVED 2026-09-09:
 // Reason: 明确状态归属并清理重组产生的重复声明。
 // Trigger: Host / legacy 控制器重构。
@@ -56,7 +57,7 @@ export function computeActiveGasDiffusions(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-): readonly RuntimeGasDiffusionSnapshot[] {
+): readonly RuntimeEnvironmentSnapshot[] {
   const topologyIndex = ensureGasDiffusionTopologyIndex(registry, topology);
   return topologyIndex.sourceDeviceIds.length === 0
     ? EMPTY_GAS_DIFFUSIONS
@@ -75,16 +76,15 @@ export function isDeviceInRequiredGasDiffusion(options: {
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly device: CompiledSimulationDevice;
-  readonly requiredGasDiffusion: string | null;
+  readonly requiredEnvironmentAnyOf: readonly string[] | null;
 }): boolean {
-  if (options.requiredGasDiffusion === null) {
+  if (options.requiredEnvironmentAnyOf === null) {
     return true;
   }
 
   const runtimeIndex = ensureGasDiffusionRuntimeIndex(options.topology, options.state);
-  return runtimeIndex.coveredGasItemIdsByDeviceId
-    .get(options.device.id)
-    ?.has(options.requiredGasDiffusion) ?? false;
+  const covered = runtimeIndex.coveredGasItemIdsByDeviceId.get(options.device.id);
+  return options.requiredEnvironmentAnyOf.some(itemId => covered?.has(itemId));
 }
 
 /** 获取设备当前完全处于的气体 itemId 集合。无任何气体覆盖时返回 null。 */
@@ -101,17 +101,17 @@ function ensureGasDiffusionRuntimeIndex(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): GasDiffusionRuntimeIndex {
-  const activeGasDiffusions = state.transient.activeGasDiffusions;
+  const activeEnvironments = state.transient.activeEnvironments;
   let runtimeIndex = runtimeIndexByState.get(state);
   if (
     runtimeIndex === undefined
     || runtimeIndex.topology !== topology
-    || runtimeIndex.activeGasDiffusions !== activeGasDiffusions
+    || runtimeIndex.activeEnvironments !== activeEnvironments
   ) {
     runtimeIndex = {
       topology,
-      activeGasDiffusions,
-      coveredGasItemIdsByDeviceId: buildDeviceGasCoverage(topology, activeGasDiffusions),
+      activeEnvironments,
+      coveredGasItemIdsByDeviceId: buildDeviceGasCoverage(topology, activeEnvironments, topologyIndexByTopology.get(topology)?.registryQueries),
     };
     runtimeIndexByState.set(state, runtimeIndex);
   }
@@ -140,7 +140,7 @@ function ensureGasDiffusionTopologyIndex(
       .findRecipeDefinitionsByMachine(device.definitionId)
       .some((recipe) =>
         isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
-        && recipe.gasDiffusionOutput !== undefined,
+        && recipe.environmentOutput !== undefined,
       )
       && (device.recipeChannels ?? []).length > 0;
     if (canRunGasDiffusionRecipe) {
@@ -151,7 +151,7 @@ function ensureGasDiffusionTopologyIndex(
     }
   }
 
-  const result = { sourceDeviceIds, recipeSourceDeviceIds };
+  const result = { sourceDeviceIds, recipeSourceDeviceIds, registryQueries: registry.queries };
   topologyIndexByTopology.set(topology, result);
   return result;
 }
@@ -161,8 +161,8 @@ function collectActiveGasDiffusions(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   sourceDeviceIds: readonly string[],
-): readonly RuntimeGasDiffusionSnapshot[] {
-  const result: RuntimeGasDiffusionSnapshot[] = [];
+): readonly RuntimeEnvironmentSnapshot[] {
+  const result: RuntimeEnvironmentSnapshot[] = [];
   const seenSourceGasPairs = new Set<string>();
 
   for (const deviceId of sourceDeviceIds) {
@@ -171,15 +171,18 @@ function collectActiveGasDiffusions(
     if (device === undefined || deviceState === undefined) {
       continue;
     }
-    for (const recipe of Object.values(deviceState.channelRecipes)) {
+    for (const channel of device.recipeChannels) {
+      const recipe = deviceState.channelRecipes[channel.id];
+      if (channel.type !== "consumption-channel"
+        && (device.powerStatus === "out-of-power-range" || (device.requiresPower && state.transient.isPowerOutage))) continue;
       if (recipe?.state !== "running") {
         continue;
       }
-      const output = recipe?.plan.gasDiffusionOutput ?? null;
+      const output = recipe?.plan.environmentOutput ?? null;
       if (output === null) {
         continue;
       }
-      const sourceGasKey = `${device.id}\u0000${output.gasItemId}\u0000${output.rangeId}`;
+      const sourceGasKey = `${device.id}\u0000${output.itemId}\u0000${output.rangeId}`;
       if (seenSourceGasPairs.has(sourceGasKey)) {
         continue;
       }
@@ -193,7 +196,7 @@ function collectActiveGasDiffusions(
         sourceDeviceId: device.id,
         rangeId: output.rangeId,
         rotation: device.rotation!,
-        gasItemId: output.gasItemId,
+        itemId: output.itemId,
         gridRect,
       });
       seenSourceGasPairs.add(sourceGasKey);
@@ -232,7 +235,7 @@ function collectActiveGasDiffusions(
 // }
 function resolveDeviceRangeRect(
   device: CompiledSimulationDevice, registry: RegistryContract, rangeId: string,
-): RuntimeGasDiffusionSnapshot["gridRect"] | null {
+): RuntimeEnvironmentSnapshot["gridRect"] | null {
   if (device.position === null || device.rotation === null || device.footprint === null) return null;
   const definition = registry.queries.findEntityDefinition(device.definitionId);
   if (!definition) throw new Error(`Unknown range provider: ${device.definitionId}`);

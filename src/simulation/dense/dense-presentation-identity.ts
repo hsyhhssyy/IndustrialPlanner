@@ -1,7 +1,7 @@
 import type {
   CompiledSimulationTopology,
   RuntimeDeviceSnapshot,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
   RuntimeNodeSnapshot,
   RuntimeSlotSnapshot,
   RuntimeTransferSnapshot,
@@ -245,8 +245,8 @@ export function projectDenseTransferSnapshot(
 
 export function projectDenseGasDiffusionSnapshot(
   identity: DensePresentationIdentity,
-  diffusion: RuntimeGasDiffusionSnapshot,
-): RuntimeGasDiffusionSnapshot | null {
+  diffusion: RuntimeEnvironmentSnapshot,
+): RuntimeEnvironmentSnapshot | null {
   const sourceDeviceId = identity.presentationDeviceIdByExecutionId.get(
     diffusion.sourceDeviceId,
   );

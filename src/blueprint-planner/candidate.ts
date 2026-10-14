@@ -242,7 +242,7 @@ async function createPlannerAttempt(
     if (redundant.length) {
       environmentLimits = new Map();
       for (const node of restored.network.nodes.filter(entry => entry.purpose === "environment" && !redundant.includes(entry))) {
-        const gas = node.recipe!.gasDiffusionOutput!.gasItemId;
+        const gas = node.recipe!.environmentOutput!.itemId;
         environmentLimits.set(gas, (environmentLimits.get(gas) ?? 0) + 1);
       }
       // 拓扑改变时从原始生产需求重新补算辅助产能和物流，不复用已撤设备的管线或消耗。
@@ -253,7 +253,7 @@ async function createPlannerAttempt(
   if (environmentLimits) {
     const counts = new Map<string, number>();
     const nodes = network.nodes.filter(node => {
-      const gas = node.recipe?.gasDiffusionOutput?.gasItemId;
+      const gas = node.recipe?.environmentOutput?.itemId;
       if (!gas) return true;
       counts.set(gas, (counts.get(gas) ?? 0) + 1);
       return counts.get(gas)! <= (environmentLimits.get(gas) ?? 0);

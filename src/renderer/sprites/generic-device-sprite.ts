@@ -1090,6 +1090,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.workspace.app, {
       forceBlueprint: forceBlueprintPreview,
       allowAnimation: this.syncDeviceAnimationInputs(context),
+      visualKey: this.definition.stateMachine === undefined ? null
+        : context?.workspace.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey,
     })
     const { bodyTextureKey, maskTextureKey } = presentation
     this.syncDeviceAnimationResource(presentation.animation)

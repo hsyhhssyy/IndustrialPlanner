@@ -444,7 +444,7 @@ describe("createRenderSceneOrchestrator", () => {
           simulationSpeed: 1,
           topology: {} as never,
           queries: {
-            getActiveGasDiffusionRanges: () => [],
+            getActiveEnvironmentRanges: () => [],
           } as never,
           actions: {
             start: vi.fn(async () => ({
@@ -597,7 +597,7 @@ describe("createRenderSceneOrchestrator", () => {
               currentPowerGeneration: null,
               isPowerOutage: false,
             }),
-            getActiveGasDiffusionRanges: () => [],
+            getActiveEnvironmentRanges: () => [],
           },
           actions: {
             advancePlaybackByDeltaMs: vi.fn(async () => null),

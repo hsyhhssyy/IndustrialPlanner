@@ -917,13 +917,23 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-show-region-annotationsDescription",
         defaultValue: false,
       },
-      {
-        id: "experimental-blueprint-planner",
-        kind: "switch",
-        labelKey: "settingsField.experimental-blueprint-planner",
-        descriptionKey: "settingsField.experimental-blueprint-plannerDescription",
-        defaultValue: false,
-      },
+      // AI-REMOVED 2026-10-14:
+      // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+      // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+      // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+      // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+      // Risk: Low；规划任务与业务可用性校验保持原行为。
+      // Human Review: Required
+      //
+      // Original code:
+      //       {
+      //         id: "experimental-blueprint-planner",
+      //         kind: "switch",
+      //         labelKey: "settingsField.experimental-blueprint-planner",
+      //         descriptionKey: "settingsField.experimental-blueprint-plannerDescription",
+      //         defaultValue: false,
+      //       },
+
       // AI-REMOVED 2026-09-26:
       // Reason: 旧选项表示启用 Dense，调试选项现表示启用 Legacy。
       // Trigger: 用户要求默认 Dense，并将旧版求解器开关移到调试分组。

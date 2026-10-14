@@ -205,7 +205,7 @@ function RecipeCard({
 }) {
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
-  const requiredGasItemId = recipe.requiredGasDiffusion;
+  const requiredGasItemIds = recipe.requiredEnvironmentAnyOf ?? [];
   const consumedItemIds = index.consumptionItemIdsByMachine.get(recipe.machineId) ?? [];
   const consumptionLabel = consumedItemIds.length > 1
     ? t("encyclopedia.recipe.deviceConsumptionAny")
@@ -272,9 +272,10 @@ function RecipeCard({
               {resolveEntityDisplayName(recipe.machineId, index, t)}
             </span>
           </button>
-          {requiredGasItemId && (
+          {requiredGasItemIds.map(requiredGasItemId => (
             <button
               type="button"
+              key={requiredGasItemId}
               className={cm(styles, "encyclopedia-recipe-gas-environment")}
               onClick={() => onItemClick(requiredGasItemId)}
             >
@@ -288,7 +289,7 @@ function RecipeCard({
                 {t("encyclopedia.recipe.gasEnvironmentSuffix")}
               </span>
             </button>
-          )}
+          ))}
           {consumedItemIds.length > 0 && (
             <div className={cm(styles, "encyclopedia-recipe-device-consumption")}>
               <span className={cm(styles, "encyclopedia-recipe-device-consumption-label")}>

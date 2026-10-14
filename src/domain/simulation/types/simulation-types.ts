@@ -121,6 +121,7 @@ export interface SimulationDeviceRuntimeChannelRecipeStatus {
 //   readonly progressSeconds: number | null;
 //   readonly desiredSeconds: number | null;
 export interface SimulationDeviceRuntimeStatusReadModel {
+  readonly deviceState?: SimulationDeviceStateReadModel;
   /** 每个 channel 的运行时配方状态，key 为 channel id */
   readonly channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null>;
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
@@ -140,6 +141,13 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   readonly powerStatus: "no-power-needed" | "in-power-range" | "out-of-power-range" | null;
 }
 
+export interface SimulationDeviceStateReadModel {
+  readonly stateId: string;
+  readonly enteredAtSeconds: number;
+  readonly endsAtSeconds: number | null;
+  readonly visualKey: string | null;
+}
+
 // AI-REMOVED 2026-07-23:
 // Reason: 固定分钟窗口计量状态不再存在。
 // Trigger: 用户要求以十秒 reserved-item 配方和真实容量 5 槽位表达消耗。
@@ -156,11 +164,11 @@ export interface SimulationDeviceRuntimeStatusReadModel {
 //   readonly previousWindowItemId: string | null;
 // }
 
-export interface SimulationGasDiffusionRangeReadModel {
+export interface SimulationEnvironmentRangeReadModel {
   readonly sourceDeviceId: string;
   readonly rangeId: string;
   readonly rotation: GridRotation;
-  readonly gasItemId: string;
+  readonly itemId: string;
   readonly gridRect: {
     readonly x: number;
     readonly y: number;

@@ -212,7 +212,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         const device = registry.queries.findEntityDefinition(recipe.machineId);
         // 配方存在不代表能够施工；计算器中的虚拟倾倒动作没有实际设备通道，必须回退到输出。
         return recipe.outputs.length === 0 && recipe.inputs.length === 1
-          && recipe.inputs[0]!.itemId === itemId && recipe.gasDiffusionOutput === undefined && recipe.powerOutput === undefined
+          && recipe.inputs[0]!.itemId === itemId && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
           && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.machineId.startsWith("cheat_")
           && device !== null && !device.tags.includes("不可摆放")
           && device.recipeChannels.some(channel => channel.type !== "consumption-channel")

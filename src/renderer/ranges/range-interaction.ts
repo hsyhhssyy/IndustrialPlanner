@@ -12,7 +12,7 @@ type InteractionKind = NonNullable<EntityRangeDefinition["interactionKind"]>;
 
 /** 静态资格与反向预览策略分开；供电的两个字段具有不同语义。 */
 export function createRangeInteractionRules(recipes: readonly RecipeDefinition[]) {
-  const gasReceivers = new Set(recipes.filter((recipe) => recipe.requiredGasDiffusion).map((recipe) => recipe.machineId));
+  const gasReceivers = new Set(recipes.filter((recipe) => recipe.requiredEnvironmentAnyOf).map((recipe) => recipe.machineId));
   const gas = (definition: EntityDefinition) => gasReceivers.has(definition.id);
   const irrigation = (definition: EntityDefinition) => definition.tags.includes("AcceptsIrrigation");
   return {

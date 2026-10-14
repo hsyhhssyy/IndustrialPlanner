@@ -188,7 +188,17 @@ for (const profile of profiles) {
           const configured = { ...input, options: { ...input.options, evaluationsPerRound: 100_000_000, concurrency: 1 } };
           const active = await p.actions.importTask(p.queries.exportDraft({ ...configured, plan: { ...input.plan, name: '运行任务' } }));
           const other = await p.actions.importTask(p.queries.exportDraft({ ...configured, plan: { ...input.plan, name: '其他任务' } }));
-          h.blueprintPlannerDialog.setEnabled(true);
+          // AI-REMOVED 2026-10-14:
+          // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+          // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+          // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+          // Replacement: 测试直接打开正式 EDA 入口，不再调用已移除的 setEnabled。
+          // Risk: Low；规划任务与业务可用性校验保持原行为。
+          // Human Review: Required
+          //
+          // Original code:
+          //           h.blueprintPlannerDialog.setEnabled(true);
+
           h.blueprintPlannerDialog.selectTask(active, p.queries.getLastRequest(active));
           h.blueprintPlannerDialog.open();
           return { active, other };

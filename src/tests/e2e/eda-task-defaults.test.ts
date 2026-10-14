@@ -17,7 +17,17 @@ for (const profile of SCREEN_PROFILES) {
       await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.blueprintPlanner != null);
       await page.evaluate(plan => {
         const controller = window.__industrialPlannerAppHost.blueprintPlannerDialog;
-        controller.setEnabled(true); controller.open(plan);
+        // AI-REMOVED 2026-10-14:
+        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
+        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+        // Replacement: 测试直接打开正式 EDA 入口，不再调用已移除的 setEnabled。
+        // Risk: Low；规划任务与业务可用性校验保持原行为。
+        // Human Review: Required
+        //
+        // Original code:
+        //         controller.setEnabled(true); controller.open(plan);
+        controller.open(plan);
       }, ${JSON.stringify(plant.request.plan)});
       const dialog = page.getByRole('dialog').filter({has:page.locator('#blueprint-planner-title')});
       const attempts = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});

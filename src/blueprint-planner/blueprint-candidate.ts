@@ -66,8 +66,8 @@ export function reduceBlueprintNetwork(registry: RegistryContract, network: Plan
   const random = new PlannerRandom(plannerRandomSeed(`matching/${variant}`));
   const existing = new Map(network.nodes.map(node => [node.entity.id, node]));
   const remaining = network.nodes.filter(node => !removed.has(node.entity.id));
-  if (remaining.some(node => node.recipe?.requiredGasDiffusion && !remaining.some(other =>
-    other.recipe?.gasDiffusionOutput?.gasItemId === node.recipe!.requiredGasDiffusion))) {
+  if (remaining.some(node => node.recipe?.requiredEnvironmentAnyOf?.[0] && !remaining.some(other =>
+    other.recipe?.environmentOutput?.itemId === node.recipe!.requiredEnvironmentAnyOf?.[0]))) {
     throw new PlannerCandidateError("减量后缺少必要的气体扩散环境。");
   }
   const retainedWires = wires.filter(wire => !(removed.has(wire.target.entityId) && existing.get(wire.target.entityId)!.purpose === "environment"));
@@ -228,8 +228,8 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       throw error;
     }
     if (resumed) network = resumed.network;
-    if (network.nodes.some(node => node.recipe?.requiredGasDiffusion
-      && !network.nodes.some(other => other.recipe?.gasDiffusionOutput?.gasItemId === node.recipe!.requiredGasDiffusion))) {
+    if (network.nodes.some(node => node.recipe?.requiredEnvironmentAnyOf?.[0]
+      && !network.nodes.some(other => other.recipe?.environmentOutput?.itemId === node.recipe!.requiredEnvironmentAnyOf?.[0]))) {
       throw new PlannerCandidateError("减量后缺少必要的气体扩散环境。");
     }
     const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, resolveSearchProfile(options.profile), layoutBackend);

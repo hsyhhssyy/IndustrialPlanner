@@ -33,7 +33,10 @@ describe("普通田块建筑定义", () => {
       expect(definition.requiresPower).toBe(false);
       expect(definition.powerDemand).toBe(0);
       expect(definition.portGroups).toEqual([]);
-      expect(definition.recipeChannels).toEqual([]);
+      expect(definition.recipeChannels).toEqual([{
+        id: "growth", ingredientStorageGroupIds: [], productStorageGroupIds: [], startPolicy: "state",
+      }]);
+      expect(definition.stateMachine).toMatchObject({ initialStateId: "seedling", channelId: "growth" });
     }
     expect(registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil")).map((definition) => definition.id))
       .toEqual(EXPECTED_PLOTS.map(([id]) => id));

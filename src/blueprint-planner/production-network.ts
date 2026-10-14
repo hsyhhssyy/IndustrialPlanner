@@ -49,7 +49,7 @@ export function createProductionNetwork(registry: RegistryContract, request: Blu
   for (const plan of request.plan.recipes) {
     const recipe = registry.queries.findRecipeDefinition(plan.recipeId)!;
     const count = Math.ceil(plan.deviceCount - EPSILON);
-    const isEnvironment = recipe.gasDiffusionOutput !== undefined;
+    const isEnvironment = recipe.environmentOutput !== undefined;
     if (isEnvironment) preferredGasCount += count;
     for (let index = 0; index < count; index++) {
       nodes.push(createRecipeNode(registry, recipe, `eda-device-${nodes.length}`,
@@ -67,7 +67,7 @@ export function createRecipeNode(
   const definition = registry.queries.findEntityDefinition(recipe.machineId);
   if (definition === null) throw new Error(`配方设备未注册：${recipe.machineId}`);
   const channel = definition.recipeChannels.find((entry) =>
-    recipe.gasDiffusionOutput !== undefined ? entry.type === "consumption-channel" : entry.type !== "consumption-channel");
+    recipe.environmentOutput !== undefined ? entry.type === "consumption-channel" : entry.type !== "consumption-channel");
   if (channel === undefined) throw new Error(`配方缺少生产通道：${recipe.id}`);
   const config: Record<string, unknown> = { channelRecipes: { [channel.id]: recipe.id } };
   if (definition.recipeChannelBehavior?.automaticModeConfigKey !== undefined) {
@@ -119,12 +119,13 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
   for (const recipePlan of plan.recipes) {
     const recipe = registry.queries.findRecipeDefinition(recipePlan.recipeId);
     if (recipe === null || !isRecipeAvailableByActivity(recipe, plan.activeActivityIds)) throw new Error(`配方当前不可用：${recipePlan.recipeId}`);
+    if (recipe.tags.includes("StateControlled")) throw new Error(`阶段配方不能独立规划：${recipePlan.recipeId}`);
     if (![recipePlan.deviceCount, recipePlan.cyclesPerMinute].every((value) => Number.isFinite(value) && value > 0)) {
       throw new Error(`无效设备数量或配方流量：${recipePlan.recipeId}`);
     }
     if (recipe.tags.includes("自然资源采集")) continue;
     const device = registry.queries.findEntityDefinition(recipe.machineId);
-    if (!device?.recipeChannels.some((entry) => recipe.gasDiffusionOutput !== undefined
+    if (!device?.recipeChannels.some((entry) => recipe.environmentOutput !== undefined
       ? entry.type === "consumption-channel" : entry.type !== "consumption-channel")) {
       throw new Error(`配方缺少生产通道：${recipe.id}`);
     }

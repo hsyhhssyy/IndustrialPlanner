@@ -40,7 +40,7 @@ export {
   type SimulationTopologyMigration,
   type SimulationTickSnapshotResult,
   type RuntimeTickSnapshot,
-  type RuntimeGasDiffusionSnapshot,
+  type RuntimeEnvironmentSnapshot,
   type WarehouseItemStats,
   type WarehouseStats,
   type RuntimeSlotSnapshot,

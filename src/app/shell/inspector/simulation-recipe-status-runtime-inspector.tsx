@@ -102,7 +102,7 @@ export function SimulationRecipeStatusRuntimeInspector({
     // 先判断该设备是否有任意配方需要气体环境
     let needsGasEnv = false;
     for (const recipe of index.recipeById.values()) {
-      if (recipe.machineId === definition.id && recipe.requiredGasDiffusion) {
+      if (recipe.machineId === definition.id && recipe.requiredEnvironmentAnyOf) {
         needsGasEnv = true;
         break;
       }

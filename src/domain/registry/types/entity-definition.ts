@@ -58,6 +58,8 @@ export type UiGroup =
 // =========================================================================
 
 export interface EntityDefinition {
+  /** 只有声明状态机的设备参与状态处理。 */
+  readonly stateMachine?: DeviceStateMachineDefinition;
   /** 设备定义唯一标识，如 "belt_straight_1x1" */
   id: string;
   /** i18n key，前端通过此 key 获取本地化设备名称 */
@@ -298,6 +300,8 @@ export interface EntityBlockageAutoClearanceDefinition {
 export interface RecipeChannelDefinition {
   /** channel 标识 */
   id: string;
+  /** 新配方的启动依据；状态和环境需求频道不参与普通自动匹配。 */
+  readonly startPolicy?: "automatic" | "state" | "environment-demand";
   /** 频道用途；省略时按普通生产频道处理。 */
   readonly type?: "normal-channel" | "consumption-channel";
   /** 配方原料从哪些存储组取 */
@@ -532,4 +536,20 @@ export interface EntityAdmissionRuleDefinition {
   /** 每仿真分钟准入上限。null 表示无每分钟上限。 */
   /** AI-CORRECTION 2026-07-23: 数值必须为 6 的正整数倍；运行时每 10 秒窗口放行 perMinuteLimit / 6。 */
   readonly perMinuteLimit?: number | null;
+}
+
+/** 设备自身的 state，与仿真 tick 的处理 stage 独立。 */
+export interface DeviceStateMachineDefinition {
+  readonly initialStateId: string;
+  readonly channelId: string;
+  readonly states: readonly DeviceStateDefinition[];
+}
+
+export interface DeviceStateDefinition {
+  readonly id: string;
+  readonly enterRecipeId?: string;
+  readonly visualKey?: string;
+  readonly transition:
+    | { readonly kind: "elapsed"; readonly durationSeconds: number; readonly nextStateId: string }
+    | { readonly kind: "recipe-completed"; readonly recipeId: string; readonly nextStateId: string };
 }

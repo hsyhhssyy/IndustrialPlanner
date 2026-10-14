@@ -1023,7 +1023,7 @@ function resolveRecipes(options: {
         topology: options.topology,
         state: options.state,
         device: options.device,
-        requiredGasDiffusion: recipe.requiredGasDiffusion ?? null,
+        requiredEnvironmentAnyOf: recipe.requiredEnvironmentAnyOf ?? null,
       })
     ) {
       return [];
@@ -1049,7 +1049,7 @@ function resolveRecipes(options: {
       topology: options.topology,
       state: options.state,
       device: options.device,
-      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion ?? null,
+      requiredEnvironmentAnyOf: selectedRecipe.requiredEnvironmentAnyOf ?? null,
     })) {
       return [];
     }
@@ -1104,7 +1104,7 @@ function resolveRecipes(options: {
       topology: options.topology,
       state: options.state,
       device: options.device,
-      requiredGasDiffusion: recipe.requiredGasDiffusion ?? null,
+      requiredEnvironmentAnyOf: recipe.requiredEnvironmentAnyOf ?? null,
     }))
     .map((recipe) => getOrCreateRegistryRecipePlan(options, recipe));
 }
@@ -1178,8 +1178,8 @@ function resolveTransportRecipePlans(
       outputs: [{ itemId: "same-as-input", amount }],
       ingredientNodeIds: options.channel.ingredientNodeIds,
       productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: null,
-      gasDiffusionOutput: null,
+      requiredEnvironmentAnyOf: null,
+      environmentOutput: null,
     }));
   });
 }
@@ -1261,9 +1261,11 @@ function getOrCreateRegistryRecipePlan(
     inputs: recipe.inputs.map((input) => ({ ...input })),
     outputs: recipe.outputs.map((output) => ({ ...output })),
     ingredientNodeIds: options.channel.ingredientNodeIds,
-    productNodeIds: options.channel.productNodeIds,
-    requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
-    gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
+    productNodeIds: recipe.outputTarget === "warehouse"
+      ? options.topology.ordering.deviceOrder.flatMap(id => options.topology.devices[id]!.definitionId === "warehouse" ? options.topology.devices[id]!.nodeIds : [])
+      : options.channel.productNodeIds,
+    requiredEnvironmentAnyOf: normalizeRecipeGasItemId(recipe.requiredEnvironmentAnyOf),
+    environmentOutput: normalizeRecipeGasDiffusionOutput(recipe.environmentOutput),
   }));
 }
 
@@ -1283,8 +1285,8 @@ function requireExactRecipeDurationTicks(
   return durationTicks;
 }
 
-function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
-  return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
+function normalizeRecipeGasItemId(itemIds: readonly string[] | undefined): readonly string[] | null {
+  return itemIds?.length ? itemIds : null;
 }
 
 // AI-REMOVED 2026-10-13:
@@ -1310,9 +1312,9 @@ function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
 //   return { gasItemId: output.gasItemId, range: output.range };
 // }
 function normalizeRecipeGasDiffusionOutput(
-  output: RecipeDefinition["gasDiffusionOutput"],
-): CompiledSimulationRecipePlan["gasDiffusionOutput"] {
-  return output ? { gasItemId: output.gasItemId, rangeId: output.rangeId } : null;
+  output: RecipeDefinition["environmentOutput"],
+): CompiledSimulationRecipePlan["environmentOutput"] {
+  return output ? { itemId: output.itemId, rangeId: output.rangeId } : null;
 }
 
 function resolveWaterPurifierAllowedRecipeId(channelId: string): string | null {

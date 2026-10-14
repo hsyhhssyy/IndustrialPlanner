@@ -3,7 +3,7 @@ import type {
   SimulationDeviceOperatingStatus,
   SimulationDeviceRuntimeStatusReadModel,
   SimulationDocumentRuntimeReadModel,
-  SimulationGasDiffusionRangeReadModel,
+  SimulationEnvironmentRangeReadModel,
   SimulationPerformanceDiagnosticsReadModel,
   WarehouseStatsReadModel,
 } from "./types/simulation-types";
@@ -23,7 +23,7 @@ export interface SimulationQuery {
   /** AI-CORRECTION 2026-07-10: 管道可承载液体或气体，此查询表示当前是否有任意 fluid 物品占用。 */
   isPipeDeviceSlotOccupied(deviceId: string): boolean;
   /** 获取当前 tick 正在生效的气体扩散范围。 */
-  getActiveGasDiffusionRanges(): readonly SimulationGasDiffusionRangeReadModel[];
+  getActiveEnvironmentRanges(): readonly SimulationEnvironmentRangeReadModel[];
   /** 获取指定设备当前完全处于的气体 itemId 集合，无覆盖时返回 null。 */
   getDeviceActiveGasItemIds(deviceId: string): readonly string[] | null;
   /** 获取仓库统计数据（配方产出/消耗 + 仓库库存），仿真未启动时返回 null */

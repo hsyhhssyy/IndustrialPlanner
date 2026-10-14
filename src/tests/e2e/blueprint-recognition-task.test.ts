@@ -11,8 +11,8 @@ for (const profile of SCREEN_PROFILES) {
     const result = await cli.runJson(`async page => {
       const assert = (value, message) => { if (!value) throw Error(message); };
       await page.addInitScript(() => {
-        localStorage.setItem('industrial-planner.experimental.eda', 'true');
-        localStorage.setItem('v3-user-settings-dialog', JSON.stringify({values:{'other-experimental-features':true}}));
+        localStorage.setItem('industrial-planner.experimental.eda', 'false');
+        localStorage.setItem('v3-user-settings-dialog', JSON.stringify({values:{'other-experimental-features':false,'experimental-blueprint-planner':false}}));
       });
       await page.goto(${JSON.stringify(baseURL ?? "http://127.0.0.1:4174")});
       await page.waitForFunction(() => window.__test__?.readiness().assembled);

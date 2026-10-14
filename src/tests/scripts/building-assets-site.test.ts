@@ -70,6 +70,13 @@ staged=json.loads(Path('batch/stage/resources/building-top-view-v15.json').read_
 assert staged['entries'][0]['animated'] is False
 assert staged['entries'][0]['sourceMetadata']['spatial']['pathId']==9223372036854775807
 assert not Path('batch/stage/resources/device-sprite-animation').exists()
+Path('resources/building-state-visuals.json').write_text(json.dumps({'fixture': {'irrigated': 'soil_0_empty'}}))
+m['prepare_metadata']('batch')
+variants=json.loads(Path('batch/import-plan.json').read_text())['statics']
+assert len(variants)==2
+assert variants[1]['spriteId']=='fixture--irrigated' and variants[1]['stateVisualKey']=='irrigated'
+assert variants[1]['sourcePath']==view+'/animations/soil_0_empty/page.webp'
+assert variants[1]['physicalWidth']==256 and variants[1]['physicalHeight']==256
 entry['staticPhase']='missing'
 Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
 try:m['prepare_metadata']('batch')

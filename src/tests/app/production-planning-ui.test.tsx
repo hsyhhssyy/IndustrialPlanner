@@ -2,6 +2,9 @@ import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ProductionPlanningPanel } from "@/app/shell/production-planning/production-planning-panel";
 import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
+import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
+import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
+import { createEditorHost } from "@/editor/editor-host";
 import { TOOLBOX_DIALOG_TAB_IDS } from "@/app/state/state-impl";
 import { createDefaultPlannerSessionState, loadPlannerState, savePlannerState, type PlannerPersistedState } from "@/shared/storage/planner-storage";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
@@ -23,6 +26,37 @@ function initialState(patch: Partial<PlannerPersistedState>): PlannerPersistedSt
     session: createDefaultPlannerSessionState(), ...patch,
   };
 }
+
+it.each([null, false, true])("EDA 工具栏和产线入口默认可用，不受旧开关值 %s 影响", async legacyEnabled => {
+  if (legacyEnabled !== null) localStorage.setItem("industrial-planner.experimental.eda", JSON.stringify(legacyEnabled));
+  localStorage.setItem("v3-user-settings-dialog", JSON.stringify({ values: {
+    "other-experimental-features": false,
+    "experimental-blueprint-planner": legacyEnabled,
+  } }));
+  const { app, workspace } = createAppTestWorkspace();
+  const editor = createEditorHost(workspace, { persistence: "memory" });
+  const planner = createBlueprintPlannerHost(workspace);
+  await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }] }));
+  const view = await mountTestComponent(<>
+    <LeftToolbar appHost={app} />
+    <ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />
+  </>);
+  try {
+    await clickTestElement(buttonWithText(view.container, app.actions.translate("eda.toolbar")));
+    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+    await act(async () => app.blueprintPlannerDialog.close());
+    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
+    await clickTestElement(buttonWithText(view.container, "计算"));
+    const planButton = () => buttonWithText(view.container, app.actions.translate("eda.planThisLine"));
+    await vi.waitFor(async () => { await settleTestDom(); expect(planButton().disabled).toBe(false); });
+    await clickTestElement(planButton());
+    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+    expect(app.blueprintPlannerDialog.plan?.targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ itemId: "item_xiranite_powder", perMinute: 30 }),
+    ]));
+    expect(localStorage.getItem("industrial-planner.experimental.eda")).toBe(legacyEnabled === null ? null : JSON.stringify(legacyEnabled));
+  } finally { await view.unmount(); planner.dispose(); editor.dispose(); app.dispose(); }
+});
 
 it.each([false, true])("自然资源无限切换保留有限速率，恢复后影响真实计算，触控布局=%s", async isTouch => {
   const { app } = createAppTestWorkspace();

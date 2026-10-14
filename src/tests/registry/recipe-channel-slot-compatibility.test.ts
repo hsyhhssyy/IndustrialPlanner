@@ -1,4 +1,7 @@
 // =========================================================================
+
+// AI-CORRECTION 2026-10-14: 用户确认 outputTarget=warehouse 的产物直接入仓，
+// 验证已注册的具体物品和正整数数量；设备产物仍保留原有本地槽位匹配规则。
 // 用户手动创建的测试
 // 验证：每个配方中的原料和产物可以放入其设备至少一个 recipe channel
 // 对应的原料/产物槽位中。
@@ -155,7 +158,7 @@ function itemDomains(itemId: string): ItemDomain {
 // ---------------------------------------------------------------------------
 
 describe("recipe channel slot compatibility", () => {
-  it("每个配方的原料和产物都可放入其设备至少一个 recipe channel 的对应槽位", () => {
+  it("每个配方的原料匹配设备频道，产物匹配声明的设备槽位或仓库目标", () => {
     const failures: Array<{
       recipeId: string;
       machineId: string;
@@ -200,7 +203,10 @@ describe("recipe channel slot compatibility", () => {
         );
 
         const ingOk = canMatchAll(inputDomainSets, ingSlotFilterTypes);
-        const prodOk = canMatchAll(outputDomainSets, prodSlotFilterTypes);
+        const prodOk = recipe.outputTarget === "warehouse"
+          ? recipe.outputs.every(output => ITEM_DOMAIN_BY_ID.has(output.itemId)
+            && Number.isSafeInteger(output.amount) && output.amount > 0)
+          : canMatchAll(outputDomainSets, prodSlotFilterTypes);
         const ok = ingOk && prodOk;
         if (ok) {
           anyChannelOk = true;
@@ -216,8 +222,10 @@ describe("recipe channel slot compatibility", () => {
         }
         if (!prodOk && outputDomainSets.length > 0) {
           parts.push(
-            `产物 [${outputDomainSets.map((d) => `{${domainFlagsToLabel(d)}}`).join(", ")}] ` +
-            `无法匹配槽位 [${prodSlotFilterTypes.map(domainFlagsToLabel).join(", ")}]`,
+            recipe.outputTarget === "warehouse"
+              ? `仓库产物须为已注册具体物品且数量为正整数：${JSON.stringify(recipe.outputs)}`
+              : `产物 [${outputDomainSets.map((d) => `{${domainFlagsToLabel(d)}}`).join(", ")}] ` +
+                `无法匹配槽位 [${prodSlotFilterTypes.map(domainFlagsToLabel).join(", ")}]`,
           );
         }
         channelResults.push(`  channel "${channel.id}": ${parts.join("; ")}`);

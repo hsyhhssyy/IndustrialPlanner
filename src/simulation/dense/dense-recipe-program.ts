@@ -1,3 +1,4 @@
+import { CompiledEnvironment, type EnvironmentRecipeBinding } from "../environment";
 import { findEntityRange } from "@/shared/geometry/entity-range";
 import type { GridRect } from "@/domain/shared/grid";
 import {
@@ -47,8 +48,10 @@ export interface DenseRecipeProgram {
   readonly durationTicks: number;
   readonly inputs: readonly DenseRecipeItemRule[];
   readonly outputs: readonly DenseRecipeItemRule[];
-  readonly requiredGasItemIndex: number;
-  readonly gasDiffusionOutput: {
+  readonly requiredEnvironmentItemIndexes: readonly number[];
+  readonly environmentBinding: EnvironmentRecipeBinding;
+  readonly warehouseOutput: boolean;
+  readonly environmentOutput: {
     readonly itemIndex: number;
     readonly rangeId: string;
     readonly localRect: GridRect;
@@ -61,6 +64,7 @@ export interface DenseRecipeChannelProgram {
   readonly index: number;
   readonly deviceIndex: number;
   readonly channelId: string;
+  readonly startPolicy: "automatic" | "state" | "environment-demand";
   readonly ingredientSlotIndexes: Uint32Array;
   readonly productSlotIndexes: Uint32Array;
   readonly candidates: readonly DenseRecipeProgram[];
@@ -70,6 +74,9 @@ export interface DenseRecipeChannelProgram {
 }
 
 export interface DenseRecipeProgramSet {
+  readonly environment: CompiledEnvironment;
+  readonly startChannelIndexes: Uint32Array;
+  readonly providerChannelIndexes: Uint32Array;
   readonly channels: readonly DenseRecipeChannelProgram[];
   readonly deviceChannelOffsets: Uint32Array;
   readonly deviceChannelIndexes: Uint32Array;
@@ -98,6 +105,7 @@ export function compileDenseRecipePrograms(
         index,
         deviceIndex,
         channelId: channel.id,
+        startPolicy: channel.startPolicy ?? "automatic",
         ingredientSlotIndexes: collectChannelSlotIndexes(
           topology,
           layout,
@@ -133,8 +141,20 @@ export function compileDenseRecipePrograms(
   }
   deviceChannelOffsets[layout.dictionary.deviceIds.length] = deviceChannelIndexes.length;
 
+  const environment = new CompiledEnvironment(topology, registry, channels.flatMap(channel => channel.candidates.map(recipe => ({
+    deviceId: layout.dictionary.deviceIds[channel.deviceIndex]!, recipe: {
+      requiredEnvironmentAnyOf: recipe.requiredEnvironmentItemIndexes.map(index => layout.dictionary.itemIds[index]!),
+      environmentOutput: recipe.environmentOutput === null ? undefined : { itemId: layout.dictionary.itemIds[recipe.environmentOutput.itemIndex]!, rangeId: recipe.environmentOutput.rangeId },
+    },
+  }))));
+  let bindingIndex = 0;
+  const boundChannels = channels.map(channel => ({ ...channel, candidates: channel.candidates.map(recipe => ({ ...recipe, environmentBinding: environment.bindings[bindingIndex++]! })) }));
+  const priority = (channel: DenseRecipeChannelProgram) => channel.consumptionChannel ? 0 : channel.candidates.some(recipe => recipe.environmentOutput !== null) ? 1 : 2;
   return {
-    channels,
+    environment,
+    startChannelIndexes: Uint32Array.from([...boundChannels].sort((a, b) => priority(a) - priority(b)), channel => channel.index),
+    providerChannelIndexes: Uint32Array.from(boundChannels.filter(channel => channel.candidates.some(recipe => recipe.environmentOutput !== null)), channel => channel.index),
+    channels: boundChannels,
     deviceChannelOffsets,
     deviceChannelIndexes: Uint32Array.from(deviceChannelIndexes),
   };
@@ -182,8 +202,10 @@ function compileChannelCandidates(options: {
         value: DENSE_INDEX_NONE,
         amount: 1,
       }],
-      requiredGasItemIndex: DENSE_INDEX_NONE,
-      gasDiffusionOutput: null,
+      requiredEnvironmentItemIndexes: [],
+      environmentBinding: { conditions: new Uint32Array(0), providerIndex: -1 },
+      warehouseOutput: false,
+      environmentOutput: null,
       warehouseSubmit: false,
       powerOutput: 0,
     }];
@@ -252,16 +274,16 @@ function compileRecipeProgram(
     ),
     inputs: recipe.inputs.map((input) => compileItemRule(input, itemIndexById, false)),
     outputs: recipe.outputs.map((output) => compileItemRule(output, itemIndexById, true)),
-    requiredGasItemIndex: recipe.requiredGasDiffusion === undefined
-      ? DENSE_INDEX_NONE
-      : requireItemIndex(itemIndexById, recipe.requiredGasDiffusion),
-    gasDiffusionOutput: recipe.gasDiffusionOutput === undefined
+    requiredEnvironmentItemIndexes: (recipe.requiredEnvironmentAnyOf ?? []).map(id => requireItemIndex(itemIndexById, id)),
+    environmentBinding: { conditions: new Uint32Array(0), providerIndex: -1 },
+    warehouseOutput: recipe.outputTarget === "warehouse",
+    environmentOutput: recipe.environmentOutput === undefined
       ? null
       : {
-          itemIndex: requireItemIndex(itemIndexById, recipe.gasDiffusionOutput.gasItemId),
-          rangeId: recipe.gasDiffusionOutput.rangeId,
+          itemIndex: requireItemIndex(itemIndexById, recipe.environmentOutput.itemId),
+          rangeId: recipe.environmentOutput.rangeId,
           localRect: findEntityRange(
-            registry.queries.findEntityDefinition(recipe.machineId)!, recipe.gasDiffusionOutput.rangeId,
+            registry.queries.findEntityDefinition(recipe.machineId)!, recipe.environmentOutput.rangeId,
           ).localRect,
         },
     warehouseSubmit: recipe.id === "r_warehouse_submit",

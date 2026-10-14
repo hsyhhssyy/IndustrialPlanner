@@ -210,7 +210,7 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
         return slot !== null && slot.itemType !== null;
       }) === true);
     },
-    getActiveGasDiffusionRanges: () => {
+    getActiveEnvironmentRanges: () => {
       const topology = context.getTopology();
       const presentation = context.getPresentation();
       if (topology === null || presentation === null) return [];
@@ -220,7 +220,7 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
           sourceDeviceId: diffusion.sourceDeviceId,
           rangeId: diffusion.rangeId,
           rotation: diffusion.rotation,
-          gasItemId: diffusion.gasItemId,
+          itemId: diffusion.itemId,
           gridRect: { ...diffusion.gridRect },
         }));
     },
@@ -242,11 +242,11 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
       const topology = context.getTopology();
       const presentation = context.getPresentation();
       if (topology === null || presentation === null || presentation.tickNumber === null) return null;
-      const diffusions = presentation.getGasDiffusions();
+      const diffusions = presentation.getGasDiffusions().filter(range => context.registryQueries.findItemDefinition(range.itemId)?.tags.includes("gas"));
       if (diffusions.length === 0) return null;
       const compiledId = resolveCompiledDeviceId(topology, deviceId);
       if (compiledId === null) return null;
-      const itemIds = buildDeviceGasCoverage(topology, diffusions).get(compiledId);
+      const itemIds = buildDeviceGasCoverage(topology, diffusions, context.registryQueries).get(compiledId);
       return itemIds === undefined ? null : [...itemIds];
     },
     getWarehouseStats: () => {
@@ -436,6 +436,7 @@ function resolveDeviceRuntimeStatus(options: {
   //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
     channelRecipes,
+    ...(deviceSnapshot.deviceState === undefined ? {} : { deviceState: deviceSnapshot.deviceState }),
     // AI-REMOVED 2026-07-23:
     // Reason: 设备状态不再投影已删除的分钟计量 read model。
     // Trigger: Inspector 改为直接读取真实消耗槽。

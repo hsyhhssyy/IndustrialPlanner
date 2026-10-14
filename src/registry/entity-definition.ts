@@ -1,3 +1,4 @@
+import { CROP_STATE_MACHINES } from "./crop-definitions";
 // =========================================================================
 // 实体定义注册表（Entity Definitions Registry）
 //
@@ -5474,6 +5475,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   // AKEData 1.5.3@10731330-8：3×3、西侧中央液体输入；当前仅接入编辑与范围展示。
+  // AI-CORRECTION 2026-10-14: 现已接入通用环境配方与按需求启停的浇水仿真。
   createEntityDefinition({
     id: "squirter_1",
     nameKey: "registry.entity.squirter_1.name",
@@ -5492,7 +5494,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "agriculture",
     displayOrder: 800,
-    tags: [],
+    tags: [PRODUCER_TAG],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
     requiresPower: true,
     powerDemand: 10,
@@ -5501,17 +5503,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       coverage: "intersects", interactionKind: "irrigation", visualId: "irrigation",
     }],
     portGroups: [createPortGroup("fluid_input", FLUID_PIPE_PORT, "input", [
-      createPort("in_w_1", 0, 1, "W"),
+      createPort("in_w_1", 0, 1, "W", { acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] } }),
     ])],
     // 不声明缓存、配方和耗水周期，避免编辑能力被误当成浇水仿真。
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    // AI-CORRECTION 2026-10-14: 新增容量 50 液体缓存与按需运行的 1 秒环境配方。
+    storageSlotGroups: [createStorageSlotGroup("liquid", ItemDomainFlag.Liquid, [createSlot("liquid", 50, ItemDomainFlag.Liquid)])],
+    portStorageBindings: [createBinding("liquid-input", "fluid_input", "liquid")],
+    recipeChannels: [{ id: "irrigation", startPolicy: "environment-demand", ingredientStorageGroupIds: ["liquid"], productStorageGroupIds: [] }],
   }),
 
   // 普通田块的 raw renderer 共用 soil_1；蓝图使用无端口方框，3D 素材待提供。
   // AI-CORRECTION 2026-10-12: 已接入各田块独立的 soil_1_mature 首帧；蓝图仍为方框，列表使用各自物品图标。
   /** 锦草田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_grass_1",
     nameKey: "registry.entity.soil_grass_1.name",
     spriteId: "soil_grass_1",
@@ -5519,12 +5523,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 801,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_grass_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 芽针田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_grass_2",
     nameKey: "registry.entity.soil_grass_2.name",
     spriteId: "soil_grass_2",
@@ -5532,12 +5540,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 802,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_grass_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 荞花田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_moss_1",
     nameKey: "registry.entity.soil_moss_1.name",
     spriteId: "soil_moss_1",
@@ -5545,12 +5557,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 803,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_moss_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 柑实田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_moss_2",
     nameKey: "registry.entity.soil_moss_2.name",
     spriteId: "soil_moss_2",
@@ -5558,12 +5574,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 804,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_moss_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 砂叶田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_moss_3",
     nameKey: "registry.entity.soil_moss_3.name",
     spriteId: "soil_moss_3",
@@ -5571,12 +5591,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 805,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_moss_3"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 酮化灌木田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_bbflower_1",
     nameKey: "registry.entity.soil_bbflower_1.name",
     spriteId: "soil_bbflower_1",
@@ -5584,12 +5608,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 806,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_bbflower_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 灰芦麦田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_sp_1",
     nameKey: "registry.entity.soil_sp_1.name",
     spriteId: "soil_sp_1",
@@ -5597,12 +5625,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 807,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_sp_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 苦叶椒田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_sp_2",
     nameKey: "registry.entity.soil_sp_2.name",
     spriteId: "soil_sp_2",
@@ -5610,12 +5642,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 808,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_sp_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 琼叶参田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_sp_3",
     nameKey: "registry.entity.soil_sp_3.name",
     spriteId: "soil_sp_3",
@@ -5623,12 +5659,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 809,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_sp_3"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
   /** 金石稻田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "soil_sp_4",
     nameKey: "registry.entity.soil_sp_4.name",
     spriteId: "soil_sp_4",
@@ -5636,7 +5676,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
     displayOrder: 810,
-    tags: ["AcceptsIrrigation"],
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_sp_4"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 

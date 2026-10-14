@@ -1,10 +1,11 @@
+import type { SimulationDeviceStateReadModel } from "@/domain/simulation/types/simulation-types";
 import {
   ADMISSION_RATE_WINDOWS_PER_MINUTE,
 } from "@/domain/registry";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipePlan,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
   SimulationRecipeType,
@@ -93,6 +94,7 @@ export interface RuntimeSlotState {
 }
 
 export interface RuntimeDeviceState {
+  deviceState?: SimulationDeviceStateReadModel;
   block: boolean;
   // AI-CORRECTION 2026-05-13: recipe → channelRecipes.
   // 每个 channel 独立运行一个配方。key 为 channel id。
@@ -156,7 +158,7 @@ export interface SimulationTickTransientState {
   /** 帧开始时冻结、Stage 5 消耗启动后重算的设备运行许可。跨 tick 的 overlay 配方完成路径不可依赖此字段 —— 它是上一 tick 的快照。 */
   activeConsumptionDeviceIds: ReadonlySet<string>;
   /** 当前 tick 判定用气体扩散范围。跨 tick 的 overlay 配方完成路径不可依赖此字段 —— 它是上一 tick 的快照。 */
-  activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
+  activeEnvironments: readonly RuntimeEnvironmentSnapshot[];
   /** 当前 tick 是否处于真实电力不足状态。 */
   isPowerOutage: boolean;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
@@ -489,7 +491,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     blockedInputNodeIds: new Set(),
     reservedAmountByStorageSlotId: null,
     activeConsumptionDeviceIds: new Set(),
-    activeGasDiffusions: [],
+    activeEnvironments: [],
     isPowerOutage: false,
     recipeStatsDelta: createRecipeStatsDelta(),
   };
@@ -832,6 +834,7 @@ function cloneFixedWindowCounterState(
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
   return {
     block: device.block,
+    ...(device.deviceState ? { deviceState: { ...device.deviceState } } : {}),
     channelRecipes: Object.fromEntries(
       Object.entries(device.channelRecipes).map(([chId, recipe]) => [
         chId,
@@ -894,7 +897,7 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
       ? null
       : { ...transient.reservedAmountByStorageSlotId },
     activeConsumptionDeviceIds: new Set(transient.activeConsumptionDeviceIds),
-    activeGasDiffusions: transient.activeGasDiffusions.map((diffusion) => ({
+    activeEnvironments: transient.activeEnvironments.map((diffusion) => ({
       ...diffusion,
       gridRect: { ...diffusion.gridRect },
     })),

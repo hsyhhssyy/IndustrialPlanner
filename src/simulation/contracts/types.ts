@@ -1,3 +1,4 @@
+import type { SimulationDeviceStateReadModel } from "@/domain/simulation/types/simulation-types";
 import type { LinkType } from "@/domain/document/world-document";
 import type {
   GridEdge,
@@ -220,7 +221,7 @@ export interface CompiledSimulationTopology {
 // }
 
 export interface CompiledSimulationGasDiffusionOutput {
-  readonly gasItemId: string;
+  readonly itemId: string;
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
 // Trigger: 洒水机和定向离体区域支持。
@@ -348,6 +349,7 @@ export interface CompiledSimulationWaterPurifierNodeConfig {
 }
 
 export interface CompiledSimulationRecipeChannel {
+  readonly startPolicy?: "automatic" | "state" | "environment-demand";
   readonly id: string;
   readonly type: "normal-channel" | "consumption-channel";
   readonly ingredientNodeIds: readonly string[];
@@ -481,8 +483,8 @@ export interface CompiledSimulationRecipePlan {
   readonly outputs: readonly CompiledSimulationRecipeItem[];
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
-  readonly requiredGasDiffusion: string | null;
-  readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
+  readonly requiredEnvironmentAnyOf: readonly string[] | null;
+  readonly environmentOutput: CompiledSimulationGasDiffusionOutput | null;
 }
 
 export interface CompiledSimulationRecipeItem {
@@ -598,16 +600,16 @@ export interface RuntimeTickSnapshot {
   readonly routingCursors: Record<string, number>;
   readonly transportComponentDomain: Record<string, string | null>;
   readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
-  readonly gasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
+  readonly environments: readonly RuntimeEnvironmentSnapshot[];
   /** 仓库统计快照：配方产出/消耗 per-min 与当前库存。仿真未启动时为 null。 */
   readonly warehouseStats: WarehouseStats | null;
 }
 
-export interface RuntimeGasDiffusionSnapshot {
+export interface RuntimeEnvironmentSnapshot {
   readonly sourceDeviceId: string;
   readonly rangeId: string;
   readonly rotation: GridRotation;
-  readonly gasItemId: string;
+  readonly itemId: string;
   readonly gridRect: GridRect;
 }
 
@@ -642,6 +644,7 @@ export interface RuntimeSlotSnapshot {
 }
 
 export interface RuntimeDeviceSnapshot {
+  readonly deviceState?: SimulationDeviceStateReadModel;
   readonly deviceId: string;
   readonly block: boolean;
   // AI-CORRECTION 2026-05-29: recipe 保留兼容，channelRecipes 为新的多 channel 数据源。

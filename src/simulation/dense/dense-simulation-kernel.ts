@@ -1,21 +1,52 @@
-import { resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
+import { compileDeviceStates, DeviceStateRuntime, type DeviceStateCheckpoint } from "../device-state";
+// AI-REMOVED 2026-10-14:
+// Reason: 几何只在环境编译器处理。
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// import { resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
+
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
-import { areGridRectsContaining } from "@/shared/geometry/power-range";
-import {
-  getRotatedGridFootprint,
-} from "@/shared/geometry/grid";
+// AI-REMOVED 2026-10-14:
+// Reason: 几何只在环境编译器处理。
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// import { areGridRectsContaining } from "@/shared/geometry/power-range";
+
+// AI-REMOVED 2026-10-14:
+// Reason: 几何只在环境编译器处理。
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   getRotatedGridFootprint,
+// } from "@/shared/geometry/grid";
+
 
 import type {
   CompiledSimulationDevice,
   CompiledSimulationTopology,
   RuntimeDeviceRecipeSnapshot,
   RuntimeDeviceSnapshot,
-  RuntimeGasDiffusionSnapshot,
+  RuntimeEnvironmentSnapshot,
 } from "../contracts";
 import {
   convertSimulationPhaseTickBetweenRates,
@@ -86,6 +117,7 @@ export interface DenseWarehouseStatsBucket {
 }
 
 export interface DenseKernelCheckpoint {
+  readonly deviceStates: DeviceStateCheckpoint;
   readonly standardTickRate: number;
   readonly tickNumber: number;
   readonly transfers: DenseKernelTransferBatch;
@@ -170,6 +202,13 @@ const BASE_BATTERY_CAPACITY_J = 100_000_000;
 export class DenseSimulationKernel {
   public readonly state: DenseRuntimeState;
   private recipePrograms: DenseRecipeProgramSet;
+  private readonly deviceStates: DeviceStateRuntime;
+  private readonly stateMachineByChannel: Int32Array;
+  private readonly stateMachineByDevice: Int32Array | null;
+  private readonly stateChannelIndexes: Uint32Array;
+  private readonly stateRecipeIndexes: readonly Int32Array[];
+  private readonly dirtyEnvironmentChannels: DenseIndexSet;
+  private readonly activeEnvironmentProviders: Int32Array;
   private readonly lookup: DenseTopologyLookup;
   private readonly channelRecipeIndexes: Int32Array;
   private readonly channelProgressTicks: Float64Array;
@@ -206,7 +245,7 @@ export class DenseSimulationKernel {
   private warehouseStatsBuckets: DenseWarehouseStatsBucket[] = [];
   private currentTickProduced = new Map<number, number>();
   private currentTickConsumed = new Map<number, number>();
-  private activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[] = [];
+  private activeEnvironments: readonly RuntimeEnvironmentSnapshot[] = [];
   private powerMode: "real" | "infinite" = "infinite";
   private powerConsumptionOverride: number | undefined;
   private currentPowerGenerationValue = BASE_POWER_GENERATION_KW;
@@ -228,6 +267,24 @@ export class DenseSimulationKernel {
     this.lookup = createDenseTopologyLookup(layout.dictionary);
     this.state = new DenseRuntimeState(layout);
     this.recipePrograms = compileDenseRecipePrograms(topology, layout, registry);
+    this.deviceStates = new DeviceStateRuntime(compileDeviceStates(topology, registry));
+    this.stateMachineByChannel = new Int32Array(this.recipePrograms.channels.length).fill(-1);
+    this.stateMachineByDevice = this.deviceStates.programs.length === 0 ? null : new Int32Array(layout.dictionary.deviceIds.length).fill(-1);
+    this.stateChannelIndexes = new Uint32Array(this.deviceStates.programs.length);
+    this.stateRecipeIndexes = this.deviceStates.programs.map((program, index) => {
+      const deviceIndex = this.lookup.deviceIndexById.get(program.deviceId)!;
+      const channel = this.recipePrograms.channels.find(entry => entry.deviceIndex === deviceIndex && entry.channelId === program.channelId)!;
+      this.stateMachineByChannel[channel.index] = index;
+      this.stateMachineByDevice![deviceIndex] = index;
+      this.stateChannelIndexes[index] = channel.index;
+      return Int32Array.from(program.states, state => {
+        const candidate = state.enterRecipeId === null ? -1 : channel.candidates.findIndex(recipe => recipe.recipeId === state.enterRecipeId);
+        if (state.enterRecipeId !== null && candidate < 0) throw new Error("Missing state recipe: " + state.enterRecipeId);
+        return candidate;
+      });
+    });
+    this.dirtyEnvironmentChannels = new DenseIndexSet(this.recipePrograms.channels.length);
+    this.activeEnvironmentProviders = new Int32Array(this.recipePrograms.channels.length).fill(-1);
     this.channelRecipeIndexes = new Int32Array(this.recipePrograms.channels.length);
     this.channelRecipeIndexes.fill(DENSE_INDEX_NONE);
     this.channelProgressTicks = new Float64Array(this.recipePrograms.channels.length);
@@ -319,8 +376,8 @@ export class DenseSimulationKernel {
     return this.currentTickTransfers;
   }
 
-  public get gasDiffusions(): readonly RuntimeGasDiffusionSnapshot[] {
-    return this.activeGasDiffusions;
+  public get environments(): readonly RuntimeEnvironmentSnapshot[] {
+    return this.activeEnvironments;
   }
 
   public get currentPowerGeneration(): number {
@@ -454,6 +511,7 @@ export class DenseSimulationKernel {
 
   public createCheckpoint(): DenseKernelCheckpoint {
     return {
+      deviceStates: this.deviceStates.checkpoint(),
       standardTickRate: this.topology.standardTickRate,
       tickNumber: this.currentTickNumber,
       transfers: cloneDenseTransfers(this.currentTickTransfers),
@@ -497,6 +555,7 @@ export class DenseSimulationKernel {
       throw new Error("Dense checkpoint time unit does not match the current standard tick rate.");
     }
     this.assertCheckpointShape(checkpoint);
+    this.deviceStates.restore(checkpoint.deviceStates);
     this.currentTickNumber = checkpoint.tickNumber;
     this.currentTickTransfers = cloneDenseTransfers(checkpoint.transfers);
     this.state.slotItemIndexes.set(checkpoint.slotItemIndexes);
@@ -529,6 +588,7 @@ export class DenseSimulationKernel {
     this.powerConsumptionOverride = checkpoint.powerConsumptionOverride;
     this.baseBatteryJoulesValue = checkpoint.baseBatteryJoules;
     this.nextRecipeRunId = checkpoint.nextRecipeRunId;
+    this.rebuildStateEnvironment();
     this.waterPurifierManualRemainders.set(checkpoint.waterPurifierManualRemainders);
     this.warehouseStatsBuckets = checkpoint.warehouseStatsBuckets.map(
       cloneWarehouseStatsBucket,
@@ -542,7 +602,8 @@ export class DenseSimulationKernel {
     this.currentTickProduced = new Map();
     this.currentTickConsumed = new Map();
     this.warehouseStatsDirtyItemIndexes.clear();
-    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    this.refreshEnvironmentChannels();
+    this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.refreshPowerState(false);
     this.state.clearDirtyState();
   }
@@ -619,6 +680,21 @@ export class DenseSimulationKernel {
     }
 
     const resetDevices = new Set(resetDeviceIds);
+    const stateCheckpoint = this.deviceStates.checkpoint();
+    const oldStates = new Map(previous.deviceStates.programs.map((program, index) => [program.deviceId, index]));
+    this.deviceStates.programs.forEach((program, index) => {
+      const oldIndex = oldStates.get(program.deviceId);
+      if (oldIndex === undefined || resetDevices.has(program.deviceId)) return;
+      const oldState = previous.deviceStates.programs[oldIndex]!.states[previous.deviceStates.indexes[oldIndex]!];
+      if (!oldState) return;
+      const nextState = program.states.findIndex(state => state.id === oldState.id);
+      if (nextState < 0) return;
+      stateCheckpoint.indexes[index] = nextState;
+      stateCheckpoint.enteredSeconds[index] = previous.deviceStates.enteredSeconds[oldIndex]!;
+      stateCheckpoint.deadlineSeconds[index] = previous.deviceStates.deadlineSeconds[oldIndex]!;
+    });
+    this.deviceStates.restore(stateCheckpoint);
+    this.rebuildStateEnvironment();
     const preservedDeviceIds = new Set<string>();
     this.currentTickNumber = migratedTickNumber;
     // 迁移后的拓扑索引可能变化，旧帧的传输事件不能带入新拓扑。
@@ -692,7 +768,8 @@ export class DenseSimulationKernel {
     this.restoreMigratedWarehouseStats(previous);
     this.resetConflictingMigratedTransportComponents();
     this.updateDeviceBlockStates();
-    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    this.refreshEnvironmentChannels();
+    this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.refreshPowerState(false);
     this.state.clearDirtyState();
   }
@@ -769,6 +846,8 @@ export class DenseSimulationKernel {
       recipe: firstRecipe,
       channelRecipes,
       admissionCounters: this.createAdmissionCounterSnapshots(deviceIndex),
+      ...(this.stateMachineByDevice !== null && this.stateMachineByDevice[deviceIndex]! >= 0
+        ? { deviceState: this.deviceStates.snapshot(this.stateMachineByDevice[deviceIndex]!) } : {}),
     };
   }
 
@@ -915,7 +994,8 @@ export class DenseSimulationKernel {
     this.applySingleBaseRegionalResourceSupply();
     this.normalizeAdmissionWindows();
     this.refreshPowerState(true);
-    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    this.refreshEnvironmentChannels();
+    this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.advanceRunningRecipes();
     this.applyWaterPurifierManualOutput();
 
@@ -924,11 +1004,14 @@ export class DenseSimulationKernel {
 
   private finishTick(): void {
     this.settleWaitingRecipes();
-    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    if (this.deviceStates.programs.length > 0) this.processDeviceStates();
+    this.refreshEnvironmentChannels();
+    this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.startIdleRecipes();
     this.applyBlockageAutoClearance();
     this.updateDeviceBlockStates();
-    this.activeGasDiffusions = this.collectActiveGasDiffusions();
+    this.refreshEnvironmentChannels();
+    this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.commitWarehouseStatsTick();
   }
 
@@ -999,8 +1082,7 @@ export class DenseSimulationKernel {
             || !consumptionAuthorizedForFrame
           )
         )
-        || (recipe.requiredGasItemIndex !== DENSE_INDEX_NONE
-          && !this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex))
+        || !this.recipePrograms.environment.satisfied(recipe.environmentBinding)
       ) {
         continue;
       }
@@ -1028,7 +1110,15 @@ export class DenseSimulationKernel {
   }
 
   private startIdleRecipes(): void {
-    for (const channel of this.recipePrograms.channels) {
+    for (const channelIndex of this.recipePrograms.startChannelIndexes) {
+      const channel = this.recipePrograms.channels[channelIndex]!;
+      if (channel.startPolicy === "environment-demand" && !isSimulationWholeSecondTick(this.currentTickNumber, this.topology.standardTickRate)) continue;
+      let requestedRecipeIndex = -1;
+      if (channel.startPolicy === "state") {
+        const machineIndex = this.stateMachineByChannel[channel.index]!;
+        requestedRecipeIndex = machineIndex < 0 ? -1 : this.stateRecipeIndexes[machineIndex]![this.deviceStates.indexes[machineIndex]!] ?? -1;
+        if (requestedRecipeIndex < 0) continue;
+      }
       if (
         this.channelStates[channel.index] !== CHANNEL_IDLE
         || !this.isDeviceTransferPhase(channel.deviceIndex)
@@ -1042,11 +1132,14 @@ export class DenseSimulationKernel {
       ) {
         continue;
       }
-      for (let recipeIndex = 0; recipeIndex < channel.candidates.length; recipeIndex += 1) {
+      const candidateStart = requestedRecipeIndex < 0 ? 0 : requestedRecipeIndex;
+      const candidateEnd = requestedRecipeIndex < 0 ? channel.candidates.length : requestedRecipeIndex + 1;
+      for (let recipeIndex = candidateStart; recipeIndex < candidateEnd; recipeIndex += 1) {
         const recipe = channel.candidates[recipeIndex]!;
+        if (channel.startPolicy === "state" && recipeIndex !== requestedRecipeIndex) continue;
+        if (channel.startPolicy === "environment-demand" && (recipe.environmentBinding.providerIndex < 0 || this.recipePrograms.environment.providerDemand[recipe.environmentBinding.providerIndex] === 0)) continue;
         if (
-          (recipe.requiredGasItemIndex !== DENSE_INDEX_NONE
-            && !this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex))
+          !this.recipePrograms.environment.satisfied(recipe.environmentBinding)
           || this.isRecipeAlreadyRunningOnSiblingChannel(channel, recipe.recipeId)
         ) {
           continue;
@@ -1056,6 +1149,7 @@ export class DenseSimulationKernel {
           continue;
         }
         this.commitRecipeStart(channel, recipeIndex, recipe, reservations);
+        this.refreshEnvironmentChannels();
         break;
       }
     }
@@ -1092,6 +1186,7 @@ export class DenseSimulationKernel {
     this.channelRecipeIndexes[channel.index] = recipeIndex;
     this.channelProgressTicks[channel.index] = 0;
     this.channelStates[channel.index] = CHANNEL_RUNNING;
+    if (recipe.environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channel.index);
     this.channelRunIds[channel.index] = this.nextRecipeRunId;
     this.nextRecipeRunId += 1;
     this.state.dirtyDeviceIndexes.add(channel.deviceIndex);
@@ -1132,7 +1227,8 @@ export class DenseSimulationKernel {
       if (channel.producer) this.recordWarehouseConsumption(inputItems);
     }
     for (const placement of placements) {
-      this.state.produce(placement.slotIndex, placement.itemIndex, placement.amount);
+      if (recipe.warehouseOutput && this.regionalOptions !== null) this.recordRegionalDeposit(placement.itemIndex, placement.amount);
+      else this.state.produce(placement.slotIndex, placement.itemIndex, placement.amount);
       this.refreshTransportComponentForSlot(placement.slotIndex);
     }
     if (channel.producer) {
@@ -1144,6 +1240,8 @@ export class DenseSimulationKernel {
       this.submitDeviceInventoryToWarehouse(channel.deviceIndex);
     }
 
+    if (this.stateMachineByDevice !== null) this.deviceStates.completed(this.stateMachineByChannel[channel.index]!, recipe.recipeId);
+    if (recipe.environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channel.index);
     this.channelRecipeIndexes[channel.index] = DENSE_INDEX_NONE;
     this.channelProgressTicks[channel.index] = 0;
     this.channelStates[channel.index] = CHANNEL_IDLE;
@@ -1217,6 +1315,19 @@ export class DenseSimulationKernel {
       }
     }
 
+    if (recipe.warehouseOutput) {
+      const placements: DenseRecipeOutputPlacement[] = [];
+      for (const output of recipe.outputs) {
+        const slotIndex = this.warehouseSlotIndexesByItemIndex[output.value]!;
+        if (slotIndex === DENSE_INDEX_NONE) return null;
+        const storage = this.layout.slotStorageIndexes[slotIndex]!;
+        const count = this.readVirtualCount(storage, virtualCounts) + output.amount;
+        if (count > this.layout.slotCapacities[slotIndex]!) return null;
+        virtualCounts.set(storage, count);
+        placements.push({ slotIndex, itemIndex: output.value, amount: output.amount });
+      }
+      return placements;
+    }
     const placements: DenseRecipeOutputPlacement[] = [];
     const firstInputItemIndex = inputItems[0]?.itemIndex ?? DENSE_INDEX_NONE;
     for (const output of recipe.outputs) {
@@ -1986,8 +2097,7 @@ export class DenseSimulationKernel {
         )
       )
       && (
-        recipe.requiredGasItemIndex === DENSE_INDEX_NONE
-        || this.isDeviceCoveredByGas(channel.deviceIndex, recipe.requiredGasItemIndex)
+        this.recipePrograms.environment.satisfied(recipe.environmentBinding)
       );
   }
 
@@ -2401,8 +2511,10 @@ export class DenseSimulationKernel {
       }
     }
     this.effectivePowerGeneration = effectiveGeneration;
+    const previousOutage = this.powerOutage;
     this.powerOutage = this.powerMode === "real"
       && effectiveGeneration < this.effectiveTotalPowerDemand;
+    if (previousOutage !== this.powerOutage) for (const index of this.recipePrograms.providerChannelIndexes) this.dirtyEnvironmentChannels.add(index);
   }
 
   private canEdgeTransferAtCurrentPhase(edgeIndex: number): boolean {
@@ -3005,48 +3117,107 @@ export class DenseSimulationKernel {
     }
   }
 
-  private collectActiveGasDiffusions(): readonly RuntimeGasDiffusionSnapshot[] {
-    const result: RuntimeGasDiffusionSnapshot[] = [];
-    const seen = new Set<string>();
-    for (const channel of this.recipePrograms.channels) {
-      if (this.channelStates[channel.index] !== CHANNEL_RUNNING) {
-        continue;
-      }
-      const output = this.getRunningProgram(channel).gasDiffusionOutput;
-      if (output === null) {
-        continue;
-      }
-      const device = this.requireDevice(channel.deviceIndex);
-      const gridRect = resolveDeviceRangeRect(device, output.localRect);
-      if (gridRect === null) {
-        continue;
-      }
-      const key = `${channel.deviceIndex}:${output.itemIndex}:${output.rangeId}`;
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      result.push({
-        sourceDeviceId: device.id,
-        rangeId: output.rangeId,
-        rotation: device.rotation!,
-        gasItemId: this.layout.dictionary.itemIds[output.itemIndex]!,
-        gridRect,
-      });
-    }
-    return result;
+  // AI-REMOVED 2026-10-14:
+// Reason: 全量频道和几何扫描改为编译关系与增量覆盖计数。
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// private collectActiveGasDiffusions(): readonly RuntimeEnvironmentSnapshot[] {
+//     const result: RuntimeEnvironmentSnapshot[] = [];
+//     const seen = new Set<string>();
+//     for (const channel of this.recipePrograms.channels) {
+//       if (this.channelStates[channel.index] !== CHANNEL_RUNNING) {
+//         continue;
+//       }
+//       const output = this.getRunningProgram(channel).environmentOutput;
+//       if (output === null) {
+//         continue;
+//       }
+//       const device = this.requireDevice(channel.deviceIndex);
+//       const gridRect = resolveDeviceRangeRect(device, output.localRect);
+//       if (gridRect === null) {
+//         continue;
+//       }
+//       const key = `${channel.deviceIndex}:${output.itemIndex}:${output.rangeId}`;
+//       if (seen.has(key)) {
+//         continue;
+//       }
+//       seen.add(key);
+//       result.push({
+//         sourceDeviceId: device.id,
+//         rangeId: output.rangeId,
+//         rotation: device.rotation!,
+//         itemId: this.layout.dictionary.itemIds[output.itemIndex]!,
+//         gridRect,
+//       });
+//     }
+//     return result;
+//   }
+
+
+  // AI-REMOVED 2026-10-14:
+// Reason: 全量频道和几何扫描改为编译关系与增量覆盖计数。
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// private isDeviceCoveredByGas(deviceIndex: number, gasItemIndex: number): boolean {
+//     const deviceRect = resolveDeviceGridRect(this.requireDevice(deviceIndex));
+//     if (deviceRect === null) {
+//       return false;
+//     }
+//     const itemId = this.layout.dictionary.itemIds[gasItemIndex]!;
+//     return this.activeEnvironments.some((diffusion) =>
+//       diffusion.itemId === itemId
+//       && areGridRectsContaining(diffusion.gridRect, deviceRect)
+//     );
+//   }
+
+
+
+  private processDeviceStates(): void {
+    const seconds = Math.max(0, this.currentTickNumber - 1) / this.topology.standardTickRate;
+    this.deviceStates.process(seconds, isSimulationWholeSecondTick(this.currentTickNumber, this.topology.standardTickRate), (machine, previous, next) => {
+      const channel = this.recipePrograms.channels[this.stateChannelIndexes[machine]!]!;
+      const oldRecipe = previous < 0 ? undefined : channel.candidates[this.stateRecipeIndexes[machine]![previous]!];
+      const newRecipe = channel.candidates[this.stateRecipeIndexes[machine]![next]!];
+      if (oldRecipe) this.recipePrograms.environment.demand(oldRecipe.environmentBinding, -1);
+      if (newRecipe) this.recipePrograms.environment.demand(newRecipe.environmentBinding, 1);
+      this.state.dirtyDeviceIndexes.add(channel.deviceIndex);
+    });
   }
 
-  private isDeviceCoveredByGas(deviceIndex: number, gasItemIndex: number): boolean {
-    const deviceRect = resolveDeviceGridRect(this.requireDevice(deviceIndex));
-    if (deviceRect === null) {
-      return false;
+  private refreshEnvironmentChannels(): void {
+    this.dirtyEnvironmentChannels.drain(index => {
+      const channel = this.recipePrograms.channels[index]!;
+      const previous = this.activeEnvironmentProviders[index]!;
+      const next = this.channelStates[index] === CHANNEL_RUNNING && (channel.consumptionChannel || this.hasDevicePower(channel.deviceIndex))
+        ? this.getRunningProgram(channel).environmentBinding.providerIndex : -1;
+      if (previous === next) return;
+      this.recipePrograms.environment.activate(previous, false);
+      this.recipePrograms.environment.activate(next, true);
+      this.activeEnvironmentProviders[index] = next;
+    });
+  }
+
+  private rebuildStateEnvironment(): void {
+    this.recipePrograms.environment.reset();
+    this.activeEnvironmentProviders.fill(-1);
+    for (let machine = 0; machine < this.deviceStates.programs.length; machine++) {
+      const state = this.deviceStates.indexes[machine]!;
+      if (state < 0) continue;
+      const channel = this.recipePrograms.channels[this.stateChannelIndexes[machine]!]!;
+      const recipe = channel.candidates[this.stateRecipeIndexes[machine]![state]!];
+      if (recipe) this.recipePrograms.environment.demand(recipe.environmentBinding, 1);
     }
-    const gasItemId = this.layout.dictionary.itemIds[gasItemIndex]!;
-    return this.activeGasDiffusions.some((diffusion) =>
-      diffusion.gasItemId === gasItemId
-      && areGridRectsContaining(diffusion.gridRect, deviceRect)
-    );
+    for (const channel of this.recipePrograms.providerChannelIndexes) this.dirtyEnvironmentChannels.add(channel);
   }
 
   private updateDeviceBlockStates(): void {
@@ -3058,12 +3229,20 @@ export class DenseSimulationKernel {
       }
       let hasRunning = false;
       let hasWaiting = false;
+      let hasRequestedWork = false;
       for (let offset = start; offset < end; offset += 1) {
         const channelIndex = this.recipePrograms.deviceChannelIndexes[offset]!;
+        const channel = this.recipePrograms.channels[channelIndex]!;
+        hasRequestedWork ||= channel.startPolicy !== "environment-demand"
+          || channel.candidates.some(recipe => recipe.environmentBinding.providerIndex >= 0
+            && this.recipePrograms.environment.providerDemand[recipe.environmentBinding.providerIndex]! > 0);
         hasRunning ||= this.channelStates[channelIndex] === CHANNEL_RUNNING;
         hasWaiting ||= this.channelStates[channelIndex] === CHANNEL_WAITING_OUTPUT;
       }
-      this.state.setDeviceBlocked(deviceIndex, hasWaiting || !hasRunning);
+      const machine = this.stateMachineByDevice?.[deviceIndex] ?? -1;
+      const currentState = machine < 0 ? -1 : this.deviceStates.indexes[machine]!;
+      const waitingForTime = currentState >= 0 && this.stateRecipeIndexes[machine]![currentState]! < 0;
+      this.state.setDeviceBlocked(deviceIndex, hasWaiting || (!hasRunning && !waitingForTime && hasRequestedWork));
     }
   }
 
@@ -3168,20 +3347,30 @@ function resolveRegionalGateTick(epochNumber: number, standardTickRate: number):
   return 1 + epochNumber * phaseTicks;
 }
 
-function resolveDeviceGridRect(
-  device: CompiledSimulationDevice,
-): RuntimeGasDiffusionSnapshot["gridRect"] | null {
-  if (device.position === null || device.rotation === null || device.footprint === null) {
-    return null;
-  }
-  const footprint = getRotatedGridFootprint(device.footprint, device.rotation);
-  return {
-    x: device.position.x,
-    y: device.position.y,
-    width: footprint.width,
-    height: footprint.height,
-  };
-}
+// AI-REMOVED 2026-10-14:
+// Reason: 田块状态机与环境需求统一处理
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// function resolveDeviceGridRect(
+//   device: CompiledSimulationDevice,
+// ): RuntimeEnvironmentSnapshot["gridRect"] | null {
+//   if (device.position === null || device.rotation === null || device.footprint === null) {
+//     return null;
+//   }
+//   const footprint = getRotatedGridFootprint(device.footprint, device.rotation);
+//   return {
+//     x: device.position.x,
+//     y: device.position.y,
+//     width: footprint.width,
+//     height: footprint.height,
+//   };
+// }
+
 
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
@@ -3208,13 +3397,23 @@ function resolveDeviceGridRect(
 //     height: range,
 //   };
 // }
-function resolveDeviceRangeRect(
-  device: CompiledSimulationDevice,
-  localRect: RuntimeGasDiffusionSnapshot["gridRect"],
-): RuntimeGasDiffusionSnapshot["gridRect"] | null {
-  if (device.position === null || device.rotation === null || device.footprint === null) return null;
-  return resolveLocalRangeGridRect(device.position, device.footprint, device.rotation, localRect);
-}
+// AI-REMOVED 2026-10-14:
+// Reason: 田块状态机与环境需求统一处理
+// Trigger: 田块灌溉及旧配方结算、状态处理、新配方启动分离。
+// Evidence: 当前 tick 调用链与编译阶段环境关系。
+// Replacement: CompiledEnvironment
+// Risk: Medium - 需验证状态转换边界和配方耗料。
+// Human Review: Required
+//
+// Original code:
+// function resolveDeviceRangeRect(
+//   device: CompiledSimulationDevice,
+//   localRect: RuntimeEnvironmentSnapshot["gridRect"],
+// ): RuntimeEnvironmentSnapshot["gridRect"] | null {
+//   if (device.position === null || device.rotation === null || device.footprint === null) return null;
+//   return resolveLocalRangeGridRect(device.position, device.footprint, device.rotation, localRect);
+// }
+
 
 function mapDenseItemIndex(
   previousLayout: DenseTopologyLayout,

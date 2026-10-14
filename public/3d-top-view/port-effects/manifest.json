@@ -68,63 +68,6 @@
     "squirter_1": "squirter_1/top"
   },
   "views": {
-    "squirter_1/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 3,
-        "height": 3,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        1.5,
-        1.5
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "open_idle": {
-          "file": "buildings/squirter_1/top/occlusion/height_open_idle.webp.rgba.bin",
-          "width": 192,
-          "height": 192,
-          "min": -3.9703264236450195,
-          "max": 3.981459856033325,
-          "pivot": [
-            96,
-            96
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "open_idle"
-      },
-      "epsilon": 0.001,
-      "variants": {
-        "liquid__0": [
-          {
-            "role": "input",
-            "index": 0,
-            "position": [
-              -1.5,
-              3,
-              0
-            ],
-            "yaw": 0,
-            "bindings": {
-              "on": "v1.5-20260924/fx/P_fxfac_interactive_large_pipeon_in_03",
-              "off": "v1.5-20260924/fx/P_interactive_large_pipeoff_in_01",
-              "activateOn": null,
-              "activateOff": null
-            }
-          }
-        ]
-      },
-      "rings": []
-    },
     "soil_grass_1/top": {
       "footprint": {
         "left": 0,
@@ -243,7 +186,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -367,7 +314,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -491,7 +442,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -615,7 +570,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -739,7 +698,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -863,7 +826,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -987,7 +954,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -1111,7 +1082,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -1235,7 +1210,11 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
@@ -1359,10 +1338,71 @@
         "soil_0_mature": "soil_0_mature",
         "soil_1_empty": "soil_1_empty",
         "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature"
+        "soil_1_mature": "soil_1_mature",
+        "soil_0_seedling_water": "soil_0_seedling",
+        "soil_0_mature_water": "soil_0_mature",
+        "soil_1_seedling_water": "soil_1_seedling",
+        "soil_1_mature_water": "soil_1_mature"
       },
       "epsilon": 0.001,
       "variants": {},
+      "rings": []
+    },
+    "squirter_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 3,
+        "height": 3,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        1.5,
+        1.5
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "open_idle": {
+          "file": "buildings/squirter_1/top/occlusion/height_open_idle.webp.rgba.bin",
+          "width": 192,
+          "height": 192,
+          "min": -3.9703264236450195,
+          "max": 3.981459856033325,
+          "pivot": [
+            96,
+            96
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "open_idle"
+      },
+      "epsilon": 0.001,
+      "variants": {
+        "liquid__0": [
+          {
+            "role": "input",
+            "index": 0,
+            "position": [
+              -1.5,
+              3,
+              0
+            ],
+            "yaw": 0,
+            "bindings": {
+              "on": "v1.5-20260924/fx/P_fxfac_interactive_large_pipeon_in_03",
+              "off": "v1.5-20260924/fx/P_interactive_large_pipeoff_in_01",
+              "activateOn": null,
+              "activateOff": null
+            }
+          }
+        ]
+      },
       "rings": []
     },
     "dismantler_1/top": {

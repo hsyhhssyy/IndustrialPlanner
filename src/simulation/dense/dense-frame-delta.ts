@@ -238,14 +238,14 @@ export class DenseFrameDeltaEncoder {
     const gasGridRects: number[] = [];
     const gasRangeIds: string[] = [];
     const gasRotations: number[] = [];
-    for (const diffusion of snapshot.gasDiffusions) {
+    for (const diffusion of snapshot.environments) {
       gasRangeIds.push(diffusion.rangeId);
       gasRotations.push(diffusion.rotation);
       gasSourceDeviceIndexes.push(
         this.requireIndex(this.lookup.deviceIndexById, diffusion.sourceDeviceId, "device"),
       );
       gasItemIndexes.push(
-        this.requireIndex(this.lookup.itemIndexById, diffusion.gasItemId, "item"),
+        this.requireIndex(this.lookup.itemIndexById, diffusion.itemId, "item"),
       );
       gasGridRects.push(
         diffusion.gridRect.x,
@@ -380,7 +380,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private baseBatteryCapacityValue = 0;
   private transfers: RuntimeTickSnapshot["transfers"] = [];
   private diagnostics: RuntimeTickSnapshot["diagnostics"] = [];
-  private gasDiffusions: RuntimeTickSnapshot["gasDiffusions"] = [];
+  private environments: RuntimeTickSnapshot["environments"] = [];
 
   public constructor(
     private readonly dictionary: DenseTopologyDictionary,
@@ -539,7 +539,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
         });
     this.diagnostics = delta.diagnostics.map((diagnostic) => ({ ...diagnostic }));
     const decodedGasDiffusions = decodeGasDiffusions(delta, this.dictionary);
-    this.gasDiffusions = this.presentationIdentity === null
+    this.environments = this.presentationIdentity === null
       ? decodedGasDiffusions
       : decodedGasDiffusions.flatMap((diffusion) => {
           const projected = projectDenseGasDiffusionSnapshot(
@@ -638,10 +638,10 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
     return this.diagnostics;
   }
 
-  public getGasDiffusions(): RuntimeTickSnapshot["gasDiffusions"] {
+  public getGasDiffusions(): RuntimeTickSnapshot["environments"] {
     return this.presentationDeviceIds === null
-      ? this.gasDiffusions
-      : this.gasDiffusions.filter((diffusion) =>
+      ? this.environments
+      : this.environments.filter((diffusion) =>
           this.presentationDeviceIds!.has(diffusion.sourceDeviceId)
         );
   }
@@ -727,7 +727,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
             this.presentationIdentity,
           )),
       diagnostics: this.diagnostics.map((diagnostic) => ({ ...diagnostic })),
-      gasDiffusions: this.getGasDiffusions().map((diffusion) => ({
+      environments: this.getGasDiffusions().map((diffusion) => ({
         ...diffusion,
         gridRect: { ...diffusion.gridRect },
       })),
@@ -1212,14 +1212,14 @@ function decodeTransfers(
 function decodeGasDiffusions(
   delta: DenseFrameDelta,
   dictionary: DenseTopologyDictionary,
-): RuntimeTickSnapshot["gasDiffusions"] {
+): RuntimeTickSnapshot["environments"] {
   return Array.from({ length: delta.gasSourceDeviceIndexes.length }, (_, offset) => ({
     sourceDeviceId: requireArrayEntry(
       dictionary.deviceIds,
       delta.gasSourceDeviceIndexes[offset]!,
       "device",
     ),
-    gasItemId: requireArrayEntry(dictionary.itemIds, delta.gasItemIndexes[offset]!, "item"),
+    itemId: requireArrayEntry(dictionary.itemIds, delta.gasItemIndexes[offset]!, "item"),
     rangeId: delta.gasRangeIds[offset]!,
     rotation: delta.gasRotations[offset]! as GridRotation,
     gridRect: {
@@ -1584,6 +1584,7 @@ function areDeviceSnapshotsEqual(
 ): boolean {
   return right !== undefined
     && left.block === right.block
+    && areJsonCompatibleValuesEqual(left.deviceState, right.deviceState)
     && areJsonCompatibleValuesEqual(left.recipe, right.recipe)
     && areJsonCompatibleValuesEqual(left.channelRecipes, right.channelRecipes)
     && areJsonCompatibleValuesEqual(left.admissionCounters, right.admissionCounters);

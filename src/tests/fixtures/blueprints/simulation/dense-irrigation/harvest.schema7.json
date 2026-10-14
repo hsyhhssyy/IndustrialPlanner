@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "dense-irrigation-harvest",
+  "version": "fixture-v2",
+  "name": "田块灌溉-harvest",
+  "description": "真实供电设施、洒水机和田块；有限 50 滴水，验证首轮收获并重新育苗。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "sprinkler": {
+      "id": "sprinkler",
+      "definitionId": "squirter_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 50
+      },
+      "tags": []
+    },
+    "plot": {
+      "id": "plot",
+      "definitionId": "soil_moss_3",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pylon": {
+      "id": "pylon",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 0,
+        "y": -3
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "sprinkler",
+    "plot",
+    "pylon"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
