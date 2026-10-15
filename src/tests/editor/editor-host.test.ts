@@ -3090,7 +3090,8 @@ describe("createEditorHost", () => {
         rotation: editorHost.internalState.drafts[0]?.rotation,
       }).toEqual({
         definitionId: definition.id,
-        position: initialDraft.position,
+        // AI-CORRECTION 2026-10-15: 缘缘庄田块的场景起点位于子区域，四次旋转必须返回各自场景的原位。
+        position: blueprint.entities[initialDraft.id]!.position,
         rotation: 0,
       });
     }

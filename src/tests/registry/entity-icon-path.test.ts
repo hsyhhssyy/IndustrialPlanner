@@ -5,14 +5,19 @@ import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 
 describe("entity icon paths", () => {
-  it("declares an existing public-relative UI icon for every entity definition", () => {
+  it("declares public-relative UI icons and permits the authorized missing crop icons", () => {
     const definitions = createRegistryContract().entityDefinitions;
 
     expect(definitions.length).toBeGreaterThan(0);
     for (const definition of definitions) {
       expect(definition.iconPath).not.toMatch(/^(?:\/|[a-z][a-z\d+\-.]*:)/i);
       expect(definition.iconPath.split("/")).not.toContain("..");
-      expect(existsSync(resolve("public", definition.iconPath))).toBe(true);
+      // AI-CORRECTION 2026-10-15: 用户允许缘缘庄新田块暂缺列表图标，保留独立路径并使用既有UI占位符。
+      if (definition.id.startsWith("soil_corp_")) {
+        expect(definition.iconPath).toBe(`device-icons/item_port_${definition.id}.webp`);
+      } else {
+        expect(existsSync(resolve("public", definition.iconPath))).toBe(true);
+      }
     }
   });
 

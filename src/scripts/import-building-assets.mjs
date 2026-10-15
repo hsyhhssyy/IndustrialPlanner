@@ -119,7 +119,8 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   batch = path.resolve(batch);
   const stage = path.join(batch, 'stage');
   const plan = await json(path.join(batch, 'import-plan.json'));
-  const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : stage, 'resources/building-top-view-v15.json'));
+  const collection = await json(within(plan.scope === 'logistics' ? projectRoot : stage, plan.mappingPath ?? 'resources/building-top-view-v15.json'));
+  if (plan.staticOnly && category !== 'static') throw new Error('Static topic batches only publish the static category');
   const selectedEntityIds = new Set(plan.entries.map((entry) => entry.entityId));
   const selectedMappingsAreComplete = plan.entries.length > 0
     && plan.entries.every((entry) => collection.entries.some((candidate) => candidate.entityId === entry.entityId));
@@ -175,6 +176,31 @@ export async function publishWebsiteBatch(batch, category = 'all') {
         path.join(maskDirectory, `${item.spriteId}.webp`), path.join(projectRoot, `resources/device-sprite-mask-overrides/${item.spriteId}.webp`),
         0, { crop: { left: 0, top: 0, width: item.physicalWidth, height: item.physicalHeight },
           frameTransform: 'flip-top-bottom', sourceResolution: item.sourceResolution, resolution });
+      if (plan.staticOnly) {
+        const blueprint = resolveBuildingAssetPublishTargets(path.join(stage, 'public/blueprint-view'))
+          .find((candidate) => candidate.resolution === resolution).outputDirectory;
+        const body = path.join(blueprint, 'sprites', `${item.spriteId}.webp`);
+        const mask = path.join(blueprint, 'sprite-masks', `${item.spriteId}.webp`);
+        await mkdir(path.dirname(body), { recursive: true });
+        await mkdir(path.dirname(mask), { recursive: true });
+        // AI-REMOVED 2026-10-15:
+        // Reason: Sharp 的 removeAlpha 与 joinChannel 组合会让蓝图轮廓丢失透明通道。
+        // Trigger: 静态专题像素回归发现透明背景被发布为不透明白色。
+        // Evidence: 透明源像素生成的蓝图 RGBA 为 [255,255,255,255]，而遮罩为零。
+        // Replacement: 下方独立白色 RGB 图像与单通道 raw Alpha 合并。
+        // Risk: 原实现会遮挡整张图片的透明留边。
+        // Human Review: Required
+        // Original code:
+        // const alpha = await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`)).extractChannel(3).png().toBuffer();
+        // await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`)).removeAlpha().linear(0, 255)
+        //   .joinChannel(alpha).webp({ lossless: true }).toFile(body);
+        const { data: alpha, info } = await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`))
+          .extractChannel(3).raw().toBuffer({ resolveWithObject: true });
+        await sharp({ create: { width: info.width, height: info.height, channels: 3, background: '#ffffff' } })
+          .joinChannel(alpha, { raw: { width: info.width, height: info.height, channels: 1 } })
+          .webp({ lossless: true }).toFile(body);
+        await copyFile(path.join(maskDirectory, `${item.spriteId}.webp`), mask);
+      }
     }
     if (includes('animations')) for (const spriteId of plan.animations) {
       const result = await publishDeviceSpriteAnimations({ definitions: definitions.entityDefinitions, spriteIds: new Set([spriteId]),
@@ -201,6 +227,9 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     }
     const heights = includes('effects') ? await publishBuildingPortEffects({ sourceDirectory: root, outputDirectory: path.join(outputDirectory, 'port-effects'),
       viewSources: plan.views, sourceVersion: plan.sourceSite.sourceVersion,
+      stateVisuals: Object.fromEntries(plan.entries.map((entry) => [entry.entityId,
+        Object.fromEntries(plan.statics.filter((visual) => visual.entityId === entry.entityId && visual.stateVisualKey)
+          .map((visual) => [visual.stateVisualKey, visual.phase]))])),
       collection: { entries: collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId)) },
       sourceResolution: plan.sourceResolution, resolution }) : null;
     if (heights?.issues.length) throw new Error(`Height/effect bindings unresolved: ${JSON.stringify(heights.issues)}`);
@@ -373,7 +402,7 @@ export async function validateWebsiteBatch(batch) {
   const stage = path.join(batch, 'stage');
   const plan = await json(path.join(batch, 'import-plan.json'));
   const receipt = await verifyOriginals(batch, plan);
-  const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : stage, 'resources/building-top-view-v15.json'));
+  const collection = await json(within(plan.scope === 'logistics' ? projectRoot : stage, plan.mappingPath ?? 'resources/building-top-view-v15.json'));
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') });
   const definitions = await registry();
@@ -409,6 +438,11 @@ export async function validateWebsiteBatch(batch) {
       }
       const bodyId = sharedId ?? entry.spriteId;
       for (const folder of ['sprites', 'sprite-masks']) await verifyImage(root, `${folder}/${bodyId}.webp`, width * resolution, height * resolution);
+      if (plan.staticOnly) {
+        const blueprint = resolveBuildingAssetPublishTargets(path.join(stage, 'public/blueprint-view'))
+          .find((candidate) => candidate.resolution === resolution).outputDirectory;
+        for (const folder of ['sprites', 'sprite-masks']) await verifyImage(blueprint, `${folder}/${bodyId}.webp`, width * resolution, height * resolution);
+      }
       if (!entry.animated) continue;
       const directory = path.join(root, 'animations', entry.spriteId);
       const manifest = await json(path.join(directory, 'manifest.json'));
@@ -430,11 +464,11 @@ export async function validateWebsiteBatch(batch) {
       }
     }
     const effectsRoot = path.join(root, 'port-effects');
-    const heights = await json(path.join(effectsRoot, 'manifest.json'));
-    for (const view of Object.values(heights.views)) for (const field of Object.values(view.fields)) {
+    const heights = plan.staticOnly ? null : await json(path.join(effectsRoot, 'manifest.json'));
+    for (const view of Object.values(heights?.views ?? {})) for (const field of Object.values(view.fields)) {
       await verifyImage(effectsRoot, field.file, field.width, field.height, true);
     }
-    for (const effect of Object.values(heights.effects)) {
+    for (const effect of Object.values(heights?.effects ?? {})) {
       await verifyImage(effectsRoot, effect.height.file, effect.height.width, effect.height.height, true);
       for (const page of effect.pages) await verifyImage(effectsRoot, page.file, page.width, page.height);
       for (const frame of effect.frames) {
@@ -483,9 +517,10 @@ export async function validateWebsiteBatch(batch) {
       products.push({ path: relative, sha256: retained.get(relative), retained: true });
       continue;
     }
-    const target = [...targets].reverse().find((item) => within(stage, relative).startsWith(`${item.outputDirectory}/`));
+    const productTargets = [...targets, ...resolveBuildingAssetPublishTargets(path.join(stage, 'public/blueprint-view'))];
+    const target = productTargets.reverse().find((item) => within(stage, relative).startsWith(`${item.outputDirectory}/`));
     const spriteId = plan.entries.find((entry) => file.includes(`/${entry.spriteId}.`) || file.includes(`/${entry.spriteId}--`) || file.includes(`/${entry.spriteId}/`));
-    const sourcePrefix = spriteId ? `buildings/${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
+    const sourcePrefix = spriteId ? `${plan.sourcePathPrefix ?? 'buildings/'}${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
     products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
   }
   await save(path.join(batch, `publish-receipt${plan.receiptHistorySuffix ?? ''}.json`), {
@@ -554,12 +589,13 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
       if (manifest.format !== 'logistics-spritesheet-v2') throw new Error('Website logistics requires baked playback');
     }
     if (application.some((entry) => entry.path !== 'src/registry/item-definition.ts'
-      && !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/'))) {
+      && !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/')
+      && !entry.path.startsWith('public/blueprint-view/'))) {
       throw new Error('Application plan contains files outside building resources or Registry fluid colors');
     }
     const sourcePayload = application.find((entry) => isRepositorySourcePayload(entry.path));
     if (sourcePayload) throw new Error(`Application plan contains website source payload: ${sourcePayload.path}`);
-    const collection = await json(path.join(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), 'resources/building-top-view-v15.json'));
+    const collection = await json(within(plan.scope === 'logistics' ? projectRoot : path.join(batch, 'stage'), plan.mappingPath ?? 'resources/building-top-view-v15.json'));
     const definitions = await registry();
     const drawingBoundsEntries = plan.scope === 'entities'
       ? collection.entries.filter((entry) => plan.entries.some((selected) => selected.entityId === entry.entityId))

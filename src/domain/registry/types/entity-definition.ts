@@ -547,6 +547,7 @@ export interface DeviceStateMachineDefinition {
 
 export interface DeviceStateDefinition {
   readonly id: string;
+  readonly nameKey: string;
   readonly enterRecipeId?: string;
   readonly visualKey?: string;
   readonly transition:

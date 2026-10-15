@@ -7,6 +7,7 @@ import type { SimulationDeviceOperatingStatus } from "@/domain/simulation";
 
 /** 每个可见设备独立保存播放进度；目标反转只在完整 idle 轮次结束后提交。 */
 /** AI-CORRECTION 2026-09-18: 播放目标改为设备展示 status；传统四阶段只是其中一种 manifest 路由。 */
+/** AI-CORRECTION 2026-10-15: 显式声明 immediate 的素材直接切换稳定片段；其他素材保留完整轮次与过渡规则。 */
 export class DeviceAnimationState {
   private readonly definition: NormalizedDeviceSpriteAnimationDefinition;
   private currentStage: DeviceSpriteAnimationPhase;
@@ -53,6 +54,10 @@ export class DeviceAnimationState {
   public setStatus(status: SimulationDeviceOperatingStatus): void {
     if (this.desiredStatus === status) return;
     this.desiredStatus = status;
+    if (this.definition.playback.statusChangeMode === "immediate") {
+      this.commitStableTarget();
+      return;
+    }
     const option = this.definition.playback.clipOptions[this.currentStage];
     if (this.holdingStableClip || option?.playing === false) this.commitStableTarget();
   }

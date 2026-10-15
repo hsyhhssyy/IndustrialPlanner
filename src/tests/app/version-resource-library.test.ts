@@ -10,7 +10,7 @@ import {
 } from "@/app/shell/module-balancing/version-resource-library";
 
 describe("version-resource-library", () => {
-  it("loads the public Wuling 1.4 and 1.5 resource presets with the 1.5 increases", () => {
+  it("loads the public Wuling 1.4, 1.5, and 1.6 resource presets with their increases", () => {
     const resourceRoot = resolve(process.cwd(), "public/module-balancing/version-resources");
     const index = normalizeVersionResourceIndex(JSON.parse(
       readFileSync(resolve(resourceRoot, "index.json"), "utf8"),
@@ -18,7 +18,7 @@ describe("version-resource-library", () => {
 
     expect(index).toEqual({
       version: "1",
-      resources: ["wuling-1.5", "wuling-1.4"],
+      resources: ["wuling-1.6", "wuling-1.5", "wuling-1.4"],
     });
 
     const wuling14 = normalizeVersionResourcePreset(JSON.parse(
@@ -26,6 +26,9 @@ describe("version-resource-library", () => {
     ));
     const wuling15 = normalizeVersionResourcePreset(JSON.parse(
       readFileSync(resolve(resourceRoot, "wuling-1.5.json"), "utf8"),
+    ));
+    const wuling16 = normalizeVersionResourcePreset(JSON.parse(
+      readFileSync(resolve(resourceRoot, "wuling-1.6.json"), "utf8"),
     ));
 
     expect(wuling14?.inputs).toContainEqual({ itemId: "item_copper_ore", perMinute: 420 });
@@ -37,6 +40,14 @@ describe("version-resource-library", () => {
     });
     expect(wuling15?.inputs).toContainEqual({ itemId: "item_copper_ore", perMinute: 510 });
     expect(wuling15?.inputs).toContainEqual({ itemId: "item_gas_xiranite", perMinute: 150 });
+    expect(wuling16).toEqual({
+      ...wuling15,
+      id: "version-resource:wuling-1.6",
+      name: "武陵1.6版本资源",
+      inputs: wuling15?.inputs.map((input) => input.itemId === "item_gas_xiranite"
+        ? { itemId: "item_gas_xiranite", perMinute: 190 }
+        : input),
+    });
   });
 
   it("normalizes a versioned index and finite or infinite resource inputs", () => {

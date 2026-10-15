@@ -407,6 +407,8 @@ export function createRenderSceneOrchestrator(
   const logisticsBakedFlow = new LogisticsBakedFlowScene()
   const pipeReflection = new LogisticsPipeReflectionScene()
   const buildingEffects = new BuildingEffectsScene()
+  const resolveBuildingStateVisualKey = (entityId: string) =>
+    renderHost.workspace.simulation?.queries.getDeviceRuntimeStatus(entityId)?.deviceState?.visualKey
   const resolveBuildingEffectRingStatus = (entityId: string): number | undefined => {
     const status = renderHost.workspace.simulation?.queries.getDeviceOperatingStatus?.(entityId)
       ?? "closed"
@@ -939,6 +941,7 @@ export function createRenderSceneOrchestrator(
         entities, definitions: entityDefinitionMap, materials: logisticsMaterials,
         hiddenIds: new Set(editorCollections[EntityCollectionType.ghost]),
         resolveRingStatus: resolveBuildingEffectRingStatus,
+        resolveVisualKey: resolveBuildingStateVisualKey,
       })
       ctx.buildingEffectPortKeys = buildingEffects.portKeys
     })

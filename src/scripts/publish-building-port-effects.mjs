@@ -26,6 +26,7 @@ export async function publishBuildingPortEffects({
   viewSources = null,
   sourceVersion = null,
   collection: suppliedCollection = null,
+  stateVisuals = {},
   sourceResolution = 1,
   resolution = 1,
 } = {}) {
@@ -144,6 +145,19 @@ export async function publishBuildingPortEffects({
     if (staticPhase !== undefined && !fields[staticPhase]) {
       throw new Error(`Selected static phase has no height field: ${sourcePath}: ${staticPhase}`);
     }
+    const stateHeightMapping = {};
+    for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath)) {
+      for (const [visualKey, phase] of Object.entries(stateVisuals[entry.entityId] ?? {})) {
+        // 积水颜色阶段可由来源 stateMapping 明确复用同植株的干地高度。
+        const fieldName = occlusion.stateMapping[phase] ?? phase;
+        if (!fields[fieldName]) throw new Error(`State visual has no height field: ${entry.entityId}/${visualKey}: ${phase}`);
+        const key = `state:${visualKey}`;
+        if (stateHeightMapping[key] !== undefined && stateHeightMapping[key] !== fieldName) {
+          throw new Error(`Conflicting state visual height: ${sourcePath}/${visualKey}`);
+        }
+        stateHeightMapping[key] = fieldName;
+      }
+    }
     for (const entry of collection.entries.filter((candidate) => candidate.sourcePath === sourcePath
       && ports?.portFxApplicable !== false)) {
       // 网站包已明确声明 rendererTemplate 时直接纳入发布；暗管没有 alter-variant 标签，不能靠 Registry 模式反推。
@@ -183,8 +197,8 @@ export async function publishBuildingPortEffects({
         - occlusion.fields[0].worldToPixel.cameraCenterSource.x - spatial.footprintRectCells.left,
       reflectSourcePlane ? spatial.footprintRectCells.height - originalOriginY : originalOriginY],
       coordinateSpace: reflectSourcePlane ? 'project-reflected-source' : 'contract2-canonical',
-      fields, stateMapping: staticPhase === undefined ? occlusion.stateMapping
-        : { ...occlusion.stateMapping, default: staticPhase }, epsilon: occlusion.epsilon.value,
+      fields, stateMapping: { ...occlusion.stateMapping, ...stateHeightMapping,
+        ...(staticPhase === undefined ? {} : { default: staticPhase }) }, epsilon: occlusion.epsilon.value,
       variants,
       rings: (ports?.rings ?? []).filter((ring) => ring.resourceId && transform(ring.resolvedTransform))
         .map((ring) => ({ resourceId: ring.resourceId, statusKey: ring.statusKey, ...transform(ring.resolvedTransform) })),

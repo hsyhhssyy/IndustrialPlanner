@@ -10,6 +10,7 @@ import { fieldBounds, tileKeys } from './height-field';
 import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
+  syncStateHeightSurfaces,
   // AI-REMOVED 2026-09-25:
   // Reason: 所有端口特效直接使用场景时钟推进。
   // Trigger: 用户明确要求 on/off 动画始终播放。
@@ -29,7 +30,8 @@ export class BuildingEffectsScene {
   public readonly portKeys = new Set<string>();
   private assets: BuildingEffectAssets | null = null;
   private readonly height = new SceneHeightCache();
-  private scene: EffectScene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+  private scene: EffectScene = { surfaces: [], stateSurfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+  private heightVersion = 0;
   private activeEffects: EffectPlacement[] = [];
   private version = '';
   private statusVersion = -1;
@@ -47,6 +49,7 @@ export class BuildingEffectsScene {
     materials?: LogisticsMaterialFrameState; hiddenIds?: ReadonlySet<string>;
     ringStatus?: ReadonlyMap<string, number>;
     resolveRingStatus?: (entityId: string) => number | undefined;
+    resolveVisualKey?: (entityId: string) => string | null | undefined;
     activatedIds?: ReadonlySet<string>;
   }): void {
     this.container.visible = options.enabled;
@@ -76,6 +79,10 @@ export class BuildingEffectsScene {
       }
     }
     if (structureChanged || this.statusVersion !== options.statusVersion) {
+      if (options.resolveVisualKey !== undefined && syncStateHeightSurfaces(this.scene, options.resolveVisualKey)) {
+        this.height.sync(this.scene.surfaces);
+        this.heightVersion++;
+      }
       const resolveStatus = options.resolveRingStatus
         ?? ((entityId: string) => options.ringStatus?.get(entityId));
       const rings = selectRingEffectPlacements(this.scene.ringEffects, resolveStatus);
@@ -101,7 +108,7 @@ export class BuildingEffectsScene {
       // nextFrames.set(effect.id, resolveEffectFrame(manifest.effects[effect.resourceId]!, timeMs));
       nextFrames.set(effect.id, resolveEffectFrame(manifest.effects[effect.resourceId]!, options.nowMs));
     }
-    const syncSignature = `${version}:${this.ringSignature}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
+    const syncSignature = `${version}:${this.heightVersion}:${this.ringSignature}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
     if (syncSignature === this.syncSignature) return;
     this.syncSignature = syncSignature;
     const groups = new Map<string, { placements: EffectPlacement[]; tile: string; resourceId: string; page: number; frame: number }>();
@@ -135,7 +142,7 @@ export class BuildingEffectsScene {
       const portKey = this.scene.portKeys.get(effect.id);
       if (ready && portKey) this.portKeys.add(portKey);
     }
-    const signature = `${version}:${assets.revision}:${[...groups].map(([key, group]) => `${key}:${group.placements.map((p) => p.id).join(',')}`).join('|')}`;
+    const signature = `${version}:${this.heightVersion}:${assets.revision}:${[...groups].map(([key, group]) => `${key}:${group.placements.map((p) => p.id).join(',')}`).join('|')}`;
     if (signature !== this.batchSignature) {
       // AI-REMOVED 2026-09-16:
       // Reason: 可见组变化不应销毁全部特效网格。
@@ -195,7 +202,8 @@ export class BuildingEffectsScene {
 
   private release(): void {
     this.clearBatches(); this.height.destroy(); this.assets?.destroy(); this.assets = null;
-    this.scene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+    this.scene = { surfaces: [], stateSurfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+    this.heightVersion = 0;
     this.activeEffects = []; this.version = ''; this.statusVersion = -1; this.ringSignature = '';
     this.batchSignature = ''; this.syncSignature = ''; this.portKeys.clear();
   }

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "yuanyuan-harvest",
+  "version": "fixture-v1",
+  "name": "缘缘庄与旧田块基础收获",
+  "description": "从生长末尾的检查点推进，验证旧田块30产量、新田块副产物和优质双产物真实入仓。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "soil_sp_1": {
+      "id": "soil_sp_1",
+      "definitionId": "soil_sp_1",
+      "position": {
+        "x": 106,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "soil_sp_2": {
+      "id": "soil_sp_2",
+      "definitionId": "soil_sp_2",
+      "position": {
+        "x": 111,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "soil_sp_3": {
+      "id": "soil_sp_3",
+      "definitionId": "soil_sp_3",
+      "position": {
+        "x": 116,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "soil_sp_4": {
+      "id": "soil_sp_4",
+      "definitionId": "soil_sp_4",
+      "position": {
+        "x": 106,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "soil_corp_bean_1": {
+      "id": "soil_corp_bean_1",
+      "definitionId": "soil_corp_bean_1",
+      "position": {
+        "x": 111,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "soil_corp_cabbage_2": {
+      "id": "soil_corp_cabbage_2",
+      "definitionId": "soil_corp_cabbage_2",
+      "position": {
+        "x": 116,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "soil_sp_1",
+    "soil_sp_2",
+    "soil_sp_3",
+    "soil_sp_4",
+    "soil_corp_bean_1",
+    "soil_corp_cabbage_2"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

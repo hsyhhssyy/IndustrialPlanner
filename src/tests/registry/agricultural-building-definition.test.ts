@@ -20,7 +20,8 @@ const EXPECTED_PLOTS = [
 describe("普通田块建筑定义", () => {
   const registry = createRegistryContract();
   // AI-CORRECTION 2026-10-13: 农业分类新增洒水机，田块专项断言按 soil_ 设备族筛选。
-  const plots = registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_"));
+  // AI-CORRECTION 2026-10-15: 此用例保留既有十种田块的素材验收；新增 soil_corp_ 家族由缘缘庄专项测试覆盖。
+  const plots = registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_") && !definition.id.startsWith("soil_corp_"));
 
   it("收录全部十种普通田块并提供原始中英文名称，排除模拟及无名田块", () => {
     expect(plots.map((definition) => definition.id)).toEqual(EXPECTED_PLOTS.map(([id]) => id));
@@ -37,8 +38,13 @@ describe("普通田块建筑定义", () => {
         id: "growth", ingredientStorageGroupIds: [], productStorageGroupIds: [], startPolicy: "state",
       }]);
       expect(definition.stateMachine).toMatchObject({ initialStateId: "seedling", channelId: "growth" });
+      expect(definition.inspectors.filter((inspector) => inspector.type === "device-state")).toHaveLength(1);
+      for (const state of definition.stateMachine!.states) {
+        expect(lookupText("zh-CN", state.nameKey)).not.toBe(state.nameKey);
+        expect(lookupText("en-US", state.nameKey)).not.toBe(state.nameKey);
+      }
     }
-    expect(registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil")).map((definition) => definition.id))
+    expect(registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil") && !definition.id.startsWith("soil_corp_")).map((definition) => definition.id))
       .toEqual(EXPECTED_PLOTS.map(([id]) => id));
     expect(new Set(plots.map((definition) => definition.displayOrder)).size).toBe(10);
   });

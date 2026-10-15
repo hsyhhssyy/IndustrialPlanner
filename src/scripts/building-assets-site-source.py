@@ -82,7 +82,7 @@ def validate_physical_rect(value, page, label):
     return value
 
 
-def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=False):
+def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=False, topic_id=None):
     batch = Path(batch).resolve()
     source = batch / "site"
     source.mkdir(parents=True, exist_ok=True)
@@ -143,6 +143,10 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
     root_buildings = {b["id"]: b for b in index["buildings"]}
     if set(buildings) != set(root_buildings):
         raise ValueError("Building index coverage differs")
+    if topic_id is not None:
+        if selected_ids or logistics_only or topic_id != "wuling-agricultural-fields":
+            raise ValueError("Fence topic scope cannot be combined with building selection")
+        return prepare_fence_source(batch, source, base_url, anchor, index, indexed, manifest, download)
     mapping = json.loads(Path("resources/building-top-view-v15.json").read_text())
     entries = mapping["entries"]
     if logistics_only:
@@ -258,6 +262,92 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
     return receipt
 
 
+def prepare_fence_source(batch, source, base_url, anchor, index, indexed, manifest, download):
+    """围栏专题复用根索引校验与下载器，只消费明确映射的静态素材和布局。"""
+    mapping_path = "resources/wuling-agricultural-fence.json"
+    mapping = json.loads(Path(mapping_path).read_text())
+    topic_id = mapping["topicId"]
+    topic = next(item for item in manifest["topics"] if item["id"] == topic_id)
+    root_topic = next(item for item in index["topics"] if item["id"] == topic_id)
+    if any(topic[key] != root_topic[key] for key in ("integrity", "contentHash")):
+        raise ValueError("Fence topic summary differs from root index")
+    scoped = json.loads(download(topic["integrity"]))
+    if (scoped.get("schemaVersion") != 1 or scoped.get("contentHash") != topic["contentHash"]
+            or scoped.get("fileCount") != len(scoped["files"])
+            or scoped.get("totalBytes") != sum(item["bytes"] for item in scoped["files"])):
+        raise ValueError("Invalid fence topic integrity")
+    for item in scoped["files"]:
+        name = topic["path"] + validate_path(item["path"])
+        if name not in indexed or any(item[key] != indexed[name][key] for key in ("bytes", "sha256")):
+            raise ValueError(f"Fence topic integrity differs: {name}")
+    topic_manifest = json.loads(download(topic["manifest"]))
+    if topic_manifest.get("profile") != "endfield-wuling-agricultural-fields-topic-v1":
+        raise ValueError("Unsupported fence topic profile")
+    profile = next(item for item in topic_manifest["profiles"] if item["pixelsPerCell"] == SOURCE_PIXELS_PER_CELL)
+    assets_path = topic["path"] + validate_path(profile["assets"])
+    assets = json.loads(download(assets_path))
+    if assets.get("profile") != "wuling-farmland-top-sprites-v1" or assets.get("pixelsPerCell") != SOURCE_PIXELS_PER_CELL:
+        raise ValueError("Unsupported fence sprite profile")
+    sprites = {item["id"]: item for item in assets["sprites"]}
+    if set(sprites) != {entry["sourceId"] for entry in mapping["entries"]}:
+        raise ValueError("Fence sprite mapping coverage differs")
+    names = {"assets-manifest.json", "release.json", topic["integrity"], topic["manifest"], assets_path,
+             topic["path"] + validate_path(topic_manifest["layout"]), topic["path"] + "README.txt"}
+    for sprite in sprites.values():
+        names.update(topic["path"] + validate_path(sprite[key]) for key in ("file", "heightFile"))
+    for name in sorted(names):
+        download(name)
+    if fetch("integrity.json.sha256", base_url) != anchor:
+        raise ValueError("Website release changed during fence download")
+    receipt = {"schemaVersion": 1, "siteUrl": base_url, "releaseId": index["releaseId"],
+               "sourceVersion": index["sourceVersion"], "indexSha256": digest((source / "integrity.json").read_bytes()),
+               "sourceResolution": SOURCE_RESOLUTION, "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+               "scope": "entities", "topicId": topic_id, "mappingPath": mapping_path,
+               "assetsPath": assets_path, "entries": mapping["entries"], "logistics": False,
+               "files": [{**indexed[name], "localPath": f"site/{name}"} for name in sorted(names)]}
+    (batch / "source-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
+    print(f"Fence source ready: {index['releaseId']}, {len(names)} verified files", flush=True)
+    return receipt
+
+
+def prepare_fence_metadata(batch, receipt, indexed):
+    mapping = json.loads(Path(receipt["mappingPath"]).read_text())
+    root = batch / "site"
+    assets = json.loads((root / receipt["assetsPath"]).read_text())
+    sprites = {item["id"]: item for item in assets["sprites"]}
+    provenance = {key: receipt[key] for key in ("siteUrl", "releaseId", "sourceVersion", "indexSha256", "sourceResolution")}
+    mapping["sourceSite"] = provenance
+    statics = []
+    for entry in mapping["entries"]:
+        sprite = sprites[entry["sourceId"]]
+        width, height = sprite["frameCells"]
+        if (sprite["imageAxes"] != {"x": "+sourceX", "y": "+sourceZ"}
+                or sprite["framePixels"] != [width * SOURCE_PIXELS_PER_CELL, height * SOURCE_PIXELS_PER_CELL]
+                or sprite["pivotPixels"] != {"x": width * SOURCE_PIXELS_PER_CELL / 2, "y": height * SOURCE_PIXELS_PER_CELL / 2}):
+            raise ValueError(f"Unsupported fence sprite geometry: {entry['sourceId']}")
+        source_path = receipt["topicId"] + "/" + validate_path(sprite["file"])
+        footprint_width, footprint_height = sprite["footprintCells"]
+        entry["spriteOffset"] = {"x": (footprint_width - width) / 2, "y": (footprint_height - height) / 2,
+                                 "width": width, "height": height}
+        entry["sourceMetadata"] = {"sha256": indexed[source_path]["sha256"], "sourcePath": source_path,
+                                   "spatial": {"framePixels": {"width": width * LOGICAL_PIXELS_PER_CELL,
+                                                               "height": height * LOGICAL_PIXELS_PER_CELL}}}
+        statics.append({"spriteId": entry["spriteId"], "sourcePath": source_path,
+                        "width": width * LOGICAL_PIXELS_PER_CELL, "height": height * LOGICAL_PIXELS_PER_CELL,
+                        "physicalWidth": sprite["framePixels"][0], "physicalHeight": sprite["framePixels"][1],
+                        "sourceResolution": SOURCE_RESOLUTION})
+    target = batch / "stage" / receipt["mappingPath"]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + "\n")
+    plan = {"schemaVersion": 1, "scope": "entities", "sourceSite": provenance, "sourceRoot": "site",
+            "sourceResolution": SOURCE_RESOLUTION, "entries": mapping["entries"], "statics": statics,
+            "views": [], "animations": [], "logistics": False, "staticOnly": True,
+            "mappingPath": receipt["mappingPath"], "sourcePathPrefix": "",
+            "receiptHistorySuffix": ".wuling-fence"}
+    (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")
+    print(f"Fence metadata prepared: {len(statics)} static sprites", flush=True)
+
+
 def create_status_playback(package, source_phases, sprite_id):
     """将网站片段与 statusControl 规范化为项目运行时唯一播放路由。"""
     clip_ids = set(source_phases)
@@ -341,8 +431,54 @@ def create_status_playback(package, source_phases, sprite_id):
     }
 
 
-def resolve_animation_delivery(package, sources, source_phases, sprite_id):
+def resolve_animation_delivery(package, sources, source_phases, sprite_id, playback=None):
     """协议核心只发布并播放 open_idle；其他设备继续遵循网站 status 路由。"""
+    # AI-CORRECTION 2026-10-15: 项目可显式选择稳定片段及立即切换策略；仅发布被该声明引用的来源。
+    if playback is not None:
+        if (not isinstance(playback, dict) or playback.get("statusChangeMode") != "immediate"
+                or playback.get("openTransitionClip") is not None
+                or playback.get("closeTransitionClip") is not None
+                or not isinstance(playback.get("statusClips"), dict)):
+            raise ValueError(f"Invalid direct animation playback: {sprite_id}")
+        statuses = {"closed", "idle", "normal", "blocked", "no-power", "not-in-power-net"}
+        if not set(playback["statusClips"]).issubset(statuses):
+            raise ValueError(f"Unknown direct animation status: {sprite_id}")
+        selected = [playback.get("fallbackClip"), playback.get("staticClip"),
+                    *playback["statusClips"].values()]
+        if any(not isinstance(clip, str) or clip not in source_phases for clip in selected):
+            raise ValueError(f"Direct animation references missing clips: {sprite_id}")
+        clip_ids = set(selected)
+        options = playback.get("clipOptions")
+        if (not isinstance(options, dict) or set(options) != clip_ids
+                or any(not isinstance(option, dict)
+                       or not isinstance(option.get("playing"), bool)
+                       or not isinstance(option.get("restart"), bool) for option in options.values())):
+            raise ValueError(f"Invalid direct animation clip options: {sprite_id}")
+        selected_clips = {clip: ranges for clip, ranges in source_phases.items() if clip in clip_ids}
+        pose = package.get("staticPose", {})
+        pose_clip = pose.get("animation")
+        if pose_clip in selected_clips and not options[pose_clip]["playing"]:
+            # 静止片段按网站显式的 retainedFrame 选择，保证颜色图与该姿态的高度图一致。
+            frame = pose.get("retainedFrame")
+            if not isinstance(frame, int) or isinstance(frame, bool) or frame < 0:
+                raise ValueError(f"Invalid direct animation static pose: {sprite_id}")
+            for frame_range in selected_clips[pose_clip]:
+                if frame < frame_range["frameCount"]:
+                    selected_clips[pose_clip] = [{**frame_range, "startFrame": frame_range["startFrame"] + frame,
+                                                  "frameCount": 1}]
+                    break
+                frame -= frame_range["frameCount"]
+            else:
+                raise ValueError(f"Direct animation static pose exceeds clip: {sprite_id}")
+        selected_names = {frame_range["source"] for ranges in selected_clips.values() for frame_range in ranges}
+        if not selected_names.issubset(sources):
+            raise ValueError(f"Direct animation references missing sources: {sprite_id}")
+        return {
+            "sources": {name: source for name, source in sources.items() if name in selected_names},
+            "clips": selected_clips,
+            "playback": playback,
+            "clipSelection": "project-direct-status-clips",
+        }
     if sprite_id not in PROTOCOL_CORE_OPEN_IDLE_ONLY_SPRITE_IDS:
         return {
             "sources": sources,
@@ -407,6 +543,8 @@ def prepare_metadata(batch):
     for entry in receipt["files"]:
         name = validate_path(entry["path"])
         verify((source / name).read_bytes(), indexed[name])
+    if receipt.get("topicId") == "wuling-agricultural-fields":
+        return prepare_fence_metadata(batch, receipt, indexed)
     # AI-REMOVED 2026-09-19:
     # Reason: 同一批网站原件不再复制到 stage/resources，避免暂存重复并阻止 apply 将展开素材写入仓库。
     # Trigger: 用户要求网站素材包只存在于 .temp/.trash。
@@ -551,7 +689,7 @@ def prepare_metadata(batch):
             previous_path = Path("resources/device-sprite-animation") / entry["spriteId"] / "manifest.json"
             previous = json.loads(previous_path.read_text()) if previous_path.exists() else {}
             delivery = resolve_animation_delivery(
-                package, sources, source_phases, entry["spriteId"]
+                package, sources, source_phases, entry["spriteId"], entry.get("animationPlayback")
             )
             if len(frame_rates) != 1:
                 raise ValueError(f"Animation phases have different frame rates: {directory}")
@@ -622,8 +760,9 @@ if __name__ == "__main__":
     parser.add_argument("--entity", action="append", dest="entities")
     parser.add_argument("--metadata-only", action="store_true")
     parser.add_argument("--logistics-only", action="store_true")
+    parser.add_argument("--topic", choices=["wuling-agricultural-fields"])
     args = parser.parse_args()
     if args.metadata_only:
         prepare_metadata(args.batch)
     else:
-        prepare_source(args.batch, args.entities, logistics_only=args.logistics_only)
+        prepare_source(args.batch, args.entities, logistics_only=args.logistics_only, topic_id=args.topic)

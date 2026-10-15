@@ -28,7 +28,8 @@ describe("quick-place model", () => {
     });
 
     expect(entries.map((entry) => entry.id)).toEqual(["assembler"]);
-    expect(entries[0]?.iconSrc).toContain("device-icons/assembler-ui-icon.webp");
+    // AI-CORRECTION 2026-10-15: 缺图统一回退；改用已交付且独立于设备ID的图标验证 iconPath 选择。
+    expect(entries[0]?.iconSrc).toContain("device-icons/item_port_filling_pd_mc_1.webp");
     expect(filterQuickPlaceDeviceEntries(entries, "zz").map((entry) => entry.id)).toEqual(["assembler"]);
     expect(filterQuickPlaceDeviceEntries(entries, "zhuang").map((entry) => entry.id)).toEqual(["assembler"]);
     expect(filterQuickPlaceDeviceEntries(entries, "组装").map((entry) => entry.id)).toEqual(["assembler"]);
@@ -160,7 +161,7 @@ function createEntityDefinition(
     id,
     nameKey: `quick-place-test.${id}`,
     spriteId: id,
-    iconPath: `device-icons/${id}-ui-icon.webp`,
+    iconPath: "device-icons/item_port_filling_pd_mc_1.webp",
     footprint: { width: 1, height: 1 },
     uiGroup,
     displayOrder,

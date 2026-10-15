@@ -443,7 +443,18 @@ describe("createRegistryContract", () => {
     );
 
     for (const definition of wulingDefinitions) {
-      expect(definition.builtinEntities ?? []).toHaveLength(0);
+      // AI-REMOVED 2026-10-15:
+      // Reason: 武陵农用地新增地块自带围栏，其余武陵基地仍没有内置建筑。
+      // Trigger: 用户要求先按占地摆放 38 个隐藏围栏件。
+      // Evidence: wuling_agricultural_land.builtinEntities 声明 34 段栏杆和 4 根立柱。
+      // Replacement: 下方按基地身份验证内置数量；wuling-fence-definition.test.ts 验证空间约束。
+      // Risk: 原有布局若与围栏重叠，会新增放置错误。
+      // Human Review: Required
+      // Original code:
+      // expect(definition.builtinEntities ?? []).toHaveLength(0);
+      expect(definition.builtinEntities ?? []).toHaveLength(
+        definition.id === "wuling_agricultural_land" ? 38 : 0,
+      );
     }
 
     // 验证 ID 协议：同一 builtin ID 在不同基地下生成不同全局 ID

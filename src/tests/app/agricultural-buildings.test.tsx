@@ -48,14 +48,15 @@ describe("农业建筑分类与普通田块摆放", () => {
     }
   });
 
-  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示十种田块与洒水机", () => {
+  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示二十二种田块与洒水机", () => {
     expect(ENTITY_UI_GROUP_ORDER).toContain("agriculture");
     expect(TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS).toContain("agriculture");
     act(() => { root.render(<PlacementPanel appHost={session.app} />); });
     const section = [...container.querySelectorAll("section")]
       .find((candidate) => candidate.querySelector("h3")?.textContent === "农业建筑")!;
     expect(section).toBeDefined();
-    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(11);
+    // AI-CORRECTION 2026-10-15: 缘缘庄新增十二种田块，与既有十种田块及洒水机共同展示。
+    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(23);
     expect(section.querySelector("[data-ui-button-id='placement-squirter_1']")).not.toBeNull();
     expect(section.querySelector(".placement-panel-group-shortcut")).toBeNull();
     for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {
@@ -68,7 +69,8 @@ describe("农业建筑分类与普通田块摆放", () => {
 
   it("十种田块均能实际放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {
     // AI-CORRECTION 2026-10-13: 分类新增洒水机，保留十种田块原有摆放断言。
-    const plots = session.workspace.registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_"));
+    // AI-CORRECTION 2026-10-15: 新食材田块仅限缘缘庄，主区域权限由下方独立用例验证。
+    const plots = session.workspace.registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_") && !definition.id.startsWith("soil_corp_"));
     expect(plots).toHaveLength(10);
     for (const [index, definition] of plots.entries()) {
       for (const originX of [0, 104]) {
@@ -88,6 +90,22 @@ describe("农业建筑分类与普通田块摆放", () => {
         editor.actions.cancelPlacementDraft();
       }
     }
+  });
+
+  it("十二种新田块在缘缘庄可以实际摆放，在农业主区域拒绝摆放", () => {
+    const plots = session.workspace.registry.entityDefinitions.filter(definition => definition.id.startsWith("soil_corp_"));
+    expect(plots).toHaveLength(12);
+    for (const [index, definition] of plots.entries()) {
+      const offset = { x: 2 + index % 4 * 5, y: 2 + Math.floor(index / 4) * 5 };
+      editor.actions.createSinglePlacementDraft(definition.id, offset);
+      const previewId = editor.state.collections[EntityCollectionType.preview][0]!;
+      expect(editor.queries.getEntityPlacementValidation(previewId).canPlace).toBe(false);
+      expect(editor.actions.applyPlacementDraft()).toBe(false);
+      editor.actions.cancelPlacementDraft();
+      editor.actions.createSinglePlacementDraft(definition.id, { x: 104 + offset.x, y: offset.y });
+      expect(editor.actions.applyPlacementDraft(), definition.id).toBe(true);
+    }
+    expect(editor.document.getSnapshot().entityOrder).toHaveLength(12);
   });
 
   it("洒水机能放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {

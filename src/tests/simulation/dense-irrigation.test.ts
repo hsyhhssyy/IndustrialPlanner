@@ -62,7 +62,7 @@ describe("Dense 田块状态转换与洒水耗水边界", () => {
           expect(kernel.state.slotCounts[storage]).toBe(20);
         }
         if (tick === start + 33 * rate) {
-          expect(kernel.createDeviceSnapshot(plot).deviceState).toMatchObject({ stateId: "growing-2", enteredAtSeconds: 1833, visualKey: "irrigated" });
+          expect(kernel.createDeviceSnapshot(plot).deviceState).toMatchObject({ stateId: "growing-2", enteredAtSeconds: 1833, visualKey: "mature-irrigated" });
           expect(recipe).toBeNull();
         }
       }

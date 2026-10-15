@@ -9,6 +9,7 @@ import { decodeHeight, fieldBounds, rasterizeHeightTile, HEIGHT_TILE_PIXELS, til
 import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
+  syncStateHeightSurfaces,
   // AI-REMOVED 2026-09-25:
   // Reason: 端口特效统一使用场景时钟，流体门控函数已移除。
   // Trigger: 用户明确要求 on/off 动画始终播放。
@@ -61,6 +62,27 @@ const entity: WorldEntity = { id: 'device', definitionId: 'transmuter_1_gastrans
 // }
 
 describe('建筑高度与端口特效', () => {
+  it('阶段高度只绑定有状态外观的实体；相同外观不替换表面，成熟恢复默认高度', () => {
+    const plot = { ...entity, id: 'plot', definitionId: 'soil_grass_1' };
+    const scene = resolveBuildingEffectScene({ manifest, definitions, entities: [entity, plot] });
+    const view = manifest.views['soil_grass_1/top']!;
+    expect(scene.issues).toEqual([]);
+    expect(scene.stateSurfaces).toHaveLength(1);
+    const original = scene.surfaces[0];
+    const read = (key: string | null) => (id: string) => { expect(id).toBe('plot'); return key; };
+    expect(syncStateHeightSurfaces(scene, read('empty'))).toBe(true);
+    expect(scene.surfaces[1]!.field).toBe(view.fields.soil_1_empty);
+    expect(scene.surfaces[0]).toBe(original);
+    expect(syncStateHeightSurfaces(scene, read('seedling'))).toBe(true);
+    const seedling = scene.surfaces[1];
+    expect(syncStateHeightSurfaces(scene, read('irrigated'))).toBe(false);
+    expect(scene.surfaces[1]).toBe(seedling);
+    expect(syncStateHeightSurfaces(scene, read('mature-irrigated'))).toBe(true);
+    expect(scene.surfaces[1]!.field).toBe(view.fields.soil_1_mature);
+    expect(syncStateHeightSurfaces(scene, read(null))).toBe(false);
+    const stateless = resolveBuildingEffectScene({ manifest, definitions, entities: [entity] });
+    expect(syncStateHeightSurfaces(stateless, () => { throw new Error('无状态机设备不应查询状态'); })).toBe(false);
+  });
   it('按世界单位解码不同范围，空像素不遮挡；移除最高表面后恢复下层', () => {
     const field: HeightField = { file: 'fixture', width: 2, height: 1, min: -5, max: 5,
       pivot: [0, 0], center: [0, 0], pixelsPerCell: 128 };

@@ -1,5 +1,15 @@
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
 const MISSING_ENTITY_ICON_ASSET_PATH = "textures/missing-sprite-texture.webp";
+let iconAssetPaths: ReadonlySet<string> | undefined;
+
+/** Vite仅展开文件名；缺图统一使用现有占位符，保留Registry中的真实图标ID。 */
+function resolveIconAssetPath(path: string): string {
+  const normalizedPath = path.replace(/^\/+/, "");
+  if (!normalizedPath.startsWith("device-icons/") && !normalizedPath.startsWith("item-icons/")) return path;
+  iconAssetPaths ??= new Set(Object.keys(import.meta.glob("/public/{device-icons,item-icons}/**/*"))
+    .map(file => file.slice("/public/".length)));
+  return iconAssetPaths.has(normalizedPath) ? normalizedPath : MISSING_ENTITY_ICON_ASSET_PATH;
+}
 
 export function createPublicAssetUrl(path: string): string {
   if (URL_SCHEME_PATTERN.test(path) || path.startsWith("//")) {
@@ -24,15 +34,15 @@ export function createAbsolutePublicAssetUrl(path: string): string {
 }
 
 export function createDeviceIconAssetUrl(iconId: string): string {
-  return createPublicAssetUrl(`device-icons/${iconId}.webp`);
+  return createPublicAssetUrl(resolveIconAssetPath(`device-icons/${iconId}.webp`));
 }
 
 export function createEntityIconAssetUrl(iconPath: string | undefined): string {
-  return createPublicAssetUrl(iconPath ?? MISSING_ENTITY_ICON_ASSET_PATH);
+  return createPublicAssetUrl(resolveIconAssetPath(iconPath ?? MISSING_ENTITY_ICON_ASSET_PATH));
 }
 
 export function createItemIconAssetUrl(iconId: string): string {
-  return createPublicAssetUrl(`item-icons/${iconId}.webp`);
+  return createPublicAssetUrl(resolveIconAssetPath(`item-icons/${iconId}.webp`));
 }
 
 export function isRootPublicAssetBaseUrl(): boolean {

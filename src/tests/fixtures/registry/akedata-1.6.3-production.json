@@ -1,0 +1,865 @@
+{
+  "sourceVersion": "1.6.3@11010254-4",
+  "sourceHashes": {
+    "FactoryMachineCraftTable": "df9b7070891ba3e82e573adba78d204992d76a075e910d6efcca64e5274a3205",
+    "FactoryItemTable": "1ea148e7e315b479178ab482abd1b9e57de7e04b69fd5043cc6a60c5c56f9794",
+    "ItemTable": "f1bc4576941eeee90fd33413a397c2855266369a2c7acf55dc828f414558d494",
+    "PlantingDataTable": "3f0a096b5b1bd298720d75dbcc649be35c19d83934edfbb7caf9d0e59634d962",
+    "RewardSoilTable": "7d8092b9ff5006b3d3ab1a1fcf6fc108c5990c534702f0694aec5a7e21bc1503",
+    "I18nTextTable_CN": "0586e66127baeea43153b094218c1159de4dcc88b6d2248657c008ec7b001a25",
+    "I18nTextTable_EN": "8712569337ea686c8e4faf400f8d71e9bc32056699afbd2de6820a246eb4d0d6"
+  },
+  "items": [
+    {
+      "id": "item_byproduct_bean_1",
+      "zhCN": "球豆壳",
+      "enUS": "Ballpea Pod"
+    },
+    {
+      "id": "item_byproduct_bean_moss_1",
+      "zhCN": "球豆壳粉末",
+      "enUS": "Ballpea Pod Powder"
+    },
+    {
+      "id": "item_byproduct_potato_1",
+      "zhCN": "平薯叶",
+      "enUS": "Pingtuber Leaf"
+    },
+    {
+      "id": "item_byproduct_potato_moss_1",
+      "zhCN": "平薯叶粉末",
+      "enUS": "Pingtuber Leaf Powder"
+    },
+    {
+      "id": "item_corp_bean_1",
+      "zhCN": "球豆",
+      "enUS": "Ballpea"
+    },
+    {
+      "id": "item_corp_bean_seed_1",
+      "zhCN": "球豆种子",
+      "enUS": "Ballpea Seeds"
+    },
+    {
+      "id": "item_corp_cabbage_1",
+      "zhCN": "青菜",
+      "enUS": "Cabbage"
+    },
+    {
+      "id": "item_corp_cabbage_2",
+      "zhCN": "优质青菜",
+      "enUS": "Cabbage [A]"
+    },
+    {
+      "id": "item_corp_cabbage_seed_1",
+      "zhCN": "青菜种子",
+      "enUS": "Cabbage Seeds"
+    },
+    {
+      "id": "item_corp_canolaflower_1",
+      "zhCN": "籽油花",
+      "enUS": "Oilseed Bloom"
+    },
+    {
+      "id": "item_corp_canolaflower_seed_1",
+      "zhCN": "籽油花种子",
+      "enUS": "Oilseeds"
+    },
+    {
+      "id": "item_corp_mushroom_1",
+      "zhCN": "多味菇",
+      "enUS": "Relishroom"
+    },
+    {
+      "id": "item_corp_mushroom_2",
+      "zhCN": "优质多味菇",
+      "enUS": "Relishroom [A]"
+    },
+    {
+      "id": "item_corp_mushroom_seed_1",
+      "zhCN": "多味菇孢子",
+      "enUS": "Relishroom Spores"
+    },
+    {
+      "id": "item_corp_potato_1",
+      "zhCN": "平薯",
+      "enUS": "Pingtuber"
+    },
+    {
+      "id": "item_corp_potato_seed_1",
+      "zhCN": "平薯块茎",
+      "enUS": "Pingtuber Cutting"
+    },
+    {
+      "id": "item_corp_strawberry_1",
+      "zhCN": "青叶莓",
+      "enUS": "Sourberry"
+    },
+    {
+      "id": "item_corp_strawberry_2",
+      "zhCN": "优质青叶莓",
+      "enUS": "Sourberry [A]"
+    },
+    {
+      "id": "item_corp_strawberry_seed_1",
+      "zhCN": "青叶莓种子",
+      "enUS": "Sourberry Seeds"
+    },
+    {
+      "id": "item_corp_sugarcane_1",
+      "zhCN": "脆蔗",
+      "enUS": "Crunchcane"
+    },
+    {
+      "id": "item_corp_sugarcane_seed_1",
+      "zhCN": "脆蔗种子",
+      "enUS": "Crunchcane Cutting"
+    },
+    {
+      "id": "item_corp_tomato_1",
+      "zhCN": "茄果",
+      "enUS": "Matoberry"
+    },
+    {
+      "id": "item_corp_tomato_seed_1",
+      "zhCN": "茄果种子",
+      "enUS": "Matoberry Seeds"
+    },
+    {
+      "id": "item_corp_whitegourd_1",
+      "zhCN": "白瓜",
+      "enUS": "Whitemelon"
+    },
+    {
+      "id": "item_corp_whitegourd_seed_1",
+      "zhCN": "白瓜种子",
+      "enUS": "Whitemelon Seeds"
+    },
+    {
+      "id": "item_Ingredient_flour_1",
+      "zhCN": "面粉",
+      "enUS": "Flour"
+    },
+    {
+      "id": "item_Ingredient_oil_1",
+      "zhCN": "菜籽油",
+      "enUS": "Seed Oil"
+    },
+    {
+      "id": "item_Ingredient_paprika_1",
+      "zhCN": "辣椒粉",
+      "enUS": "Ground Pepper"
+    },
+    {
+      "id": "item_Ingredient_starch_1",
+      "zhCN": "淀粉",
+      "enUS": "Starch"
+    },
+    {
+      "id": "item_Ingredient_sugar_1",
+      "zhCN": "砂糖",
+      "enUS": "Sugar"
+    },
+    {
+      "id": "item_inn_drink_10",
+      "zhCN": "瓶装霞莓饮",
+      "enUS": "Bottled Duskberry Juice"
+    },
+    {
+      "id": "item_inn_drink_2",
+      "zhCN": "瓶装兽奶",
+      "enUS": "Bottled Milk"
+    },
+    {
+      "id": "item_inn_drink_4",
+      "zhCN": "瓶装脆蔗汁",
+      "enUS": "Bottled Canejuice"
+    },
+    {
+      "id": "item_inn_drink_7",
+      "zhCN": "瓶装优质兽奶",
+      "enUS": "Bottled Milk [A]"
+    },
+    {
+      "id": "item_ranch_fodder_1",
+      "zhCN": "饱食饲料",
+      "enUS": "Yummy Feed"
+    },
+    {
+      "id": "item_ranch_fodder_2",
+      "zhCN": "双效饱食饲料",
+      "enUS": "Double-Yummy Feed"
+    },
+    {
+      "id": "item_ranch_milk_1",
+      "zhCN": "兽奶",
+      "enUS": "Milk"
+    },
+    {
+      "id": "item_ranch_milk_2",
+      "zhCN": "优质兽奶",
+      "enUS": "Milk [A]"
+    }
+  ],
+  "manufacturingRecipes": [
+    {
+      "id": "filling_bottled_drink_10_1",
+      "machineId": "filling_powder_mc_1",
+      "totalProgress": 60000,
+      "durationSeconds": 10,
+      "inputs": [
+        {
+          "itemId": "item_iron_bottle",
+          "amount": 1
+        },
+        {
+          "itemId": "item_corp_strawberry_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_inn_drink_10",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "grinder_byproduct_potato_moss_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_potato_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_byproduct_potato_moss_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_strawberry_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_strawberry_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_strawberry_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "filling_bottled_drink_4_1",
+      "machineId": "filling_powder_mc_1",
+      "totalProgress": 60000,
+      "durationSeconds": 10,
+      "inputs": [
+        {
+          "itemId": "item_iron_bottle",
+          "amount": 1
+        },
+        {
+          "itemId": "item_corp_sugarcane_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_inn_drink_4",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "pool_ranch_fodder_1_2",
+      "machineId": "mix_pool_2",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_potato_moss_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_ranch_fodder_1",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "pool_ranch_fodder_1",
+      "machineId": "mix_pool_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_potato_moss_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_ranch_fodder_1",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "filling_bottled_drink_2_1",
+      "machineId": "filling_powder_mc_1",
+      "totalProgress": 60000,
+      "durationSeconds": 10,
+      "inputs": [
+        {
+          "itemId": "item_iron_bottle",
+          "amount": 1
+        },
+        {
+          "itemId": "item_ranch_milk_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_inn_drink_2",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "filling_bottled_drink_7_1",
+      "machineId": "filling_powder_mc_1",
+      "totalProgress": 60000,
+      "durationSeconds": 10,
+      "inputs": [
+        {
+          "itemId": "item_iron_bottle",
+          "amount": 1
+        },
+        {
+          "itemId": "item_ranch_milk_2",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_inn_drink_7",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_bean_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_bean_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_bean_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_mushroom_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_mushroom_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_mushroom_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "grinder_Ingredient_starch_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_potato_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_starch_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_canolaflower_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_canolaflower_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_canolaflower_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "pool_Ingredient_oil_1",
+      "machineId": "mix_pool_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_canolaflower_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_oil_1",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "grinder_Ingredient_flour_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_plant_sp_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_flour_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "grinder_Ingredient_paprika_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_plant_sp_2",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_paprika_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "grinder_Ingredient_sugar_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_sugarcane_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_sugar_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "grinder_byproduct_bean_moss_1",
+      "machineId": "grinder_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_bean_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_byproduct_bean_moss_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "pool_Ingredient_oil_1_2",
+      "machineId": "mix_pool_2",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_canolaflower_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_Ingredient_oil_1",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "pool_ranch_fodder_2",
+      "machineId": "mix_pool_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_bean_moss_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_ranch_fodder_2",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "pool_ranch_fodder_2_2",
+      "machineId": "mix_pool_2",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_byproduct_bean_moss_1",
+          "amount": 1
+        },
+        {
+          "itemId": "item_liquid_water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_ranch_fodder_2",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_cabbage_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_cabbage_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_cabbage_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_potato_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_potato_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_potato_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_sugarcane_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_sugarcane_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_sugarcane_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_tomato_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_tomato_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_tomato_seed_1",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "seedcollector_plant_whitegourd_1",
+      "machineId": "seedcollector_1",
+      "totalProgress": 12000,
+      "durationSeconds": 2,
+      "inputs": [
+        {
+          "itemId": "item_corp_whitegourd_1",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_corp_whitegourd_seed_1",
+          "amount": 2
+        }
+      ]
+    }
+  ],
+  "plots": [
+    {
+      "id": "soil_corp_bean_1",
+      "zhCN": "球豆田块",
+      "enUS": "Ballpea Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_bean_1",
+          "amount": 30
+        },
+        {
+          "itemId": "item_byproduct_bean_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_cabbage_1",
+      "zhCN": "青菜田块",
+      "enUS": "Cabbage Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_cabbage_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_cabbage_2",
+      "zhCN": "优质青菜田块",
+      "enUS": "Cabbage Plot [A]",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_cabbage_1",
+          "amount": 30
+        },
+        {
+          "itemId": "item_corp_cabbage_2",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_canolaflower_1",
+      "zhCN": "籽油花田块",
+      "enUS": "Oilseed Bloom Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_canolaflower_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_mushroom_1",
+      "zhCN": "多味菇田块",
+      "enUS": "Relishroom Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_mushroom_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_mushroom_2",
+      "zhCN": "优质多味菇田块",
+      "enUS": "Relishroom Plot [A]",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_mushroom_1",
+          "amount": 30
+        },
+        {
+          "itemId": "item_corp_mushroom_2",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_potato_1",
+      "zhCN": "平薯田块",
+      "enUS": "Pingtuber Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_potato_1",
+          "amount": 30
+        },
+        {
+          "itemId": "item_byproduct_potato_1",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_strawberry_1",
+      "zhCN": "青叶莓田块",
+      "enUS": "Sourberry Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_strawberry_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_strawberry_2",
+      "zhCN": "优质青叶莓田块",
+      "enUS": "Sourberry Plot [A]",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_strawberry_1",
+          "amount": 30
+        },
+        {
+          "itemId": "item_corp_strawberry_2",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_sugarcane_1",
+      "zhCN": "脆蔗田块",
+      "enUS": "Crunchcane Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_sugarcane_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_tomato_1",
+      "zhCN": "茄果田块",
+      "enUS": "Matoberry Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_tomato_1",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "soil_corp_whitegourd_1",
+      "zhCN": "白瓜田块",
+      "enUS": "Whitemelon Plot",
+      "growthSeconds": 28800,
+      "outputs": [
+        {
+          "itemId": "item_corp_whitegourd_1",
+          "amount": 30
+        }
+      ]
+    }
+  ],
+  "provenanceNotes": [
+    "2026-10-15：投入产出直接按原始FactoryMachineCraftTable组与条目顺序保存；不使用跨配方语义比较时排序的派生视图。"
+  ]
+}

@@ -35,6 +35,10 @@ export class PlannerBoundary {
   readonly entries: readonly BoundaryEntry[];
   private readonly byIndex: ReadonlyMap<number, BoundaryEntry>;
   private readonly proposalCache = new Map<number, PlannerBoundaryPose[]>();
+  private readonly warehouseCounts = [0, 0, 0, 0];
+  private readonly beltCounts = [0, 0, 0, 0];
+  private readonly warehouseRects: Array<{ x: number; y: number; width: number; height: number; side: number; kind: number }> = [];
+  private readonly warehouseLabels: Int32Array;
 
   constructor(private readonly registry: RegistryContract, private readonly network: PlannerNetwork,
     readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number }) {
@@ -53,6 +57,7 @@ export class PlannerBoundary {
       return [{ index, kind, geometry }];
     });
     this.byIndex = new Map(this.entries.map(entry => [entry.index, entry]));
+    this.warehouseLabels = new Int32Array(this.entries.filter(entry => entry.kind === "warehouse").length);
   }
 
   has(index: number): boolean { return this.byIndex.has(index); }
@@ -101,7 +106,9 @@ export class PlannerBoundary {
 
   resolve(poses: readonly PlannerBoundaryPose[], selected?: ReadonlySet<number>, override?: { index: number; pose: PlannerBoundaryPose }) {
     let warehouse = 0, externalBelts = 0, violations = 0;
-    const warehouseCounts = [0, 0, 0, 0], beltCounts = [0, 0, 0, 0];
+    const warehouseCounts = this.warehouseCounts, beltCounts = this.beltCounts;
+    warehouseCounts.fill(0); beltCounts.fill(0);
+    let warehouseIndex = 0;
     for (const entry of this.entries) {
       if (selected && !selected.has(entry.index)) continue;
       const pose = override?.index === entry.index ? override.pose : poses[entry.index]!;
@@ -115,14 +122,30 @@ export class PlannerBoundary {
       else if (entry.kind === "belt") externalBelts |= bit;
       if (entry.kind === "warehouse") warehouseCounts[EDGES.indexOf(edge)]!++;
       else if (entry.kind === "belt") beltCounts[EDGES.indexOf(edge)]!++;
+      if (!selected && entry.kind === "warehouse") {
+        const rect = this.warehouseRects[warehouseIndex++] ??= { x: 0, y: 0, width: 0, height: 0, side: 0, kind: 0 };
+        rect.x = pose.x; rect.y = pose.y; rect.width = width; rect.height = height; rect.side = EDGES.indexOf(edge);
+        rect.kind = this.network.nodes[entry.index]!.entity.definitionId === "unloader_1" ? 1 : 2;
+      }
     }
     // 增量初排只检查已放口的边界；完整连通性在整组放完后判定。
-    if (!selected) violations += warehousePortViolations(this.entries.filter(entry => entry.kind === "warehouse").map(entry => {
-      const pose = override?.index === entry.index ? override.pose : poses[entry.index]!;
-      const geometry = entry.geometry[pose.rotation / 90]!;
-      return { ...pose, width: geometry.width, height: geometry.height, side: EDGES.indexOf(geometry.edge),
-        kind: this.network.nodes[entry.index]!.entity.definitionId === "unloader_1" ? 1 : 2 };
-    }), this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height, this.outline.warehouseSide);
+// AI-REMOVED 2026-10-14:
+// Reason: 逐提案 filter/map 重新生成仓库口矩形；对象数量在搜索实例内固定。
+// Trigger: Windows 分配复测仍约 108MiB/s，驻留内存未明显下降。
+// Evidence: reuse-profile 的评分与排列仍占分配约 65%。
+// Replacement: 上方复用矩形及计数数组，warehousePortViolations 复用连通标签
+// Risk: 必须保持枚举平局及坐标/连通评分；固定轨迹与独立回归验证。
+// Human Review: Required
+// Original code:
+//     if (!selected) violations += warehousePortViolations(this.entries.filter(entry => entry.kind === "warehouse").map(entry => {
+//       const pose = override?.index === entry.index ? override.pose : poses[entry.index]!;
+//       const geometry = entry.geometry[pose.rotation / 90]!;
+//       return { ...pose, width: geometry.width, height: geometry.height, side: EDGES.indexOf(geometry.edge),
+//         kind: this.network.nodes[entry.index]!.entity.definitionId === "unloader_1" ? 1 : 2 };
+//     }), this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height, this.outline.warehouseSide);
+    if (!selected) violations += warehousePortViolations(this.warehouseRects,
+      this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height,
+      this.outline.warehouseSide, this.warehouseLabels);
     const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts);
     return { busMask, violations: violations + plannerBusConflictCount(
       this.network.request.options.warehouseBus === "straight" ? 1 : this.network.request.options.warehouseBus === "corner" ? 2 : 3,

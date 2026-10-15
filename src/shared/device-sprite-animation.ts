@@ -64,6 +64,7 @@ export interface NormalizedDeviceSpriteAnimationDefinition {
   readonly clips: Readonly<Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipDefinition>>;
   readonly clipIds: readonly DeviceSpriteAnimationPhase[];
   readonly playback: {
+    readonly statusChangeMode: "cycle-end" | "immediate";
     readonly fallbackClip: DeviceSpriteAnimationPhase;
     readonly staticClip: DeviceSpriteAnimationPhase;
     readonly statusClips: Readonly<Partial<Record<SimulationDeviceOperatingStatus, DeviceSpriteAnimationPhase>>>;
@@ -236,6 +237,13 @@ export function normalizeDeviceSpriteAnimationDefinition(
   );
   const openTransitionClip = readTransition("openTransitionClip");
   const closeTransitionClip = readTransition("closeTransitionClip");
+  const statusChangeMode = playbackSource.statusChangeMode ?? "cycle-end";
+  if (statusChangeMode !== "cycle-end" && statusChangeMode !== "immediate") {
+    throw new Error("playback.statusChangeMode must be cycle-end or immediate");
+  }
+  if (statusChangeMode === "immediate" && (openTransitionClip !== null || closeTransitionClip !== null)) {
+    throw new Error("Immediate status changes cannot include transition clips");
+  }
   const transitionClips = new Set([openTransitionClip, closeTransitionClip].filter((clip): clip is string => clip !== null));
   if (transitionClips.has(fallbackClip)) throw new Error("playback.fallbackClip cannot be a transition clip");
   for (const [status, clip] of Object.entries(statusClips)) {
@@ -282,6 +290,7 @@ export function normalizeDeviceSpriteAnimationDefinition(
     clips: Object.freeze(clips),
     clipIds: Object.freeze(clipIds),
     playback: Object.freeze({
+      statusChangeMode,
       fallbackClip,
       staticClip,
       statusClips: Object.freeze(statusClips),

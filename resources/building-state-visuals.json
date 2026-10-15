@@ -1,32 +1,56 @@
 {
   "soil_grass_1": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling",
+    "mature-irrigated": "soil_1_mature_water"
   },
   "soil_grass_2": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling",
+    "mature-irrigated": "soil_1_mature_water"
   },
   "soil_moss_1": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_moss_2": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_moss_3": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_bbflower_1": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_sp_1": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_sp_2": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling"
   },
   "soil_sp_3": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling",
+    "mature-irrigated": "soil_1_mature_water"
   },
   "soil_sp_4": {
-    "irrigated": "soil_1_mature_water"
+    "irrigated": "soil_1_seedling_water",
+    "empty": "soil_1_empty",
+    "seedling": "soil_1_seedling",
+    "mature-irrigated": "soil_1_mature_water"
   }
 }

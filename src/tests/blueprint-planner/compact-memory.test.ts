@@ -25,3 +25,23 @@ it("故障任务的六条搜索轨迹在缓冲复用后保持评分、连接、�
     expect(network.nodes.map(node => ({ position: node.entity.position, rotation: node.entity.rotation }))).toEqual(scenario.finalPoses);
   }
 });
+
+it("不同外框的搜索交错执行时，复用工作区不串扰评分或端口归属", async () => {
+  const registry = createRegistryContract(), seed = reference.seed as PlannerSearchSeed;
+  const searches = reference.cases.map(scenario => {
+    const { network, wires } = restorePlannerSeed(registry, JSON.parse(seed.requestKey), seed);
+    const statistics: PlannerSearchStatistics = { strategy: scenario.strategy as "baseline" | "compact", seed: 294883,
+      evaluationLimit: 512, evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0,
+      outline: { width: scenario.size[0]!, height: scenario.size[1]! } };
+    return { scenario, network, wires, statistics, search: new CompactLayoutSearch(registry, network, wires, statistics) };
+  });
+  await Promise.all(searches.map(async ({ scenario, network, wires, statistics, search }) => {
+    for (const expected of scenario.trajectory) {
+      expect(await search.advance(64, () => {})).toBe(expected.feasible);
+      search.applyBest();
+      expect(JSON.parse(JSON.stringify(statistics))).toEqual(expected.statistics);
+      expect(createHash("sha256").update(JSON.stringify(wires)).digest("hex")).toBe(expected.wiresHash);
+    }
+    expect(network.nodes.map(node => ({ position: node.entity.position, rotation: node.entity.rotation }))).toEqual(scenario.finalPoses);
+  }));
+});

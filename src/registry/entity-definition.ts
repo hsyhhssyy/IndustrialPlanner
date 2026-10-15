@@ -1,4 +1,5 @@
 import { CROP_STATE_MACHINES } from "./crop-definitions";
+import { WULING_FENCE_DEFINITIONS } from "./wuling-fence-definition";
 // =========================================================================
 // 实体定义注册表（Entity Definitions Registry）
 //
@@ -242,6 +243,10 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
 
   // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
   declaredInspectors.unshift({ type: INSPECTOR_TYPE.problem });
+  if (normalizedDefinition.stateMachine !== undefined
+    && !declaredInspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.deviceState)) {
+    declaredInspectors.push({ type: INSPECTOR_TYPE.deviceState });
+  }
   if (
     normalizedDefinition.recipeChannels?.some(
       (channel) => channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE,
@@ -5492,6 +5497,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // Human Review: Required
     // Original code:
     // spriteAnimation: { closeIdleMode: "hold-last" },
+    // AI-CORRECTION 2026-10-15: 已按用户确认接入 watering 循环与无水待机，按展示状态立即切换，不播放启停过渡。
+    spriteAnimation: { closeIdleMode: "hold-last" },
+    spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 3 } },
     uiGroup: "agriculture",
     displayOrder: 800,
     tags: [PRODUCER_TAG],
@@ -5684,6 +5692,210 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
   }),
 
+  /** 球豆田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_bean_1",
+    nameKey: "registry.entity.soil_corp_bean_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_bean_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 811,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_bean_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_cabbage_1",
+    nameKey: "registry.entity.soil_corp_cabbage_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_cabbage_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 812,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_cabbage_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 优质青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_cabbage_2",
+    nameKey: "registry.entity.soil_corp_cabbage_2.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_cabbage_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 813,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_cabbage_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 籽油花田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_canolaflower_1",
+    nameKey: "registry.entity.soil_corp_canolaflower_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_canolaflower_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 814,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_canolaflower_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_mushroom_1",
+    nameKey: "registry.entity.soil_corp_mushroom_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_mushroom_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 815,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_mushroom_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 优质多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_mushroom_2",
+    nameKey: "registry.entity.soil_corp_mushroom_2.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_mushroom_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 816,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_mushroom_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 平薯田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_potato_1",
+    nameKey: "registry.entity.soil_corp_potato_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_potato_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 817,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_potato_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_strawberry_1",
+    nameKey: "registry.entity.soil_corp_strawberry_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_strawberry_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 818,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_strawberry_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 优质青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_strawberry_2",
+    nameKey: "registry.entity.soil_corp_strawberry_2.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_strawberry_2.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 819,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_strawberry_2"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 脆蔗田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_sugarcane_1",
+    nameKey: "registry.entity.soil_corp_sugarcane_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_sugarcane_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 820,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_sugarcane_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 茄果田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_tomato_1",
+    nameKey: "registry.entity.soil_corp_tomato_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_tomato_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 821,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_tomato_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
+  /** 白瓜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  createEntityDefinition({
+    id: "soil_corp_whitegourd_1",
+    nameKey: "registry.entity.soil_corp_whitegourd_1.name",
+    spriteId: "soil_grass_2",
+    iconPath: "device-icons/item_port_soil_corp_whitegourd_1.webp",
+    footprint: { width: 4, height: 4 },
+    uiGroup: "agriculture",
+    displayOrder: 822,
+    tags: ["AcceptsIrrigation", "Producer"],
+    requiresPower: false, powerDemand: 0,
+    portGroups: [], storageSlotGroups: [], portStorageBindings: [],
+    stateMachine: CROP_STATE_MACHINES["soil_corp_whitegourd_1"],
+    recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
+  }),
+
   /**
    * item_port_miner_2 — 电驱矿机（3×3）
    *
@@ -5732,4 +5944,5 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     tags: ["不可摆放"],
   }),
+  ...WULING_FENCE_DEFINITIONS.map(createEntityDefinition),
 ];

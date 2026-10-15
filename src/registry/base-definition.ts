@@ -1,5 +1,6 @@
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BaseBuiltinEntityDefinition } from "@/domain/registry/types/base-definition";
+import { WULING_FENCE_BUILTIN_ENTITIES } from "./wuling-fence-definition";
 // AI-REMOVED 2026-10-12:
 // Reason: 跨地区设备权限由设备白名单承担。
 // Trigger: 用户确认设备地图与区域白名单重构。
@@ -140,6 +141,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     name: "农牧用地",
     nameplate: "武陵农用地",
     placeableArea: { width: 44, height: 44 },
+    builtinEntities: WULING_FENCE_BUILTIN_ENTITIES,
     outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
     subAreas: [{
       id: "wuling_yuanyuan_zhuang",

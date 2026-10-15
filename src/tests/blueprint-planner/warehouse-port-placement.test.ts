@@ -17,6 +17,21 @@ import fixture from "./fixtures/separator-core.json";
 const rect = (x: number, kind: number, y = 0, width = 3, height = 1, side = 0): PlannerWarehouseRect => ({ x, y, width, height, kind, side });
 const violation = (rects: PlannerWarehouseRect[]) => warehousePortViolations(rects, "continuous", 20, 20);
 
+it("连通标签工作区在规模缩小、种类切换和空输入后不会残留旧分量", () => {
+  const labels = new Int32Array(12).fill(99);
+  const cases = [
+    { rects: [rect(0, 1), rect(4, 1), rect(10, 2), rect(14, 2)], expected: 2 },
+    { rects: [rect(0, 1), rect(3, 2), rect(6, 1)], expected: 0 },
+    { rects: [], expected: 0 },
+    { rects: [rect(0, 2), rect(4, 2)], expected: 1 },
+    { rects: [rect(0, 1)], expected: 0 },
+  ];
+  for (let pass = 0; pass < 3; pass++) for (const { rects, expected } of cases) {
+    expect(warehousePortViolations(rects, "continuous", 20, 20, -1, labels)).toBe(expected);
+    expect(warehousePortViolations(rects, "continuous", 20, 20, -1, new Int32Array(0))).toBe(expected);
+  }
+});
+
 it("合并连通或各类分别连通，禁止同类被空隙拆散", () => {
   expect(violation([rect(0, 1), rect(3, 2), rect(6, 1), rect(9, 2)])).toBe(0);
   expect(violation([rect(0, 1), rect(3, 1), rect(10, 2), rect(13, 2)])).toBe(0);

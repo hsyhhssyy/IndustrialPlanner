@@ -36,7 +36,10 @@ import { PLANNER_LAYOUT_GEOMETRY_STRIDE, plannerLayoutBatchSize, type PlannerLay
 
 interface Pose { x: number; y: number; rotation: GridRotation; }
 interface Geometry { width: number; height: number; ports: Map<string, PlannerPort>; }
-interface Edge { source: number; target: number; sourceKey: string; targetKey: string; weight: number; minimumCells: number; }
+interface Edge { source: number; target: number; sourceKey: string; targetKey: string; weight: number; minimumCells: number; penaltyKey: string; }
+// 2026-10-14：代价保留 JavaScript Number 的完整精度；固定普通数组避免 Float64 读取的装箱分配。
+// AI-CORRECTION 2026-10-14：对照确认总分配略降，但未单独证明装箱是原因；原原因解释不作为定论。
+interface PortAssignmentWorkspace { costs: number[]; chosen: Int32Array; next: Int32Array; prefixCosts: number[]; bestKeys: string[]; bestCost: number; }
 interface Evaluation { cost: number; wireLength: number; feasible: boolean; conflicts: NonNullable<PlannerSearchStatistics["remainingConflicts"]>; }
 
 /** 在真实端口网表上退火；所有提案（包括几何拒绝）共享同一个计数器。 */
@@ -84,10 +87,20 @@ export class CompactLayoutSearch {
   private randomState: number;
   private readonly penalties = new Map<string, number>();
   private readonly placedPorts = new Map<number, Map<string, { x: number; y: number; rotation: number; port: PlannerPort }>>();
-  private readonly assignmentCosts = new Map<object, { costs: Float64Array; chosen: string[]; bestKeys: string[] }>();
+  private readonly assignmentCosts = new Map<object, PortAssignmentWorkspace>();
   private readonly previousPoses: Pose[] = [];
-  private readonly portOwners = new Map<number, number>();
-  private readonly demands = new Map<number, { x: number; y: number; kind: LogisticsKind; density: number }>();
+// AI-REMOVED 2026-10-14:
+// Reason: 每次 clear 后重新 set 会反复分配哈希表；坐标键已有紧凑编码。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: evaluate 的端口占用与粗格网索引数组
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//   private readonly portOwners = new Map<number, number>();
+//   private readonly demands = new Map<number, { x: number; y: number; kind: LogisticsKind; density: number }>();
+  private portOwners = new Int32Array(0);
+  private demandIndices = new Int32Array(0);
   private readonly demandEntries: Array<{ x: number; y: number; kind: LogisticsKind; density: number }> = [];
   private readonly evaluationRects: Array<{ x: number; y: number; width: number; height: number; blockedKinds: number }> = [];
   private occupancy = new Uint8Array(0);
@@ -151,7 +164,7 @@ export class CompactLayoutSearch {
     const graph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
     this.edges = wires.map(wire => ({ source: indices.get(wire.source.entityId)!, target: indices.get(wire.target.entityId)!,
       sourceKey: portKey(wire.source), targetKey: portKey(wire.target),
-      minimumCells: wire.minimumCells ?? 0,
+      minimumCells: wire.minimumCells ?? 0, penaltyKey: `${wire.source.entityId}/${wire.target.entityId}`,
       // 回流库存有限，优先缩短 SCC 内部线路，避免过多启动物料滞留运输途中。
       weight: graph.groups[graph.groupIndexByNodeId.get(wire.source.entityId)!]!.cyclic
         && graph.groupIndexByNodeId.get(wire.source.entityId) === graph.groupIndexByNodeId.get(wire.target.entityId) ? 4 : 1 }));
@@ -515,7 +528,7 @@ export class CompactLayoutSearch {
     }
     for (const edge of this.edges) {
       const kind = this.geometry[edge.source]![0]!.ports.get(edge.sourceKey)!.kind === "belt" ? 1 : 2;
-      edges.push(edge.source, edge.target, kind, edge.minimumCells, Math.ceil(edge.weight + (this.penalties.get(`${this.network.nodes[edge.source]!.entity.id}/${this.network.nodes[edge.target]!.entity.id}`) ?? 0)),
+      edges.push(edge.source, edge.target, kind, edge.minimumCells, Math.ceil(edge.weight + (this.penalties.get(edge.penaltyKey) ?? 0)),
         Number(this.logistics[edge.source]! || this.logistics[edge.target]!), 0, 0);
       for (const [node, key] of [[edge.source, edge.sourceKey], [edge.target, edge.targetKey]] as const) {
         for (let turn = 0; turn < 4; turn++) {
@@ -954,9 +967,23 @@ export class CompactLayoutSearch {
     }
     const obstacles = rects;
     // 一次建立格子占用，供端口检查与拥塞估计复用，避免每个格子重复扫描所有建筑。
-    const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
-    const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
-    const gridHeight = Math.max(...obstacles.map(rect => rect.y + rect.height)) - gridTop;
+// AI-REMOVED 2026-10-14:
+// Reason: 逐提案仅求四个极值却构造四份临时数组。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: 同位置单次遍历求包围范围
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//     const gridLeft = Math.min(0, ...obstacles.map(rect => rect.x)), gridTop = Math.min(0, ...obstacles.map(rect => rect.y));
+//     const gridWidth = Math.max(...obstacles.map(rect => rect.x + rect.width)) - gridLeft;
+//     const gridHeight = Math.max(...obstacles.map(rect => rect.y + rect.height)) - gridTop;
+    let gridLeft = 0, gridTop = 0, gridRight = -Infinity, gridBottom = -Infinity;
+    for (const rect of obstacles) {
+      gridLeft = Math.min(gridLeft, rect.x); gridTop = Math.min(gridTop, rect.y);
+      gridRight = Math.max(gridRight, rect.x + rect.width); gridBottom = Math.max(gridBottom, rect.y + rect.height);
+    }
+    const gridWidth = gridRight - gridLeft, gridHeight = gridBottom - gridTop;
     if (this.occupancy.length < gridWidth * gridHeight) this.occupancy = new Uint8Array(gridWidth * gridHeight);
     const occupied = this.occupancy; occupied.fill(0, 0, gridWidth * gridHeight);
     for (const rect of obstacles) for (let y = rect.y; y < rect.y + rect.height; y++) {
@@ -970,8 +997,17 @@ export class CompactLayoutSearch {
     for (let pass = 0; pass < 2; pass++) for (const junction of this.junctionPorts) {
       // 同一评分内每个“边×端口”的代价不变；排列回溯只读取小矩阵。
       let workspace = this.assignmentCosts.get(junction);
-      if (!workspace) { workspace = { costs: new Float64Array(junction.edges.length * junction.keys.length), chosen: [], bestKeys: [] }; this.assignmentCosts.set(junction, workspace); }
-      const { costs, chosen, bestKeys } = workspace; chosen.length = 0; bestKeys.length = 0;
+      if (!workspace) { workspace = { costs: new Array<number>(junction.edges.length * junction.keys.length).fill(0), chosen: new Int32Array(junction.edges.length), next: new Int32Array(junction.edges.length + 1), prefixCosts: new Array<number>(junction.edges.length + 1).fill(0), bestKeys: [], bestCost: Infinity }; this.assignmentCosts.set(junction, workspace); }
+// AI-REMOVED 2026-10-14:
+// Reason: 排列前缀改用固定索引缓冲，取消 push/pop 及每次评分的递归闭包。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: assignPlannerPorts 与 PortAssignmentWorkspace
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//       const { costs, chosen, bestKeys } = workspace; chosen.length = 0; bestKeys.length = 0;
+      const { costs, bestKeys } = workspace; bestKeys.length = 0; workspace.bestCost = Infinity;
       for (let offset = 0; offset < junction.edges.length; offset++) {
         const edge = this.edges[junction.edges[offset]!]!;
         const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
@@ -985,41 +1021,51 @@ export class CompactLayoutSearch {
             + Math.max(0, edge.minimumCells - length - 1) * 50;
         }
       }
-      let bestCost = Infinity;
-      const assign = (offset: number, cost: number): void => {
-        if (cost >= bestCost) return;
-        if (offset === junction.edges.length) {
-          bestCost = cost;
-          for (let i = 0; i < chosen.length; i++) bestKeys[i] = chosen[i]!;
-          return;
-        }
-        for (let index = 0; index < junction.keys.length; index++) {
-          const key = junction.keys[index]!;
-          if (chosen.includes(key)) continue;
-          // AI-REMOVED 2026-10-13:
-          // Reason: 排列树每条路径重复构造相同端口和代价。
-          // Trigger: 1GiB 内存目标；Evidence: 单 Worker 分配采样中 assign 占数十 GB。
-          // Replacement: 上方每次评分的代价矩阵；Risk: 必须保留枚举顺序及平局规则。
-          // Human Review: Required
-          // Original code:
-          // const edge = this.edges[junction.edges[offset]!]!;
-          // const own = this.port(junction.node, key);
-          // const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
-          // const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
-          //   && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
-          // const blocked = !direct && rects.some((rect, index) => (this.blockedKinds[index]! & (own.kind === "belt" ? 1 : 2)) !== 0 && contains(rect, own.outside));
-          // const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
-          // const penalty = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
-          //   + Math.max(0, edge.minimumCells - length - 1) * 50;
-          const penalty = costs[offset * junction.keys.length + index]!;
-          chosen.push(key); assign(offset + 1, cost + penalty); chosen.pop();
-        }
-      };
-      assign(0, 0);
-      junction.edges.forEach((index, offset) => {
-        if (junction.source) this.edges[index]!.sourceKey = bestKeys[offset]!;
-        else this.edges[index]!.targetKey = bestKeys[offset]!;
-      });
+// AI-REMOVED 2026-10-14:
+// Reason: 端口排列递归闭包与动态前缀产生大量分配，改为显式工作区。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: 文件内 assignPlannerPorts；保持候选顺序、剪枝和平局选择
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//       let bestCost = Infinity;
+//       const assign = (offset: number, cost: number): void => {
+//         if (cost >= bestCost) return;
+//         if (offset === junction.edges.length) {
+//           bestCost = cost;
+//           for (let i = 0; i < chosen.length; i++) bestKeys[i] = chosen[i]!;
+//           return;
+//         }
+//         for (let index = 0; index < junction.keys.length; index++) {
+//           const key = junction.keys[index]!;
+//           if (chosen.includes(key)) continue;
+//           // AI-REMOVED 2026-10-13:
+//           // Reason: 排列树每条路径重复构造相同端口和代价。
+//           // Trigger: 1GiB 内存目标；Evidence: 单 Worker 分配采样中 assign 占数十 GB。
+//           // Replacement: 上方每次评分的代价矩阵；Risk: 必须保留枚举顺序及平局规则。
+//           // Human Review: Required
+//           // Original code:
+//           // const edge = this.edges[junction.edges[offset]!]!;
+//           // const own = this.port(junction.node, key);
+//           // const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+//           // const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
+//           //   && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
+//           // const blocked = !direct && rects.some((rect, index) => (this.blockedKinds[index]! & (own.kind === "belt" ? 1 : 2)) !== 0 && contains(rect, own.outside));
+//           // const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
+//           // const penalty = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
+//           //   + Math.max(0, edge.minimumCells - length - 1) * 50;
+//           const penalty = costs[offset * junction.keys.length + index]!;
+//           chosen.push(key); assign(offset + 1, cost + penalty); chosen.pop();
+//         }
+//       };
+//       assign(0, 0);
+      assignPlannerPorts(workspace, junction.keys, junction.edges.length);
+      for (let offset = 0; offset < junction.edges.length; offset++) {
+        const edge = this.edges[junction.edges[offset]!]!;
+        if (junction.source) edge.sourceKey = bestKeys[offset]!;
+        else edge.targetKey = bestKeys[offset]!;
+      }
     }
     const minX = 0;
     const minY = 0;
@@ -1159,11 +1205,21 @@ export class CompactLayoutSearch {
     // const isOccupied = (x: number, y: number, kind: LogisticsKind) => x >= gridLeft && x < gridLeft + gridWidth
     // && y >= gridTop && y < gridTop + gridHeight && (occupied[(y - gridTop) * gridWidth + x - gridLeft]! & (kind === "belt" ? 1 : 2)) !== 0;
     let wireLength = 0, wireCost = 0, congestion = 0;
-    const used = this.portOwners; used.clear();
+// AI-REMOVED 2026-10-14:
+// Reason: 删除逐评分重建的 Map；保留需求首次出现顺序。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: 下方按端口范围扩容并清零的索引缓冲
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//     const used = this.portOwners; used.clear();
+//     const endpoints = this.endpoints;
+//     const demand = this.demands; demand.clear();
     const endpoints = this.endpoints;
-    const demand = this.demands; demand.clear();
+    let demandCount = 0;
     // 端点的精确范围编码坐标；负坐标、越界提案也不会碰撞。
-    let portLeft = Infinity, portTop = Infinity, portRight = -Infinity;
+    let portLeft = Infinity, portTop = Infinity, portRight = -Infinity, portBottom = -Infinity;
     for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
       const edge = this.edges[edgeIndex]!;
       const source = this.port(edge.source, edge.sourceKey), target = this.port(edge.target, edge.targetKey);
@@ -1175,9 +1231,17 @@ export class CompactLayoutSearch {
       portLeft = Math.min(portLeft, source.outside.x, target.outside.x);
       portTop = Math.min(portTop, source.outside.y, target.outside.y);
       portRight = Math.max(portRight, source.outside.x, target.outside.x);
+      portBottom = Math.max(portBottom, source.outside.y, target.outside.y);
     }
     const portWidth = portRight - portLeft + 1, demandLeft = Math.floor(portLeft / 4), demandTop = Math.floor(portTop / 4);
     const demandWidth = Math.floor(portRight / 4) - demandLeft + 1;
+    // 每个搜索实例独占缓冲；只按本轮端口包围范围增长，零表示未占用／未索引。
+    const portCells = this.edges.length ? portWidth * (portBottom - portTop + 1) * 2 : 0;
+    const demandCells = this.edges.length ? demandWidth * (Math.floor(portBottom / 4) - demandTop + 1) * 2 : 0;
+    if (this.portOwners.length < portCells) this.portOwners = new Int32Array(portCells);
+    if (this.demandIndices.length < demandCells) this.demandIndices = new Int32Array(demandCells);
+    const used = this.portOwners, demand = this.demandIndices;
+    used.fill(0, 0, portCells); demand.fill(0, 0, demandCells);
     for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
       const edge = this.edges[edgeIndex]!, { source, target, direct } = endpoints[edgeIndex]!;
       for (let side = 0; side < 2; side++) {
@@ -1188,13 +1252,13 @@ export class CompactLayoutSearch {
         if (isOccupied(port.outside.x, port.outside.y, port.kind)) violations++;
         if (record && isOccupied(port.outside.x, port.outside.y, port.kind)) record("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, port.outside) ? [i] : [])], port.outside);
         const key = ((port.outside.y - portTop) * portWidth + port.outside.x - portLeft) * 2 + (port.kind === "belt" ? 0 : 1);
-        const owner = edgeIndex;
-        if (used.has(key) && used.get(key) !== owner) violations++;
-        if (record && used.has(key) && used.get(key) !== owner) {
-          const other = this.edges[Number(used.get(key))]!;
+        const owner = edgeIndex + 1, previousOwner = used[key]!;
+        if (previousOwner && previousOwner !== owner) violations++;
+        if (record && previousOwner && previousOwner !== owner) {
+          const other = this.edges[previousOwner - 1]!;
           record("port-competition", 1, [index, other.source, other.target], port.outside);
         }
-        used.set(key, owner);
+        used[key] = owner;
         overflow += Math.max(0, port.outside.x + 1 - width) + Math.max(0, port.outside.y + 1 - height);
         record?.("port-boundary", Math.max(0, port.outside.x + 1 - width) + Math.max(0, port.outside.y + 1 - height), [index], port.outside);
         const next = { x: port.outside.x * 2 - port.cell.x, y: port.outside.y * 2 - port.cell.y };
@@ -1205,7 +1269,7 @@ export class CompactLayoutSearch {
           && isOccupied(next.x, next.y, port.kind)) congestion += 12;
       }
       const length = Math.abs(source.outside.x - target.outside.x) + Math.abs(source.outside.y - target.outside.y);
-      const extra = this.penalties.get(`${source.entityId}/${target.entityId}`) ?? 0;
+      const extra = this.penalties.get(edge.penaltyKey) ?? 0;
       const bufferedLength = Math.max(length, edge.minimumCells - 1);
       wireLength += length; wireCost += bufferedLength * edge.weight;
       // 必需缓冲不能被普通短线奖励抵消；实际长度仍由路由器和供料审计硬验证。
@@ -1216,16 +1280,33 @@ export class CompactLayoutSearch {
       const density = Math.max(1, length) / ((x1 - x0 + 1) * (y1 - y0 + 1) * 16);
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         const key = ((y - demandTop) * demandWidth + x - demandLeft) * 2 + (source.kind === "belt" ? 0 : 1);
-        let entry = demand.get(key);
-        if (!entry) {
-          entry = this.demandEntries[demand.size] ??= { x, y, kind: source.kind, density: 0 };
+// AI-REMOVED 2026-10-14:
+// Reason: 复用数值索引，避免粗格网逐提案创建 Map 背板。
+// Trigger: 高并发内存优化，保持搜索与评分语义。
+// Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+// Replacement: demandIndices 与按首次遇见顺序排列的 demandEntries
+// Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+// Human Review: Required
+// Original code:
+//         let entry = demand.get(key);
+//         if (!entry) {
+//           entry = this.demandEntries[demand.size] ??= { x, y, kind: source.kind, density: 0 };
+//           entry.x = x; entry.y = y; entry.kind = source.kind; entry.density = 0;
+//           demand.set(key, entry);
+//         }
+//         entry.density += density;
+        let entryIndex = demand[key]! - 1;
+        if (entryIndex < 0) {
+          entryIndex = demandCount++;
+          const entry = this.demandEntries[entryIndex] ??= { x, y, kind: source.kind, density: 0 };
           entry.x = x; entry.y = y; entry.kind = source.kind; entry.density = 0;
-          demand.set(key, entry);
+          demand[key] = entryIndex + 1;
         }
-        entry.density += density;
+        this.demandEntries[entryIndex]!.density += density;
       }
     }
-    for (const { x, y, kind, density } of demand.values()) {
+    for (let i = 0; i < demandCount; i++) {
+      const { x, y, kind, density } = this.demandEntries[i]!;
       let free = 0;
       for (let cy = y! * 4; cy < y! * 4 + 4; cy++) for (let cx = x! * 4; cx < x! * 4 + 4; cx++) {
         if (!isOccupied(cx, cy, kind)) free++;
@@ -1441,4 +1522,52 @@ function countDisconnectedKind(rects: readonly { x: number; y: number; width: nu
     }
   }
   return count;
+}
+
+/** 固定索引前缀避免递归闭包分配；枚举与旧搜索完全同序，同分保留先到方案。 */
+// AI-CORRECTION 2026-10-14：复测发现递归仍产生分配，最终以迭代游标遍历同一棵排列树。
+// AI-REMOVED 2026-10-14:
+// Reason: 递归参数及反复写对象数值仍产生分配；改为有界深度优先游标。
+// Trigger: Windows 分配复测仍约 108MiB/s，驻留内存未明显下降。
+// Evidence: reuse-profile 的评分与排列仍占分配约 65%。
+// Replacement: 同名函数的迭代枚举与固定前缀代价缓冲
+// Risk: 必须保持枚举平局及坐标/连通评分；固定轨迹与独立回归验证。
+// Human Review: Required
+// Original code:
+// function assignPlannerPorts(workspace: PortAssignmentWorkspace, keys: readonly string[], count: number, offset: number, cost: number): void {
+//   if (cost >= workspace.bestCost) return;
+//   if (offset === count) {
+//     workspace.bestCost = cost;
+//     for (let i = 0; i < count; i++) workspace.bestKeys[i] = keys[workspace.chosen[i]!]!;
+//     return;
+//   }
+//   for (let index = 0; index < keys.length; index++) {
+//     let used = false;
+//     for (let i = 0; i < offset; i++) if (workspace.chosen[i] === index) { used = true; break; }
+//     if (used) continue;
+//     workspace.chosen[offset] = index;
+//     assignPlannerPorts(workspace, keys, count, offset + 1, cost + workspace.costs[offset * keys.length + index]!);
+//   }
+// }
+function assignPlannerPorts(workspace: PortAssignmentWorkspace, keys: readonly string[], count: number): void {
+  const { chosen, next, prefixCosts, costs, bestKeys } = workspace;
+  let offset = 0, bestCost = Infinity;
+  next[0] = 0; prefixCosts[0] = 0;
+  while (offset >= 0) {
+    if (offset === count) {
+      bestCost = prefixCosts[offset]!;
+      for (let i = 0; i < count; i++) bestKeys[i] = keys[chosen[i]!]!;
+      offset--; continue;
+    }
+    if (next[offset]! >= keys.length) { offset--; continue; }
+    const index = next[offset]!; next[offset] = index + 1;
+    let used = false;
+    for (let i = 0; i < offset; i++) if (chosen[i] === index) { used = true; break; }
+    if (used) continue;
+    const cost = prefixCosts[offset]! + costs[offset * keys.length + index]!;
+    if (cost >= bestCost) continue;
+    chosen[offset] = index; offset++;
+    next[offset] = 0; prefixCosts[offset] = cost;
+  }
+  workspace.bestCost = bestCost;
 }

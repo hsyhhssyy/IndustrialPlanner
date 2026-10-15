@@ -166,8 +166,10 @@ describe("v1.5 建筑素材发布", () => {
     expect(new Set(ids).size).toBe(ids.length);
     // AI-CORRECTION 2026-10-12: 在已有 52 个映射上新增 10 种普通田块静态成株，动画设备仍为 37 个。
     // AI-CORRECTION 2026-10-13: 新增洒水机静态首帧，总映射为 63，动画设备仍为 37 个。
-    expect(collection.entries).toHaveLength(63);
-    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(37);
+    // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块共用芽针素材的映射，总映射75，动画设备仍为37个。
+    expect(collection.entries).toHaveLength(75);
+    // AI-CORRECTION 2026-10-15: 洒水机由静态素材切换为状态动画，动画设备数增至 38。
+    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(38);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
       "grinder_1",

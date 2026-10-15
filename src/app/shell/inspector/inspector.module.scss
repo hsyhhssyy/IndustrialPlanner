@@ -585,6 +585,44 @@
   margin-top: 6px;
 }
 
+.device-state-heading,
+.device-state-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.device-state-body {
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.device-state-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.device-state-name strong {
+  color: var(--text-0);
+  font-size: 0.88rem;
+}
+
+.device-state-heading > span,
+.device-state-detail,
+.device-state-status {
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.device-state-detail {
+  margin-top: 6px;
+}
+
 .progress-track {
   flex: 1;
   height: 6px;

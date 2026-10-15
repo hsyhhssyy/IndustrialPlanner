@@ -71,6 +71,9 @@ export const INSPECTOR_TYPE = {
    */
   runtimeStatistics: "runtime-statistics",
 
+  /** 只读展示设备当前 state、阶段进度与剩余时间；复用状态机定义及仿真运行数据。 */
+  deviceState: "device-state",
+
   /**
    * ## 运行消耗面板
    *
@@ -525,6 +528,7 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.genericDevice }
   | { readonly type: typeof INSPECTOR_TYPE.problem }
   | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
+  | { readonly type: typeof INSPECTOR_TYPE.deviceState }
   | { readonly type: typeof INSPECTOR_TYPE.meteredConsumption }
   | { readonly type: typeof INSPECTOR_TYPE.logisticsItem }
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }

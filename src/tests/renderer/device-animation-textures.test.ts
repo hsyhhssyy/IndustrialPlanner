@@ -54,6 +54,18 @@ const manifest = {
   },
 };
 
+describe("动画状态切换策略校验", () => {
+  it("默认保持整轮切换，并拒绝未知策略或立即切换与过渡片段混用", () => {
+    expect(normalizeDeviceSpriteAnimationDefinition(definition, manifest).playback.statusChangeMode).toBe("cycle-end");
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
+      ...manifest, playback: { ...manifest.playback, statusChangeMode: "unknown" },
+    })).toThrow("playback.statusChangeMode");
+    expect(() => normalizeDeviceSpriteAnimationDefinition(definition, {
+      ...manifest, playback: { ...manifest.playback, statusChangeMode: "immediate" },
+    })).toThrow("Immediate status changes cannot include transition clips");
+  });
+});
+
 function createTexture(width: number, height: number, resolution = 1): Texture {
   return new Texture({ source: new BufferImageSource({
     resource: new Uint8Array(width * height * resolution * resolution * 4), width, height, resolution,

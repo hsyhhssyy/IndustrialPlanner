@@ -4275,4 +4275,599 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: ["introduced:1.4"],
   },
 
+  // AKEData 1.6.3@11010254-4：制造配方使用原始稳定 ID，沿用现有设备与缓存。
+  {
+    "id": "filling_bottled_drink_10_1",
+    "nameKey": "registry.item.item_inn_drink_10.name",
+    "durationSeconds": 10,
+    "inputs": [
+      {
+        "itemId": "item_iron_bottle",
+        "amount": 1
+      },
+      {
+        "itemId": "item_corp_strawberry_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_inn_drink_10",
+        "amount": 1
+      }
+    ],
+    "machineId": "filling_pd_mc_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6",
+      "bottle_filling"
+    ]
+  },
+  {
+    "id": "grinder_byproduct_potato_moss_1",
+    "nameKey": "registry.item.item_byproduct_potato_moss_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_potato_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_byproduct_potato_moss_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_strawberry_1",
+    "nameKey": "registry.item.item_corp_strawberry_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_strawberry_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_strawberry_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "filling_bottled_drink_4_1",
+    "nameKey": "registry.item.item_inn_drink_4.name",
+    "durationSeconds": 10,
+    "inputs": [
+      {
+        "itemId": "item_iron_bottle",
+        "amount": 1
+      },
+      {
+        "itemId": "item_corp_sugarcane_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_inn_drink_4",
+        "amount": 1
+      }
+    ],
+    "machineId": "filling_pd_mc_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6",
+      "bottle_filling"
+    ]
+  },
+  {
+    "id": "pool_ranch_fodder_1_2",
+    "nameKey": "registry.item.item_ranch_fodder_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_potato_moss_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_ranch_fodder_1",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_2",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "pool_ranch_fodder_1",
+    "nameKey": "registry.item.item_ranch_fodder_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_potato_moss_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_ranch_fodder_1",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "filling_bottled_drink_2_1",
+    "nameKey": "registry.item.item_inn_drink_2.name",
+    "durationSeconds": 10,
+    "inputs": [
+      {
+        "itemId": "item_iron_bottle",
+        "amount": 1
+      },
+      {
+        "itemId": "item_ranch_milk_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_inn_drink_2",
+        "amount": 1
+      }
+    ],
+    "machineId": "filling_pd_mc_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6",
+      "bottle_filling"
+    ]
+  },
+  {
+    "id": "filling_bottled_drink_7_1",
+    "nameKey": "registry.item.item_inn_drink_7.name",
+    "durationSeconds": 10,
+    "inputs": [
+      {
+        "itemId": "item_iron_bottle",
+        "amount": 1
+      },
+      {
+        "itemId": "item_ranch_milk_2",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_inn_drink_7",
+        "amount": 1
+      }
+    ],
+    "machineId": "filling_pd_mc_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6",
+      "bottle_filling"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_bean_1",
+    "nameKey": "registry.item.item_corp_bean_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_bean_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_bean_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_mushroom_1",
+    "nameKey": "registry.item.item_corp_mushroom_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_mushroom_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_mushroom_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "grinder_Ingredient_starch_1",
+    "nameKey": "registry.item.item_Ingredient_starch_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_potato_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_starch_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_canolaflower_1",
+    "nameKey": "registry.item.item_corp_canolaflower_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_canolaflower_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_canolaflower_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "pool_Ingredient_oil_1",
+    "nameKey": "registry.item.item_Ingredient_oil_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_canolaflower_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_oil_1",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "grinder_Ingredient_flour_1",
+    "nameKey": "registry.item.item_Ingredient_flour_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_plant_sp_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_flour_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "grinder_Ingredient_paprika_1",
+    "nameKey": "registry.item.item_Ingredient_paprika_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_plant_sp_2",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_paprika_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "grinder_Ingredient_sugar_1",
+    "nameKey": "registry.item.item_Ingredient_sugar_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_sugarcane_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_sugar_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "grinder_byproduct_bean_moss_1",
+    "nameKey": "registry.item.item_byproduct_bean_moss_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_bean_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_byproduct_bean_moss_1",
+        "amount": 3
+      }
+    ],
+    "machineId": "grinder_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "pool_Ingredient_oil_1_2",
+    "nameKey": "registry.item.item_Ingredient_oil_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_canolaflower_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_Ingredient_oil_1",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_2",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "pool_ranch_fodder_2",
+    "nameKey": "registry.item.item_ranch_fodder_2.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_bean_moss_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_ranch_fodder_2",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "pool_ranch_fodder_2_2",
+    "nameKey": "registry.item.item_ranch_fodder_2.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_byproduct_bean_moss_1",
+        "amount": 1
+      },
+      {
+        "itemId": "item_liquid_water",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_ranch_fodder_2",
+        "amount": 1
+      }
+    ],
+    "machineId": "mix_pool_2",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_cabbage_1",
+    "nameKey": "registry.item.item_corp_cabbage_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_cabbage_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_cabbage_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_potato_1",
+    "nameKey": "registry.item.item_corp_potato_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_potato_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_potato_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_sugarcane_1",
+    "nameKey": "registry.item.item_corp_sugarcane_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_sugarcane_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_sugarcane_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_tomato_1",
+    "nameKey": "registry.item.item_corp_tomato_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_tomato_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_tomato_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
+  {
+    "id": "seedcollector_plant_whitegourd_1",
+    "nameKey": "registry.item.item_corp_whitegourd_seed_1.name",
+    "durationSeconds": 2,
+    "inputs": [
+      {
+        "itemId": "item_corp_whitegourd_1",
+        "amount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "item_corp_whitegourd_seed_1",
+        "amount": 2
+      }
+    ],
+    "machineId": "seedcol_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "introduced:1.6"
+    ]
+  },
 ];

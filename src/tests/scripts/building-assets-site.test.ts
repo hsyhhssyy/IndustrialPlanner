@@ -108,7 +108,7 @@ print('explicit static phase verified')
         heightMin: 0, heightMax: 1, worldToPixel: { pivotPixels: { x: 256, y: 256 },
           cameraCenterSource: { x: 2, z: 2 }, pixelsPerCell: { x: 128, y: 128 } } }));
       await put("occlusion/occlusion.json", { textureProfile: profile, fields,
-        stateMapping: { default: "soil_0_empty" }, epsilon: { value: 0.01 } });
+        stateMapping: { default: "soil_0_empty", soil_1_mature_water: "soil_1_mature" }, epsilon: { value: 0.01 } });
       for (const field of fields) {
         await sharp({ create: { width: 256, height: 256, channels: 4,
           background: { r: 0, g: 64, b: 0, alpha: 1 } } }).webp({ lossless: true })
@@ -122,6 +122,17 @@ print('explicit static phase verified')
       expect(manifest.views["soil_grass_1/top"].stateMapping.default).toBe("soil_1_mature");
       expect(manifest.views["soil_grass_1/top"].variants).toEqual({});
       expect(manifest.issues).toEqual([]);
+      await publishBuildingPortEffects({ ...options, collection: { entries: [entry] },
+        stateVisuals: { soil_grass_1: { empty: "soil_0_empty", irrigated: "soil_1_mature_water" } } });
+      const stateManifest = JSON.parse(await readFile(path.join(options.outputDirectory, "manifest.json"), "utf8"));
+      expect(stateManifest.views["soil_grass_1/top"].stateMapping).toMatchObject({
+        default: "soil_1_mature", "state:empty": "soil_0_empty", "state:irrigated": "soil_1_mature",
+      });
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [entry] },
+        stateVisuals: { soil_grass_1: { empty: "missing" } } })).rejects.toThrow("State visual has no height field");
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [entry, { ...entry, entityId: "alias" }] },
+        stateVisuals: { soil_grass_1: { empty: "soil_0_empty" }, alias: { empty: "soil_1_mature" } } }))
+        .rejects.toThrow("Conflicting state visual height");
       await expect(publishBuildingPortEffects({ ...options, collection: { entries: [{ ...entry, staticPhase: "missing" }] } }))
         .rejects.toThrow("Selected static phase has no height field");
       await expect(publishBuildingPortEffects({ ...options, collection: { entries: [entry, { ...entry, staticPhase: "soil_0_empty" }] } }))
@@ -573,6 +584,41 @@ else: raise AssertionError('ambiguous fallback accepted')
 print(json.dumps(explicit,sort_keys=True))
 `, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
     expect(JSON.parse(result).statusClips).toEqual({ normal: "RUNNING" });
+  });
+
+  it("项目声明的直接切换只发布所选稳定片段，拒绝缺片、缺来源和无效状态", () => {
+    const result = execFileSync("python3", ["-c", `
+import runpy,sys,json,copy
+m=runpy.run_path(sys.argv[1])
+clips={k:[{'source':k+'_000','startFrame':0,'frameCount':1}] for k in ['open','open_idle','watering','watering_start','watering_stop']}
+sources={k+'_000':{'file':k+'.webp'} for k in clips}
+playback={'statusChangeMode':'immediate','fallbackClip':'open_idle','staticClip':'open_idle',
+  'statusClips':{'normal':'watering'},'openTransitionClip':None,'closeTransitionClip':None,
+  'clipOptions':{'open_idle':{'playing':False,'restart':True},'watering':{'playing':True,'restart':True}},'sourceStatuses':{}}
+package={'statusControl':{'codes':[{'code':'RUNNING','sourceStatusKey':4,'animation':{'clip':'watering','playing':True}}]}}
+delivery=m['resolve_animation_delivery'](package,sources,clips,'fixture',playback)
+assert set(delivery['clips'])=={'open_idle','watering'}
+assert set(delivery['sources'])=={'open_idle_000','watering_000'}
+assert delivery['playback']==playback
+pose_package={**package,'staticPose':{'animation':'open_idle','retainedFrame':1}}
+pose_clips={**clips,'open_idle':[{'source':'open_idle_000','startFrame':2,'frameCount':3}]}
+pose_delivery=m['resolve_animation_delivery'](pose_package,sources,pose_clips,'fixture',playback)
+assert pose_delivery['clips']['open_idle']==[{'source':'open_idle_000','startFrame':3,'frameCount':1}]
+try:m['resolve_animation_delivery']({**package,'staticPose':{'animation':'open_idle','retainedFrame':99}},sources,clips,'fixture',playback)
+except ValueError:pass
+else:raise AssertionError('invalid static pose accepted')
+for change in [{'statusClips':{'normal':'missing'}},{'statusClips':{'unknown':'watering'}},
+               {'openTransitionClip':'open'},{'clipOptions':{}},{'statusChangeMode':'unknown'}]:
+    invalid={**playback,**change}
+    try:m['resolve_animation_delivery'](package,sources,clips,'fixture',invalid)
+    except ValueError:pass
+    else:raise AssertionError(change)
+try:m['resolve_animation_delivery'](package,{},clips,'fixture',playback)
+except ValueError:pass
+else:raise AssertionError('missing sources accepted')
+print(json.dumps(delivery['playback']))
+`, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
+    expect(JSON.parse(result).statusClips).toEqual({ normal: "watering" });
   });
 
   it("两种协议核心只交付 open_idle，并把所有运行状态固定到该循环", () => {

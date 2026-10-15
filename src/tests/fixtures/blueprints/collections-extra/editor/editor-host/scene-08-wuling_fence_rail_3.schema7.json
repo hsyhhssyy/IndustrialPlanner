@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:editor-host:scene-08:wuling_fence_rail_3",
+  "version": "fixture-v1",
+  "name": "editor-host scene-08",
+  "description": "",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "preview-wuling_fence_rail_3": {
+      "id": "preview-wuling_fence_rail_3",
+      "originalEntityId": "preview-wuling_fence_rail_3",
+      "definitionId": "wuling_fence_rail_3",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "preview-wuling_fence_rail_3"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -47,6 +47,33 @@ interface SourceAnimationManifest {
 }
 
 describe("device animation definitions", () => {
+  it("洒水机只发布喷水循环和无水待机，并立即响应运行状态", async () => {
+    const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === "squirter_1")!;
+    const source = JSON.parse(await readFile(`resources/device-sprite-animation/${entity.spriteId}/manifest.json`, "utf8"));
+    const directory = `public/3d-top-view/animations/${entity.spriteId}`;
+    const runtime = JSON.parse(await readFile(`${directory}/manifest.json`, "utf8"));
+    const normalized = normalizeDeviceSpriteAnimationDefinition(entity.spriteAnimation, runtime);
+    expect(entity.footprint).toEqual({ width: 3, height: 3 });
+    expect(entity.spriteOffset?.topView).toEqual({ x: 0, y: 0, width: 6, height: 3 });
+    expect(source.clipSelection).toBe("project-direct-status-clips");
+    expect(runtime.playback).toEqual(source.playback);
+    expect(new Set(normalized.clipIds)).toEqual(new Set(["open_idle", "watering"]));
+    expect(normalized.playback.statusChangeMode).toBe("immediate");
+    expect(normalized.playback.openTransitionClip).toBeNull();
+    expect(normalized.playback.closeTransitionClip).toBeNull();
+    expect(normalized.playback.staticClip).toBe("open_idle");
+    expect(normalized.playback.clipOptions.open_idle?.playing).toBe(false);
+    expect(normalized.playback.clipOptions.watering?.loop).toBe(true);
+    expect(normalized.clips.watering?.durationMs).toBe(5000);
+    for (const status of DEVICE_SPRITE_ANIMATION_STATUSES) {
+      expect(resolveDeviceSpriteAnimationStatusClip(normalized, status)).toBe(status === "normal" ? "watering" : "open_idle");
+    }
+    expect(await sharp(`public/3d-top-view/sprites/${entity.spriteId}.webp`).metadata()).toMatchObject({ width: 384, height: 192 });
+    const referenced = new Set(["manifest.json", normalized.maskFile,
+      ...Object.values(normalized.clips).flatMap((clip) => clip.pages.map((page) => page.file))]);
+    expect(new Set(await readdir(directory))).toEqual(referenced);
+  });
+
   it.each(PROTOCOL_CORE_ENTITY_IDS)("publishes %s as an open_idle-only loop", async (entityId) => {
     const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === entityId);
     expect(entity).toBeDefined();

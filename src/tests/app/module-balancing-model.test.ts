@@ -44,7 +44,8 @@ const TEST_REGISTRY: RegistryContract = {
       id: "machine_assembler",
       nameKey: "machine.assembler",
       spriteId: "machine_assembler",
-      iconPath: "device-icons/assembler-ui-icon.webp",
+      // AI-CORRECTION 2026-10-15: 缺图统一回退；用已交付图标保留独立 iconPath 的选择验证。
+      iconPath: "device-icons/item_port_filling_pd_mc_1.webp",
       footprint: { width: 1, height: 1 },
       uiGroup: "advancedManufacturing",
       displayOrder: 100,
@@ -231,7 +232,7 @@ describe("module-balancing-model", () => {
 
     expect(resolveModuleDisplayTitle(module!, index, translate)).toBe("铁板 · 齿轮 · 装配机");
     expect(resolveModuleIconSrcs(module!, index)).toEqual([
-      expect.stringContaining("device-icons/assembler-ui-icon.webp"),
+      expect.stringContaining("device-icons/item_port_filling_pd_mc_1.webp"),
     ]);
   });
 

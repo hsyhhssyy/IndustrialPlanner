@@ -56,7 +56,9 @@ export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
 export const PLANNER_BUS_MASKS = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11] as const;
 export function plannerBusConflictCount(maximumSides: number, warehouse: readonly number[], belts: readonly number[]): number {
   let best = Infinity;
-  for (const mask of PLANNER_BUS_MASKS.slice(0, maximumSides === 1 ? 5 : maximumSides === 2 ? 9 : 13)) {
+  const count = maximumSides === 1 ? 5 : maximumSides === 2 ? 9 : 13;
+  for (let index = 0; index < count; index++) {
+    const mask = PLANNER_BUS_MASKS[index]!;
     let conflicts = 0;
     for (let side = 0; side < 4; side++) conflicts += (mask & (1 << side)) ? belts[side]! : warehouse[side]!;
     best = Math.min(best, conflicts);

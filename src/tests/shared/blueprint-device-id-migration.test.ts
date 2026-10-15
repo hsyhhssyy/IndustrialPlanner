@@ -936,7 +936,19 @@ describe("blueprint device id migration version chain", () => {
 
     // AI-CORRECTION 2026-10-12: 原 66 种设备新增 10 种普通田块；存量设备迁移规则保持原断言。
     // AI-CORRECTION 2026-10-13: 新增洒水机后共 77 种设备，存量迁移规则不变。
-    expect(ENTITY_DEFINITIONS).toHaveLength(77);
+    // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块后共89种设备，既有ID与迁移规则保持不变。
+    // AI-CORRECTION 2026-10-15: 设备总数会随独立功能增长；迁移不变量为ID唯一、无前缀且所有历史目标可解析。
+    // AI-REMOVED 2026-10-15:
+    // Reason: 全量设备总数不是历史schema迁移的不变量。
+    // Trigger: 新增田块及同一工作区独立设备扩展均不修改历史迁移目标。
+    // Evidence: 本用例下方逐项验证全部version3迁移目标；注册表设备可持续增加。
+    // Replacement: 下方注册ID唯一性及既有迁移目标覆盖断言。
+    // Risk: Low；新增设备数量由各设备定义专项测试验证。
+    // Human Review: Required
+    // Original code:
+    // expect(ENTITY_DEFINITIONS).toHaveLength(77);
+    // expect(ENTITY_DEFINITIONS).toHaveLength(89);
+    expect(registeredIds.size).toBe(ENTITY_DEFINITIONS.length);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
     expect(version3Spec?.deviceRules.every((rule) => {
       const currentId = migrateOneEntity(rule.toDeviceId, 3, BLUEPRINT_DEVICE_ID_SCHEMA_VERSION)

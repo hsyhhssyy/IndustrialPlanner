@@ -45,6 +45,7 @@ function createNormalizedDefinition(
     clips,
     clipIds,
     playback: {
+      statusChangeMode: "cycle-end",
       fallbackClip: "close_idle",
       staticClip: "open",
       statusClips: { normal: "open_idle" },
@@ -74,6 +75,42 @@ function expectFrame(
 }
 
 describe("DeviceAnimationState", () => {
+  it.each(["idle", "closed", "blocked", "no-power", "not-in-power-net"] as const)(
+    "立即切换素材在 %s 时打断喷水循环，恢复运行从首帧开始",
+    (status) => {
+      const definition = normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "hold-last" }, {
+        schemaVersion: 2, frameWidth: 1, frameHeight: 1, maskFile: "mask.webp",
+        clips: { open_idle: createClip("open_idle", 2), watering: createClip("watering", 5, 1000) },
+        playback: {
+          statusChangeMode: "immediate", fallbackClip: "open_idle", staticClip: "open_idle",
+          statusClips: { normal: "watering" },
+          clipOptions: {
+            open_idle: { playing: false, restart: true }, watering: { playing: true, restart: true },
+          },
+        },
+      });
+      const state = new DeviceAnimationState(definition, "idle");
+      state.advance(3000);
+      expectFrame(state, "open_idle", 0);
+      state.setStatus("normal");
+      expectFrame(state, "watering", 0);
+      state.advance(1250);
+      expectFrame(state, "watering", 1);
+      state.setStatus("normal");
+      expectFrame(state, "watering", 1);
+      state.setStatus(status);
+      expectFrame(state, "open_idle", 0);
+      state.advance(7000);
+      expectFrame(state, "open_idle", 0);
+      state.setStatus("normal");
+      expectFrame(state, "watering", 0);
+      state.advance(5000);
+      expectFrame(state, "watering", 0);
+      state.reset(status, true);
+      expectFrame(state, "open_idle", 0);
+    },
+  );
+
   it("按逐帧时长定位，跨页边界与末帧停留保持准确", () => {
     const clips = Object.fromEntries(["open", "open_idle", "close", "close_idle"].map((phase) => [phase, {
       frameCount: 3,
@@ -429,6 +466,7 @@ describe("DeviceAnimationState", () => {
       clips,
       clipIds: Object.keys(clips),
       playback: {
+        statusChangeMode: "cycle-end",
         fallbackClip: "CLOSED",
         staticClip: "RUNNING",
         statusClips: { normal: "RUNNING", "no-power": "PORT_DISCONNECT" },

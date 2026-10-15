@@ -537,6 +537,7 @@ describe("GenericDeviceSprite", () => {
           }])),
           clipIds: ["open", "open_idle", "close", "close_idle"],
           playback: {
+            statusChangeMode: "cycle-end",
             fallbackClip: "close_idle",
             staticClip: "open",
             statusClips: { normal: "open_idle" },

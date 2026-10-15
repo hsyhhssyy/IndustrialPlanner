@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 10,
+  "fixtureRevision": 12,
   "schemaVersion": 7,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -592,6 +592,118 @@
           "definitionId": "squirter_1"
         },
         "file": "scene-08-variant-77.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_bean_1"
+        },
+        "file": "scene-08-soil_corp_bean_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_cabbage_1"
+        },
+        "file": "scene-08-soil_corp_cabbage_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_cabbage_2"
+        },
+        "file": "scene-08-soil_corp_cabbage_2.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_canolaflower_1"
+        },
+        "file": "scene-08-soil_corp_canolaflower_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_mushroom_1"
+        },
+        "file": "scene-08-soil_corp_mushroom_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_mushroom_2"
+        },
+        "file": "scene-08-soil_corp_mushroom_2.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_potato_1"
+        },
+        "file": "scene-08-soil_corp_potato_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_strawberry_1"
+        },
+        "file": "scene-08-soil_corp_strawberry_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_strawberry_2"
+        },
+        "file": "scene-08-soil_corp_strawberry_2.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_sugarcane_1"
+        },
+        "file": "scene-08-soil_corp_sugarcane_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_tomato_1"
+        },
+        "file": "scene-08-soil_corp_tomato_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "soil_corp_whitegourd_1"
+        },
+        "file": "scene-08-soil_corp_whitegourd_1.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "wuling_fence_rail_5"
+        },
+        "file": "scene-08-wuling_fence_rail_5.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "wuling_fence_rail_2"
+        },
+        "file": "scene-08-wuling_fence_rail_2.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "wuling_fence_rail_3"
+        },
+        "file": "scene-08-wuling_fence_rail_3.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "wuling_fence_post"
+        },
+        "file": "scene-08-wuling_fence_post.schema7.json",
         "version": "fixture-v1"
       }
     ]

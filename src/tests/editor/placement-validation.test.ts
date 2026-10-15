@@ -112,6 +112,24 @@ afterEach(() => {
 });
 
 describe("placement validation", () => {
+  it("renders agricultural fences without persisting them and preserves both gates", () => {
+    const workspace = createWorkspace();
+    const editor = createEditorHost(workspace);
+    editor.internalDocument.setSnapshot(createDocumentWithEntities([
+      createEntity("on-fence", "belt_straight_1x1", -1, 10),
+      createEntity("west-gate", "belt_straight_1x1", -1, 35),
+      createEntity("south-gate", "belt_straight_1x1", 20, 44),
+    ], "wuling_agricultural_land"));
+    expect(editor.queries.listEntities()).toHaveLength(41);
+    expect(Object.keys(editor.document.getSnapshot().entities)).toHaveLength(3);
+    expect(editor.queries.getEntityPlacementValidation("on-fence").reasons.map((reason) => reason.code))
+      .toContain("overlap");
+    for (const id of ["west-gate", "south-gate"]) {
+      expect(editor.queries.getEntityPlacementValidation(id).reasons.map((reason) => reason.code))
+        .not.toContain("overlap");
+    }
+  });
+
   it("registers default placement behavior on every entity definition", () => {
     const registry = createRegistryContract();
 

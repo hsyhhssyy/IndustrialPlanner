@@ -19,6 +19,7 @@ import type {
   EffectPlacement,
   RingEffectPlacement,
   SurfacePlacement,
+  HeightField,
 } from './types';
 import { rotatePoint } from './height-field';
 
@@ -35,10 +36,25 @@ interface PhysicalPort {
 
 export interface EffectScene {
   surfaces: SurfacePlacement[];
+  stateSurfaces: { surfaceIndex: number; defaultField: HeightField; fields: ReadonlyMap<string, HeightField> }[];
   effects: EffectPlacement[];
   ringEffects: RingEffectPlacement[];
   portKeys: Map<string, string>;
   issues: string[];
+}
+
+/** 场景构建时已绑定状态外观；只有仿真版本变化才检查，且只替换真正变更的表面。 */
+export function syncStateHeightSurfaces(scene: EffectScene, resolveVisualKey: (entityId: string) => string | null | undefined): boolean {
+  let changed = false;
+  for (const binding of scene.stateSurfaces) {
+    const surface = scene.surfaces[binding.surfaceIndex]!;
+    const key = resolveVisualKey(surface.id);
+    const field = key == null ? binding.defaultField : binding.fields.get(key) ?? binding.defaultField;
+    if (surface.field === field) continue;
+    scene.surfaces[binding.surfaceIndex] = { ...surface, field };
+    changed = true;
+  }
+  return changed;
 }
 
 /** 仅按明确模式取绑定；多个允许模式时以 Registry alter-variant 选择，绝不合并。 */
@@ -119,7 +135,7 @@ export function resolveBuildingEffectScene(options: {
   ringStatus?: ReadonlyMap<string, number>;
   activatedIds?: ReadonlySet<string>;
 }): EffectScene {
-  const result: EffectScene = { surfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
+  const result: EffectScene = { surfaces: [], stateSurfaces: [], effects: [], ringEffects: [], portKeys: new Map(), issues: [] };
   const physical = new Map<string, PhysicalPort[]>();
   const byEntity = new Map<string, PhysicalPort[]>();
   const entities = options.entities.filter((entity) => !options.hiddenIds?.has(entity.id) && !('originalEntityId' in entity));
@@ -164,6 +180,17 @@ export function resolveBuildingEffectScene(options: {
     const field = fieldName === null || fieldName === undefined ? undefined : view.fields[fieldName];
     if (field) result.surfaces.push({ id: entity.id, field, x: originX, y: originY,
       rotation: entity.rotation + (material?.rotation ?? 0), baseY: 0 });
+    if (field && definition.stateMachine !== undefined) {
+      const fields = new Map<string, HeightField>();
+      for (const state of definition.stateMachine.states) {
+        if (state.visualKey === undefined || fields.has(state.visualKey)) continue;
+        const name = view.stateMapping[`state:${state.visualKey}`];
+        const stateField = name == null ? undefined : view.fields[name];
+        if (stateField === undefined) result.issues.push(`${definition.id}/${state.visualKey}: state height missing`);
+        else fields.set(state.visualKey, stateField);
+      }
+      if (fields.size > 0) result.stateSurfaces.push({ surfaceIndex: result.surfaces.length - 1, defaultField: field, fields });
+    }
     const key = selectEffectVariant(view, definition);
     if (key === undefined) continue;
     for (const port of view.variants[key]!) {

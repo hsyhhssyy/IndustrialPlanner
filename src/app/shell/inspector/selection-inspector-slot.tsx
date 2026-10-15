@@ -33,6 +33,7 @@ import {
 import { SelectionInspectorActionStrip } from "./selection-inspector-action-strip";
 import { SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS } from "./selection-inspector-action-strip";
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
+import { DeviceStateInspector } from "./device-state-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
 import { InfiniteStorageInspector } from "./infinite-storage-inspector";
@@ -273,6 +274,16 @@ function renderInspector(options: {
         ...options,
         declaration: options.declaration as RecipeStatusInspectorDeclaration,
       });
+    case INSPECTOR_TYPE.deviceState:
+      return (
+        <DeviceStateInspector
+          definition={options.definition}
+          runtimeStatus={options.runtimeStatus}
+          runtimeSample={options.runtimeSample}
+          recipes={options.appHost.workspace.registry.recipeDefinitions}
+          translate={options.translate}
+        />
+      );
     case INSPECTOR_TYPE.problem:
       return (
         <ProblemInspector
