@@ -17,6 +17,7 @@ export interface BlueprintPlannerAction {
   identifyBlueprint(taskId: string, signal?: AbortSignal): Promise<void>;
   deleteTask(taskId: string): Promise<void>;
   importTask(file: BlueprintPlannerTaskFile): Promise<string>;
+  duplicateTask(taskId: string): Promise<string>;
   start(request: BlueprintPlannerRequest): string;
   continuePlanning(taskId: string, evaluationsPerRound: number, concurrency?: number | "auto", gpu?: boolean): void;
   save(taskId: string): Promise<void>;

@@ -12,10 +12,35 @@ import { PlannerItemRules } from "@/shared/planner-item-policy";
 import { restorePlannerOutputRequest } from "@/blueprint-planner/output-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { PlannerNetwork } from "@/blueprint-planner/model";
+import type { PlannerCandidate } from "@/blueprint-planner/candidate";
+import { assertPlannerCandidateBounds, assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
+import legacyTask from "./fixtures/legacy-boundary-task.json";
 import fixture from "./fixtures/separator-core.json";
 
 const rect = (x: number, kind: number, y = 0, width = 3, height = 1, side = 0): PlannerWarehouseRect => ({ x, y, width, height, kind, side });
 const violation = (rects: PlannerWarehouseRect[]) => warehousePortViolations(rects, "continuous", 20, 20);
+
+it("交付仓库口按声明包围盒验收，保留空白边距并支持原图的显式原点", () => {
+  const registry = createRegistryContract();
+  const request = { ...fixture.request, options: { ...fixture.request.options,
+    warehouseBus: "straight", warehousePortPlacement: "continuous" } } as BlueprintPlannerRequest;
+  const nodes = [0, 1].map(index => createPlainNode(registry, "unloader_1", `right-${index}`, "supply"));
+  nodes.forEach((node, index) => { node.entity.position = { x: 19, y: 5 + index * 3 }; node.entity.rotation = 90; });
+  const original = legacyTask.file.checkpoint.best.candidate as unknown as PlannerCandidate;
+  const candidate: PlannerCandidate = { ...original, seed: undefined,
+    metrics: { ...original.metrics, width: 20, height: 20, area: 400 }, search: { ...original.search, outline: { width: 20, height: 20 } },
+    execution: { ...original.execution, blueprint: { ...original.execution.blueprint,
+      entities: Object.fromEntries(nodes.map(node => [node.entity.id, node.entity])), entityOrder: nodes.map(node => node.entity.id) } } };
+  expect(() => assertPlannerCandidateBounds(registry, candidate)).not.toThrow();
+  expect(() => assertPlannerWarehousePorts(registry, request, candidate)).not.toThrow();
+  const shifted = structuredClone(candidate);
+  for (const entity of Object.values(shifted.execution.blueprint.entities)) { entity.position = { x: entity.position.x + 100, y: entity.position.y - 50 }; }
+  expect(() => assertPlannerCandidateBounds(registry, shifted)).toThrow("实体超出");
+  expect(() => assertPlannerWarehousePorts(registry, request, shifted)).toThrow();
+  const anchored = { ...shifted, outlineOrigin: { x: 100, y: -50 } };
+  expect(() => assertPlannerCandidateBounds(registry, anchored)).not.toThrow();
+  expect(() => assertPlannerWarehousePorts(registry, request, anchored)).not.toThrow();
+});
 
 it("连通标签工作区在规模缩小、种类切换和空输入后不会残留旧分量", () => {
   const labels = new Int32Array(12).fill(99);

@@ -42,6 +42,7 @@ export interface PlannerSearchOptions {
   readonly diagnostics?: boolean;
   /** 省略时只启用已验证的 power-dedup；显式数组替换默认集合，[] 用于旧算法对照。 */
   /** 订正 2026-09-30：有 maximumArea 的 compact 同时启用 partial-rebuild；显式数组仍完整替换默认集合。 */
+  /** 订正 2026-10-15：生成任务还须已有成果种子才默认局部重建，冷启动将预算用于完整布局搜索。 */
   readonly experiments?: readonly PlannerSearchExperiment[];
 }
 

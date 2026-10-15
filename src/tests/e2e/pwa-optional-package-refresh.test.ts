@@ -15,7 +15,16 @@ interface PackageSnapshot {
 // 开发期已用真实产品和 SW 串行验证三档环境；本用例独立验证离线包协议与实际缓存。
 test.use({ appServer: false });
 
-for (const profile of SCREEN_PROFILES) {
+// AI-REMOVED 2026-10-15:
+// Reason: 真实 Service Worker 与 CacheStorage 恢复与视口尺寸无关，三屏重复运行没有新增边界覆盖。
+// Trigger: 用户要求移除与屏幕无关的重复 E2E。
+// Evidence: 本文件断言不依赖排版、Canvas 命中或触控差异。
+// Replacement: 下方保留 desktop 原生浏览器用例及其完整断言。
+// Risk: 不再重复模拟手机和平板尺寸；实际布局由专属三屏用例验证。
+// Human Review: Required
+// Original code:
+// for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   test(`完整动画和音频包刷新静默恢复，缓存丢失只补缺失文件 [${profile.name}]`, async ({ browserSession, round }) => {
     test.setTimeout(90_000);
     const server = await startPwaPackageServer();

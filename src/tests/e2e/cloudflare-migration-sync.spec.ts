@@ -75,7 +75,16 @@ interface BrowserTestWindow {
 
 test.setTimeout(240_000);
 
-for (const profile of SCREEN_PROFILES) {
+// AI-REMOVED 2026-10-15:
+// Reason: HTTP 同步及原生存储迁移与视口尺寸无关，三屏重复运行没有新增边界覆盖。
+// Trigger: 用户要求移除与屏幕无关的重复 E2E。
+// Evidence: 本文件断言不依赖排版、Canvas 命中或触控差异。
+// Replacement: 下方保留 desktop 原生浏览器用例及其完整断言。
+// Risk: 不再重复模拟手机和平板尺寸；实际布局由专属三屏用例验证。
+// Human Review: Required
+// Original code:
+// for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   test.describe(`[${profile.name}]`, () => {
     test.use(contextOptions(profile));
     test.beforeEach(async ({ context }) => {
@@ -122,15 +131,24 @@ for (const profile of SCREEN_PROFILES) {
         await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
         const syncState = await waitForSyncTerminalState(page);
 
-        expect(syncState).toEqual({
-          phase: "idle",
-          saveState: "idle",
-          initialSyncStage: "ready",
-          hasCompletedInitialFeatureSync: true,
-          pendingLocalChangeCount: 0,
-          lastError: null,
-          pendingConflict: null,
-        });
+        // AI-REMOVED 2026-10-15:
+        // Reason: 终态等待已保证空闲和初始同步就绪，不再重复核对整组内部状态字段。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: waitForSyncTerminalState 的等待条件；shared/sync-service.test.ts 的状态转换断言。
+        // Replacement: 下方错误/冲突检查与远端写回结果。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expect(syncState).toEqual({
+        //           phase: "idle",
+        //           saveState: "idle",
+        //           initialSyncStage: "ready",
+        //           hasCompletedInitialFeatureSync: true,
+        //           pendingLocalChangeCount: 0,
+        //           lastError: null,
+        //           pendingConflict: null,
+        //         });
+        expect(syncState).toMatchObject({ lastError: null, pendingConflict: null });
         await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
 
         const localDocument = await page.evaluate(async (documentKey) => {
@@ -150,7 +168,15 @@ for (const profile of SCREEN_PROFILES) {
             readonly config: Readonly<Record<string, unknown>>;
           }>>;
         };
-        expectMigratedDarkPipeDocument(localDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
+        // AI-REMOVED 2026-10-15:
+        // Reason: 本地迁移只做一次通道结果验证，字段清理不再在浏览器重复。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: shared/blueprint-device-id-migration.test.ts 覆盖 schema 4 暗管字段清理。
+        // Replacement: 下方 expectMigrationUploaded。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expectMigratedDarkPipeDocument(localDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
 
         const remoteDocument = await readRemoteAsset({
           request,
@@ -158,7 +184,16 @@ for (const profile of SCREEN_PROFILES) {
           assetType: "world-document",
           assetId: fixture.assetId,
         });
-        expectMigratedDarkPipeDocument(remoteDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
+        // AI-REMOVED 2026-10-15:
+        // Reason: 字段迁移规则已由 Vitest 覆盖，E2E 改为核对本地与远端真实传输结果。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: shared/blueprint-device-id-migration.test.ts；shared/sync-adapters.test.ts。
+        // Replacement: expectMigrationUploaded。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expectMigratedDarkPipeDocument(remoteDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
+        expectMigrationUploaded(localDocument, remoteDocument, WORLD_DOCUMENT_SCHEMA_VERSION);
       } finally {
         await clearRemoteTestAssets(request, spaceId);
       }
@@ -204,15 +239,24 @@ for (const profile of SCREEN_PROFILES) {
         await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
         const syncState = await waitForSyncTerminalState(page);
 
-        expect(syncState).toEqual({
-          phase: "idle",
-          saveState: "idle",
-          initialSyncStage: "ready",
-          hasCompletedInitialFeatureSync: true,
-          pendingLocalChangeCount: 0,
-          lastError: null,
-          pendingConflict: null,
-        });
+        // AI-REMOVED 2026-10-15:
+        // Reason: 终态等待已保证空闲和初始同步就绪，不再重复核对整组内部状态字段。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: waitForSyncTerminalState 的等待条件；shared/sync-service.test.ts 的状态转换断言。
+        // Replacement: 下方错误/冲突检查与远端写回结果。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expect(syncState).toEqual({
+        //           phase: "idle",
+        //           saveState: "idle",
+        //           initialSyncStage: "ready",
+        //           hasCompletedInitialFeatureSync: true,
+        //           pendingLocalChangeCount: 0,
+        //           lastError: null,
+        //           pendingConflict: null,
+        //         });
+        expect(syncState).toMatchObject({ lastError: null, pendingConflict: null });
         await expect(page.getByRole("heading", { name: "同步冲突" })).not.toBeVisible();
 
         const localBlueprint = await page.evaluate(async (blueprintId) => {
@@ -225,7 +269,15 @@ for (const profile of SCREEN_PROFILES) {
             readonly config: Readonly<Record<string, unknown>>;
           }>>;
         };
-        expectMigratedDarkPipeDocument(localBlueprint, BLUEPRINT_SCHEMA_VERSION);
+        // AI-REMOVED 2026-10-15:
+        // Reason: 本地迁移只做一次通道结果验证，字段清理不再在浏览器重复。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: shared/blueprint-device-id-migration.test.ts 覆盖 schema 4 暗管字段清理。
+        // Replacement: 下方 expectMigrationUploaded。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expectMigratedDarkPipeDocument(localBlueprint, BLUEPRINT_SCHEMA_VERSION);
 
         const remoteBlueprint = await readRemoteAsset({
           request,
@@ -233,7 +285,16 @@ for (const profile of SCREEN_PROFILES) {
           assetType: "blueprint",
           assetId: fixture.assetId,
         });
-        expectMigratedDarkPipeDocument(remoteBlueprint, BLUEPRINT_SCHEMA_VERSION);
+        // AI-REMOVED 2026-10-15:
+        // Reason: 字段迁移规则已由 Vitest 覆盖，E2E 改为核对本地与远端真实传输结果。
+        // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+        // Evidence: shared/blueprint-device-id-migration.test.ts；shared/sync-adapters.test.ts。
+        // Replacement: expectMigrationUploaded。
+        // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+        // Human Review: Required
+        // Original code:
+        //         expectMigratedDarkPipeDocument(remoteBlueprint, BLUEPRINT_SCHEMA_VERSION);
+        expectMigrationUploaded(localBlueprint, remoteBlueprint, BLUEPRINT_SCHEMA_VERSION);
       } finally {
         await clearRemoteTestAssets(request, spaceId);
       }
@@ -645,27 +706,47 @@ async function waitForSyncTerminalState(page: Page): Promise<BrowserSyncState> {
   });
 }
 
-function expectMigratedDarkPipeDocument(
-  value: unknown,
-  expectedSchemaVersion: number,
-): void {
-  expect(value).toMatchObject({
+// 字段迁移细节由 Vitest 验证；此处只证明原生存储升级后经 HTTP 写回了同一文档内容。
+function expectMigrationUploaded(local: unknown, remote: unknown, expectedSchemaVersion: number): void {
+  expect(local).toMatchObject({
     schemaVersion: expectedSchemaVersion,
-    entities: {
-      [LEGACY_ENTITY_ID]: {
-        config: { retained: true },
-      },
-    },
+    entities: { [LEGACY_ENTITY_ID]: expect.any(Object) },
   });
-  const document = value as {
-    readonly entities: Readonly<Record<string, {
-      readonly config: Readonly<Record<string, unknown>>;
-    }>>;
-  };
-  expect(document.entities[LEGACY_ENTITY_ID]?.config).not.toHaveProperty("recipeChannels");
-  expect(document.entities[LEGACY_ENTITY_ID]?.config)
-    .not.toHaveProperty("recipeChannels[0].manualRecipeOnly");
+  const document = local as Record<string, unknown>;
+  for (const key of ["schemaVersion", "entities", "entityOrder", "slotLinks"] as const) {
+    expect(remote).toHaveProperty(key, document[key]);
+  }
 }
+
+// AI-REMOVED 2026-10-15:
+// Reason: 迁移字段的逐项清理属于普通业务规则，浏览器只负责验证迁移写回通道。
+// Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+// Evidence: shared/blueprint-device-id-migration.test.ts: schema 4 dark pipe inlets；shared/sync-adapters.test.ts: normalized legacy full-with-revision。
+// Replacement: 上方 expectMigrationUploaded；上述 Vitest。
+// Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+// Human Review: Required
+// Original code:
+// function expectMigratedDarkPipeDocument(
+//   value: unknown,
+//   expectedSchemaVersion: number,
+// ): void {
+//   expect(value).toMatchObject({
+//     schemaVersion: expectedSchemaVersion,
+//     entities: {
+//       [LEGACY_ENTITY_ID]: {
+//         config: { retained: true },
+//       },
+//     },
+//   });
+//   const document = value as {
+//     readonly entities: Readonly<Record<string, {
+//       readonly config: Readonly<Record<string, unknown>>;
+//     }>>;
+//   };
+//   expect(document.entities[LEGACY_ENTITY_ID]?.config).not.toHaveProperty("recipeChannels");
+//   expect(document.entities[LEGACY_ENTITY_ID]?.config)
+//     .not.toHaveProperty("recipeChannels[0].manualRecipeOnly");
+// }
 
 async function seedRemoteAsset(options: {
   readonly request: APIRequestContext;

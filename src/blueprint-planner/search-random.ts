@@ -1,3 +1,12 @@
+import { createUuid } from "@/domain/shared/uuid";
+
+/** 新任务使用独立随机身份；复制时排除原种子，后续随机进度由检查点保存。 */
+export function createPlannerRandomSeed(previous?: number): number {
+  let seed: number;
+  do { seed = plannerRandomSeed(createUuid()); } while (seed === previous);
+  return seed;
+}
+
 /** 与 CPU / WGSL 布局内核共用 xorshift32；状态必须非零。 */
 export function plannerRandomStep(state: number): number {
   let value = state;

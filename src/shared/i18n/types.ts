@@ -148,6 +148,7 @@ export type UiKey =
   | "eda.retrySave"
   | "eda.start"
   | "eda.replan"
+  | "eda.randomSeed"
   | "eda.place"
   | "eda.unavailable"
   | "eda.placeFailed"

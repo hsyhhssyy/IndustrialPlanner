@@ -5,7 +5,16 @@ import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 test.use({ appServer: false });
 
 // 延迟 CLI 自身的目录创建，真实浏览器仍负责动作、live trace 和 fixture 收尾；连续冷启动验证后续轮次可执行。
-for (const profile of SCREEN_PROFILES) {
+// AI-REMOVED 2026-10-15:
+// Reason: CLI live trace、目录创建与逐轮资源释放与视口尺寸无关，三屏重复运行没有新增边界覆盖。
+// Trigger: 用户要求移除与屏幕无关的重复 E2E。
+// Evidence: 本文件断言不依赖排版、Canvas 命中或触控差异。
+// Replacement: 下方保留 desktop 原生浏览器用例及其完整断言。
+// Risk: 不再重复模拟手机和平板尺寸；实际布局由专属三屏用例验证。
+// Human Review: Required
+// Original code:
+// for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   for (const roundNumber of [1, 2]) {
     test(`慢速目录创建时完整记录 live trace 并释放会话 [${profile.name}] [${roundNumber}]`, async ({ browserSession, round }) => {
       const traces = resolve(round.directory, "traces");

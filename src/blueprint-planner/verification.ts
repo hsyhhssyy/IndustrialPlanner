@@ -35,8 +35,10 @@ export function meetsProductionTargets(request: BlueprintPlannerRequest, report:
 
 
 /** 交付和恢复都核对声明尺寸与实体包围盒，不能靠伪造 metrics 绕过 70 格上限。 */
-export function assertPlannerCandidateBounds(registry: RegistryContract, candidate: Pick<PlannerCandidate, "metrics" | "execution">): void {
+export function assertPlannerCandidateBounds(registry: RegistryContract, candidate: Pick<PlannerCandidate, "metrics" | "execution" | "outlineOrigin">): void {
   assertPlannerOutline(candidate.metrics);
+  const origin = candidate.outlineOrigin ?? { x: 0, y: 0 };
+  if (![origin.x, origin.y].every(Number.isSafeInteger)) throw new Error("蓝图包围盒原点无效。");
   if (candidate.metrics.area !== candidate.metrics.width * candidate.metrics.height) throw new Error("蓝图面积与宽高不一致。");
   const blueprint = candidate.execution.blueprint;
   const rects = blueprint.entityOrder.map(id => {
@@ -49,18 +51,28 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
   const width = Math.max(...rects.map(rect => rect.x + rect.width)) - Math.min(...rects.map(rect => rect.x));
   const height = Math.max(...rects.map(rect => rect.y + rect.height)) - Math.min(...rects.map(rect => rect.y));
   assertPlannerOutline({ width, height });
-  if (width > candidate.metrics.width || height > candidate.metrics.height) throw new Error("实体超出蓝图声明范围。");
+  if (width > candidate.metrics.width || height > candidate.metrics.height
+    || rects.some(rect => rect.x < origin.x || rect.y < origin.y
+      || rect.x + rect.width > origin.x + candidate.metrics.width
+      || rect.y + rect.height > origin.y + candidate.metrics.height)) throw new Error("实体超出蓝图声明范围。");
 }
 
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
   if (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any") return;
   const blueprint = candidate.execution.blueprint;
-  const rects = blueprint.entityOrder.map(id => {
-    const entity = blueprint.entities[id]!;
-    return resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! });
-  });
-  const x = Math.min(...rects.map(rect => rect.x)), y = Math.min(...rects.map(rect => rect.y));
+  // AI-REMOVED 2026-10-15:
+  // Reason: 实体占用起点不等于固定包围盒原点，空白边距会让合法的右侧／下侧仓库口被误判。
+  // Trigger: Windows 原任务生成的 38×43 候选左侧留空一格，Worker 合法而 Host 终止任务。
+  // Evidence: desktop-09-area reports.json，面积 1634 的候选；最小实体 x=1，仓库口 x=37。
+  // Replacement: 下方使用声明原点，与完整范围验收一致；Risk: 原图基线需显式原点；Human Review: Required
+  // Original code:
+  // const rects = blueprint.entityOrder.map(id => {
+  //   const entity = blueprint.entities[id]!;
+  //   return resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! });
+  // });
+  // const x = Math.min(...rects.map(rect => rect.x)), y = Math.min(...rects.map(rect => rect.y));
+  const { x, y } = candidate.outlineOrigin ?? { x: 0, y: 0 };
   const nodes = blueprint.entityOrder.filter(id => ["loader_1", "unloader_1"].includes(blueprint.entities[id]!.definitionId)).map(id => {
     const entity = blueprint.entities[id]!;
     return { ...createPlainNode(registry, entity.definitionId, id, "logistics"),

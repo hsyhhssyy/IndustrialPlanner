@@ -103,7 +103,7 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
   const network: PlannerNetwork = { request, nodes, slotLinks: structuredClone(input.blueprint.slotLinks),
     initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length };
   const seed = capturePlannerSeed(request, network, wires, routes, width, height, { x: left, y: top });
-  const candidate: PlannerCandidate = { seed, execution,
+  const candidate: PlannerCandidate = { seed, execution, outlineOrigin: { x: left, y: top },
     supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 }, connections: [],
     metrics: { width, height, area: width * height, entityCount: input.blueprint.entityOrder.length,
       productionDeviceCount: nodes.filter(node => node.purpose === "production").length,

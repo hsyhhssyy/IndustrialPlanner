@@ -99,7 +99,16 @@ interface MigrationSnapshot {
   hostCreated: boolean;
 }
 
-for (const profile of SCREEN_PROFILES) {
+// AI-REMOVED 2026-10-15:
+// Reason: 原生 IndexedDB 跨仓库事务与启动迁移与视口尺寸无关，三屏重复运行没有新增边界覆盖。
+// Trigger: 用户要求移除与屏幕无关的重复 E2E。
+// Evidence: 本文件断言不依赖排版、Canvas 命中或触控差异。
+// Replacement: 下方保留 desktop 原生浏览器用例及其完整断言。
+// Risk: 不再重复模拟手机和平板尺寸；实际布局由专属三屏用例验证。
+// Human Review: Required
+// Original code:
+// for (const profile of SCREEN_PROFILES) {
+for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   test(`启动时旧资产只迁入出口文档；失败原子回滚，刷新重试不复制链接 [${profile.name}]`, async ({ browserSession, baseURL }, testInfo) => {
     test.setTimeout(150_000);
     const cli = await browserSession.openCli(profile);

@@ -85,7 +85,7 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   }
   const sides = ["上", "右", "下", "左"].filter((_, side) => resolved.busMask! & (1 << side));
   blueprint.description = `${blueprint.description ?? ""}\n按当前规则重算：${width} × ${height}；存取线${sides.length ? `请在包围盒外${sides.join("、")}侧自行放置` : "无需接入"}。`;
-  return { ...candidate, seed, connections, search: { ...candidate.search, quality },
+  return { ...candidate, outlineOrigin: { x: 0, y: 0 }, seed, connections, search: { ...candidate.search, quality },
     metrics: { ...candidate.metrics, width, height, area, entityCount: entities.length, score: boundedPlannerScore(area, quality.secondary) },
     execution: { ...candidate.execution, blueprint, collectAnalysis: true,
       probes: [...candidate.execution.probes.filter(probe => !probe.id.startsWith("stash-submit:")),

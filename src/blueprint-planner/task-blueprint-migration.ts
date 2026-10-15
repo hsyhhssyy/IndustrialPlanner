@@ -6,15 +6,24 @@ import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import type { PlannerCheckpoint } from "./task-checkpoint";
 import { plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import type { PlannerCandidate } from "./candidate";
+import { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 
 /** 内嵌蓝图有自己的版本；空升级不重置算法状态，也不执行旧算法的几何转换。 */
 // 订正 2026-10-11：同步补齐旧任务的任意摆放选项与尺寸算法版本，不改变旧任务的几何规则。
+// AI-CORRECTION 2026-10-15：不改算法版本；旧缓存原样携带到用户继续时统一丢弃，不解析其结构。
 export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): BlueprintPlannerTaskFile {
   const file: { -readonly [K in keyof BlueprintPlannerTaskFile]: BlueprintPlannerTaskFile[K] } = structuredClone(value);
   const options = (value: BlueprintPlannerRequest["options"]) => value.warehousePortPlacement === undefined
     ? { ...value, warehousePortPlacement: "any" as const } : value;
   file.request = { ...file.request, options: options(file.request.options) };
-  if (["dimension-shards-1", "warehouse-port-shards-1"].includes(file.algorithmVersion)) file.algorithmVersion = "seeded-strategies-1";
+  // AI-REMOVED 2026-10-15:
+  // Reason: 算法版本不同统一丢弃搜索缓存，不逐版本伪装为另一版本。
+  // Trigger: 用户要求任何算法更新都从最优面积重新调度。
+  // Evidence: 旧种子和分片结构无需被新算法理解。
+  // Replacement: 下方版本不同的成果提取。
+  // Risk: 未形成成果的进展丢弃；Human Review: Required。
+  // Original code:
+  // if (["dimension-shards-1", "warehouse-port-shards-1"].includes(file.algorithmVersion)) file.algorithmVersion = "seeded-strategies-1";
   const upgrade = (blueprint: BlueprintDocument): BlueprintDocument => {
     if (blueprint.schemaVersion === BLUEPRINT_SCHEMA_VERSION) return blueprint;
     const next = normalizeBlueprintDocument(blueprint);
@@ -34,6 +43,34 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
     return upgraded === request ? key : plannerRequestKey(upgraded);
   };
   file.request = upgradeRequest(file.request);
+  // AI-REMOVED 2026-10-15:
+  // Reason: Schema 转换先于任务恢复，过早删除缓存会破坏损坏任务的原文保护。
+  // Trigger: task-checkpoint 的损坏历史导出回归失败。
+  // Evidence: 未完成恢复即丢失 attempt、portfolio 等原始字段。
+  // Replacement: restorePlannerTaskFile 原子重置；此处旧缓存不解析、不迁移。
+  // Risk: 用户继续前仍保存旧缓存；Human Review: Required
+  // Original code:
+  //   if (file.algorithmVersion !== PLANNER_ALGORITHM_VERSION) {
+  //     // 只读取成果的公开场景和验收约束；旧 seed、portfolio、parallel 的形状完全不参与转换。
+  //     const previous = file.checkpoint as PlannerCheckpoint | undefined;
+  //     const original = previous?.best?.candidate;
+  //     const best = original ? { report: previous!.best!.report, candidate: {
+  //       outlineOrigin: original.outlineOrigin,
+  //       execution: { ...original.execution, blueprint: upgrade(original.execution.blueprint) },
+  //       metrics: original.metrics, connections: original.connections, supplyAudit: original.supplyAudit,
+  //       search: { seed: 0, evaluationLimit: 0, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
+  //         initialWireLength: 0, finalWireLength: 0, outline: { width: original.metrics.width, height: original.metrics.height } },
+  //     } satisfies PlannerCandidate } : null;
+  //     file.checkpoint = { best, savedBlueprintId: previous?.savedBlueprintId ?? null };
+  //     return file;
+  //   }
+  if (file.algorithmVersion !== PLANNER_ALGORITHM_VERSION) {
+    const point = file.checkpoint as PlannerCheckpoint | undefined;
+    const best = point?.best;
+    if (best) file.checkpoint = { ...point, best: { ...best, candidate: { ...best.candidate,
+      execution: { ...best.candidate.execution, blueprint: upgrade(best.candidate.execution.blueprint) } } } };
+    return file;
+  }
   const seed = (value: PlannerSearchSeed): PlannerSearchSeed => {
     const request = upgradeRequest(value.network.request);
     return { ...value, network: { ...value.network, request }, requestKey: upgradeKey(value.requestKey) };

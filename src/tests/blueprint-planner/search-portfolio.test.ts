@@ -199,7 +199,8 @@ it("真实 Worker 中新增固定存取口也不能撑破全局面积上限", as
       expect(statistics.evaluations).toBeLessThanOrEqual(7);
       expect(statistics.maximumArea).toBe(440);
       expect(statistics.outline.width * statistics.outline.height).toBeLessThanOrEqual(440);
-      expect(statistics.experiments).toEqual(strategy === "compact" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+      // 2026-10-15：冷启动默认不启用局部重建；有已验证种子的压缩才使用该策略。
+      expect(statistics.experiments).toEqual(["power-dedup"]);
     }
   } finally { await client.dispose(); }
 }, 40_000);

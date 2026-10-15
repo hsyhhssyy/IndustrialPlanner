@@ -1,5 +1,6 @@
 import { warehouseStorageCounts, type PlannerWarehousePortProfile } from "./warehouse-port-schedule";
 import { PLANNER_MAX_SIDE, breadthOutlines, type PlannerOutline } from "./search-outline";
+import { plannerAttemptBudget } from "./search-policy";
 
 export const PLANNER_SHARD_COUNT = 32;
 /** AI 决策：单次领取的默认尝试上限；权重只用于分组，不分割本次额度。 */
@@ -13,6 +14,9 @@ export interface PlannerDimension extends PlannerOutline {
 }
 
 export interface PlannerDimensionSchedule {
+  readonly deviceArea?: number;
+  readonly inclusive?: boolean;
+  readonly boundaryLength?: number;
   readonly warehousePorts?: PlannerWarehousePortProfile;
   readonly generation: number;
   readonly targetArea: number;
@@ -22,12 +26,16 @@ export interface PlannerDimensionSchedule {
 
 /** 用户设计：面积前沿、正权重、唯一归属；整体旋转等价尚未证明，保留两个方向。 */
 // 订正 2026-10-11：整边模式仅枚举可行口数对应的四个指定边，权重统一为一。
-export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile): PlannerDimension[][] {
+export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile,
+  inclusive = false, boundaryLength = 0): PlannerDimension[][] {
   if (!Number.isSafeInteger(targetArea) || targetArea <= 0
     || ![minimum.width, minimum.height].every(value => Number.isSafeInteger(value) && value > 0)) {
     throw new Error("尺寸分片的面积基准或最小边长无效。");
   }
-  let dimensions: PlannerDimension[] = breadthOutlines(targetArea - 1, minimum).map(({ width, height }) => ({
+  const maximumArea = targetArea - Number(!inclusive);
+  if (!Number.isSafeInteger(boundaryLength) || boundaryLength < 0) throw new Error("边界入口长度无效。");
+  let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
+    .filter(({ width, height }) => Math.max(width, height) >= boundaryLength).map(({ width, height }) => ({
     width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
   })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
   if (warehousePorts) {
@@ -40,7 +48,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     dimensions = warehouseStorageCounts(warehousePorts).flatMap(storageCount => {
       const length = warehousePorts.pickupLength + storageCount * warehousePorts.storageLength;
       if (length <= 0 || length > PLANNER_MAX_SIDE) return [];
-      const depth = Math.min(PLANNER_MAX_SIDE, Math.floor((targetArea - 1) / length));
+      const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length));
       return [0, 1, 2, 3].flatMap(warehouseSide => {
         const width = warehouseSide % 2 === 0 ? length : depth;
         const height = warehouseSide % 2 === 0 ? depth : length;
@@ -64,10 +72,13 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
 export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedule,
   shards: readonly { readonly dimensions?: readonly PlannerDimension[]; readonly dimensionCursor?: number }[]): void {
   if (!schedule || !Number.isSafeInteger(schedule.generation) || schedule.generation < 0
-    || schedule.attemptsPerTask !== PLANNER_DIMENSION_ATTEMPTS || !schedule.minimum || shards.length !== PLANNER_SHARD_COUNT) {
+    || schedule.attemptsPerTask !== (schedule.deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(schedule.deviceArea))
+    || schedule.inclusive !== undefined && typeof schedule.inclusive !== "boolean"
+    || !schedule.minimum || shards.length !== PLANNER_SHARD_COUNT) {
     throw new Error("尺寸调度检查点无效。");
   }
-  const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts);
+  const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
+    schedule.inclusive, schedule.boundaryLength);
   for (const [index, shard] of shards.entries()) {
     const list = shard.dimensions;
     if (!Array.isArray(list) || list.length !== expected[index]!.length

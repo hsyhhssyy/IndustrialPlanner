@@ -152,19 +152,27 @@ for (const resolution of ["use-remote", "use-local"] as const) {
     });
     await expect(page.getByRole("heading", { name: "同步冲突" }))
       .toBeVisible({ timeout: 90_000 });
-    expect(await page.evaluate(() =>
-      (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-        ?.workspace?.sync?.state.pendingConflict ?? null
-    )).toMatchObject({
-      phase: "awaiting-resolution",
-      items: expect.arrayContaining([
-        expect.objectContaining({
-          adapterId: "world-documents",
-          assetId: baseline.assetId,
-          kind: "conflict",
-        }),
-      ]),
-    });
+    // AI-REMOVED 2026-10-15:
+    // Reason: 内部冲突对象的 phase、adapterId 和 kind 不是浏览器通道目标。
+    // Trigger: 用户要求保留的 E2E 也去除 Vitest 已覆盖和内部状态细节断言。
+    // Evidence: shared/sync-adapters.test.ts 覆盖冲突规划；本例已操作真实冲突对话框并核对远端内容及后续增量上传。
+    // Replacement: 本例的对话框操作、远端 revision/内容及后续增量上传检查。
+    // Risk: 仍验证真实传输结果和错误/冲突；字段规则由 Vitest 验证。
+    // Human Review: Required
+    // Original code:
+    //     expect(await page.evaluate(() =>
+    //       (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+    //         ?.workspace?.sync?.state.pendingConflict ?? null
+    //     )).toMatchObject({
+    //       phase: "awaiting-resolution",
+    //       items: expect.arrayContaining([
+    //         expect.objectContaining({
+    //           adapterId: "world-documents",
+    //           assetId: baseline.assetId,
+    //           kind: "conflict",
+    //         }),
+    //       ]),
+    //     });
     await resolveVisibleConflict(page, resolution);
 
     if (resolution === "use-remote") {

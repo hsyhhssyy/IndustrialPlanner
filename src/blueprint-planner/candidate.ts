@@ -57,6 +57,8 @@ import { prepareProductionDevices } from "./production-preparation";
 import { routeConverterAlternatives } from "./converter-routing";
 
 export interface PlannerCandidate {
+  /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
+  readonly outlineOrigin?: { readonly x: number; readonly y: number };
   readonly seed?: PlannerSearchSeed;
   readonly supplyAudit: PlannerSupplyAudit;
   readonly search: PlannerSearchStatistics;
@@ -99,7 +101,8 @@ export async function createPlannerCandidate(
     checkBudget, update, options, reportEvaluations, routing, false, layoutBackend, session, resumed);
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
-  const reserve = !options.seed && options.strategy !== "baseline" && total >= 20_000;
+  // AI-CORRECTION 2026-10-15：固定尺寸任务独享完整预算，不因达到 20000 次而重建并切换另一算法。
+  const reserve = !options.seed && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
   // 两倍初排先使用十分之一预算，随后复用紧凑重排与宽松工序重排；所有阶段共用截止时间与次数。
   const phases: { strategy: "compact" | "baseline"; initial: boolean; fraction: number }[] = [
     ...(tight ? [{ strategy: "compact" as const, initial: true, fraction: 0.1 }] : []),
@@ -229,7 +232,8 @@ async function createPlannerAttempt(
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   checkBudget();
   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
-    ?? (options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+    // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
+    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }

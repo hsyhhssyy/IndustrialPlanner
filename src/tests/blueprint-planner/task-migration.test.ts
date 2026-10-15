@@ -6,7 +6,12 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
-import { plannerRequestKey, restorePlannerSeed } from "@/blueprint-planner/search-seed";
+// AI-REMOVED 2026-10-15:
+// Reason: 算法更新不再迁移搜索种子。
+// Trigger: 用户要求全部丢弃旧计算状态；Evidence: restorePlannerTaskFile 的统一重置分支。
+// Replacement: 下方验证种子不存在及搜索池为空；Risk: Low；Human Review: Required
+// Original code:
+// import { plannerRequestKey, restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import legacy from "./fixtures/legacy-boundary-task.json";
@@ -14,17 +19,22 @@ import invalid from "./fixtures/legacy-boundary-invalid-task.json";
 
 const taskFile = () => structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
 
-it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"])("%s：旧最优移除存取线后真实验收，保留进度且只改曲线末点", async algorithmVersion => {
+it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1", "unknown-algorithm"])("%s：保留验收通过的最优蓝图和完整历史，丢弃计算状态", async algorithmVersion => {
   const session = new PlannerBatchSession();
   try {
     const file = { ...taskFile(), algorithmVersion };
+    // 2026-10-15：未知旧算法的计算字段可以完全不可解释，不能妨碍稳定成果和历史恢复。
+    if (algorithmVersion === "unknown-algorithm") {
+      Object.assign(file.checkpoint, { randomSeed: -1, parallel: { shards: { obsolete: true }, originTaskId: 42 }, portfolio: { obsolete: true }, pendingCandidate: { obsolete: true } });
+      Object.assign(file.checkpoint.best!.candidate, { seed: { obsolete: true }, search: { obsolete: true } });
+    }
     const original = structuredClone(file);
     const migrated = await restorePlannerTaskFile(file, session.workspace.registry,
       execution => session.simulation.actions.runBlueprint(execution));
     expect(migrated.progress).toMatchObject({ evaluatedProposals: 12345, candidateCount: 7,
-      validatedCandidateCount: 3, elapsedMs: 54321, startedAt: 42, roundEvaluatedProposals: 2345, bestArea: 60 });
+      validatedCandidateCount: 3, elapsedMs: 54321, startedAt: 42, roundEvaluatedProposals: 0, bestArea: 60 });
     expect(migrated.progress.areaHistory).toEqual([
-      ...file.progress.areaHistory!.slice(0, -1), { evaluatedProposals: 12345, bestArea: 60 },
+      ...file.progress.areaHistory!,
     ]);
     const best = migrated.checkpoint.best!;
     expect(best.candidate.metrics).toMatchObject({ width: 6, height: 10, area: 60, entityCount: 9 });
@@ -32,14 +42,30 @@ it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1"])("%s
     expect(best.report.probes[0]!.perMinute).toBeGreaterThanOrEqual(60);
     expect(Object.values(best.candidate.execution.blueprint.entities).some(entity => entity.definitionId.startsWith("log_hongs_bus"))).toBe(false);
     expect(best.candidate.execution.scene.externalEntities.some(entity => entity.definitionId === "log_hongs_bus")).toBe(true);
-    expect(best.candidate.seed!.network.nodes.some(node => node.entity.definitionId.startsWith("log_hongs_bus"))).toBe(false);
-    expect(best.candidate.seed!.requestKey).toBe(plannerRequestKey(file.request));
-    expect(restorePlannerSeed(session.workspace.registry, file.request, best.candidate.seed!).network.nodes).toHaveLength(4);
-    expect(migrated.checkpoint.portfolio.pools[0]!.entries[0]!.seed).toEqual(best.candidate.seed);
+    expect(best.candidate.seed).toBeUndefined();
+    expect(migrated.checkpoint.randomSeed).toBeUndefined();
+    expect(migrated.checkpoint.parallel).toBeUndefined();
+    expect(migrated.checkpoint.portfolio.pools).toEqual([]);
     expect(migrated.checkpoint.result!.metrics).toEqual(best.candidate.metrics);
-    expect(migrated.checkpoint.savedBlueprintId).toBeNull();
+    expect(migrated.checkpoint.savedBlueprintId).toBe(file.checkpoint.savedBlueprintId);
     expect(await restorePlannerTaskFile(JSON.parse(JSON.stringify(migrated)), session.workspace.registry)).toEqual(migrated);
     expect(file).toEqual(original);
+    if (algorithmVersion === "unknown-algorithm") {
+      const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 20,
+        worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+          session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
+        dispose: () => {} } });
+      try {
+        const id = await host.actions.importTask(file);
+        host.actions.continuePlanning(id, 10000, 1);
+        await host.whenSettled();
+        const resumed = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+        expect(resumed.progress.bestArea).toBe(60);
+        expect(resumed.progress.evaluatedProposals).toBe(12365);
+        expect(resumed.checkpoint.parallel?.baseVariant).toBe(0);
+        expect(resumed.progress.areaHistory).toEqual(file.progress.areaHistory);
+      } finally { host.dispose(); }
+    }
     await saveSuccessfulPlanning(session.workspace.registry, `历史进度迁移-${algorithmVersion}`, best.candidate.execution.blueprint,
       file.request, { originalProgress: file.progress, migrated, engineKind: "dense-v2", ticksPerSecond: 2 });
   } finally { await session.dispose(); }
@@ -59,7 +85,7 @@ it("缺少续搜种子的旧结果仍可保留已验收最小蓝图", async () =
   } finally { await session.dispose(); }
 });
 
-it("旧自由存取线连同种子指纹统一迁移为直角，保留合格蓝图", async () => {
+it("旧自由存取线输入转换为直角，保留合格蓝图并丢弃种子指纹", async () => {
   const session = new PlannerBatchSession();
   try {
     const file = taskFile();
@@ -73,8 +99,8 @@ it("旧自由存取线连同种子指纹统一迁移为直角，保留合格蓝�
       execution => session.simulation.actions.runBlueprint(execution));
     expect(migrated.request.options.warehouseBus).toBe("corner");
     expect(migrated.progress.bestArea).toBe(60);
-    expect(migrated.checkpoint.best!.candidate.seed!.network.request.options.warehouseBus).toBe("corner");
-    expect(migrated.checkpoint.best!.candidate.seed!.requestKey).toBe(plannerRequestKey(migrated.request));
+    expect(migrated.checkpoint.best!.candidate.seed).toBeUndefined();
+    expect(migrated.checkpoint.portfolio.pools).toEqual([]);
   } finally { await session.dispose(); }
 });
 
@@ -108,6 +134,10 @@ it("旧曲线与新规则最优结果分段验证，新规则首解面积可以�
     const input = { ...migrated, checkpoint: { ...migrated.checkpoint, legacyHistoryLength: 1 },
       progress: { ...migrated.progress, areaHistory: [{ evaluatedProposals: 100, bestArea: 20 }, { evaluatedProposals: 12345, bestArea: 60 }] } };
     expect(parsePlannerTaskFile(input, session.workspace.registry).progress.areaHistory).toEqual(input.progress.areaHistory);
+    const next = await restorePlannerTaskFile({ ...input, algorithmVersion: "older-history-generation" }, session.workspace.registry,
+      execution => session.simulation.actions.runBlueprint(execution));
+    expect(next.progress.areaHistory).toEqual(input.progress.areaHistory);
+    expect(next.checkpoint.legacyHistoryLength).toBe(2);
     expect(() => parsePlannerTaskFile({ ...input, progress: { ...input.progress,
       areaHistory: [...input.progress.areaHistory, { evaluatedProposals: 12345, bestArea: 61 }] } }, session.workspace.registry)).toThrow("面积曲线无效");
   } finally { await session.dispose(); }
@@ -140,7 +170,7 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     expect(host.queries.getTask(id)!.evaluatedProposals).toBe(persisted.progress.evaluatedProposals + 20);
     expect(host.queries.getTask(id)!.bestArea).toBe(60);
-    expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools.length).toBeGreaterThan(0);
+    expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools).toEqual([]);
     host.dispose();
     reloaded = createBlueprintPlannerHost(session.workspace, { storage });
     await vi.waitFor(() => expect(reloaded!.queries.getTask(file.taskId)?.bestArea).toBe(60));

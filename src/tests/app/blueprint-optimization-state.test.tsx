@@ -5,6 +5,7 @@ import { createAppHost } from "@/app/host/app-host";
 import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { listBlueprintDirectory, readBlueprintRecord, saveBlueprintDocument } from "@/shared/storage/blueprint-storage";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
@@ -18,6 +19,47 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
 });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+
+it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导入后恢复配置", async () => {
+  const session = new PlannerBatchSession();
+  const app = createAppHost(session.workspace);
+  const planner = createBlueprintPlannerHost(session.workspace);
+  const controller = app.blueprintPlannerDialog;
+  controller.setBlueprintPlanningEnabled(true);
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | null = null;
+  try {
+    controller.openBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json"));
+    await vi.waitFor(() => { expect(controller.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const inputs = () => [...view!.container.querySelectorAll<HTMLSelectElement>('[class*="boundaryGroup"] select')];
+    expect(inputs()).toHaveLength(1);
+    await changeTestValue(inputs()[0]!, "item_iron_ore");
+    const id = controller.viewTaskId!;
+    await vi.waitFor(() => {
+      const request = planner.queries.getLastRequest(id)!;
+      expect(isBlueprintRecognitionRequest(request) && request.input.boundaries.some(boundary =>
+        boundary.direction === "input" && boundary.itemId === "item_iron_ore")).toBe(true);
+    });
+    const rule = selectWithLabel(view.container, "取货口摆放规则");
+    await changeTestValue(rule, "full-side");
+    await vi.waitFor(() => expect(rule.disabled).toBe(false));
+    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(true);
+    expect(view.container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(1);
+    expect(buttonWithText(view.container, "识别蓝图").disabled).toBe(true);
+    const file = planner.queries.exportTask(id);
+    await view.unmount(); view = null;
+    const imported = await planner.actions.importTask(file);
+    controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    expect(inputs()[0]!.value).toBe("item_iron_ore");
+    expect(selectWithLabel(view.container, "取货口摆放规则").value).toBe("full-side");
+    expect(buttonWithText(view.container, "识别蓝图").disabled).toBe(true);
+    await changeTestValue(selectWithLabel(view.container, "取货口摆放规则"), "continuous");
+    await vi.waitFor(() => expect(buttonWithText(view!.container, "识别蓝图").disabled).toBe(false));
+    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(false);
+    expect(planner.queries.exportTask(id)).toEqual(file);
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose(); }
+});
 
 it("原图识别成为只读基线，保存副本不覆盖原图，重建主机恢复基线和边界", async () => {
   const session = new PlannerBatchSession();
@@ -110,10 +152,29 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     const imported = await planner.actions.importTask(planner.queries.exportTask(id));
     app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(readonlyBoundary(true)).toEqual(rows);
+    // 2026-10-15：合并原 EDA workflow E2E 的导入、历史和蓝图库隔离断言，复用本例真实识别结果。
+    const importedResult = planner.queries.getResult(imported)!;
+    expect(importedResult.folderId).toBeNull();
+    expect(importedResult.blueprint.blueprintId).not.toBe(result.blueprint.blueprintId);
+    expect(planner.queries.getTask(imported)?.areaHistory).toEqual(planner.queries.getTask(id)?.areaHistory);
+    const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    try {
+      await clickTestElement(buttonWithText(view.container, "预览蓝图"));
+      expect(app.blueprintPreview.dialogState.visible).toBe(true);
+      expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+      app.blueprintPreview.close();
+      expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+    } finally { await view.unmount(); }
+    await planner.actions.deleteTask(imported);
+    expect(planner.queries.getTask(id)).not.toBeNull();
+    await planner.actions.deleteTask(id);
+    expect((await listBlueprintDirectory(folder.folderId)).blueprints).toEqual(copies);
+    expect(await readBlueprintRecord(blueprint.blueprintId)).toEqual(original);
   } finally { planner.dispose(); app.dispose(); await session.dispose(); }
 }, 60_000);
 
-it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// 2026-10-16：用户将初始面积统一改为三倍；本例 88 格设备的参考点由 176 改为 264。
+it("不合规原图以三倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
@@ -132,20 +193,20 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
     await planner.actions.identifyBlueprint(id);
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
+    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 264, bestArea: null, areaHistory: [] });
     expect(planner.queries.getResult(id)).toBeNull();
     const reference = markup();
-    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
+    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("264 · 初始搜索基准");
     expect(reference.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
     expect(reference.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(0);
-    expect(reference.textContent).toContain("初始搜索基准 176");
+    expect(reference.textContent).toContain("初始搜索基准 264");
     const original = planner.queries.exportTask(id);
     expect(parsePlannerTaskFile(original, session.workspace.registry).checkpoint.blueprintBaseline!.candidate.metrics.area).toBe(150);
     await planner.whenSettled();
     planner.dispose();
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
-    expect(planner.queries.getTask(id)?.initialArea).toBe(176);
+    expect(planner.queries.getTask(id)?.initialArea).toBe(264);
     const imported = await planner.actions.importTask(original);
     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);

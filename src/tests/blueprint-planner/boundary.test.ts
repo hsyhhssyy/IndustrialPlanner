@@ -71,6 +71,21 @@ it("直线口位短边放不下时仍能选择长边，不把贪心初始化误�
   expect([1, 4]).toContain(result.busMask);
 });
 
+it("连续口整组修复能合并同边十二个断开的分量，不保留旧间隙且不修改输入姿态", () => {
+  const registry = createRegistryContract(), input = structuredClone(separator.request) as BlueprintPlannerRequest;
+  const request = { ...input, options: { ...input.options, warehouseBus: "straight" as const, warehousePortPlacement: "continuous" as const } };
+  const nodes = Array.from({ length: 12 }, (_, index) => createPlainNode(registry, "unloader_1", `dock-${index}`, "supply"));
+  const network: PlannerNetwork = { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+  const boundary = new PlannerBoundary(registry, network, { width: 60, height: 20, warehouseSide: 0 });
+  const poses = nodes.map((_, index) => boundary.proposals(index).find(pose => pose.x === index * 5)!);
+  const before = structuredClone(poses);
+  expect(boundary.resolve(poses).violations).toBe(11);
+  const repaired = boundary.arrange(0, { poses, movable: new Set(nodes.map((_, index) => index)) });
+  expect(boundary.resolve(repaired).violations).toBe(0);
+  expect(poses).toEqual(before);
+  for (let index = 1; index < repaired.length; index++) expect(repaired[index]!.x - repaired[index - 1]!.x).toBe(3);
+});
+
 it("所有朝向与非整段边长的盒外存取线可施工、连续接源桩，且没有实体进入盒内", () => {
   const registry = createRegistryContract();
   const request = structuredClone(separator.request) as BlueprintPlannerRequest;

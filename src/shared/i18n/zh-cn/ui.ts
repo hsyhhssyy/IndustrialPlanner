@@ -159,6 +159,7 @@ const UI: Record<string, string> = {
     "eda.optimization.mergeBoundaryFacilities": "合并输入、输出设施",
     "eda.optimization.mergeBoundaryFacilities.description": "在吞吐量足够时，用更少的入口或出口输送同种物品。",
     "eda.replan": "复制任务",
+    "eda.randomSeed": "随机种子",
     "eda.place": "放置蓝图",
     "eda.unavailable": "规划服务尚未就绪。",
     "eda.placeFailed": "当前基地无法放置此蓝图。",

@@ -159,6 +159,7 @@ const UI: Record<string, string> = {
     "eda.optimization.mergeBoundaryFacilities": "Combine input and output facilities",
     "eda.optimization.mergeBoundaryFacilities.description": "Use fewer entrances or exits for the same item when their capacity is sufficient.",
     "eda.replan": "Duplicate task",
+    "eda.randomSeed": "Random seed",
     "eda.place": "Place blueprint",
     "eda.unavailable": "The planner is not ready.",
     "eda.placeFailed": "This blueprint cannot be placed in the current base.",

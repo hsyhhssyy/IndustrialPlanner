@@ -368,6 +368,8 @@ export class CompactLayoutSearch {
       // 独立暗管与服务设备共同移动/旋转，保持已形成的局部供料关系；暗管自身仍可单独微调。
       const moveTerminals = this.random() < 0.5;
       for (const { parent, terminal } of moveTerminals ? this.localTerminals : []) {
+        // 2026-10-15：连续入口由边界整组算子移动，不能随单台消费者拆散。
+        if (this.boundary.has(terminal) && (this.network.request.options.warehousePortPlacement ?? "any") !== "any") continue;
         const before = previous[parent]!, after = this.poses[parent]!;
         if (before.x === after.x && before.y === after.y && before.rotation === after.rotation) continue;
         const child = this.poses[terminal]!, oldChild = previous[terminal]!;
@@ -775,8 +777,37 @@ export class CompactLayoutSearch {
     const pose = this.poses[index]!, mode = this.random();
     const origin = { ...pose };
     if (this.boundary.has(index)) {
+      // 连续直线入口以整排平移、同类换位或整组换边探索，保留所有口位排列而避免单体断开。
+      const warehouse = this.boundary.entries.filter(entry => entry.kind === "warehouse");
+      if (this.network.request.options.warehouseBus === "straight"
+        && (this.network.request.options.warehousePortPlacement ?? "any") !== "any"
+        && warehouse.some(entry => entry.index === index) && warehouse.every(entry => this.movable.includes(entry.index))) {
+        if (this.boundary.resolve(this.poses).violations || mode < 0.15) {
+          if (this.proposeRepair({ kind: "boundary-access", amount: 1,
+            entityIds: warehouse.map(entry => this.network.nodes[entry.index]!.entity.id) })) return;
+        } else if (mode < 0.6) {
+          const peers = warehouse.filter(entry => this.network.nodes[entry.index]!.definition.id === this.network.nodes[index]!.definition.id);
+          const other = peers[Math.floor(this.random() * peers.length)]!.index;
+          const next = { ...this.poses[other]! };
+          Object.assign(this.poses[other]!, pose); Object.assign(pose, next);
+          return;
+        } else {
+          const entry = warehouse.find(entry => entry.index === index)!;
+          const edge = entry.geometry[pose.rotation / 90]!.edge;
+          const axis = edge === "NORTH" || edge === "SOUTH" ? "x" : "y";
+          const side = axis === "x" ? "width" : "height";
+          const first = Math.min(...warehouse.map(entry => this.poses[entry.index]![axis]));
+          const last = Math.max(...warehouse.map(entry => this.poses[entry.index]![axis] + this.dimensions(entry.index)[side]));
+          const shift = Math.max(-first, Math.min(this.statistics.outline[side] - last,
+            (this.random() < 0.5 ? -1 : 1) * (this.random() < progress ? 1 : 3)));
+          for (const entry of warehouse) this.poses[entry.index]![axis] += shift;
+          return;
+        }
+      }
       // 默认搜索与 baseline 回退共用整组迁移，完整评分、接受和计费仍由 advance 处理。
-      if (this.statistics.strategy === "compact" && mode < 0.08 && this.proposeRepair({
+      // 2026-10-15：连续口已断开时增加共同修复机会；合法布局仍保留原有整组探索频率。
+      if (this.statistics.strategy === "compact" && mode < ((this.network.request.options.warehousePortPlacement ?? "any") !== "any"
+        && this.boundary.resolve(this.poses).violations ? 0.35 : 0.08) && this.proposeRepair({
         kind: "boundary-access", amount: 1, entityIds: this.boundary.entries.map(entry => this.network.nodes[entry.index]!.entity.id),
       })) return;
       if (mode < 0.35) {
@@ -797,7 +828,9 @@ export class CompactLayoutSearch {
       const limit = 2 + Math.floor(this.random() * 4);
       for (let cursor = 0; cursor < group.length && group.length < limit; cursor++) {
         for (const neighbor of this.neighbors[group[cursor]!]!) {
-          if (!group.includes(neighbor) && this.movable.includes(neighbor) && this.random() < 0.65) group.push(neighbor);
+          if (!group.includes(neighbor) && this.movable.includes(neighbor)
+            && (!this.boundary.has(neighbor) || (this.network.request.options.warehousePortPlacement ?? "any") === "any")
+            && this.random() < 0.65) group.push(neighbor);
           if (group.length >= limit) break;
         }
       }

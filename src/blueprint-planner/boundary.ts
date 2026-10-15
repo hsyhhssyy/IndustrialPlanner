@@ -178,8 +178,10 @@ export class PlannerBoundary {
           const preferred = entry.kind === "warehouse" ? preferredEdge : opposite(preferredEdge);
           const current = poses[entry.index]!;
           const distance = (pose: PlannerBoundaryPose) => Math.abs(pose.x - current.x) + Math.abs(pose.y - current.y);
+          // 2026-10-15：连续口必须重新紧邻排放；逐口靠近旧位置会保留断开的分量，使整组修复始终失败。
+          const preserveDistance = state && !(entry.kind === "warehouse" && (this.network.request.options.warehousePortPlacement ?? "any") !== "any");
           return Number(gb.edge === preferred) - Number(ga.edge === preferred)
-            || (state ? distance(a) - distance(b) : 0) || a.y - b.y || a.x - b.x;
+            || (preserveDistance ? distance(a) - distance(b) : 0) || a.y - b.y || a.x - b.x;
         });
         const pose = candidates.find(pose => {
           const bit = 1 << EDGES.indexOf(entry.geometry[pose.rotation / 90]!.edge);

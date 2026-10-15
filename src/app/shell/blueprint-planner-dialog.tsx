@@ -211,6 +211,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   // Original code:
   // const selectedId = controller.viewTaskId;
   const progress = selectedId === null ? null : planner?.queries.getTask(selectedId) ?? null;
+  const randomSeed = selectedId === null ? null : planner?.queries.getRandomSeed(selectedId) ?? null;
   const result = useMemo(() => {
     void revision;
     return selectedId === null ? null : planner?.queries.getResult(selectedId) ?? null;
@@ -635,6 +636,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           {progress !== null ? <section className={styles.progress} aria-live="polite">
             <div className={styles.statistics}>
               <span>{statusLabel(progress.status)}</span>
+              {randomSeed !== null ? <span>{t("eda.randomSeed")} <strong>{randomSeed}</strong></span> : null}
               <span>{t("eda.elapsed")} <strong>{elapsed}</strong></span>
               {progress.phase !== "identification" ? <span>{t("eda.candidates")} <strong>{progress.candidateCount}</strong></span> : null}
               {progress.bestArea !== null ? <span>{t("eda.bestArea")} <strong>{progress.bestArea}</strong></span> : null}
@@ -698,7 +700,10 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               })}>{t(progress?.status === "running" ? "eda.identifyingBlueprint" : "eda.identifyBlueprint")}</button> : null}
 
             {progress !== null && (plan !== null || recognition !== null) && !busy ? <button type="button" disabled={anyBusy}
-              onClick={() => act(controller.duplicateTask)}>{t("eda.replan")}</button> : null}
+              onClick={() => act(async () => {
+                setFileBusy(true);
+                try { await controller.duplicateTask(); } finally { setFileBusy(false); }
+              })}>{t("eda.replan")}</button> : null}
             {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
               onClick={() => act(async () => {

@@ -6,7 +6,7 @@ import { prepareEdaDataMigration } from "@/blueprint-planner/data-migration";
 import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-blueprint-migration";
 import { createRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
-import type { PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { EDA_TASK_LOCATION, LEGACY_EDA_TASK_LOCATION, edaTaskStorage } from "@/shared/storage/eda-task-storage";
 import { readFromIndexedDb, saveToIndexedDb } from "@/shared/storage/browser-storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
@@ -23,6 +23,8 @@ const options: BlueprintPlannerOptions = { warehousePortPlacement: "any", solidS
 
 it("内嵌蓝图空升级同步更新请求指纹且保留检查点、计数和原件", () => {
   const file = structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
+  // 2026-10-15：Schema 空升级仅在相同算法版本内维护种子；跨算法计算缓存按用户要求丢弃。
+  Object.assign(file, { algorithmVersion: PLANNER_ALGORITHM_VERSION });
   const source = { blueprint: blueprint as BlueprintDocument, boundaries: [], activeActivityIds: [] };
   file.request = { ...file.request, blueprintSource: source };
   const seed = file.checkpoint.best!.candidate.seed!;

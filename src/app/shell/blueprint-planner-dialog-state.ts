@@ -245,18 +245,31 @@ export class BlueprintPlannerDialogController {
   }
 
   /** 复制任务输入，规划选项恢复默认；蓝图从原图重新识别，不继承搜索检查点。 */
-  duplicateTask(): void {
+  // AI-CORRECTION 2026-10-16：复制由 Planner 创建持久副本，保留约束和最小成果，生成新随机种子并重置搜索进度。
+  async duplicateTask(): Promise<void> {
     if (this.taskLocked || this.viewTaskId === null) return;
-    const request = this.getPlanner()?.queries.getLastRequest(this.viewTaskId);
-    if (!request) throw new Error("当前任务不可复制。");
-    if (isBlueprintRecognitionRequest(request)) {
-      const input = request.input;
-      this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
-    } else {
-      const input = request.blueprintSource;
-      if (input) this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
-      else this.open(request.plan);
-    }
+    // AI-REMOVED 2026-10-16:
+    // Reason: 重新打开原图或草稿会丢弃最小成果与原配置。
+    // Trigger: 用户要求复制更换随机种子并继承最小结果。
+    // Evidence: 原 open/openBlueprint 只复制输入且重置选项。
+    // Replacement: BlueprintPlannerAction.duplicateTask。
+    // Risk: 复制改为异步持久操作；错误交给界面统一处理。
+    // Human Review: Required
+    // Original code:
+    // const request = this.getPlanner()?.queries.getLastRequest(this.viewTaskId);
+    // if (!request) throw new Error("当前任务不可复制。");
+    // if (isBlueprintRecognitionRequest(request)) {
+    //   const input = request.input;
+    //   this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
+    // } else {
+    //   const input = request.blueprintSource;
+    //   if (input) this.openBlueprint(input.blueprint, input.activeActivityIds, input.boundaries);
+    //   else this.open(request.plan);
+    // }
+    const planner = this.getPlanner();
+    if (!planner) throw new Error("规划服务尚未就绪。");
+    const id = await planner.actions.duplicateTask(this.viewTaskId);
+    this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
   }
 
   selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {

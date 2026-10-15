@@ -98,10 +98,16 @@ it("未启动草稿可导出并导入，保留当前配置且不需要仿真服�
     expect(host.state.revision).toBe(revision);
     const parsed = parsePlannerTaskFile(JSON.parse(JSON.stringify(file)), workspace.registry);
     expect(parsed.request).toEqual(configured);
-    expect(parsed.checkpoint).toEqual(emptyPlannerCheckpoint());
+    // AI-CORRECTION 2026-10-16：新草稿创建时即保存随机种子，搜索计数仍为空。
+    expect(parsed.checkpoint).toEqual({ ...emptyPlannerCheckpoint(), randomSeed: expect.any(Number) });
+    expect(parsed.checkpoint.randomSeed).toBeGreaterThan(0);
+    expect(parsed.checkpoint.randomSeed).not.toBe((second.checkpoint as ReturnType<typeof emptyPlannerCheckpoint>).randomSeed);
     expect(parsed.progress).toMatchObject({ taskId: file.taskId, status: "waiting", elapsedMs: 0,
       evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0 });
     const id = await host.actions.importTask(parsed);
+    expect(host.queries.getRandomSeed(id)).toBe(parsed.checkpoint.randomSeed);
+    const importedAgain = await host.actions.importTask(JSON.parse(JSON.stringify(host.queries.exportTask(id))));
+    expect(host.queries.getRandomSeed(importedAgain)).toBe(parsed.checkpoint.randomSeed);
     expect(host.queries.getLastRequest(id)).toEqual(configured);
     expect(host.queries.getTask(id)?.status).toBe("waiting");
     expect(host.queries.getResult(id)).toBeNull();
@@ -110,6 +116,25 @@ it("未启动草稿可导出并导入，保留当前配置且不需要仿真服�
     Object.assign(file.request.options, { evaluationsPerRound: 20_000 });
     expect(second.request.options.evaluationsPerRound).toBe(70_000);
     expect(host.queries.getLastRequest(id)?.options.evaluationsPerRound).toBe(70_000);
+  } finally { host.dispose(); }
+});
+
+it("旧草稿缺失种子时导入保持同一起点，显式非法种子不被重新随机化", async () => {
+  const workspace: WorkspaceContract = { state: createWorkspaceState(), registry: createRegistryContract(),
+    app: null, audio: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null };
+  const host = createBlueprintPlannerHost(workspace, { storage: null });
+  try {
+    const old = taskFile();
+    const a = await host.actions.importTask(old), b = await host.actions.importTask(old);
+    expect(host.queries.getRandomSeed(a)).toBeGreaterThan(0);
+    expect(host.queries.getRandomSeed(a)).toBe(host.queries.getRandomSeed(b));
+    for (const randomSeed of [null, 0, -1, 1.5, 2 ** 32]) {
+      const file = { ...taskFile(), checkpoint: { ...emptyPlannerCheckpoint(), randomSeed } };
+      const id = await host.actions.importTask(file);
+      expect((host.queries.exportTask(id).checkpoint as { randomSeed: unknown }).randomSeed).toBe(randomSeed);
+      expect(host.queries.getRandomSeed(id)).toBeNull();
+      expect(() => parsePlannerTaskFile(host.queries.exportTask(id), workspace.registry)).toThrow("随机状态");
+    }
   } finally { host.dispose(); }
 });
 
@@ -261,7 +286,7 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
   } finally { host.dispose(); await session.dispose(); }
 }, 90_000);
 
-it("已知旧算法保留累计进度并重建搜索状态，未知版本与无效输入不猜测迁移", async () => {
+it("任意算法版本变化均保留累计进度并重建搜索状态，无效输入仍拒绝", async () => {
   const { restorePlannerTaskFile } = await import("@/blueprint-planner/task-checkpoint");
   const registry = createRegistryContract();
   const file = { ...taskFile(), algorithmVersion: "compact-portfolio-1", checkpoint: { obsolete: true },
@@ -278,7 +303,7 @@ it("已知旧算法保留累计进度并重建搜索状态，未知版本与无�
   expect(file).toEqual(original);
   expect(await restorePlannerTaskFile(restored, registry)).toEqual(restored);
   for (const algorithmVersion of ["future", "compact-portfolio-3", "compact-portfolio-0"])
-    await expect(restorePlannerTaskFile({ ...file, algorithmVersion }, registry)).rejects.toThrow();
+    expect((await restorePlannerTaskFile({ ...file, algorithmVersion }, registry)).checkpoint).toEqual(restored.checkpoint);
   await expect(restorePlannerTaskFile({ ...file, request: { ...file.request,
     options: { ...file.request.options, evaluationsPerRound: -1 } } }, registry)).rejects.toThrow();
 });

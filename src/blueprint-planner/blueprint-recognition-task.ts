@@ -8,10 +8,12 @@ import { isItemAvailableByActivity } from "@/shared/registry/activity-availabili
 import { validatePlannerTaskOptions } from "./task-checkpoint";
 import { blueprintBoundaryKey } from "./blueprint-analysis";
 import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
+import { assertPlannerRandomState, createPlannerRandomSeed, plannerRandomSeed } from "./search-random";
 
 export const BLUEPRINT_RECOGNITION_VERSION = "blueprint-recognition-1";
 
 export interface BlueprintRecognitionCheckpoint {
+  randomSeed?: number;
   step: "inspection" | "inputs" | "outputs" | "verification";
 }
 
@@ -63,7 +65,7 @@ export function createRecognitionTaskFile(registry: RegistryContract, taskId: st
   validateRecognitionInput(registry, input);
   return parseRecognitionTaskFile({ formatVersion: 1, algorithmVersion: BLUEPRINT_RECOGNITION_VERSION, taskId,
     request: { kind: "blueprint-recognition", input: structuredClone(input), options: structuredClone(options), detectedBoundaries: null },
-    checkpoint: { step: "inspection" }, progress: { taskId, status: "waiting", phase: "identification", startedAt: Date.now(),
+    checkpoint: { step: "inspection", randomSeed: createPlannerRandomSeed() }, progress: { taskId, status: "waiting", phase: "identification", startedAt: Date.now(),
       elapsedMs: 0, estimatedProgress: null, evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0,
       validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: "正在准备蓝图边界检查。" } }, registry);
 }
@@ -94,6 +96,10 @@ export function parseRecognitionTaskFile(value: BlueprintPlannerTaskFile, regist
 //     || options.converterStartup !== undefined && !["manual", "tank", "reject"].includes(options.converterStartup)) throw new Error("识别任务计算参数无效。");
   validatePlannerTaskOptions(request.options);
   const point = file.checkpoint as BlueprintRecognitionCheckpoint;
+  if (point) {
+    if (point.randomSeed === undefined) point.randomSeed = plannerRandomSeed(`${file.taskId}/${BLUEPRINT_RECOGNITION_VERSION}`);
+    assertPlannerRandomState(point.randomSeed);
+  }
   const progress = file.progress;
   if (!point || !["inspection", "inputs", "outputs", "verification"].includes(point.step)
     || !progress || progress.taskId !== file.taskId || progress.phase !== "identification"
@@ -115,6 +121,6 @@ export function parseRecognitionTaskFile(value: BlueprintPlannerTaskFile, regist
   const effectiveRequest = changed ? { ...request,
     input: { ...request.input, boundaries: request.input.boundaries.filter(boundary => !excludedEntityIds.has(boundary.entityId)) },
     detectedBoundaries: request.detectedBoundaries?.filter(boundary => !excludedEntityIds.has(boundary.entityId)) ?? null } : request;
-  return { ...file, request: effectiveRequest, checkpoint: changed && point.step !== "inspection" ? { step: "inputs" } : point,
+  return { ...file, request: effectiveRequest, checkpoint: changed && point.step !== "inspection" ? { ...point, step: "inputs" } : point,
     progress: { ...progress, message: withBlueprintDisconnectionWarning(registry, request.input, progress.message) } };
 }
