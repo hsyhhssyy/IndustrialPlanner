@@ -5722,18 +5722,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_cabbage_1"],
+    cultivation: { cropId: "item_corp_cabbage_1", growingStateIds: ["growing-1", "growing-refined"],
+      refinedStateIds: ["growing-refined", "harvest-refined"], neighborDurationSeconds: 30, neighborBonusPerPlot: 0.2 },
     recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
   }),
 
   /** 优质青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_cabbage_2",
     nameKey: "registry.entity.soil_corp_cabbage_2.name",
     spriteId: "soil_grass_2",
     iconPath: "device-icons/item_port_soil_corp_cabbage_2.webp",
     footprint: { width: 4, height: 4 },
-    uiGroup: "agriculture",
+    uiGroup: "hidden",
     displayOrder: 813,
     tags: ["AcceptsIrrigation", "Producer"],
     requiresPower: false, powerDemand: 0,
@@ -5773,18 +5776,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_mushroom_1"],
+    cultivation: { cropId: "item_corp_mushroom_1", growingStateIds: ["growing-1", "growing-refined"],
+      refinedStateIds: ["growing-refined", "harvest-refined"], neighborDurationSeconds: 30, neighborBonusPerPlot: 0.2 },
     recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
   }),
 
   /** 优质多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_mushroom_2",
     nameKey: "registry.entity.soil_corp_mushroom_2.name",
     spriteId: "soil_grass_2",
     iconPath: "device-icons/item_port_soil_corp_mushroom_2.webp",
     footprint: { width: 4, height: 4 },
-    uiGroup: "agriculture",
+    uiGroup: "hidden",
     displayOrder: 816,
     tags: ["AcceptsIrrigation", "Producer"],
     requiresPower: false, powerDemand: 0,
@@ -5824,18 +5830,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_strawberry_1"],
+    cultivation: { cropId: "item_corp_strawberry_1", growingStateIds: ["growing-1", "growing-refined"],
+      refinedStateIds: ["growing-refined", "harvest-refined"], neighborDurationSeconds: 30, neighborBonusPerPlot: 0.2 },
     recipeChannels: [{ id: "growth", startPolicy: "state", ingredientStorageGroupIds: [], productStorageGroupIds: [] }],
     placementWhitelist: [{ baseId: "wuling_agricultural_land", areaIds: ["wuling_yuanyuan_zhuang"] }],
   }),
 
   /** 优质青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_strawberry_2",
     nameKey: "registry.entity.soil_corp_strawberry_2.name",
     spriteId: "soil_grass_2",
     iconPath: "device-icons/item_port_soil_corp_strawberry_2.webp",
     footprint: { width: 4, height: 4 },
-    uiGroup: "agriculture",
+    uiGroup: "hidden",
     displayOrder: 819,
     tags: ["AcceptsIrrigation", "Producer"],
     requiresPower: false, powerDemand: 0,

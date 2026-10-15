@@ -161,6 +161,7 @@ function createDeviceSnapshots(
       deviceId,
       block: runtimeDevice.block,
       ...(runtimeDevice.deviceState ? { deviceState: { ...runtimeDevice.deviceState } } : {}),
+      ...(runtimeDevice.cultivation ? { cultivation: { ...runtimeDevice.cultivation } } : {}),
       recipe: firstRecipe === null
         ? null
         : {

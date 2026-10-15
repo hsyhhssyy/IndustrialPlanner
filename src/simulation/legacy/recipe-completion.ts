@@ -20,7 +20,11 @@ export function completeRecipeIfPossible(options: {
   readonly recipe: RuntimeDeviceRecipeState;
   readonly regionalWarehouse?: RegionalWarehouseWriteContext;
 }): boolean {
-  if (!finishRecipeIfPossible(options.registry, options.topology, options.state, options.recipe)) {
+  const definition = options.registry.queries.findRecipeDefinition(options.recipe.recipeId);
+  const bonus = definition?.outputTarget === "warehouse" ? options.state.persistent.devices[options.deviceId]?.cultivation?.yieldBonusRatio ?? 0 : 0;
+  const recipe = bonus === 0 ? options.recipe : { ...options.recipe, plan: { ...options.recipe.plan,
+    outputs: options.recipe.plan.outputs.map(output => ({ ...output, amount: Math.round(output.amount * (1 + bonus)) })) } };
+  if (!finishRecipeIfPossible(options.registry, options.topology, options.state, recipe)) {
     return false;
   }
 
@@ -28,16 +32,16 @@ export function completeRecipeIfPossible(options: {
     submitSlotsToWarehouse(options.topology, options.state, options.deviceId, options.regionalWarehouse);
   }
 
-  const definition = options.registry.queries.findRecipeDefinition(options.recipe.recipeId);
   if (definition?.outputTarget === "warehouse") {
     for (const output of definition.outputs) {
+      const amount = Math.round(output.amount * (1 + bonus));
       const produced = options.state.transient.recipeStatsDelta.produced;
-      produced[output.itemId] = (produced[output.itemId] ?? 0) + output.amount;
+      produced[output.itemId] = (produced[output.itemId] ?? 0) + amount;
       if (options.regionalWarehouse) {
         const slotId = options.recipe.plan.productNodeIds.flatMap(id => options.topology.nodes[id]!.slotIds).find(id => options.topology.slots[id]!.lock === output.itemId);
         if (slotId === undefined || !options.regionalWarehouse.isWarehouseStorageSlotId(slotId)) throw new Error("Regional crop warehouse slot is missing.");
-        options.state.persistent.slots[slotId]!.count -= output.amount;
-        options.regionalWarehouse.deposit(output.itemId, output.amount);
+        options.state.persistent.slots[slotId]!.count -= amount;
+        options.regionalWarehouse.deposit(output.itemId, amount);
       }
     }
   }

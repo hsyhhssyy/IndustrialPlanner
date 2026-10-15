@@ -12,8 +12,8 @@ const registry = createRegistryContract();
 const definition = registry.queries.findEntityDefinition("soil_moss_3")!;
 const growing = definition.stateMachine!.states.find((state) => state.id === "growing-1")!;
 const watering = definition.stateMachine!.states.find((state) => state.id === "watering-1")!;
-const growthRuntime = { stateId: growing.id, enteredAtSeconds: 32, endsAtSeconds: 332, visualKey: "irrigated" };
-const waterRuntime = { stateId: watering.id, enteredAtSeconds: 2, endsAtSeconds: null, visualKey: "seedling" };
+const growthRuntime = { stateId: growing.id, enteredAtSeconds: 32, timerStartedAtSeconds: 32, endsAtSeconds: 332, visualKey: "irrigated" };
+const waterRuntime = { stateId: watering.id, enteredAtSeconds: 2, timerStartedAtSeconds: null, endsAtSeconds: null, visualKey: "seedling" };
 
 function clock(rate: number, seconds: number): SimulationRecipePresentationClock {
   return {
@@ -52,7 +52,7 @@ describe("设备状态 Inspector 展示", () => {
     expect(resolveDeviceStateProgressSeconds(watering, waterRuntime, { ...channel, recipeId: "r_soil_moss_3_seedling" }, time)).toBe(0);
   });
 
-  it("普通 DOM 显示本地化状态、阶段顺序、进度、剩余时间及环境等待", () => {
+  it("普通 DOM 显示本地化状态、进度、剩余时间及环境等待，分支状态不使用数组序号", () => {
     const time = clock(2, 15);
     const html = renderToStaticMarkup(createElement(DeviceStateInspector, {
       definition, recipes: registry.recipeDefinitions, translate: (key) => lookupText("zh-CN", key) ?? key,
@@ -64,9 +64,28 @@ describe("设备状态 Inspector 展示", () => {
         simulationState: time.simulationState!, sampledAtMs: 0, activeGasItemIds: null },
     }));
     expect(html).toContain("浇水");
-    expect(html).toContain("阶段 2 / 4");
+    expect(html).not.toContain("阶段 2 / 4");
     expect(html).toContain('aria-valuenow="12"');
     expect(html).toContain("剩余 18 秒");
     expect(html).toContain("等待环境");
+  });
+
+  it("育种分支切换只改变状态进入时间，生长进度继续使用原计时起点", () => {
+    const plot = registry.queries.findEntityDefinition("soil_corp_cabbage_1")!;
+    const refined = plot.stateMachine!.states.find(state => state.id === "growing-refined")!;
+    const runtime = { stateId: refined.id, enteredAtSeconds: 7200, timerStartedAtSeconds: 0, endsAtSeconds: 28800, visualKey: "irrigated" };
+    expect(resolveDeviceStateProgressSeconds(refined, runtime, null, clock(2, 7200))).toBe(7200);
+    const html = renderToStaticMarkup(createElement(DeviceStateInspector, {
+      definition: plot, recipes: registry.recipeDefinitions, translate: key => lookupText("zh-CN", key) ?? key,
+      runtimeStatus: { deviceState: runtime, channelRecipes: { growth: null }, slotItems: [], powerStatus: "no-power-needed",
+        cultivation: { neighborProgressSeconds: 30, adjacentPlotCount: 3, effectiveNeighborCount: 2, yieldBonusRatio: 0.4, isNeighborProgressing: false } },
+      runtimeSample: { entityId: "plot", documentStatus: clock(2, 7200).documentStatus,
+        simulationState: clock(2, 7200).simulationState!, sampledAtMs: 0, activeGasItemIds: null },
+    }));
+    expect(html).toContain("育种后成长中");
+    expect(html).toContain("25%");
+    expect(html).toContain('aria-label="优质培育进度" aria-valuemin="0" aria-valuemax="30" aria-valuenow="30"');
+    expect(html).toContain("相接增产 +40%");
+    expect(html).toContain("相接 3 块 · 有效 2 块");
   });
 });

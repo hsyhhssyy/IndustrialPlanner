@@ -26,6 +26,7 @@ function prepareThreeSecondsBeforeWatering(scene: ReturnType<typeof createScenar
   const machine = registry.queries.findEntityDefinition("soil_grass_1")!.stateMachine!;
   checkpoint.deviceStates.indexes[0] = machine.states.findIndex(state => state.id === "growing-1");
   checkpoint.deviceStates.enteredSeconds[0] = 3;
+  checkpoint.deviceStates.timerStartedSeconds[0] = 3;
   checkpoint.deviceStates.deadlineSeconds[0] = 1803;
   const tick = 1800 * rate + 1;
   kernel.restoreCheckpoint({ ...checkpoint, tickNumber: tick });

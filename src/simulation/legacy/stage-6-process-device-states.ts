@@ -1,11 +1,14 @@
+import { CropCultivationRuntime } from "../cultivation";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { compileDeviceStates, DeviceStateRuntime } from "../device-state";
 import { CompiledEnvironment } from "../environment";
-import { isSimulationWholeSecondTick, type CompiledSimulationTopology } from "../contracts";
+import { adjustReservedAmounts } from "./runtime-slot-access";
+import { type CompiledSimulationTopology } from "../contracts";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 
 interface LegacyStateContext {
   readonly machines: DeviceStateRuntime;
+  readonly cultivation: CropCultivationRuntime;
   readonly machineByDevice: ReadonlyMap<string, number>;
   readonly environment: CompiledEnvironment;
   readonly bindingByDeviceRecipe: ReadonlyMap<string, ReadonlyMap<string, number>>;
@@ -34,6 +37,7 @@ function contextFor(registry: RegistryContract, topology: CompiledSimulationTopo
     if (stateIndex < 0) throw new Error(`Unknown saved device state: ${saved.stateId}`);
     checkpoint.indexes[index] = stateIndex;
     checkpoint.enteredSeconds[index] = saved.enteredAtSeconds;
+    checkpoint.timerStartedSeconds[index] = saved.timerStartedAtSeconds ?? Infinity;
     checkpoint.deadlineSeconds[index] = saved.endsAtSeconds ?? Infinity;
   });
   machines.restore(checkpoint);
@@ -45,7 +49,9 @@ function contextFor(registry: RegistryContract, topology: CompiledSimulationTopo
     if (!entries) { entries = new Map(); bindingByDeviceRecipe.set(deviceId, entries); }
     entries.set(recipe.id, index);
   });
-  const context = { machines, machineByDevice, environment, bindingByDeviceRecipe };
+  const cultivation = new CropCultivationRuntime(topology, registry, machines);
+  cultivation.restoreSnapshots(state.persistent.cultivationSeconds ?? 0, id => state.persistent.devices[id]?.cultivation);
+  const context = { machines, cultivation, machineByDevice, environment, bindingByDeviceRecipe };
   machines.programs.forEach((program, index) => {
     const current = program.states[machines.indexes[index]!];
     if (current?.enterRecipeId) changeDemand(context, program.deviceId, current.enterRecipeId, 1);
@@ -62,15 +68,28 @@ function changeDemand(context: LegacyStateContext, deviceId: string, recipeId: s
 export function processDeviceStates(registry: RegistryContract, topology: CompiledSimulationTopology, state: SimulationMutableRuntimeState): void {
   const context = contextFor(registry, topology, state);
   if (!context) return;
-  context.machines.process(Math.max(0, state.tickNumber - 1) / topology.standardTickRate,
-    isSimulationWholeSecondTick(state.tickNumber, topology.standardTickRate), (index, previous, next) => {
+  const seconds = Math.max(0, state.tickNumber - 1) / topology.standardTickRate;
+  context.cultivation.advance(seconds);
+  context.machines.process(seconds,
+    (index, previous, next) => {
+      context.cultivation.stateChanged(index, next);
       const program = context.machines.programs[index]!;
       const oldRecipe = program.states[previous]?.enterRecipeId;
       const newRecipe = program.states[next]!.enterRecipeId;
       if (oldRecipe) changeDemand(context, program.deviceId, oldRecipe, -1);
+      const device = state.persistent.devices[program.deviceId]!;
+      const running = device.channelRecipes[program.channelId];
+      if (previous >= 0 && running) {
+        adjustReservedAmounts(state, running.reservations, -1);
+        device.channelRecipes[program.channelId] = null;
+      }
       if (newRecipe) changeDemand(context, program.deviceId, newRecipe, 1);
       state.persistent.devices[program.deviceId]!.deviceState = context.machines.snapshot(index);
     });
+  context.cultivation.refresh();
+  for (const id of context.cultivation.changedDevices) state.persistent.devices[id]!.cultivation = context.cultivation.snapshot(id);
+  context.cultivation.changedDevices.clear();
+  state.persistent.cultivationSeconds = seconds;
 }
 
 export function notifyStateRecipeCompleted(registry: RegistryContract, topology: CompiledSimulationTopology, state: SimulationMutableRuntimeState, deviceId: string, recipeId: string): void {

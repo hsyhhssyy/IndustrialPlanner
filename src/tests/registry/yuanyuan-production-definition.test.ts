@@ -55,7 +55,7 @@ describe("AKEData 1.6 缘缘庄生产数据", () => {
       expect(recipe.outputs[0]!.amount).toBe(id.startsWith("soil_sp_") ? 30 : 10);
       if (id.startsWith("soil_sp_")) {
         const states = registry.queries.findEntityDefinition(id)!.stateMachine!.states;
-        expect(states.reduce((seconds, state) => seconds + (state.transition?.kind === "elapsed" ? state.transition.durationSeconds : 0), 0)).toBe(43200);
+        expect(states.reduce((seconds, state) => seconds + (state.timerDurationSeconds ?? 0), 0)).toBe(43200);
       }
     }
   });
@@ -63,10 +63,11 @@ describe("AKEData 1.6 缘缘庄生产数据", () => {
   it("12种田块只允许缘缘庄区域，统一灌溉并保留副产物与优质双产物", () => {
     const base = registry.baseDefinitions.find(candidate => candidate.id === "wuling_agricultural_land")!;
     const areas = resolveBaseAreas(base);
+    const hiddenPlotIds = new Set(["soil_corp_cabbage_2", "soil_corp_mushroom_2", "soil_corp_strawberry_2"]);
     expect(evidence.plots).toHaveLength(12);
     for (const raw of evidence.plots) {
       const plot = registry.queries.findEntityDefinition(raw.id)!;
-      expect(plot).toMatchObject({ uiGroup: "agriculture", footprint: { width: 4, height: 4 }, requiresPower: false, powerDemand: 0, portGroups: [] });
+      expect(plot).toMatchObject({ uiGroup: hiddenPlotIds.has(raw.id) ? "hidden" : "agriculture", footprint: { width: 4, height: 4 }, requiresPower: false, powerDemand: 0, portGroups: [] });
       expect(lookupText("zh-CN", plot.nameKey)).toBe(raw.zhCN);
       expect(lookupText("en-US", plot.nameKey)).toBe(raw.enUS);
       expect(plot.tags).toContain("AcceptsIrrigation");
@@ -74,8 +75,10 @@ describe("AKEData 1.6 缘缘庄生产数据", () => {
       for (const other of registry.baseDefinitions.filter(candidate => candidate.id !== base.id)) {
         expect(resolveEntityPlacementAreas(plot, other, resolveBaseAreas(other))).toEqual([]);
       }
-      expect(plot.stateMachine!.states.map(state => state.id)).toEqual(["seedling", "watering-1", "growing-1", "harvest"]);
-      expect(plot.stateMachine!.states[2]!.transition).toEqual({ kind: "elapsed", durationSeconds: raw.growthSeconds, nextStateId: "harvest" });
+      expect(plot.stateMachine!.states.map(state => state.id)).toEqual(["seedling", "watering-1", "growing-1", "harvest",
+        ...(plot.cultivation ? ["growing-refined", "harvest-refined"] : [])]);
+      expect(plot.stateMachine!.states[2]!.timerDurationSeconds).toBe(raw.growthSeconds);
+      expect(plot.stateMachine!.states[2]!.transitions).toContainEqual({ kind: "elapsed", nextStateId: "harvest" });
       expect(raw.growthSeconds).toBe(28800);
       expect(registry.queries.findRecipeDefinition(`r_${raw.id}_seedling`)).toMatchObject({ durationSeconds: 2, inputs: [] });
       expect(registry.queries.findRecipeDefinition(`r_${raw.id}_watering`)).toMatchObject({ durationSeconds: 30, requiredEnvironmentAnyOf: ["item_liquid_water", "item_gas_water"] });

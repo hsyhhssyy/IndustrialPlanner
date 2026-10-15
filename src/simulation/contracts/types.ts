@@ -1,4 +1,4 @@
-import type { SimulationDeviceStateReadModel } from "@/domain/simulation/types/simulation-types";
+import type { SimulationDeviceStateReadModel, SimulationCropCultivationReadModel } from "@/domain/simulation/types/simulation-types";
 import type { LinkType } from "@/domain/document/world-document";
 import type {
   GridEdge,
@@ -645,6 +645,7 @@ export interface RuntimeSlotSnapshot {
 
 export interface RuntimeDeviceSnapshot {
   readonly deviceState?: SimulationDeviceStateReadModel;
+  readonly cultivation?: SimulationCropCultivationReadModel;
   readonly deviceId: string;
   readonly block: boolean;
   // AI-CORRECTION 2026-05-29: recipe 保留兼容，channelRecipes 为新的多 channel 数据源。

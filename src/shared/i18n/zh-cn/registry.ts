@@ -1,4 +1,7 @@
 const REGISTRY: Record<string, string> = {
+  "registry.deviceState.growing_refined": "育种后成长中",
+  "registry.deviceState.harvest_refined": "育种后成熟 · 收获",
+  "registry.recipe.crop_refinement.name": "优质培育",
   "registry.entity.wuling_fence_rail_5.name": "武陵农用地围栏（5格）",
   "registry.entity.wuling_fence_rail_2.name": "武陵农用地围栏（2格）",
   "registry.entity.wuling_fence_rail_3.name": "武陵农用地围栏（3格）",

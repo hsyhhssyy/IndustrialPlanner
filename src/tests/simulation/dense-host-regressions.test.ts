@@ -1136,6 +1136,76 @@ describe("ST2-RQ-023 dense host regressions", () => {
     }
   });
 
+  it.each([
+    { entityId: "gas-diffuser", regional: false },
+    { entityId: "power", regional: false },
+    { entityId: "gas-diffuser", regional: true },
+    { entityId: "power", regional: true },
+  ])("运行推进尚未结束时移动 $entityId（regional=$regional）仍完成刷新并继续播放", async ({ entityId, regional }) => {
+    const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/simulation/dense-host-regressions/scene-05-move-during-playback.schema7.json",
+    ));
+    const documentStore = createSnapshotStore(document);
+    const workspace = createDenseTestWorkspace({
+      currentDocument: document,
+      documentStore,
+      readLatestBaseDocuments: async (baseIds) =>
+        baseIds.map((baseId) => createWorldDocument({ baseId })),
+    });
+    setRegionalMultiBaseSetting(workspace, regional);
+    const host = createSimulationHost(workspace, {
+      engineKind: "dense-v2",
+      workerMode: "runtime",
+    });
+
+    try {
+      await host.actions.start();
+      await host.internalActions.syncToTick(5);
+      const rate = host.topology.getSnapshot()!.standardTickRate;
+      const originalRange = host.queries.getActiveEnvironmentRanges()[0]!;
+      expect(originalRange).toMatchObject({ sourceDeviceId: "device:gas-diffuser" });
+
+      // 不等待前一帧结束，积压下一帧目标，并在途中触发真实文档订阅与拓扑迁移。
+      const firstFrame = host.actions.advancePlaybackByDeltaMs(1000);
+      const secondFrame = host.actions.advancePlaybackByDeltaMs(1000);
+      const entity = document.entities[entityId]!;
+      documentStore.setSnapshot({
+        ...document,
+        entities: {
+          ...document.entities,
+          [entityId]: { ...entity, position: { x: 0, y: 6 } },
+        },
+      });
+      const nextFrame = host.actions.advancePlaybackByDeltaMs(1000);
+      await Promise.all([firstFrame, secondFrame, nextFrame]);
+
+      const expectedTick = 5 + 3 * rate;
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(expectedTick);
+      expect(host.state.runningState).toBe("start");
+      expect(host.internalState.runtimeStatus.error).toBeNull();
+      expect(host.queries.getActiveEnvironmentRanges()).toEqual([{
+        ...originalRange,
+        gridRect: entityId === "gas-diffuser"
+          ? { ...originalRange.gridRect, y: originalRange.gridRect.y + 6 }
+          : originalRange.gridRect,
+      }]);
+
+      host.actions.pause();
+      host.actions.resume();
+      await host.actions.advancePlaybackByDeltaMs(500);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(expectedTick + rate / 2);
+
+      host.actions.stop();
+      await host.actions.start();
+      await host.actions.advancePlaybackByDeltaMs(1000);
+      expect(readSimulationSnapshot(host)?.tickNumber).toBe(rate);
+      expect(host.state.runningState).toBe("start");
+      expect(host.internalState.runtimeStatus.error).toBeNull();
+    } finally {
+      host.dispose();
+    }
+  });
+
   it("does not rebuild a running dense session for viewport-only document changes", async () => {
     const document = createWorldDocument({ baseId: "wuling_protocol_core" });
     const documentStore = createSnapshotStore(document);

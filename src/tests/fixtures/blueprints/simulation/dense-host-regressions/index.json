@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 4,
+  "fixtureRevision": 5,
   "schemaVersion": 7,
   "source": "src/tests/simulation/dense-host-regressions.test.ts",
   "migratedAt": "2026-09-14",
@@ -92,6 +92,14 @@
         },
         "file": "scene-04-checkpoint-empty-tick-8ca0cc57.schema7.json",
         "blueprintId": "req-076-checkpoint-empty-tick",
+        "version": "fixture-v1"
+      }
+    ],
+    "scene-05": [
+      {
+        "parameters": {},
+        "file": "scene-05-move-during-playback.schema7.json",
+        "blueprintId": "dense-move-during-playback",
         "version": "fixture-v1"
       }
     ]

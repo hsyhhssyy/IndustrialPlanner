@@ -122,6 +122,7 @@ export interface SimulationDeviceRuntimeChannelRecipeStatus {
 //   readonly desiredSeconds: number | null;
 export interface SimulationDeviceRuntimeStatusReadModel {
   readonly deviceState?: SimulationDeviceStateReadModel;
+  readonly cultivation?: SimulationCropCultivationReadModel;
   /** 每个 channel 的运行时配方状态，key 为 channel id */
   readonly channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null>;
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
@@ -144,8 +145,18 @@ export interface SimulationDeviceRuntimeStatusReadModel {
 export interface SimulationDeviceStateReadModel {
   readonly stateId: string;
   readonly enteredAtSeconds: number;
+  /** 与当前状态进入时间独立，继承计时器时保留。没有计时器时为 null。 */
+  readonly timerStartedAtSeconds: number | null;
   readonly endsAtSeconds: number | null;
   readonly visualKey: string | null;
+}
+
+export interface SimulationCropCultivationReadModel {
+  readonly neighborProgressSeconds: number;
+  readonly adjacentPlotCount: number;
+  readonly effectiveNeighborCount: number;
+  readonly yieldBonusRatio: number;
+  readonly isNeighborProgressing: boolean;
 }
 
 // AI-REMOVED 2026-07-23:

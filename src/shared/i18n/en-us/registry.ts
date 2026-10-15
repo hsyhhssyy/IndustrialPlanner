@@ -1,4 +1,7 @@
 const REGISTRY: Record<string, string> = {
+  "registry.deviceState.growing_refined": "Refined · Growing",
+  "registry.deviceState.harvest_refined": "Refined · Harvest",
+  "registry.recipe.crop_refinement.name": "Crop Refinement",
   "registry.entity.wuling_fence_rail_5.name": "Wuling Farmland Rail (5 cells)",
   "registry.entity.wuling_fence_rail_2.name": "Wuling Farmland Rail (2 cells)",
   "registry.entity.wuling_fence_rail_3.name": "Wuling Farmland Rail (3 cells)",

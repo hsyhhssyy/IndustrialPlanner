@@ -1,4 +1,4 @@
-import type { SimulationDeviceStateReadModel } from "@/domain/simulation/types/simulation-types";
+import type { SimulationDeviceStateReadModel, SimulationCropCultivationReadModel } from "@/domain/simulation/types/simulation-types";
 import {
   ADMISSION_RATE_WINDOWS_PER_MINUTE,
 } from "@/domain/registry";
@@ -25,6 +25,7 @@ export interface SimulationMutableRuntimeState {
 }
 
 export interface SimulationPersistentRuntimeState {
+  cultivationSeconds?: number;
   slots: Record<string, RuntimeSlotState>;
   devices: Record<string, RuntimeDeviceState>;
   /** 准入口跨 tick 计数。key 为 compiled port id。 */
@@ -95,6 +96,7 @@ export interface RuntimeSlotState {
 
 export interface RuntimeDeviceState {
   deviceState?: SimulationDeviceStateReadModel;
+  cultivation?: SimulationCropCultivationReadModel;
   block: boolean;
   // AI-CORRECTION 2026-05-13: recipe → channelRecipes.
   // 每个 channel 独立运行一个配方。key 为 channel id。
@@ -328,6 +330,7 @@ export function createMigratedSimulationMutableRuntimeState(
   state.tickNumber = options.previousState.tickNumber;
   state.lastAdvancedTickNumber = options.previousState.tickNumber;
   state.persistent.nextRecipeRunIndex = options.previousState.persistent.nextRecipeRunIndex;
+  state.persistent.cultivationSeconds = options.previousState.persistent.cultivationSeconds;
   state.persistent.baseBatteryJoules = options.previousState.persistent.baseBatteryJoules;
   for (const [itemId, perMinute] of Object.entries(
     options.topology.regionalResourceSupply?.finitePerMinuteByItemId ?? {},
@@ -433,6 +436,7 @@ export function cloneSimulationMutableRuntimeState(
     tickNumber: state.tickNumber,
     lastAdvancedTickNumber: state.lastAdvancedTickNumber,
     persistent: {
+      cultivationSeconds: state.persistent.cultivationSeconds,
       slots: Object.fromEntries(Object.entries(state.persistent.slots).map(([slotId, slot]) => [
         slotId,
         cloneRuntimeSlotState(slot),
@@ -835,6 +839,7 @@ function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState
   return {
     block: device.block,
     ...(device.deviceState ? { deviceState: { ...device.deviceState } } : {}),
+    ...(device.cultivation ? { cultivation: { ...device.cultivation } } : {}),
     channelRecipes: Object.fromEntries(
       Object.entries(device.channelRecipes).map(([chId, recipe]) => [
         chId,

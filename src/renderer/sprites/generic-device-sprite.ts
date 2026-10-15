@@ -70,7 +70,8 @@ import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 const POWER_DISCONNECTED_TEXTURE_KEY = "texture-power-disconnected"
-const POWER_DISCONNECTED_ICON_TINT = 0xff656c
+// 取自游戏截图“供电桩放置-触碰到设备.png”中断电插头实心区域的主色。
+const POWER_DISCONNECTED_ICON_TINT = 0xfea737
 
 // AI-REMOVED 2026-09-05:
 // Reason: 本体素材前缀收敛至统一展示解析入口。
@@ -296,6 +297,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly previewMask: Sprite
   private readonly deviceLabelRoot: Container
   private readonly deviceIcon: Sprite
+  private readonly powerDisconnectedIcon: Sprite
   private readonly deviceNameText: Text
   private currentLayout: RenderSpriteLayout | null = null
   /** 足迹（不含 spriteOffset）在视口中的布局，用于绘制线框。仅有 spriteOffset 的设备才需要计算。 */
@@ -313,11 +315,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private textureLoadVersion = 0
   private deviceIconLoadVersion = 0
   private isDeviceIconReady = false
+  private powerDisconnectedIconLoadStarted = false
+  private isPowerDisconnectedIconReady = false
   private staticBodyTexture: Texture | null = null
   private staticMaskTexture: Texture | null = null
   private stopBodyTextureRecovery: (() => void) | null = null
   private stopMaskTextureRecovery: (() => void) | null = null
   private stopDeviceIconRecovery: (() => void) | null = null
+  private stopPowerDisconnectedIconRecovery: (() => void) | null = null
   private animationTextures: DeviceAnimationTextures | null = null
   private preparingAnimationTextures: DeviceAnimationTextures | null = null
   private animationVisible = true
@@ -454,6 +459,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.primaryOutputRoot = new Container()
     this.primaryOutputRoot.visible = false
     this.deviceLabelRoot.addChild(this.primaryOutputRoot)
+
+    this.powerDisconnectedIcon = new Sprite(Texture.EMPTY)
+    this.powerDisconnectedIcon.label = "device.powerDisconnected"
+    this.powerDisconnectedIcon.anchor.set(0.5)
+    this.powerDisconnectedIcon.roundPixels = true
+    this.powerDisconnectedIcon.tint = POWER_DISCONNECTED_ICON_TINT
+    this.powerDisconnectedIcon.visible = false
+    this.deviceLabelRoot.addChild(this.powerDisconnectedIcon)
 
     this.getRootOfLayer("entity").addChild(this.deviceLabelRoot)
 
@@ -1556,6 +1569,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   private syncDeviceLabel(layout: RenderSpriteLayout): void {
     const app = this.renderHost.workspace.app;
+    this.powerDisconnectedIcon.visible = false;
     if (this.currentSuppressedAccessoryFamily !== null) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
@@ -1586,6 +1600,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 主要产物存在 → 始终显示（不受 showDeviceIcon 设置控制）
     // AI-CORRECTION 2026-10-13: 主要产物仍不受显示设置控制；供电覆盖缺失时由断电图标优先替代。
+    // AI-CORRECTION 2026-10-15: 断电提示改为独立图标，不再替代主要产物或设备 avatar。
     const hasPrimaryOutput = primaryOutputIds !== null && primaryOutputIds.length > 0;
 
     if (!this.isTextureReady || (!showDeviceName && !showDeviceIconSetting && !hasPrimaryOutput && !showPowerDisconnected)) {
@@ -1596,7 +1611,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    const effectiveShowIcon = showPowerDisconnected || hasPrimaryOutput || showDeviceIconSetting;
+    const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
     const labelAnchorLayout = this.currentFootprintLayout ?? layout;
     const deviceName = showDeviceName ? resolveDeviceDisplayName(this.definition, app) : null;
     const labelLayout = resolveDeviceLabelLayout({
@@ -1605,7 +1620,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       showDeviceName,
       deviceName,
       useBlueprintStyle,
-      allowInlineDeviceIcon: showDeviceIconSetting && !hasPrimaryOutput && !showPowerDisconnected,
+      allowInlineDeviceIcon: showDeviceIconSetting && !hasPrimaryOutput,
       gridCellPixelSize: this.currentGridCellPixelSize,
     });
 
@@ -1613,14 +1628,23 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 处理图标区域：主要产物 或 普通设备图标
     // AI-CORRECTION 2026-10-13: 供电范围外的耗电设备优先显示红色断开插头，位置与主要产物一致，且不受仿真开关限制。
-    this.deviceIcon.tint = showPowerDisconnected ? POWER_DISCONNECTED_ICON_TINT : 0xffffff;
-    if (hasPrimaryOutput && !showPowerDisconnected) {
+    // AI-CORRECTION 2026-10-15: 黄色断开插头独立置于标签上方，avatar 与主要产物保持原有显示规则。
+    // AI-REMOVED 2026-10-15:
+    // Reason: 断电提示不应给设备 avatar 染色。
+    // Trigger: 断电时原 avatar 消失且插头偏红。
+    // Evidence: 此前 deviceIcon 同时承载 avatar 和断电纹理。
+    // Replacement: 独立的 powerDisconnectedIcon。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.deviceIcon.tint = showPowerDisconnected ? POWER_DISCONNECTED_ICON_TINT : 0xffffff;
+    if (hasPrimaryOutput) {
       this.deviceIcon.visible = false;
       this.syncPrimaryOutputSprites(primaryOutputIds, labelLayout);
-    } else if (showDeviceIconSetting || showPowerDisconnected) {
+    } else if (showDeviceIconSetting) {
       this.primaryOutputRoot.visible = false;
       this.hidePrimaryOutputSprites();
-      this.syncDeviceIconTexture(showPowerDisconnected ? POWER_DISCONNECTED_TEXTURE_KEY : undefined);
+      this.syncDeviceIconTexture();
       this.deviceIcon.x = labelLayout.icon.x;
       this.deviceIcon.y = labelLayout.icon.y;
       this.deviceIcon.width = labelLayout.icon.size;
@@ -1630,6 +1654,22 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     } else {
       this.deviceIcon.visible = false;
       this.primaryOutputRoot.visible = false;
+    }
+
+    if (showPowerDisconnected) {
+      this.loadPowerDisconnectedIconTexture();
+      const zoomRatio = labelLayout.text.fontSize / DEVICE_LABEL_FONT_SIZE;
+      const size = DEVICE_LABEL_ICON_SIZE * zoomRatio;
+      const labelTop = effectiveShowIcon
+        ? labelLayout.icon.y - labelLayout.icon.size / 2
+        : labelLayout.text.y - labelLayout.text.fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO / 2;
+      this.powerDisconnectedIcon.x = labelAnchorLayout.x + labelAnchorLayout.width / 2;
+      this.powerDisconnectedIcon.y = effectiveShowIcon || showDeviceName
+        ? labelTop - DEVICE_LABEL_GAP * zoomRatio - size / 2
+        : labelAnchorLayout.y + labelAnchorLayout.height / 2;
+      this.powerDisconnectedIcon.width = size;
+      this.powerDisconnectedIcon.height = size;
+      this.powerDisconnectedIcon.visible = this.isPowerDisconnectedIconReady;
     }
 
     if (showDeviceName) {
@@ -1687,8 +1727,37 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     })).length === 0;
   }
 
-  private syncDeviceIconTexture(resourceKey?: string): void {
-    const nextTextureKey = resourceKey ?? resolveDeviceLabelIconTextureKey(
+  private loadPowerDisconnectedIconTexture(): void {
+    if (this.powerDisconnectedIconLoadStarted) return;
+    this.powerDisconnectedIconLoadStarted = true;
+
+    const applyTexture = (texture: Texture): void => {
+      if (this.disposed) return;
+      this.powerDisconnectedIcon.texture = texture;
+      this.isPowerDisconnectedIconReady = true;
+      if (this.currentLayout !== null) this.syncDeviceLabel(this.currentLayout);
+    };
+    void this.renderHost.textureManager.getTexture(POWER_DISCONNECTED_TEXTURE_KEY).then((texture) => {
+      if (this.disposed) return;
+      if (isFallbackTexture(texture)) {
+        this.stopPowerDisconnectedIconRecovery = this.renderHost.textureManager.watchTextureRecovery(
+          POWER_DISCONNECTED_TEXTURE_KEY,
+          (recoveredTexture) => {
+            this.stopPowerDisconnectedIconRecovery = null;
+            applyTexture(recoveredTexture);
+          },
+        );
+        return;
+      }
+      applyTexture(texture);
+    }).catch(() => {
+      if (this.disposed) return;
+      this.powerDisconnectedIconLoadStarted = false;
+    });
+  }
+
+  private syncDeviceIconTexture(): void {
+    const nextTextureKey = resolveDeviceLabelIconTextureKey(
       this.definition.spriteId,
       this.renderHost.workspace.app,
     );
@@ -2558,9 +2627,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.stopBodyTextureRecovery?.()
     this.stopMaskTextureRecovery?.()
     this.stopDeviceIconRecovery?.()
+    this.stopPowerDisconnectedIconRecovery?.()
     this.stopBodyTextureRecovery = null
     this.stopMaskTextureRecovery = null
     this.stopDeviceIconRecovery = null
+    this.stopPowerDisconnectedIconRecovery = null
     this.animationLoadVersion += 1
     this.animationFrameLoadVersion += 1
     this.animationState = null

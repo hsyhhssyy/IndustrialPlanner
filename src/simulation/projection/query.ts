@@ -437,6 +437,7 @@ function resolveDeviceRuntimeStatus(options: {
   return {
     channelRecipes,
     ...(deviceSnapshot.deviceState === undefined ? {} : { deviceState: deviceSnapshot.deviceState }),
+    ...(deviceSnapshot.cultivation === undefined ? {} : { cultivation: deviceSnapshot.cultivation }),
     // AI-REMOVED 2026-07-23:
     // Reason: 设备状态不再投影已删除的分钟计量 read model。
     // Trigger: Inspector 改为直接读取真实消耗槽。

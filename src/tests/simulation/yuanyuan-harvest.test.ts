@@ -23,11 +23,12 @@ describe("缘缘庄与旧田块的真实收获入仓", () => {
       if (definition?.stateMachine === undefined) continue;
       plotIndexes.push(index);
       // 只准备观察起点；原始生长时长由Registry测试核对，最后2秒及收获由真实引擎完成。
-      const stateIndex = definition.stateMachine.states.findLastIndex(state => state.transition?.kind === "elapsed");
+      const stateIndex = definition.stateMachine.states.findLastIndex(state => state.timerDurationSeconds !== undefined);
       const stateDeviceIndex = statePrograms.findIndex(program => program.deviceId === device.id);
       expect(stateDeviceIndex).toBeGreaterThanOrEqual(0);
       checkpoint.deviceStates.indexes[stateDeviceIndex] = stateIndex;
       checkpoint.deviceStates.enteredSeconds[stateDeviceIndex] = 0;
+      checkpoint.deviceStates.timerStartedSeconds[stateDeviceIndex] = 0;
       checkpoint.deviceStates.deadlineSeconds[stateDeviceIndex] = 2;
     }
     expect(plotIndexes).toHaveLength(6);

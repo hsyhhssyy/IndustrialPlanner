@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "crop-cultivation",
+  "version": "fixture-v2",
+  "name": "田块育种与相接增产",
+  "description": "A 完整息壤覆盖；B 贴边且在息壤外；C 仅与普通 B 相接；D 仅角接 A；M 与 A 贴边但不同种。",
+  "baseId": "wuling_agricultural_land",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "gas": {
+      "id": "gas",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 104,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_xiranite",
+        "storageSlotGroups[0].slots[0].initialCount": 5,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "pylon": {
+      "id": "pylon",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 105,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "A": {
+      "id": "A",
+      "definitionId": "soil_corp_cabbage_1",
+      "position": {
+        "x": 108,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "B": {
+      "id": "B",
+      "definitionId": "soil_corp_cabbage_1",
+      "position": {
+        "x": 112,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "C": {
+      "id": "C",
+      "definitionId": "soil_corp_cabbage_1",
+      "position": {
+        "x": 116,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "D": {
+      "id": "D",
+      "definitionId": "soil_corp_cabbage_1",
+      "position": {
+        "x": 104,
+        "y": -4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "M": {
+      "id": "M",
+      "definitionId": "soil_corp_mushroom_1",
+      "position": {
+        "x": 108,
+        "y": -4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sprinkler": {
+      "id": "sprinkler",
+      "definitionId": "squirter_1",
+      "position": {
+        "x": 108,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "gas",
+    "pylon",
+    "A",
+    "B",
+    "C",
+    "D",
+    "M",
+    "sprinkler"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

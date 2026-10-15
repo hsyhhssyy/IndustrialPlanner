@@ -60,6 +60,7 @@ export type UiGroup =
 export interface EntityDefinition {
   /** 只有声明状态机的设备参与状态处理。 */
   readonly stateMachine?: DeviceStateMachineDefinition;
+  readonly cultivation?: CropCultivationDefinition;
   /** 设备定义唯一标识，如 "belt_straight_1x1" */
   id: string;
   /** i18n key，前端通过此 key 获取本地化设备名称 */
@@ -545,12 +546,41 @@ export interface DeviceStateMachineDefinition {
   readonly states: readonly DeviceStateDefinition[];
 }
 
+export interface CropCultivationDefinition {
+  readonly cropId: string;
+  readonly growingStateIds: readonly string[];
+  readonly refinedStateIds: readonly string[];
+  readonly neighborDurationSeconds: number;
+  readonly neighborBonusPerPlot: number;
+}
+
 export interface DeviceStateDefinition {
   readonly id: string;
   readonly nameKey: string;
   readonly enterRecipeId?: string;
   readonly visualKey?: string;
-  readonly transition:
-    | { readonly kind: "elapsed"; readonly durationSeconds: number; readonly nextStateId: string }
-    | { readonly kind: "recipe-completed"; readonly recipeId: string; readonly nextStateId: string };
+  /** 进入时新建计时器；继承迁移保留来源状态的计时起点和截止时间。 */
+  readonly timerDurationSeconds?: number;
+  // AI-REMOVED 2026-10-15:
+  // Reason: 单迁移无法同时监听育种完成和生长到期。
+  // Trigger: 用户要求分支状态机、继承计时及同 tick 连续迁移。
+  // Evidence: DeviceStateRuntime 原来只有一个 nextIndex。
+  // Replacement: transitions + DeviceStateTransitionDefinition
+  // Risk: Medium - 所有状态定义与消费者统一迁移。
+  // Human Review: Required
+  // Original code:
+  // readonly transition:
+  //   | { readonly kind: "elapsed"; readonly durationSeconds: number; readonly nextStateId: string }
+  //   | { readonly kind: "recipe-completed"; readonly recipeId: string; readonly nextStateId: string };
+  /** 按声明顺序选取首个满足条件的迁移。 */
+  readonly transitions: readonly DeviceStateTransitionDefinition[];
 }
+
+export type DeviceStateTransitionDefinition = (
+  | { readonly kind: "elapsed" }
+  | { readonly kind: "recipe-completed"; readonly recipeId: string }
+) & {
+  readonly nextStateId: string;
+  /** true 保留计时器；省略时按目标状态重新创建或清除。 */
+  readonly inheritTimer?: boolean;
+};

@@ -48,7 +48,7 @@ describe("农业建筑分类与普通田块摆放", () => {
     }
   });
 
-  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示二十二种田块与洒水机", () => {
+  it("放置面板和百科分类收录农业建筑，仅在农牧用地展示十九种可见田块与洒水机", () => {
     expect(ENTITY_UI_GROUP_ORDER).toContain("agriculture");
     expect(TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS).toContain("agriculture");
     act(() => { root.render(<PlacementPanel appHost={session.app} />); });
@@ -56,7 +56,11 @@ describe("农业建筑分类与普通田块摆放", () => {
       .find((candidate) => candidate.querySelector("h3")?.textContent === "农业建筑")!;
     expect(section).toBeDefined();
     // AI-CORRECTION 2026-10-15: 缘缘庄新增十二种田块，与既有十种田块及洒水机共同展示。
-    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(23);
+    // AI-CORRECTION 2026-10-15: 用户要求隐藏三种独立优质田块，当前展示十九种田块及洒水机。
+    expect(section.querySelectorAll(".placement-device-button")).toHaveLength(20);
+    for (const id of ["soil_corp_cabbage_2", "soil_corp_mushroom_2", "soil_corp_strawberry_2"]) {
+      expect(section.querySelector(`[data-ui-button-id='placement-${id}']`)).toBeNull();
+    }
     expect(section.querySelector("[data-ui-button-id='placement-squirter_1']")).not.toBeNull();
     expect(section.querySelector(".placement-panel-group-shortcut")).toBeNull();
     for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {

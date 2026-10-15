@@ -1585,6 +1585,7 @@ function areDeviceSnapshotsEqual(
   return right !== undefined
     && left.block === right.block
     && areJsonCompatibleValuesEqual(left.deviceState, right.deviceState)
+    && areJsonCompatibleValuesEqual(left.cultivation, right.cultivation)
     && areJsonCompatibleValuesEqual(left.recipe, right.recipe)
     && areJsonCompatibleValuesEqual(left.channelRecipes, right.channelRecipes)
     && areJsonCompatibleValuesEqual(left.admissionCounters, right.admissionCounters);

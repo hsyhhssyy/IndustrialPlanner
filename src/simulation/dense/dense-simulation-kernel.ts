@@ -1,3 +1,4 @@
+import { CropCultivationRuntime, type CultivationCheckpoint } from "../cultivation";
 import { compileDeviceStates, DeviceStateRuntime, type DeviceStateCheckpoint } from "../device-state";
 // AI-REMOVED 2026-10-14:
 // Reason: 几何只在环境编译器处理。
@@ -118,6 +119,7 @@ export interface DenseWarehouseStatsBucket {
 
 export interface DenseKernelCheckpoint {
   readonly deviceStates: DeviceStateCheckpoint;
+  readonly cultivation: CultivationCheckpoint;
   readonly standardTickRate: number;
   readonly tickNumber: number;
   readonly transfers: DenseKernelTransferBatch;
@@ -203,6 +205,7 @@ export class DenseSimulationKernel {
   public readonly state: DenseRuntimeState;
   private recipePrograms: DenseRecipeProgramSet;
   private readonly deviceStates: DeviceStateRuntime;
+  private readonly cultivation: CropCultivationRuntime;
   private readonly stateMachineByChannel: Int32Array;
   private readonly stateMachineByDevice: Int32Array | null;
   private readonly stateChannelIndexes: Uint32Array;
@@ -268,6 +271,7 @@ export class DenseSimulationKernel {
     this.state = new DenseRuntimeState(layout);
     this.recipePrograms = compileDenseRecipePrograms(topology, layout, registry);
     this.deviceStates = new DeviceStateRuntime(compileDeviceStates(topology, registry));
+    this.cultivation = new CropCultivationRuntime(topology, registry, this.deviceStates);
     this.stateMachineByChannel = new Int32Array(this.recipePrograms.channels.length).fill(-1);
     this.stateMachineByDevice = this.deviceStates.programs.length === 0 ? null : new Int32Array(layout.dictionary.deviceIds.length).fill(-1);
     this.stateChannelIndexes = new Uint32Array(this.deviceStates.programs.length);
@@ -512,6 +516,7 @@ export class DenseSimulationKernel {
   public createCheckpoint(): DenseKernelCheckpoint {
     return {
       deviceStates: this.deviceStates.checkpoint(),
+      cultivation: this.cultivation.checkpoint(),
       standardTickRate: this.topology.standardTickRate,
       tickNumber: this.currentTickNumber,
       transfers: cloneDenseTransfers(this.currentTickTransfers),
@@ -556,6 +561,7 @@ export class DenseSimulationKernel {
     }
     this.assertCheckpointShape(checkpoint);
     this.deviceStates.restore(checkpoint.deviceStates);
+    this.cultivation.restore(checkpoint.cultivation);
     this.currentTickNumber = checkpoint.tickNumber;
     this.currentTickTransfers = cloneDenseTransfers(checkpoint.transfers);
     this.state.slotItemIndexes.set(checkpoint.slotItemIndexes);
@@ -691,9 +697,12 @@ export class DenseSimulationKernel {
       if (nextState < 0) return;
       stateCheckpoint.indexes[index] = nextState;
       stateCheckpoint.enteredSeconds[index] = previous.deviceStates.enteredSeconds[oldIndex]!;
+      stateCheckpoint.timerStartedSeconds[index] = previous.deviceStates.timerStartedSeconds[oldIndex]!;
       stateCheckpoint.deadlineSeconds[index] = previous.deviceStates.deadlineSeconds[oldIndex]!;
     });
     this.deviceStates.restore(stateCheckpoint);
+    this.cultivation.restoreSnapshots(Math.max(0, migratedTickNumber - 1) / this.topology.standardTickRate,
+      id => resetDevices.has(id) ? undefined : previous.cultivation.snapshot(id));
     this.rebuildStateEnvironment();
     const preservedDeviceIds = new Set<string>();
     this.currentTickNumber = migratedTickNumber;
@@ -846,6 +855,7 @@ export class DenseSimulationKernel {
       recipe: firstRecipe,
       channelRecipes,
       admissionCounters: this.createAdmissionCounterSnapshots(deviceIndex),
+      cultivation: this.cultivation.snapshot(this.layout.dictionary.deviceIds[deviceIndex]!),
       ...(this.stateMachineByDevice !== null && this.stateMachineByDevice[deviceIndex]! >= 0
         ? { deviceState: this.deviceStates.snapshot(this.stateMachineByDevice[deviceIndex]!) } : {}),
     };
@@ -996,6 +1006,8 @@ export class DenseSimulationKernel {
     this.refreshPowerState(true);
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
+    this.cultivation.advance(Math.max(0, this.currentTickNumber - 1) / this.topology.standardTickRate);
+    this.flushCultivationChanges();
     this.advanceRunningRecipes();
     this.applyWaterPurifierManualOutput();
 
@@ -1005,6 +1017,8 @@ export class DenseSimulationKernel {
   private finishTick(): void {
     this.settleWaitingRecipes();
     if (this.deviceStates.programs.length > 0) this.processDeviceStates();
+    this.cultivation.refresh();
+    this.flushCultivationChanges();
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.startIdleRecipes();
@@ -1321,10 +1335,11 @@ export class DenseSimulationKernel {
         const slotIndex = this.warehouseSlotIndexesByItemIndex[output.value]!;
         if (slotIndex === DENSE_INDEX_NONE) return null;
         const storage = this.layout.slotStorageIndexes[slotIndex]!;
-        const count = this.readVirtualCount(storage, virtualCounts) + output.amount;
+        const amount = this.cultivation.outputAmount(this.layout.dictionary.deviceIds[channel.deviceIndex]!, output.amount);
+        const count = this.readVirtualCount(storage, virtualCounts) + amount;
         if (count > this.layout.slotCapacities[slotIndex]!) return null;
         virtualCounts.set(storage, count);
-        placements.push({ slotIndex, itemIndex: output.value, amount: output.amount });
+        placements.push({ slotIndex, itemIndex: output.value, amount });
       }
       return placements;
     }
@@ -2188,20 +2203,26 @@ export class DenseSimulationKernel {
     const end = this.recipePrograms.deviceChannelOffsets[deviceIndex + 1]!;
     for (let offset = start; offset < end; offset += 1) {
       const channelIndex = this.recipePrograms.deviceChannelIndexes[offset]!;
-      const reservations = this.channelReservations[channelIndex] ?? [];
-      for (const reservation of reservations) {
-        if (!reservation.ignoreStock) {
-          this.state.adjustReserved(reservation.slotIndex, -reservation.amount);
-        }
-      }
-      this.channelRecipeIndexes[channelIndex] = DENSE_INDEX_NONE;
-      this.channelProgressTicks[channelIndex] = 0;
-      this.channelStates[channelIndex] = CHANNEL_IDLE;
-      this.channelRunIds[channelIndex] = 0;
-      this.channelReservations[channelIndex] = null;
-      this.channelInputItems[channelIndex] = null;
+      this.cancelChannelRecipe(channelIndex);
     }
     this.state.dirtyDeviceIndexes.add(deviceIndex);
+  }
+
+  private cancelChannelRecipe(channelIndex: number): void {
+    const channel = this.recipePrograms.channels[channelIndex]!;
+    const reservations = this.channelReservations[channelIndex] ?? [];
+    for (const reservation of reservations) {
+      if (!reservation.ignoreStock) this.state.adjustReserved(reservation.slotIndex, -reservation.amount);
+    }
+    if (this.channelStates[channelIndex] !== CHANNEL_IDLE
+      && this.getRunningProgram(channel).environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channelIndex);
+    this.channelRecipeIndexes[channelIndex] = DENSE_INDEX_NONE;
+    this.channelProgressTicks[channelIndex] = 0;
+    this.channelStates[channelIndex] = CHANNEL_IDLE;
+    this.channelRunIds[channelIndex] = 0;
+    this.channelReservations[channelIndex] = null;
+    this.channelInputItems[channelIndex] = null;
+    this.state.dirtyDeviceIndexes.add(channel.deviceIndex);
   }
 
   private normalizeMigratedSlotAliases(): void {
@@ -3184,14 +3205,22 @@ export class DenseSimulationKernel {
 
   private processDeviceStates(): void {
     const seconds = Math.max(0, this.currentTickNumber - 1) / this.topology.standardTickRate;
-    this.deviceStates.process(seconds, isSimulationWholeSecondTick(this.currentTickNumber, this.topology.standardTickRate), (machine, previous, next) => {
+    this.deviceStates.process(seconds, (machine, previous, next) => {
+      this.cultivation.stateChanged(machine, next);
       const channel = this.recipePrograms.channels[this.stateChannelIndexes[machine]!]!;
       const oldRecipe = previous < 0 ? undefined : channel.candidates[this.stateRecipeIndexes[machine]![previous]!];
       const newRecipe = channel.candidates[this.stateRecipeIndexes[machine]![next]!];
       if (oldRecipe) this.recipePrograms.environment.demand(oldRecipe.environmentBinding, -1);
+      // 离开状态先释放本频道未完成的过程配方；同 tick 中间状态不启动配方。
+      if (previous >= 0) this.cancelChannelRecipe(channel.index);
       if (newRecipe) this.recipePrograms.environment.demand(newRecipe.environmentBinding, 1);
       this.state.dirtyDeviceIndexes.add(channel.deviceIndex);
     });
+  }
+
+  private flushCultivationChanges(): void {
+    for (const id of this.cultivation.changedDevices) this.state.dirtyDeviceIndexes.add(this.lookup.deviceIndexById.get(id)!);
+    this.cultivation.changedDevices.clear();
   }
 
   private refreshEnvironmentChannels(): void {
@@ -3241,7 +3270,7 @@ export class DenseSimulationKernel {
       }
       const machine = this.stateMachineByDevice?.[deviceIndex] ?? -1;
       const currentState = machine < 0 ? -1 : this.deviceStates.indexes[machine]!;
-      const waitingForTime = currentState >= 0 && this.stateRecipeIndexes[machine]![currentState]! < 0;
+      const waitingForTime = currentState >= 0 && Number.isFinite(this.deviceStates.deadlineSeconds[machine]!);
       this.state.setDeviceBlocked(deviceIndex, hasWaiting || (!hasRunning && !waitingForTime && hasRequestedWork));
     }
   }

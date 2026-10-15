@@ -3,6 +3,8 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 
 /** AKEData 1.5.3@10731330-8：PlantingDataTable、RewardSoilTable；基础奖励，不含施肥增产。 */
 // AI-CORRECTION 2026-10-15: 四种旧田块收获量与十二种食材田块按 1.6.3@11010254-4 对齐；新增田块独立运行，不模拟变异率。
+// AI-CORRECTION 2026-10-15: 状态使用有序 transitions，计时时长归属状态，可在分支迁移中继承。
+// AI-CORRECTION 2026-10-15: 三种普通食材田块已接入育种；按用户确认假定累计 30 秒完成，每轮重置，完成后不退化。
 export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefinition>> = {
   "soil_grass_1": {
     "initialStateId": "seedling",
@@ -13,64 +15,76 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_grass_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_grass_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 1800,
-          "nextStateId": "watering-2"
-        }
+        "timerDurationSeconds": 1800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-2"
+          }
+        ]
       },
       {
         "id": "watering-2",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_grass_1_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_1_watering",
-          "nextStateId": "growing-2"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_1_watering",
+            "nextStateId": "growing-2"
+          }
+        ]
       },
       {
         "id": "growing-2",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 1800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 1800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_grass_1_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -83,64 +97,76 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_grass_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_grass_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 1800,
-          "nextStateId": "watering-2"
-        }
+        "timerDurationSeconds": 1800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-2"
+          }
+        ]
       },
       {
         "id": "watering-2",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_grass_2_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_2_watering",
-          "nextStateId": "growing-2"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_2_watering",
+            "nextStateId": "growing-2"
+          }
+        ]
       },
       {
         "id": "growing-2",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 1800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 1800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_grass_2_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_grass_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_grass_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -153,43 +179,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_moss_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_moss_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 3600,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 3600,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_moss_1_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -202,43 +236,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_moss_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_moss_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 3600,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 3600,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_moss_2_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -251,43 +293,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_moss_3_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_3_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_3_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_moss_3_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_3_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_3_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 300,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 300,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_moss_3_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_moss_3_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_moss_3_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -300,43 +350,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_bbflower_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_bbflower_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_bbflower_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_bbflower_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_bbflower_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_bbflower_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 300,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 300,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_bbflower_1_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_bbflower_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_bbflower_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -349,43 +407,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_sp_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 43200,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 43200,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_sp_1_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -398,43 +464,51 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_sp_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 43200,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 43200,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_sp_2_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -447,85 +521,101 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_sp_3_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_3_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_3_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_3_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_3_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_3_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "watering-2"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-2"
+          }
+        ]
       },
       {
         "id": "watering-2",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_3_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_3_watering",
-          "nextStateId": "growing-2"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_3_watering",
+            "nextStateId": "growing-2"
+          }
+        ]
       },
       {
         "id": "growing-2",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "watering-3"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-3"
+          }
+        ]
       },
       {
         "id": "watering-3",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_3_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_3_watering",
-          "nextStateId": "growing-3"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_3_watering",
+            "nextStateId": "growing-3"
+          }
+        ]
       },
       {
         "id": "growing-3",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_sp_3_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_3_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_3_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -538,85 +628,101 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_sp_4_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_4_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_4_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_4_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_4_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_4_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "watering-2"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-2"
+          }
+        ]
       },
       {
         "id": "watering-2",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_4_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_4_watering",
-          "nextStateId": "growing-2"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_4_watering",
+            "nextStateId": "growing-2"
+          }
+        ]
       },
       {
         "id": "growing-2",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "watering-3"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "watering-3"
+          }
+        ]
       },
       {
         "id": "watering-3",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_sp_4_watering",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_4_watering",
-          "nextStateId": "growing-3"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_4_watering",
+            "nextStateId": "growing-3"
+          }
+        ]
       },
       {
         "id": "growing-3",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "mature-irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 14400,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 14400,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_sp_4_harvest",
         "visualKey": undefined,
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_sp_4_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_sp_4_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -629,42 +735,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_bean_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_bean_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_bean_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_bean_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_bean_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_bean_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_bean_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_bean_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_bean_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -677,42 +791,80 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_cabbage_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_cabbage_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_1_refinement",
+            "nextStateId": "growing-refined",
+            "inheritTimer": true
+          },
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ],
+        "enterRecipeId": "r_soil_corp_cabbage_1_refinement"
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_cabbage_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
+      },
+      {
+        "id": "growing-refined",
+        "nameKey": "registry.deviceState.growing_refined",
+        "visualKey": "irrigated",
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest-refined"
+          }
+        ]
+      },
+      {
+        "id": "harvest-refined",
+        "nameKey": "registry.deviceState.harvest_refined",
+        "enterRecipeId": "r_soil_corp_cabbage_1_harvest_refined",
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_1_harvest_refined",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -725,42 +877,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_cabbage_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_cabbage_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_cabbage_2_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_cabbage_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_cabbage_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -773,42 +933,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_canolaflower_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_canolaflower_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_canolaflower_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_canolaflower_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_canolaflower_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_canolaflower_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_canolaflower_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_canolaflower_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_canolaflower_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -821,42 +989,80 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_mushroom_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_mushroom_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_1_refinement",
+            "nextStateId": "growing-refined",
+            "inheritTimer": true
+          },
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ],
+        "enterRecipeId": "r_soil_corp_mushroom_1_refinement"
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_mushroom_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
+      },
+      {
+        "id": "growing-refined",
+        "nameKey": "registry.deviceState.growing_refined",
+        "visualKey": "irrigated",
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest-refined"
+          }
+        ]
+      },
+      {
+        "id": "harvest-refined",
+        "nameKey": "registry.deviceState.harvest_refined",
+        "enterRecipeId": "r_soil_corp_mushroom_1_harvest_refined",
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_1_harvest_refined",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -869,42 +1075,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_mushroom_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_mushroom_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_mushroom_2_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_mushroom_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_mushroom_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -917,42 +1131,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_potato_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_potato_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_potato_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_potato_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_potato_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_potato_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_potato_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_potato_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_potato_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -965,42 +1187,80 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_strawberry_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_strawberry_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_1_refinement",
+            "nextStateId": "growing-refined",
+            "inheritTimer": true
+          },
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ],
+        "enterRecipeId": "r_soil_corp_strawberry_1_refinement"
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_strawberry_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
+      },
+      {
+        "id": "growing-refined",
+        "nameKey": "registry.deviceState.growing_refined",
+        "visualKey": "irrigated",
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest-refined"
+          }
+        ]
+      },
+      {
+        "id": "harvest-refined",
+        "nameKey": "registry.deviceState.harvest_refined",
+        "enterRecipeId": "r_soil_corp_strawberry_1_harvest_refined",
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_1_harvest_refined",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -1013,42 +1273,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_strawberry_2_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_2_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_2_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_strawberry_2_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_2_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_2_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_strawberry_2_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_strawberry_2_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_strawberry_2_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -1061,42 +1329,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_sugarcane_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_sugarcane_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_sugarcane_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_sugarcane_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_sugarcane_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_sugarcane_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_sugarcane_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_sugarcane_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_sugarcane_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -1109,42 +1385,50 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_tomato_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_tomato_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_tomato_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_tomato_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_tomato_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_tomato_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_tomato_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_tomato_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_tomato_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
   },
@@ -1157,45 +1441,53 @@ export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefi
         "nameKey": "registry.deviceState.seedling",
         "enterRecipeId": "r_soil_corp_whitegourd_1_seedling",
         "visualKey": "empty",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_whitegourd_1_seedling",
-          "nextStateId": "watering-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_whitegourd_1_seedling",
+            "nextStateId": "watering-1"
+          }
+        ]
       },
       {
         "id": "watering-1",
         "nameKey": "registry.deviceState.watering",
         "enterRecipeId": "r_soil_corp_whitegourd_1_watering",
         "visualKey": "seedling",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_whitegourd_1_watering",
-          "nextStateId": "growing-1"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_whitegourd_1_watering",
+            "nextStateId": "growing-1"
+          }
+        ]
       },
       {
         "id": "growing-1",
         "nameKey": "registry.deviceState.growing",
         "visualKey": "irrigated",
-        "transition": {
-          "kind": "elapsed",
-          "durationSeconds": 28800,
-          "nextStateId": "harvest"
-        }
+        "timerDurationSeconds": 28800,
+        "transitions": [
+          {
+            "kind": "elapsed",
+            "nextStateId": "harvest"
+          }
+        ]
       },
       {
         "id": "harvest",
         "nameKey": "registry.deviceState.harvest",
         "enterRecipeId": "r_soil_corp_whitegourd_1_harvest",
-        "transition": {
-          "kind": "recipe-completed",
-          "recipeId": "r_soil_corp_whitegourd_1_harvest",
-          "nextStateId": "seedling"
-        }
+        "transitions": [
+          {
+            "kind": "recipe-completed",
+            "recipeId": "r_soil_corp_whitegourd_1_harvest",
+            "nextStateId": "seedling"
+          }
+        ]
       }
     ]
-  },
+  }
 };
 
 /** 育苗和收获保留各 2 秒操作时间；环境浇水累计 30 秒，可暂停。 */
@@ -2298,4 +2590,121 @@ export const CROP_RECIPES: readonly RecipeDefinition[] = [
     ],
     "outputTarget": "warehouse"
   },
+  {
+    "id": "r_soil_corp_cabbage_1_refinement",
+    "nameKey": "registry.recipe.crop_refinement.name",
+    "durationSeconds": 30,
+    "inputs": [],
+    "outputs": [],
+    "machineId": "soil_corp_cabbage_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "requiredEnvironmentAnyOf": [
+      "item_gas_xiranite"
+    ]
+  },
+  {
+    "id": "r_soil_corp_cabbage_1_harvest_refined",
+    "nameKey": "registry.recipe.crop_harvest.name",
+    "durationSeconds": 2,
+    "inputs": [],
+    "outputs": [
+      {
+        "itemId": "item_corp_cabbage_1",
+        "amount": 30
+      },
+      {
+        "itemId": "item_corp_cabbage_2",
+        "amount": 30
+      }
+    ],
+    "machineId": "soil_corp_cabbage_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "outputTarget": "warehouse"
+  },
+  {
+    "id": "r_soil_corp_mushroom_1_refinement",
+    "nameKey": "registry.recipe.crop_refinement.name",
+    "durationSeconds": 30,
+    "inputs": [],
+    "outputs": [],
+    "machineId": "soil_corp_mushroom_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "requiredEnvironmentAnyOf": [
+      "item_gas_xiranite"
+    ]
+  },
+  {
+    "id": "r_soil_corp_mushroom_1_harvest_refined",
+    "nameKey": "registry.recipe.crop_harvest.name",
+    "durationSeconds": 2,
+    "inputs": [],
+    "outputs": [
+      {
+        "itemId": "item_corp_mushroom_1",
+        "amount": 30
+      },
+      {
+        "itemId": "item_corp_mushroom_2",
+        "amount": 30
+      }
+    ],
+    "machineId": "soil_corp_mushroom_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "outputTarget": "warehouse"
+  },
+  {
+    "id": "r_soil_corp_strawberry_1_refinement",
+    "nameKey": "registry.recipe.crop_refinement.name",
+    "durationSeconds": 30,
+    "inputs": [],
+    "outputs": [],
+    "machineId": "soil_corp_strawberry_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "requiredEnvironmentAnyOf": [
+      "item_gas_xiranite"
+    ]
+  },
+  {
+    "id": "r_soil_corp_strawberry_1_harvest_refined",
+    "nameKey": "registry.recipe.crop_harvest.name",
+    "durationSeconds": 2,
+    "inputs": [],
+    "outputs": [
+      {
+        "itemId": "item_corp_strawberry_1",
+        "amount": 30
+      },
+      {
+        "itemId": "item_corp_strawberry_2",
+        "amount": 30
+      }
+    ],
+    "machineId": "soil_corp_strawberry_1",
+    "recipeType": "immediate-consume",
+    "tags": [
+      "ToolboxHidden",
+      "StateControlled"
+    ],
+    "outputTarget": "warehouse"
+  }
 ];

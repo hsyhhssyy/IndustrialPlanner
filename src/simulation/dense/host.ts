@@ -1654,6 +1654,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
 
   private async drainPlaybackAdvances(): Promise<void> {
     while (this.state.runningState === "start") {
+      // 拓扑刷新正在等待本轮播放结束；新批次必须让出，不能再反向等待刷新队列。
+      if (this.topologyRefreshQueue !== null) return;
       const currentTickNumber = this.projection?.tickNumber ?? 0;
       let targetTickNumber = this.playbackTargetTickNumber;
       if (targetTickNumber <= currentTickNumber) return;
@@ -1683,6 +1685,8 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
         advancedTicks,
         wallTimeMs: this.lastAdvanceExecutionMs,
       });
+      // 推进期间可能收到刷新请求；调速也复用该队列，须先结束本轮再由后续帧继续。
+      if (this.topologyRefreshQueue !== null) return;
       await this.applyPendingDenseStandardTickRate();
     }
   }
