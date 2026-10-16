@@ -6,7 +6,7 @@ import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognit
 import { collectPlannerItemBoundaries, PlannerItemRules, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { BlueprintPlannerItemPolicies } from "./blueprint-planner-item-policies";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toJS } from "mobx";
+import { reaction, toJS } from "mobx";
 import { observer } from "mobx-react-lite";
 // AI-REMOVED 2026-10-13: 文件类型移入 readPlannerTaskFile，主界面不再解析。
 // Trigger: 一次性 Worker 导入；Replacement: planner-task-file.ts；Risk: Low；Human Review: Required
@@ -181,6 +181,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
+  const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
+  // 暂停要等 Worker 结算及检查点保存完成；窗口隐藏期间也跟随任务解锁清除提示。
+  useEffect(() => reaction(() => planner?.state.activeTaskId, () => setPausingTaskId(null)), [planner]);
   // AI-REMOVED 2026-10-13:
   // Reason: 四项优化作为页面内配置，取消首次开始时的额外弹窗状态。
   // Trigger: 用户确认 A 方案，要求与摆放规则组成一体。
@@ -211,6 +214,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   // Original code:
   // const selectedId = controller.viewTaskId;
   const progress = selectedId === null ? null : planner?.queries.getTask(selectedId) ?? null;
+  const pausing = pausingTaskId !== null && pausingTaskId === selectedId && pausingTaskId === controller.activeTaskId;
   const randomSeed = selectedId === null ? null : planner?.queries.getRandomSeed(selectedId) ?? null;
   const result = useMemo(() => {
     void revision;
@@ -488,7 +492,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const elapsed = formatPlannerElapsed(progress?.elapsedMs ?? 0, [t("eda.elapsedDay"), t("eda.elapsedHour"), t("eda.elapsedMinute"), t("eda.elapsedSecond")]);
   const rate = progress?.status !== "running" ? 0 : recentRate?.taskId === progress.taskId
     && recentRate.roundStart === progress.evaluatedProposals - progress.roundEvaluatedProposals ? recentRate.rate : null;
-  const statusLabel = (status: string) => t(status === "running" ? "eda.running" : status === "saving" ? "eda.saving"
+  const statusLabel = (status: string, taskId: string) => t(pausing && taskId === pausingTaskId ? "eda.pausing"
+    : status === "running" ? "eda.running" : status === "saving" ? "eda.saving"
     : status === "failed" || status === "save-failed" ? "eda.failed" : status === "completed" ? "eda.saved" : "eda.paused");
   return <DialogShell dialogKey="blueprint-planner" dialogState={controller.dialogState}
     title={t("eda.title")} titleId="blueprint-planner-title" closeTitle={t("action.close")}
@@ -536,7 +541,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             <strong title={task.name}>{task.name}</strong>
             <span className={styles.taskMeta}>
               <span className={styles.taskCategory}>{t(task.categoryKey)}</span>
-              <span className={styles.taskStatus}>{statusLabel(task.status)}</span>
+              <span className={styles.taskStatus}>{statusLabel(task.status, task.taskId)}</span>
             </span>
             <time dateTime={new Date(task.startedAt).toISOString()}>{task.timeLabel}</time>
           </button>)}
@@ -635,7 +640,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           </> : null}
           {progress !== null ? <section className={styles.progress} aria-live="polite">
             <div className={styles.statistics}>
-              <span>{statusLabel(progress.status)}</span>
+              <span>{statusLabel(progress.status, progress.taskId)}</span>
               {randomSeed !== null ? <span>{t("eda.randomSeed")} <strong>{randomSeed}</strong></span> : null}
               <span>{t("eda.elapsed")} <strong>{elapsed}</strong></span>
               {progress.phase !== "identification" ? <span>{t("eda.candidates")} <strong>{progress.candidateCount}</strong></span> : null}
@@ -649,7 +654,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <span>{t("eda.totalProposals")} <strong>{progress.evaluatedProposals.toLocaleString()}</strong>{" "}
                 <span className={styles.proposalRate} title={t("eda.averageRate")}>({plannerProposalRate(progress.evaluatedProposals, progress.elapsedMs).toLocaleString()} {t("eda.proposalsPerSecond")})</span></span>
             </div> : null}
-            <p>{progress.message}</p>
+            <p>{pausing ? t("eda.notifyingWorkers") : progress.message}</p>
             {progress.initialArea !== undefined || progress.areaHistory?.length ? <AreaCurve points={progress.areaHistory ?? []} initialArea={progress.initialArea}
               proposals={progress.evaluatedProposals} label={t("eda.areaCurve")}
               xLabel={`${t("eda.totalProposals")}${t("eda.logScale")}`} yLabel={t("eda.area")}
@@ -704,7 +709,12 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 setFileBusy(true);
                 try { await controller.duplicateTask(); } finally { setFileBusy(false); }
               })}>{t("eda.replan")}</button> : null}
-            {progress?.status === "running" ? <button type="button" onClick={() => act(() => planner?.actions.cancel(progress.taskId))}>{t("eda.pause")}</button> : null}
+            {progress !== null && (progress.status === "running" || pausing) ? <button type="button" disabled={pausing} onClick={() => act(() => {
+              if (!planner || pausing) return;
+              setPausingTaskId(progress.taskId);
+              try { planner.actions.cancel(progress.taskId); }
+              catch (failure) { setPausingTaskId(null); throw failure; }
+            })}>{t(pausing ? "eda.pausing" : "eda.pause")}</button> : null}
             {progress !== null && plan !== null && !busy ? <button type="button" disabled={!validRoundSettings || anyBusy || invalidWarehouseSupply}
               onClick={() => act(async () => {
                 if (!planner || busy || anyBusy) return;

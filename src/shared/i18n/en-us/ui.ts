@@ -50,6 +50,8 @@ const UI: Record<string, string> = {
     "eda.chooseBoundaryItem": "Select transported item",
     "eda.preview": "Preview blueprint",
     "eda.pause": "Pause",
+    "eda.pausing": "Pausing",
+    "eda.notifyingWorkers": "Notifying all Workers",
     "eda.running": "Running",
     "eda.saving": "Saving",
     "eda.saved": "Saved",

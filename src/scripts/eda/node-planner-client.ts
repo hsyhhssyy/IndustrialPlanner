@@ -1,4 +1,5 @@
 import { Worker } from "node:worker_threads";
+import { URL as NodeURL } from "node:url";
 import type { BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { PlannerSearchOptions } from "@/blueprint-planner/search-types";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
@@ -14,7 +15,8 @@ export class NodePlannerClient {
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, search?: PlannerSearchOptions,
     update?: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, signal?: AbortSignal): Promise<PlannerCandidate> {
     if (signal?.aborted) return Promise.reject(new DOMException("计算已暂停", "AbortError"));
-    const worker = this.worker ??= new Worker(new URL("./node-worker.mjs", import.meta.url), {
+    // Node 执行器显式使用文件 URL，避免 jsdom 的浏览器构建转换将入口改成 HTTP URL。
+    const worker = this.worker ??= new Worker(new NodeURL("./node-worker.mjs", import.meta.url), {
       resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 },
     });
     const id = ++this.sequence;

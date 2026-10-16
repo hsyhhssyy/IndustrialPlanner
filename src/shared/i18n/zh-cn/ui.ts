@@ -50,6 +50,8 @@ const UI: Record<string, string> = {
     "eda.chooseBoundaryItem": "选择运送物品",
     "eda.preview": "预览蓝图",
     "eda.pause": "暂停计算",
+    "eda.pausing": "正在暂停",
+    "eda.notifyingWorkers": "正在通知各个Worker",
     "eda.running": "计算中",
     "eda.saving": "保存中",
     "eda.saved": "已保存",

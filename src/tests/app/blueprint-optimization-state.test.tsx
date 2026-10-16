@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
 import { toJS } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createAppHost } from "@/app/host/app-host";
@@ -11,6 +12,7 @@ import { listBlueprintDirectory, readBlueprintRecord, saveBlueprintDocument } fr
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, selectWithLabel, settleTestDom } from "../helpers/react-test-dom";
+import plant from "../blueprint-planner/fixtures/plant-preload.json" with { type: "json" };
 
 beforeEach(() => {
   vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
@@ -19,6 +21,78 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
 });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+
+it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重开与续算不残留提示", async () => {
+  const session = new PlannerBatchSession();
+  const app = createAppHost(session.workspace);
+  let releaseSave = () => {};
+  const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
+  let holdSave = false, waitingForSave = false, workerStarted = false;
+  const planner = createBlueprintPlannerHost(session.workspace, {
+    storage: { load: async () => [], delete: async () => {}, save: async file => {
+      if (holdSave && file.progress.status !== "running") { waitingForSave = true; await saveGate; }
+    } },
+    worker: {
+      build: (...args) => {
+        workerStarted = true;
+        return session.planner.build(args[0], args[1], args[2], { maxEvaluations: args[3] }, args[5], args[4]);
+      },
+      dispose: () => {},
+    },
+  });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | null = null;
+  try {
+    await planner.whenSettled();
+    const request = { ...plant.request, options: { ...toJS(controller.options), evaluationsPerRound: 100_000_000, concurrency: 1, gpu: false } };
+    const id = await planner.actions.importTask(planner.queries.exportDraft(request));
+    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    controller.open();
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    await clickTestElement(buttonWithText(view.container, "开始规划"));
+    // Worker 的异步进度会触发 React 更新；等待真实运行状态并在 act 内完成 DOM 提交。
+    await act(async () => {
+      await vi.waitFor(() => {
+        const progress = planner.queries.getTask(id);
+        expect(progress?.status, progress?.message ?? undefined).toBe("running");
+        expect(workerStarted).toBe(true);
+      });
+    });
+    holdSave = true;
+    await clickTestElement(buttonWithText(view.container, "暂停计算"));
+    expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+    expect(view.container.textContent).toContain("正在通知各个Worker");
+    await vi.waitFor(() => expect(waitingForSave).toBe(true));
+    await settleTestDom();
+    expect(session.planner.threadId).not.toBeNull();
+    expect(planner.queries.getTask(id)?.status).not.toBe("running");
+    expect(planner.state.activeTaskId).toBe(id);
+    expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+    expect(buttonWithText(view.container, "导入任务").disabled).toBe(true);
+    await clickTestElement(buttonWithText(view.container, "关闭"));
+    await act(async () => { controller.open(); });
+    expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+    expect(view.container.textContent).toContain("正在通知各个Worker");
+    await act(async () => { releaseSave(); await planner.whenSettled(); });
+    expect(view.container.textContent).not.toContain("正在通知各个Worker");
+    expect(view.container.textContent).not.toContain("正在暂停");
+    expect(buttonWithText(view.container, "继续规划").disabled).toBe(false);
+    expect(buttonWithText(view.container, "导入任务").disabled).toBe(false);
+    await clickTestElement(buttonWithText(view.container, "继续规划"));
+    expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
+    await clickTestElement(buttonWithText(view.container, "暂停计算"));
+    await clickTestElement(buttonWithText(view.container, "关闭"));
+    await act(async () => { await planner.whenSettled(); controller.open(); });
+    await clickTestElement(buttonWithText(view.container, "继续规划"));
+    expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
+    expect(view.container.textContent).not.toContain("正在通知各个Worker");
+    await clickTestElement(buttonWithText(view.container, "暂停计算"));
+    await act(async () => { await planner.whenSettled(); });
+  } finally {
+    releaseSave();
+    await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose();
+  }
+}, 30_000);
 
 it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导入后恢复配置", async () => {
   const session = new PlannerBatchSession();
