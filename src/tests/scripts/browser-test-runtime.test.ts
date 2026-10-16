@@ -51,6 +51,8 @@ it("命令忽略 SIGTERM 时仍有界终止，并完整保留输出", async () =
       process.on('SIGTERM',()=>{}); console.log('started'); setInterval(()=>{},1000);
     `], "timeout.log", 500)).rejects.toThrow("超时");
     expect(await readFile(resolve(round.directory, "timeout.log"), "utf8")).toContain("started");
+    expect(await readFile(resolve(round.directory, "timeout.log"), "utf8")).toContain("[command failure]");
+    expect(await readFile(resolve(round.directory, "timeout.log"), "utf8")).toContain("超时");
   } finally { await round.close(); }
 });
 

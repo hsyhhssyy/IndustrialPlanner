@@ -19,7 +19,7 @@ import { plannerRequestKey } from "./search-seed";
 import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
 import { migratePlannerCandidate } from "./task-migration";
-import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { assertPlannerRandomState } from "./search-random";
@@ -319,8 +319,9 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
         checkpoint.savedBlueprintId = file.checkpoint.savedBlueprintId;
         checkpoint.result = { taskId: file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
           metrics: candidate.metrics, connections: candidate.connections,
+          // 2026-10-16：迁移成果也按净产率交付，避免把同物品外部输入计为新增产出。
           measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
-            .map(probe => ({ itemId: probe.id, perMinute: probe.perMinute })), warmupSeconds: candidate.execution.warmupSeconds,
+            .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })), warmupSeconds: candidate.execution.warmupSeconds,
           observationSeconds: report.observationSeconds, elapsedMs: file.progress.elapsedMs };
       }
     }

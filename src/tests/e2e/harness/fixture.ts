@@ -187,7 +187,8 @@ export class ManagedCli {
         "async page => { await page.__finishCanvasLockAudit?.(); }"], "canvas-lock-audit.log", 15_000);
     } catch (error) { errors.push(error); }
     if (this.tracing) {
-      try { await this.round.command("playwright-cli", [`-s=${this.session}`, "tracing-stop"], "trace-stop.log", 15_000); }
+      // 2026-10-16：live trace 停止需排空写入队列，与原生 context 的 trace 收尾使用相同的有界预算。
+      try { await this.round.command("playwright-cli", [`-s=${this.session}`, "tracing-stop"], "trace-stop.log", 30_000); }
       catch (error) { this.cleanupFailed = true; errors.push(error); }
     }
     if (errors.length) throw new AggregateError(errors, "CLI 取证失败");

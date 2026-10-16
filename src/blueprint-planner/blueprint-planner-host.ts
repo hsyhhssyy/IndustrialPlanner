@@ -35,7 +35,7 @@ import { PlannerWorkerClient } from "./worker-client";
 import type { PlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
 import { comparePlannerRanks } from "./quality";
-import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets } from "./verification";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
 import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./search-random";
 import { nextPlannerStrategy } from "./strategy-schedule";
@@ -609,8 +609,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
           metrics: candidate.metrics, connections: candidate.connections,
           measuredOutputs: report.probes.filter(probe => task.file.request.plan.targets.some(target => target.itemId === probe.id))
-            .map(probe => ({ itemId: probe.id, perMinute: probe.perMinute
-              - (task.file.request.blueprintSource ? report.probes.find(entry => entry.id === `input:${probe.id}`)?.perMinute ?? 0 : 0) })),
+            .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(task.file.request, report, probe.id) })),
           warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) };
         publish(task, { bestArea: candidate.metrics.area,
           areaHistory: oldArea === null || candidate.metrics.area < oldArea
@@ -2215,8 +2214,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
               result: candidate && report ? { taskId, blueprint: candidate.execution.blueprint, folderId: null,
                 metrics: candidate.metrics, connections: candidate.connections,
                 measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
-                  .map(probe => ({ itemId: probe.id, perMinute: probe.perMinute
-                    - (file.request.blueprintSource ? report.probes.find(entry => entry.id === `input:${probe.id}`)?.perMinute ?? 0 : 0) })),
+                  .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })),
                 warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: 0 } : null },
               progress: { ...file.progress, initialArea: candidate?.metrics.area, bestArea: candidate?.metrics.area ?? null,
                 areaHistory: candidate ? [{ evaluatedProposals: 0, bestArea: candidate.metrics.area }] : [],

@@ -69,3 +69,19 @@ for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "deskto
     });
   }
 }
+
+test("trace 收尾超过普通命令清理预算时仍完整停止并释放会话", async ({ browserSession }) => {
+  const cli = await browserSession.openCli(SCREEN_PROFILES.find(profile => profile.name === "desktop")!);
+  expect(await cli.runJson(`async page => {
+    await page.setContent('<button type="button">记录动作</button>');
+    await page.getByRole('button').click();
+    const tracing = page.context().tracing;
+    const stop = tracing.stop.bind(tracing);
+    // 只注入收尾延迟；实际 trace 停止、文件刷写和会话清理仍由真实 CLI 与 fixture 完成。
+    tracing.stop = async (...args) => {
+      await page.waitForTimeout(16_000);
+      return stop(...args);
+    };
+    return { ready: true };
+  }`, "slow-trace-stop.log")).toEqual({ ready: true });
+});

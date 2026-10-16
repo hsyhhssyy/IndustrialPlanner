@@ -34,6 +34,42 @@ function setup(engineKind: "legacy" | "dense-v2" = "dense-v2") {
 }
 
 describe("原蓝图识别与受约束优化", () => {
+  it("同物品输入输出的旧任务迁移、复制与再次导入保持真实净产率", async () => {
+    const env = setup();
+    const blueprint = loadBlueprintFromFile(`${directory}plant-cycle-with-transit.schema7.json`);
+    const original = structuredClone(blueprint);
+    try {
+      const boundaries = (await env.planner.actions.inspectBlueprint(blueprint, [])).map(boundary =>
+        boundary.entityId.startsWith("net-pass-") ? { ...boundary, itemId: "item_plant_moss_3" } : boundary);
+      const id = await env.planner.actions.createBlueprintTask({ blueprint, boundaries, activeActivityIds: [] }, options);
+      await env.planner.whenSettled();
+      await env.planner.actions.identifyBlueprint(id);
+      const file = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry);
+      const outputs = [{ itemId: "item_plant_moss_3", perMinute: 30 }];
+      expect(file.request.plan.targets).toEqual(outputs);
+      const migrated = await restorePlannerTaskFile({ ...file, algorithmVersion: "before-net-output-migration" }, env.workspace.registry,
+        request => env.simulation.actions.runBlueprint(request));
+      const report = migrated.checkpoint.best!.report;
+      expect(report.engineKind).toBe("dense-v2");
+      expect(report.probes.find(probe => probe.id === "item_plant_moss_3")?.perMinute).toBe(60);
+      expect(report.probes.find(probe => probe.id === "input:item_plant_moss_3")?.perMinute).toBe(30);
+      expect(migrated.checkpoint.result!.measuredOutputs).toEqual(outputs);
+      expect(meetsProductionTargets({ ...migrated.request, plan: { ...migrated.request.plan,
+        targets: [{ itemId: "item_plant_moss_3", perMinute: 45 }] } }, report)).toBe(false);
+      const imported = await env.planner.actions.importTask(migrated);
+      const copied = await env.planner.actions.duplicateTask(imported);
+      expect(env.planner.queries.getResult(copied)?.measuredOutputs).toEqual(outputs);
+      const reimported = await env.planner.actions.importTask(env.planner.queries.exportTask(copied));
+      expect(env.planner.queries.getResult(reimported)?.measuredOutputs).toEqual(outputs);
+      expect(blueprint).toEqual(original);
+      const success = `.temp/eda/success/net-output-migration-${Date.now()}`;
+      await mkdir(success, { recursive: true });
+      await Promise.all([writeFile(`${success}/input.json`, JSON.stringify(migrated.request)),
+        writeFile(`${success}/blueprint.json`, JSON.stringify(migrated.checkpoint.result!.blueprint)),
+        writeFile(`${success}/report.json`, JSON.stringify({ report, outputs: migrated.checkpoint.result!.measuredOutputs }))]);
+    } finally { env.dispose(); }
+  }, 60_000);
+
   it("优化开关独立约束换口、供料、物流展开和边界设施保留", async () => {
     const env = setup(), client = new NodePlannerClient();
     try {

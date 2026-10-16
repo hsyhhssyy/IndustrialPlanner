@@ -9,6 +9,13 @@ import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import type { PlannerSupplyAudit } from "./supply-audit";
 import { meetsStashSubmission } from "./stash-submission";
 
+/** 原图任务按净产率交付；识别、验收、复制和迁移使用同一输入扣除规则。 */
+export function plannerOutputPerMinute(request: Pick<BlueprintPlannerRequest, "blueprintSource">,
+  report: SimulationBlueprintRunReport, itemId: string): number {
+  return (report.probes.find(probe => probe.id === itemId)?.perMinute ?? 0)
+    - (request.blueprintSource ? report.probes.find(probe => probe.id === `input:${itemId}`)?.perMinute ?? 0 : 0);
+}
+
 export function meetsOperatingLimits(audit: PlannerSupplyAudit, report: SimulationBlueprintRunReport): boolean {
   return (audit.startupProduction ?? []).every(limit => {
     const measured = report.probes.find(probe => probe.id === `startup:${limit.entityId}`)?.perMinute;
@@ -29,8 +36,7 @@ export function meetsProductionTargets(request: BlueprintPlannerRequest, report:
   if (report.status !== "completed" || report.observationSeconds <= 0 || !meetsStashSubmission(report)
     || report.diagnostics.some((entry) => entry.severity === "error")
     || report.deviceStatuses.some((entry) => entry.status === "not-in-power-net" || entry.status === "no-power")) return false;
-  return request.plan.targets.every((target) => (report.probes.find((probe) => probe.id === target.itemId)?.perMinute ?? 0)
-    - (request.blueprintSource ? report.probes.find(probe => probe.id === `input:${target.itemId}`)?.perMinute ?? 0 : 0) + 1e-6 >= target.perMinute);
+  return request.plan.targets.every(target => plannerOutputPerMinute(request, report, target.itemId) + 1e-6 >= target.perMinute);
 }
 
 

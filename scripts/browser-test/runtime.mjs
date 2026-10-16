@@ -140,6 +140,10 @@ export class BrowserRound {
       });
       if (expired || code !== 0) throw new Error(`${executable} ${expired ? "超时" : `退出 ${code}`}；日志：${log}\n${output.slice(-6000)}`);
       return executable === "playwright-cli" ? cliResult(output) : output;
+    } catch (error) {
+      // 2026-10-16：Playwright 报告不会展开嵌套 AggregateError，命令自身日志必须保留失败原因。
+      writes = writes.then(() => file.write(`\n[command failure] ${String(error)}\n`));
+      throw error;
     } finally {
       clearTimeout(timer); clearTimeout(forceTimer);
       try { await writes; } finally { await file.close(); }

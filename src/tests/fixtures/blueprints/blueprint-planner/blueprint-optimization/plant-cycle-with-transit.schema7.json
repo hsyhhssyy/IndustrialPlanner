@@ -1,0 +1,639 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "eda-plant-cycle-with-transit",
+  "version": "fixture-v1",
+  "name": "同物品输入输出净产率迁移",
+  "description": "闭环产线净产出 30/min；额外直通支路输入输出同物品各 30/min。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "eda-device-0": {
+      "id": "eda-device-0",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_seedcol_moss_seed_from_moss_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_3",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 5
+      },
+      "tags": []
+    },
+    "eda-device-1": {
+      "id": "eda-device-1",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 5,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 1
+      },
+      "tags": []
+    },
+    "eda-device-2": {
+      "id": "eda-device-2",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 4,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    "eda-output-3": {
+      "id": "eda-output-3",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_3",
+        "storageSlotGroups[1].slots[0].lock": "item_plant_moss_3",
+        "storageSlotGroups[2].slots[0].lock": "item_plant_moss_3",
+        "storageSlotGroups[3].slots[0].lock": "item_plant_moss_3",
+        "storageSlotGroups[4].slots[0].lock": "item_plant_moss_3",
+        "storageSlotGroups[5].slots[0].lock": "item_plant_moss_3",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "eda-power-0": {
+      "id": "eda-power-0",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 0,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "eda-route-0": {
+      "id": "eda-route-0",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 180,
+      "position": {
+        "x": 3,
+        "y": 13
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-1": {
+      "id": "eda-route-1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-2": {
+      "id": "eda-route-2",
+      "definitionId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-3": {
+      "id": "eda-route-3",
+      "definitionId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 4,
+        "y": 6
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-4": {
+      "id": "eda-route-4",
+      "definitionId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "position": {
+        "x": 5,
+        "y": 6
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-5": {
+      "id": "eda-route-5",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 3,
+        "y": 6
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-6": {
+      "id": "eda-route-6",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 90,
+      "position": {
+        "x": 3,
+        "y": 7
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-7": {
+      "id": "eda-route-7",
+      "definitionId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 3,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-8": {
+      "id": "eda-route-8",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 4,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-9": {
+      "id": "eda-route-9",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 5,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-10": {
+      "id": "eda-route-10",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 6,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-11": {
+      "id": "eda-route-11",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 7,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-12": {
+      "id": "eda-route-12",
+      "definitionId": "belt_straight_1x1",
+      "rotation": 0,
+      "position": {
+        "x": 8,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-13": {
+      "id": "eda-route-13",
+      "definitionId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "position": {
+        "x": 9,
+        "y": 8
+      },
+      "config": {},
+      "tags": []
+    },
+    "eda-route-14": {
+      "id": "eda-route-14",
+      "definitionId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "position": {
+        "x": 9,
+        "y": 9
+      },
+      "config": {},
+      "tags": []
+    },
+    "net-pass-0": {
+      "id": "net-pass-0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-1": {
+      "id": "net-pass-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-2": {
+      "id": "net-pass-2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-3": {
+      "id": "net-pass-3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-4": {
+      "id": "net-pass-4",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-5": {
+      "id": "net-pass-5",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-6": {
+      "id": "net-pass-6",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-7": {
+      "id": "net-pass-7",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-8": {
+      "id": "net-pass-8",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "net-pass-9": {
+      "id": "net-pass-9",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "eda-device-0",
+    "eda-device-1",
+    "eda-device-2",
+    "eda-output-3",
+    "eda-power-0",
+    "eda-route-0",
+    "eda-route-1",
+    "eda-route-2",
+    "eda-route-3",
+    "eda-route-4",
+    "eda-route-5",
+    "eda-route-6",
+    "eda-route-7",
+    "eda-route-8",
+    "eda-route-9",
+    "eda-route-10",
+    "eda-route-11",
+    "eda-route-12",
+    "eda-route-13",
+    "eda-route-14",
+    "net-pass-0",
+    "net-pass-1",
+    "net-pass-2",
+    "net-pass-3",
+    "net-pass-4",
+    "net-pass-5",
+    "net-pass-6",
+    "net-pass-7",
+    "net-pass-8",
+    "net-pass-9"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-10-03T16:48:56.428Z",
+  "updatedAt": "2026-10-03T16:48:56.428Z"
+}

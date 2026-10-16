@@ -10,6 +10,7 @@ import type { PlannerCandidate } from "./candidate";
 import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import { capturePlannerSeed } from "./search-seed";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
+import { plannerOutputPerMinute } from "./verification";
 
 /** 设备数量与端口身份来自原图，流量来自实测；不借产线求解器重建主体设备。 */
 export function identifyBlueprintNetwork(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
@@ -20,7 +21,7 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
   const graph = assertBlueprintRecognition(registry, input, report), analysis = report.analysis!;
   assertBlueprintSteadyState(registry, report, execution.probes);
   const targets = report.probes.filter(probe => execution.probes.find(entry => entry.id === probe.id)?.direction === "input")
-    .map(probe => ({ itemId: probe.id, perMinute: probe.perMinute - (report.probes.find(entry => entry.id === `input:${probe.id}`)?.perMinute ?? 0) }))
+    .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute({ blueprintSource: originalInput }, report, probe.id) }))
     .filter(target => target.perMinute > 1e-6);
   if (!targets.length) throw new Error("出口没有持续净产出，无法建立产率基线。");
   const request: BlueprintPlannerRequest = { blueprintSource: structuredClone(originalInput), options: { ...options, solidOutput: "warehouse", itemPolicies: [] },
