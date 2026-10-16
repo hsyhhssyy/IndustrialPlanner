@@ -89,22 +89,25 @@ describe("AKEData 1.6 缘缘庄生产数据", () => {
     expect(new Set(orders).size).toBe(22);
   });
 
-  it("共用芽针全部状态素材、蓝图方框及avatar，列表图标保持独立路径", async () => {
+  it("使用独立原生状态素材与高度，蓝图方框和avatar保持共用几何", async () => {
     const reference = registry.queries.findEntityDefinition("soil_grass_2")!;
     const effects = JSON.parse(await readFile("public/3d-top-view/port-effects/manifest.json", "utf8"));
     const mapping = JSON.parse(await readFile("resources/building-top-view-v15.json", "utf8"));
     for (const raw of evidence.plots) {
       const plot = registry.queries.findEntityDefinition(raw.id)!;
-      expect(plot.spriteId).toBe(reference.spriteId);
+      expect(plot.spriteId).toBe(raw.id);
+      expect(plot.spriteAnimation).toEqual({ closeIdleMode: "loop" });
       expect(plot.iconPath).toBe(`device-icons/item_port_${raw.id}.webp`);
-      expect(effects.definitions[raw.id]).toBe(effects.definitions.soil_grass_2);
-      expect(mapping.entries.find((entry: { entityId: string }) => entry.entityId === raw.id)).toMatchObject({ spriteId: reference.spriteId, sourcePath: "soil_grass_2/top" });
+      expect(effects.definitions[raw.id]).toBe(`${raw.id}/top`);
+      expect(mapping.entries.find((entry: { entityId: string }) => entry.entityId === raw.id)).toMatchObject({ spriteId: raw.id, sourcePath: `${raw.id}/top`, animated: true });
       for (const state of plot.stateMachine!.states) {
         const top = resolveDeviceBodyPresentation(plot, null, { forceBlueprint: false, allowAnimation: false, visualKey: state.visualKey });
-        const expected = resolveDeviceBodyPresentation(reference, null, { forceBlueprint: false, allowAnimation: false, visualKey: state.visualKey });
-        expect(top).toEqual(expected);
+        const expected = `device-sprite-${raw.id}${state.visualKey ? `--${state.visualKey}` : ""}`;
+        expect(top.bodyTextureKey).toBe(expected);
         expect(resolveDeviceBodyPresentation(plot, null, { forceBlueprint: true, allowAnimation: false, visualKey: state.visualKey }).bodyTextureKey)
-          .toBe("blueprint-sprite-soil_grass_2");
+          .toBe(`blueprint-sprite-${raw.id}`);
+        expect(await readFile(`public/blueprint-view/sprites/${raw.id}.webp`))
+          .toEqual(await readFile(`public/blueprint-view/sprites/${reference.spriteId}.webp`));
       }
     }
     expect(await readFile("public/blueprint-view/sprites/soil_grass_2.webp"))

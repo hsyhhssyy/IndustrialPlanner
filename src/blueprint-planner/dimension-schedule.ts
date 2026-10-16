@@ -37,7 +37,8 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
   let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength).map(({ width, height }) => ({
     width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
-  })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
+  // 2026-10-16：相同形状权重优先领取接近面积上限的外框，避免首轮先跑被 70 格截短的小面积。
+  })).sort((a, b) => b.weight - a.weight || b.area - a.area || a.width - b.width || a.height - b.height);
   if (warehousePorts) {
     if (![warehousePorts.pickupLength, warehousePorts.fixedStorageCount].every(value => Number.isSafeInteger(value) && value >= 0)
       || !Number.isSafeInteger(warehousePorts.storageLength) || warehousePorts.storageLength <= 0

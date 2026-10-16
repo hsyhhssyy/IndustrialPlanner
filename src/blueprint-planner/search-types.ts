@@ -14,6 +14,8 @@ export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "con
 /** 订正 2026-09-22：生产界面现在同时配置每个独立搜索的局部评估次数，并由 Host 映射到 maxEvaluations。 */
 /** 订正 2026-09-30：任务化界面改为整轮提案总预算；Host 将剩余额度映射到每次搜索的 maxEvaluations，无头客户端共用此计数。 */
 export interface PlannerSearchOptions {
+  /** Host 的真实首解阶段；不能用本轮是否带种子推断，否则优化阶段的独立重启会再次预留通道。 */
+  readonly firstSolution?: boolean;
   /** 调度层已抽样的策略；与布局内核的随机流分离，Worker 不重新决定策略。 */
   readonly attemptStrategy?: PlannerAttemptStrategy;
   /** baseline 保留旧搜索组织用于同预算对照；规则修复和最终验收始终共用。 */

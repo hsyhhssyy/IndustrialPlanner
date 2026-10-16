@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 
 describe("用户设计的包围盒尺寸分片", () => {
+  it("相同权重先分配大外框，不让 70 格边长截断造成的小面积抢占首轮", () => {
+    const shards = partitionPlannerDimensions(4900, { width: 5, height: 5 }, undefined, true);
+    expect(shards[0]![0]).toMatchObject({ width: 70, height: 70, area: 4900 });
+    const first = shards.map(shard => shard[0]!);
+    for (let i = 1; i < first.length; i++) expect(first[i]!.area).toBeLessThanOrEqual(first[i - 1]!.area);
+    expect(new Set(shards.flat().map(value => value.width)).size).toBe(66);
+  });
+
   it("完整枚举严格小于当前面积的整数前沿，每个尺寸唯一归属，权重始终为正", () => {
     const shards = partitionPlannerDimensions(400, { width: 3, height: 3 });
     const dimensions = shards.flat();

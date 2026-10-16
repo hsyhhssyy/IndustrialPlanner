@@ -1,56 +1,122 @@
 {
   "soil_grass_1": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling",
-    "mature-irrigated": "soil_1_mature_water"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "mature-irrigated": "mature_water"
   },
   "soil_grass_2": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling",
-    "mature-irrigated": "soil_1_mature_water"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "mature-irrigated": "mature_water"
   },
   "soil_moss_1": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_moss_2": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_moss_3": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_bbflower_1": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_sp_1": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_sp_2": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   },
   "soil_sp_3": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling",
-    "mature-irrigated": "soil_1_mature_water"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "mature-irrigated": "mature_water"
   },
   "soil_sp_4": {
-    "irrigated": "soil_1_seedling_water",
-    "empty": "soil_1_empty",
-    "seedling": "soil_1_seedling",
-    "mature-irrigated": "soil_1_mature_water"
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "mature-irrigated": "mature_water"
+  },
+  "soil_corp_bean_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_cabbage_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "refined-irrigated": "variant_water",
+    "refined": "variant"
+  },
+  "soil_corp_cabbage_2": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_canolaflower_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_mushroom_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "refined-irrigated": "variant_water",
+    "refined": "variant"
+  },
+  "soil_corp_mushroom_2": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_potato_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_strawberry_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water",
+    "refined-irrigated": "variant_water",
+    "refined": "variant"
+  },
+  "soil_corp_strawberry_2": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_sugarcane_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_tomato_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
+  },
+  "soil_corp_whitegourd_1": {
+    "empty": "empty",
+    "seedling": "seedling",
+    "irrigated": "seedling_water"
   }
 }

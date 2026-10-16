@@ -27,8 +27,14 @@ it("批次不超次数预算，小预算和超能力布局由 CPU 承担", () =>
     expect(batch.chains).toBeLessThanOrEqual(32);
   }
   expect(plannerLayoutBatchSize(24, 324, 20_000)).toEqual({ chains: 32, steps: 625 });
-  expect(plannerLayoutBatchSize(65, 100, 2000)).toBeNull();
-  expect(plannerLayoutBatchSize(24, 1025, 2000)).toBeNull();
+  // 2026-10-16：扩展大任务硬件能力，超出 128 节点或 70×70 才回退 CPU。
+  expect(plannerLayoutBatchSize(129, 100, 2000)).toBeNull();
+  expect(plannerLayoutBatchSize(24, 4901, 2000)).toBeNull();
+  for (const [nodes, cells] of [[65, 1025], [128, 4900]]) {
+    const batch = plannerLayoutBatchSize(nodes!, cells!, 512)!;
+    expect(batch).not.toBeNull();
+    expect(batch.chains * batch.steps).toBeLessThanOrEqual(512);
+  }
   expect(plannerLayoutBatchSize(24, 324, 31)).toBeNull();
 });
 

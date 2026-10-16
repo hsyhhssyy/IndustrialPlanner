@@ -8,6 +8,7 @@
   "compactionProbability": 0.25,
   "routeFeedbackWeight": 6,
   "initialClearance": 0,
+  "routingClearance": 0,
   "separateOperatingSupply": 1,
   "fluidGroupSize": 3
 }

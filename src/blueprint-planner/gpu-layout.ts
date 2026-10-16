@@ -10,7 +10,7 @@ export class PlannerGpuLayout implements PlannerLayoutBackend {
   private device: GPUDevice | null = null;
   private initialization: Promise<void> | null = null;
   private stopped = false;
-  private readonly pipelines = new Map<number, GPUComputePipeline>();
+  private readonly pipelines = new Map<string, GPUComputePipeline>();
 
   get available(): boolean { return !this.stopped; }
 
@@ -33,7 +33,8 @@ export class PlannerGpuLayout implements PlannerLayoutBackend {
   private async initialize(): Promise<void> {
     const adapter = typeof navigator === "undefined" ? null : await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" });
     if (!adapter || adapter.info.isFallbackAdapter) throw new Error("硬件 WebGPU 不可用");
-    const device = await adapter.requestDevice({ requiredFeatures: adapter.features.has("timestamp-query") ? ["timestamp-query"] : [] });
+    const device = await adapter.requestDevice({ requiredFeatures: adapter.features.has("timestamp-query") ? ["timestamp-query"] : [],
+      requiredLimits: { maxComputeWorkgroupStorageSize: Math.min(32768, adapter.limits.maxComputeWorkgroupStorageSize) } });
     if (this.stopped) { device.destroy(); return; }
     this.device = device;
     void device.lost.then(info => this.stop(`WebGPU device lost: ${info.message}`));
@@ -43,11 +44,19 @@ export class PlannerGpuLayout implements PlannerLayoutBackend {
   private async run(input: PlannerLayoutBatch): Promise<PlannerLayoutBatchResult> {
     const device = this.device!, [nodes, , width, height, steps] = input.parameters;
     const capacity = Math.ceil(width! * height! / 128) * 128;
-    let pipeline = this.pipelines.get(capacity);
+    const nodeCapacity = nodes! > 64 ? 128 : 64;
+    const pipelineKey = `${nodeCapacity}/${capacity}`;
+    if (capacity * 4 + nodeCapacity * 48 + 352 > device.limits.maxComputeWorkgroupStorageSize) {
+      throw new Error("当前 GPU 工作组存储不足以容纳布局");
+    }
+    let pipeline = this.pipelines.get(pipelineKey);
     if (!pipeline) {
-      const module = device.createShaderModule({ code: shader.replace("array<atomic<u32>,4900>", `array<atomic<u32>,${capacity}>`) });
+      const module = device.createShaderModule({ code: shader.replace("array<atomic<u32>,4900>", `array<atomic<u32>,${capacity}>`)
+        .replaceAll("array<vec3<i32>,64>", `array<vec3<i32>,${nodeCapacity}>`)
+        .replaceAll("array<i32,64>", `array<i32,${nodeCapacity}>`)
+        .replaceAll("array<vec2<i32>,64>", `array<vec2<i32>,${nodeCapacity}>`) });
       pipeline = await device.createComputePipelineAsync({ layout: "auto", compute: { module, entryPoint: "main" } });
-      this.pipelines.set(capacity, pipeline);
+      this.pipelines.set(pipelineKey, pipeline);
     }
     if (this.stopped) throw new Error("GPU 已停止");
     const buffers: GPUBuffer[] = [];

@@ -8,11 +8,13 @@ import type { SimulationDeviceOperatingStatus } from "@/domain/simulation";
 /** 每个可见设备独立保存播放进度；目标反转只在完整 idle 轮次结束后提交。 */
 /** AI-CORRECTION 2026-09-18: 播放目标改为设备展示 status；传统四阶段只是其中一种 manifest 路由。 */
 /** AI-CORRECTION 2026-10-15: 显式声明 immediate 的素材直接切换稳定片段；其他素材保留完整轮次与过渡规则。 */
+/** AI-CORRECTION 2026-10-16: 状态外观 visualKey 可选择同一播放器的稳定片段，不增加调度或逐帧仿真查询。 */
 export class DeviceAnimationState {
   private readonly definition: NormalizedDeviceSpriteAnimationDefinition;
   private currentStage: DeviceSpriteAnimationPhase;
   private stageElapsedMs = 0;
   private desiredStatus: SimulationDeviceOperatingStatus;
+  private desiredVisualKey: string | null = null;
   private holdingStableClip = false;
   private readonly savedElapsedMs = new Map<DeviceSpriteAnimationPhase, number>();
 
@@ -20,11 +22,12 @@ export class DeviceAnimationState {
     definition: NormalizedDeviceSpriteAnimationDefinition,
     desiredStatus: SimulationDeviceOperatingStatus,
     stable = false,
+    visualKey: string | null = null,
   ) {
     this.definition = definition;
     this.currentStage = definition.playback.fallbackClip;
     this.desiredStatus = desiredStatus;
-    this.reset(desiredStatus, stable);
+    this.reset(desiredStatus, stable, visualKey);
   }
 
   public get stage(): DeviceSpriteAnimationPhase {
@@ -51,9 +54,10 @@ export class DeviceAnimationState {
     return left;
   }
 
-  public setStatus(status: SimulationDeviceOperatingStatus): void {
-    if (this.desiredStatus === status) return;
+  public setStatus(status: SimulationDeviceOperatingStatus, visualKey: string | null = null): void {
+    if (this.desiredStatus === status && this.desiredVisualKey === visualKey) return;
     this.desiredStatus = status;
+    this.desiredVisualKey = visualKey;
     if (this.definition.playback.statusChangeMode === "immediate") {
       this.commitStableTarget();
       return;
@@ -63,10 +67,11 @@ export class DeviceAnimationState {
   }
 
   /** seek 落点或离屏恢复可直接收敛到稳定阶段；普通启用仍完整播放开启序列。 */
-  public reset(status: SimulationDeviceOperatingStatus, stable = false): void {
+  public reset(status: SimulationDeviceOperatingStatus, stable = false, visualKey: string | null = null): void {
     this.desiredStatus = status;
+    this.desiredVisualKey = visualKey;
     this.savedElapsedMs.clear();
-    const target = resolveDeviceSpriteAnimationStatusClip(this.definition, status);
+    const target = resolveDeviceSpriteAnimationStatusClip(this.definition, status, visualKey);
     const openTransition = this.definition.playback.openTransitionClip;
     this.currentStage = !stable && target === this.definition.playback.statusClips.normal
       && openTransition !== null
@@ -124,7 +129,7 @@ export class DeviceAnimationState {
         this.enterClip(this.definition.playback.fallbackClip);
         continue;
       }
-      const target = resolveDeviceSpriteAnimationStatusClip(this.definition, this.desiredStatus);
+      const target = resolveDeviceSpriteAnimationStatusClip(this.definition, this.desiredStatus, this.desiredVisualKey);
       if (target !== this.currentStage) {
         this.commitStableTarget();
         continue;
@@ -143,7 +148,7 @@ export class DeviceAnimationState {
   }
 
   private commitStableTarget(): void {
-    const target = resolveDeviceSpriteAnimationStatusClip(this.definition, this.desiredStatus);
+    const target = resolveDeviceSpriteAnimationStatusClip(this.definition, this.desiredStatus, this.desiredVisualKey);
     if (target === this.currentStage) return;
     const normalClip = this.definition.playback.statusClips.normal;
     if (this.currentStage === this.definition.playback.fallbackClip && target === normalClip

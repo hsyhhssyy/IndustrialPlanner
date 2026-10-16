@@ -203,6 +203,12 @@ export class PlannerLayoutKernel {
 
       for (let j = 0; j < i; j++) {
         const [a, b] = this.point(j);
+        const gap = Math.min(this.dim(i, 75), this.dim(j, 75));
+        if (gap > 0 && !this.input.overlaps[i * this.n + j]) {
+          const dx = Math.max(0, x - a - this.dim(j, 0), a - x - w);
+          const dy = Math.max(0, y - b - this.dim(j, 1), b - y - h);
+          cost += Math.max(0, gap - dx) * Math.max(0, gap - dy) * 500;
+        }
         if (!this.input.overlaps[i * this.n + j]) cost += Math.max(0, Math.min(x + w, a + this.dim(j, 0)) - Math.max(x, a))
           * Math.max(0, Math.min(y + h, b + this.dim(j, 1)) - Math.max(y, b)) * 10000;
         const range = this.dim(i, 41);

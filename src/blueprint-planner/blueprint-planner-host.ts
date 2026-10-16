@@ -1220,7 +1220,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           task.liveEvaluations.set(shard.index, count);
           live(phase, message);
         }, selection.seed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
-        point.blueprintBaseline?.candidate.seed, undefined, random.strategy);
+        point.blueprintBaseline?.candidate.seed, undefined, random.strategy, !point.best && !task.file.request.blueprintSource);
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null,
           signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search);
       } catch (error) {

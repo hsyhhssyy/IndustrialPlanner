@@ -2,8 +2,9 @@ import { expect, it } from "vitest";
 import { initialPlannerArea, plannerAttemptBudget } from "@/blueprint-planner/search-policy";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions } from "@/blueprint-planner/dimension-schedule";
 
-it.each([[150, 450, 5000], [265, 795, 16000], [300, 900, 20000], [474, 1422, 50000], [600, 1800, 80000],
-  [900, 2700, 100000], [1200, 3600, 100000], [2000, 4900, 100000]])(
+// 2026-10-16：首解策略采用经 Windows 任务验证的五倍线性起点；单尺寸预算保持设备规模语义。
+it.each([[150, 750, 5000], [265, 1325, 16000], [300, 1500, 20000], [474, 2370, 50000], [600, 3000, 80000],
+  [765, 3825, 100000], [900, 4500, 100000], [1200, 4900, 100000], [2000, 4900, 100000]])(
   "设备占地 %i 的首解面积为 %i、单尺寸预算为 %i", (devices, area, budget) => {
     expect(initialPlannerArea(devices)).toBe(area);
     expect(plannerAttemptBudget(devices)).toBe(budget);

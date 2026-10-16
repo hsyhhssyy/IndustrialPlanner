@@ -16,6 +16,26 @@ import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import nugget from "./fixtures/pyrrolite-nugget.json";
 import powerNoSpace from "./fixtures/power-no-space.json";
 
+it("首解主分支预留通道，独立重启与取得首解后的搜索关闭通道偏好", async () => {
+  const client = new NodePlannerClient();
+  try {
+    for (const [firstSolution, restart, clearance] of [[true, false, 2], [true, true, 0], [false, false, 0]] as const) {
+      let statistics: PlannerSearchStatistics | undefined;
+      try {
+        statistics = (await client.build(nugget.request as BlueprintPlannerRequest, 0, 30_000,
+          { firstSolution, maxEvaluations: 1, targetOutline: { width: 70, height: 70 },
+            attemptStrategy: { ...plannerAttemptStrategy(0), restart } })).search;
+      } catch (error) {
+        expect(error).toBeInstanceOf(PlannerCandidateError);
+        statistics = (error as PlannerCandidateError).search;
+      }
+      expect(statistics?.profile?.routingClearance).toBe(clearance);
+      expect(statistics?.evaluations).toBeLessThanOrEqual(1);
+      expect(statistics?.experiments).toEqual(clearance ? ["constraint-repair", "power-dedup", "constrained-routing"] : ["power-dedup"]);
+    }
+  } finally { await client.dispose(); }
+}, 150_000);
+
 it("约束修复遵守总提案预算与边界接入，最终几何仍由共同评分核验", async () => {
   const registry = createRegistryContract();
   const fixed = createPlainNode(registry, "unloader_1", "warehouse-port", "supply");

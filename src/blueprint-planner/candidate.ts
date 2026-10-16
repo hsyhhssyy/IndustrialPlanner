@@ -89,8 +89,11 @@ export async function createPlannerCandidate(
   // 每四轮的独立重启轮换供水结构；三种结构避免与 32 分片步长锁定，阶段重排保持本轮选择。
   // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
   // AI-CORRECTION 2026-10-11：三种供水结构按尺寸内独立打乱的轮转表选择，不再依赖 variant。
+  // 2026-10-16：首解优先局部直连和容量合箱，减少跨区分流；独立重启袋保留四分之一的原策略探索。
+  const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
   options = { ...options, conduitTopology: options.conduitTopology
-    ?? attemptStrategy.conduitTopology };
+    ?? (firstSolution ? "local" : attemptStrategy.conduitTopology),
+  stashPackingVariant: options.stashPackingVariant ?? (firstSolution ? 0 : undefined) };
   // 切片额度和诊断开关不改变搜索身份；输入、种子、外框、策略或拓扑变化必须重新准备。
   const session = sessions && options.sessionKey ? { store: sessions, fingerprint: JSON.stringify([
     "production", plannerRequestKey(request), variant,
@@ -239,16 +242,20 @@ async function createPlannerAttempt(
   const checkBudget = () => { reportEvaluations(readEvaluations()); assertBudget(); };
   const diagnosticStarted = performance.now();
   const attemptStrategy = options.attemptStrategy!;
+  const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   checkBudget();
   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
     // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
-    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+    ?? (firstSolution ? ["constraint-repair", "power-dedup", "constrained-routing"]
+      : options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
-  const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}), ...options.profile });
+  const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}),
+    ...(firstSolution ? { areaWeight: 0, congestionWeight: 2, overflowWeight: 300, initialClearance: 2,
+      routingClearance: 2, compactionProbability: 0, fluidGroupSize: 1 } : {}), ...options.profile });
   let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {

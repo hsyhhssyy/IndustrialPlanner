@@ -66,20 +66,1992 @@
     "soil_sp_3": "soil_sp_3/top",
     "soil_sp_4": "soil_sp_4/top",
     "squirter_1": "squirter_1/top",
-    "soil_corp_bean_1": "soil_grass_2/top",
-    "soil_corp_cabbage_1": "soil_grass_2/top",
-    "soil_corp_cabbage_2": "soil_grass_2/top",
-    "soil_corp_canolaflower_1": "soil_grass_2/top",
-    "soil_corp_mushroom_1": "soil_grass_2/top",
-    "soil_corp_mushroom_2": "soil_grass_2/top",
-    "soil_corp_potato_1": "soil_grass_2/top",
-    "soil_corp_strawberry_1": "soil_grass_2/top",
-    "soil_corp_strawberry_2": "soil_grass_2/top",
-    "soil_corp_sugarcane_1": "soil_grass_2/top",
-    "soil_corp_tomato_1": "soil_grass_2/top",
-    "soil_corp_whitegourd_1": "soil_grass_2/top"
+    "soil_corp_bean_1": "soil_corp_bean_1/top",
+    "soil_corp_cabbage_1": "soil_corp_cabbage_1/top",
+    "soil_corp_cabbage_2": "soil_corp_cabbage_2/top",
+    "soil_corp_canolaflower_1": "soil_corp_canolaflower_1/top",
+    "soil_corp_mushroom_1": "soil_corp_mushroom_1/top",
+    "soil_corp_mushroom_2": "soil_corp_mushroom_2/top",
+    "soil_corp_potato_1": "soil_corp_potato_1/top",
+    "soil_corp_strawberry_1": "soil_corp_strawberry_1/top",
+    "soil_corp_strawberry_2": "soil_corp_strawberry_2/top",
+    "soil_corp_sugarcane_1": "soil_corp_sugarcane_1/top",
+    "soil_corp_tomato_1": "soil_corp_tomato_1/top",
+    "soil_corp_whitegourd_1": "soil_corp_whitegourd_1/top"
   },
   "views": {
+    "soil_grass_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_grass_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_grass_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_grass_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.021580226719379425,
+          "max": 1.610123872756958,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:mature-irrigated": "mature"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_grass_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_grass_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_grass_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_grass_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.017693419009447098,
+          "max": 1.4605145454406738,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:mature-irrigated": "mature"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_moss_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_moss_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_moss_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_moss_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.054030612111091614,
+          "max": 1.18094801902771,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_moss_1/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_moss_1/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.054030612111091614,
+          "max": 1.18094801902771,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_moss_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_moss_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_moss_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_moss_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0008408660651184618,
+          "max": 1.5302897691726685,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_moss_2/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_moss_2/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0008408660651184618,
+          "max": 1.5302897691726685,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_moss_3/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_moss_3/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_moss_3/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_moss_3/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.022480422630906105,
+          "max": 1.1522407531738281,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_moss_3/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_moss_3/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.022480422630906105,
+          "max": 1.1522407531738281,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_bbflower_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_bbflower_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_bbflower_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_bbflower_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.014157700352370739,
+          "max": 1.1584583520889282,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_bbflower_1/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0013527593109756708,
+          "max": 0.7149952054023743,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_bbflower_1/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.014157700352370739,
+          "max": 1.1584583520889282,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_sp_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_sp_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_sp_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0073475828394293785,
+          "max": 0.6669807434082031,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_sp_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.008707704022526741,
+          "max": 1.384534239768982,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_sp_1/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0073475828394293785,
+          "max": 0.6669807434082031,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_sp_1/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.008707704022526741,
+          "max": 1.384534239768982,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_sp_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_sp_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -1.862645149230957e-9,
+          "max": 0.22508344054222107,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_sp_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0005666583310812712,
+          "max": 0.6128416657447815,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_sp_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.000779816706199199,
+          "max": 1.4909182786941528,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling_water": {
+          "file": "buildings/soil_sp_2/top/occlusion/height_seedling_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0005666583310812712,
+          "max": 0.6128416657447815,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature_water": {
+          "file": "buildings/soil_sp_2/top/occlusion/height_mature_water.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.000779816706199199,
+          "max": 1.4909182786941528,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling_water",
+        "mature_water": "mature_water",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling_water"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_sp_3/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_sp_3/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_sp_3/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.008624137379229069,
+          "max": 0.3153899013996124,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_sp_3/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0209751408547163,
+          "max": 0.6465991139411926,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:mature-irrigated": "mature"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_sp_4/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_sp_4/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_sp_4/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.00487643014639616,
+          "max": 0.35417255759239197,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_sp_4/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0010818247683346272,
+          "max": 1.1557306051254272,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:mature-irrigated": "mature"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_bean_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_bean_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_bean_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.04727143049240112,
+          "max": 1.8457090854644775,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_bean_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.048502374440431595,
+          "max": 1.8457090854644775,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_cabbage_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_cabbage_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_cabbage_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_cabbage_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.04379928484559059,
+          "max": 0.43732699751853943,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "variant": {
+          "file": "buildings/soil_corp_cabbage_1/top/occlusion/height_variant.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.05912903696298599,
+          "max": 0.5903914570808411,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "variant": "variant",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "variant_water": "variant",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:refined-irrigated": "variant",
+        "state:refined": "variant"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_cabbage_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_cabbage_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_cabbage_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_cabbage_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.05912903696298599,
+          "max": 0.5903914570808411,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_canolaflower_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_canolaflower_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_canolaflower_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_canolaflower_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.008076476864516735,
+          "max": 1.1075997352600098,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_mushroom_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_mushroom_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_mushroom_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.09745747596025467,
+          "max": 0.46720090508461,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_mushroom_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.09745751321315765,
+          "max": 0.7157257795333862,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "variant": {
+          "file": "buildings/soil_corp_mushroom_1/top/occlusion/height_variant.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.09745751321315765,
+          "max": 1.2917954921722412,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "variant": "variant",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "variant_water": "variant",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:refined-irrigated": "variant",
+        "state:refined": "variant"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_mushroom_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_mushroom_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_mushroom_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.09745747596025467,
+          "max": 0.46720090508461,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_mushroom_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.09745751321315765,
+          "max": 1.2917954921722412,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_potato_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_potato_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_potato_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_potato_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.028500720858573914,
+          "max": 1.0260944366455078,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_strawberry_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_strawberry_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_strawberry_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_strawberry_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.010026363655924797,
+          "max": 1.3804196119308472,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "variant": {
+          "file": "buildings/soil_corp_strawberry_1/top/occlusion/height_variant.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.03787895664572716,
+          "max": 1.2970649003982544,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "variant": "variant",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "variant_water": "variant",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling",
+        "state:refined-irrigated": "variant",
+        "state:refined": "variant"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_strawberry_2/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_strawberry_2/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_strawberry_2/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_strawberry_2/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.03787895664572716,
+          "max": 1.2970649003982544,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_sugarcane_1/top": {
+      "footprint": {
+        "left": 1,
+        "top": 1,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_sugarcane_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 384,
+          "height": 384,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            192,
+            192
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_sugarcane_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 384,
+          "height": 384,
+          "min": -0.0009018331184051931,
+          "max": 0.4766634702682495,
+          "pivot": [
+            192,
+            192
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_sugarcane_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 384,
+          "height": 384,
+          "min": -0.1268075853586197,
+          "max": 5.888808250427246,
+          "pivot": [
+            192,
+            192
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_tomato_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_tomato_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_tomato_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.04058472067117691,
+          "max": 1.684248924255371,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_tomato_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.04058470577001572,
+          "max": 1.8149518966674805,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
+    "soil_corp_whitegourd_1/top": {
+      "footprint": {
+        "left": 0,
+        "top": 0,
+        "width": 4,
+        "height": 4,
+        "source": "FactoryBuildingTable.range"
+      },
+      "origin": [
+        2,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "empty": {
+          "file": "buildings/soil_corp_whitegourd_1/top/occlusion/height_empty.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": 0,
+          "max": 0.19824226200580597,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "seedling": {
+          "file": "buildings/soil_corp_whitegourd_1/top/occlusion/height_seedling.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.04727143049240112,
+          "max": 1.8457090854644775,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        },
+        "mature": {
+          "file": "buildings/soil_corp_whitegourd_1/top/occlusion/height_mature.webp.rgba.bin",
+          "width": 256,
+          "height": 256,
+          "min": -0.0485018752515316,
+          "max": 1.8457094430923462,
+          "pivot": [
+            128,
+            128
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "mature",
+        "empty": "empty",
+        "seedling": "seedling",
+        "mature": "mature",
+        "seedling_water": "seedling",
+        "mature_water": "mature",
+        "state:empty": "empty",
+        "state:seedling": "seedling",
+        "state:irrigated": "seedling"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
     "squirter_1/top": {
       "footprint": {
         "left": 0,
@@ -138,1320 +2110,6 @@
           }
         ]
       },
-      "rings": []
-    },
-    "soil_grass_1/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.021580226719379425,
-          "max": 1.610123872756958,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_grass_1/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.021580226719379425,
-          "max": 1.610123872756958,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling",
-        "state:mature-irrigated": "soil_1_mature"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_grass_2/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.017693419009447098,
-          "max": 1.4605145454406738,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_grass_2/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.017693419009447098,
-          "max": 1.4605145454406738,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling",
-        "state:mature-irrigated": "soil_1_mature"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_moss_1/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.054030612111091614,
-          "max": 1.18094801902771,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_moss_1/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.054030612111091614,
-          "max": 1.18094801902771,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_moss_2/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0008408660651184618,
-          "max": 1.5302897691726685,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_moss_2/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0008408660651184618,
-          "max": 1.5302897691726685,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_moss_3/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.022480422630906105,
-          "max": 1.1522407531738281,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_moss_3/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.022480422630906105,
-          "max": 1.1522407531738281,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_bbflower_1/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.014157700352370739,
-          "max": 1.1584583520889282,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0013527593109756708,
-          "max": 0.7149952054023743,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_bbflower_1/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.014157700352370739,
-          "max": 1.1584583520889282,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_sp_1/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0073475828394293785,
-          "max": 0.6669807434082031,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.008707704022526741,
-          "max": 1.384534239768982,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0073475828394293785,
-          "max": 0.6669807434082031,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_sp_1/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.008707704022526741,
-          "max": 1.384534239768982,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_sp_2/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0005666583310812712,
-          "max": 0.6128416657447815,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.000779816706199199,
-          "max": 1.4909182786941528,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -1.862645149230957e-9,
-          "max": 0.22508344054222107,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0005666583310812712,
-          "max": 0.6128416657447815,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_sp_2/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.000779816706199199,
-          "max": 1.4909182786941528,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_sp_3/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.008624137379229069,
-          "max": 0.3153899013996124,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0209751408547163,
-          "max": 0.6465991139411926,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.008624137379229069,
-          "max": 0.3153899013996124,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_sp_3/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0209751408547163,
-          "max": 0.6465991139411926,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling",
-        "state:mature-irrigated": "soil_1_mature"
-      },
-      "epsilon": 0.001,
-      "variants": {},
-      "rings": []
-    },
-    "soil_sp_4/top": {
-      "footprint": {
-        "left": 0,
-        "top": 0,
-        "width": 4,
-        "height": 4,
-        "source": "FactoryBuildingTable.range"
-      },
-      "origin": [
-        2,
-        2
-      ],
-      "coordinateSpace": "project-reflected-source",
-      "fields": {
-        "soil_0_empty": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_0_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_seedling": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_0_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.00487643014639616,
-          "max": 0.35417255759239197,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_0_mature": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_0_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0010818247683346272,
-          "max": 1.1557306051254272,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_empty": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_1_empty.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -2.3283064365386963e-10,
-          "max": 0.19824226200580597,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_seedling": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_1_seedling.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.00487643014639616,
-          "max": 0.35417255759239197,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        },
-        "soil_1_mature": {
-          "file": "buildings/soil_sp_4/top/occlusion/height_soil_1_mature.webp.rgba.bin",
-          "width": 256,
-          "height": 256,
-          "min": -0.0010818247683346272,
-          "max": 1.1557306051254272,
-          "pivot": [
-            128,
-            128
-          ],
-          "center": [
-            0,
-            0
-          ],
-          "pixelsPerCell": 64
-        }
-      },
-      "stateMapping": {
-        "default": "soil_1_mature",
-        "soil_0_empty": "soil_0_empty",
-        "soil_0_seedling": "soil_0_seedling",
-        "soil_0_mature": "soil_0_mature",
-        "soil_1_empty": "soil_1_empty",
-        "soil_1_seedling": "soil_1_seedling",
-        "soil_1_mature": "soil_1_mature",
-        "soil_0_seedling_water": "soil_0_seedling",
-        "soil_0_mature_water": "soil_0_mature",
-        "soil_1_seedling_water": "soil_1_seedling",
-        "soil_1_mature_water": "soil_1_mature",
-        "state:irrigated": "soil_1_seedling",
-        "state:empty": "soil_1_empty",
-        "state:seedling": "soil_1_seedling",
-        "state:mature-irrigated": "soil_1_mature"
-      },
-      "epsilon": 0.001,
-      "variants": {},
       "rings": []
     },
     "dismantler_1/top": {

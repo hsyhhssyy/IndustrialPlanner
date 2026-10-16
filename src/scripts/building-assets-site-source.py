@@ -434,6 +434,7 @@ def create_status_playback(package, source_phases, sprite_id):
 def resolve_animation_delivery(package, sources, source_phases, sprite_id, playback=None):
     """协议核心只发布并播放 open_idle；其他设备继续遵循网站 status 路由。"""
     # AI-CORRECTION 2026-10-15: 项目可显式选择稳定片段及立即切换策略；仅发布被该声明引用的来源。
+    # AI-CORRECTION 2026-10-16: 状态机 visualKey 与设备 status 共用片段发布协议，选择规则由项目显式声明。
     if playback is not None:
         if (not isinstance(playback, dict) or playback.get("statusChangeMode") != "immediate"
                 or playback.get("openTransitionClip") is not None
@@ -443,8 +444,14 @@ def resolve_animation_delivery(package, sources, source_phases, sprite_id, playb
         statuses = {"closed", "idle", "normal", "blocked", "no-power", "not-in-power-net"}
         if not set(playback["statusClips"]).issubset(statuses):
             raise ValueError(f"Unknown direct animation status: {sprite_id}")
+        visual_clips = playback.get("visualClips", {})
+        if (not isinstance(visual_clips, dict)
+                or any(not isinstance(key, str) or not key or
+                       any(not (character.isalnum() or character in "_-") for character in key)
+                       for key in visual_clips)):
+            raise ValueError(f"Invalid direct animation visual keys: {sprite_id}")
         selected = [playback.get("fallbackClip"), playback.get("staticClip"),
-                    *playback["statusClips"].values()]
+                    *playback["statusClips"].values(), *visual_clips.values()]
         if any(not isinstance(clip, str) or clip not in source_phases for clip in selected):
             raise ValueError(f"Direct animation references missing clips: {sprite_id}")
         clip_ids = set(selected)

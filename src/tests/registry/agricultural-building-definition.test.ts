@@ -73,16 +73,16 @@ describe("普通田块建筑定义", () => {
     }
   });
 
-  it("十种田块使用成株静态图、匹配的高度和各自游戏图标", async () => {
+  it("十种田块使用原生动画、成株静态回退、匹配高度和各自游戏图标", async () => {
     const mapping = JSON.parse(await readFile("resources/building-top-view-v15.json", "utf8"));
     const effects = JSON.parse(await readFile("public/3d-top-view/port-effects/manifest.json", "utf8"));
     const images = [];
     for (const definition of plots) {
-      expect(definition.spriteAnimation).toBeUndefined();
+      expect(definition.spriteAnimation).toEqual({ closeIdleMode: "loop" });
       expect(definition.iconPath).toBe(`device-icons/item_port_${definition.id}.webp`);
       expect(mapping.entries.find((entry: { entityId: string }) => entry.entityId === definition.id))
-        .toMatchObject({ spriteId: definition.id, sourcePath: `${definition.id}/top`, animated: false, staticPhase: "soil_1_mature" });
-      expect(effects.views[`${definition.id}/top`].stateMapping.default).toBe("soil_1_mature");
+        .toMatchObject({ spriteId: definition.id, sourcePath: `${definition.id}/top`, animated: true, animationPlayback: { staticClip: "mature" } });
+      expect(effects.views[`${definition.id}/top`].stateMapping.default).toBe("mature");
       const image = await readFile(`public/3d-top-view/sprites/${definition.spriteId}.webp`);
       images.push(image.toString("base64"));
       expect(await sharp(image).metadata()).toMatchObject({ width: 256, height: 256 });

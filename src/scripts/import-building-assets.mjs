@@ -170,6 +170,25 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     const { outputDirectory, resolution } = target;
     const spriteDirectory = path.join(outputDirectory, 'sprites');
     const maskDirectory = path.join(outputDirectory, 'sprite-masks');
+    // 2026-10-16：独立俯视素材可复用已确认的蓝图几何和头像；复制仍进入同一暂存、验收与应用计划。
+    if (includes('static')) for (const entry of collection.entries.filter((item) => selectedEntityIds.has(item.entityId))) {
+      for (const [rootName, folder, sourceId] of [
+        ['blueprint-view', 'sprites', entry.blueprintSpriteId],
+        ['blueprint-view', 'sprite-masks', entry.blueprintSpriteId],
+        ['blueprint-view', 'avatar', entry.avatarSpriteId],
+        ['3d-top-view', 'avatar', entry.avatarSpriteId],
+      ]) {
+        if (sourceId === undefined) continue;
+        if (!/^[a-zA-Z0-9_-]+$/.test(sourceId) || sourceId === entry.spriteId) throw new Error(`Invalid shared presentation source: ${entry.entityId}`);
+        const sourceRoot = resolveBuildingAssetPublishTargets(path.join(projectRoot, 'public', rootName))
+          .find((item) => item.resolution === resolution).outputDirectory;
+        const destinationRoot = resolveBuildingAssetPublishTargets(path.join(stage, 'public', rootName))
+          .find((item) => item.resolution === resolution).outputDirectory;
+        const relative = `${folder}/${entry.spriteId}.webp`;
+        await mkdir(path.dirname(path.join(destinationRoot, relative)), { recursive: true });
+        await copyFile(path.join(sourceRoot, folder, `${sourceId}.webp`), path.join(destinationRoot, relative));
+      }
+    }
     console.log(`Publishing resolution ${resolution}: ${plan.statics.length} static / ${plan.animations.length} animated`);
     if (includes('static')) for (const item of plan.statics) {
       await publishDeviceSprite(within(root, item.sourcePath), path.join(spriteDirectory, `${item.spriteId}.webp`),
@@ -521,7 +540,19 @@ export async function validateWebsiteBatch(batch) {
     const target = productTargets.reverse().find((item) => within(stage, relative).startsWith(`${item.outputDirectory}/`));
     const spriteId = plan.entries.find((entry) => file.includes(`/${entry.spriteId}.`) || file.includes(`/${entry.spriteId}--`) || file.includes(`/${entry.spriteId}/`));
     const sourcePrefix = spriteId ? `${plan.sourcePathPrefix ?? 'buildings/'}${spriteId.sourcePath}/` : file.includes('logistics') ? 'buildings/logistics/' : 'buildings/';
-    products.push({ path: relative, sha256: await fileHash(within(stage, relative)), resolution: target.resolution, sourcePrefix });
+    const mapping = spriteId && collection.entries.find((entry) => entry.entityId === spriteId.entityId);
+    const inheritedId = /\/avatar\//.test(relative) ? mapping?.avatarSpriteId
+      : relative.startsWith('public/blueprint-view/') ? mapping?.blueprintSpriteId : undefined;
+    const productSha256 = await fileHash(within(stage, relative));
+    let inheritedFrom;
+    if (inheritedId !== undefined) {
+      const sourcePath = relative.replace(`/${spriteId.spriteId}.webp`, `/${inheritedId}.webp`);
+      const sourceSha256 = await fileHash(within(projectRoot, sourcePath));
+      if (sourceSha256 === null || sourceSha256 !== productSha256) throw new Error(`Shared presentation differs: ${relative}`);
+      inheritedFrom = { path: sourcePath, sha256: sourceSha256 };
+    }
+    products.push({ path: relative, sha256: productSha256, resolution: target.resolution, sourcePrefix,
+      ...(inheritedFrom ? { inheritedFrom } : {}) });
   }
   await save(path.join(batch, `publish-receipt${plan.receiptHistorySuffix ?? ''}.json`), {
     schemaVersion: 1, sourceSite: plan.sourceSite, sources: receipt.files.map(({ path: file, sha256 }) => ({ path: file, sha256 })),

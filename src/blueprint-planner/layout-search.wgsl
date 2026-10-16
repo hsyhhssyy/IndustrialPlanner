@@ -135,6 +135,10 @@ fn score(lane:u32)->f32{
       let overlap=max(0,min(a.x+w,b.x+dim(j,0))-max(a.x,b.x))*max(0,min(a.y+h,b.y+dim(j,1))-max(a.y,b.y));
       if(pairs[i*n+j]==0){
         cost+=f32(overlap)*10000.0;
+        let gap=min(dim(i,75),dim(j,75));
+        let dx=max(0,max(a.x-b.x-dim(j,0),b.x-a.x-w));
+        let dy=max(0,max(a.y-b.y-dim(j,1),b.y-a.y-h));
+        cost+=f32(max(0,gap-dx)*max(0,gap-dy))*500.0;
       }
       let radius=dim(i,41);
       if(radius>0&&dim(i,42)==dim(j,42)&&a.x-radius<b.x+dim(j,0)&&b.x<a.x+w+radius&&a.y-radius<b.y+dim(j,1)&&b.y<a.y+h+radius){

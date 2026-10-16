@@ -39,7 +39,8 @@ export interface PlannerGpuLayoutMetrics {
 
 /** 32 条独立链保留搜索深度；限制单次内核工作量，避免长命令拖住桌面和取消。 */
 export function plannerLayoutBatchSize(nodes: number, cells: number, budget: number, cpu = false): { chains: number; steps: number } | null {
-  if (!Number.isSafeInteger(nodes) || nodes < 1 || (!cpu && nodes > 64) || !Number.isSafeInteger(cells) || cells < 1 || (!cpu && cells > 1024)
+  // 2026-10-16：大产线首解同样允许硬件批次；实际工作组容量由 GPU 按节点数和外框申请。
+  if (!Number.isSafeInteger(nodes) || nodes < 1 || (!cpu && nodes > 128) || !Number.isSafeInteger(cells) || cells < 1 || (!cpu && cells > 4900)
     || !Number.isSafeInteger(budget) || budget < (cpu ? 1 : 32)) return null;
   const chains = Math.max(1, Math.min(32, Math.floor(budget / 16)));
   const steps = Math.min(625, Math.floor(budget / chains), Math.max(16, Math.floor(8_000_000 / (nodes * cells))));

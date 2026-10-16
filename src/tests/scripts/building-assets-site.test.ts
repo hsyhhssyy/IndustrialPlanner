@@ -31,6 +31,25 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
+  it("状态外观选择保留完整积水轨道并拒绝无来源片段", () => {
+    const result = execFileSync("python3", ["-B", "-c", `
+import runpy,sys
+m=runpy.run_path(sys.argv[1])
+sources={name:{'file':name+'.webp'} for name in ['mature','water','unused']}
+phases={name:[{'source':name,'startFrame':0,'frameCount':30 if name=='water' else 1}] for name in sources}
+playback={'statusChangeMode':'immediate','fallbackClip':'mature','staticClip':'mature','statusClips':{},'visualClips':{'irrigated':'water'},'clipOptions':{'mature':{'playing':False,'restart':True},'water':{'playing':True,'restart':True}}}
+delivery=m['resolve_animation_delivery']({},sources,phases,'fixture',playback)
+assert set(delivery['sources'])=={'mature','water'}
+assert delivery['clips']['water'][0]['frameCount']==30
+assert delivery['playback']['visualClips']=={'irrigated':'water'}
+playback['visualClips']['irrigated']='missing'
+try:m['resolve_animation_delivery']({},sources,phases,'fixture',playback)
+except ValueError as error:assert 'missing clips' in str(error)
+else:raise AssertionError('missing visual clip accepted')
+print('visual animation delivery verified')
+`, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
+    expect(result.trim()).toBe("visual animation delivery verified");
+  });
   it("显式静态阶段从多阶段交付选择成株首帧，拒绝不存在的阶段", async () => {
     await fixture(async (directory) => {
       const result = execFileSync("python3", ["-B", "-c", `
@@ -122,6 +141,12 @@ print('explicit static phase verified')
       expect(manifest.views["soil_grass_1/top"].stateMapping.default).toBe("soil_1_mature");
       expect(manifest.views["soil_grass_1/top"].variants).toEqual({});
       expect(manifest.issues).toEqual([]);
+      await publishBuildingPortEffects({ ...options, collection: { entries: [{
+        entityId: entry.entityId, sourcePath: entry.sourcePath,
+        animationPlayback: { staticClip: "soil_1_mature" },
+      }] } });
+      const animatedManifest = JSON.parse(await readFile(path.join(options.outputDirectory, "manifest.json"), "utf8"));
+      expect(animatedManifest.views["soil_grass_1/top"].stateMapping.default).toBe("soil_1_mature");
       await publishBuildingPortEffects({ ...options, collection: { entries: [entry] },
         stateVisuals: { soil_grass_1: { empty: "soil_0_empty", irrigated: "soil_1_mature_water" } } });
       const stateManifest = JSON.parse(await readFile(path.join(options.outputDirectory, "manifest.json"), "utf8"));

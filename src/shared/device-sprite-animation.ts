@@ -68,6 +68,8 @@ export interface NormalizedDeviceSpriteAnimationDefinition {
     readonly fallbackClip: DeviceSpriteAnimationPhase;
     readonly staticClip: DeviceSpriteAnimationPhase;
     readonly statusClips: Readonly<Partial<Record<SimulationDeviceOperatingStatus, DeviceSpriteAnimationPhase>>>;
+    /** 状态机外观的稳定片段；未命中时沿用设备运行状态路由。 */
+    readonly visualClips: Readonly<Record<string, DeviceSpriteAnimationPhase>>;
     readonly openTransitionClip: DeviceSpriteAnimationPhase | null;
     readonly closeTransitionClip: DeviceSpriteAnimationPhase | null;
     readonly clipOptions: Readonly<Record<DeviceSpriteAnimationPhase, NormalizedDeviceSpriteAnimationClipPlayback>>;
@@ -230,6 +232,16 @@ export function normalizeDeviceSpriteAnimationDefinition(
       `playback.statusClips.${status}`,
     );
   }
+  const visualClipSource = playbackSource.visualClips === undefined
+    ? {}
+    : requireRecord(playbackSource.visualClips, "playback.visualClips");
+  const visualClips: Record<string, DeviceSpriteAnimationPhase> = {};
+  for (const [visualKey, clip] of Object.entries(visualClipSource)) {
+    requireClipId(visualKey, "playback.visualClips key");
+    Object.defineProperty(visualClips, visualKey, {
+      value: requireExistingClip(clip, `playback.visualClips.${visualKey}`), enumerable: true,
+    });
+  }
   const readTransition = (key: "openTransitionClip" | "closeTransitionClip") => (
     playbackSource[key] === undefined || playbackSource[key] === null
       ? null
@@ -248,6 +260,9 @@ export function normalizeDeviceSpriteAnimationDefinition(
   if (transitionClips.has(fallbackClip)) throw new Error("playback.fallbackClip cannot be a transition clip");
   for (const [status, clip] of Object.entries(statusClips)) {
     if (transitionClips.has(clip)) throw new Error(`playback.statusClips.${status} cannot be a transition clip`);
+  }
+  for (const [visualKey, clip] of Object.entries(visualClips)) {
+    if (transitionClips.has(clip)) throw new Error(`playback.visualClips.${visualKey} cannot be a transition clip`);
   }
   if (openTransitionClip !== null && statusClips.normal !== "open_idle") {
     throw new Error("playback.openTransitionClip requires normal to resolve to open_idle");
@@ -294,6 +309,7 @@ export function normalizeDeviceSpriteAnimationDefinition(
       fallbackClip,
       staticClip,
       statusClips: Object.freeze(statusClips),
+      visualClips: Object.freeze(visualClips),
       openTransitionClip,
       closeTransitionClip,
       clipOptions: Object.freeze(clipOptions),
@@ -310,8 +326,11 @@ export function normalizeDeviceSpriteAnimationDefinition(
 export function resolveDeviceSpriteAnimationStatusClip(
   definition: NormalizedDeviceSpriteAnimationDefinition,
   status: SimulationDeviceOperatingStatus,
+  visualKey: string | null = null,
 ): DeviceSpriteAnimationPhase {
-  return definition.playback.statusClips[status] ?? definition.playback.fallbackClip;
+  return (visualKey !== null && Object.hasOwn(definition.playback.visualClips, visualKey)
+    ? definition.playback.visualClips[visualKey] : undefined)
+    ?? definition.playback.statusClips[status] ?? definition.playback.fallbackClip;
 }
 
 export function getDeviceSpriteAnimationSignature(definition: DeviceSpriteAnimationDefinition): string {

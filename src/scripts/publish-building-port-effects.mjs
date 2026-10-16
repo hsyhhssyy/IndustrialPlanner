@@ -138,8 +138,10 @@ export async function publishBuildingPortEffects({
     const requestedVariantKeys = new Set(ports?.portFxApplicable === false ? [] : ports?.deliveryVariantKeys ?? []);
     const availableVariantKeys = new Set((ports?.variants ?? []).map((variant) => variant.rendererTemplateKey));
     const sourcePath = `${building.buildingId}/${building.view}`;
-    const staticPhases = new Set(collection.entries.filter((entry) => entry.sourcePath === sourcePath
-      && entry.staticPhase !== undefined).map((entry) => entry.staticPhase));
+    // 2026-10-16：默认高度跟随静态展示片段；动画设备也有独立静态回退，不能误用空田高度。
+    const staticPhases = new Set(collection.entries.filter((entry) => entry.sourcePath === sourcePath)
+      .map((entry) => entry.staticPhase ?? entry.animationPlayback?.staticClip)
+      .filter((phase) => phase !== undefined));
     if (staticPhases.size > 1) throw new Error(`Conflicting static phases for height view: ${sourcePath}`);
     const staticPhase = [...staticPhases][0];
     if (staticPhase !== undefined && !fields[staticPhase]) {

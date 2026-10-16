@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 2,
+  "frameWidth": 512,
+  "frameHeight": 512,
+  "fps": 30,
+  "sourceResolution": 0.5,
+  "pageRows": 7,
+  "pageColumns": 5,
+  "sources": {
+    "empty_000": {
+      "file": "empty_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "physicalFrameWidth": 256,
+      "physicalFrameHeight": 256,
+      "sourcePath": "buildings/soil_corp_tomato_1/top/animations/empty/spritesheet_000.webp",
+      "sha256": "4be96ad54b67418d1be0d778b385fe09cce5703c79c0addbe98c4a90430ccaf5"
+    },
+    "seedling_000": {
+      "file": "seedling_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "physicalFrameWidth": 256,
+      "physicalFrameHeight": 256,
+      "sourcePath": "buildings/soil_corp_tomato_1/top/animations/seedling/spritesheet_000.webp",
+      "sha256": "f6f4040c9332cac71d21b14c28bb4200902ac0075ae608c150bc3147ebc94816"
+    },
+    "mature_000": {
+      "file": "mature_000.webp",
+      "rows": 1,
+      "columns": 1,
+      "frameCount": 1,
+      "frameDurationsMs": [
+        33
+      ],
+      "physicalFrameWidth": 256,
+      "physicalFrameHeight": 256,
+      "sourcePath": "buildings/soil_corp_tomato_1/top/animations/mature/spritesheet_000.webp",
+      "sha256": "25f8db2dcbc694562c2f652dc43876ad9df3a5007740804741f4bf93b3c6c6af"
+    },
+    "seedling_water_000": {
+      "file": "seedling_water_000.webp",
+      "rows": 4,
+      "columns": 8,
+      "frameCount": 30,
+      "frameDurationsMs": [
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33,
+        33,
+        34,
+        33
+      ],
+      "physicalFrameWidth": 256,
+      "physicalFrameHeight": 256,
+      "sourcePath": "buildings/soil_corp_tomato_1/top/animations/seedling_water/spritesheet_000.webp",
+      "sha256": "4c3789935623ea621b7241f9aad0f02bf63bdf214425c92f1d1adf2072ec3235"
+    }
+  },
+  "clips": {
+    "empty": [
+      {
+        "source": "empty_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "seedling": [
+      {
+        "source": "seedling_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "mature": [
+      {
+        "source": "mature_000",
+        "startFrame": 0,
+        "frameCount": 1
+      }
+    ],
+    "seedling_water": [
+      {
+        "source": "seedling_water_000",
+        "startFrame": 0,
+        "frameCount": 30
+      }
+    ]
+  },
+  "frameTransform": "flip-top-bottom",
+  "coordinateTransform": "projectY = depth - 1 - sourceZ",
+  "playback": {
+    "statusChangeMode": "immediate",
+    "fallbackClip": "mature",
+    "staticClip": "mature",
+    "statusClips": {},
+    "visualClips": {
+      "empty": "empty",
+      "seedling": "seedling",
+      "irrigated": "seedling_water"
+    },
+    "openTransitionClip": null,
+    "closeTransitionClip": null,
+    "clipOptions": {
+      "empty": {
+        "playing": false,
+        "restart": true
+      },
+      "mature": {
+        "playing": false,
+        "restart": true
+      },
+      "seedling": {
+        "playing": false,
+        "restart": true
+      },
+      "seedling_water": {
+        "playing": true,
+        "restart": true
+      }
+    },
+    "sourceStatuses": {}
+  },
+  "clipSelection": "project-direct-status-clips",
+  "sourceSite": {
+    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+    "releaseId": "v1.5-20260924-20261016-165831-cst",
+    "sourceVersion": "v1.5-20260924",
+    "indexSha256": "41bbc67225ee9d7c84703ac2415178aa652568b70704ea0ef631096722d52ba5",
+    "sourceResolution": 0.5
+  }
+}

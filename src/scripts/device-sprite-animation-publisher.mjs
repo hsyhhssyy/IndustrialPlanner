@@ -343,13 +343,14 @@ async function encodeCompletedPage(page, outputDirectory, frameWidth, frameHeigh
     return;
   }
   const pixels = resolution === 1 ? page.buffer : await resizePageFrames(page, frameWidth, frameHeight, resolution);
+  // AI-CORRECTION 2026-10-16: 网站已交付有损颜色原件，重排后必须无损编码，避免重复量化改变原像素。
   await sharp(pixels, {
     raw: {
       width: page.columns * frameWidth * resolution,
       height: page.rows * frameHeight * resolution,
       channels: 4,
     },
-  }).webp({ quality: 85, alphaQuality: 100, effort: 4 }).toFile(path.join(outputDirectory, page.file));
+  }).webp({ lossless: true, effort: 6 }).toFile(path.join(outputDirectory, page.file));
   page.buffer = null;
 }
 

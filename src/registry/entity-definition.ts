@@ -5527,6 +5527,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_grass_1",
     nameKey: "registry.entity.soil_grass_1.name",
     spriteId: "soil_grass_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_grass_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5547,6 +5548,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_grass_2",
     nameKey: "registry.entity.soil_grass_2.name",
     spriteId: "soil_grass_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_grass_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5567,6 +5569,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_moss_1",
     nameKey: "registry.entity.soil_moss_1.name",
     spriteId: "soil_moss_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_moss_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5587,6 +5590,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_moss_2",
     nameKey: "registry.entity.soil_moss_2.name",
     spriteId: "soil_moss_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_moss_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5607,6 +5611,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_moss_3",
     nameKey: "registry.entity.soil_moss_3.name",
     spriteId: "soil_moss_3",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_moss_3.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5627,6 +5632,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_bbflower_1",
     nameKey: "registry.entity.soil_bbflower_1.name",
     spriteId: "soil_bbflower_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_bbflower_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5647,6 +5653,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_sp_1",
     nameKey: "registry.entity.soil_sp_1.name",
     spriteId: "soil_sp_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_sp_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5667,6 +5674,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_sp_2",
     nameKey: "registry.entity.soil_sp_2.name",
     spriteId: "soil_sp_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_sp_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5687,6 +5695,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_sp_3",
     nameKey: "registry.entity.soil_sp_3.name",
     spriteId: "soil_sp_3",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_sp_3.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5707,6 +5716,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "soil_sp_4",
     nameKey: "registry.entity.soil_sp_4.name",
     spriteId: "soil_sp_4",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_sp_4.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5723,10 +5733,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 球豆田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_bean_1",
     nameKey: "registry.entity.soil_corp_bean_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_bean_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_bean_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5743,10 +5755,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_cabbage_1",
     nameKey: "registry.entity.soil_corp_cabbage_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_cabbage_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_cabbage_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5766,10 +5780,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /** 优质青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
   // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_cabbage_2",
     nameKey: "registry.entity.soil_corp_cabbage_2.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_cabbage_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_cabbage_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "hidden",
@@ -5786,10 +5802,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 籽油花田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_canolaflower_1",
     nameKey: "registry.entity.soil_corp_canolaflower_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_canolaflower_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_canolaflower_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5806,10 +5824,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_mushroom_1",
     nameKey: "registry.entity.soil_corp_mushroom_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_mushroom_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_mushroom_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5829,10 +5849,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /** 优质多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
   // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_mushroom_2",
     nameKey: "registry.entity.soil_corp_mushroom_2.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_mushroom_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_mushroom_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "hidden",
@@ -5849,10 +5871,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 平薯田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_potato_1",
     nameKey: "registry.entity.soil_corp_potato_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_potato_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_potato_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5869,10 +5893,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_strawberry_1",
     nameKey: "registry.entity.soil_corp_strawberry_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_strawberry_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_strawberry_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5892,10 +5918,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /** 优质青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
   // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_strawberry_2",
     nameKey: "registry.entity.soil_corp_strawberry_2.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_strawberry_2",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_strawberry_2.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "hidden",
@@ -5912,12 +5940,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 脆蔗田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_sugarcane_1",
     nameKey: "registry.entity.soil_corp_sugarcane_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_sugarcane_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_sugarcane_1.webp",
     footprint: { width: 4, height: 4 },
+    spriteOffset: { topView: { x: -1, y: -1, width: 6, height: 6 } },
     uiGroup: "agriculture",
     displayOrder: 820,
     tags: ["AcceptsIrrigation", "Producer"],
@@ -5932,10 +5963,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 茄果田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_tomato_1",
     nameKey: "registry.entity.soil_corp_tomato_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_tomato_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_tomato_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",
@@ -5952,10 +5985,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 白瓜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
+  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_whitegourd_1",
     nameKey: "registry.entity.soil_corp_whitegourd_1.name",
-    spriteId: "soil_grass_2",
+    spriteId: "soil_corp_whitegourd_1",
+    spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_soil_corp_whitegourd_1.webp",
     footprint: { width: 4, height: 4 },
     uiGroup: "agriculture",

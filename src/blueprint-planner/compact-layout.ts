@@ -70,6 +70,7 @@ export class CompactLayoutSearch {
   private readonly blockedKinds: number[];
   private readonly overlaps: Uint8Array;
   private readonly logistics: boolean[];
+  private readonly corridorNodes: boolean[];
   // AI-REMOVED 2026-10-11:
   // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
   // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -132,6 +133,7 @@ export class CompactLayoutSearch {
     // 2026-10-11：策略分离后布局种子可占满 32 位；使用整数乘法避免精度丢失，并排除 xorshift 零状态。
     this.randomState = (Math.imul(statistics.seed + 1, 2654435761) >>> 0) || 1;
     this.poses = network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
+    this.corridorNodes = network.nodes.map(node => node.purpose === "production" || node.purpose === "auxiliary");
     // AI-REMOVED 2026-10-11:
     // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
     // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -504,6 +506,8 @@ export class CompactLayoutSearch {
       geometry[start + 72] = node.entity.definitionId === "unloader_1" ? 1 : node.entity.definitionId === "loader_1" ? 2 : 0;
       geometry[start + 73] = this.network.request.options.warehousePortPlacement === "continuous" ? 1 : this.network.request.options.warehousePortPlacement === "full-side" ? 2 : 0;
       geometry[start + 74] = (this.statistics.outline.warehouseSide ?? -1) + 1;
+      // 2026-10-16：软通道代价由 CPU 完整评分与数值后端共同使用，避免初排空隙在退火中消失。
+      geometry[start + 75] = this.corridorNodes[i] ? this.profile.routingClearance : 0;
       geometry[start + 40] = Number(this.fixedNodeIds.has(node.entity.id));
       geometry[start + 41] = noNear?.type === "no-near-same-entity" ? noNear.range : 0;
       geometry[start + 42] = definitions.indexOf(node.definition.id);
@@ -1114,7 +1118,7 @@ export class CompactLayoutSearch {
     const minX = 0;
     const minY = 0;
     const { width, height } = this.statistics.outline;
-    let overflow = 0, maxX = 0, maxY = 0;
+    let overflow = 0, maxX = 0, maxY = 0, corridorCost = 0;
     for (let i = 0; i < rects.length; i++) {
       const rect = rects[i]!;
       violations += Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y);
@@ -1122,6 +1126,12 @@ export class CompactLayoutSearch {
       for (let j = 0; j < i; j++) {
         const other = rects[j]!;
         if (this.overlaps[i * this.poses.length + j]) continue;
+        if (this.profile.routingClearance && this.corridorNodes[i] && this.corridorNodes[j]) {
+          const gap = this.profile.routingClearance;
+          const dx = Math.max(0, rect.x - other.x - other.width, other.x - rect.x - rect.width);
+          const dy = Math.max(0, rect.y - other.y - other.height, other.y - rect.y - rect.height);
+          corridorCost += Math.max(0, gap - dx) * Math.max(0, gap - dy) * 50;
+        }
         violations += Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
           * Math.max(0, Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y));
         record?.("body-overlap", Math.max(0, Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x))
@@ -1414,7 +1424,8 @@ export class CompactLayoutSearch {
       record?.("power-coverage", nearest?.distance ?? 1, nearest ? [index, nearest.provider] : [index], box);
       return total + (nearest?.distance ?? 1);
     }, 0) : 0;
-    return { cost: wireCost + congestion * this.profile.congestionWeight + overflow * this.profile.overflowWeight + maxX * maxY * this.profile.areaWeight + violations * 100 + disconnected * 100 + power * 100,
+    const constraintWeight = this.profile.routingClearance ? 1000 : 100;
+    return { cost: wireCost + corridorCost + congestion * this.profile.congestionWeight + overflow * this.profile.overflowWeight + maxX * maxY * this.profile.areaWeight + violations * constraintWeight + disconnected * constraintWeight + power * constraintWeight,
       wireLength, feasible: overflow === 0 && violations === 0 && disconnected === 0 && power === 0,
       conflicts: { geometry: violations, power, boundary: overflow, connections: disconnected } };
   }

@@ -29,6 +29,33 @@ import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import fixture from "./fixtures/yazhen-syringe.json";
 import memoryReference from "./fixtures/cpu-layout-memory-reference.json";
+import { resolveSearchProfile } from "@/blueprint-planner/search-profile";
+
+it("首解软通道保留两格间距，CPU 完整评分与数值快照同向，关闭后恢复原评分", async () => {
+  const registry = createRegistryContract();
+  const measure = async (gap: number, clearance: number) => {
+    const nodes = ["a", "b"].map(id => createPlainNode(registry, "furnance_1", id, "production"));
+    nodes[0]!.entity.position = { x: 2, y: 2 };
+    nodes[1]!.entity.position = { x: 2 + nodes[0]!.definition.footprint.width + gap, y: 2 };
+    const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 32, evaluations: 0, acceptedMoves: 0,
+      routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 30, height: 30 } };
+    let proxy = 0;
+    const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
+      nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics,
+      resolveSearchProfile({ routingClearance: clearance, areaWeight: 0, congestionWeight: 0 }), { search: async input => {
+        proxy = new PlannerLayoutKernel(input).score();
+        return { evaluations: 32, kernelMs: 0, poses: [] };
+      } });
+    expect(await search.advance(0, () => {})).toBe(true);
+    await search.advance(32, () => {});
+    return { cost: statistics.layoutInitialCost!, proxy };
+  };
+  const close = await measure(0, 2), open = await measure(2, 2), off = await measure(0, 0);
+  expect(close.cost).toBeGreaterThan(open.cost);
+  expect(close.proxy).toBeGreaterThan(open.proxy);
+  expect(off).toEqual(open);
+  expect(() => resolveSearchProfile({ routingClearance: 0.5 })).toThrow();
+});
 
 it("复用评分工作区保持优化前的评分、随机轨迹和多链结果", async () => {
   // 2026-10-13：参考数据来自修改前的真实 CPU 内核，覆盖三种存取面规则和连通评分开关。

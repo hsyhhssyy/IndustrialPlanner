@@ -169,7 +169,8 @@ describe("v1.5 建筑素材发布", () => {
     // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块共用芽针素材的映射，总映射75，动画设备仍为37个。
     expect(collection.entries).toHaveLength(75);
     // AI-CORRECTION 2026-10-15: 洒水机由静态素材切换为状态动画，动画设备数增至 38。
-    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(38);
+    // AI-CORRECTION 2026-10-16: 22 种田块均接入状态动画，总映射仍为 75，动画设备数增至 60。
+    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(60);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
       "grinder_1",

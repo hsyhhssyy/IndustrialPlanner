@@ -141,6 +141,9 @@ describe("device animation generation", () => {
       });
       expect(await sharp(path.join(outputRoot, "open-0.webp")).metadata())
         .toMatchObject({ width: 4, height: 2 });
+      // 2026-10-16：同密度重排保留原件 RGB 与 Alpha，不能再经过一次有损量化。
+      expect(await readPixels(path.join(outputRoot, "open-0.webp")))
+        .toEqual(await readPixels(path.join(options.sourceDirectory, "fixture/open.webp")));
       expect(await sharp(path.join(outputRoot, "mask.webp")).metadata())
         .toMatchObject({ width: 2, height: 2 });
       expect(await sharp(path.join(options.spriteDirectory, "fixture.webp")).metadata())

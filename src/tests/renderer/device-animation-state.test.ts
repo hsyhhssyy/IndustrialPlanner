@@ -49,6 +49,7 @@ function createNormalizedDefinition(
       fallbackClip: "close_idle",
       staticClip: "open",
       statusClips: { normal: "open_idle" },
+      visualClips: {},
       openTransitionClip: "open",
       closeTransitionClip: "close",
       clipOptions: Object.fromEntries(clipIds.map((clipId) => [clipId, {
@@ -75,6 +76,50 @@ function expectFrame(
 }
 
 describe("DeviceAnimationState", () => {
+  it("同一运行状态下按外观立即切换积水与优质片段，重复同步不重启循环", () => {
+    const definition = normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "loop" }, {
+      schemaVersion: 2, frameWidth: 1, frameHeight: 1, maskFile: "mask.webp",
+      clips: { mature: createClip("mature", 1), water: createClip("water", 3), refined: createClip("refined", 3) },
+      playback: {
+        statusChangeMode: "immediate", fallbackClip: "mature", staticClip: "mature", statusClips: {},
+        visualClips: { irrigated: "water", "refined-irrigated": "refined" },
+        clipOptions: { mature: { playing: false, restart: true } },
+      },
+    });
+    const state = new DeviceAnimationState(definition, "idle", true, "irrigated");
+    state.advance(150);
+    expectFrame(state, "water", 1);
+    state.setStatus("idle", "irrigated");
+    state.advance(100);
+    expectFrame(state, "water", 2);
+    state.setStatus("idle", "refined-irrigated");
+    expectFrame(state, "refined", 0);
+    state.advance(350);
+    expectFrame(state, "refined", 0);
+    state.setStatus("idle", null);
+    state.advance(1000);
+    expectFrame(state, "mature", 0);
+    state.reset("blocked", true, "irrigated");
+    expectFrame(state, "water", 0);
+    state.setStatus("blocked", "constructor");
+    expectFrame(state, "mature", 0);
+  });
+
+  it("拒绝状态外观引用缺失片段或机械过渡片段", () => {
+    const manifest = {
+      schemaVersion: 2, frameWidth: 1, frameHeight: 1, maskFile: "mask.webp",
+      clips: { mature: createClip("mature", 1) },
+      playback: { fallbackClip: "mature", staticClip: "mature", statusClips: {}, visualClips: { irrigated: "missing" } },
+    };
+    expect(() => normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "loop" }, manifest))
+      .toThrow("playback.visualClips.irrigated references an unknown clip");
+    const transitions = createDefinition();
+    expect(() => normalizeDeviceSpriteAnimationDefinition({ closeIdleMode: "loop" }, {
+      ...transitions, schemaVersion: 2,
+      playback: { ...transitions.playback, visualClips: { irrigated: "open" } },
+    })).toThrow("playback.visualClips.irrigated cannot be a transition clip");
+  });
+
   it.each(["idle", "closed", "blocked", "no-power", "not-in-power-net"] as const)(
     "立即切换素材在 %s 时打断喷水循环，恢复运行从首帧开始",
     (status) => {
@@ -470,6 +515,7 @@ describe("DeviceAnimationState", () => {
         fallbackClip: "CLOSED",
         staticClip: "RUNNING",
         statusClips: { normal: "RUNNING", "no-power": "PORT_DISCONNECT" },
+        visualClips: {},
         openTransitionClip: null,
         closeTransitionClip: null,
         clipOptions: {

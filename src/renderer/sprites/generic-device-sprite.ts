@@ -332,6 +332,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private animationFrameLoadVersion = 0
   private animationFrameLoadKey: string | null = null
   private animationStatus: SimulationDeviceOperatingStatus = "closed"
+  private animationVisualKey: string | null = null
   private animationPaused = false
   private animationSeeking = false
   private animationCursor: number | null = null
@@ -1100,11 +1101,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // const maskTextureKey = forceBlueprintPreview
     //   ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
     //   : resolveDeviceMaskTextureKey(this.spriteId, this.renderHost.workspace.app)
+    const visualKey = this.definition.stateMachine === undefined ? null
+      : context?.workspace.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey ?? null
     const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.workspace.app, {
       forceBlueprint: forceBlueprintPreview,
-      allowAnimation: this.syncDeviceAnimationInputs(context),
-      visualKey: this.definition.stateMachine === undefined ? null
-        : context?.workspace.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey,
+      allowAnimation: this.syncDeviceAnimationInputs(context, visualKey),
+      visualKey,
     })
     const { bodyTextureKey, maskTextureKey } = presentation
     this.syncDeviceAnimationResource(presentation.animation)
@@ -1204,7 +1206,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   /** 只在低频同步时读取仿真输入，逐帧播放不查询 Registry 或 Runtime。 */
   /** AI-CORRECTION 2026-09-18: 低频输入现为互斥设备展示 status，不再从配方推进聚合 working。 */
-  private syncDeviceAnimationInputs(context?: RenderSpriteSyncContext): boolean {
+  /** AI-CORRECTION 2026-10-16: 同次同步复用已读取的 visualKey，状态变化时才切换已有动画片段。 */
+  private syncDeviceAnimationInputs(context?: RenderSpriteSyncContext, visualKey: string | null = null): boolean {
     if (this.definition.spriteAnimation === undefined || context === undefined) {
       return false
     }
@@ -1225,6 +1228,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const status: SimulationDeviceOperatingStatus = continuouslyAnimated
       ? "normal"
       : simulation?.queries.getDeviceOperatingStatus(this.entityId) ?? "closed"
+    const previousVisualKey = this.animationVisualKey
+    if (!seeking) this.animationVisualKey = visualKey
     // AI-REMOVED 2026-09-05: 首次 Runtime 门槛已移除，正式非工作设备允许 close_idle。
     // Trigger: REQ-025 边界审阅。Evidence: 下方真实实体判定。Replacement: None。
     // Risk: Low; Human Review: Required. Original code:
@@ -1232,6 +1237,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     //   this.hasEnteredRuntime = true
     // }
     // 普通暂停保留目标；seek 落点即使仍暂停，也需要读取新的工作状态。
+    // AI-CORRECTION 2026-10-16: 暂停只冻结播放时间；新快照的外观仍立即同步，避免静态图与动画形态不一致。
     if (!paused || seekFinished || cursorRewound || pausedCursorChanged || this.animationState === null) {
       this.animationStatus = status
     }
@@ -1243,12 +1249,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.animationWasHidden = false
     if (this.animationState !== null) {
       if (this.animationStableResetPending && !seeking) {
-        this.animationState.reset(this.animationStatus, true)
+        this.animationState.reset(this.animationStatus, true, this.animationVisualKey)
         this.animationStableResetPending = false
         this.discardNextAnimationDelta = true
         this.applyAnimationFrame()
-      } else if (!paused) {
-        this.animationState.setStatus(this.animationStatus)
+      } else if (!paused || previousVisualKey !== this.animationVisualKey) {
+        this.animationState.setStatus(this.animationStatus, this.animationVisualKey)
+        if (paused) this.applyAnimationFrame()
       }
     }
     const editor = context.workspace.editor
@@ -1351,6 +1358,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         textures.definition,
         this.animationStatus,
         true,
+        this.animationVisualKey,
       )
       if (!this.animationVisible) {
         this.animationRequested = false
